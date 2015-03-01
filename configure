@@ -1,0 +1,23 @@
+
+#
+# Copyright (C) Niklaus F.Schen.
+#
+
+#!/bin/bash
+
+install_path=/usr/local/melon
+test -n "$1"
+if [ $? -eq 0 ]; then
+	test $1 = "--help"
+	if [ $? -eq 0 ]; then
+		echo -e "\nMelon platform."
+		echo "Copyright (C) Niklaus F.Schen."
+		echo "Options:"
+		echo -e "\t--prefix=INSTALL_PATH"
+		exit 0
+	fi
+	install_path=`echo $1|cut -d '=' -f 2`
+fi
+
+sh configure.pl $install_path
+
