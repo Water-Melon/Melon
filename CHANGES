@@ -1,0 +1,56 @@
+
+Changes with melon 1.2.3                                          10 May 2015
+
+    *) Modified configuration's data structures.
+
+    *) Added an interface for reloading configurations.
+
+    *) Modified the interface form of 'mln_tcp_connection_set_buf'.
+
+    *) Modified the interface form of 'mln_event_set_fd'.
+
+    *) Added two marcos for fd-event timeout.
+
+    *) Added an interface for setting fd-event timeout handler.
+
+    *) Added an interface for breaking out of 'mln_dispatch()'.
+
+    *) Added an interface for setting an callback routine in 'mln_dispatch()'.
+
+    *) Modified some interfaces' implementation in event module.
+
+    *) Added an interface for scanning every worker process node
+       and processing the node with a specified fd-event handler.
+
+    *) Added an interface for scanning every data in hash table
+       and processing the data with a specified function.
+
+    *) Modified the macro interface form of 'MLN_DEFINE_TOKEN()'.
+
+    *) Modified log data structures.
+
+    *) Added an interface for reloading log configurations.
+
+    *) Modified the format of log message.
+
+    *) Added a new feature -- a LALR(1) Parser Generator.
+
+    *) Added a new data structure module -- mln_queue.
+
+    *) Added a new data structure module -- mln_stack.
+
+    *) Added a new function 'mln_init_all_resource()' for
+       initializing some essential resources.
+
+    *) Added a new function 'mln_worker_process()' for
+       writing worker process routine.
+
+    *) Added a marco to judge whether the return value of
+       'mln_rbtree_search()' is NULL.
+
+    *) Added an interface for scanning every red-black tree node
+       and processing the node with a specified function.
+
+Changes with melon 0.8.1                                          01 Mar 2015
+
+    *) The first public version.

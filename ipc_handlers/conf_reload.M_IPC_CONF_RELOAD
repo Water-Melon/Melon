@@ -1,0 +1,15 @@
+void conf_reload_master(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr)
+{
+    /*
+     * do nothing.
+     */
+}
+
+void conf_reload_worker(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr)
+{
+    if (mln_conf_reload() < 0) {
+        mln_log(error, "mln_conf_reload() failed.\n");
+        exit(1);
+    }
+}
+

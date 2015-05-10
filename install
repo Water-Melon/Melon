@@ -1,0 +1,35 @@
+
+#
+# Copyright (C) Niklaus F.Schen.
+#
+
+#!/bin/bash
+
+install_path=/usr/local/melon
+test -n "$1"
+if [ $? -eq 0 ]; then
+	test $1 = "--help"
+	if [ $? -eq 0 ]; then
+		echo -e "\nMelon platform."
+		echo "Copyright (C) Niklaus F.Schen."
+		echo "Options:"
+		echo -e "\t--prefix=INSTALL_PATH"
+		exit 0
+	fi
+	install_path=`echo $1|cut -d '=' -f 2`
+fi
+
+echo "Install path	[$install_path]"
+sh configure.pl $install_path
+test -e Makefile && make
+test -e Makefile && make install
+
+for dir in `ls modules`
+do
+	tmp=`echo $dir|cut -d '/' -f 2`
+	test -e modules/$tmp/Makefile && make -f modules/$tmp/Makefile clean
+	test -e modules/$tmp/configure && sh modules/$tmp/configure $install_path
+	test -e modules/$tmp/Makefile && make -f modules/$tmp/Makefile
+	test -e modules/$tmp/Makefile && make -f modules/$tmp/Makefile install
+done
+
