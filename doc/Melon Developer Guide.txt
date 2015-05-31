@@ -1,0 +1,1468 @@
+
+/*
+ * Copyright (C) Niklaus F.Schen.
+ */
+ 
+Melon Developer Guide
+A software platform for simplifying development on UNIX
+Melon Version 1.2.3
+E-Mail: Melon-c@hotmail.com
+
+1.Preface
+Melon is a software platform for simplifying development on UNIX.
+Why is a platform? Because we want to run our programs on it and
+wish it can maintain them automatically (of course, you can refuse
+this maintenance by setting configuration).
+Melon has two architectures -- multithread and multiprocess.
+For multithread, Melon provides a developing method which is the
+same as process development to build its thread modules.
+In addition, Melon provides many interfaces about data structures
+and algorithms to develop the processing logic that we need.
+
+As shown in Figure 1,this is the multiprocess architecture.
+                      --------------
+                     |master process|
+                      --------------
+                             |
+             --------------------------------------
+            |         ..................           |
+      --------------------                --------------------
+     |      process 1     |              |      process N     |
+      --------------------               ---------------------
+     | processing logic 1 |              | processing logic N |
+      --------------------                --------------------
+
+              Figure 1. Multiprocess architecture.
+
+And the multithread architecture shown in Figure 2.
+                     --------------
+                    |master process|
+                     --------------
+                            |
+            --------------------------------------
+           |         ..................           |
+     --------------------                --------------------
+    |      process 1     |              |      process N     |
+     --------------------               ---------------------
+              |                                   |
+     ---------------------               ---------------------
+    |     ..........      |             |     ..........      |
+ -------------        ------------   -------------        -------------
+| thread 11   |      | thread 1N  | | thread N1   |      | thread NN   |
+ -------------        ------------   -------------        -------------
+| processing  |      | processing | | processing  |      | processing  |
+| logic 11    |      | logic 1N   | | logic N1    |      | logic NN    |
+ -------------        ------------   -------------        -------------
+
+              Figure 2. Multithread architecture.
+
+
+2.Installation
+We can install Melon following these steps:
+  a) Download and decompress melon-1.2.3.
+  b) Change directory to the melon-1.2.3/.
+  c) Execute shell command
+         ./install [--prefix=/...|--help]
+     to build Makefile and some source and header files.
+     --prefix indicate the installation path.
+     --help   show help message.
+
+3.Types
+There are some basic custom types, such as mln_u8_t, etc.
+Their definitions can be found in melon-1.2.3/include/mln_types.h.
+
+4.Interfaces
+  1) String
+    a) mln_string_t *mln_new_string(const char *s);
+       This interface returns a mln_string_t object which is
+       allocated by malloc(). And its content is varied by the
+       argument. If the memory is not enough, NULL will be
+       returned.
+
+    b) mln_string_t *mln_dup_string(mln_string_t *str);
+       It duplicates the argument and returns a new object.
+       The new object is allocated by malloc().
+
+    c) mln_string_t *mln_ndup_string(mln_string_t *str,
+                                     mln_s32_t size);
+       It is the same as mln_dup_string(), but the second
+       argument indicates the length of the duplication.
+
+    d) mln_string_t *mln_refer_string(mln_string_t *str);
+       This interface creates a new pointer which points to the
+       same string contents that pointed by the argument.
+       It won't free the string contents when mln_free_string()
+       is called.
+
+    e) mln_string_t *mln_refer_const_string(char *s);
+       It is the same as mln_refer_string() but the argument
+       type.
+
+    f) void mln_free_string(mln_string_t *str);
+       It is used to free mln_string_t.
+       If 'str' is initialized by mln_refer_string() or
+       mln_refer_const_string(), the string contents will be
+       freed at the same time.
+
+    g) int mln_strcmp(mln_string_t *s1, mln_string_t *s2);
+       It is the same as strcmp() but the arguments' type.
+
+    h) int mln_const_strcmp(mln_string_t *s1, const char *s2);
+       This interface is the same as mln_strcmp() but the type
+       of the second argument.
+
+    i) int mln_strncmp(mln_string_t *s1,
+                       mln_string_t *s2,
+                       mln_u32_t n);
+       It is the same as strncmp().
+
+    j) int mln_const_strncmp(mln_string_t *s1,
+                             const char *s2,
+                             mln_u32_t n);
+       It is the same as mln_strncmp() but the type of the
+       second argument.
+
+    k) int mln_strcasecmp(mln_string_t *s1, mln_string_t *s2);
+       It is the same as strcasecmp().
+
+    l) int mln_const_strcasecmp(mln_string_t *s1,
+                                const char *s2);
+       It is the same as mln_strcasecmp() but the type of
+	   the second argument.
+
+    m) int mln_const_strncasecmp(mln_string_t *s1,
+                                 const char *s2,
+                                 mln_u32_t n); 
+       It is the same as strncasecmp().
+
+    n) int mln_strncasecmp(mln_string_t *s1,
+                           mln_string_t *s2,
+                           mln_u32_t n);
+       It is the same as mln_strncasecmp() but the type of
+       the second argument.
+
+    o) char *mln_strstr(mln_string_t *text,
+                        mln_string_t *pattern);
+       It is the same as strstr().
+
+    p) char *mln_const_strstr(mln_string_t *text,
+                              const char *pattern);
+       It is the same as mln_strstr() but the type of the
+       second argument.
+
+    q) mln_string_t *mln_str_strstr(mln_string_t *text,
+                                    mln_string_t *pattern);
+       It is used to get a string which starts from the
+       position that is matched with 'pattern'.
+
+    r) mln_string_t *mln_str_const_strstr(mln_string_t *text,
+                                          const char *pattern);
+       The same as mln_str_strstr() but the type of the
+       second argument.
+
+    s) char *mln_kmp_strstr(mln_string_t *text,
+                            mln_string_t *pattern);
+    t) char *mln_const_kmp_strstr(mln_string_t *text,
+                                  const char *pattern);
+    u) mln_string_t *mln_str_kmp_strstr(mln_string_t *text,
+                                        mln_string_t *pattern);
+    v) mln_string_t *mln_str_const_kmp_strstr(mln_string_t *text,
+                                              const char *pattern);
+       These four interfaces are the same as mln_strstr(),
+       mln_const_strstr(), mln_str_strstr() and mln_str_const_strstr(),
+       but implemented by KMP algorithm.
+
+    w) mln_string_t *mln_slice(mln_string_t *s,
+                               const char *sep_array
+                               /*ended by \0*/);
+       Slice string into several pieces.
+       Slicing characters can be given by the second argument.
+       This interface has a side-effect that the string buffer
+       will be destroyed. So you can call mln_dup_string() or
+       mln_ndup_string() at first.
+       The return value is a vector, and its last element is NULL.
+
+    x) void mln_slice_free(mln_string_t *array);
+       This interface frees the vector that mln_slice() returned.
+
+  2) Hash Table
+    struct mln_hash_attr {
+        hash_calc_handler    hash;
+        hash_cmp_handler     cmp;
+        hash_free_handler    free_key;
+        hash_free_handler    free_val;
+        mln_u32_t            len_base;
+        mln_u32_t            expandable;
+    };
+    typedef int  (*hash_scan_handler)(void * /*key*/,
+                                      void * /*val*/, void *);
+    typedef int  (*hash_calc_handler)(mln_hash_t *, void *);
+    /*
+     * cmp_handler's return value: 0 -- not matched, !0 -- matched.
+     */
+    typedef int  (*hash_cmp_handler) (mln_hash_t *, void *, void *);
+    typedef void (*hash_free_handler)(void *);
+
+    This structure is used to be the argument that will be passed
+    to mln_hash_init() to initialize a hash table.
+    hash -- is used to calculate and return a hash value to be
+    the hash table index.
+    cmp -- is used to compare with two hash elements' value.
+    free_key and free_val -- are used to free hash element's key
+    and value. These two pointers can be NULL.
+    len_base -- is an ideal value as a seed to be passed to a
+    prime generator to calculate the real hash table length.
+    expandable -- is a flag to indicate whether operations
+    expand hash table dynamically. 0 means no, otherwise yes.
+
+    a) mln_hash_t *mln_hash_init(struct mln_hash_attr *attr);
+       Initialize a hash table.
+
+    b) void mln_hash_destroy(mln_hash_t *h,
+                             enum mln_hash_flag flg);
+       Destroy the hash table.
+       If people set 'free_key' and (or) 'free_value', this
+       function will free hash element's key and (or) value at
+       the same time.
+
+    c) void *mln_hash_search(mln_hash_t *h, void *key);
+       This interface searches the value data according to
+       the key.
+
+    d) int mln_hash_insert(mln_hash_t *h, void *key, void *val);
+       It inserts a key-value into the hash table.
+       If malloc() cannot allocate memory, -1 will be returned.
+
+    e) void mln_hash_remove(mln_hash_t *h,
+                            void *key,
+                            enum mln_hash_flag flg);
+       It removes a key-value from the hash table.
+       If the 'free_key' and (or) 'free_value' are set, the
+       element's key and (or) value will be freed at the same
+       time.
+
+    f) int mln_hash_scan_all(mln_hash_t *h,
+                             hash_scan_handler handler,
+                             void *udata);
+       This interface is used to scan the whole table and
+       process every key-value by the handler.
+       The third argument of handler is the udata that is a
+       custom structure pointer.
+
+  3) Fibonacci Heap
+    struct mln_fheap_attr {
+        fheap_cmp                cmp;
+        fheap_copy               copy;
+        fheap_key_free           key_free;
+        void                    *min_val;
+        mln_size_t               min_val_size;
+    };
+    cmp -- is a function pointer, its prototype is
+        typedef int (*fheap_cmp)(const void *, const void *);
+    The two arguments are custom structure pointers.
+    And the return value is: 0 - ptr1 < ptr2, !0 - ptr1 >= ptr2.
+    copy -- is also a function pointer, its prototype is
+        typedef void (*fheap_copy)(void *dest, void *src);
+    This function is used to copy data from 'src' to 'dest'.
+    key_free -- is a function pointer to free key's value in
+    a heap node. Its prototype is
+        typedef void (*fheap_key_free)(void *);
+    This pointer can be NULL.
+    min_val -- is a key's value actually. This is the minimum
+    value in the heap.
+    min_val_size -- is the size of 'min_val' structure.
+
+    a) mln_fheap_node_t* mln_fheap_node_init(mln_fheap_t *fh,
+                                             void *key);
+       It initializes a fibonacci heap node.
+       The first argument is a pointer points to a fibonacci heap.
+       The second one is a user data.
+       If memory is not enough, NULL will be returned.
+
+    b) void mln_fheap_node_destroy(mln_fheap_t *fh,
+                                   mln_fheap_node_t *fn);
+       It destroys a heap node and frees its system resources.
+       The second argument is the pointer that
+       mln_fheap_node_init() returned.
+       If key_free isn't NULL, the key's value in the heap node
+       will be freed.
+
+    c) mln_fheap_t *mln_fheap_init(struct mln_fheap_attr *attr);
+       It initializes and returns a fibonacci heap.
+
+    d) void mln_fheap_destroy(mln_fheap_t *fh);
+       It destroys a fibonacci heap. If 'key_free' is not NULL,
+       the key's value in every heap node will be freed by
+       the function 'key_free' at the same time.
+
+    e) void mln_fheap_insert(mln_fheap_t *fh,
+                             mln_fheap_node_t *fn);
+       This interface inserts a heap node.
+
+    f) void mln_fheap_delete(mln_fheap_t *fh,
+                             mln_fheap_node_t *node);
+       This interface removes a heap node.
+
+    g) mln_fheap_node_t* mln_fheap_minimum(mln_fheap_t *fh);
+       It retrieves a minimum heap node.
+       If the heap is empty, NULL will be returned.
+
+    h) mln_fheap_node_t* mln_fheap_extract_min(mln_fheap_t *fh);
+       Extract the node whose key value is minimum in the heap.
+       If the heap is empty, NULL will be returned.
+
+    i) int mln_fheap_decrease_key(mln_fheap_t *fh,
+                                  mln_fheap_node_t *node,
+                                  void *key);
+       It decreases the key's value of the specified node to
+       the key.
+       The type of key must be identical with the type of keys
+       in heap nodes.
+       The return value is: -1 - key error, 0 - succeed.
+
+  4) Red-Black Tree
+    struct mln_rbtree_attr {
+        rbtree_cmp                cmp;
+        rbtree_free_data          data_free;
+    };
+    cmp -- is a function pointer to compare with two RB-tree
+    data. Its prototype is
+        typedef int (*rbtree_cmp)(const void *, const void *);
+    The type of two arguments is custom.
+    And the return value is: >0 -- the first one is greater
+    than the second; ==0 -- equal; <0 -- less.
+    data_free -- is a function pointer to free data in a tree
+    node. This pointer can be NULL. Its prototype is
+        typedef void (*rbtree_free_data)(void *);
+
+    a) mln_rbtree_node_t *mln_rbtree_new_node(mln_rbtree_t *t,
+                                              void *data);
+       It creates a new RB-tree node.
+       The first argument is the pointer points to a RB-tree
+       which is the one that the new node is going to be
+       inserted.
+       The second one is a user data pointer.
+       If memory is not enough, NULL will be returned.
+
+    b) void mln_rbtree_free_node(mln_rbtree_t *t,
+                                 mln_rbtree_node_t *n);
+       This function destroys RB-tree node and frees its
+       resources.
+       If RB-tree's 'data_free' is not NULL, the user data in
+       the node will be freed by calling function data_free().
+
+    c) mln_rbtree_t *mln_rbtree_init(struct mln_rbtree_attr *attr);
+       It initializes an RB-tree.
+       If memory is not enough, NULL will be returned.
+
+    d) void mln_rbtree_destroy(mln_rbtree_t *t);
+       It destroys an RB-tree.
+       If 'data_free' is not NULL, all user data in the whole
+       tree will be freed.
+
+    e) void mln_rbtree_insert(mln_rbtree_t *t,
+                              mln_rbtree_node_t *n);
+       It inserts an RB-tree node into a tree.
+
+    f) void mln_rbtree_delete(mln_rbtree_t *t,
+                              mln_rbtree_node_t *n);
+       It removes an RB-tree node from a tree.
+
+    g) mln_rbtree_node_t* mln_rbtree_successor(mln_rbtree_t *t,
+                                         mln_rbtree_node_t *n);
+    It finds n's successor.
+    If nothing can be found, &(t->nil) will be returned.
+    This return value is the address of tree's variable 'nil',
+    we can use mln_rbtree_null() to test it.
+
+    h) mln_rbtree_node_t* mln_rbtree_search(mln_rbtree_t *t,
+                                     mln_rbtree_node_t *root,
+                                            const void *key);
+       It searches an RB-tree node whose key is equal to the 'key'.
+       The routine will start from 'root'. If nothing can be found,
+       &(t->nil) will be returned.
+
+    i) mln_rbtree_node_t* mln_rbtree_min(mln_rbtree_t *t);
+       It returns the node whose user data is minimum in a tree.
+       If the tree is empty, &(t->nil) will be returned.
+
+    j) mln_rbtree_null(ptr,ptree);
+       This function is used to test the return value of most
+       rbtree interfaces. If function returns !0, the 'ptr' is
+       pointing to the address of ptree's 'nil'. Otherwise, the
+       data that is pointed by 'ptr' is valid.
+
+    k) int mln_rbtree_scan_all(mln_rbtree_t *t,
+                               mln_rbtree_node_t *root,
+                               rbtree_act act,
+                               void *udata);
+	   This function is used to scan all rbtree nodes and
+       process them by the callback function 'act'.
+       t -- is a rbtree pointer.
+       root -- is the start node that is given by the caller.
+       This node must be existent in 't'.
+       act -- is a callback function which is defined by the
+       caller. Its prototype is
+           typedef int (*rbtree_act)(void *rn_data, void *udata);
+       The first argument is the data of rbtree node. And
+       the second one is an user data that is passed by the
+       fourth argument of mln_rbtree_scan_all().
+
+  5) Path
+    a) char *mln_get_path(void);
+       Depending on the parameter of shell script 'install',
+       the installation path can be specified.
+       We have to get the absolute path because some
+       components need it.
+
+  6) Prime number Generator
+    a) mln_u32_t mln_calc_prime(mln_u32_t n);
+       It returns a prime number which is equal to or
+       greater than n.
+
+  7) Lock
+    The lock that we discuss here is a portable spin lock.
+
+    a) MLN_LOCK_INIT(lock_ptr)
+       It initializes a spin lock.
+       The argument is a lock pointer.
+       The return value is an integer, 0 means OK,
+       otherwise the return value is equivalent to the
+       error number.
+
+    b) MLN_LOCK_DESTROY(lock_ptr)
+       It destroys a spin lock.
+       The return value is an integer, 0 means OK,
+       otherwise the return value is equivalent to the
+       error number.
+
+    c) MLN_LOCK(lock_ptr)
+       This interface triggers a lock.
+
+    d) MLN_TRYLOCK(lock_ptr)
+       This interface tries to lock. When it fails,
+       !0 will be returned. Otherwise 0.
+
+    e) MLN_UNLOCK(lock_ptr)
+       This interface releases the lock.
+
+  8) Log
+    There are some interfaces about log files, but not all
+    of them are useful for developers. So we just discuss
+    a part of them.
+
+    a) mln_log(err_lv,msg,...);
+       This interface is widely used in Melon.
+       We use it to record log message.
+       The first argument is log level. There are five
+       levels: none, report, debug, error and nolog.
+       The initial log level can be set in the
+       configuration file. The second argument is a string.
+       It likes the first argument 'fmt' in printf(). And it
+       supports some format control characters, such as %s,
+       %l, %d, %c, %f, %x, %X (=%lx in printf()), %u and
+       %U (=%lu in printf()).
+       Depending on the format control characters in msg,
+       the rest arguments can be none or even more than one.
+
+    b) char *mln_log_get_dir_path(void);
+       It returns the path of log files' directory.
+
+    c) char *mln_log_get_log_path(void);
+       It returns the path of a log file.
+
+    d) char *mln_log_get_pid_path(void);
+       It returns the path of a pid file.
+       The pid of the parent process is recorded in this file.
+
+  9) Lexer
+     In Melon, Lexer is very easy to use and customize.
+     Even though, there are some open source lexer generators,
+     such as flex, but they are not so much simple as Melon's.
+     If you would like to create a lexer, you can follow these
+     steps below:
+     (1) #include "mln_lex.h"
+     (2) Define structures, enumerations, declarations and
+         some arrays.
+         We just need to write a macro
+         MLN_DEFINE_TOKEN_TYPE_AND_STRUCT() at the beginning
+         of the file below #include "mln_lex.h".
+         For example, if we are going to define a lexer, its
+         functions' scope is 'extern'. The prefix of every
+         function, structure and enumeration name is
+         'mln_test_lex'. Its token prefix is 'TEST' and it
+         has three keywords 'for', 'while' and 'switch', as
+         shown below.
+
+         MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(extern,
+                                          mln_test_lex,
+                                          TEST,
+                                          TEST_TK_FOR,
+                                          TEST_TK_WHILE,
+                                          TEST_TK_SWITCH);
+
+         The TEST_TK_FOR, TEST_TK_WHILE and TEST_TK_SWITCH are
+         the token types of keywords 'for', 'while' and 'switch'.
+         We should pay attention to the enumeration sequence
+         that the custom special character declarations
+         should be written before keywords'.
+         And the sequence of keywords' enumerations should be
+         identical with the sequence written in a keywords array. 
+     (3) Then we need to define functions and related arrays,
+         e.g.,
+         MLN_DEFINE_TOKEN(mln_test_lex,
+                          TEST,
+                          {TEST_TK_FOR, "TEST_TK_FOR"},
+                          {TEST_TK_WHILE, "TEST_TK_WHILE"},
+                          {TEST_TK_SWITCH, "TEST_TK_SWITCH"});
+         Now we have already defined 39 functions and a
+         structure array.
+         There are 33 functions are associated with processing
+         special characters.
+         One function is for setting custom functions to process
+         special characters.
+         One function is for creating token object.
+         One is for destroying token object.
+         One is for processing keywords.
+         One is for processing all special characters' hooks.
+         The last one function is for getting a token from a file
+         or string buffer.
+         The array maintains all special characters' handlers.
+         You can refer to the include/mln_lex.h and src/mln_conf.c.
+     (4) Set lexer's attributions and call MLN_LEX_INIT_WITH_HOOKS()
+         to initialize a lexer object.
+         e.g.,
+             struct mln_lex_attr attr;
+             ... //Set some special characters' processing hooks.
+             mln_lex_t *lex = NULL;
+             MLN_LEX_INIT_WITH_HOOKS(mln_test_lex, lex, &attr);
+
+         Now a lexer has been created. The structure of attr is
+         defined as
+             struct mln_lex_attr {
+                 enum {
+                     mln_lex_file,
+                     mln_lex_buf
+                 } input_type;
+                 union {
+                     mln_s8ptr_t   filename;
+                     /*
+                      * file_buf must be ended by '\0'.
+                      */
+                     mln_s8ptr_t   file_buf;
+                 } input;
+                 /*
+                  * keywords must be ended by NULL
+                  */
+                 char              **keywords;
+                 mln_lex_hooks_t   *hooks;
+             };
+         input_type -- is used to indicate the type of input,
+         file or string buffer.
+         input -- maintains the relevant information of the
+         input, file name or string buffer.
+         keywords -- is a vector which records all keywords that
+         we need and the last element in vector is NULL. 
+
+     Even though, there are 39 functions has been built in step c),
+     but only three of them should be concerned.
+
+     a) mln_test_lex_struct_t *mln_test_lex_new(mln_lex_t *lex,
+                                    enum mln_test_lex_enum type);
+        It initializes a new token.
+        If memory is not enough, NULL will be returned.
+
+     b) void mln_test_lex_free(mln_test_lex_struct_t *ptr);
+        It frees a token object which is given by the argument.
+
+     c) mln_test_lex_struct_t *mln_test_lex_token(mln_lex_t *lex);
+        It returns a token object.
+        If it is called again, the next token will be returned.
+        If the lexer encounters the EOF, a token object with
+        the type TK_xxx_TK_EOF will be returned.
+        If lexer encounters an error, NULL will be returned
+        and the error number will be set in it.
+
+     Besides these three interfaces, there are some others we
+     also need to know.
+     a) void mln_lex_destroy(mln_lex_t *lex);
+        It destroys the lexer object.
+        But this function does not destroy all token objects
+        those are created by a lexer object.
+
+     b) char *mln_lex_strerror(mln_lex_t *lex);
+        As strerror(), this function will return an error message.
+
+     c) char mln_geta_char(mln_lex_t *lex);
+        Get the next character from a file or a string buffer.
+        If lexer encounters EOF, MLN_EOF will be returned.
+        If it encounters an error, MLN_ERR will be returned
+        and error number will be set.
+
+     d) int mln_puta_char(mln_lex_t *lex, char c);
+        It puts a character into the result buffer which is a
+        string that xxx_token() returned.
+        If it encounters an error, MLN_ERR will be returned
+        and the error number will be set.
+
+     e) void mln_step_back(mln_lex_t *lex);
+        It steps back a character.
+        If this interface is called between calling
+        mln_geta_char() twice, the returned characters via
+        calling mln_geta_char() twice are the same.
+
+     f) int mln_isletter(char c);
+        This interface is equivalent to
+        if (c == '_' || isalpha(c)).
+
+     g) int mln_isoctal(char c);
+        This interface is equivalent to
+        if (c >= '0' && c < '8').
+
+     h) int mln_ishex(char c);
+        This interface is equivalent to
+        if (isdigit(c) || \
+            (c >= 'a' && c <= 'f') || \
+            (c >= 'A' && c <= 'F')).
+
+  10) Configuration
+     As shown below, this is the architecture of configuration.
+     -------       -------        -------       -------
+    |       |     |       |      |       |     |       |
+    |  mln_ |---->| mln_  |----->|  mln_ |---->| mln_  |
+    | conf_t|     | conf_ |      | conf_ |     | conf_ |
+    |       |     |domain_|      | cmd_t |     | item_t|
+    |       |     |t      |      |       |     |       |
+    |       |     |       |      |       |      -------
+    |       |     |       |      |       |\
+    |       |     |       |       -------  \
+    |       |     |       |\                ...
+    |       |      -------  \
+    |       |                ....
+    |       |\
+     -------  \
+               ...
+            Figure 3. Configuration architecture.
+
+     Except mln_conf_item_t, other structures have a function
+     pointer named search.
+     In mln_conf_t, its prototype is
+         typedef mln_conf_domain_t *
+                       (*search_domain)(mln_conf_t *, char *);
+	 This function is used to search a conf-domain.
+     The first argument is a configuration object returned by
+     mln_get_conf(). The second argument is a string indicating
+     the domain name.
+     If domain is existent, the domain object (mln_conf_domain_t)
+     will be returned. Otherwise, the return value is NULL.
+
+     In mln_conf_domain_t, the prototype of function 'search' is
+         typedef mln_conf_cmd_t *
+                   (*search_cmd) (mln_conf_domain_t *, char *);
+     This function is used to search a conf-command.
+     The first argument is a domain object. The second argument
+     is the command name that we are looking for.
+     If command is not existent, NULL will be returned.
+
+	 In mln_conf_cmd_t, the prototype of function 'search' is
+         typedef mln_conf_item_t *
+                 (*search_item)  (mln_conf_cmd_t *, mln_u32_t);
+     The first argument is a command object. The second one is
+     an index indicating the position of the item in command.
+     This index is start from 1.
+     If index value is invalid, NULL will be returned.
+
+	 The mln_conf_item_t is the smallest unit in configuration.
+     Its structure is
+         struct mln_conf_item_s {
+             enum {
+                 CONF_NONE = 0,
+                 CONF_STR,
+                 CONF_CHAR,
+                 CONF_BOOL,
+                 CONF_INT,
+                 CONF_FLOAT
+            } type;
+            union {
+                 mln_string_t *s;
+                 mln_s8_t c;
+                 mln_u8_t b;
+                 mln_sauto_t i;
+                 float f;
+            } val;
+        };
+     We can operate this structure directly to get the value
+     that we need.
+
+	 About the usage of configuration file, there are something
+     we need to know.
+         1. Configuration file has a concept named domain.
+            The number of domain is unlimited. But one domain
+            cannot be nested in the other one, which means the
+            level of domain is always 1.
+         2. We can define any domains or commands in a
+            configuration file (of course, their tokens should
+            be valid to the lexer) and Melon won't report any
+            warnings or errors while there is an unused command
+            or domain written in file.
+         3. The specification of configuration lexical analyzer
+            follows these rules below:
+            I.   The name in the configuration file should be
+                 start with a letter or бо_'. And the rest
+                 characters can be composed by digit, letter
+                 and бо_'.
+            II.  Domain can be defined by a closure which is
+                 composed by a domain name, a left brace and a
+                 right brace at least.
+            III. Except domain, the others are all called command.
+                 The first token in a command is the command name.
+                 And the rest tokens are called items. The
+                 number of item in a command can be 0.
+            IV.  The type of an item can be the one of following
+                 types: string, character, boolean, integer and
+                 float. Their written form is compatible with C
+                 language.
+            V.   Every command should be ended by a бо;'.
+            VI.  The way of writing comments is the same as C
+                 language.
+         4. There are two keywords that we support, 'on' and 'off'.
+            Their value is 1 and 0 (type CONF_BOOL) recorded in
+            variable 'b' of union 'val' in an item object.
+
+     There are some other interfaces we need to know.
+     a) mln_conf_t *mln_get_conf(void);
+        It gets a 'mln_conf_t' object.
+        Then we can use its 'search' to find out the domain that
+        we need.
+        The return value won't be NULL until Melon crashed.
+
+     b) mln_u32_t mln_get_cmd_num(mln_conf_t *cf, char *domain);
+        It returns the number of commands in the domain.
+        If domain is not existent, NULL will be returned.
+
+     c) void mln_get_all_cmds(mln_conf_t *cf,
+                              char *domain,
+                              mln_conf_cmd_t **vector);
+        It puts all commands in the domain into the third argument.
+        Vector should be allocated before calling.
+
+     d) mln_u32_t mln_get_cmd_args_num(mln_conf_cmd_t *cc);
+        It returns the number of items which belong to 'cc'.
+
+     e) int mln_conf_set_hook(reload_handler reload, void *data);
+        This interface is used to set a callback function which
+        is used to reload one or more configuration items.
+        If memory is not enough, -1 will be returned.
+
+  11) Event
+     Just like libevent, Melon's event module also integrates epoll,
+     kqueue and select.
+     It supports three kinds of event: timer event, signal event
+     and file descriptor event.
+
+     a) mln_event_t *mln_event_init(mln_u32_t is_main);
+        It initializes an event object.
+        is_main -- indicates whether the event object is initialized
+        as a main event object.
+
+     b) void mln_event_destroy(mln_event_t *ev);
+        It destroys an event object.
+
+     c) int mln_event_set_fd(mln_event_t *event,
+                             int fd, 
+                             mln_u32_t flag,
+                             int timeout_ms,
+                             void *data,
+                             ev_fd_handler fd_handler);
+        This function sets a file descriptor event.
+        The first argument is an event object.
+        The second one is the file descriptor that we are interested.
+        The third one is a flag indicating the type of this event.
+        Some flags are listed below:
+            I.    M_EV_RECV
+                  This flag indicates the event is a read event.
+            II.   M_EV_SEND
+                  Indicates the event is a write event.
+            III.  M_EV_ERROR
+                  Indicates the event is an error event.
+            IV.   M_EV_ONESHOT
+                  Indicates the event only triggered once.
+            V.    M_EV_NONBLOCK
+                  Set file descriptor to be non-blocking mode.
+            VI.   M_EV_BLOCK
+                  Set file descriptor to be blocking mode.
+            VII.  M_EV_APPEND
+                  Set this flag will retain the old event type and
+                  the new type.
+            VIII. M_EV_CLR
+                  Remove this file descriptor event.
+        I, II, III, IV, V (or VI), VII can be used in the same
+        one event combined with бо|'.
+        The fourth is a millisecond timer. If we don't want to
+        set a timer, we can set this value to be M_EV_UNLIMITED.
+        If we need to modify the event type of a file descriptor,
+        and we don't want to modify its timer, we can set this
+        value to be M_EV_UNMODIFIED.		
+        The fifth is a user data that will be passed to a function
+        which is given by the last argument.
+        The last one is a function pointer, its prototype is
+            typedef void (*ev_fd_handler) (mln_event_t *,
+                                           int, void *);
+        There are three arguments of function 'fh_handler': 
+        an event object, a file descriptor and a user data.
+        If an event is failed to set, -1 will be returned.
+        Otherwise, the returned value is 0.
+
+     d) int mln_event_set_timer(mln_event_t *event,
+                                mln_u32_t msec,
+                                void *data,
+                                ev_tm_handler tm_handler);
+        It sets a timer event.
+        The first argument is an event object.
+        The second one is a millisecond timer. Its unit is 10ms.
+        Third argument is a user data.
+        The last one is an event handler. Its prototype is
+            typedef void (*ev_tm_handler) (mln_event_t *,
+                                              void *);
+        The arguments of 'tm_handler' are an event object and
+        a user data.
+        If an event is failed to set, -1 will be returned.
+        Otherwise, the returned value is 0.
+
+     e) int mln_event_set_signal(mln_event_t *event,
+                                 mln_u32_t flag,
+                                 int signo,
+                                 void *data,
+                                 ev_sig_handler sg_handler);
+        It sets a signal event.
+        The first argument is an event object.
+        The second one is a flag indicating the type of event to
+        install or uninstall the event handler. Its value can be
+        M_EV_SET or M_EV_UNSET.
+        The third one is the signal number that we catch.
+        The fourth one is a user data.
+        Last one is an event handler. Its prototype is
+            typedef void (*ev_sig_handler) (mln_event_t *,
+                                            int, void *);
+        The arguments of 'sg_handler' are an event object,
+        a signal number and a user data.
+        If an event is failed to set, -1 will be returned.
+        Otherwise, 0 will be returned.
+        It is different between this interface and the one in
+        libevent. We allow to set signal event handlers
+        (no matter they are different or not) for the same one
+        signal into one or many event objects.
+        When a signal raised, the handlers that are whether in
+        the same event object or not, will be called in their
+        thread.
+
+     f) void mln_dispatch(mln_event_t *event);
+        It dispatches every event.
+        If a routine jumps into this function, it won't be out
+        until encountering two situations:
+            calling mln_event_set_break() to break out
+        or
+            a child process is forked.
+
+     g) void mln_event_set_break(mln_event_t *ev);
+        It lets the routine break out from mln_dispatch().
+
+     h) void mln_event_set_callback(mln_event_t *ev,
+                                    dispatch_callback dc,
+                                    void *dc_data);
+        Besides fd, timer and signal callback handlers,
+        there is another one (this) can be called to
+        process some other things in dispatch routine.
+        The second argument is a function pointer, its prototype
+        is
+            typedef void (*dispatch_callback) (mln_event_t *,
+                                               void *);
+
+     i) void mln_event_set_fd_timeout_handler(mln_event_t *event,
+                                              int fd,
+                                              void *data,
+                                   ev_fd_handler timeout_handler);
+        This interface will set a callback handler for processing
+        the case that the fd's timer expired.
+
+  12) Connection I/O
+     Connection I/O, for now, only supports TCP (actually, it
+     also supports file I/O).
+
+     a) void mln_tcp_connection_init(mln_tcp_connection_t *c,
+                                     int fd);
+        Initialize a connection object which is provided by
+        the first argument.
+
+     b) void mln_tcp_connection_destroy(mln_tcp_connection_t *c);
+        Destroy a connection object. Free c's buffers.
+
+     c) int mln_tcp_connection_set_buf(mln_tcp_connection_t *c,
+                                      void *buf,
+                                      mln_u32_t len,
+                                      int type,
+                                      int is_referred);
+        Set a connection's buffer.
+        The connection object has two buffers. One for sending,
+        the other for receiving.
+        We can identify the buffer type from the argument 'type'.
+        It has two value: M_C_SEND and M_C_RECV.
+        The content of send/receive buffer can be given by
+        two methods. One is allocating a buffer and copying the
+        contents in 'buf' to this new buffer. The other is setting
+        send/receive buffer pointer to the 'buf'.
+
+     d) void mln_tcp_connection_clr_buf(mln_tcp_connection_t *c,
+                                        int type);
+        Clear and free connection's buffer.
+        The buffer type is indicated by type.
+        Type value can be M_C_SEND or M_C_RECV.
+
+     e) void *mln_tcp_connection_get_buf(mln_tcp_connection_t *c,
+                                         int type);
+        Get a connection's buffer.
+        The buffer type is indicated by the second argument,
+        its value can be M_C_SEND or M_C_RECV.
+
+     f) int mln_tcp_connection_send(mln_tcp_connection_t *c);
+        Send data via TCP. There are four kinds of return value.
+            I.   M_C_FINISH
+                 Data transfer is completed.
+            II.  M_C_NOTYET
+                 Data transfer is uncompleted.
+            III. M_C_ERROR
+                 Transfer error.
+            IV.  M_C_CLOSED
+                 Connection closed by peer.
+        If a return value is M_C_FINISH, we can get buffer via
+        mln_tcp_connection_get_buf().
+        And we should clear connection's buffer after we get the
+        concerned buffer via mln_tcp_connection_clr_buf(). 
+
+     g) int mln_tcp_connection_recv(mln_tcp_connection_t *c);
+        Receive data via TCP.
+        The return value is the same as mln_tcp_connection_send().
+
+     h) M_C_SND_EMPTY(c_ptr);
+        Test whether the send buffer is empty or not.
+
+     i) M_C_RCV_EMPTY(c_ptr);
+        Test whether the receive buffer is empty or not.
+
+     j) M_C_SND_NULL(c_ptr);
+        Test whether the send buffer pointer is NULL or not.
+
+     k) M_C_RCV_NULL(c_ptr);
+        Test whether the receive buffer pointer is NULL or not.
+
+  13) Global resources Initialization
+     a) void mln_global_init(void);
+        This interface is used to initialize global variables.
+        It is called in the case that configuration file is not
+        loaded.
+        If developers need to initialize some global variables
+        independent of the configuration, they can write the code
+        directly in this function.
+
+     b) int mln_init_all_resource(void);
+        This interface is used to initialize global variables
+        those are dependent on the configuration.
+        People can write the code directly in this function.
+
+  14) Queue
+
+     struct mln_queue_attr {
+         mln_uauto_t            qlen;
+         queue_free             free_handler;
+     };
+
+     This structure is used to initialize a queue data structure.
+     qlen -- is the length of the queue.
+     free_handler -- is a function pointer to free the element's
+     memory in queue. Its prototype is
+         typedef void (*queue_free)(void *);
+     The argument is the data pointer of an element.
+
+     There are 12 interfaces for this data structure.
+     a) mln_queue_empty(q)
+	 It is used to test whether the queue is empty.
+
+     b) mln_queue_full(q)
+     It is used to test whether the queue is full.
+
+     c) mln_queue_length(q)
+     It is used to get the queue length.
+
+     d) mln_queue_element(q)
+     It is used to get the number of elements currently in queue.
+
+     e) mln_queue_t *mln_queue_init(struct mln_queue_attr *attr);
+     It is used to initialize a queue object.
+
+     f) void mln_queue_destroy(mln_queue_t *q);
+     It is used to destroy a queue object.
+
+     g) int mln_queue_append(mln_queue_t *q, void *data);
+     It is used to append an element to the queue.
+
+     h) void *mln_queue_get(mln_queue_t *q);
+     It is used to get the first element in the queue.
+
+     i) void mln_queue_remove(mln_queue_t *q);
+     It is used to remove the first element from the queue.
+     And this interface won't free the memory of the first element.
+
+     j) void *mln_queue_search(mln_queue_t *q, mln_uauto_t index);
+     It is used to search an element via 'index'.
+     'index' starts from 0.
+
+     k) void mln_queue_free_index(mln_queue_t *q, mln_uauto_t index);
+     It is used to remove the element that located by 'index' in
+     the queue and free its memory.
+
+     l) int mln_queue_scan_all(mln_queue_t *q,
+                               queue_scan scan_handler,
+                               void *udata);
+     It is used to scan all elements in the queue.
+     scan_handler -- is a function pointer that is used to process
+     every element. Its prototype is
+         typedef int (*queue_scan)(void *, void *);
+     The first argument is the pointer of an element. The second
+     one is a user data.
+
+  15) Stack
+
+     struct mln_stack_attr {
+         stack_free               free_handler;
+         stack_copy               copy_handler;
+     };
+     This structure is used to initialize a stack object.
+     free_handler -- is a function pointer to free stack data.
+     Its prototype is
+         typedef void (*stack_free)(void *);
+     The argument is a stack data.
+     copy_handler -- is a function pointer to duplicate a stack data.
+     Its prototype is
+         typedef void *(*stack_copy)(void *);
+     The argument is the stack data.
+
+     There are 7 interfaces for stack.
+     a) mln_stack_empty(s)
+     It is used to test whether the stack is empty.
+
+     b) mln_stack_t *mln_stack_init(struct mln_stack_attr *attr);
+     This interface is used to initialize a stack object.
+
+     c) void mln_stack_destroy(mln_stack_t *st);
+     This interface is used to destroy a stack object.
+
+     d) int mln_stack_push(mln_stack_t *st, void *data);
+     It is used to push a data into the stack.
+
+     e) void *mln_stack_pop(mln_stack_t *st);
+     It is used to pop a data out of the stack. 
+
+     f) void *mln_stack_top(mln_stack_t *st);
+     It is used to get the top data in the stack.
+
+     g) mln_stack_t *mln_stack_dup(mln_stack_t *st);
+     It is used to duplicate a stack data.
+
+  16) Parser and Parser Generator
+     Parser can be used to parse a text which is in a file
+     or buffer automatically.
+     And it also can do some semantic actions.
+     How to use it? Just follow these steps below.
+
+     1. We have to think how many keywords or special characters
+        that lexer has. Because the parse depends on it.
+        In our example, I only define one keyword -- 'for'.
+
+     2. We have to think what kind of syntax that we need.
+        That means we need to determine the productions.
+        In our example,
+            ss -> s eof
+            s  -> v = e
+            s  -> e
+            e  -> v
+            v  -> ID
+            v  -> * e
+	    With these productions, we can write
+            **a = ***c
+        in a file and it will pass the parsing.
+
+     3. How to get a parser? We can use parser generator to generate
+        it. How to define a parser generator? In our example, we can
+        write
+            MLN_DECLARE_PASER_GENERATOR(static,
+                                        test1,
+                                        TEST1,
+                                        TEST1_TK_FOR);
+            MLN_DEFINE_PASER_GENERATOR(static,
+                                       test1,
+                                       TEST1,
+                                      {TEST1_TK_FOR, "TEST_TK_FOR"});
+            mln_production_t prod_tbl[] = {
+                {"SS:S TEST1_TK_EOF", NULL},
+                {"S:V TEST1_TK_EQUAL E", NULL},
+                {"S:E", NULL},
+                {"E:V", NULL},
+                {"V:TEST1_TK_ID", NULL},
+                {"V:TEST1_TK_AST E", NULL}
+            };
+        Now, we have defined a parser generator.
+        'prod_tbl' is the production array. The 'mln_production_t' is
+        defined as
+            typedef struct {
+                char                     *production;
+                semantic_func             func;
+            } mln_production_t;
+        production -- is a string indicating a production.
+        func -- is a function pointer that is used to execute some
+        semantic actions. Its prototype is
+            typedef int (*semantic_func)(mln_factor_t *left,
+                                         mln_factor_t **right,
+                                         void *data);
+        The first argument is indicating the left terminal.
+        The second argument is an array that includes all right
+        non-terminals.
+        The last one is a user data.
+        'mln_factor_t' is defined as
+            struct mln_factor_s {
+                void                     *data;
+                enum factor_data_type     data_type;
+                nonterm_free              nonterm_free_handler;
+                nonterm_copy              nonterm_copy_handler;
+                mln_sauto_t               cur_state;
+                int                       token_type;
+                mln_u32_t                 line;
+            };
+            enum factor_data_type {
+                M_P_TERM,
+                M_P_NONTERM
+            };
+        data -- is a structure pointer. If 'data_type' is M_P_TERM,
+        the type of 'data' will be 'test1_struct_t'. Otherwise,
+        its type will be a custom type.
+        nonterm_free_handler -- is a callback function to free
+        the 'data' if 'data_type' is M_P_NONTERM.
+        nonterm_copy_handler -- is a callback function to duplicate
+        the 'data' if 'data_type' is M_P_NONTERM.
+		cur_state -- is the state number in state transition table.
+        Just ignore it.
+        token_type -- is the type of token, such as TEST1_TK_FOR,
+        TEST1_TK_AST, etc.
+        line -- is the number of lines that token located in a text.
+
+        MLN_DECLARE_PASER_GENERATOR and MLN_DEFINE_PASER_GENERATOR
+        define a lot of functions, but only three functions we care.
+
+        a) void *test1_parser_generate(mln_production_t *prod_tbl,
+           mln_u32_t nr_prod);
+           This function is used to generate a big table that will
+           be used in the parser.          
+
+        b) int test1_parse(struct mln_parse_attr *pattr);
+           This function is used to parse a text.
+           pattr -- is a data structure pointer, it's defined as
+               struct mln_parse_attr {
+                   mln_production_t         *prod_tbl;
+                   mln_lex_t                *lex;
+                   void                     *pg_data;
+                   void                     *udata;
+               };
+           prod_tbl -- is the production array.
+           lex -- is a initialized lexer.
+           pg_data -- is the data that test1_parser_generate()
+           returned.
+           udata -- is the user data that the third argument of
+           semantic function.
+
+        c) void test1_pg_data_free(void *pg_data);
+        It is used to free the data that test1_parser_generate()
+        returned.
+
+     4. Get the intermediate result.
+        call function test1_parser_generate().
+            void *data;
+            data = test1_parser_generate(prod_tbl,
+                     sizeof(prod_tbl)/sizeof(mln_production_t));
+            if (data == NULL) {
+                mln_log(error, "parser generate failed.\n");
+                ...
+            }
+
+     5. Initialize the lexer.
+        We assume that the text which is going to be parsed is
+        in a buffer not file.
+
+            char text[] = "**a = ***c";
+
+            char *keywords[] = {"for", NULL};
+
+            mln_lex_t *lex = NULL;
+            struct mln_lex_attr lattr;
+            lattr.input_type = mln_lex_buf;
+            lattr.input.file_buf = text;
+            lattr.keywords = keywords;
+            lattr.hooks = NULL;
+            lex = mln_lex_init(&lattr);
+            if (lex == NULL) {
+                mln_log(error, "...\n");
+                test1_pg_data_free(ret_data);
+                ...
+            }
+
+     6. Parse
+        Now, we can parse the text.
+            struct mln_parse_attr pattr;
+            pattr.prod_tbl = prod_tbl;
+            pattr.lex = lex;
+            pattr.pg_data = data;
+            pattr.udata = NULL;
+            if (test1_parse(&pattr) < 0) {
+                mln_log(error, "Parse error.\n");
+                ...
+            }
+        'data' can be reused in this phase.
+
+     Now, the text has been parsed.
+     We can build a A.S.T via semantic actions.
+
+5. Process Module Development
+   In Melon, there are two methods to develop process module.
+   Let us discuss the first method.
+   I. Actually, it is not much different between application
+      program development and this one. We can write a normal
+      application program and configure its path and
+      parameters in Melon's configuration file.
+      Now, let us follow these steps to develop a process
+      module. Of course, we assume Melon has already installed.
+      1) write a program.
+         Example:
+         #include <stdio.h>
+         int main(int argc, char *argv[])
+         {
+             printf("This is a test. %s\n", argv[1]);
+             return 0;
+         }
+      2) compile this source file.
+         cc -o a a.c
+      3) modify Melon's configuration file.
+             vim /.../melon-xxx/conf/melon.conf
+         We assume the new program's path is '/home/John/a'.
+         There is a domian named 'exec_proc' in configuration
+         file. We can add a command in it.
+             keepalive/default "/home/John/a" "argument1";
+         Command name indicates the process type, there are
+         two types: keepalive and default.
+         'keepalive' will restart process when the process is
+         killed by an unexpected error or system command 'kill'.
+         'default' will do nothing when the process is terminated.
+      4) move source files to the directory 'modules/test', and
+         write a file 'configure' to build this new program
+         automatically.
+      5) start up Melon.
+     Now, this new program is running.
+     In the above example, the last argument in program 'a' is
+     not 'argument1' but a string of a file descriptor, even
+     though it is not written in the command. This file descriptor
+     is a connection between the master process and a worker process.
+     If command name is 'keepalive' and program 'a' is terminated,
+     this connection will be closed, and the master process of Melon
+     will receive this event and restart program 'a'. If
+     command name is 'default' and the file descriptor is closed,
+     Melon will never restart 'a' and ignore this event.
+
+   Then, let us see the second method.
+   II.This method will make Melon to be the real multiprocess
+      model.
+      In file '/.../melon-xxx/src/mln_process.c', there is a
+      function named 'mln_worker_process', its prototype is
+          void mln_worker_process(mln_event_t *ev);
+      This function is the main routine of every worker process.
+      The number of processes can be configured in 'melon.conf'.
+      And these processes is a kind of private processes forked
+      by the master process. And these processes will be
+      supervised by the master. If any one of them is terminated,
+      master will fork another one immediately.
+      In this method, the module development is easier than the
+      previous. We just need to write our code in function
+      'mln_worker_process'. That's all.
+
+   Now, the next essential is IPC. How to implement IPC?
+   Melon provides an easy way. We don't need to modify the original
+   source files. There is a directory for this, named 'ipc_handlers'.
+   All files in this directory are used to define the IPC message
+   types and their handlers.
+   File name can be separated in two parts.
+   The first one is the prefix of handlers' name. There are two
+   handlers. One is for master process named 'xxx_master' and the
+   other is for worker process named 'xxx_worker'.
+   The other part is the message type. This type will be defined
+   in '/.../melon-xxx/include/mln_ipc.h', and we don't need to
+   modify this file.
+   Executing shell script 'configure', this file will be re-
+   created automatically, then all message types are re-defined.
+   The prototypes of IPC handlers are:
+       void prefix_master(mln_event_t *ev,
+                          void *f_ptr,
+                          void *buf,
+                          mln_u32_t len,
+                          void **udata_ptr);
+       void prefix_worker(mln_event_t *ev,
+                          void *f_ptr,
+                          void *buf,
+                          mln_u32_t len,
+                          void **udata_ptr);
+   The first argument is an event object that is related with
+   this connection.
+   The second one is a 'mln_fork_t' object. It can provide us
+   some essentials about child process, such as TCP connection
+   object.
+   The third one is the data that master or worker received.
+   The fourth one indicates the length of 'buf'.
+   The last one is a custom data. The memory of it should be
+   allocated and freed by the handler. Melon won't initialize
+   or destroy it.
+   About IPC, there is a case that the master may send a message
+   to all child processes. Based on this case, Melon provides
+   an interface to scan and process all child processes' objects.
+   Its prototype is
+       int mln_fork_scan_all(mln_event_t *ev,
+                             mln_u32_t flag,
+                             int timeout_ms,
+                             ev_fd_handler fd_handler);
+   ev -- is the event object of the master process.
+   flag -- is the event flag which is bound with the file
+   descriptor that connects every child process and the master.
+   timeout_ms -- is the event timer.
+   fd_handler -- is the event handler.
+
+6. Thread Module Development
+   In Melon, there is only one model between multiprocess and
+   multithread. We can trigger one of them via the configuration
+   item 'thread_mode'. This command has only one parameter, it's
+   a boolean value. If its value is 'on', multithread model will
+   be triggered. Otherwise, multiprocess will be triggered.
+
+   Thread module development is not only like process
+   module development, but also like IPC development.
+   There is a directory named 'threads' that is provided for
+   maintaining thread module files. Every file is a thread
+   module. The file name is the thread's alias.
+   Every thread has an entrance named 'xxx_main' (xxx is the
+   thread alias). Its prototype is
+       int xxx_main(int argc, char **argv);
+   Thread will start from this function. This function is the
+   same as 'main()' in application program except its name.
+
+   Not all of these thread modules in directory 'threads' can
+   be started up. Only the thread modules that are written in
+   the domain 'thread_exec' in 'melon.conf' can be started up.
+
+   Now, let us see an example.
+   1) create a thread module file.
+          touch threads/hello
+      Then the thread's alias is 'hello', and its entrance
+      should be named 'hello_main'.
+
+   2) edit the thread file.
+          #include ...//include some essential header files.
+          int hello_main(int argc, char *argv[])
+          {
+              //this is a thread module.
+              mln_log(debug, "hello thread!\n");
+              return 0;
+          }
+      This thread is going to do one thing that output
+      'hello thread!' to the log file.
+      The last element in the second argument is a string
+      indicating a file descriptor that is combined with a
+      TCP connection for communicating with the main thread.
+      And the first element in the second argument is the
+      thread alias. The rest elements are all parameters.
+
+   3) modify configuration file.
+        thread_exec {
+            //format: restart|default 'alias' ["parameter",...];
+            //... Other threads
+            restart "hello";
+        }
+      In this example, 'restart' is the command name that
+      indicates Melon to restart this thread when it exited.
+      There is another command name 'default', it indicates
+      Melon to clean up the thread's resources when the thread
+      is terminated.
+      The type of alias and parameters must be the string.
+
+   4) start up Melon.
+
+   There is a command in the configuration file which is
+   'worker_process'. Its parameter notices Melon how many
+   worker processes will be started up.
+   If there is no thread in domain 'thread_exec', the worker
+   process will still be started up and do nothing.
+
+   Now, we discuss inter-thread communication.
+   As shown in Figure 3, it is the inter-thread communication
+   architecture.
+
+     ------------------------------------------------
+    |                 main thread                    |
+     ------------------------------------------------
+      |                 |         ......       |
+     ---------------   ---------------    ---------------
+    |child thread 1 | |child thread 2 |  |child thread N |
+     ---------------   ---------------    ---------------
+             Figure 3. Inter-thread communication.
+
+   We can see the message is only transferred between the
+   main thread and a child thread. If 'child_thread1' wants
+   to send a message to 'child_thread2', the message should
+   be delivered to the main thread at first, and then it
+   would be transferred to the destination thread.
+   This mechanism effectively reduces the coupling degree.
+   It is very like the micro kernel model.
+
+   Now, let us see the message format of inter-thread com-
+   munication.
+       typedef struct {
+           mln_string_t              *dest;
+           mln_string_t              *src;
+           double                     f;
+           void                      *pfunc;
+           void                      *pdata;
+           mln_sauto_t                sauto;
+           mln_uauto_t                uauto;
+           mln_s8_t                   c;
+           mln_s8_t                   padding[7];
+           enum {
+               ITC_REQUEST,
+               ITC_RESPONSE
+           }                          type;
+           int                        need_clear;
+       } mln_thread_msg_t;
+   dest --  is an alias indicating the destination thread.
+   If this alias is not existent, message will be dropped
+   by main thread, and the main thread won't send any
+   error message to the source thread.
+   src -- is an alias to indicatie the source thread. This
+   variable is set by main thread.
+   type -- indicating the type of message is a request or
+   response.
+   need_clear -- indicates whether the 'pdata' should be
+   freed.
+   The rest variables can be used to pass some arguments
+   and (or) a function pointer.
+   There are three interfaces we should know:
+   a) void mln_thread_clear_msg(mln_thread_msg_t *msg);
+      Free msg's memory.
+
+   b) void mln_thread_exit(int sockfd, int exit_code);
+      Exit the thread.
+
+   c) void mln_set_cleanup(void (*tcleanup)(void *), 
+                           void *data);
+      Set a cleanup function that will be called after
+      the thread exited.
