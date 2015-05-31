@@ -1405,7 +1405,7 @@ Their definitions can be found in melon-1.2.3/include/mln_types.h.
    process will still be started up and do nothing.
 
    Now, we discuss inter-thread communication.
-   As shown in Figure 3, it is the inter-thread communication
+   As shown in Figure 4, it is the inter-thread communication
    architecture.
 
      ------------------------------------------------
@@ -1415,7 +1415,7 @@ Their definitions can be found in melon-1.2.3/include/mln_types.h.
      ---------------   ---------------    ---------------
     |child thread 1 | |child thread 2 |  |child thread N |
      ---------------   ---------------    ---------------
-             Figure 3. Inter-thread communication.
+             Figure 4. Inter-thread communication.
 
    We can see the message is only transferred between the
    main thread and a child thread. If 'child_thread1' wants
