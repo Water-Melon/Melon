@@ -12,5 +12,6 @@
 
 void mln_global_init(void)
 {
+    cr0 = cr1 = cr2 = cr3 = 0;
 }
 
