@@ -843,11 +843,11 @@ void *realloc(void *ptr, size_t size)
     if (ptr == NULL) return mln_alloc(size);
     mln_u8ptr_t new_ptr = NULL;
     mln_blk_t *blk = (mln_blk_t *)(ptr - sizeof(mln_blk_t));
-    if (blk->blk_size >= size)
+    if (blk->blk_size >= size && size > ((blk->blk_size)>>1))
         return ptr;
     new_ptr = mln_alloc(size);
     if (new_ptr == NULL) return NULL;
-    memcpy(new_ptr, ptr, blk->blk_size);
+    memcpy(new_ptr, ptr, blk->blk_size>=size?size:blk->blk_size);
     free(ptr);
     return new_ptr;
 }

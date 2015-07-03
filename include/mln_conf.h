@@ -76,7 +76,8 @@ extern int mln_conf_load(void);
 extern void mln_conf_free(void);
 extern mln_conf_t *mln_get_conf(void);
 extern void mln_dump_conf(void);
-extern int mln_conf_set_hook(reload_handler reload, void *data);
+extern mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data);
+extern void mln_conf_unset_hook(mln_conf_hook_t *hook);
 extern void mln_conf_free_hook(void);
 
 extern mln_u32_t

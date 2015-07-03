@@ -799,14 +799,21 @@ static void mln_conf_hook_destroy(mln_conf_hook_t *ch)
     free(ch);
 }
 
-int mln_conf_set_hook(reload_handler reload, void *data)
+mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data)
 {
     mln_conf_hook_t *ch = mln_conf_hook_init();
-    if (ch == NULL) return -1;
+    if (ch == NULL) return NULL;
     ch->reload = reload;
     ch->data = data;
     conf_hook_chain_add(&gConfHookHead, &gConfHookTail, ch);
-    return 0;
+    return ch;
+}
+
+void mln_conf_unset_hook(mln_conf_hook_t *hook)
+{
+    if (hook == NULL) return;
+    conf_hook_chain_del(&gConfHookHead, &gConfHookTail, hook);
+    mln_conf_hook_destroy(hook);
 }
 
 void mln_conf_free_hook(void)

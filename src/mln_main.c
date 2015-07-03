@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     if (mln_conf_load() < 0) {
         return -1;
     }
-    if (mln_conf_set_hook(mln_log_reload, NULL) < 0) {
+    if (mln_conf_set_hook(mln_log_reload, NULL) == NULL) {
         return -1;
     }
 
@@ -194,7 +194,7 @@ static int mln_cmdline(int argc, char *argv[])
 static void output_version(void)
 {
     printf("Melon Platform.\n");
-    printf("Version 1.2.3.\n");
+    printf("Version 1.2.4.\n");
     printf("Copyright (C) Niklaus F.Schen (Chinese name: Shen Fanchen).\n");
     printf("\n");
 }

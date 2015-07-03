@@ -1,4 +1,14 @@
 
+Changes with melon 1.2.4                                          03 Jul 2015
+    *) Modified shell script 'configure'.
+
+    *) Modified the input arguments of KMP algorithm.
+
+    *) Modified the prototype of function 'mln_conf_set_hook'.
+
+    *) Added an interface 'mln_conf_unset_hook' to unset a
+       callback handler which is indicated by the argument.
+
 Changes with melon 1.2.3                                          10 May 2015
 
     *) Modified configuration's data structures.
@@ -15,7 +25,8 @@ Changes with melon 1.2.3                                          10 May 2015
 
     *) Added an interface for breaking out of 'mln_dispatch()'.
 
-    *) Added an interface for setting an callback routine in 'mln_dispatch()'.
+    *) Added an interface for setting an callback routine in
+       'mln_dispatch()'.
 
     *) Modified some interfaces' implementation in event module.
 

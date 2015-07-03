@@ -3,11 +3,33 @@
 # Copyright (C) Niklaus F.Schen.
 #
 
-#!/bin/bash
+#!/bin/sh
 
-#confirm install path
-install_path=$1
+#installation path
+install_path=`echo "/usr/local/melon"`
 
+#get all parameters
+for param in $@
+do
+	if [ $param == "--help" ]; then
+		echo -e "\nMelon platform."
+		echo "Copyright (C) Niklaus F.Schen."
+		echo "Options:"
+		echo -e "\t--prefix=INSTALL_PATH"
+		exit 0
+	fi
+	param_prefix=`echo $param|cut -d '=' -f 1`
+	param_suffix=`echo $param|cut -d '=' -f 2`
+	if [ $param_prefix == "--prefix" ]; then
+		install_path=$param_suffix
+	else
+		echo "Error: Invalid option \"$param\"."
+		exit 1
+	fi
+done
+
+#output installation path
+echo -e "Installation Path \t[$install_path]"
 #build path.c & h
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
 echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
@@ -243,27 +265,30 @@ do
 done
 echo "" >> Makefile
 echo -e "SA_LIB_OBJS\t= objs/mln_salloc.o objs/mln_log.o objs/mln_sa_rbtree.o objs/mln_defs.o objs/mln_path.o" >> Makefile
-echo -e "SA_LIB\t\t= libsalloc.a" >> Makefile
+echo -e "SA_LIB\t\t= lib/libsalloc.a" >> Makefile
 
-echo -e ".PHONY :\tcompile install clean" >> Makefile
+echo -e ".PHONY :\tcompile modules install clean" >> Makefile
 if [ $is_linux -eq 1 ]; then
 	echo -e ".IGNORE:\tcleanuser" >> Makefile
 fi
 
-echo "compile: MKDIR \$(OBJS) \$(SA_LIB_OBJS) BUILD_SA_LIB \$(MELON)" >> Makefile
+echo "compile: MKDIR \$(OBJS) \$(SA_LIB_OBJS) \$(SA_LIB) \$(MELON)" >> Makefile
+echo "modules:" >> Makefile
+echo -e "\tsh config_modules.sh" >> Makefile
 echo "clean:" >> Makefile
 echo -e "\trm -fr \$(MELON) objs lib Makefile" >> Makefile
 echo "MKDIR :" >> Makefile
-echo -e "\t-mkdir objs lib" >> Makefile
+echo -e "\ttest -d objs || mkdir objs" >> Makefile
+echo -e "\ttest -d lib || mkdir lib" >> Makefile
 if [ $is_linux -eq 1 ]; then
 	echo "createuser :" >> Makefile
 	echo -e "\t-useradd -M -c \"melon user\" -s /sbin/nologin melon 2> /dev/null" >> Makefile
 	echo "cleanuser :" >> Makefile
 	echo -e "\t-userdel melon 2> /dev/null" >> Makefile
 fi
-echo "BUILD_SA_LIB :" >> Makefile
-echo -e "\tar -r lib/\$(SA_LIB) \$(SA_LIB_OBJS)" >> Makefile
-echo "\$(MELON) :" >> Makefile
+echo "\$(SA_LIB) : \$(SA_LIB_OBJS)" >> Makefile
+echo -e "\tar -r \$(SA_LIB) \$(SA_LIB_OBJS)" >> Makefile
+echo "\$(MELON) : \$(OBJS) \$(SA_LIB)" >> Makefile
 if [ $is_linux -eq 1 ]; then
 	echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -lsalloc -ldl" >> Makefile
 else
@@ -283,7 +308,16 @@ fi
 for fname in `ls src`
 do
 	objname=`echo $fname | cut -d '.' -f 1`".o"
-	echo "objs/$objname :" >> Makefile
+	echo -n "objs/$objname :" >> Makefile
+	for header in `cpp -MM -MG src/$fname`
+	do
+		suffix=`echo $header | cut -d '.' -f 2`
+		if [ $suffix != 'h' ]; then
+			continue
+		fi
+		echo -n "include/$header " >> Makefile
+	done
+	echo "" >> Makefile
 	test $fname = "mln_event.c"
 	if [ $? -eq 0 ]; then
 	#test event system call

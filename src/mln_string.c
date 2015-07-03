@@ -11,7 +11,8 @@
 static inline mln_string_t *mln_assign_string(char *s, mln_s32_t len);
 
 static inline int *compute_prefix_function(const char *pattern, int m);
-static inline char *kmp_string_match(char *text, const char *pattern) __NONNULL1(1);
+static inline char *
+kmp_string_match(char *text, const char *pattern, int text_len, int pattern_len) __NONNULL2(1,2);
 static mln_string_t *mln_slice_recursive(char *s, int len, char *ascii, int cnt) __NONNULL2(1,3);
 
 static inline mln_string_t *mln_assign_string(char *s, mln_s32_t len)
@@ -262,14 +263,14 @@ char *mln_kmp_strstr(mln_string_t *text, mln_string_t *pattern)
 {
     if (text == pattern || text->str == pattern->str)
         return text->str;
-    return kmp_string_match(text->str, pattern->str);
+    return kmp_string_match(text->str, pattern->str, text->len, pattern->len);
 }
 
 char *mln_const_kmp_strstr(mln_string_t *text, const char *pattern)
 {
     if (text->str == pattern)
         return text->str;
-    return kmp_string_match(text->str, pattern);
+    return kmp_string_match(text->str, pattern, text->len, strlen(pattern));
 }
 
 mln_string_t *mln_str_kmp_strstr(mln_string_t *text, mln_string_t *pattern)
@@ -293,21 +294,20 @@ mln_string_t *mln_str_const_kmp_strstr(mln_string_t *text, const char *pattern)
  * the higher performance of KMP algorithm made.
  */
 
-static inline char *kmp_string_match(char *text, const char *pattern)
+static inline char *
+kmp_string_match(char *text, const char *pattern, int text_len, int pattern_len)
 {
-    int n = strlen(text);
-    int m = strlen(pattern);
-    int *shift = compute_prefix_function(pattern, m);
+    int *shift = compute_prefix_function(pattern, pattern_len);
     if (shift == NULL) return NULL;
     int q = 0, i;
-    for (i = 0; i<n; i++) {
+    for (i = 0; i<text_len; i++) {
         while (q > 0 && pattern[q] != text[i])
             q = shift[q - 1];
         if (pattern[q] == text[i])
             q++;
-        if (q == m) {
+        if (q == pattern_len) {
             free(shift);
-            return &text[i-m+1];
+            return &text[i-pattern_len+1];
           /*
            * we just return the first position.
            */

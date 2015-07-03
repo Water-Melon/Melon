@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.2.3
+Melon Version 1.2.4
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -59,17 +59,20 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.2.3.
-  b) Change directory to the melon-1.2.3/.
+  a) Download and decompress melon-1.2.4.
+  b) Change directory to the melon-1.2.4/.
   c) Execute shell command
-         ./install [--prefix=/...|--help]
-     to build Makefile and some source and header files.
+         ./configure [--prefix=/...|--help]
+         make
+         make modules (This is an optional step. If you want compile
+                       your modules, you need to execute it.)
+         make install
      --prefix indicate the installation path.
      --help   show help message.
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.2.3/include/mln_types.h.
+Their definitions can be found in melon-1.2.4/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -749,10 +752,17 @@ Their definitions can be found in melon-1.2.3/include/mln_types.h.
      d) mln_u32_t mln_get_cmd_args_num(mln_conf_cmd_t *cc);
         It returns the number of items which belong to 'cc'.
 
-     e) int mln_conf_set_hook(reload_handler reload, void *data);
+     e) mln_conf_hook_t *mln_conf_set_hook(reload_handler reload,
+                                           void *data);
         This interface is used to set a callback function which
         is used to reload one or more configuration items.
-        If memory is not enough, -1 will be returned.
+        The return value is a pointer indicating a chain node,
+        which can be used to unset the hook.
+        If memory is not enough, NULL will be returned.
+
+     f) void mln_conf_unset_hook(mln_conf_hook_t *hook);
+        This interface is used to unset a callback function which
+        has been set in the global reload chain.
 
   11) Event
      Just like libevent, Melon's event module also integrates epoll,
