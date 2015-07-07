@@ -1,0 +1,7 @@
+
+Copyright (C) Niklaus F.Schen.
+
+This directory is provided for Melon Module Development.
+You can create your module as a subdirectory in here.
+You also can write a 'configure' file or 'Makefile' file
+in you subdirectory to build your module.
