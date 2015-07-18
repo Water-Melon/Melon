@@ -312,6 +312,11 @@ do
 	for header in `cpp -MM -MG src/$fname`
 	do
 		suffix=`echo $header | cut -d '.' -f 2`
+		if [ $suffix = 'c' ]; then
+			echo -n $header >> Makefile
+			echo -n " " >> Makefile
+			continue
+		fi
 		if [ $suffix != 'h' ]; then
 			continue
 		fi
