@@ -13,10 +13,21 @@
 #include "mln_global.h"
 #include "mln_log.h"
 
-
 MLN_DEFINE_TOKEN(mln_passwd_lex, PWD, \
                  {PWD_TK_MELON, "PWD_TK_MELON"}, \
                  {PWD_TK_COMMENT, "PWD_TK_COMMENT"});
+
+static int
+mln_boot_help(const char *boot_str, const char *alias);
+static int
+mln_boot_version(const char *boot_str, const char *alias);
+static int mln_set_id(void);
+
+mln_boot_t boot_params[] = {
+{"--help", "-h", mln_boot_help, 0},
+{"--version", "-v", mln_boot_version, 0}
+};
+
 
 static mln_passwd_lex_struct_t *
 mln_passwd_lex_nums_handler(mln_lex_t *lex, void *data)
@@ -35,7 +46,7 @@ mln_passwd_lex_nums_handler(mln_lex_t *lex, void *data)
 int mln_unlimit_memory(void)
 {
     if (getuid()) {
-        mln_log(error, "RLIMIT_AS permission deny.\n");
+        fprintf(stderr, "RLIMIT_AS permission deny.\n");
         return -1;
     }
 #ifdef RLIMIT_AS
@@ -44,7 +55,7 @@ int mln_unlimit_memory(void)
     rl.rlim_cur = RLIM_INFINITY;
     rl.rlim_max = RLIM_INFINITY;
     if (setrlimit(RLIMIT_AS, &rl) != 0) {
-        mln_log(error, "%s\n", strerror(errno));
+        fprintf(stderr, "setrlimit memory failed, %s\n", strerror(errno));
         return -1;
     }
 #endif
@@ -54,7 +65,7 @@ int mln_unlimit_memory(void)
 int mln_cancel_core(void)
 {
     if (getuid()) {
-        mln_log(error, "RLIMIT_CORE permission deny.\n");
+        fprintf(stderr, "RLIMIT_CORE permission deny.\n");
         return -1;
     }
 #ifdef RLIMIT_CORE
@@ -62,7 +73,7 @@ int mln_cancel_core(void)
     memset(&rl, 0, sizeof(rl));
     rl.rlim_cur = rl.rlim_max = 0;
     if (setrlimit(RLIMIT_CORE, &rl) != 0) {
-        mln_log(error, "%s\n", strerror(errno));
+        fprintf(stderr, "setrlimit core failed, %s\n", strerror(errno));
         return -1;
     }
 #endif
@@ -72,7 +83,7 @@ int mln_cancel_core(void)
 int mln_unlimit_fd(void)
 {
     if (getuid()) {
-        mln_log(error, "RLIMIT_NOFILE permission deny.\n");
+        fprintf(stderr, "RLIMIT_NOFILE permission deny.\n");
         return -1;
     }
 #ifdef RLIMIT_NOFILE
@@ -82,7 +93,7 @@ int mln_unlimit_fd(void)
     if (setrlimit(RLIMIT_NOFILE, &rl) != 0) {
         rl.rlim_cur = rl.rlim_max = 0x100000;
         if (setrlimit(RLIMIT_NOFILE, &rl) != 0) {
-            mln_log(error, "%s\n", strerror(errno));
+            fprintf(stderr, "setrlimit fd failed, %s\n", strerror(errno));
             return -1;
         }
     }
@@ -90,8 +101,35 @@ int mln_unlimit_fd(void)
     return 0;
 }
 
-void mln_daemon(void)
+int mln_daemon(void)
 {
+    int ret;
+
+    mln_conf_t *cf = mln_get_conf();
+    if (cf == NULL) goto out;
+    mln_conf_domain_t *cd = cf->search(cf, "main");
+    if (cd == NULL) {
+        fprintf(stderr, "No such domain named 'main'\n");
+        abort();
+    }
+    mln_conf_cmd_t *cc = cd->search(cd, "daemon");
+    if (cc == NULL) goto out;
+    mln_conf_item_t *ci = cc->search(cc, 1);
+    if (ci == NULL) {
+        fprintf(stderr, "Command 'daemon' need a parameter.\n");
+        return -1;
+    }
+    if (ci->type != CONF_BOOL) {
+        fprintf(stderr, "Parameter type of command 'daemon' error.\n");
+        return -1;
+    }
+    if (!ci->val.b) {
+out:
+        ret = mln_log_init(0);
+        if (ret < 0) return ret;
+        return mln_set_id();
+    }
+
     pid_t pid;
     if ((pid = fork()) < 0) {
         mln_log(error, "%s\n", strerror(errno));
@@ -100,10 +138,7 @@ void mln_daemon(void)
         exit(0);
     }
     setsid();
-}
 
-void mln_close_terminal(void)
-{
     int fd0 = STDIN_FILENO;
     int fd1 = STDOUT_FILENO;
     int fd2 = STDERR_FILENO;
@@ -117,16 +152,45 @@ void mln_close_terminal(void)
         fd1 != STDOUT_FILENO || \
         fd2 != STDERR_FILENO)
     {
-        mln_log(error, "Unexpected file descriptors %d %d %d\n", fd0, fd1, fd2);
+        fprintf(stderr, "Unexpected file descriptors %d %d %d\n", fd0, fd1, fd2);
     }
+    ret = mln_log_init(1);
+    if (ret < 0) return ret;
+    return mln_set_id();
 }
 
-int mln_set_id(void)
+static int mln_set_id(void)
 {
-    /*init lexer*/
     char filename[] = "/etc/passwd";
-    char *keywords[] = {"melon", NULL};
+    char *keywords[] = {"root", NULL};
     struct mln_lex_attr lattr;
+
+    /*get user name*/
+    mln_conf_t *cf = mln_get_conf();
+    if (cf == NULL) {
+        mln_log(error, "No configuration.\n");
+        abort();
+    }
+    mln_conf_domain_t *cd = cf->search(cf, "main");
+    if (cd == NULL) {
+        mln_log(error, "No 'main' domain.\n");
+        abort();
+    }
+    mln_conf_cmd_t *cc = cd->search(cd, "user");
+    if (cc != NULL) {
+        mln_conf_item_t *ci = cc->search(cc, 1);
+        if (ci == NULL) {
+            mln_log(error, "Command 'user' need a parameter.\n");
+            return -1;
+        }
+        if (ci->type != CONF_STR) {
+            mln_log(error, "Parameter type of command 'user' error.\n");
+            return -1;
+        }
+        keywords[0] = ci->val.s->str;
+    }
+
+    /*init lexer*/
     mln_lex_hooks_t hooks;
     memset(&hooks, 0, sizeof(hooks));
     hooks.nums_handler = (lex_hook)mln_passwd_lex_nums_handler;
@@ -221,6 +285,49 @@ err:
         mln_log(error, "Set eUID failed. %s\n", strerror(errno));
     }
 
+    return 0;
+}
+
+int mln_boot_params(int argc, char *argv[])
+{
+    int i, ret;
+    char *p;
+    mln_boot_t *b;
+    mln_boot_t *bend = boot_params + sizeof(boot_params)/sizeof(mln_boot_t);
+    for (i = 1; i < argc; i++) {
+        p = argv[i];
+        for (b = boot_params; b < bend; b++) {
+             if (!b->cnt && \
+                 (!strcmp(p, b->boot_str) || \
+                 !strcmp(p, b->alias)))
+             {
+                 b->cnt++;
+                 ret = b->handler(b->boot_str, b->alias);
+                 if (ret < 0) {
+                     return ret;
+                 }
+             }
+        }
+    }
+    return 0;
+}
+
+static int
+mln_boot_help(const char *boot_str, const char *alias)
+{
+    printf("Boot parameters:\n");
+    printf("\t--version -v\t\t\tshow version\n");
+    exit(0);
+    return 0;
+}
+
+static int
+mln_boot_version(const char *boot_str, const char *alias)
+{
+    printf("Melon Platform.\n");
+    printf("Version 1.2.5.\n");
+    printf("Copyright (C) Niklaus F.Schen (Chinese name: Shen Fanchen).\n");
+    exit(0);
     return 0;
 }
 

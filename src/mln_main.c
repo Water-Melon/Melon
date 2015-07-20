@@ -19,11 +19,7 @@
 #include "mln_process.h"
 #include "mln_thread.h"
 
-
 static void mln_get_root(void);
-static int mln_cmdline(int argc, char *argv[]);
-static void output_version(void);
-static void output_help(void);
 static void mln_master_routine(void);
 static void mln_worker_routine(void);
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data);
@@ -33,11 +29,11 @@ int main(int argc, char *argv[])
 {
     mln_global_init();
     mln_get_root();
-    if (mln_cmdline(argc, argv) < 0)
+    if (mln_boot_params(argc, argv) < 0)
          return -1;
 
     /*Modify system limitations*/
-    mln_log(none, "Init system resources\n");
+    printf("Init system resources\n");
     if (mln_unlimit_memory() < 0) {
         return -1;
     }
@@ -49,7 +45,7 @@ int main(int argc, char *argv[])
     }
 
     /*Init configurations*/
-    mln_log(none, "Init configurations\n");
+    printf("Init configurations\n");
     if (mln_conf_load() < 0) {
         return -1;
     }
@@ -57,20 +53,15 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    mln_log(none, "Change log output level\n");
-    if (mln_log_set_level() < 0) {
-        return -1;
-    }
-
-    /*Init user and group*/
-    mln_log(none, "Change user to 'melon'\n");
-    if (mln_set_id() < 0) {
-        return -1;
-    }
-
     /*Init Melon resources*/
-    mln_log(none, "Init Melon resources\n");
+    printf("Init Melon resources\n");
     if (mln_init_all_resource() < 0) {
+        return -1;
+    }
+
+    /*daemon*/
+    if (mln_daemon() < 0) {
+        fprintf(stderr, "Melon boot up failed.\n");
         return -1;
     }
 
@@ -149,62 +140,13 @@ static void mln_get_root(void)
     if (getuid() == 0) return;
     uid_t euid = geteuid();
     if (euid != 0) {
-        mln_log(error, "Not running as 'root'.\n");
+        fprintf(stderr, "Not running as 'root'.\n");
         exit(1);
     }
     if (setuid(euid) < 0) {
-        mln_log(error, "Set uid failed. %s\n", strerror(errno));
+        fprintf(stderr, "Set uid failed. %s\n", strerror(errno));
         exit(1);
     }
-}
-
-static int mln_cmdline(int argc, char *argv[])
-{
-    int daemon = 0, version = 0;
-    char **p = &argv[1];
-    for (; *p != NULL; p++) {
-        if (!strncasecmp(*p, "daemon", 6)) {
-            daemon = 1;
-            continue;
-        }
-        if (!strncasecmp(*p, "version", 7)) {
-            version = 1;
-            continue;
-        }
-        fprintf(stderr, "Invalid No.%d parameter \"%s\".\n", \
-                (int)(p - argv), *p);
-        output_help();
-        return -1;
-    }
-    if (version) {
-        output_version();
-    }
-    if (mln_log_init(daemon) < 0) {
-        fprintf(stderr, "mln_log_init failed.\n");
-        return -1;
-    }
-    if (daemon) {
-        mln_daemon();
-        mln_close_terminal();
-        return 1;
-    }
-    return 0;
-}
-
-static void output_version(void)
-{
-    printf("Melon Platform.\n");
-    printf("Version 1.2.4.\n");
-    printf("Copyright (C) Niklaus F.Schen (Chinese name: Shen Fanchen).\n");
-    printf("\n");
-}
-
-static void output_help(void)
-{
-    output_version();
-    printf("Boot parameters:\n");
-    printf("\tdaemon\t\t\trun as daemon\n");
-    printf("\tversion\t\t\tshow version\n");
 }
 
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data)

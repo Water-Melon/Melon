@@ -1,4 +1,15 @@
 
+Changes with melon 1.2.5                                          20 Jul 2015
+    *) Optimized the initialization of boot parameters.
+
+    *) Optimized the initialization of log and daemon.
+
+    *) Fixed Makefile not to overwrite configuration file.
+
+    *) Deleted the shell script code which created user 'melon'.
+
+    *) Added configuration item for changing user.
+
 Changes with melon 1.2.4                                          03 Jul 2015
     *) Modified shell script 'configure'.
 

@@ -268,9 +268,6 @@ echo -e "SA_LIB_OBJS\t= objs/mln_salloc.o objs/mln_log.o objs/mln_sa_rbtree.o ob
 echo -e "SA_LIB\t\t= lib/libsalloc.a" >> Makefile
 
 echo -e ".PHONY :\tcompile modules install clean" >> Makefile
-if [ $is_linux -eq 1 ]; then
-	echo -e ".IGNORE:\tcleanuser" >> Makefile
-fi
 
 echo "compile: MKDIR \$(OBJS) \$(SA_LIB_OBJS) \$(SA_LIB) \$(MELON)" >> Makefile
 echo "modules:" >> Makefile
@@ -280,12 +277,7 @@ echo -e "\trm -fr \$(MELON) objs lib Makefile" >> Makefile
 echo "MKDIR :" >> Makefile
 echo -e "\ttest -d objs || mkdir objs" >> Makefile
 echo -e "\ttest -d lib || mkdir lib" >> Makefile
-if [ $is_linux -eq 1 ]; then
-	echo "createuser :" >> Makefile
-	echo -e "\t-useradd -M -c \"melon user\" -s /sbin/nologin melon 2> /dev/null" >> Makefile
-	echo "cleanuser :" >> Makefile
-	echo -e "\t-userdel melon 2> /dev/null" >> Makefile
-fi
+
 echo "\$(SA_LIB) : \$(SA_LIB_OBJS)" >> Makefile
 echo -e "\tar -r \$(SA_LIB) \$(SA_LIB_OBJS)" >> Makefile
 echo "\$(MELON) : \$(OBJS) \$(SA_LIB)" >> Makefile
@@ -299,10 +291,7 @@ echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
 echo -e "\ttest -d '$install_path/sbin' || mkdir -p '$install_path/sbin'" >> Makefile
 echo -e "\tcp -fr \$(MELON) $install_path/sbin" >> Makefile
 echo -e "\tcp -fr lib $install_path" >> Makefile
-echo -e "\tcp -fr conf $install_path" >> Makefile
-if [ $is_linux -eq 0 ]; then
-	echo -e "\techo \"Please add user 'melon' before running platform.\"" >> Makefile
-fi
+echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
 
 
 for fname in `ls src`

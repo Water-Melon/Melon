@@ -31,6 +31,7 @@ _mln_sys_log_process(mln_log_t *log, \
                      va_list arg);
 static void mln_file_lock(int fd);
 static void mln_file_unlock(int fd);
+static int mln_log_set_level(mln_log_t *log, int is_init);
 static ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
 
 /*
@@ -123,7 +124,10 @@ int mln_log_init(int in_daemon)
     snprintf(log->log_path, M_LOG_PATH_LEN-1, "%s/logs/melon.log", ab_path);
 
     if (mkdir(log->dir_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) < 0) {
-        if (errno != EEXIST) return -1;
+        if (errno != EEXIST) {
+            fprintf(stderr, "mkdir '%s' failed. %s\n", log->dir_path, strerror(errno));
+            return -1;
+        }
     }
 
     int pid_fd = open(log->pid_path, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
@@ -150,6 +154,11 @@ int mln_log_init(int in_daemon)
         close(log->fd);
         return -1;
     }
+    if (mln_log_set_level(log, 1) < 0) {
+        fprintf(stderr, "Set log level failed.\n");
+        close(log->fd);
+        return -1;
+    }
     return 0;
 }
 
@@ -163,25 +172,33 @@ void mln_log_destroy(void)
 /*
  * mln_log_set_level
  */
-int mln_log_set_level(void)
+static int mln_log_set_level(mln_log_t *log, int is_init)
 {
-    mln_log_t *log = &gLog;
     mln_conf_t *cf = mln_get_conf();
     if (cf == NULL) return 0;
     mln_conf_domain_t *cd = cf->search(cf, "main");
     if (cd == NULL) {
-        mln_log(error, "No 'main' domain.\n");
+        if (is_init)
+            fprintf(stderr, "No 'main' domain.\n");
+        else
+            mln_log(error, "No 'main' domain.\n");
         abort();
     }
     mln_conf_cmd_t *cc = cd->search(cd, "log_level");
     if (cc == NULL) return 0;
     mln_conf_item_t *ci = cc->search(cc, 1);
     if (ci == NULL) {
-        mln_log(error, "Command 'log_level' need a parameter.\n");
+        if (is_init)
+            fprintf(stderr, "Command 'log_level' need a parameter.\n");
+        else
+            mln_log(error, "Command 'log_level' need a parameter.\n");
         return -1;
     }
     if (ci->type != CONF_STR) {
-        mln_log(error, "Parameter type of command [log_level] error.\n");
+        if (is_init)
+            fprintf(stderr, "Parameter type of command 'log_level' error.\n");
+        else
+            mln_log(error, "Parameter type of command 'log_level' error.\n");
         return -1;
     }
     if (!mln_const_strcmp(ci->val.s, "none")) {
@@ -193,7 +210,10 @@ int mln_log_set_level(void)
     } else if (!mln_const_strcmp(ci->val.s, "error")) {
         log->level = error;
     } else {
-        mln_log(error, "Parameter value of command [log_level] error.\n");
+        if (is_init)
+            fprintf(stderr, "Parameter value of command [log_level] error.\n");
+        else
+            mln_log(error, "Parameter value of command [log_level] error.\n");
         return -1;
     }
     return 0;
@@ -206,7 +226,7 @@ int mln_log_reload(void *data)
 {
     MLN_LOCK(&(gLog.thread_lock));
     mln_file_lock(gLog.fd);
-    int ret = mln_log_set_level();
+    int ret = mln_log_set_level(&gLog, 0);
     mln_file_unlock(gLog.fd);
     MLN_UNLOCK(&(gLog.thread_lock));
     return ret;

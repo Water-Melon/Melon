@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 #define CONF_ERR(TK,MSG); \
-    mln_log(error, "Configuration error. %d: \"%s\" %s.\n", (TK)->line, (TK)->text->str, MSG);\
+    fprintf(stderr, "Configuration error. %d: \"%s\" %s.\n", (TK)->line, (TK)->text->str, MSG);\
 
 mln_conf_hook_t *gConfHookHead = NULL, *gConfHookTail = NULL;
 mln_conf_t *gConf = NULL;
@@ -297,7 +297,7 @@ static inline mln_conf_t *mln_conf_init(void)
     mln_conf_t *cf;
     cf = (mln_conf_t *)malloc(sizeof(mln_conf_t));
     if (cf == NULL) {
-        mln_log(error, "No memory.\n");
+        fprintf(stderr, "No memory.\n");
         return NULL;
     }
     cf->search = mln_conf_search_domain;
@@ -310,14 +310,14 @@ static inline mln_conf_t *mln_conf_init(void)
     hattr.expandable = 1;
     cf->domain_hash_tbl = mln_hash_init(&hattr);
     if (cf->domain_hash_tbl == NULL) {
-        mln_log(error, "No memory.\n");
+        fprintf(stderr, "No memory.\n");
         free(cf);
         return NULL;
     }
     mln_size_t path_len = strlen(mln_get_path());
     char *conf_file_path = malloc(path_len + sizeof(conf_filename) + 1);
     if (conf_file_path == NULL) {
-        mln_log(error, "No memory.\n");
+        fprintf(stderr, "No memory.\n");
         mln_hash_destroy(cf->domain_hash_tbl, hash_free_key_val);
         free(cf);
         return NULL;
@@ -344,19 +344,19 @@ static inline mln_conf_t *mln_conf_init(void)
     }
     mln_conf_domain_t *cd = mln_conf_domain_init(cf, &default_domain);
     if (cd == NULL) {
-        mln_log(error, "No memory.\n");
+        fprintf(stderr, "No memory.\n");
         mln_conf_destroy(cf);
         return NULL;
     }
     mln_string_t *main_domain = mln_dup_string(&default_domain);
     if (main_domain == NULL) {
-        mln_log(error, "No memory.\n");
+        fprintf(stderr, "No memory.\n");
         mln_conf_domain_destroy((void *)cd);
         mln_conf_destroy(cf);
         return NULL;
     }
     if (mln_hash_insert(cf->domain_hash_tbl, main_domain, cd) < 0) {
-        mln_log(error, "No memory.\n");
+        fprintf(stderr, "No memory.\n");
         mln_free_string(main_domain);
         mln_conf_domain_destroy((void *)cd);
         mln_conf_destroy(cf);
@@ -583,7 +583,7 @@ mln_conf_item_init(mln_conf_lex_struct_t *cls, mln_conf_item_t *ci)
             ci->type = CONF_STR;
             ci->val.s = mln_dup_string(cls->text);
             if (ci->val.s == NULL) {
-                mln_log(error, "No memory.\n");
+                fprintf(stderr, "No memory.\n");
                 return -1;
             }
             break;
@@ -600,7 +600,7 @@ mln_conf_item_init(mln_conf_lex_struct_t *cls, mln_conf_item_t *ci)
             ci->val.c = (mln_s8_t)(cls->text->str[0]);
             break;
         default:
-            mln_log(error, "No such token type.\n");
+            fprintf(stderr, "No such token type.\n");
             abort();
     }
     return 0;
@@ -623,7 +623,7 @@ mln_conf_item_recursive(mln_conf_t *cf, \
                         mln_u32_t cnt)
 {
     if (cls == NULL) {
-        mln_log(error, "Get token error. %s\n", mln_lex_strerror(cf->lex));
+        fprintf(stderr, "Get token error. %s\n", mln_lex_strerror(cf->lex));
         return -1;
     }
     if (cls->type == CONF_TK_EOF) {
@@ -638,7 +638,7 @@ mln_conf_item_recursive(mln_conf_t *cf, \
         }
         cc->arg_tbl = (mln_conf_item_t *)calloc(cnt, sizeof(mln_conf_item_t));
         if (cc->arg_tbl == NULL) {
-            mln_log(error, "No memory.\n");
+            fprintf(stderr, "No memory.\n");
             mln_conf_lex_free(cls);
             return -1;
         }
@@ -667,7 +667,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
     while ( 1 ) {
         fir = mln_conf_token(cf->lex);
         if (fir == NULL) {
-            mln_log(error, "Get token error. %s\n", mln_lex_strerror(cf->lex));
+            fprintf(stderr, "Get token error. %s\n", mln_lex_strerror(cf->lex));
             return -1;
         } else if (fir->type == CONF_TK_EOF) {
             mln_conf_lex_free(fir);
@@ -688,7 +688,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
         next = mln_conf_token(cf->lex);
         if (next == NULL) {
             mln_conf_lex_free(fir);
-            mln_log(error, "Get token error. %s\n", mln_lex_strerror(cf->lex));
+            fprintf(stderr, "Get token error. %s\n", mln_lex_strerror(cf->lex));
             return -1;
         }
         else if (next->type == CONF_TK_EOF) {
@@ -708,17 +708,17 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
             tk = mln_dup_string(fir->text);
             mln_conf_lex_free(fir);
             if (tk == NULL) {
-                mln_log(error, "No memory.\n");
+                fprintf(stderr, "No memory.\n");
                 return -1;
             }
             cd = mln_conf_domain_init(cf, tk);
             if (cd == NULL) {
-                mln_log(error, "No memory.\n");
+                fprintf(stderr, "No memory.\n");
                 mln_free_string(tk);
                 return -1;
             }
             if (mln_hash_insert(cf->domain_hash_tbl, tk, cd) < 0) {
-                mln_log(error, "No memory.\n");
+                fprintf(stderr, "No memory.\n");
                 mln_free_string(tk);
                 mln_conf_domain_destroy(cd);
                 return -1;
@@ -730,19 +730,19 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
         tk = mln_dup_string(fir->text);
         mln_conf_lex_free(fir);
         if (tk == NULL) {
-            mln_log(error, "No memory.\n");
+            fprintf(stderr, "No memory.\n");
             mln_conf_lex_free(next);
             return -1;
         }
         cmd = mln_conf_cmd_init(tk);
         if (cmd == NULL) {
-            mln_log(error, "No memory.\n");
+            fprintf(stderr, "No memory.\n");
             mln_free_string(tk);
             mln_conf_lex_free(next);
             return -1;
         }
         if (mln_hash_insert(current->cmd_hash_tbl, tk, cmd) < 0) {
-            mln_log(error, "No memory.\n");
+            fprintf(stderr, "No memory.\n");
             mln_conf_cmd_destroy(cmd);
             mln_free_string(tk);
             mln_conf_lex_free(next);
@@ -890,14 +890,14 @@ mln_u32_t mln_get_cmd_args_num(mln_conf_cmd_t *cc)
  */
 void mln_dump_conf(void)
 {
-    mln_log(none, "CONFIGURATIONS:\n");
+    printf("CONFIGURATIONS:\n");
     mln_hash_scan_all(gConf->domain_hash_tbl, mln_conf_dump_conf_scan, NULL);
 }
 
 static int mln_conf_dump_conf_scan(void *key, void *val, void *udata)
 {
     mln_conf_domain_t *cd = (mln_conf_domain_t *)val;
-    mln_log(none, "\tDOMAIN [%s]:\n", cd->domain_name->str);
+    printf("\tDOMAIN [%s]:\n", cd->domain_name->str);
     mln_hash_scan_all(cd->cmd_hash_tbl, mln_conf_dump_domain_scan, NULL);
     return 0;
 }
@@ -905,27 +905,27 @@ static int mln_conf_dump_conf_scan(void *key, void *val, void *udata)
 static int mln_conf_dump_domain_scan(void *key, void *val, void *udata)
 {
     mln_conf_cmd_t *cc = (mln_conf_cmd_t *)val;
-    mln_log(none, "\t\tCOMMAND [%s]:\n", cc->cmd_name->str);
+    printf("\t\tCOMMAND [%s]:\n", cc->cmd_name->str);
     mln_s32_t i;
     mln_conf_item_t *ci;
     for (i = 0; i < cc->n_args; i++) {
         ci = &(cc->arg_tbl[i]);
-        mln_log(none, "\t\t\t");
+        printf("\t\t\t");
         switch (ci->type) {
             case CONF_STR:
-                mln_log(none, "STRING [%s]\n", ci->val.s->str);
+                printf("STRING [%s]\n", ci->val.s->str);
                 break;
             case CONF_CHAR:
-                mln_log(none, "CHAR [%c]\n", ci->val.c);
+                printf("CHAR [%c]\n", ci->val.c);
                 break;
             case CONF_BOOL:
-                mln_log(none, "BOOL [%u]\n", ci->val.b);
+                printf("BOOL [%u]\n", ci->val.b);
                 break;
             case CONF_INT:
-                mln_log(none, "INT [%l]\n", ci->val.i);
+                printf("INT [%ld]\n", ci->val.i);
                 break;
             case CONF_FLOAT:
-                mln_log(none, "FLOAT [%f]\n", ci->val.f);
+                printf("FLOAT [%f]\n", ci->val.f);
                 break;
             default: break;
         }
