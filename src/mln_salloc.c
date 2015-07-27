@@ -20,10 +20,14 @@ mln_chunk_t *mHeapBase = NULL;
 mln_chunk_t *mHeapTop = NULL;
 mln_chunk_t *mMmapHead = NULL;
 mln_chunk_t *mMmapTail = NULL;
+pthread_key_t mKey;
 mln_lock_t mHeapLock;
 mln_lock_t mLargeTreeLock;
 mln_lock_t mMmapLock;
+mln_lock_t mMisc;
 mln_sarbt_t mLargeTree;
+size_t mRef = 0;
+int mKeyInit = 0;
 long mPageSize = 0;
 char mln_check_bits[M_CHKBITS_LEN+1] = {
   0x4d, 0x45, 0x4c, 0x4f,
@@ -136,18 +140,29 @@ mln_Allocator_init(mln_salloc_t **sa)
     }
 
     if (sa != &mAllocator) {
-        if ((err = pthread_key_create(&((*sa)->key), mln_move)) != 0) {
-            mln_log(error, "pthread_key_create error. %s\n", strerror(err));
-            goto err3;
+        MLN_LOCK(&mMisc);
+        if (!mKeyInit) {
+            if ((err = pthread_key_create(&mKey, mln_move)) != 0) {
+                mln_log(error, "pthread_key_create error. %s\n", strerror(err));
+                MLN_UNLOCK(&mMisc);
+                goto err3;
+            }
+            mKeyInit = 1;
         }
-
-        if ((err = pthread_setspecific((*sa)->key, (*sa))) != 0) {
+        if ((err = pthread_setspecific(mKey, *sa)) != 0) {
             mln_log(error, "pthread_setspecific error. %s\n", strerror(err));
-            pthread_key_delete((*sa)->key);
+            if (mRef == 0) {
+                pthread_key_delete(mKey);
+                mKeyInit = 0;
+            }
+            MLN_UNLOCK(&mMisc);
             goto err3;
         }
+        mRef++;
+        MLN_UNLOCK(&mMisc);
         return 0;
     }
+
     mPageSize = sysconf(_SC_PAGESIZE);
     if (mPageSize < 0) {
         mPageSize = M_DFL_PAGESIZE;
@@ -176,8 +191,16 @@ mln_Allocator_init(mln_salloc_t **sa)
         mln_log(error, "mMmapLock init error. %s\n", strerror(err));
         goto err5;
     }
+    err = MLN_LOCK_INIT(&mMisc);
+    if (err != 0) {
+        mln_log(error, "mMisc init error. %s\n", strerror(err));
+        goto err6;
+    }
+
     return 0;
 
+err6:
+    MLN_LOCK_DESTROY(&mMmapLock);
 err5:
     MLN_LOCK_DESTROY(&mLargeTreeLock);
 err4:
@@ -1095,13 +1118,19 @@ static void mln_move(void *arg)
 static void
 mln_salloc_destroy(mln_salloc_t *sa)
 {
-    pthread_key_delete(sa->key);
     MLN_LOCK_DESTROY(&(sa->index_lock));
     MLN_LOCK_DESTROY(&(sa->stat_lock));
     if (munmap(sa, sizeof(mln_salloc_t)) < 0) {
         mln_log(error, "munmap failed. %s\n", strerror(errno));
         abort();
     }
+    MLN_LOCK(&mMisc);
+    if (--mRef == 0) {
+        pthread_key_delete(mKey);
+        mKeyInit = 0;
+    }
+    MLN_UNLOCK(&mMisc);
+    pthread_setspecific(mKey, NULL);
 }
 
 /*

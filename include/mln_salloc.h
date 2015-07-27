@@ -68,7 +68,6 @@ struct mln_salloc_s {
     mln_size_t             threshold;
     mln_lock_t             index_lock;
     mln_lock_t             stat_lock;
-    pthread_key_t          key;
 };
 
 extern void *malloc(size_t size);
