@@ -30,6 +30,8 @@ MLN_CHAIN_FUNC_DECLARE(ev_sig, \
                        mln_event_desc_t, \
                        static inline void, \
                        __NONNULL3(1,2,3));
+static void mln_event_atfork_lock(void);
+static void mln_event_atfork_unlock(void);
 static inline void
 mln_event_desc_free(void *data);
 static int
@@ -143,6 +145,13 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
     if (!is_lock_init) {
         MLN_LOCK_INIT(&event_lock);
         is_lock_init = 1;
+        if (pthread_atfork(mln_event_atfork_lock, \
+                           mln_event_atfork_unlock, \
+                           mln_event_atfork_unlock) != 0)
+        {
+            mln_log(error, "No memory.\n");
+            goto err2;
+        }
     }
     struct mln_fheap_attr fattr;
     fattr.cmp = mln_event_fd_timeout_cmp;
@@ -245,6 +254,16 @@ err2:
 err1:
     free(ev);
     return NULL;
+}
+
+static void mln_event_atfork_lock(void)
+{
+    MLN_LOCK(&event_lock);
+}
+
+static void mln_event_atfork_unlock(void)
+{
+    MLN_UNLOCK(&event_lock);
 }
 
 static void

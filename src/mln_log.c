@@ -33,6 +33,8 @@ static void mln_file_lock(int fd);
 static void mln_file_unlock(int fd);
 static int mln_log_set_level(mln_log_t *log, int is_init);
 static ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
+static void mln_log_atfork_lock(void);
+static void mln_log_atfork_unlock(void);
 
 /*
  * global variables
@@ -43,7 +45,7 @@ long mon_days[2][12] = {
 };
 char log_err_level[] = "Log level permission deny.";
 char log_err_fmt[] = "Log message format error.";
-mln_log_t gLog;
+mln_log_t gLog = {{0},{0},{0},STDERR_FILENO,0,none,(mln_lock_t)0};
 
 /*
  * file lock
@@ -151,15 +153,36 @@ int mln_log_init(int in_daemon)
     log->level = none;
     int ret = 0;
     if ((ret = MLN_LOCK_INIT(&(log->thread_lock))) != 0) {
+        fprintf(stderr, "%s(): Init log's thread_lock failed. %s\n", __FUNCTION__, strerror(ret));
+        close(log->fd);
+        return -1;
+    }
+    if ((ret = pthread_atfork(mln_log_atfork_lock, \
+                              mln_log_atfork_unlock, \
+                              mln_log_atfork_unlock)) != 0)
+    {
+        fprintf(stderr, "%s(): pthread_atfork failed. %s\n", __FUNCTION__, strerror(ret));
+        MLN_LOCK_DESTROY(&(log->thread_lock));
         close(log->fd);
         return -1;
     }
     if (mln_log_set_level(log, 1) < 0) {
-        fprintf(stderr, "Set log level failed.\n");
+        fprintf(stderr, "%s(): Set log level failed.\n", __FUNCTION__);
+        MLN_LOCK_DESTROY(&(log->thread_lock));
         close(log->fd);
         return -1;
     }
     return 0;
+}
+
+static void mln_log_atfork_lock(void)
+{
+    MLN_LOCK(&(gLog.thread_lock));
+}
+
+static void mln_log_atfork_unlock(void)
+{
+    MLN_UNLOCK(&(gLog.thread_lock));
 }
 
 void mln_log_destroy(void)

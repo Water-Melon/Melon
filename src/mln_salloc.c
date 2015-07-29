@@ -15,6 +15,8 @@
 /*
  * global variables
  */
+mln_salloc_t *mAHead = NULL;
+mln_salloc_t *mATail = NULL;
 mln_salloc_t *mAllocator = NULL;
 mln_chunk_t *mHeapBase = NULL;
 mln_chunk_t *mHeapTop = NULL;
@@ -24,10 +26,11 @@ pthread_key_t mKey;
 mln_lock_t mHeapLock;
 mln_lock_t mLargeTreeLock;
 mln_lock_t mMmapLock;
-mln_lock_t mMisc;
+mln_lock_t mMiscLock;
 mln_sarbt_t mLargeTree;
 size_t mRef = 0;
 int mKeyInit = 0;
+int mForkSet = 0;
 long mPageSize = 0;
 char mln_check_bits[M_CHKBITS_LEN+1] = {
   0x4d, 0x45, 0x4c, 0x4f,
@@ -43,6 +46,10 @@ __thread mln_salloc_t *tAllocator = NULL;
 /*
  * declarations
  */
+MLN_CHAIN_FUNC_DECLARE(sa_q, \
+                       mln_salloc_t, \
+                       static inline void, \
+                       __NONNULL3(1,2,3));
 MLN_CHAIN_FUNC_DECLARE(mgr_q, \
                        mln_chunk_t, \
                        static inline void, \
@@ -56,6 +63,9 @@ MLN_CHAIN_FUNC_DECLARE(index_q, \
                        static inline void, \
                        __NONNULL3(1,2,3));
 static int mln_salloc_init(void);
+static void mln_sa_atfork_prepare(void);
+static void mln_sa_atfork_parent(void);
+static void mln_sa_atfork_child(void);
 static inline int
 mln_Allocator_init(mln_salloc_t **sa);
 static inline void
@@ -140,11 +150,22 @@ mln_Allocator_init(mln_salloc_t **sa)
     }
 
     if (sa != &mAllocator) {
-        MLN_LOCK(&mMisc);
+        MLN_LOCK(&mMiscLock);
+        if (!mForkSet) {
+            if ((err = pthread_atfork(mln_sa_atfork_prepare, \
+                                      mln_sa_atfork_parent, \
+                                      mln_sa_atfork_child)) != 0)
+            {
+                mln_log(error, "pthread_atfork error. %s\n", strerror(err));
+                MLN_UNLOCK(&mMiscLock);
+                goto err3;
+            }
+            mForkSet = 1;
+        }
         if (!mKeyInit) {
             if ((err = pthread_key_create(&mKey, mln_move)) != 0) {
                 mln_log(error, "pthread_key_create error. %s\n", strerror(err));
-                MLN_UNLOCK(&mMisc);
+                MLN_UNLOCK(&mMiscLock);
                 goto err3;
             }
             mKeyInit = 1;
@@ -155,11 +176,12 @@ mln_Allocator_init(mln_salloc_t **sa)
                 pthread_key_delete(mKey);
                 mKeyInit = 0;
             }
-            MLN_UNLOCK(&mMisc);
+            MLN_UNLOCK(&mMiscLock);
             goto err3;
         }
         mRef++;
-        MLN_UNLOCK(&mMisc);
+        sa_q_chain_add(&mAHead, &mATail, *sa);
+        MLN_UNLOCK(&mMiscLock);
         return 0;
     }
 
@@ -191,9 +213,9 @@ mln_Allocator_init(mln_salloc_t **sa)
         mln_log(error, "mMmapLock init error. %s\n", strerror(err));
         goto err5;
     }
-    err = MLN_LOCK_INIT(&mMisc);
+    err = MLN_LOCK_INIT(&mMiscLock);
     if (err != 0) {
-        mln_log(error, "mMisc init error. %s\n", strerror(err));
+        mln_log(error, "mMiscLock init error. %s\n", strerror(err));
         goto err6;
     }
 
@@ -213,6 +235,90 @@ err1:
     munmap((*sa), sizeof(mln_salloc_t));
     *sa = NULL;
     return -1;
+}
+
+static void
+mln_sa_atfork_prepare(void)
+{
+    MLN_LOCK(&(mAllocator->index_lock));
+    MLN_LOCK(&mMiscLock);
+    mln_salloc_t *sa;
+    for (sa = mAHead; sa != NULL; sa = sa->next) {
+        MLN_LOCK(&(sa->index_lock));
+        MLN_LOCK(&(sa->stat_lock));
+    }
+    MLN_LOCK(&(mAllocator->stat_lock));
+    MLN_LOCK(&mLargeTreeLock);
+    MLN_LOCK(&mMmapLock);
+    MLN_LOCK(&mHeapLock);
+}
+
+static void
+mln_sa_atfork_parent(void)
+{
+    MLN_UNLOCK(&mHeapLock);
+    MLN_UNLOCK(&mMmapLock);
+    MLN_UNLOCK(&mLargeTreeLock);
+    MLN_UNLOCK(&(mAllocator->stat_lock));
+    mln_salloc_t *sa;
+    for (sa = mATail; sa != NULL; sa = sa->prev) {
+        MLN_UNLOCK(&(sa->stat_lock));
+        MLN_UNLOCK(&(sa->index_lock));
+    }
+    MLN_UNLOCK(&mMiscLock);
+    MLN_UNLOCK(&(mAllocator->index_lock));
+}
+
+static void
+mln_sa_atfork_child(void)
+{
+    int i;
+    mln_blk_t *blk;
+    mln_blk_index_t *dbi, *sbi;
+    mln_salloc_t *sa;
+    for (sa = mATail; sa != NULL; sa = sa->prev) {
+        if (sa == tAllocator) {
+            continue;
+        }
+        for (i = 0; i < M_INDEX_LEN; i++) {
+            dbi = &(mAllocator->index_tbl[i]);
+            sbi = &(sa->index_tbl[i]);
+            while ((blk = sbi->free_head) != NULL) {
+                index_q_chain_del(&(sbi->free_head), &(sbi->free_tail), blk);
+                blk->salloc = mAllocator;
+                blk->index = dbi;
+                index_q_chain_add(&(dbi->free_head), &(dbi->free_tail), blk);
+            }
+            while ((blk = sbi->used_head) != NULL) {
+                index_q_chain_del(&(sbi->used_head), &(sbi->used_tail), blk);
+                blk->salloc = mAllocator;
+                blk->index = dbi;
+                index_q_chain_add(&(dbi->used_head), &(dbi->used_tail), blk);
+            }
+        }
+        MLN_LOCK_DESTROY(&(sa->index_lock));
+        MLN_LOCK_DESTROY(&(sa->stat_lock));
+        sa_q_chain_del(&mAHead, &mATail, sa);
+        if (munmap(sa, sizeof(mln_salloc_t)) < 0) {
+            abort();
+        }
+        if (--mRef == 0) {
+            pthread_key_delete(mKey);
+            mKeyInit = 0;
+        }
+    }
+    mAllocator->threshold >>= 1;
+
+    MLN_UNLOCK(&mHeapLock);
+    MLN_UNLOCK(&mMmapLock);
+    MLN_UNLOCK(&mLargeTreeLock);
+    MLN_UNLOCK(&(mAllocator->stat_lock));
+    MLN_UNLOCK(&(tAllocator->stat_lock));
+    MLN_UNLOCK(&(tAllocator->index_lock));
+    MLN_UNLOCK(&mMiscLock);
+    MLN_UNLOCK(&(mAllocator->index_lock));
+
+    mln_salloc_reduce_main();
 }
 
 static int
@@ -1120,22 +1226,28 @@ mln_salloc_destroy(mln_salloc_t *sa)
 {
     MLN_LOCK_DESTROY(&(sa->index_lock));
     MLN_LOCK_DESTROY(&(sa->stat_lock));
+    sa_q_chain_del(&mAHead, &mATail, sa);
     if (munmap(sa, sizeof(mln_salloc_t)) < 0) {
         mln_log(error, "munmap failed. %s\n", strerror(errno));
         abort();
     }
-    MLN_LOCK(&mMisc);
+    MLN_LOCK(&mMiscLock);
     if (--mRef == 0) {
         pthread_key_delete(mKey);
         mKeyInit = 0;
     }
-    MLN_UNLOCK(&mMisc);
     pthread_setspecific(mKey, NULL);
+    MLN_UNLOCK(&mMiscLock);
 }
 
 /*
  * chains
  */
+MLN_CHAIN_FUNC_DEFINE(sa_q, \
+                      mln_salloc_t, \
+                      static inline void, \
+                      prev, \
+                      next);
 MLN_CHAIN_FUNC_DEFINE(mgr_q, \
                       mln_chunk_t, \
                       static inline void, \
