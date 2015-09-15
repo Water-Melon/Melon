@@ -8,10 +8,13 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "mln_types.h"
+#include "mln_chain.h"
+#include "mln_alloc.h"
 
 /*buffer type*/
 #define M_C_SEND 1
 #define M_C_RECV 2
+#define M_C_SENT 3
 /*return value*/
 #define M_C_FINISH 1
 #define M_C_NOTYET 2
@@ -54,6 +57,36 @@ extern int
 mln_tcp_connection_send(mln_tcp_connection_t *c) __NONNULL1(1);
 extern int
 mln_tcp_connection_recv(mln_tcp_connection_t *c) __NONNULL1(1);
+
+
+/*
+ * another tcp I/O
+ */
+
+#define M_C_TYPE_FOLLOW 0
+#define M_C_TYPE_MEMORY 0x1
+#define M_C_TYPE_FILE   0x2
+
+typedef struct {
+    mln_alloc_t *pool;
+    mln_chain_t *rcv_head;
+    mln_chain_t *rcv_tail;
+    mln_chain_t *snd_head;
+    mln_chain_t *snd_tail;
+    mln_chain_t *sent_head;
+    mln_chain_t *sent_tail;
+    int          sockfd;
+} mln_tcp_conn_t;
+
+extern int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd) __NONNULL1(1);
+extern void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
+extern int mln_tcp_conn_getsock(mln_tcp_conn_t *tc) __NONNULL1(1);
+extern void
+mln_tcp_conn_set(mln_tcp_conn_t *tc, mln_chain_t *c, int type) __NONNULL2(1,2);
+extern mln_chain_t *mln_tcp_conn_get(mln_tcp_conn_t *tc, int type) __NONNULL1(1);
+extern mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type) __NONNULL1(1);
+extern int mln_tcp_conn_send(mln_tcp_conn_t *tc) __NONNULL1(1);
+extern int mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag) __NONNULL1(1);
 
 #endif
 

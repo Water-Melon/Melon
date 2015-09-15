@@ -7,6 +7,8 @@
 
 #installation path
 install_path=`echo "/usr/local/melon"`
+malloc_type="default"
+jemalloc_path="nil";
 
 #get all parameters
 for param in $@
@@ -16,17 +18,32 @@ do
 		echo "Copyright (C) Niklaus F.Schen."
 		echo "Options:"
 		echo -e "\t--prefix=INSTALL_PATH"
+		echo -e "\t--with-salloc			Salloc is an implementation of malloc()."
+		echo -e "\t--with-jemalloc			Use jemalloc."
+		echo -e "\t--with-jemalloc_lib_path	Indicate the path of jemalloc libaray."
 		exit 0
 	fi
 	param_prefix=`echo $param|cut -d '=' -f 1`
 	param_suffix=`echo $param|cut -d '=' -f 2`
 	if [ $param_prefix == "--prefix" ]; then
 		install_path=$param_suffix
+	elif [ $param_prefix == "--with-salloc" ]; then
+		malloc_type="salloc"
+	elif [ $param_prefix == "--with-jemalloc" ]; then
+		malloc_type="jemalloc"
+        elif [ $param_prefix == "--with-jemalloc_lib_path" ]; then
+		jemalloc_path=$param_suffix
 	else
 		echo "Error: Invalid option \"$param\"."
 		exit 1
 	fi
 done
+
+#output malloc information
+echo -e "malloc library: \t[$malloc_type]"
+if [ $jemalloc_path != "nil" ]; then
+	echo -e "jemalloc library path: \t[$jemalloc_path]"
+fi
 
 #output installation path
 echo -e "Installation Path \t[$install_path]"
@@ -282,9 +299,29 @@ echo "\$(SA_LIB) : \$(SA_LIB_OBJS)" >> Makefile
 echo -e "\tar -r \$(SA_LIB) \$(SA_LIB_OBJS)" >> Makefile
 echo "\$(MELON) : \$(OBJS) \$(SA_LIB)" >> Makefile
 if [ $is_linux -eq 1 ]; then
-	echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -lsalloc -ldl" >> Makefile
+	if [ $malloc_type == "salloc" ]; then
+		echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -lsalloc -ldl" >> Makefile
+	elif [ $malloc_type == "jemalloc" ]; then
+		if [ $jemalloc_path == "nil" ]; then
+			echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -ljemalloc -ldl" >> Makefile
+		else
+			echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -L$jemalloc_path -ljemalloc -ldl" >> Makefile
+		fi
+	else
+		echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -ldl" >> Makefile
+	fi
 else
-	echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -lsalloc -lc" >> Makefile
+	if [ $malloc_type == "salloc" ]; then
+		echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -lsalloc -lc" >> Makefile
+	elif [ $malloc_type == "jemalloc" ]; then
+		if [ $jemalloc_path == "nil" ]; then
+			echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -ljemalloc -lc" >> Makefile
+		else
+			echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -L$jemalloc_path -ljemalloc -lc" >> Makefile
+		fi
+	else
+		echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -lc" >> Makefile
+	fi
 fi
 echo "install:" >> Makefile
 echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
@@ -342,6 +379,24 @@ do
 		echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_SELECT" >> Makefile
 		continue
 	fi
+
+        test $fname = "mln_connection.c"
+        if [ $? -eq 0 ]; then
+        #test sendfile
+		echo "#include <sys/sendfile.h>
+		int main(void){sendfile(1,0,0,1);return 0;}" > sendfile_test.c
+		cc -o sendfile_test sendfile_test.c 2>/dev/null
+		if [ "$?" == "0" ]; then
+			echo "sendfile		[exist]"
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_SENDFILE" >> Makefile
+			rm -f sendfile_test sendfile_test.c
+			continue
+		fi
+		rm -f sendfile_test sendfile_test.c
+		echo "sendfile		[not exist]"
+		echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile
+		continue
+        fi
 	echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile
 done
 echo "Configure done!"

@@ -6,6 +6,7 @@
 #ifndef __MLN_TYPES
 #define __MLN_TYPES
 
+#include <unistd.h>
 #include "mln_defs.h"
 #include "mln_path.h"
 #if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)
@@ -44,6 +45,7 @@ typedef long *                mln_s64ptr_t;
 typedef unsigned long *       mln_u64ptr_t;
 #endif
 typedef size_t                mln_size_t;
+typedef off_t                 mln_off_t;
 typedef long                  mln_sptr_t;
 typedef unsigned long         mln_uptr_t;
 typedef long                  mln_sauto_t;

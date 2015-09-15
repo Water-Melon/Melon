@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.2.7
+Melon Version 1.2.8
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -59,8 +59,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.2.7.
-  b) Change directory to the melon-1.2.7/.
+  a) Download and decompress melon-1.2.8.
+  b) Change directory to the melon-1.2.8/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.2.7/include/mln_types.h.
+Their definitions can be found in melon-1.2.8/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -187,6 +187,24 @@ Their definitions can be found in melon-1.2.7/include/mln_types.h.
 
     x) void mln_slice_free(mln_string_t *array);
        This interface frees the vector that mln_slice() returned.
+
+    y) mln_string(s);
+       This interface is used to create a string on stack. Its
+       content is 's', and its length is sizeof(s)-1.
+
+    z) mln_string_set(pstring,s);
+       This interface is used to set the content of 'pstring', its
+       'str' is 's', its length is 'strlen(s)' and its 'is_referred'
+       will be set 1.
+
+    aa) mln_string_t *mln_new_string_pool(mln_alloc_t *pool,
+                                          const char *s);
+       This interface is the same as 'mln_new_string' but allocated
+       from a memory pool.
+
+    ab) void mln_free_string_pool(mln_string_t *str);
+       This interface is the same as 'mln_free_string' but freed to
+       a memory pool.
 
   2) Hash Table
     struct mln_hash_attr {
@@ -965,6 +983,51 @@ Their definitions can be found in melon-1.2.7/include/mln_types.h.
      k) M_C_RCV_NULL(c_ptr);
         Test whether the receive buffer pointer is NULL or not.
 
+     l) int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd);
+        Initialize a 'mln_tcp_conn_t' structure and associate with
+        the socket file descriptor 'sockfd'.
+
+     m) void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
+        Destroy a 'mln_tcp_conn_t' structure.
+
+     n) int mln_tcp_conn_getsock(mln_tcp_conn_t *tc);
+        Return the socket file descriptor that associate with 'tc'.
+
+     o) void mln_tcp_conn_set(mln_tcp_conn_t *tc,
+                              mln_chain_t *c,
+                              int type);
+        Add 'c' to the end of a chain in 'tc'.
+        'type' has three value:
+            I.   M_C_SEND
+                 Indicating the send chain.
+            II.  M_C_RECV
+                 Indicating the receive chain.
+            III. M_C_SENT
+                 Indicating the sent chain.
+
+     p) mln_chain_t *mln_tcp_conn_get(mln_tcp_conn_t *tc, int type);
+        Get the first chain node pointer from a chain in 'tc'.
+        'type' is the same as 'mln_tcp_conn_set'.
+
+     q) mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc,
+                                         int type);
+        Remove and return the chain that 'type' indicates in 'tc'.
+
+     r) mln_tcp_conn_send(mln_tcp_conn_t *tc);
+        Send the data of 'send' chain in 'tc' to the peer of a
+        connection.
+
+     s) mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag);
+        Receive the data from the peer of a connection and add
+        the data to the end of 'receive' chain in 'tc'.
+        'flag' indicates the storage method for the receive data.
+            I.   M_C_TYPE_FOLLOW
+                 Set the method to be as same as latest one.
+            II.  M_C_TYPE_MEMORY
+                 Store the receive data in memory.
+            III. M_C_TYPE_FILE
+                 Store the receive data in a temporary file.
+
   13) Global resources Initialization
      a) void mln_global_init(void);
         This interface is used to initialize global variables.
@@ -998,47 +1061,49 @@ Their definitions can be found in melon-1.2.7/include/mln_types.h.
 	 It is used to test whether the queue is empty.
 
      b) mln_queue_full(q)
-     It is used to test whether the queue is full.
+        It is used to test whether the queue is full.
 
      c) mln_queue_length(q)
-     It is used to get the queue length.
+        It is used to get the queue length.
 
      d) mln_queue_element(q)
-     It is used to get the number of elements currently in queue.
+        It is used to get the number of elements currently
+        in queue.
 
      e) mln_queue_t *mln_queue_init(struct mln_queue_attr *attr);
-     It is used to initialize a queue object.
+        It is used to initialize a queue object.
 
      f) void mln_queue_destroy(mln_queue_t *q);
-     It is used to destroy a queue object.
+        It is used to destroy a queue object.
 
      g) int mln_queue_append(mln_queue_t *q, void *data);
-     It is used to append an element to the queue.
+        It is used to append an element to the queue.
 
      h) void *mln_queue_get(mln_queue_t *q);
-     It is used to get the first element in the queue.
+        It is used to get the first element in the queue.
 
      i) void mln_queue_remove(mln_queue_t *q);
-     It is used to remove the first element from the queue.
-     And this interface won't free the memory of the first element.
+        It is used to remove the first element from the queue.
+        And this interface won't free the memory of the first
+        element.
 
      j) void *mln_queue_search(mln_queue_t *q, mln_uauto_t index);
-     It is used to search an element via 'index'.
-     'index' starts from 0.
+        It is used to search an element via 'index'.
+        'index' starts from 0.
 
      k) void mln_queue_free_index(mln_queue_t *q, mln_uauto_t index);
-     It is used to remove the element that located by 'index' in
-     the queue and free its memory.
+        It is used to remove the element that located by 'index' in
+        the queue and free its memory.
 
      l) int mln_queue_scan_all(mln_queue_t *q,
                                queue_scan scan_handler,
                                void *udata);
-     It is used to scan all elements in the queue.
-     scan_handler -- is a function pointer that is used to process
-     every element. Its prototype is
-         typedef int (*queue_scan)(void *, void *);
-     The first argument is the pointer of an element. The second
-     one is a user data.
+        It is used to scan all elements in the queue.
+        scan_handler -- is a function pointer that is used to
+        process every element. Its prototype is
+            typedef int (*queue_scan)(void *, void *);
+        The first argument is the pointer of an element. The second
+        one is a user data.
 
   15) Stack
 
@@ -1058,25 +1123,25 @@ Their definitions can be found in melon-1.2.7/include/mln_types.h.
 
      There are 7 interfaces for stack.
      a) mln_stack_empty(s)
-     It is used to test whether the stack is empty.
+        It is used to test whether the stack is empty.
 
      b) mln_stack_t *mln_stack_init(struct mln_stack_attr *attr);
-     This interface is used to initialize a stack object.
+        This interface is used to initialize a stack object.
 
      c) void mln_stack_destroy(mln_stack_t *st);
-     This interface is used to destroy a stack object.
+        This interface is used to destroy a stack object.
 
      d) int mln_stack_push(mln_stack_t *st, void *data);
-     It is used to push a data into the stack.
+        It is used to push a data into the stack.
 
      e) void *mln_stack_pop(mln_stack_t *st);
-     It is used to pop a data out of the stack. 
+        It is used to pop a data out of the stack. 
 
      f) void *mln_stack_top(mln_stack_t *st);
-     It is used to get the top data in the stack.
+        It is used to get the top data in the stack.
 
      g) mln_stack_t *mln_stack_dup(mln_stack_t *st);
-     It is used to duplicate a stack data.
+        It is used to duplicate a stack data.
 
   16) Parser and Parser Generator
      Parser can be used to parse a text which is in a file
@@ -1238,6 +1303,108 @@ Their definitions can be found in melon-1.2.7/include/mln_types.h.
 
      Now, the text has been parsed.
      We can build a A.S.T via semantic actions.
+
+  17) Memory Pool
+     The memory pool can help developer use memory more easily.
+     a) mln_alloc_t *mln_alloc_init(void);
+        Initialize a memory pool object.
+
+     b) void mln_alloc_destroy(mln_alloc_t *pool);
+        Destroy a memory pool object and free all memory blocks
+        that it allocated.
+
+     c) void mln_alloc_m(mln_alloc_t *pool, mln_size_t size);
+        Allocate a memory block with size 'size'.
+
+     d) void mln_alloc_c(mln_alloc_t *pool, mln_size_t size);
+        Allocate a memory block with size 'size', and set its
+        content to be 0.
+
+     e) void mln_alloc_re(mln_alloc_t *pool,
+                          void *ptr,
+                          mln_size_t size);
+        Re-allocate a memory block. That is the same as 'realloc'
+        but allocating from a memory pool.
+
+     f) void mln_alloc_free(void *ptr);
+        Free a memory block to a memory pool.
+
+  18) Chain & Buf
+     These two structures do not have interfaces to operate.
+     We should set them manually. Just like buf and chain in
+     Nginx.
+
+     typedef struct mln_buf_s {
+         mln_u8ptr_t         send_pos;
+         mln_u8ptr_t         pos;
+         mln_u8ptr_t         last;
+         mln_u8ptr_t         start;
+         mln_u8ptr_t         end;
+         struct mln_buf_s   *shadow;
+         mln_off_t           file_send_pos;
+         mln_off_t           file_pos;
+         mln_off_t           file_last;
+         mln_file_t         *file;
+         mln_u32_t           temporary:1;
+         mln_u32_t           mmap:1;
+         mln_u32_t           in_memory:1;
+         mln_u32_t           in_file:1;
+         mln_u32_t           flush:1;
+         mln_u32_t           sync:1;
+         mln_u32_t           last_buf:1;
+         mln_u32_t           last_in_chain:1;
+     } mln_buf_t;
+
+     typedef struct mln_chain_s {
+         mln_buf_t          *buf;
+         struct mln_chain_s *next;
+     } mln_chain_t;
+
+     a) mln_buf_size(pbuf);
+        Calculate buf size.
+
+     b) mln_buf_left_size(pbuf);
+        Calculate the left size in a buf.
+
+     c) mln_buf_t *mln_buf_new(mln_alloc_t *pool);
+        Create a new buf structure and initialize it.
+
+     d) mln_chain_t *mln_chain_new(mln_alloc_t *pool);
+        Create and initialize a new chain node.
+
+     e) void mln_buf_pool_release(mln_buf_t *b);
+        Release a buf structure resource.
+
+     f) void mln_chain_pool_release(mln_chain_t *c);
+        Release a chain node structure resource.
+
+     g) void mln_chain_pool_release_all(mln_chain_t *c);
+        Release whole chain node.
+
+  19) File
+     a) mln_file_set_t *mln_file_set_init(mln_size_t max_file);
+        Create and initilize a file set.
+
+     b) void mln_file_set_destroy(mln_file_set_t *fset);
+        Destroy a file set and release all file descriptors
+        that it cached.
+
+     c) mln_file_t *mln_file_open(mln_file_set_t *fset,
+                                  const char *filepath);
+        Open a file. And this file must be opened with read-only.
+        This file object will be cached in 'fset'.
+
+     d) void mln_file_close(void *pfile);
+        Close a file. If 'pfile' is a regular file, it will be
+        cached in its file set. Otherwise, it will be freed.
+
+     e) mln_file_t *mln_file_tmp_open(mln_alloc_t *pool);
+        Open a temporary file. This file will be created and opened
+        with 'O_RDWR'.
+
+     f) mln_file_fd(pfile);
+        This interface is used to get a file descriptor from 'pfile'.
+        'pfile' is a 'mln_file_t' pointer.
 
 5. Process Module Development
    In Melon, there are two methods to develop process module.

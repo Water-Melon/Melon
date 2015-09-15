@@ -8,12 +8,12 @@
 #include <stdlib.h>
 #include "mln_string.h"
 
-static inline mln_string_t *mln_assign_string(char *s, mln_s32_t len);
 
 static inline int *compute_prefix_function(const char *pattern, int m);
 static inline char *
 kmp_string_match(char *text, const char *pattern, int text_len, int pattern_len) __NONNULL2(1,2);
 static mln_string_t *mln_slice_recursive(char *s, int len, char *ascii, int cnt) __NONNULL2(1,3);
+static inline mln_string_t *mln_assign_string(char *s, mln_s32_t len);
 
 static inline mln_string_t *mln_assign_string(char *s, mln_s32_t len)
 {
@@ -23,6 +23,29 @@ static inline mln_string_t *mln_assign_string(char *s, mln_s32_t len)
     str->str = s;
     str->len = len;
     str->is_referred = 1;
+    return str;
+}
+
+mln_string_t *mln_new_string_pool(mln_alloc_t *pool, const char *s)
+{
+    mln_string_t *str = (mln_string_t *)mln_alloc_m(pool, sizeof(mln_string_t));
+    if (str == NULL) return NULL;
+    if (s == NULL) {
+        str->str = NULL;
+        str->len = 0;
+        str->is_referred = 0;
+        return str;
+    }
+    mln_s32_t len = strlen(s);
+    str->str = (mln_s8ptr_t)mln_alloc_m(pool, len + 1);
+    if (str->str == NULL) {
+        mln_alloc_free(str);
+        return NULL;
+    }
+    memcpy(str->str, s, len);
+    str->str[len] = 0;
+    str->len = len;
+    str->is_referred = 0;
     return str;
 }
 
@@ -109,6 +132,14 @@ void mln_free_string(mln_string_t *str)
     if (!str->is_referred && str->str != NULL)
         free(str->str);
     free(str);
+}
+
+void mln_free_string_pool(mln_string_t *str)
+{
+    if (str == NULL) return;
+    if (!str->is_referred && str->str != NULL)
+        mln_alloc_free(str->str);
+    mln_alloc_free(str);
 }
 
 int mln_strcmp(mln_string_t *s1, mln_string_t *s2)

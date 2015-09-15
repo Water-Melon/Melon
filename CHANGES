@@ -1,3 +1,11 @@
+Changes with melon 1.2.8                                          14 Sep 2015
+    *) Added a memory pool.
+    *) Added a change structure.
+    *) Added a buffer structure.
+    *) Added another implementation of tcp I/O.
+    *) Added some interfaces of string.
+    *) Added an implementation of file cache.
+
 Changes with melon 1.2.7                                          29 Jul 2015
     *) Fixed some bugs about lock.
 

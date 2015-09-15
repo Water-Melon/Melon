@@ -6,6 +6,8 @@
 #ifndef __MLN_STRING_H
 #define __MLN_STRING_H
 #include "mln_types.h"
+#include <string.h>
+#include "mln_alloc.h"
 
 typedef struct {
     mln_s8ptr_t  str;
@@ -16,8 +18,18 @@ typedef struct {
 /*
  * init & free
  */
+#define mln_string(s) {s, sizeof(s)-1}
+#define mln_string_set(pstring,s) \
+    {\
+        (pstring)->str = (mln_s8ptr_t)(s);\
+        (pstring)->len = strlen(s);\
+        (pstring)->is_referred = 1;\
+    }
+
 extern mln_string_t *
 mln_new_string(const char *s);
+extern mln_string_t *
+mln_new_string_pool(mln_alloc_t *pool, const char *s);
 extern mln_string_t *
 mln_dup_string(mln_string_t *str) __NONNULL1(1);
 extern mln_string_t *
@@ -28,6 +40,8 @@ extern mln_string_t *
 mln_refer_const_string(char *s);
 extern void
 mln_free_string(mln_string_t *str);
+extern void
+mln_free_string_pool(mln_string_t *str);
 
 /*
  * tool functions
