@@ -63,7 +63,7 @@ mln_tcp_connection_recv(mln_tcp_connection_t *c) __NONNULL1(1);
  * another tcp I/O
  */
 
-#define M_C_TYPE_FOLLOW 0
+#define M_C_TYPE_FOLLOW 0x8
 #define M_C_TYPE_MEMORY 0x1
 #define M_C_TYPE_FILE   0x2
 
@@ -81,6 +81,8 @@ typedef struct {
 extern int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd) __NONNULL1(1);
 extern void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
 extern int mln_tcp_conn_getsock(mln_tcp_conn_t *tc) __NONNULL1(1);
+extern void
+mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type) __NONNULL2(1,2);
 extern void
 mln_tcp_conn_set(mln_tcp_conn_t *tc, mln_chain_t *c, int type) __NONNULL2(1,2);
 extern mln_chain_t *mln_tcp_conn_get(mln_tcp_conn_t *tc, int type) __NONNULL1(1);

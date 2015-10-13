@@ -14,6 +14,7 @@ enum log_level {
     none,
     report,
     debug,
+    warn,
     error
 };
 

@@ -24,9 +24,7 @@ typedef struct {
 } mln_boot_t;
 
 
-extern int mln_unlimit_memory(void);
-extern int mln_cancel_core(void);
-extern int mln_unlimit_fd(void);
+extern int mln_sys_limit_modify(void);
 extern int mln_daemon(void);
 extern int mln_boot_params(int argc, char *argv[]);
 #endif

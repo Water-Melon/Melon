@@ -32,24 +32,18 @@ int main(int argc, char *argv[])
     if (mln_boot_params(argc, argv) < 0)
          return -1;
 
-    /*Modify system limitations*/
-    printf("Init system resources\n");
-    if (mln_unlimit_memory() < 0) {
-        return -1;
-    }
-    if (mln_cancel_core() < 0) {
-        return -1;
-    }
-    if (mln_unlimit_fd() < 0) {
-        return -1;
-    }
-
     /*Init configurations*/
     printf("Init configurations\n");
     if (mln_conf_load() < 0) {
         return -1;
     }
     if (mln_conf_set_hook(mln_log_reload, NULL) == NULL) {
+        return -1;
+    }
+
+    /*Modify system limitations*/
+    printf("Modify system limitations\n");
+    if (mln_sys_limit_modify() < 0) {
         return -1;
     }
 

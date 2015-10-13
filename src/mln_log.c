@@ -230,6 +230,8 @@ static int mln_log_set_level(mln_log_t *log, int is_init)
         log->level = report;
     } else if (!mln_const_strcmp(ci->val.s, "debug")) {
         log->level = debug;
+    } else if (!mln_const_strcmp(ci->val.s, "warn")) {
+        log->level = warn;
     } else if (!mln_const_strcmp(ci->val.s, "error")) {
         log->level = error;
     } else {
@@ -314,6 +316,9 @@ _mln_sys_log_process(mln_log_t *log, \
             break;
         case debug:
             mln_log_write(log, (void *)"DEBUG: ", 7);
+            break;
+        case warn:
+            mln_log_write(log, (void *)"WARN: ", 6);
             break;
         case error:
             mln_log_write(log, (void *)"ERROR: ", 7);

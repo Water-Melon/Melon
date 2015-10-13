@@ -47,6 +47,16 @@ typedef struct mln_chain_s {
     ((pbuf) == NULL? 0: \
         ((pbuf)->in_file? (pbuf)->file_last - (pbuf)->file_send_pos: (pbuf)->last - (pbuf)->send_pos))
 
+#define mln_chain_add(pphead,pptail,c) \
+{\
+    if (*(pphead) == NULL) {\
+        *(pphead) = *(pptail) = (c);\
+    } else {\
+        (*(pptail))->next = (c);\
+        *(pptail) = (c);\
+    }\
+}
+
 extern mln_buf_t *mln_buf_new(mln_alloc_t *pool);
 extern mln_chain_t *mln_chain_new(mln_alloc_t *pool);
 extern void mln_buf_pool_release(mln_buf_t *b);

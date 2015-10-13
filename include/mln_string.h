@@ -18,7 +18,7 @@ typedef struct {
 /*
  * init & free
  */
-#define mln_string(s) {s, sizeof(s)-1}
+#define mln_string(s) {(mln_s8ptr_t)s, sizeof(s)-1, 1}
 #define mln_string_set(pstring,s) \
     {\
         (pstring)->str = (mln_s8ptr_t)(s);\
@@ -32,6 +32,8 @@ extern mln_string_t *
 mln_new_string_pool(mln_alloc_t *pool, const char *s);
 extern mln_string_t *
 mln_dup_string(mln_string_t *str) __NONNULL1(1);
+extern mln_string_t *
+mln_dup_string_pool(mln_alloc_t *pool, mln_string_t *str) __NONNULL2(1,2);
 extern mln_string_t *
 mln_ndup_string(mln_string_t *str, mln_s32_t size) __NONNULL1(1);
 extern mln_string_t *

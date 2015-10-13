@@ -382,19 +382,38 @@ do
 
         test $fname = "mln_connection.c"
         if [ $? -eq 0 ]; then
+		sendfile=0
         #test sendfile
 		echo "#include <sys/sendfile.h>
 		int main(void){sendfile(1,0,0,1);return 0;}" > sendfile_test.c
 		cc -o sendfile_test sendfile_test.c 2>/dev/null
 		if [ "$?" == "0" ]; then
+			sendfile=1
 			echo "sendfile		[exist]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_SENDFILE" >> Makefile
-			rm -f sendfile_test sendfile_test.c
-			continue
+		else
+			echo "sendfile		[not exist]"
 		fi
 		rm -f sendfile_test sendfile_test.c
-		echo "sendfile		[not exist]"
-		echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile
+	#test writev
+		echo -e "#include <stdio.h>\n#include <sys/uio.h>" > writev_test.c
+		echo "int main(void){writev(0,NULL,0);return 0;}" >> writev_test.c
+		cc -o writev_test writev_test.c 2>/dev/null
+		if [ "$?" == "0" ]; then
+			echo "writev			[exist]"
+			if [ $sendfile -eq "1" ]; then
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_SENDFILE -DMLN_WRITEV" >> Makefile
+			else
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_WRITEV" >> Makefile
+			fi
+		else
+			echo "writev			[not exist]"
+			if [ $sendfile -eq "1" ]; then
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_SENDFILE" >> Makefile
+			else
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile
+			fi
+		fi
+		rm -f writev_test writev_test.c
 		continue
         fi
 	echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile

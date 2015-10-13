@@ -22,12 +22,16 @@ mln_boot_help(const char *boot_str, const char *alias);
 static int
 mln_boot_version(const char *boot_str, const char *alias);
 static int mln_set_id(void);
+static int mln_sys_core_modify(void);
+static int mln_sys_nofile_modify(void);
 
 mln_boot_t boot_params[] = {
 {"--help", "-h", mln_boot_help, 0},
 {"--version", "-v", mln_boot_version, 0}
 };
-
+char mln_core_file_cmd[] = "core_file_size";
+char mln_nofile_cmd[] = "max_nofile";
+char mln_limit_unlimited[] = "unlimited";
 
 static mln_passwd_lex_struct_t *
 mln_passwd_lex_nums_handler(mln_lex_t *lex, void *data)
@@ -43,35 +47,54 @@ mln_passwd_lex_nums_handler(mln_lex_t *lex, void *data)
     return mln_passwd_lex_new(lex, PWD_TK_COMMENT);
 }
 
-int mln_unlimit_memory(void)
+int mln_sys_limit_modify(void)
 {
     if (getuid()) {
-        fprintf(stderr, "RLIMIT_AS permission deny.\n");
+        fprintf(stderr, "Modify system limitation failed. Permission deny.\n");
         return -1;
     }
-#ifdef RLIMIT_AS
-    struct rlimit rl;
-    memset(&rl, 0, sizeof(rl));
-    rl.rlim_cur = RLIM_INFINITY;
-    rl.rlim_max = RLIM_INFINITY;
-    if (setrlimit(RLIMIT_AS, &rl) != 0) {
-        fprintf(stderr, "setrlimit memory failed, %s\n", strerror(errno));
+
+    if (mln_sys_core_modify() < 0) {
         return -1;
     }
-#endif
-    return 0;
+    return mln_sys_nofile_modify();
 }
 
-int mln_cancel_core(void)
+static int mln_sys_core_modify(void)
 {
-    if (getuid()) {
-        fprintf(stderr, "RLIMIT_CORE permission deny.\n");
+#ifdef RLIMIT_CORE
+    rlim_t core_file_size = 0;
+
+    mln_conf_t *cf = mln_get_conf();
+    if (cf == NULL) {
+        fprintf(stderr, "Configuration messed up.\n");
         return -1;
     }
-#ifdef RLIMIT_CORE
+    mln_conf_domain_t *cd = cf->search(cf, "main");
+    if (cd == NULL) {
+        fprintf(stderr, "Configuration messed up.\n");
+        return -1;
+    }
+    mln_conf_cmd_t *cc = cd->search(cd, mln_core_file_cmd);
+    if (cc == NULL) return 0;
+
+    mln_conf_item_t *ci = cc->search(cc, 1);
+    if (ci->type == CONF_INT) {
+        core_file_size = (rlim_t)ci->val.i;
+    } else if (ci->type == CONF_STR) {
+        if (mln_const_strcmp(ci->val.s, mln_limit_unlimited)) {
+            fprintf(stderr, "Invalid argument of %s.\n", mln_core_file_cmd);
+            return -1;
+        }
+        core_file_size = RLIM_INFINITY;
+    } else {
+        fprintf(stderr, "Invalid argument of %s.\n", mln_core_file_cmd);
+        return -1;
+    }
+
     struct rlimit rl;
     memset(&rl, 0, sizeof(rl));
-    rl.rlim_cur = rl.rlim_max = 0;
+    rl.rlim_cur = rl.rlim_max = core_file_size;
     if (setrlimit(RLIMIT_CORE, &rl) != 0) {
         fprintf(stderr, "setrlimit core failed, %s\n", strerror(errno));
         return -1;
@@ -80,22 +103,44 @@ int mln_cancel_core(void)
     return 0;
 }
 
-int mln_unlimit_fd(void)
+static int mln_sys_nofile_modify(void)
 {
-    if (getuid()) {
-        fprintf(stderr, "RLIMIT_NOFILE permission deny.\n");
+#ifdef RLIMIT_NOFILE
+    rlim_t nofile = 0;
+
+    mln_conf_t *cf = mln_get_conf();
+    if (cf == NULL) {
+        fprintf(stderr, "Configuration messed up.\n");
         return -1;
     }
-#ifdef RLIMIT_NOFILE
-    struct rlimit rl;
-    memset(&rl, 0, sizeof(rl));
-    rl.rlim_cur = rl.rlim_max = RLIM_INFINITY;
-    if (setrlimit(RLIMIT_NOFILE, &rl) != 0) {
-        rl.rlim_cur = rl.rlim_max = 0x100000;
-        if (setrlimit(RLIMIT_NOFILE, &rl) != 0) {
-            fprintf(stderr, "setrlimit fd failed, %s\n", strerror(errno));
+    mln_conf_domain_t *cd = cf->search(cf, "main");
+    if (cd == NULL) {
+        fprintf(stderr, "Configuration messed up.\n");
+        return -1;
+    }
+    mln_conf_cmd_t *cc = cd->search(cd, mln_nofile_cmd);
+    if (cc == NULL) return 0;
+
+    mln_conf_item_t *ci = cc->search(cc, 1);
+    if (ci->type == CONF_INT) {
+        nofile = (rlim_t)ci->val.i;
+    } else if (ci->type == CONF_STR) {
+        if (mln_const_strcmp(ci->val.s, mln_limit_unlimited)) {
+            fprintf(stderr, "Invalid argument of %s.\n", mln_nofile_cmd);
             return -1;
         }
+        nofile = RLIM_INFINITY;
+    } else {
+        fprintf(stderr, "Invalid argument of %s.\n", mln_nofile_cmd);
+        return -1;
+    }
+
+    struct rlimit rl;
+    memset(&rl, 0, sizeof(rl));
+    rl.rlim_cur = rl.rlim_max = nofile;
+    if (setrlimit(RLIMIT_NOFILE, &rl) != 0) {
+        fprintf(stderr, "setrlimit fd failed, %s\n", strerror(errno));
+        return -1;
     }
 #endif
     return 0;
@@ -325,7 +370,7 @@ static int
 mln_boot_version(const char *boot_str, const char *alias)
 {
     printf("Melon Platform.\n");
-    printf("Version 1.2.8.\n");
+    printf("Version 1.3.0.\n");
     printf("Copyright (C) Niklaus F.Schen (Chinese name: Shen Fanchen).\n");
     exit(0);
     return 0;

@@ -66,11 +66,13 @@ mln_hash_destroy(mln_hash_t *h, enum mln_hash_flag flg) __NONNULL1(1);
 extern void *
 mln_hash_search(mln_hash_t *h, void *key) __NONNULL2(1,2);
 extern int
-mln_hash_insert(mln_hash_t *h, void *key, void *val) __NONNULL3(1,2,3);
+mln_hash_insert(mln_hash_t *h, void *key, void *val) __NONNULL2(1,2);
 extern void
 mln_hash_remove(mln_hash_t *h, void *key, enum mln_hash_flag flg) __NONNULL2(1,2);
 extern int
 mln_hash_scan_all(mln_hash_t *h, hash_scan_handler handler, void *udata) __NONNULL1(1);
+extern void *
+mln_hash_change_value(mln_hash_t *h, void *key, void *new_value) __NONNULL2(1,2);
 
 #endif
 

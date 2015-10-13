@@ -162,6 +162,24 @@ mln_move_hash_entry(mln_hash_t *h, mln_hash_mgr_t *old_tbl, mln_u32_t old_len)
     }
 }
 
+void *mln_hash_change_value(mln_hash_t *h, void *key, void *new_value)
+{
+    mln_u32_t index = h->hash(h, key);
+    if (index >= h->len) {
+        mln_log(error, "fatal error: index >= hash table length.\n");
+        abort();
+    }
+    mln_hash_mgr_t *mgr = &(h->tbl[index]);
+    mln_hash_entry_t *he;
+    for (he = mgr->head; he != NULL; he = he->next) {
+        if (h->cmp(h, key, he->key)) break;
+    }
+    if (he == NULL) return NULL;
+    mln_u8ptr_t retval = (mln_u8ptr_t)(he->val);
+    he->val = new_value;
+    return retval;
+}
+
 void *mln_hash_search(mln_hash_t *h, void *key)
 {
     mln_u32_t index = h->hash(h, key);

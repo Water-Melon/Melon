@@ -88,6 +88,22 @@ mln_string_t *mln_dup_string(mln_string_t *str)
     return s;
 }
 
+mln_string_t *mln_dup_string_pool(mln_alloc_t *pool, mln_string_t *str)
+{
+    mln_string_t *s = (mln_string_t *)mln_alloc_m(pool, sizeof(mln_string_t));
+    if (s == NULL) return NULL;
+    s->str = (mln_s8ptr_t)mln_alloc_m(pool, str->len + 1);
+    if (s->str == NULL) {
+        mln_alloc_free(s);
+        return NULL;
+    }
+    memcpy(s->str, str->str, str->len);
+    s->str[str->len] = 0;
+    s->len = str->len;
+    s->is_referred = 0;
+    return s;
+}
+
 mln_string_t *mln_ndup_string(mln_string_t *str, mln_s32_t size)
 {
     if (size <= 0) return NULL;

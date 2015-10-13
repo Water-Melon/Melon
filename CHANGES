@@ -1,3 +1,11 @@
+Changes with melon 1.3.0                                          17 Sep 2015
+    *) Added a log level (Warn).
+    *) Added two configuration command (max_nofile and
+       core_file_size).
+    *) Added an new interface in mln_hash.c for changing value
+       (mln_hash_change_value()).
+    *) Added HTTP components.
+
 Changes with melon 1.2.8                                          14 Sep 2015
     *) Added a memory pool.
     *) Added a change structure.

@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.2.8
+Melon Version 1.3.0
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -59,8 +59,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.2.8.
-  b) Change directory to the melon-1.2.8/.
+  a) Download and decompress melon-1.3.0.
+  b) Change directory to the melon-1.3.0/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.2.8/include/mln_types.h.
+Their definitions can be found in melon-1.3.0/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -269,6 +269,13 @@ Their definitions can be found in melon-1.2.8/include/mln_types.h.
        process every key-value by the handler.
        The third argument of handler is the udata that is a
        custom structure pointer.
+
+    g) void *mln_hash_change_value(mln_hash_t *h,
+                                   void *key,
+                                   void *new_value);
+       This interface is used to change the value that is
+       indicated by 'key'.
+       The old value will be returned.
 
   3) Fibonacci Heap
     struct mln_fheap_attr {
@@ -476,7 +483,7 @@ Their definitions can be found in melon-1.2.8/include/mln_types.h.
        This interface is widely used in Melon.
        We use it to record log message.
        The first argument is log level. There are five
-       levels: none, report, debug, error and nolog.
+       levels: none, report, debug, warn and error.
        The initial log level can be set in the
        configuration file. The second argument is a string.
        It likes the first argument 'fmt' in printf(). And it
@@ -1405,6 +1412,238 @@ Their definitions can be found in melon-1.2.8/include/mln_types.h.
      f) mln_file_fd(pfile);
         This interface is used to get a file descriptor from 'pfile'.
         'pfile' is a 'mln_file_t' pointer.
+
+  20) HTTP
+     HTTP components contains two parts: HTTP header and HTTP.
+     In this section we will see many interfaces.
+     Now, let's start from HTTP header.
+     I) HTTP Header
+        a) void mln_http_header_reset(mln_http_header_t *header,
+                                      http_header *hooks);
+           Reset all fields in 'header' and set function pointers that
+           is recorded in 'hooks' to 'header' to process HTTP fields.
+           The prototype of 'http_header' is defined as,
+               typedef mln_chain_t *(*http_header)(mln_string_t *,
+                                                   mln_string_t **,
+                                                   mln_http_header_t *,
+                                                   void *);
+           The first argument is the HTTP field name.
+           The second one is an address which points to the field's
+           value.
+           The third one is a HTTP header object.
+           The last one is an user data which is set in HTTP header
+           object by 'mln_http_header_set_data'..
+
+        b) mln_http_header_t *mln_http_header_init(mln_alloc_t *pool);
+           Initialize a HTTP header object.
+
+        c) void mln_http_header_destroy(mln_http_header_t *header);
+           Destroy 'header'.
+
+        d) mln_chain_t *mln_http_header_packup(mln_http_header_t *header);
+           Depending on all HTTP fields in 'header', pack up a request or
+           response.
+
+        e) mln_chain_t *mln_http_header_parse(mln_http_header_t *header,
+                                              mln_chain_t *in);
+           Parse the content in 'in' and set all fields in 'header'.
+           Then we can use the following interfaces to visit them.
+
+        f) mln_http_header_get_pool(header);
+           Get the memory pool pointer from 'header'.
+
+        g) mln_http_header_set_pool(header,p);
+           Set 'p' to the pool pointer of 'header'.
+
+        h) mln_http_header_get_data(header);
+           Get the user data which is set in 'header'.
+
+        i) mln_http_header_set_data(header,pdata);
+           Set 'pdata' to the data pointer of 'header'.
+
+        j) mln_http_header_get_value(header,key);
+           Depending on the 'key', get a HTTP field value from 'header'.
+           There are 44 fields defined in 'mln_http_header.h' for 'key'.
+           The key's scope is
+           'M_HTTP_HEADER_CACHE_CONTORL ... M_HTTP_HEADER_CONTENT_LENGTH'.
+
+        k) mln_http_header_set_value(header,key,val);
+           Set 'val' to the place that is mapped by 'key' in 'header'.
+           'val' is a secondary pointer which points to a string
+           object pointer that points to the value.
+
+        l) mln_http_header_get_handle(header,key);
+           Get the HTTP field handler (function pointer) from 'header'.
+
+        m) mln_http_header_set_handle(header,key,handle);
+           Set HTTP field handler.
+
+        n) mln_http_header_get_max_size(header);
+           Get the max buffer size for parsing HTTP header.
+
+        o) mln_http_header_request_set(header);
+           Set 'header' to be a request header.
+
+        p) mln_http_header_response_set(header);
+           Set 'header' to be a response header.
+
+        q) mln_http_header_is_request(header);
+           Test 'header' whether is a request header or not.
+
+        r) mln_http_header_get_retval(header);
+           Get return value which indicates whether the
+           operation excuted successfully or not.
+
+        s) mln_http_header_set_retval(header,rv);
+           Set return value. We may use this interface in HTTP
+           field handler which is provided by programmer.
+
+        t) mln_http_header_set_uri(header,/*mln_string_t **/puri);
+           Set HTTP request URI.
+
+        u) mln_http_header_get_uri(header);
+           Get HTTP request's URI.
+
+        v) mln_http_header_set_args(header, /*mln_string_t **/pargs);
+           Set HTTP request arguments.
+
+        w) mln_http_header_get_args(header);
+           Get HTTP request's arguments.
+
+        x) mln_http_header_set_version(header,val);
+           Set HTTP version.
+           'val' has two options:
+             1) M_HTTP_HEADER_VERSION_1_0
+             2) M_HTTP_HEADER_VERSION_1_1
+
+        y) mln_http_header_get_version(header);
+           Get HTTP version.
+
+        z) mln_http_header_set_status(header,val);
+           Set HTTP status code.
+           The options of 'val' are defined in 'mln_http_header.h',
+           and their scope is
+               'M_HTTP_HEADER_CONTINUE ... 
+                M_HTTP_HEADER_UNPARSEABLE_RESPONSE_HEADERS'.
+
+        aa) mln_http_header_get_status(header);
+           Get HTTP status code.
+
+        ab) mln_http_header_set_method(header,val);
+           Set HTTP request method.
+           The options of 'val' are define in 'mln_http_header.h',
+           and their scope is
+               'M_HTTP_HEADER_GET ... M_HTTP_HEADER_OPTIONS'.
+
+        ac) mln_http_header_get_method(header);
+           Get HTTP request method.
+
+        ad) mln_http_header_cookie_t *
+            mln_http_header_cookie_parse(mln_http_header_t *header);
+            Parse cookies.
+            This interfaces is only working on 'Cookie' field.
+            The return value is an array that records all key-value
+            in HTTP cookie.
+            typedef struct {
+                mln_string_t *key;
+                mln_string_t *value;
+            } mln_http_header_cookie_t;
+            The 'key' that the last element in array will be NULL.
+
+        ae) mln_http_header_cookie_t *
+            mln_http_header_setcookie_parse(mln_http_header_t *header);
+            Parse cookies.
+            This interfaces is only working on 'Set-Cookie' field.
+
+        af) void mln_http_header_cookies_destroy(
+                                    mln_http_header_cookie_t *cookies);
+            Destroy array 'cookies' that is returned by
+            'mln_http_header_cookie_parse' or
+            'mln_http_header_setcookie_parse'.
+
+        ag) mln_string_t *
+            mln_http_header_cookie_packup(mln_http_header_t *header,
+                                          mln_http_header_cookie_t *cookies);
+            Depending on 'cookies', pack up cookie string.
+
+     Now, here is HTTP.
+     II) HTTP
+        a) mln_http_t *mln_http_init(mln_alloc_t *pool);
+           Initialize a HTTP object.
+
+        b) void mln_http_destroy(mln_http_t *http);
+           Destroy 'http'.
+
+        c) mln_chain_t *mln_http_packup(mln_http_t *http);
+           Pack up a HTTP request or response.
+
+        d) mln_chain_t *mln_http_parse(mln_http_t *http, mln_chain_t *in);
+           Parse HTTP packet.
+
+        e) void mln_http_set_send_default_handle(mln_http_t *http);
+           Set default send handler.
+
+        f) mln_http_get_pool(http);
+           Get the memory pool pointer from 'http'.
+
+        g) mln_http_set_pool(http,p);
+           Set 'p' to the pool pointer in 'http'.
+
+        h) mln_http_get_data(http);
+           Get user data from 'http'.
+
+        i) mln_http_set_data(http,pdata);
+           Set 'pdata' to the data pointer in 'http'.
+
+        j) mln_http_get_connection(http);
+           Get connection object from 'http'.
+
+        k) mln_http_set_connection(http,con);
+           Set 'con' to the connection pointer in 'http'.
+
+        l) mln_http_get_handle(http);
+           Get HTTP body handler (function pointer) from 'http'.
+
+        m) mln_http_set_handle(http,h);
+           Set 'h' to the body handler pointer in 'http'.
+
+        n) mln_http_get_header(http);
+           Get HTTP header from 'http'.
+
+        o) mln_http_set_header(http,h);
+           Set 'h' to the header pointer in 'http'.
+
+        p) mln_http_body_head(http);
+           Get HTTP body content chain.
+
+        q) mln_http_body_append(http,chain);
+           Append 'chain' to the HTTP body content chain.
+
+        r) mln_http_get_peer_address(http);
+           Get peer's address.
+
+        s) mln_http_set_peer_address(http,addr);
+           Set peer's address.
+
+        t) mln_http_get_header_done(http);
+           Get the flag that indicates whether the HTTP
+           procedure is done.
+
+        u) mln_http_set_header_done(http);
+           If an HTTP packet has already processed, we need to
+           call this interface to notice the procedure.
+
+        v) mln_http_reset_header_done(http);
+           Reset done flag.
+
+        w) mln_http_get_status_code(http);
+           Get status code which indicates whether the
+           operation is executed successfully.
+           This status code is different from the one
+           in HTTP header object.
+
+        x) mln_http_set_status_code(http,code);
+           Set status code.
 
 5. Process Module Development
    In Melon, there are two methods to develop process module.
