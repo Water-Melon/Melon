@@ -1,3 +1,6 @@
+Changes with melon 1.3.1                                          20 Oct 2015
+    *) Fixed a bug of event component.
+
 Changes with melon 1.3.0                                          17 Sep 2015
     *) Added a log level (Warn).
     *) Added two configuration command (max_nofile and

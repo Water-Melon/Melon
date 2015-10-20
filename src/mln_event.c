@@ -587,9 +587,9 @@ mln_event_deal_timer(mln_event_t *event, int *ret)
     while ( 1 ) {
         fn = mln_fheap_minimum(event->ev_timer_heap);
         if (fn == NULL) {
-            *ret = -1;
             break;
         }
+        *ret = -1;
         ed = (mln_event_desc_t *)(fn->key);
         if (ed->data.tm.end_tm > now) break;
         fn = mln_fheap_extract_min(event->ev_timer_heap);
@@ -1098,9 +1098,9 @@ void mln_dispatch(mln_event_t *event)
         mln_event_deal_fd_timeout(event, &ret);
         BREAK_OUT();
         if (ret < 0)
-            nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, -1);
-        else
             nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, M_EV_TIMEOUT_MS);
+        else
+            nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, -1);
         if (nfds < 0) {
             if (errno == EINTR) continue;
             else {
@@ -1187,11 +1187,11 @@ void mln_dispatch(mln_event_t *event)
         mln_event_deal_fd_timeout(event, &ret);
         BREAK_OUT();
         if (ret < 0) {
-            nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, NULL);
-        } else {
             ts.tv_sec = 0;
             ts.tv_nsec = M_EV_TIMEOUT_NS;
             nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
+        } else {
+            nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, NULL);
         }
         if (nfds < 0) {
             if (errno == EINTR) continue;
@@ -1281,11 +1281,11 @@ void mln_dispatch(mln_event_t *event)
                 event->select_fd = fd + 1;
         }
         if (ret < 0) {
-            nfds = select(event->select_fd, rd_set, wr_set, err_set, NULL);
-        } else {
             tm.tv_sec = 0;
             tm.tv_usec = M_EV_TIMEOUT_US;
             nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
+        } else {
+            nfds = select(event->select_fd, rd_set, wr_set, err_set, NULL);
         }
         if (nfds < 0) {
             if (errno == EINTR || errno == ENOMEM) continue;
@@ -1394,9 +1394,9 @@ mln_event_deal_fd_timeout(mln_event_t *event, int *ret)
     while ( 1 ) {
         fn = mln_fheap_minimum(event->ev_fd_timeout_heap);
         if (fn == NULL) {
-            *ret = -1;
             break;
         }
+        *ret = -1;
         ed = (mln_event_desc_t *)(fn->key);
         ef = &(ed->data.fd);
         if (ef->in_active) {
