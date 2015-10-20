@@ -35,6 +35,7 @@ static int mln_log_set_level(mln_log_t *log, int is_init);
 static ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
 static void mln_log_atfork_lock(void);
 static void mln_log_atfork_unlock(void);
+static int mln_log_get_log(mln_log_t *log, int is_init);
 
 /*
  * global variables
@@ -45,6 +46,7 @@ long mon_days[2][12] = {
 };
 char log_err_level[] = "Log level permission deny.";
 char log_err_fmt[] = "Log message format error.";
+char log_path_cmd[] = "log_path";
 mln_log_t gLog = {{0},{0},{0},STDERR_FILENO,0,none,(mln_lock_t)0};
 
 /*
@@ -117,44 +119,47 @@ mln_get_localtime(struct timeval *tv, struct localtime_s *lc)
 int mln_log_init(int in_daemon)
 {
     mln_log_t *log = &gLog;
-    char *ab_path = mln_get_path();
-    memset(log->dir_path, 0, M_LOG_PATH_LEN);
-    snprintf(log->dir_path, M_LOG_PATH_LEN-1, "%s/logs", ab_path);
-    memset(log->pid_path, 0, M_LOG_PATH_LEN);
-    snprintf(log->pid_path, M_LOG_PATH_LEN-1, "%s/logs/melon.pid", ab_path);
-    memset(log->log_path, 0, M_LOG_PATH_LEN);
-    snprintf(log->log_path, M_LOG_PATH_LEN-1, "%s/logs/melon.log", ab_path);
+    char *ab_path, path[M_LOG_PATH_LEN];
 
-    if (mkdir(log->dir_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) < 0) {
+    ab_path = mln_get_path();
+
+    memset(path, 0, M_LOG_PATH_LEN);
+    snprintf(path, M_LOG_PATH_LEN-1, "%s/logs", ab_path);
+    if (mkdir(path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) < 0) {
         if (errno != EEXIST) {
-            fprintf(stderr, "mkdir '%s' failed. %s\n", log->dir_path, strerror(errno));
+            fprintf(stderr, "mkdir '%s' failed. %s\n", path, strerror(errno));
             return -1;
         }
     }
 
-    int pid_fd = open(log->pid_path, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    if (pid_fd < 0) {
+    memset(log->pid_path, 0, M_LOG_PATH_LEN);
+    snprintf(log->pid_path, M_LOG_PATH_LEN-1, "%s/logs/melon.pid", ab_path);
+    int fd = open(log->pid_path, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    if (fd < 0) {
         fprintf(stderr, "%s(): open pid file failed. %s\n", __FUNCTION__, strerror(errno));
         return -1;
     }
     char pid_str[64] = {0};
     snprintf(pid_str, sizeof(pid_str)-1, "%lu", (unsigned long)getpid());
-    mln_file_lock(pid_fd);
-    write(pid_fd, pid_str, strlen(pid_str));
-    mln_file_unlock(pid_fd);
-    close(pid_fd);
+    mln_file_lock(fd);
+    write(fd, pid_str, strlen(pid_str));
+    mln_file_unlock(fd);
+    close(fd);
 
-    log->fd = open(log->log_path, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    if (log->fd < 0) {
+    memset(path, 0, M_LOG_PATH_LEN);
+    snprintf(path, M_LOG_PATH_LEN-1, "%s/logs/melon.log", ab_path);
+    fd = open(path, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    if (fd < 0) {
         fprintf(stderr, "%s(): open log file failed. %s\n", __FUNCTION__, strerror(errno));
         return -1;
     }
+    close(fd);
+
     log->in_daemon = in_daemon;
     log->level = none;
     int ret = 0;
     if ((ret = MLN_LOCK_INIT(&(log->thread_lock))) != 0) {
         fprintf(stderr, "%s(): Init log's thread_lock failed. %s\n", __FUNCTION__, strerror(ret));
-        close(log->fd);
         return -1;
     }
     if ((ret = pthread_atfork(mln_log_atfork_lock, \
@@ -163,15 +168,87 @@ int mln_log_init(int in_daemon)
     {
         fprintf(stderr, "%s(): pthread_atfork failed. %s\n", __FUNCTION__, strerror(ret));
         MLN_LOCK_DESTROY(&(log->thread_lock));
-        close(log->fd);
         return -1;
     }
+
+    if (mln_log_get_log(log, 1) < 0) {
+        fprintf(stderr, "%s(): Get log file failed.\n", __FUNCTION__);
+        mln_log_destroy();
+        return -1;
+    }
+
     if (mln_log_set_level(log, 1) < 0) {
         fprintf(stderr, "%s(): Set log level failed.\n", __FUNCTION__);
-        MLN_LOCK_DESTROY(&(log->thread_lock));
-        close(log->fd);
+        mln_log_destroy();
         return -1;
     }
+    return 0;
+}
+
+static int
+mln_log_get_log(mln_log_t *log, int is_init)
+{
+    mln_conf_t *cf;
+    mln_conf_domain_t *cd;
+    mln_conf_cmd_t *cc;
+    mln_conf_item_t *ci;
+    mln_string_t path;
+    char buf[M_LOG_PATH_LEN] = {0}, *p;
+    char default_dir[] = "logs", default_file[] = "melon.log";
+    int fd;
+
+    cf = mln_get_conf();
+    cd = cf->search(cf, "main");
+    cc = cd->search(cd, log_path_cmd);
+    if (cc == NULL) {
+        path.len = snprintf(buf, sizeof(buf)-1, "%s/%s/%s", \
+                            mln_get_path(), default_dir, default_file);
+        path.str = buf;
+    } else {
+        if (mln_get_cmd_args_num(cc) != 1) {
+            fprintf(stderr, "%s(): Invalid command '%s' in domain 'main'.\n", \
+                    __FUNCTION__, log_path_cmd);
+            return -1;
+        }
+        ci = cc->search(cc, 1);
+        if (ci->type != CONF_STR) {
+            fprintf(stderr, "%s(): Invalid command '%s' in domain 'main'.\n", \
+                    __FUNCTION__, log_path_cmd);
+            return -1;
+        }
+        if ((ci->val.s->str)[0] != '/') {
+            path.len = snprintf(buf, sizeof(buf)-1, "%s/%s", \
+                                mln_get_path(), ci->val.s->str);
+            path.str = buf;
+        } else {
+            path.len = ci->val.s->len > M_LOG_PATH_LEN-1? M_LOG_PATH_LEN-1: ci->val.s->len;
+            path.str = ci->val.s->str;
+        }
+    }
+
+    fd = open(path.str, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    if (fd < 0) {
+        fprintf(stderr, "%s(): open '%s' failed. %s\n", __FUNCTION__, path.str, strerror(errno));
+        return -1;
+    }
+
+    if (!is_init && \
+        log->fd > 0 && \
+        log->fd != STDIN_FILENO && \
+        log->fd != STDOUT_FILENO && \
+        log->fd != STDERR_FILENO)
+    {
+        close(log->fd);
+    }
+
+    log->fd = fd;
+    memcpy(log->log_path, path.str, path.len);
+    log->log_path[path.len] = 0;
+    for (p = &(path.str[path.len - 1]); p >= path.str && *p != '/'; p--)
+        ;
+    memcpy(log->dir_path, path.str, p - path.str);
+    log->dir_path[p - path.str] = 0;
+
     return 0;
 }
 
@@ -188,7 +265,13 @@ static void mln_log_atfork_unlock(void)
 void mln_log_destroy(void)
 {
     mln_log_t *log = &gLog;
-    close(log->fd);
+    if (log->fd > 0 && \
+        log->fd != STDIN_FILENO && \
+        log->fd != STDOUT_FILENO && \
+        log->fd != STDERR_FILENO)
+    {
+        close(log->fd);
+    }
     MLN_LOCK_DESTROY(&(log->thread_lock));
 }
 
@@ -250,6 +333,7 @@ static int mln_log_set_level(mln_log_t *log, int is_init)
 int mln_log_reload(void *data)
 {
     MLN_LOCK(&(gLog.thread_lock));
+    mln_log_get_log(&gLog, 0);
     mln_file_lock(gLog.fd);
     int ret = mln_log_set_level(&gLog, 0);
     mln_file_unlock(gLog.fd);
