@@ -72,6 +72,7 @@ mln_fork_scan_all(mln_event_t *ev, \
                   mln_u32_t flag, \
                   int timeout_ms, \
                   ev_fd_handler fd_handler) __NONNULL1(1);
+extern mln_tcp_connection_t *mln_fork_get_master_connection(void);
 extern int do_fork(void);
 /*
  * Only master process can call 'mln_fork_spawn'.

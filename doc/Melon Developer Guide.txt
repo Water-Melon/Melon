@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.3.1
+Melon Version 1.3.2
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -59,8 +59,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.3.1.
-  b) Change directory to the melon-1.3.1/.
+  a) Download and decompress melon-1.3.2.
+  b) Change directory to the melon-1.3.2/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.3.1/include/mln_types.h.
+Their definitions can be found in melon-1.3.2/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -990,17 +990,21 @@ Their definitions can be found in melon-1.3.1/include/mln_types.h.
      k) M_C_RCV_NULL(c_ptr);
         Test whether the receive buffer pointer is NULL or not.
 
-     l) int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd);
+     l) mln_tcp_connection_get_fd(pconn);
+        Return the socket file descriptor of 'pconn' (its type is
+        mln_tcp_connection_t).
+
+     m) int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd);
         Initialize a 'mln_tcp_conn_t' structure and associate with
         the socket file descriptor 'sockfd'.
 
-     m) void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
+     n) void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
         Destroy a 'mln_tcp_conn_t' structure.
 
-     n) int mln_tcp_conn_getsock(mln_tcp_conn_t *tc);
+     o) int mln_tcp_conn_getsock(mln_tcp_conn_t *tc);
         Return the socket file descriptor that associate with 'tc'.
 
-     o) void mln_tcp_conn_set(mln_tcp_conn_t *tc,
+     p) void mln_tcp_conn_set(mln_tcp_conn_t *tc,
                               mln_chain_t *c,
                               int type);
         Add 'c' to the end of a chain in 'tc'.
@@ -1012,19 +1016,19 @@ Their definitions can be found in melon-1.3.1/include/mln_types.h.
             III. M_C_SENT
                  Indicating the sent chain.
 
-     p) mln_chain_t *mln_tcp_conn_get(mln_tcp_conn_t *tc, int type);
+     q) mln_chain_t *mln_tcp_conn_get(mln_tcp_conn_t *tc, int type);
         Get the first chain node pointer from a chain in 'tc'.
         'type' is the same as 'mln_tcp_conn_set'.
 
-     q) mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc,
+     r) mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc,
                                          int type);
         Remove and return the chain that 'type' indicates in 'tc'.
 
-     r) mln_tcp_conn_send(mln_tcp_conn_t *tc);
+     s) mln_tcp_conn_send(mln_tcp_conn_t *tc);
         Send the data of 'send' chain in 'tc' to the peer of a
         connection.
 
-     s) mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag);
+     t) mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag);
         Receive the data from the peer of a connection and add
         the data to the end of 'receive' chain in 'tc'.
         'flag' indicates the storage method for the receive data.
@@ -1034,6 +1038,19 @@ Their definitions can be found in melon-1.3.1/include/mln_types.h.
                  Store the receive data in memory.
             III. M_C_TYPE_FILE
                  Store the receive data in a temporary file.
+
+     u) mln_tcp_conn_get_fd(pconn);
+        Return the socket file descriptor of 'pconn' (its type is
+        mln_tcp_conn_t).
+
+     v) mln_tcp_conn_send_empty(pconn);
+        Test whether the 'send' chain is empty or not.
+
+     w) mln_tcp_conn_recv_empty(pconn);
+        Test whether the 'receive' chain is empty or not.
+
+     x) mln_tcp_conn_sent_empty(pconn);
+        Test whether the 'sent' chain is empty or not.
 
   13) Global resources Initialization
      a) void mln_global_init(void);
@@ -1754,6 +1771,9 @@ Their definitions can be found in melon-1.3.1/include/mln_types.h.
    descriptor that connects every child process and the master.
    timeout_ms -- is the event timer.
    fd_handler -- is the event handler.
+   Melon also provides another interface for getting master's
+   connection by worker process. Its prototype is
+       mln_tcp_connection_t *mln_fork_get_master_connection(void);
 
 6. Thread Module Development
    In Melon, there is only one model between multiprocess and

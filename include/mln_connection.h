@@ -39,6 +39,7 @@ typedef struct {
     int                      fd     __cacheline_aligned;
 } mln_tcp_connection_t;
 
+#define mln_tcp_connection_get_fd(pconn) ((pconn)->fd)
 extern void
 mln_tcp_connection_init(mln_tcp_connection_t *c, int fd) __NONNULL1(1);
 extern void
@@ -78,6 +79,11 @@ typedef struct {
     int          sockfd;
 } mln_tcp_conn_t;
 
+
+#define mln_tcp_conn_send_empty(pconn) ((pconn)->snd_head == NULL)
+#define mln_tcp_conn_recv_empty(pconn) ((pconn)->rcv_head == NULL)
+#define mln_tcp_conn_sent_empty(pconn) ((pconn)->sent_head == NULL)
+#define mln_tcp_conn_get_fd(pconn) ((pconn)->sockfd)
 extern int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd) __NONNULL1(1);
 extern void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
 extern int mln_tcp_conn_getsock(mln_tcp_conn_t *tc) __NONNULL1(1);

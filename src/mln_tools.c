@@ -25,6 +25,8 @@ static int
 mln_boot_version(const char *boot_str, const char *alias);
 static int
 mln_boot_reload(const char *boot_str, const char *alias);
+static int
+mln_boot_stop(const char *boot_str, const char *alias);
 static int mln_set_id(void);
 static int mln_sys_core_modify(void);
 static int mln_sys_nofile_modify(void);
@@ -32,7 +34,8 @@ static int mln_sys_nofile_modify(void);
 mln_boot_t boot_params[] = {
 {"--help", "-h", mln_boot_help, 0},
 {"--version", "-v", mln_boot_version, 0},
-{"--reload", "-r", mln_boot_reload, 0}
+{"--reload", "-r", mln_boot_reload, 0},
+{"--stop", "-s", mln_boot_stop, 0}
 };
 char mln_core_file_cmd[] = "core_file_size";
 char mln_nofile_cmd[] = "max_nofile";
@@ -368,6 +371,7 @@ mln_boot_help(const char *boot_str, const char *alias)
     printf("Boot parameters:\n");
     printf("\t--version -v\t\t\tshow version\n");
     printf("\t--reload  -r\t\t\treload configuration\n");
+    printf("\t--stop    -s\t\t\tstop melon service.\n");
     exit(0);
     return 0;
 }
@@ -376,7 +380,7 @@ static int
 mln_boot_version(const char *boot_str, const char *alias)
 {
     printf("Melon Platform.\n");
-    printf("Version 1.3.1.\n");
+    printf("Version 1.3.2.\n");
     printf("Copyright (C) Niklaus F.Schen (Chinese name: Shen Fanchen).\n");
     exit(0);
     return 0;
@@ -403,6 +407,31 @@ mln_boot_reload(const char *boot_str, const char *alias)
 
     pid = atoi(buf);
     kill(pid, SIGUSR2);
+
+    exit(0);
+}
+
+static int
+mln_boot_stop(const char *boot_str, const char *alias)
+{
+    char buf[1024] = {0};
+    int fd, n, pid;
+
+    snprintf(buf, sizeof(buf)-1, "%s/logs/melon.pid", mln_get_path());
+    fd = open(buf, O_RDONLY);
+    if (fd < 0) {
+        fprintf(stderr, "'melon.pid' not existent.\n");
+        exit(1);
+    }
+    n = read(fd, buf, sizeof(buf)-1);
+    if (n <= 0) {
+        fprintf(stderr, "Invalid file 'melon.pid'.\n");
+        exit(1);
+    }
+    buf[n] = 0;
+
+    pid = atoi(buf);
+    kill(pid, SIGKILL);
 
     exit(0);
 }

@@ -459,6 +459,11 @@ int mln_fork_scan_all(mln_event_t *ev, \
     return 0;
 }
 
+mln_tcp_connection_t *mln_fork_get_master_connection(void)
+{
+    return &master_conn;
+}
+
 /*
  * There is a case that I press Ctrl+c to terminate master process,
  * a worker process dead firstly and the master will receive a
