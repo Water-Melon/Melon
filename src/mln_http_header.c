@@ -466,16 +466,12 @@ mln_chain_t *mln_http_header_parse(mln_http_header_t *header, mln_chain_t *in)
                 continue;
             }
             if (*(b->send_pos) == '\n') {
-                ready = 2;
-            }
-            if (ready == 2) {
-                b->send_pos++;
                 if (mln_http_header_field_done(header)) {
                     not_done = 0;
                     break;
                 }
                 save_c = c;
-                save_pos = b->send_pos;
+                save_pos = b->send_pos + 1;
                 mln_http_header_field_done_set(header);
                 mln_http_header_process_field(header, buf, p - buf);
                 if (mln_http_header_get_retval(header) != M_HTTP_HEADER_RET_OK) {
@@ -485,6 +481,7 @@ mln_chain_t *mln_http_header_parse(mln_http_header_t *header, mln_chain_t *in)
                 }
                 memset(buf, 0, p - buf);
                 p = buf;
+                ready = 0;
                 continue;
             }
             if (ready == 1) {
@@ -600,8 +597,8 @@ mln_http_header_process_field(mln_http_header_t *header, mln_u8ptr_t buf, mln_si
     key.str = (mln_s8ptr_t)buf;
     key.len = p - buf;
     key.is_referred = 1;
-    val.str = (mln_s8ptr_t)(p + 1);
-    val.len = pend - (p + 1);
+    val.str = *(p+1) == ' '? (mln_s8ptr_t)(p + 2): (mln_s8ptr_t)(p + 1);
+    val.len = *(p+1) == ' '? pend - (p + 2): pend - (p + 1);
     val.is_referred = 1;
 
     index = mln_http_header_map_field(&key);
