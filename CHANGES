@@ -1,5 +1,5 @@
-Changes with melon 1.3.3                                          04 Nov 2015
-    *) Fixed a bug of parsing HTTP protocol.
+Changes with melon 1.3.3                                          05 Nov 2015
+    *) Fixed some bugs of parsing HTTP protocol.
 
 Changes with melon 1.3.2                                          22 Oct 2015
     *) Added one interface for the communication

@@ -1636,30 +1636,33 @@ Their definitions can be found in melon-1.3.3/include/mln_types.h.
         q) mln_http_body_append(http,chain);
            Append 'chain' to the HTTP body content chain.
 
-        r) mln_http_get_peer_address(http);
+        r) mln_http_body_reset(http);
+           Reset HTTP body content chain.
+
+        s) mln_http_get_peer_address(http);
            Get peer's address.
 
-        s) mln_http_set_peer_address(http,addr);
+        t) mln_http_set_peer_address(http,addr);
            Set peer's address.
 
-        t) mln_http_get_header_done(http);
+        u) mln_http_get_header_done(http);
            Get the flag that indicates whether the HTTP
            procedure is done.
 
-        u) mln_http_set_header_done(http);
+        v) mln_http_set_header_done(http);
            If an HTTP packet has already processed, we need to
            call this interface to notice the procedure.
 
-        v) mln_http_reset_header_done(http);
+        w) mln_http_reset_header_done(http);
            Reset done flag.
 
-        w) mln_http_get_status_code(http);
+        x) mln_http_get_status_code(http);
            Get status code which indicates whether the
            operation is executed successfully.
            This status code is different from the one
            in HTTP header object.
 
-        x) mln_http_set_status_code(http,code);
+        y) mln_http_set_status_code(http,code);
            Set status code.
 
 5. Process Module Development

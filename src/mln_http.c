@@ -135,7 +135,6 @@ mln_chain_t *mln_http_packup(mln_http_t *http)
 mln_chain_t *mln_http_parse(mln_http_t *http, mln_chain_t *in)
 {
     if (in == NULL) {
-        mln_log(warn, "Input chain node is empty.\n");
         mln_http_set_status_code(http, M_HTTP_STATUS_CODE_OK);
         return in;
     }

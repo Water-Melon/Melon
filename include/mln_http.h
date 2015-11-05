@@ -66,6 +66,10 @@ mln_http_set_send_default_handle(mln_http_t *http) __NONNULL1(1);
         (http)->body_tail = (chain);\
     }\
 }
+#define mln_http_body_reset(http); \
+{\
+    (http)->body_head = (http)->body_tail = NULL;\
+}
 
 #define mln_http_get_peer_address(http) &((http)->peer_addr)
 #define mln_http_set_peer_address(http,addr) \

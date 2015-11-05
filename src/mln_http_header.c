@@ -466,12 +466,13 @@ mln_chain_t *mln_http_header_parse(mln_http_header_t *header, mln_chain_t *in)
                 continue;
             }
             if (*(b->send_pos) == '\n') {
+                save_c = c;
+                save_pos = b->send_pos + 1;
                 if (mln_http_header_field_done(header)) {
+                    b->send_pos++;
                     not_done = 0;
                     break;
                 }
-                save_c = c;
-                save_pos = b->send_pos + 1;
                 mln_http_header_field_done_set(header);
                 mln_http_header_process_field(header, buf, p - buf);
                 if (mln_http_header_get_retval(header) != M_HTTP_HEADER_RET_OK) {
