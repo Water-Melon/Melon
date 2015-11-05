@@ -90,6 +90,7 @@ mln_http_header_send_default_handle(mln_string_t *key, \
     b->in_memory = 1;
     b->last_buf = 1;
 
+    mln_http_header_set_retval(header, M_HTTP_HEADER_RET_OK);
     return c;
 }
 
@@ -164,11 +165,6 @@ mln_chain_t *mln_http_parse(mln_http_t *http, mln_chain_t *in)
              status == M_HTTP_HEADER_NOT_MODIFIED))
         {
             mln_http_set_status_code(http, M_HTTP_STATUS_CODE_DONE);
-            return header_left;
-        }
-
-        if (header_left == NULL) {
-            mln_http_set_status_code(http, M_HTTP_STATUS_CODE_OK);
             return header_left;
         }
     }
