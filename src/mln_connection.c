@@ -354,6 +354,24 @@ mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type)
     return rc;
 }
 
+mln_chain_t *mln_tcp_conn_get_last(mln_tcp_conn_t *tc, int type)
+{
+    mln_chain_t *rc;
+
+    if (type == M_C_SEND) {
+        rc = tc->snd_tail;
+    } else if (type == M_C_RECV) {
+        rc = tc->rcv_tail;
+    } else if (type == M_C_SENT) {
+        rc = tc->sent_tail;
+    } else {
+        mln_log(error, "flag error.\n");
+        abort();
+    }
+
+    return rc;
+}
+
 int mln_tcp_conn_send(mln_tcp_conn_t *tc)
 {
     int n;

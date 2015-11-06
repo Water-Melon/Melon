@@ -93,6 +93,7 @@ extern void
 mln_tcp_conn_set(mln_tcp_conn_t *tc, mln_chain_t *c, int type) __NONNULL2(1,2);
 extern mln_chain_t *mln_tcp_conn_get(mln_tcp_conn_t *tc, int type) __NONNULL1(1);
 extern mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type) __NONNULL1(1);
+extern mln_chain_t *mln_tcp_conn_get_last(mln_tcp_conn_t *tc, int type) __NONNULL1(1);
 extern int mln_tcp_conn_send(mln_tcp_conn_t *tc) __NONNULL1(1);
 extern int mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag) __NONNULL1(1);
 
