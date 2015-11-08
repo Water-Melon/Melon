@@ -638,7 +638,7 @@ mln_http_header_map_field(mln_string_t *key)
     int i;
 
     for (i = 0; i < M_HTTP_HEADER_NR_FIELDS; i++) {
-        if (!mln_strcmp(key, &mln_http_header_fields[i])) {
+        if (!mln_strcasecmp(key, &mln_http_header_fields[i])) {
             return i;
         }
     }
@@ -653,7 +653,7 @@ mln_http_header_map_version(mln_string_t *version)
     end = mln_http_header_version + sizeof(mln_http_header_version)/sizeof(mln_http_header_map_t);
 
     for (map = mln_http_header_version; map < end; map++) {
-        if (!mln_strcmp(version, &(map->type_string))) {
+        if (!mln_strcasecmp(version, &(map->type_string))) {
             return map->type_code;
         }
     }
@@ -668,7 +668,7 @@ mln_http_header_map_method(mln_string_t *method)
     end = mln_http_header_version + sizeof(mln_http_header_method)/sizeof(mln_http_header_map_t);
 
     for (map = mln_http_header_method; map < end; map++) {
-        if (!mln_strcmp(method, &(map->type_string))) {
+        if (!mln_strcasecmp(method, &(map->type_string))) {
             return map->type_code;
         }
     }
