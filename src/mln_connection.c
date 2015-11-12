@@ -23,9 +23,8 @@
 
 
 static inline int mln_fd_is_nonblock(int fd);
-static int mln_connection_return(mln_tcp_connection_t *c, int flag) __NONNULL1(1);
 static inline mln_chain_t *
-mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type);
+mln_tcp_conn_pop_inline(mln_tcp_conn_t *tc, int type);
 static inline int
 mln_tcp_conn_recv_chain(mln_tcp_conn_t *tc, mln_u32_t flag);
 static inline int
@@ -41,91 +40,6 @@ static inline int
 mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc);
 
 
-void mln_tcp_connection_init(mln_tcp_connection_t *c, int fd)
-{
-    c->fd = fd;
-    c->recv.buf = NULL;
-    c->recv.len = 0;
-    c->recv.pos = 0;
-    c->recv.is_referred = 0;
-    c->send.buf = NULL;
-    c->send.len = 0;
-    c->send.pos = 0;
-    c->send.is_referred = 0;
-}
-
-void mln_tcp_connection_destroy(mln_tcp_connection_t *c)
-{
-    mln_connection_return(c, M_C_CLOSED);
-    memset(c, 0, sizeof(mln_tcp_connection_t));
-    c->fd = -1;
-}
-
-int mln_tcp_connection_set_buf(mln_tcp_connection_t *c, \
-                               void *buf, \
-                               mln_u32_t len, \
-                               int type, \
-                               int is_referred)
-{
-    if (type == M_C_SEND) {
-        if (is_referred) {
-            c->send.buf = buf;
-            c->send.is_referred = 1;
-        } else {
-            c->send.buf = malloc(len);
-            if (c->send.buf == NULL) return -1;
-            memcpy(c->send.buf, buf, len);
-            c->send.is_referred = 0;
-        }
-        c->send.len = len;
-        c->send.pos = 0;
-    } else if (type == M_C_RECV) {
-        if (is_referred) {
-            c->recv.buf = buf;
-            c->recv.is_referred = 1;
-        } else {
-            c->recv.buf = malloc(len);
-            if (c->recv.buf == NULL) return -1;
-            c->recv.is_referred = 0;
-        }
-        c->recv.len = len;
-        c->recv.pos = 0;
-    } else {
-        mln_log(error, "No such type.\n");
-        abort();
-    }
-    return 0;
-}
-
-void *mln_tcp_connection_get_buf(mln_tcp_connection_t *c, int type)
-{
-    if (type != M_C_SEND && type != M_C_RECV) {
-        mln_log(error, "No such type.\n");
-        abort();
-    }
-    return (type == M_C_SEND)?c->send.buf:c->recv.buf;
-}
-
-void mln_tcp_connection_clr_buf(mln_tcp_connection_t *c, int type)
-{
-    if (type == M_C_SEND) {
-        if (c->send.buf != NULL && !c->send.is_referred)
-            free(c->send.buf);
-        c->send.buf = NULL;
-        c->send.len = 0;
-        c->send.pos = 0;
-    } else if (type == M_C_RECV) {
-        if (c->recv.buf != NULL && !c->recv.is_referred)
-            free(c->recv.buf);
-        c->recv.buf = NULL;
-        c->recv.len = 0;
-        c->recv.pos = 0;
-    } else {
-        mln_log(error, "No such type.\n");
-        abort();
-    }
-}
-
 static inline int mln_fd_is_nonblock(int fd)
 {
     int flg;
@@ -135,99 +49,6 @@ static inline int mln_fd_is_nonblock(int fd)
     }
     return flg & O_NONBLOCK;
 }
-
-static int mln_connection_return(mln_tcp_connection_t *c, int flag)
-{
-    switch (flag) {
-        case M_C_FINISH:
-        case M_C_NOTYET: return flag;
-        case M_C_ERROR:
-        case M_C_CLOSED:
-            mln_tcp_connection_clr_buf(c, M_C_SEND);
-            mln_tcp_connection_clr_buf(c, M_C_RECV);
-            close(c->fd);
-            break;
-        default:
-            mln_log(error, "No such flag.\n");
-            abort();
-    }
-    return flag;
-}
-
-int mln_tcp_connection_send(mln_tcp_connection_t *c)
-{
-    if (c->send.pos >= c->send.len)
-        return mln_connection_return(c, M_C_FINISH);
-    int n;
-    if (mln_fd_is_nonblock(c->fd)) {
-lp1:
-        while ((n = send(c->fd, \
-                         c->send.buf+c->send.pos, \
-                         c->send.len-c->send.pos, 0)) > 0)
-        {
-            c->send.pos += n;
-            if (c->send.pos >= c->send.len)
-                return mln_connection_return(c, M_C_FINISH);
-        }
-        if (n == 0) {
-            mln_log(error, "send return 0.\n");
-            abort();
-        }
-        if (errno == EINTR) goto lp1;
-        if (errno == EAGAIN)
-            return mln_connection_return(c, M_C_NOTYET);
-    } else {
-lp2:
-        n = send(c->fd, c->send.buf+c->send.pos, c->send.len-c->send.pos, 0);
-        if (n > 0) {
-            c->send.pos += n;
-            if (c->send.pos >= c->send.len)
-                return mln_connection_return(c, M_C_FINISH);
-            return mln_connection_return(c, M_C_NOTYET);
-        } else if (n == 0) {
-            mln_log(error, "send return 0.\n");
-            abort();
-        }
-        if (errno == EINTR) goto lp2;
-    }
-    return mln_connection_return(c, M_C_ERROR);
-}
-
-int mln_tcp_connection_recv(mln_tcp_connection_t *c)
-{
-    if (c->recv.pos >= c->recv.len)
-        return mln_connection_return(c, M_C_FINISH);
-    int n;
-    if (mln_fd_is_nonblock(c->fd)) {
-lp1:
-        while ((n = recv(c->fd, \
-                         c->recv.buf+c->recv.pos, \
-                         c->recv.len-c->recv.pos, 0)) > 0)
-        {
-            c->recv.pos += n;
-            if (c->recv.pos >= c->recv.len)
-                return mln_connection_return(c, M_C_FINISH);
-        }
-        if (n == 0) return mln_connection_return(c, M_C_CLOSED);
-        if (errno == EINTR) goto lp1;
-        if (errno == EAGAIN)
-            return mln_connection_return(c, M_C_NOTYET);
-    } else {
-lp2:
-        n = recv(c->fd, c->recv.buf+c->recv.pos, c->recv.len-c->recv.pos, 0);
-        if (n > 0) {
-            c->recv.pos += n;
-            if (c->recv.pos >= c->recv.len)
-                return mln_connection_return(c, M_C_FINISH);
-            return mln_connection_return(c, M_C_NOTYET);
-        } else if (n == 0) {
-            return mln_connection_return(c, M_C_CLOSED);
-        }
-        if (errno == EINTR) goto lp2;
-    }
-    return mln_connection_return(c, M_C_ERROR);
-}
-
 
 
 /*
@@ -255,12 +76,7 @@ void mln_tcp_conn_destroy(mln_tcp_conn_t *tc)
     mln_alloc_destroy(tc->pool);
 }
 
-int mln_tcp_conn_getsock(mln_tcp_conn_t *tc)
-{
-    return tc->sockfd;
-}
-
-void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
+void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
 {
     if (c == NULL) return;
 
@@ -290,7 +106,7 @@ void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
     }
 }
 
-void mln_tcp_conn_set(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
+void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
 {
     mln_chain_t **head, **tail;
     if (type == M_C_SEND) {
@@ -315,7 +131,7 @@ void mln_tcp_conn_set(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
     }
 }
 
-mln_chain_t *mln_tcp_conn_get(mln_tcp_conn_t *tc, int type)
+mln_chain_t *mln_tcp_conn_get_head(mln_tcp_conn_t *tc, int type)
 {
     mln_chain_t *rc = NULL;
 
@@ -354,7 +170,35 @@ mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type)
     return rc;
 }
 
-mln_chain_t *mln_tcp_conn_get_last(mln_tcp_conn_t *tc, int type)
+mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type)
+{
+    mln_chain_t **head, **tail;
+    if (type == M_C_SEND) {
+        head = &(tc->snd_head);
+        tail = &(tc->snd_tail);
+    } else if (type == M_C_RECV) {
+        head = &(tc->rcv_head);
+        tail = &(tc->rcv_tail);
+    } else if (type == M_C_SENT) {
+        head = &(tc->sent_head);
+        tail = &(tc->sent_tail);
+    } else {
+        mln_log(error, "flag error.\n");
+        abort();
+    }
+
+    mln_chain_t *rc = *head;
+    if (rc == *tail) {
+        *head = *tail = NULL;
+        return rc;
+    }
+
+    *head = rc->next;
+    rc->next = NULL;
+    return rc;
+}
+
+mln_chain_t *mln_tcp_conn_get_tail(mln_tcp_conn_t *tc, int type)
 {
     mln_chain_t *rc;
 
@@ -451,23 +295,23 @@ non:
 
                 b = c->buf;
                 if (b == NULL) {
-                    c = mln_tcp_conn_pop(tc, M_C_SEND);
-                    mln_tcp_conn_set(tc, c, M_C_SENT);
+                    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                    mln_tcp_conn_append(tc, c, M_C_SENT);
                     continue;
                 }
                 if (!b->in_memory) break;
                 buf_left_size = mln_buf_left_size(b);
                 if (buf_left_size == 0) {
-                    c = mln_tcp_conn_pop(tc, M_C_SEND);
-                    mln_tcp_conn_set(tc, c, M_C_SENT);
+                    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                    mln_tcp_conn_append(tc, c, M_C_SENT);
                     continue;
                 }
 
                 if (n >= buf_left_size) {
                     b->send_pos += buf_left_size;
                     n -= buf_left_size;
-                    c = mln_tcp_conn_pop(tc, M_C_SEND);
-                    mln_tcp_conn_set(tc, c, M_C_SENT);
+                    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                    mln_tcp_conn_append(tc, c, M_C_SENT);
                     if (b->last_in_chain) {
                         is_done = 1;
                         break;
@@ -513,23 +357,23 @@ blk:
 
         b = c->buf;
         if (b == NULL) {
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
         if (!b->in_memory) break;
         buf_left_size = mln_buf_left_size(b);
         if (buf_left_size == 0) {
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
 
         if (n >= buf_left_size) {
             b->send_pos += buf_left_size;
             n -= buf_left_size;
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             if (b->last_in_chain) {
                 is_done = 1;
                 break;
@@ -597,22 +441,22 @@ non:
 
                 b = c->buf;
                 if (b == NULL) {
-                    c = mln_tcp_conn_pop(tc, M_C_SEND);
-                    mln_tcp_conn_set(tc, c, M_C_SENT);
+                    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                    mln_tcp_conn_append(tc, c, M_C_SENT);
                     continue;
                 }
                 buf_left_size = mln_buf_left_size(b);
                 if (buf_left_size == 0) {
-                    c = mln_tcp_conn_pop(tc, M_C_SEND);
-                    mln_tcp_conn_set(tc, c, M_C_SENT);
+                    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                    mln_tcp_conn_append(tc, c, M_C_SENT);
                     continue;
                 }
 
                 if (n >= buf_left_size) {
                     n -= buf_left_size;
                     b->send_pos += buf_left_size;
-                    c = mln_tcp_conn_pop(tc, M_C_SEND);
-                    mln_tcp_conn_set(tc, c, M_C_SENT);
+                    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                    mln_tcp_conn_append(tc, c, M_C_SENT);
                     if (b->last_in_chain) {
                         is_done = 1;
                         break;
@@ -668,22 +512,22 @@ blk:
         if (n == 0) break;
         b = c->buf;
         if (b == NULL) {
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
         buf_left_size = mln_buf_left_size(b);
         if (buf_left_size == 0) {
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
 
         if (n >= buf_left_size) {
             n -= buf_left_size;
             b->send_pos += buf_left_size;
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             if (b->last_in_chain) {
                 is_done = 1;
                 break;
@@ -715,15 +559,15 @@ mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc)
         while ((c = tc->snd_head) != NULL) {
             b = c->buf;
             if (b == NULL) {
-                c = mln_tcp_conn_pop(tc, M_C_SEND);
-                mln_tcp_conn_set(tc, c, M_C_SENT);
+                c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                mln_tcp_conn_append(tc, c, M_C_SENT);
                 continue;
             }
             if (!b->in_file) break;
             buf_left_size = mln_buf_left_size(b);
             if (buf_left_size == 0) {
-                c = mln_tcp_conn_pop(tc, M_C_SEND);
-                mln_tcp_conn_set(tc, c, M_C_SENT);
+                c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                mln_tcp_conn_append(tc, c, M_C_SENT);
                 continue;
             }
 
@@ -742,8 +586,8 @@ non:
                 continue;
             }
 
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             if (b->last_in_chain) break;
         }
         return 1;
@@ -752,14 +596,14 @@ non:
     while ((c = tc->snd_head) != NULL) {
         b = c->buf;
         if (b == NULL) {
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
         if (!b->in_file) return 0;
         if (mln_buf_left_size(b) == 0) {
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
         break;
@@ -781,8 +625,8 @@ blk:
         return 0;
     }
 
-    c = mln_tcp_conn_pop(tc, M_C_SEND);
-    mln_tcp_conn_set(tc, c, M_C_SENT);
+    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+    mln_tcp_conn_append(tc, c, M_C_SENT);
 
     if (b->last_in_chain) return 1;
     return 0;
@@ -803,16 +647,16 @@ mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc)
         while ((c = tc->snd_head) != NULL) {
             b = c->buf;
             if (b == NULL) {
-                c = mln_tcp_conn_pop(tc, M_C_SEND);
-                mln_tcp_conn_set(tc, c, M_C_SENT);
+                c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                mln_tcp_conn_append(tc, c, M_C_SENT);
                 continue;
             }
             if (!b->in_file) break;
 
             buf_left_size = mln_buf_left_size(b);
             if (buf_left_size == 0) {
-                c = mln_tcp_conn_pop(tc, M_C_SEND);
-                mln_tcp_conn_set(tc, c, M_C_SENT);
+                c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+                mln_tcp_conn_append(tc, c, M_C_SENT);
                 continue;
             }
 
@@ -838,8 +682,8 @@ non_snd:
                 continue;
             }
 
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             if (b->last_in_chain) {
                 return 1;
             }
@@ -850,16 +694,16 @@ non_snd:
     while ((c = tc->snd_head) != NULL) {
         b = c->buf;
         if (b == NULL) {
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
         if (!b->in_file) return 0;
 
         buf_left_size = mln_buf_left_size(b);
         if (buf_left_size == 0) {
-            c = mln_tcp_conn_pop(tc, M_C_SEND);
-            mln_tcp_conn_set(tc, c, M_C_SENT);
+            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+            mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
 
@@ -888,15 +732,15 @@ blk_snd:
         return 0;
     }
 
-    c = mln_tcp_conn_pop(tc, M_C_SEND);
-    mln_tcp_conn_set(tc, c, M_C_SENT);
+    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+    mln_tcp_conn_append(tc, c, M_C_SENT);
 
     return b->last_in_chain == 0? 0: 1;
 }
 #endif
 
 static inline mln_chain_t *
-mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type)
+mln_tcp_conn_pop_inline(mln_tcp_conn_t *tc, int type)
 {
     mln_chain_t **head, **tail;
     if (type == M_C_SEND) {
@@ -996,7 +840,7 @@ mln_tcp_conn_recv_chain(mln_tcp_conn_t *tc, mln_u32_t flag)
     if (n <= 0) {
         mln_chain_pool_release(c);
     } else {
-        mln_tcp_conn_set(tc, c, M_C_RECV);
+        mln_tcp_conn_append(tc, c, M_C_RECV);
     }
 
     return n;
@@ -1018,9 +862,9 @@ mln_tcp_conn_recv_chain_file(int sockfd, \
         if ((b->file = mln_file_tmp_open(pool)) == NULL) {
             return -1;
         }
-        b->file_pos = 0;
+        b->file_send_pos = b->file_pos = 0;
     } else {
-        b->file_pos = last->file_last;
+        b->file_send_pos = b->file_pos = last->file_last;
         b->file = last->file;
         last->shadow = b;
     }
@@ -1053,7 +897,7 @@ mln_tcp_conn_recv_chain_mem(int sockfd, mln_alloc_t *pool, mln_buf_t *b)
         return n;
     }
 
-    b->pos = b->start = buf;
+    b->send_pos = b->pos = b->start = buf;
     b->last = b->end = buf + n;
     b->in_memory = 1;
     b->last_buf = 1;

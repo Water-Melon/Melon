@@ -62,9 +62,10 @@ struct mln_thread_s {
     char                     **argv;
     int                        argc;
     int                        peerfd;
+    int                        is_created;
     enum thread_stype          stype;
     pthread_t                  tid;
-    mln_tcp_connection_t       conn;
+    mln_tcp_conn_t             conn;
     mln_thread_msgq_t         *local_head;
     mln_thread_msgq_t         *local_tail;
     mln_thread_msgq_t         *dest_head;
@@ -80,7 +81,7 @@ mln_thread_create(mln_thread_t *t, mln_event_t *ev) __NONNULL2(1,2);
 /*
  * mln_thread_exit() called by child thread only.
  */
-extern void mln_thread_exit(int sockfd, int exit_code);
+extern void mln_thread_exit(int exit_code);
 /*
  * mln_thread_kill() called by main thread only.
  */

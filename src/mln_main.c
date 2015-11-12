@@ -23,7 +23,7 @@ static void mln_get_root(void);
 static void mln_master_routine(void);
 static void mln_worker_routine(void);
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data);
-static void mln_conf_reload_send(mln_event_t *ev, int fd, void *data);
+static int mln_conf_reload_scan_handler(mln_event_t *ev, void *data);
 
 int main(int argc, char *argv[])
 {
@@ -145,11 +145,7 @@ static void mln_get_root(void)
 
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data)
 {
-    if (mln_fork_scan_all(ev, \
-                          M_EV_SEND|M_EV_APPEND|M_EV_ONESHOT, \
-                          M_EV_UNLIMITED, \
-                          mln_conf_reload_send) < 0)
-    {
+    if (mln_fork_scan_all(ev, mln_conf_reload_scan_handler) < 0) {
         mln_log(error, "mln_fork_scan() failed.\n");
         return;
     }
@@ -159,37 +155,10 @@ static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data)
     }
 }
 
-static void mln_conf_reload_send(mln_event_t *ev, int fd, void *data)
+static int mln_conf_reload_scan_handler(mln_event_t *ev, void *data)
 {
     char msg[] = "conf_reload";
-    char buf[128] = {0};
-    mln_u32_t type = M_IPC_CONF_RELOAD;
-    mln_u32_t len = sizeof(type) + sizeof(msg) - 1;
-    memcpy(buf, &len, sizeof(len));
-    memcpy(buf+sizeof(len), &type, sizeof(type));
-    memcpy(buf+sizeof(len)*2, msg, sizeof(msg)-1);
-    mln_fork_t *f = (mln_fork_t *)data;
-    mln_tcp_connection_t *c = &(f->conn);
-    mln_tcp_connection_set_buf(c, buf, len+sizeof(len), M_C_SEND, 1);
-    int ret = mln_tcp_connection_send(c);
-    if (ret == M_C_FINISH) {
-        mln_tcp_connection_clr_buf(c, M_C_SEND);
-    } else if (ret == M_C_NOTYET) {
-        if (mln_event_set_fd(ev, \
-                             fd, \
-                             M_EV_SEND|M_EV_APPEND|M_EV_ONESHOT, \
-                             M_EV_UNLIMITED, \
-                             c, \
-                             mln_conf_reload_send) < 0)
-        {
-            mln_log(error, "mln_event_set_fd() failed.\n");
-            abort();/*shouldn't be here.*/
-        }
-    } else if (ret == M_C_ERROR) {
-        mln_log(error, "mln_tcp_connection_send() failed. %s\n", strerror(errno));
-    } else {
-        mln_log(error, "Shouldn't be here.\n");
-        abort();
-    }
+
+    return mln_ipc_master_send_prepare(ev, M_IPC_CONF_RELOAD, msg, sizeof(msg)-1, (mln_fork_t *)data);
 }
 

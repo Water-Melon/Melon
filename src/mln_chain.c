@@ -30,7 +30,7 @@ void mln_buf_pool_release(mln_buf_t *b)
 {
     if (b == NULL) return;
 
-    if (b->shadow != NULL) {
+    if (b->shadow != NULL || b->temporary) {
         mln_alloc_free(b);
         return;
     }
