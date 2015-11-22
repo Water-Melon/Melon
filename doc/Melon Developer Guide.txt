@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.3.4
+Melon Version 1.3.5
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -59,8 +59,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.3.4.
-  b) Change directory to the melon-1.3.4/.
+  a) Download and decompress melon-1.3.5.
+  b) Change directory to the melon-1.3.5/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.3.4/include/mln_types.h.
+Their definitions can be found in melon-1.3.5/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -1613,6 +1613,74 @@ Their definitions can be found in melon-1.3.4/include/mln_types.h.
 
         y) mln_http_set_status_code(http,code);
            Set status code.
+
+  21) Regular Expression
+     Melon, now, has already support regular expression. And
+     this capability is not relying on library pcre, but its
+     own component.
+     Providing this feature is trying to make the capability
+     of parsing HTTP URI better.
+     There are only two functions here.
+     a) int mln_reg_match(mln_string_t *exp,
+                          mln_string_t *text);
+        'exp' is the regular expression that user provided.
+        'text' is the string that will be matched by 'exp'.
+        This function will return a length that indicates
+        how many bytes left in 'text' (which are not matched).
+        If not matched, -1 will be returned.
+
+     b) int mln_reg_equal(mln_string_t *exp,
+                          mln_string_t *text);
+        This function will return a non-zero if 'text' is
+        completely matched by 'exp'. Otherwise, zero will be
+        returned.
+
+     Melon support these symbols below,
+     a) *
+        Indicating none or more characters where are located
+        before '*' can be matched.
+     b) ?
+        Indicating none or one character where is located
+        before '+' can be matched.
+     c) +
+        Indicating at least one character where is located
+        before '+' can be matched.
+     d) .
+        Anyone character can be matched.
+     e) ^
+        In common mode, this symbol means the first one
+        character in text must be matched by the charactor or
+        sub-expression followed '^'.
+        In charcter mode, it means the current text character
+        must not be matched by anyone in the square brackets.
+     f) $
+        This symbol must be matched the end of text.
+     g) ()
+        Sub-expression, which contain a small and complete
+        regular expression.
+     h) []
+        Character mode.
+        There is only one logical relation in this mode -- or.
+        And only one text character can be matched by one of
+        characters in the brackets.
+     i) -
+        This symbol only can be activated in character mode.
+        It is used to indicate the scope that defined by the
+        characters on either side of '-'.
+     j) {}
+        Indicating how many times that the character before '{'
+        should be matched.
+        {1} / {1,2} / {1,}
+     k) \d
+        Match a number.
+     l) \D
+        Match a nonnumeric character.
+     m) \n
+        Just like '\n' in C.
+     n) \a
+        Match a letter.
+     o) \\
+        Just like '\\' in C.
 
 5. Process Module Development
    In Melon, there are two methods to develop process module.
