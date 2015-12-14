@@ -15,7 +15,7 @@
 #include "mln_queue.h"
 #include "mln_stack.h"
 
-#define M_PG_DFL_HASHLEN 32
+#define M_PG_DFL_HASHLEN 31
 #define M_PG_ERROR 0
 #define M_PG_SHIFT 1
 #define M_PG_REDUCE 2
@@ -513,6 +513,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     hattr.free_val = mln_pg_map_hash_free;\
     hattr.len_base = M_PG_DFL_HASHLEN;\
     hattr.expandable = 1;\
+    hattr.calc_prime = 0;\
     attr->map_tbl = mln_hash_init(&hattr);\
     if (attr->map_tbl == NULL) {\
         mln_log(error, "No memory.\n");\
@@ -587,14 +588,14 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
 err2:\
     mln_rbtree_destroy(attr->token_tree);\
 err1:\
-    mln_hash_destroy(attr->map_tbl, hash_free_key_val);\
+    mln_hash_destroy(attr->map_tbl, M_HASH_F_KV);\
     return -1;\
 }\
 \
 SCOPE void PREFIX_NAME##_preprocess_attr_free(struct PREFIX_NAME##_preprocess_attr *attr)\
 {\
     if (attr->map_tbl != NULL) \
-        mln_hash_destroy(attr->map_tbl, hash_free_key_val);\
+        mln_hash_destroy(attr->map_tbl, M_HASH_F_KV);\
     if (attr->token_tree != NULL) \
         mln_rbtree_destroy(attr->token_tree);\
     if (attr->rule_tbl != NULL) {\

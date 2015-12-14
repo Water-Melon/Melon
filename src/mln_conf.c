@@ -308,6 +308,7 @@ static inline mln_conf_t *mln_conf_init(void)
     hattr.free_val = mln_conf_domain_destroy;
     hattr.len_base = MLN_CONF_HASH_LEN;
     hattr.expandable = 1;
+    hattr.calc_prime = 0;
     cf->domain_hash_tbl = mln_hash_init(&hattr);
     if (cf->domain_hash_tbl == NULL) {
         fprintf(stderr, "No memory.\n");
@@ -318,7 +319,7 @@ static inline mln_conf_t *mln_conf_init(void)
     char *conf_file_path = malloc(path_len + sizeof(conf_filename) + 1);
     if (conf_file_path == NULL) {
         fprintf(stderr, "No memory.\n");
-        mln_hash_destroy(cf->domain_hash_tbl, hash_free_key_val);
+        mln_hash_destroy(cf->domain_hash_tbl, M_HASH_F_KV);
         free(cf);
         return NULL;
     }
@@ -338,7 +339,7 @@ static inline mln_conf_t *mln_conf_init(void)
     MLN_LEX_INIT_WITH_HOOKS(mln_conf_lex, cf->lex, &lattr);
     free(conf_file_path);
     if (cf->lex == NULL) {
-        mln_hash_destroy(cf->domain_hash_tbl, hash_free_key_val);
+        mln_hash_destroy(cf->domain_hash_tbl, M_HASH_F_KV);
         free(cf);
         return NULL;
     }
@@ -374,7 +375,7 @@ mln_conf_destroy(mln_conf_t *cf)
         cf->lex = NULL;
     }
     if (cf->domain_hash_tbl != NULL) {
-        mln_hash_destroy(cf->domain_hash_tbl, hash_free_key_val);
+        mln_hash_destroy(cf->domain_hash_tbl, M_HASH_F_KV);
         cf->domain_hash_tbl = NULL;
     }
     free(cf);
@@ -410,6 +411,7 @@ mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name)
     hattr.free_val = mln_conf_cmd_destroy;
     hattr.len_base = MLN_CONF_HASH_LEN;
     hattr.expandable = 1;
+    hattr.calc_prime = 0;
     cd->cmd_hash_tbl = mln_hash_init(&hattr);
     if (cd->cmd_hash_tbl == NULL) {
         mln_free_string(cd->domain_name);
@@ -429,7 +431,7 @@ mln_conf_domain_destroy(void *data)
         cd->domain_name = NULL;
     }
     if (cd->cmd_hash_tbl != NULL) {
-        mln_hash_destroy(cd->cmd_hash_tbl, hash_free_key_val);
+        mln_hash_destroy(cd->cmd_hash_tbl, M_HASH_F_KV);
         cd->cmd_hash_tbl = NULL;
     }
     free(cd);
@@ -439,12 +441,12 @@ static int
 mln_conf_domain_calc_hash(mln_hash_t *h, void *key)
 {
     mln_string_t *s = (mln_string_t *)key;
-    mln_s32_t i;
+    mln_s8ptr_t p, end = s->str + s->len;
     int index = 0;
-    char *p = s->str;
-    for (i = 0; i<s->len; i++) {
-        index += (p[i] * 65599);
+    for (p = s->str; p < end; p++) {
+        index += ((*p) * 65599);
         index %= h->len;
+        if (index < 0) index = -index;
     }
     return index;
 }

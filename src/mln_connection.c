@@ -34,9 +34,9 @@ mln_tcp_conn_recv_chain_file(int sockfd, \
                              mln_buf_t *last);
 static inline int
 mln_tcp_conn_recv_chain_mem(int sockfd, mln_alloc_t *pool, mln_buf_t *b);
-static inline int
+static inline ssize_t
 mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc);
-static inline int
+static inline ssize_t
 mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc);
 
 
@@ -76,11 +76,11 @@ void mln_tcp_conn_destroy(mln_tcp_conn_t *tc)
     mln_alloc_destroy(tc->pool);
 }
 
-void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
+void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chain_t *c_tail, int type)
 {
-    if (c == NULL) return;
+    if (c_head == NULL) return;
 
-    mln_chain_t **head, **tail, *scan = c;
+    mln_chain_t **head, **tail;
     if (type == M_C_SEND) {
         head = &(tc->snd_head);
         tail = &(tc->snd_tail);
@@ -95,14 +95,16 @@ void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
         abort();
     }
 
-    for (scan = c; scan->next != NULL; scan = scan->next)
-        ;
+    if (c_tail == NULL) {
+        for (c_tail = c_head; c_tail->next != NULL; c_tail = c_tail->next)
+            ;
+    }
     if (*head == NULL) {
-        *head = c;
-        *tail = scan;
+        *head = c_head;
+        *tail = c_tail;
     } else {
-        (*tail)->next = c;
-        *tail = scan;
+        (*tail)->next = c_head;
+        *tail = c_tail;
     }
 }
 
@@ -218,7 +220,7 @@ mln_chain_t *mln_tcp_conn_get_tail(mln_tcp_conn_t *tc, int type)
 
 int mln_tcp_conn_send(mln_tcp_conn_t *tc)
 {
-    int n;
+    ssize_t n;
 
     if (tc->snd_head == NULL) return M_C_NOTYET;
 
@@ -251,32 +253,29 @@ fi:
 
 
 #if defined(MLN_WRITEV)
-static inline int
+static inline ssize_t
 mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc)
 {
     mln_chain_t *c;
     mln_buf_t *b;
-    mln_size_t buf_left_size;
-    int n, is_done = 0, nonblock, proc_vec, nvec;
+    ssize_t n, is_done = 0;
+    register mln_size_t buf_left_size;
+    int proc_vec, nvec = 256;
     struct iovec vector[256];
 
-    nvec = sizeof(vector) / sizeof(struct iovec);
-    nonblock = mln_fd_is_nonblock(tc->sockfd);
-
-    if (nonblock) {
+    if (mln_fd_is_nonblock(tc->sockfd)) {
         while (1) {
             proc_vec = 0;
             for (c = tc->snd_head; c != NULL; c = c->next) {
                 if (proc_vec >= nvec) break;
-                b = c->buf;
-                if (b == NULL) continue;
+                if ((b = c->buf) == NULL) continue;
                 if (!b->in_memory) break;
                 buf_left_size = mln_buf_left_size(b);
-                if (buf_left_size == 0) continue;
-
-                vector[proc_vec].iov_base = b->send_pos;
-                vector[proc_vec].iov_len = buf_left_size;
-                proc_vec++;
+                if (buf_left_size) {
+                    vector[proc_vec].iov_base = b->send_pos;
+                    vector[proc_vec].iov_len = buf_left_size;
+                    proc_vec++;
+                }
                 if (b->last_in_chain) break;
             }
 
@@ -291,36 +290,25 @@ non:
             }
 
             while ((c = tc->snd_head) != NULL) {
-                if (n == 0) break;
-
-                b = c->buf;
-                if (b == NULL) {
+                if ((b = c->buf) == NULL) {
                     c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
                     mln_tcp_conn_append(tc, c, M_C_SENT);
                     continue;
                 }
                 if (!b->in_memory) break;
-                buf_left_size = mln_buf_left_size(b);
-                if (buf_left_size == 0) {
-                    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
-                    mln_tcp_conn_append(tc, c, M_C_SENT);
-                    continue;
-                }
+                if (b->last_in_chain) is_done = 1;
 
+                buf_left_size = mln_buf_left_size(b);
                 if (n >= buf_left_size) {
                     b->send_pos += buf_left_size;
                     n -= buf_left_size;
                     c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
                     mln_tcp_conn_append(tc, c, M_C_SENT);
-                    if (b->last_in_chain) {
-                        is_done = 1;
-                        break;
-                    }
-                    continue;
+                } else {
+                    b->send_pos += n;
+                    n = 0;
                 }
-
-                b->send_pos += n;
-                break;
+                if (is_done || n == 0) break;
             }
 
             if (is_done) break;
@@ -331,15 +319,14 @@ non:
     proc_vec = 0;
     for (c = tc->snd_head; c != NULL; c = c->next) {
         if (proc_vec >= nvec) break;
-        b = c->buf;
-        if (b == NULL) continue;
+        if ((b = c->buf) == NULL) continue;
         if (!b->in_memory) break;
         buf_left_size = mln_buf_left_size(b);
-        if (buf_left_size == 0) continue;
-
-        vector[proc_vec].iov_base = b->send_pos;
-        vector[proc_vec].iov_len = buf_left_size;
-        proc_vec++;
+        if (buf_left_size) {
+            vector[proc_vec].iov_base = b->send_pos;
+            vector[proc_vec].iov_len = buf_left_size;
+            proc_vec++;
+        }
         if (b->last_in_chain) break;
     }
 
@@ -353,76 +340,62 @@ blk:
     }
 
     while ((c = tc->snd_head) != NULL) {
-        if (n == 0) break;
-
-        b = c->buf;
-        if (b == NULL) {
+        if ((b = c->buf) == NULL) {
             c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
             mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
         if (!b->in_memory) break;
-        buf_left_size = mln_buf_left_size(b);
-        if (buf_left_size == 0) {
-            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
-            mln_tcp_conn_append(tc, c, M_C_SENT);
-            continue;
-        }
+        if (b->last_in_chain) is_done = 1;
 
+        buf_left_size = mln_buf_left_size(b);
         if (n >= buf_left_size) {
             b->send_pos += buf_left_size;
             n -= buf_left_size;
             c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
             mln_tcp_conn_append(tc, c, M_C_SENT);
-            if (b->last_in_chain) {
-                is_done = 1;
-                break;
-            }
-            continue;
+        } else {
+            b->send_pos += n;
+            n = 0;
         }
-
-        b->send_pos += n;
-        break;
+        if (is_done || n == 0) break;
     }
 
     return is_done;
 }
 #else
-static inline int
+static inline ssize_t
 mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc)
 {
     mln_u8_t buf[8192], *p;
     mln_chain_t *c;
     mln_buf_t *b;
-    mln_size_t left_size, buf_left_size;
-    int n, is_done = 0, nonblock;
+    mln_size_t left_size;
+    register mln_size_t buf_left_size;
+    ssize_t n, is_done = 0;
 
-    nonblock = mln_fd_is_nonblock(tc->sockfd);
-
-    if (nonblock) {
+    if (mln_fd_is_nonblock(tc->sockfd)) {
         while (1) {
             p = buf;
             left_size = sizeof(buf);
 
             for (c = tc->snd_head; c != NULL; c = c->next) {
-                if (left_size == 0) break;
-                b = c->buf;
-                if (b == NULL) continue;
+                if ((b = c->buf) == NULL) continue;
                 if (!b->in_memory) break;
                 buf_left_size = mln_buf_left_size(b);
-                if (buf_left_size == 0) continue;
 
                 if (buf_left_size > left_size) {
                     memcpy(p, b->send_pos, left_size);
                     p += left_size;
                     left_size = 0; 
+                    break;
                 } else {
-                    memcpy(p, b->send_pos, buf_left_size);
-                    p += buf_left_size;
-                    left_size -= buf_left_size;
-                    if (b->last_in_chain) {
-                        break;
+                    if (buf_left_size > 0) {
+                        memcpy(p, b->send_pos, buf_left_size);
+                        p += buf_left_size;
+                        left_size -= buf_left_size;
                     }
+                    if (b->last_in_chain) break;
                 }
             }
 
@@ -437,35 +410,23 @@ non:
             }
 
             while ((c = tc->snd_head) != NULL) {
-                if (n == 0) break;
-
-                b = c->buf;
-                if (b == NULL) {
+                if ((b = c->buf) == NULL) {
                     c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
                     mln_tcp_conn_append(tc, c, M_C_SENT);
                     continue;
                 }
                 buf_left_size = mln_buf_left_size(b);
-                if (buf_left_size == 0) {
-                    c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
-                    mln_tcp_conn_append(tc, c, M_C_SENT);
-                    continue;
-                }
-
-                if (n >= buf_left_size) {
+                if (buf_left_size > n) {
+                    b->send_pos += n;
+                    n = 0;
+                } else {
+                    if (b->last_in_chain) is_done = 1;
                     n -= buf_left_size;
                     b->send_pos += buf_left_size;
                     c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
                     mln_tcp_conn_append(tc, c, M_C_SENT);
-                    if (b->last_in_chain) {
-                        is_done = 1;
-                        break;
-                    }
-                    continue;
                 }
-
-                b->send_pos += n;
-                break;
+                if (is_done || n == 0) break;
             }
 
             if (is_done) break;
@@ -478,24 +439,22 @@ non:
     left_size = sizeof(buf);
 
     for (c = tc->snd_head; c != NULL; c = c->next) {
-        if (left_size == 0) break;
-        b = c->buf;
-        if (b == NULL) continue;
+        if ((b = c->buf) == NULL) continue;
         if (!b->in_memory) break;
         buf_left_size = mln_buf_left_size(b);
-        if (buf_left_size == 0) continue;
 
         if (buf_left_size > left_size) {
             memcpy(p, b->send_pos, left_size);
             p += left_size;
             left_size = 0;
+            break;
         } else {
-            memcpy(p, b->send_pos, buf_left_size);
-            p += buf_left_size;
-            left_size -= buf_left_size;
-            if (b->last_in_chain) {
-                break;
+            if (buf_left_size > 0) {
+                memcpy(p, b->send_pos, buf_left_size);
+                p += buf_left_size;
+                left_size -= buf_left_size;
             }
+            if (b->last_in_chain) break;
         }
     }
 
@@ -509,34 +468,23 @@ blk:
     }
 
     while ((c = tc->snd_head) != NULL) {
-        if (n == 0) break;
-        b = c->buf;
-        if (b == NULL) {
+        if ((b = c->buf) == NULL) {
             c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
             mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
         }
         buf_left_size = mln_buf_left_size(b);
-        if (buf_left_size == 0) {
-            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
-            mln_tcp_conn_append(tc, c, M_C_SENT);
-            continue;
-        }
-
-        if (n >= buf_left_size) {
+        if (buf_left_size > n) {
+            b->send_pos += n;
+            n = 0;
+        } else {
+            if (b->last_in_chain) is_done = 1;
             n -= buf_left_size;
             b->send_pos += buf_left_size;
             c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
             mln_tcp_conn_append(tc, c, M_C_SENT);
-            if (b->last_in_chain) {
-                is_done = 1;
-                break;
-            }
-            continue;
         }
-
-        b->send_pos += n;
-        break;
+        if (is_done || n == 0) break;
     }
 
     return is_done;
@@ -545,72 +493,61 @@ blk:
 
 
 #if defined(MLN_SENDFILE)
-static inline int
+static inline ssize_t
 mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc)
 {
-    int nonblock, n, sockfd = tc->sockfd;
+    int sockfd = tc->sockfd;
+    ssize_t n, is_done = 0;
     mln_chain_t *c;
     mln_buf_t *b;
     mln_size_t buf_left_size;
 
-    nonblock = mln_fd_is_nonblock(tc->sockfd);
-
-    if (nonblock) {
+    if (mln_fd_is_nonblock(sockfd)) {
         while ((c = tc->snd_head) != NULL) {
-            b = c->buf;
-            if (b == NULL) {
+            if ((b = c->buf) == NULL) {
                 c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
                 mln_tcp_conn_append(tc, c, M_C_SENT);
                 continue;
             }
             if (!b->in_file) break;
             buf_left_size = mln_buf_left_size(b);
-            if (buf_left_size == 0) {
-                c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
-                mln_tcp_conn_append(tc, c, M_C_SENT);
-                continue;
-            }
+            if (b->last_in_chain) is_done = 1;
 
+            if (buf_left_size) {
 non:
-            n = sendfile(sockfd, \
-                         mln_file_fd(b->file), \
-                         &b->file_send_pos, \
-                         buf_left_size);
-            if (n <= 0) {
-                if (errno == EINTR) goto non;
-                if (errno == EAGAIN) return 0;
-                return -1;
-            }
+                n = sendfile(sockfd, \
+                             mln_file_fd(b->file), \
+                             &b->file_send_pos, \
+                             buf_left_size);
+                if (n <= 0) {
+                    if (errno == EINTR) goto non;
+                    if (errno == EAGAIN) return 0;
+                    return -1;
+                }
 
-            if (mln_buf_left_size(b)) {
-                continue;
+                if (mln_buf_left_size(b)) {
+                    goto non;
+                }
             }
-
             c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
             mln_tcp_conn_append(tc, c, M_C_SENT);
-            if (b->last_in_chain) break;
+            if (is_done) break;
         }
         return 1;
     }
 
     while ((c = tc->snd_head) != NULL) {
-        b = c->buf;
-        if (b == NULL) {
-            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
-            mln_tcp_conn_append(tc, c, M_C_SENT);
-            continue;
+        if ((b = c->buf) != NULL) {
+            if (mln_buf_left_size(b)) break;
+            if (b->last_in_chain) is_done = 1;
         }
-        if (!b->in_file) return 0;
-        if (mln_buf_left_size(b) == 0) {
-            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
-            mln_tcp_conn_append(tc, c, M_C_SENT);
-            continue;
-        }
-        break;
+        c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
+        mln_tcp_conn_append(tc, c, M_C_SENT);
+        if (is_done) return 1;
     }
     if (tc->snd_head == NULL) return 0;
+    if (!b->in_file) return 0;
 
-    b = c->buf;
 blk:
     n = sendfile(sockfd, \
                  mln_file_fd(b->file), \
@@ -621,32 +558,27 @@ blk:
         return -1;
     }
 
-    if (mln_buf_left_size(b)) {
-        return 0;
-    }
-
+    if (mln_buf_left_size(b)) goto blk;
+    if (b->last_in_chain) is_done = 1;
     c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
     mln_tcp_conn_append(tc, c, M_C_SENT);
 
-    if (b->last_in_chain) return 1;
-    return 0;
+    return is_done;
 }
 #else
-static inline int
+static inline ssize_t
 mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc)
 {
-    int n, nonblock, sockfd = tc->sockfd;
+    int sockfd = tc->sockfd;
+    ssize_t n;
     mln_buf_t *b;
     mln_chain_t *c;
     mln_u8_t buf[4096];
     mln_size_t len, buf_left_size;
 
-    nonblock = mln_fd_is_nonblock(sockfd);
-
-    if (nonblock) {
+    if (mln_fd_is_nonblock(sockfd)) {
         while ((c = tc->snd_head) != NULL) {
-            b = c->buf;
-            if (b == NULL) {
+            if ((b = c->buf) == NULL) {
                 c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
                 mln_tcp_conn_append(tc, c, M_C_SENT);
                 continue;
@@ -657,6 +589,7 @@ mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc)
             if (buf_left_size == 0) {
                 c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
                 mln_tcp_conn_append(tc, c, M_C_SENT);
+                if (b->last_in_chain) return 1;
                 continue;
             }
 
@@ -678,22 +611,17 @@ non_snd:
                 return -1;
             }
             b->file_send_pos += n;
-            if (mln_buf_left_size(b)) {
-                continue;
-            }
+            if (mln_buf_left_size(b)) continue;
 
             c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
             mln_tcp_conn_append(tc, c, M_C_SENT);
-            if (b->last_in_chain) {
-                return 1;
-            }
+            if (b->last_in_chain) return 1;
         }
         return 0;
     }
 
     while ((c = tc->snd_head) != NULL) {
-        b = c->buf;
-        if (b == NULL) {
+        if ((b = c->buf) == NULL) {
             c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
             mln_tcp_conn_append(tc, c, M_C_SENT);
             continue;
@@ -704,6 +632,7 @@ non_snd:
         if (buf_left_size == 0) {
             c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
             mln_tcp_conn_append(tc, c, M_C_SENT);
+            if (b->last_in_chain) return 1;
             continue;
         }
 
@@ -728,9 +657,7 @@ blk_snd:
         return -1;
     }
     b->file_send_pos += n;
-    if (mln_buf_left_size(b)) {
-        return 0;
-    }
+    if (mln_buf_left_size(b)) return 0;
 
     c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
     mln_tcp_conn_append(tc, c, M_C_SENT);
@@ -775,10 +702,9 @@ int mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag)
         abort();
     }
 
-    int n, nonblock = 0;
-    nonblock = mln_fd_is_nonblock(tc->sockfd);
+    int n;
 
-    if (nonblock) {
+    if (mln_fd_is_nonblock(tc->sockfd)) {
 goon_non:
         while ((n = mln_tcp_conn_recv_chain(tc, flag)) > 0) {
             /*do nothing*/
@@ -795,7 +721,7 @@ goon_blk:
     }
 
     if (errno == EINTR) {
-        if (nonblock) {
+        if (mln_fd_is_nonblock(tc->sockfd)) {
             goto goon_non;
         } else {
             goto goon_blk;
@@ -813,9 +739,10 @@ mln_tcp_conn_recv_chain(mln_tcp_conn_t *tc, mln_u32_t flag)
     int n = -1;
     mln_buf_t *b;
     mln_chain_t *c;
+    mln_alloc_t *pool = mln_tcp_conn_get_pool(tc);
 
-    c = mln_chain_new(tc->pool);
-    b = mln_buf_new(tc->pool);
+    c = mln_chain_new(pool);
+    b = mln_buf_new(pool);
     if (c == NULL || b == NULL) {
         errno = ENOMEM;
         return -1;
@@ -829,9 +756,9 @@ mln_tcp_conn_recv_chain(mln_tcp_conn_t *tc, mln_u32_t flag)
                 last = NULL;
             }
         }
-        n = mln_tcp_conn_recv_chain_file(tc->sockfd, tc->pool, b, last);
+        n = mln_tcp_conn_recv_chain_file(tc->sockfd, pool, b, last);
     } else if (flag & M_C_TYPE_MEMORY) {
-        n = mln_tcp_conn_recv_chain_mem(tc->sockfd, tc->pool, b);
+        n = mln_tcp_conn_recv_chain_mem(tc->sockfd, pool, b);
     } else {
         mln_log(error, "Flag error.\n");
         abort();

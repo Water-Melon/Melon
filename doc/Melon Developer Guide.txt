@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.3.5
+Melon Version 1.3.6
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -59,8 +59,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.3.5.
-  b) Change directory to the melon-1.3.5/.
+  a) Download and decompress melon-1.3.6.
+  b) Change directory to the melon-1.3.6/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.3.5/include/mln_types.h.
+Their definitions can be found in melon-1.3.6/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -213,7 +213,8 @@ Their definitions can be found in melon-1.3.5/include/mln_types.h.
         hash_free_handler    free_key;
         hash_free_handler    free_val;
         mln_u32_t            len_base;
-        mln_u32_t            expandable;
+        mln_u32_t            expandable:1;
+        mln_u32_t            calc_prime:1;
     };
     typedef int  (*hash_scan_handler)(void * /*key*/,
                                       void * /*val*/, void *);
@@ -232,19 +233,24 @@ Their definitions can be found in melon-1.3.5/include/mln_types.h.
     free_key and free_val -- are used to free hash element's key
     and value. These two pointers can be NULL.
     len_base -- is an ideal value as a seed to be passed to a
-    prime generator to calculate the real hash table length.
+    prime generator to calculate the real hash table length if
+    'calc_prime' flag is set. Otherwise it only means the length
+    of hash table.
     expandable -- is a flag to indicate whether operations
     expand hash table dynamically. 0 means no, otherwise yes.
+    calc_prime -- is a flag to indicate whether a prime number
+    should be calculated. This prime number can be the length or
+    the threshold of hash table. This calculation will take maybe
+    more than a hundred microseconds.
 
     a) mln_hash_t *mln_hash_init(struct mln_hash_attr *attr);
        Initialize a hash table.
 
-    b) void mln_hash_destroy(mln_hash_t *h,
-                             enum mln_hash_flag flg);
+    b) void mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg);
        Destroy the hash table.
-       If people set 'free_key' and (or) 'free_value', this
-       function will free hash element's key and (or) value at
-       the same time.
+       If people set 'free_key' and (or) 'free_value' and the
+       'flg' is not M_HASH_F_NONE, this function will free hash
+       element's key and (or) value at the same time.
 
     c) void *mln_hash_search(mln_hash_t *h, void *key);
        This interface searches the value data according to
@@ -256,19 +262,19 @@ Their definitions can be found in melon-1.3.5/include/mln_types.h.
 
     e) void mln_hash_remove(mln_hash_t *h,
                             void *key,
-                            enum mln_hash_flag flg);
+                            mln_hash_flag_t flg);
        It removes a key-value from the hash table.
-       If the 'free_key' and (or) 'free_value' are set, the
-       element's key and (or) value will be freed at the same
-       time.
+       If the 'free_key' and (or) 'free_value' are set and the
+       'flg' is not M_HASH_F_NONE, the element's key and (or)
+       value will be freed at the same time.
 
     f) int mln_hash_scan_all(mln_hash_t *h,
                              hash_scan_handler handler,
                              void *udata);
        This interface is used to scan the whole table and
        process every key-value by the handler.
-       The third argument of handler is the udata that is a
-       custom structure pointer.
+       The third argument of handler is the 'udata' provided
+       by caller.
 
     g) void *mln_hash_change_value(mln_hash_t *h,
                                    void *key,
@@ -276,6 +282,24 @@ Their definitions can be found in melon-1.3.5/include/mln_types.h.
        This interface is used to change the value that is
        indicated by 'key'.
        The old value will be returned.
+
+    h) int mln_hash_key_exist(mln_hash_t *h, void *key);
+       Test whether the 'key' is existent.
+
+    i) void mln_hash_reset(mln_hash_t *h, mln_hash_flag_t flg);
+       Reset hash table. It will clear all entries in 'h'.
+       If flg is not M_HASH_F_NONE and 'h->free_key' and (or)
+       'h->free_val' are (is) not NULL, all entries will free
+       their key and (or) value at the same time.
+
+    j) mln_hash_replace(mln_hash_t *h, void *key, void *val);
+       Replace the 'key' and 'val' to an exitent k-v entry which
+       is located by 'key'. If k-v entry is not existent, a
+       new key-val entry will be created and insert into 'h'.
+       Note: The second and third arguments of this function are
+       all second rank pointer variables. For getting rid of the
+       compiler's error, These two types have to be defined as
+       void *.
 
   3) Fibonacci Heap
     struct mln_fheap_attr {
@@ -957,11 +981,12 @@ Their definitions can be found in melon-1.3.5/include/mln_types.h.
         Get the last chain node from the chain that is indicated
         by 'type' from 'tc'.
 
-     g) void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc,
-                                       mln_chain_t *c,
+     g) void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, \
+                                       mln_chain_t *c_head, \
+                                       mln_chain_t *c_tail, \
                                        int type);
-        Append whole chain 'c' to the specified chain in 'tc' which
-        is indicated by 'type'.
+        Append whole chain 'c_head' to the specified chain in
+        'tc' which is indicated by 'type'.
 
      h) mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type);
         Pop the first chain node from the specified chain from 'tc'
@@ -1380,239 +1405,159 @@ Their definitions can be found in melon-1.3.5/include/mln_types.h.
         'pfile' is a 'mln_file_t' pointer.
 
   20) HTTP
-     HTTP components contains two parts: HTTP header and HTTP.
-     In this section we will see many interfaces.
-     Now, let's start from HTTP header.
-     I) HTTP Header
-        a) void mln_http_header_reset(mln_http_header_t *header,
-                                      http_header *hooks);
-           Reset all fields in 'header' and set function pointers that
-           is recorded in 'hooks' to 'header' to process HTTP fields.
-           The prototype of 'http_header' is defined as,
-               typedef mln_chain_t *(*http_header)(mln_string_t *,
-                                                   mln_string_t **,
-                                                   mln_http_header_t *,
-                                                   void *);
-           The first argument is the HTTP field name.
-           The second one is an address which points to the field's
-           value.
-           The third one is a HTTP header object.
-           The last one is an user data which is set in HTTP header
-           object by 'mln_http_header_set_data'..
+     HTTP is not quiet difficult to use. There are some functions.
+     So we just
+     1) initialize a HTTP object.
+     2) set its HTTP fields, status, version, method, type and
+        handler,
+     3) parse or generate a HTTP packet.
+     4) finaly destroy the HTTP object.
+     Here are the functions:
+     a) mln_http_t *mln_http_init(mln_tcp_conn_t *connection,
+                                  void *data,
+                                  mln_http_handler body_handler);
+        Initialize a HTTP object.
+        'body_handler' is a callback handler. When we call
+        mln_http_parse() or mln_http_generate(), this function
+        will be called to process HTTP body.
+        'data' is a user data. It will be passed to 'body_handler'.
 
-        b) mln_http_header_t *mln_http_header_init(mln_alloc_t *pool);
-           Initialize a HTTP header object.
+     b) void mln_http_destroy(mln_http_t *http);
+        Destroy a HTTP object.
 
-        c) void mln_http_header_destroy(mln_http_header_t *header);
-           Destroy 'header'.
+     c) void mln_http_reset(mln_http_t *http);
+        Reset HTTP object flags, such as version, method, etc.
+        But the connection, memory pool, user data and body
+        callback handler will not be reset.
 
-        d) mln_chain_t *mln_http_header_packup(mln_http_header_t *header);
-           Depending on all HTTP fields in 'header', pack up a request or
-           response.
+     d) int mln_http_parse(mln_http_t *http, mln_chain_t **in);
+        Parse HTTP packets.
+        Return value:
+           M_HTTP_RET_DONE:  parse complete and no error.
+           M_HTTP_RET_OK:    parse incomplete and no error.
+           M_HTTP_RET_ERROR: parse error.
+        If an error ocurred, we can get the error code via
+        mln_http_get_error().
+        All parsed entries can be found in 'http'. we can use
+        these functions below here to operate there entries.
 
-        e) mln_chain_t *mln_http_header_parse(mln_http_header_t *header,
-                                              mln_chain_t *in);
-           Parse the content in 'in' and set all fields in 'header'.
-           Then we can use the following interfaces to visit them.
+     e) int mln_http_generate(mln_http_t *http,
+                              mln_chain_t **out_head,
+                              mln_chain_t **out_tail);
+        Generate a HTTP packet.
+        Return value: see mln_http_parse().
 
-        f) mln_http_header_get_pool(header);
-           Get the memory pool pointer from 'header'.
+     f) int mln_http_set_field(mln_http_t *http,
+                               mln_string_t *key,
+                               mln_string_t *val);
+        Set a field in a HTTP header.
 
-        g) mln_http_header_set_pool(header,p);
-           Set 'p' to the pool pointer of 'header'.
+     g) mln_string_t *mln_http_get_field(mln_http_t *http,
+                                         mln_string_t *key);
+        Get a field from a HTTP header.
 
-        h) mln_http_header_get_data(header);
-           Get the user data which is set in 'header'.
+     h) mln_http_get_connection(h);
+        Get the tcp connection.
 
-        i) mln_http_header_set_data(header,pdata);
-           Set 'pdata' to the data pointer of 'header'.
+     i) mln_http_set_connection(h,c);
+        Set the tcp connection.
 
-        j) mln_http_header_get_value(header,key);
-           Depending on the 'key', get a HTTP field value from 'header'.
-           There are 44 fields defined in 'mln_http_header.h' for 'key'.
-           The key's scope is
-           'M_HTTP_HEADER_CACHE_CONTORL ... M_HTTP_HEADER_CONTENT_LENGTH'.
+     j) mln_http_get_pool(h);
+        Get the memory pool.
 
-        k) mln_http_header_set_value(header,key,val);
-           Set 'val' to the place that is mapped by 'key' in 'header'.
-           'val' is a secondary pointer which points to a string
-           object pointer that points to the value.
+     k) mln_http_set_pool(h,p);
+        Set the memory pool.
 
-        l) mln_http_header_get_handle(header,key);
-           Get the HTTP field handler (function pointer) from 'header'.
+     l) mln_http_get_data(h);
+        Get the user data.
 
-        m) mln_http_header_set_handle(header,key,handle);
-           Set HTTP field handler.
+     m) mln_http_set_data(h,d);
+        Set the user data.
 
-        n) mln_http_header_get_max_size(header);
-           Get the max buffer size for parsing HTTP header.
+     n) mln_http_get_uri(h);
+        Get the URI.
 
-        o) mln_http_header_request_set(header);
-           Set 'header' to be a request header.
+     o) mln_http_set_uri(h,u);
+        Set the URI.
 
-        p) mln_http_header_response_set(header);
-           Set 'header' to be a response header.
+     p) mln_http_get_args(h);
+        Get the arguments.
 
-        q) mln_http_header_is_request(header);
-           Test 'header' whether is a request header or not.
+     q) mln_http_set_args(h,a);
+        Set the arguments.
 
-        r) mln_http_header_get_retval(header);
-           Get return value which indicates whether the
-           operation excuted successfully or not.
+     r) mln_http_get_status(h);
+        Get the response status.
 
-        s) mln_http_header_set_retval(header,rv);
-           Set return value. We may use this interface in HTTP
-           field handler which is provided by programmer.
+     s) mln_http_set_status(h,s);
+        Set the response status.
 
-        t) mln_http_header_set_uri(header,/*mln_string_t **/puri);
-           Set HTTP request URI.
+     t) mln_http_get_method(h);
+        Get the request method.
 
-        u) mln_http_header_get_uri(header);
-           Get HTTP request's URI.
+     u) mln_http_set_method(h,m);
+        Set the request method.
 
-        v) mln_http_header_set_args(header, /*mln_string_t **/pargs);
-           Set HTTP request arguments.
+     v) mln_http_get_version(h);
+        Get the HTTP version.
 
-        w) mln_http_header_get_args(header);
-           Get HTTP request's arguments.
+     w) mln_http_set_version(h,v);
+        Set the HTTP version.
 
-        x) mln_http_header_set_version(header,val);
-           Set HTTP version.
-           'val' has two options:
-             1) M_HTTP_HEADER_VERSION_1_0
-             2) M_HTTP_HEADER_VERSION_1_1
+     x) mln_http_get_type(h);
+        Get the type of a HTTP packet.
 
-        y) mln_http_header_get_version(header);
-           Get HTTP version.
+     y) mln_http_set_type(h,t);
+        Set the type of a HTTP packet.
 
-        z) mln_http_header_set_status(header,val);
-           Set HTTP status code.
-           The options of 'val' are defined in 'mln_http_header.h',
-           and their scope is
-               'M_HTTP_HEADER_CONTINUE ... 
-                M_HTTP_HEADER_UNPARSEABLE_RESPONSE_HEADERS'.
+     z) mln_http_get_handler(h);
+        Get the callback handler.
 
-        aa) mln_http_header_get_status(header);
-           Get HTTP status code.
+     aa) mln_http_set_handler(h,hlr);
+         Set the callback handler.
 
-        ab) mln_http_header_set_method(header,val);
-           Set HTTP request method.
-           The options of 'val' are define in 'mln_http_header.h',
-           and their scope is
-               'M_HTTP_HEADER_GET ... M_HTTP_HEADER_OPTIONS'.
+     ab) mln_http_get_response_msg(h);
+         Get the response status string.
 
-        ac) mln_http_header_get_method(header);
-           Get HTTP request method.
+     ac) mln_http_set_response_msg(h,m);
+         Set the response status string.
+         Actually, this function is not very useful.
+         Because mln_http_generate() will generate a HTTP
+         response status string depending on the status
+         code.
 
-        ad) mln_http_header_cookie_t *
-            mln_http_header_cookie_parse(mln_http_header_t *header);
-            Parse cookies.
-            This interfaces is only working on 'Cookie' field.
-            The return value is an array that records all key-value
-            in HTTP cookie.
-            typedef struct {
-                mln_string_t *key;
-                mln_string_t *value;
-            } mln_http_header_cookie_t;
-            The 'key' that the last element in array will be NULL.
+     ad) mln_http_get_error(h);
+         Get the error code.
 
-        ae) mln_http_header_cookie_t *
-            mln_http_header_setcookie_parse(mln_http_header_t *header);
-            Parse cookies.
-            This interfaces is only working on 'Set-Cookie' field.
+     ae) mln_http_set_error(h,e);
+         Set the error code.
 
-        af) void mln_http_header_cookies_destroy(
-                                    mln_http_header_cookie_t *cookies);
-            Destroy array 'cookies' that is returned by
-            'mln_http_header_cookie_parse' or
-            'mln_http_header_setcookie_parse'.
+     af) mln_http_get_header(h);
+         Get the header hash table object.
 
-        ag) mln_string_t *
-            mln_http_header_cookie_packup(mln_http_header_t *header,
-                                          mln_http_header_cookie_t *cookies);
-            Depending on 'cookies', pack up cookie string.
-
-     Now, here is HTTP.
-     II) HTTP
-        a) mln_http_t *mln_http_init(mln_alloc_t *pool);
-           Initialize a HTTP object.
-
-        b) void mln_http_destroy(mln_http_t *http);
-           Destroy 'http'.
-
-        c) mln_chain_t *mln_http_packup(mln_http_t *http);
-           Pack up a HTTP request or response.
-
-        d) mln_chain_t *mln_http_parse(mln_http_t *http, mln_chain_t *in);
-           Parse HTTP packet.
-
-        e) void mln_http_set_send_default_handle(mln_http_t *http);
-           Set default send handler.
-
-        f) mln_http_get_pool(http);
-           Get the memory pool pointer from 'http'.
-
-        g) mln_http_set_pool(http,p);
-           Set 'p' to the pool pointer in 'http'.
-
-        h) mln_http_get_data(http);
-           Get user data from 'http'.
-
-        i) mln_http_set_data(http,pdata);
-           Set 'pdata' to the data pointer in 'http'.
-
-        j) mln_http_get_connection(http);
-           Get connection object from 'http'.
-
-        k) mln_http_set_connection(http,con);
-           Set 'con' to the connection pointer in 'http'.
-
-        l) mln_http_get_handle(http);
-           Get HTTP body handler (function pointer) from 'http'.
-
-        m) mln_http_set_handle(http,h);
-           Set 'h' to the body handler pointer in 'http'.
-
-        n) mln_http_get_header(http);
-           Get HTTP header from 'http'.
-
-        o) mln_http_set_header(http,h);
-           Set 'h' to the header pointer in 'http'.
-
-        p) mln_http_body_head(http);
-           Get HTTP body content chain.
-
-        q) mln_http_body_append(http,chain);
-           Append 'chain' to the HTTP body content chain.
-
-        r) mln_http_body_reset(http);
-           Reset HTTP body content chain.
-
-        s) mln_http_get_peer_address(http);
-           Get peer's address.
-
-        t) mln_http_set_peer_address(http,addr);
-           Set peer's address.
-
-        u) mln_http_get_header_done(http);
-           Get the flag that indicates whether the HTTP
-           procedure is done.
-
-        v) mln_http_set_header_done(http);
-           If an HTTP packet has already processed, we need to
-           call this interface to notice the procedure.
-
-        w) mln_http_reset_header_done(http);
-           Reset done flag.
-
-        x) mln_http_get_status_code(http);
-           Get status code which indicates whether the
-           operation is executed successfully.
-           This status code is different from the one
-           in HTTP header object.
-
-        y) mln_http_set_status_code(http,code);
-           Set status code.
+     ag) typedef int (*mln_http_handler)(mln_http_t *,
+                                         mln_chain_t **,
+                                         mln_chain_t **);
+         This is the callback function's prototype.
+         This function will be called in mln_http_parse()
+         and mln_http_generate() to process the HTTP body.
+         The second and third arguments are all second
+         rank pointer variable.
+         In mln_http_parse(), only the second argument will
+         be set, and the third is NULL. The second one
+         indicates a input chain. So that means we must freed
+         the chain nodes which are processed in this function,
+         and update this argument.
+         In mln_http_generate, both of these arguments will
+         be set. The first one points to the first output chain
+         node, the other one points to the last output chain
+         node. After we generate a HTTP body, we have to update
+         these two arguments as the body.
+         Finally, we discuss the return value.
+         The return values are the same as mln_http_parse().
+         But there is a thing we should know. If there is an
+         error occured, we should set the error code via
+         mln_http_set_error().
 
   21) Regular Expression
      Melon, now, has already support regular expression. And
@@ -1681,6 +1626,160 @@ Their definitions can be found in melon-1.3.5/include/mln_types.h.
         Match a letter.
      o) \\
         Just like '\\' in C.
+
+  22) JSON
+     Melon, now, support JSON without relying on any json libraries.
+     Here are the functions:
+     a) mln_json_t *mln_json_new(void);
+        Initialize a JSON object.
+
+     b) void mln_json_free(void *json);
+        Destroy a JSON object.
+
+     c) mln_json_t *mln_json_parse(mln_string_t *jstr);
+        Parse JSON string.
+
+     d) mln_string_t *mln_json_generate(mln_json_t *j);
+        Generate a JSON string.
+
+     e) mln_json_t *mln_json_search_value(mln_json_t *j,
+                                          mln_string_t *key);
+        Search the JSON object value via 'key'.
+
+     f) mln_json_t *mln_json_search_element(mln_json_t *j,
+                                            mln_uauto_t index);
+        Search the element from a JSON array.
+
+     g) mln_uauto_t mln_json_get_array_length(mln_json_t *j);
+        Get JSON array length.
+
+     h) int mln_json_update_obj(mln_json_t *j,
+                                mln_json_t *key,
+                                mln_json_t *val);
+        Update JSON object key-value.
+        If 'key' is existent, the old value will be replaced by
+        'val' and freed.
+        The type of 'j' should be M_JSON_OBJECT or M_JSON_NONE.
+
+     i) int mln_json_add_element(mln_json_t *j,
+                                 mln_json_t *value);
+        Add an element into a JSON array.
+        The type of 'j' should be M_JSON_ARRAY or M_JSON_NONE.
+
+     j) int mln_json_update_element(mln_json_t *j,
+                                    mln_json_t *value,
+                                    mln_uauto_t index);
+        Update JSON array element.
+        The old value where is located by 'index' will be
+        replaced by 'value' and free if it is existent.
+        The type of 'j' must be M_JSON_ARRAY.
+
+     k) void mln_json_reset(mln_json_t *j);
+        Reset a JSON object.
+
+     l) mln_json_t *mln_json_remove_object(mln_json_t *j,
+                                           mln_string_t *key);
+        Remove a key-value couple from a JSON object.
+        The type of 'j' must be M_JSON_OBJECT.
+
+     m) mln_json_t *mln_json_remove_element(mln_json_t *j,
+                                            mln_uauto_t index);
+        Remove an element from a JSON object.
+        The type of 'j' must be M_JSON_ARRAY.
+
+     n) M_JSON_IS_OBJECT(json);
+        Test whether the type of 'json' is M_JSON_OBJECT.
+
+     o) M_JSON_IS_ARRAY(json);
+        Test whether the type of 'json' is M_JSON_ARRAY.
+
+     p) M_JSON_IS_STRING(json);
+        Test whether the type of 'json' is M_JSON_STRING.
+
+     q) M_JSON_IS_NUMBER(json);
+        Test whether the type of 'json' is M_JSON_NUM.
+
+     r) M_JSON_IS_TRUE(json);
+        Test whether the type of 'json' is M_JSON_TRUE.
+
+     s) M_JSON_IS_FALSE(json);
+        Test whether the type of 'json' is M_JSON_FALSE.
+
+     t) M_JSON_IS_NULL(json);
+        Test whether the type of 'json' is M_JSON_NULL.
+
+     u) M_JSON_IS_NONE(json);
+        Test whether the type of 'json' is M_JSON_NONE.
+
+     v) M_JSON_GET_DATA_OBJECT(json);
+        Get the object hash table if the type of 'json'
+        is M_JSON_OBJECT.
+
+     w) M_JSON_GET_DATA_ARRAY(json);
+        Get the array red-black tree if the type of 'json'
+        is M_JSON_ARRAY.
+
+     x) M_JSON_GET_DATA_STRING(json);
+        Get the string if the type of 'json' is
+        M_JSON_STRING.
+
+     y) M_JSON_GET_DATA_NUMBER(json);
+        Get the number if the type of 'json' is
+        M_JSON_NUM.
+
+     z) M_JSON_GET_DATA_TRUE(json);
+        Get the binary flag of TRUE if the type of 'json'
+        is M_JSON_TRUE.
+
+     aa) M_JSON_GET_DATA_FALSE(json);
+         Get the binary flag of FALSE if the type of 'json'
+         is M_JSON_FALSE.
+
+     ab) M_JSON_GET_DATA_NULL(json);
+         Get the variable of NULL if the type of 'json' is
+         M_JSON_NULL.
+
+     ac) M_JSON_SET_INDEX(json,i);
+         Set the index of 'json' to be 'i'.
+
+     ad) M_JSON_SET_TYPE_NONE(json);
+         Set the type of 'json' to be M_JSON_NONE.
+
+     ae) M_JSON_SET_TYPE_OBJECT(json);
+         Set the type of 'json' to be M_JSON_OBJECT.
+
+     af) M_JSON_SET_TYPE_ARRAY(json);
+         Set the type of 'json' to be M_JSON_ARRAY.
+
+     ag) M_JSON_SET_TYPE_STRING(json);
+         Set the type of 'json' to be M_JSON_STRING.
+
+     ah) M_JSON_SET_TYPE_NUMBER(json);
+         Set the type of 'json' to be M_JSON_NUM.
+
+     ai) M_JSON_SET_TYPE_TRUE(json);
+         Set the type of 'json' to be M_JSON_TRUE.
+
+     aj) M_JSON_SET_TYPE_FALSE(json);
+         Set the type of 'json' to be M_JSON_FALSE.
+
+     ak) M_JSON_SET_TYPE_NULL(json);
+         Set the type of 'json' to be M_JSON_NULL.
+
+     al) M_JSON_SET_DATA_STRING(json,str);
+         Set the string value of 'json' to be 'str'.
+
+     am) M_JSON_SET_DATA_NUMBER(json,num);
+         Set the number of 'json' to be 'num'.
+
+     an) M_JSON_SET_DATA_TRUE(json);
+         Set the binary flag of TRUE in 'json'.
+
+     ao) M_JSON_SET_DATA_FALSE(json);
+         Set the binary flag of FALSE in 'json'.
+
+     ap) M_JSON_SET_DATA_NULL(json);
+         Set the variable of NULL in 'json'.
 
 5. Process Module Development
    In Melon, there are two methods to develop process module.

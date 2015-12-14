@@ -204,7 +204,7 @@ int mln_load_thread(mln_event_t *ev)
     mln_conf_cmd_t **v = (mln_conf_cmd_t **)calloc(nr_cmds, sizeof(mln_conf_cmd_t *));;
     if (v == NULL) {
         mln_log(error, "No memory.\n");
-        mln_hash_destroy(thread_hash, hash_none);
+        mln_hash_destroy(thread_hash, M_HASH_F_NONE);
         return -1;
     }
     mln_get_all_cmds(cf, thread_domain, v);
@@ -308,7 +308,7 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
                          mln_main_thread_itc_recv_handler) < 0)
     {
         mln_log(error, "mln_event_set_fd failed.\n");
-        mln_hash_remove(thread_hash, t->alias, hash_none);
+        mln_hash_remove(thread_hash, t->alias, M_HASH_F_NONE);
         return -1;
     }
     int err;
@@ -320,7 +320,7 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
                          M_EV_UNLIMITED, \
                          NULL, \
                          NULL);
-        mln_hash_remove(thread_hash, t->alias, hash_none);
+        mln_hash_remove(thread_hash, t->alias, M_HASH_F_NONE);
         return -1;
     }
     t->is_created = 1;
@@ -545,7 +545,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
 {
     mln_chain_t *c;
 
-    mln_hash_remove(thread_hash, t->alias, hash_none);
+    mln_hash_remove(thread_hash, t->alias, M_HASH_F_NONE);
     mln_event_set_fd(ev, \
                      mln_tcp_conn_get_fd(&(t->conn)), \
                      M_EV_CLR, \
@@ -629,6 +629,7 @@ mln_thread_hash_init(void)
     hattr.free_val = NULL;
     hattr.len_base = THREAD_HASH_LEN;
     hattr.expandable = 1;
+    hattr.calc_prime = 0;
     thread_hash = mln_hash_init(&hattr);
     if (thread_hash == NULL) return -1;
     return 0;

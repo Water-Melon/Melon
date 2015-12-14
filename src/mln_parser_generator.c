@@ -255,6 +255,7 @@ int mln_pg_calc_info_init(struct mln_pg_calc_info_s *pci, \
     hattr.free_val = NULL;
     hattr.len_base = M_PG_DFL_HASHLEN;
     hattr.expandable = 0;
+    hattr.calc_prime = 0;
     pci->hash = mln_hash_init(&hattr);
     if (pci->hash == NULL) {
         return -1;
@@ -272,7 +273,7 @@ void mln_pg_calc_info_destroy(struct mln_pg_calc_info_s *pci)
 {
     if (pci == NULL) return;
     if (pci->hash != NULL)
-        mln_hash_destroy(pci->hash, hash_none);
+        mln_hash_destroy(pci->hash, M_HASH_F_NONE);
     mln_pg_state_t *s;
     while ((s = pci->head) != NULL) {
         mln_state_chain_del(&(pci->head), &(pci->tail), s);

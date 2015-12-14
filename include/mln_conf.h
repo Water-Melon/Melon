@@ -11,7 +11,7 @@
 #include "mln_hash.h"
 #include "mln_string.h"
 
-#define MLN_CONF_HASH_LEN 10
+#define MLN_CONF_HASH_LEN 31
 
 typedef struct mln_conf_item_s    mln_conf_item_t;
 typedef struct mln_conf_domain_s  mln_conf_domain_t;

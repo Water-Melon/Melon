@@ -51,7 +51,10 @@ typedef struct {
 extern int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd) __NONNULL1(1);
 extern void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
 extern void
-mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c, int type) __NONNULL2(1,2);
+mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, \
+                          mln_chain_t *c_head, \
+                          mln_chain_t *c_tail, \
+                          int type) __NONNULL2(1,2);
 extern void
 mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type) __NONNULL2(1,2);
 extern mln_chain_t *mln_tcp_conn_get_head(mln_tcp_conn_t *tc, int type) __NONNULL1(1);

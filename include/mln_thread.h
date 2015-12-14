@@ -9,7 +9,7 @@
 #include "mln_connection.h"
 #include "mln_event.h"
 
-#define THREAD_HASH_LEN 4
+#define THREAD_HASH_LEN 31
 #define THREAD_SOCKFD_LEN 128
 
 typedef int (*tentrance)(int, char **);

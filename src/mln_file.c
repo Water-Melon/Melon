@@ -20,6 +20,7 @@ MLN_CHAIN_FUNC_DECLARE(reg_file, \
                        __NONNULL3(1,2,3));
 static int mln_file_set_hash(mln_hash_t *h, void *key);
 static int mln_file_set_cmp(mln_hash_t *h, void *key1, void *key2);
+static void mln_file_free(void *pfile);
 
 mln_file_set_t *mln_file_set_init(mln_size_t max_file)
 {
@@ -40,9 +41,10 @@ mln_file_set_t *mln_file_set_init(mln_size_t max_file)
     attr.hash = mln_file_set_hash;
     attr.cmp = mln_file_set_cmp;
     attr.free_key = NULL;
-    attr.free_val = mln_file_close;
+    attr.free_val = mln_file_free;
     attr.len_base = max_file >> 1;
     attr.expandable = 0;
+    attr.calc_prime = 0;
     fs->reg_file_hash = mln_hash_init(&attr);
     if (fs->reg_file_hash == NULL) {
         mln_alloc_destroy(fs->pool);
@@ -60,14 +62,15 @@ static int mln_file_set_hash(mln_hash_t *h, void *key)
 {
     mln_string_t *str = (mln_string_t *)key;
     mln_s8ptr_t s, send = str->str + str->len;
-    int index = 0;
+    register int index = 0, steplen = (str->len >> 3) - 1;
+    if (steplen <= 0) steplen = 1;
 
-    for (s = str->str; s < send; s++) {
-        index += (*s * 65599);
-        index %= h->len;
+    for (s = str->str; s < send; s+=steplen) {
+        index += (*s * 3);
     }
-
     if (index < 0) index = -index;
+    index %= h->len;
+
     return index;
 }
 
@@ -81,7 +84,7 @@ void mln_file_set_destroy(mln_file_set_t *fs)
     if (fs == NULL) return;
 
     if (fs->reg_file_hash != NULL)
-        mln_hash_destroy(fs->reg_file_hash, hash_only_free_val);
+        mln_hash_destroy(fs->reg_file_hash, M_HASH_F_VAL);
     if (fs->pool != NULL)
         mln_alloc_destroy(fs->pool);
     free(fs);
@@ -166,13 +169,19 @@ void mln_file_close(void *pfile)
     if (fs->reg_file_hash->nr_nodes > fs->max_file) {
         f = fs->reg_free_head;
         reg_file_chain_del(&(fs->reg_free_head), &(fs->reg_free_tail), f);
-        mln_hash_remove(fs->reg_file_hash, f->file_path, hash_only_free_val);
-        if (f->file_path != NULL)
-            mln_free_string_pool(f->file_path);
-        if (f->fd >= 0)
-            close(f->fd);
-        mln_alloc_free(f);
+        mln_hash_remove(fs->reg_file_hash, f->file_path, M_HASH_F_VAL);
     }
+}
+
+static void mln_file_free(void *pfile)
+{
+    if (pfile == NULL) return;
+
+    mln_file_t *f = (mln_file_t *)pfile;
+    if (f->file_path != NULL)
+        mln_free_string_pool(f->file_path);
+    if (f->fd >= 0) close(f->fd);
+    mln_alloc_free(f);
 }
 
 mln_file_t *mln_file_tmp_open(mln_alloc_t *pool)

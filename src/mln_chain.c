@@ -36,10 +36,18 @@ void mln_buf_pool_release(mln_buf_t *b)
     }
 
     if (b->in_memory) {
-        if (b->start != NULL) {
-            mln_alloc_free(b->start);
+        if (b->mmap) {
+            if (b->start != NULL) {
+                munmap(b->start, b->end - b->start);
+            } else {
+                munmap(b->pos, b->last - b->pos);
+            }
         } else {
-            mln_alloc_free(b->pos);
+            if (b->start != NULL) {
+                mln_alloc_free(b->start);
+            } else {
+                mln_alloc_free(b->pos);
+            }
         }
         mln_alloc_free(b);
         return;
@@ -47,16 +55,6 @@ void mln_buf_pool_release(mln_buf_t *b)
 
     if (b->in_file) {
         mln_file_close(b->file);
-        mln_alloc_free(b);
-        return;
-    }
-
-    if (b->mmap) {
-        if (b->start != NULL) {
-            munmap(b->start, b->end - b->start);
-        } else {
-            munmap(b->pos, b->last - b->pos);
-        }
         mln_alloc_free(b);
         return;
     }
