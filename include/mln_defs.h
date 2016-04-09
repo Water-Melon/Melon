@@ -10,6 +10,7 @@
 #define __NONNULL1(x)     __nonnull((x))
 #define __NONNULL2(x,y)   __nonnull((x)) __nonnull((y))
 #define __NONNULL3(x,y,z) __nonnull((x)) __nonnull((y)) __nonnull((z))
+#define __NONNULL4(w,x,y,z) __nonnull((w)) __nonnull((x)) __nonnull((y)) __nonnull((z))
 
 #ifdef __GNUC__
 #define __cacheline_aligned __attribute__((__aligned__(16)))

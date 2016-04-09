@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.3.6
+Melon Version 1.4.0
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -59,8 +59,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.3.6.
-  b) Change directory to the melon-1.3.6/.
+  a) Download and decompress melon-1.4.0.
+  b) Change directory to the melon-1.4.0/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.3.6/include/mln_types.h.
+Their definitions can be found in melon-1.4.0/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -1780,6 +1780,402 @@ Their definitions can be found in melon-1.3.6/include/mln_types.h.
 
      ap) M_JSON_SET_DATA_NULL(json);
          Set the variable of NULL in 'json'.
+
+  23) Big Number
+      For now, big number only can represent the number which is
+      smaller than 2048-bit number.
+
+      a) mln_bignum_positive(pbn);
+         Switch big number's tag to be positive.
+
+      b) mln_bignum_negative(pbn);
+         Switch big number's tag to be negative.
+
+      c) mln_bignum_t *mln_bignum_init(void);
+         Create and initialize a big number.
+
+      d) mln_bignum_t *mln_bignum_pool_init(mln_alloc_t *pool);
+         Create and initialize a big number on 'pool'.
+
+      e) void mln_bignum_free(mln_bignum_t *bn);
+         Free a big number instance.
+
+      f) void mln_bignum_pool_free(mln_bignum_t *bn);
+         Free a big number instance to a memory pool.
+
+      g) mln_bignum_t *mln_bignum_dup(mln_bignum_t *bn);
+         Duplicate a big number instance.
+
+      h) mln_bignum_t *mln_bignum_pool_dup(mln_alloc_t *pool,
+                                           mln_bignum_t*bn);
+         Duplicate a big number instance.
+         The new instance is allocated on 'pool'.
+
+      i) int mln_bignum_assign(mln_bignum_t *bn,
+                               mln_s8ptr_t sval,
+                               mln_u32_t len);
+         Assign a value which is represented as string to a big number
+         instance.
+         'bn' is the big number instance.
+         'sval' is the value which is represented as a string.
+         'len' is the length of 'sval'.
+         There are three representations of 'sval':
+           I.  Decimal
+               It should be started with '1'~'9'.
+           II. Octal
+               It must be started with '0' and the rest number must
+               be '0'~'7'.
+           III.Hexadecimal
+               It must be started with '0x' and the rest number can
+               be '0'~'9', 'a'~'f', 'A'~'F'.
+           If we need a negative number, just add '-' to the head of
+           'sval'. Such as, -123, -0x89ab, -0337.
+
+      j) void mln_bignum_add(mln_bignum_t *dest, mln_bignum_t *src);
+         Big number addition.
+         The result will be written in 'dest'.
+
+      k) void mln_bignum_sub(mln_bignum_t *dest, mln_bignum_t *src);
+         Big number substraction.
+         The result will be written in 'dest'.
+
+      l) void mln_bignum_mul(mln_bignum_t *dest, mln_bignum_t *src);
+         Big number multiplication.
+         The result will be written in 'dest'.
+
+      m) int mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src,
+                            mln_bignum_t *quotient);
+         Big number division.
+         The quotient will be written in 'quotient' if 'quotient' is not
+         NULL.
+         The remainder will be written in 'dest'.
+
+      n) int mln_bignum_pwr(mln_bignum_t *dest, mln_bignum_t *exponent,
+                            mln_bignum_t *mod);
+         Big number involution.
+         The result will be written in 'dest'.
+         The result modulo 'mod' if 'mod' not NULL.
+
+      o) int mln_bignum_compare(mln_bignum_t *bn1, mln_bignum_t *bn2);
+         Compare two big numbers.
+         Return value:
+           -1 -- 'bn1' < 'bn2'
+            0 -- 'bn1' == 'bn2'
+            1 -- 'bn1' > 'bn2'.
+
+      p) int mln_bignum_absCompare(mln_bignum_t *bn1, mln_bignum_t *bn2);
+         Same as 'mln_bignum_compare', but ignore the negative sign.
+
+      q) int mln_bignum_testBit(mln_bignum_t *bn, mln_u32_t index);
+         Test the bit that is specified by 'index' is 0 or 1.
+         'index' starts from 0.
+         Return value: 0 -- bit is 0, 1 -- bit is 1.
+
+      r) void mln_bignum_leftShift(mln_bignum_t *bn, mln_u32_t n);
+         Left shift.
+         'n' starts from 0.
+
+      s) void mln_bignum_rightShift(mln_bignum_t *bn, mln_u32_t n);
+         Right shift.
+         'n' starts from 0.
+
+      t) int mln_bignum_prime(mln_bignum_t *res, mln_u32_t bitwidth);
+         Generate a big number.
+         The result will be put into 'res'.
+         'bitwidth' indicates the number of big number's bit.
+         If 'bitwidth' is invalid, -1 will be returned.
+
+      u) int mln_bignum_extendEulid(mln_bignum_t *a,
+                                    mln_bignum_t *b,
+                                    mln_bignum_t *x,
+                                    mln_bignum_t *y,
+                                    mln_bignum_t *gcd);
+         Extend Eulid calculation.
+
+  24) MD5
+      a) void mln_md5_init(mln_md5_t *m);
+         Initialize a MD5 instance.
+         'm' can be allocated on stack or heap.
+
+      b) mln_md5_t *mln_md5_new(void);
+         Create a new MD5 instance.
+
+      c) mln_md5_t *mln_md5_new_pool(mln_alloc_t *pool);
+         Create a new MD5 instance on 'pool'.
+
+      d) void mln_md5_free(mln_md5_t *m);
+         Free a MD5 instance.
+
+      e) void mln_md5_free_pool(mln_md5_t *m);
+         Free a MD5 instance to a memory pool.
+
+      f) void mln_md5_calc(mln_md5_t *m,
+                           mln_u8ptr_t input,
+                           mln_uauto_t len,
+                           mln_u32_t is_last);
+         MD5 calculation.
+         'm' is a MD5 instance.
+         'input' is the content that need to be calculated.
+         'len' is the length of 'input'.
+         'is_last' is a flag to indicate whether 'input' is
+         the last content or not.
+
+      g) void mln_md5_toBytes(mln_md5_t *m,
+                              mln_u8ptr_t buf,
+                              mln_u32_t len);
+         Put MD5 result into 'buf'.
+         'len' is the length of 'buf'.
+         The data filled in 'buf' is binary.
+
+      h) void mln_md5_toString(mln_md5_t *m,
+                               mln_s8ptr_t buf,
+                               mln_u32_t len);
+         Put MD5 result into 'buf'.
+         'len' is the length of 'buf'.
+         The data filled in 'buf' is a hex string.
+
+  25) SHA1
+      a) void mln_sha1_init(mln_sha1_t *s);
+         Inialize a SHA1 instance.
+         's' can be allocated on stack or heap.
+
+      b) mln_sha1_t *mln_sha1_new(void);
+         Create a new SHA1 instance on heap.
+
+      c) mln_sha1_t *mln_sha1_new_pool(mln_alloc_t *pool);
+         Create a new SHA1 instance on 'pool'.
+
+      d) void mln_sha1_free(mln_sha1_t *s);
+         Free SHA1 instance.
+
+      e) void mln_sha1_free_pool(mln_sha1_t *s);
+         Free SHA1 instance to a memory pool.
+
+      f) void mln_sha1_calc(mln_sha1_t *s,
+                            mln_u8ptr_t input,
+                            mln_uauto_t len,
+                            mln_u32_t is_last);
+         SHA1 calculation.
+         's' is a SHA1 instance.
+         'input' is the content that need to be calculated.
+         'len' is the length of 'input'.
+         'is_last' is a flag to indicate whether the 'input'
+         is the last content or not.
+
+      g) void mln_sha1_toBytes(mln_sha1_t *s,
+                               mln_u8ptr_t buf,
+                               mln_u32_t len);
+         Put SHA1 result into 'buf'.
+         'len' is the length of 'buf'.
+         The data filled in 'buf' is binary.
+
+      h) void mln_sha1_toString(mln_sha1_t *s,
+                                mln_s8ptr_t buf,
+                                mln_u32_t len);
+         Put SHA1 result into 'buf'.
+         'len' is the length of 'buf'.
+         The data filled in 'buf' is a hex string.
+
+  26) DES
+      a) void mln_des_init(mln_des_t *d, mln_u64_t key);
+         Initialize a DES instance.
+         'd' is the instance which can be allocated on
+         stack or heap.
+         'key' is a 4-byte A.K.A. 64-bit memory.
+
+      b) mln_des_t *mln_des_new(mln_u64_t key);
+         Create a new DES instance.
+
+      c) mln_des_t *mln_des_new_pool(mln_alloc_t *pool,
+                                     mln_u64_t key);
+         Same as 'mln_des_new', but allocated on 'pool'.
+
+      d) void mln_des_free(mln_des_t *d);
+         Free a DES instance.
+
+      e) void mln_des_free_pool(mln_des_t *d);
+         Free a DES instance to a memory pool.
+
+      f) mln_u64_t mln_des(mln_des_t *d,
+                           mln_u64_t msg,
+                           mln_u32_t is_encrypt);
+         DES encrypt or decrypt.
+         'd' is the DES instance.
+         'msg' is a 64-bit text.
+         'is_encrypt' is a flag to make 'msg'
+         encrypt or decrypt.
+
+      g) void mln_des_buf(mln_des_t *d,
+                          mln_u8ptr_t in,
+                          mln_uauto_t inlen,
+                          mln_u8ptr_t out,
+                          mln_uauto_t outlen,
+                          mln_u8_t fill,
+                          mln_u32_t is_encrypt);
+         DES encrypt or decrypt.
+         Break the 64-bit limitation.
+         We provide an input buffer to encrypt or decrypt
+         message and also provide an output buffer to
+         get the cipher or text that function processed.
+
+      h) void mln_3des_init(mln_3des_t *tdes,
+                            mln_u64_t key1,
+                            mln_u64_t key2);
+         Initialize a 3DES instance.
+         3DES need two 64-bit keys.
+
+      i) mln_3des_t *mln_3des_new(mln_u64_t key1,
+                                  mln_u64_t key2);
+         Create a new 3DES instance.
+
+      j) mln_3des_t *mln_3des_new_pool(mln_alloc_t *pool,
+                                       mln_u64_t key1,
+                                       mln_u64_t key2);
+         Same as 'mln_3des_new', but allocated on 'pool'.
+
+      k) void mln_3des_free(mln_3des_t *tdes);
+         Free 3DES instance.
+
+      l) void mln_3des_free_pool(mln_3des_t *tdes);
+         Free 3Des instance to a memory pool.
+
+      m) mln_u64_t mln_3des(mln_3des_t *tdes,
+                            mln_u64_t msg,
+                            mln_u32_t is_encrypt);
+         3DES encrypt or decrypt.
+
+      n) void mln_3des_buf(mln_3des_t *tdes,
+                           mln_u8ptr_t in,
+                           mln_uauto_t inlen,
+                           mln_u8ptr_t out,
+                           mln_uauto_t outlen,
+                           mln_u8_t fill,
+                           mln_u32_t is_encrypt);
+         Same as 'mln_des_buf' but work on 3DES.
+
+  27) RC4
+      a) void mln_rc4_init(mln_u8ptr_t s,
+                          mln_u8ptr_t key,
+                          mln_uauto_t len);
+         Initialize input data 's'.
+         'key' can be any data.
+         'len' is the length of 'key'.
+         The length of 's' is 256 bytes.
+         And 's' is a memory filled by 0.
+
+      b) void mln_rc4_calc(mln_u8ptr_t s,
+                           mln_u8ptr_t data,
+                           mln_uauto_t len);
+         Encrypt or decrypt 'data'.
+         'len' is the length of 'data'.
+         's' is a 256 bytes memory which is
+         initialized by 'mln_rc4_init()'.
+
+  28) AES
+      a) int mln_aes_init(mln_aes_t *a,
+                          mln_u8ptr_t key,
+                          mln_u32_t bits);
+         Initialize an AES instance.
+         The 'key''s length is depending on 'bits'.
+         There are three value of 'bits':
+           I.   M_AES_128
+           II.  M_AES_192
+           III. M_AES_256
+         The suffix number indicates how many bits
+         the 'key' has.
+         'a' is an AES instance which can be allocated
+         on stack.
+
+      b) mln_aes_t *mln_aes_new(mln_u8ptr_t key,
+                                mln_u32_t bits);
+         Create a new AES instance from the heap.
+         The values of 'bits' are the same as
+         'mln_aes_init()'.
+
+      c) mln_aes_t *mln_aes_new_pool(mln_alloc_t *pool,
+                                     mln_u8ptr_t key,
+                                     mln_u32_t bits);
+         The same as 'mln_aes_new()', but the instance
+         is allocated from 'pool'.
+
+      d) void mln_aes_free(mln_aes_t *a);
+         Free an AES instance to the heap.
+
+      e) void mln_aes_free_pool(mln_aes_t *a);
+         Free an AES instance to a memory pool.
+
+      f) int mln_aes_encrypt(mln_aes_t *a,
+                             mln_u8ptr_t text);
+         AES encrypt.
+         'text' must be a 128-bit data.
+
+      g) int mln_aes_decrypt(mln_aes_t *a,
+                             mln_u8ptr_t cipher);
+         AES decrypt.
+         'cipher' must be a 128-bit data.
+
+  29) Base64
+      a) int mln_base64_encode(mln_u8ptr_t in,
+                               mln_uauto_t inlen,
+                               mln_u8ptr_t *out,
+                               mln_uauto_t *outlen);
+         Encode 'in' in Base64. 'out' and 'outlen' are
+         output arguments.
+         It will return -1 if memory not enough.
+
+      b) int mln_base64_encode_pool(mln_alloc_t *pool,
+                                    mln_u8ptr_t in,
+                                    mln_uauto_t inlen,
+                                    mln_u8ptr_t *out,
+                                    mln_uauto_t *outlen);
+         Same as 'mln_base64_encode' but the memory of
+         'out' is allocated by 'pool'.
+
+      c) int mln_base64_decode(mln_u8ptr_t in,
+                               mln_uauto_t inlen,
+                               mln_u8ptr_t *out,
+                               mln_uauto_t *outlen);
+         Decode 'in'. 'out' and 'outlen' are output
+         arguments.
+         It will return -1 if memory not enough.
+
+      d) int mln_base64_decode_pool(mln_alloc_t *pool,
+                                    mln_u8ptr_t in,
+                                    mln_uauto_t inlen,
+                                    mln_u8ptr_t *out,
+                                    mln_uauto_t *outlen);
+         Same as 'mln_base64_decode' but the memory of
+         'out' is allocated by 'pool'.
+
+      e) void mln_base64_free(mln_u8ptr_t data);
+         Free 'data' which is returned by encode and decode
+         functions via argument 'out'.
+
+      f) void mln_base64_free_pool(mln_u8ptr_t data);
+         Same as 'mln_base64_free' but free memory to a pool.
+
+  30) RSA
+      a) mln_rsa_key_t *mln_rsa_key_new(void);
+         Create a new RSA key instance.
+
+      b) mln_rsa_key_t *mln_rsa_key_new_pool(mln_alloc_t *pool);
+         Create a new RSA key instance via a memory pool.
+
+      c) void mln_rsa_key_free(mln_rsa_key_t *key);
+         Free RSA key instance.
+
+      d) void mln_rsa_key_free_pool(mln_rsa_key_t *key);
+         Free RSA key instance to the memory pool.
+
+      e) int mln_rsa_keyGenerate(mln_rsa_key_t *pub,
+                                 mln_rsa_key_t *pri,
+                                 mln_u32_t bits);
+         Generate a couple of RSA keys.
+
+      f) int mln_rsa_calc(mln_rsa_key_t *key,
+                          mln_bignum_t *in,
+                          mln_bignum_t *out);
+         RSA encrypt and decrypt.
 
 5. Process Module Development
    In Melon, there are two methods to develop process module.
