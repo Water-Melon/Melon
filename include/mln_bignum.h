@@ -11,8 +11,8 @@
 
 #define M_BIGNUM_POSITIVE 0
 #define M_BIGNUM_NEGATIVE 1
-#define M_BIGNUM_SIZE     64
-#define M_BIGNUM_BITS     2048
+#define M_BIGNUM_SIZE     128
+#define M_BIGNUM_BITS     4096
 #define M_BIGNUM_UMAX     ((mln_u64_t)0x100000000llu)
 
 typedef struct {

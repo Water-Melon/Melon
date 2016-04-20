@@ -39,6 +39,10 @@ static inline void
 __mln_bignum_leftShift(mln_bignum_t *bn, mln_u32_t n);
 static inline void
 __mln_bignum_rightShift(mln_bignum_t *bn, mln_u32_t n);
+static inline void
+__mln_bignum_mul32(mln_bignum_t *dest, mln_s64_t src);
+static inline int
+__mln_bignum_div32(mln_bignum_t *dest, mln_s64_t src, mln_bignum_t *quotient);
 /*prime*/
 static inline void
 mln_bignum_seperate(mln_u32_t *pwr, mln_bignum_t *odd);
@@ -79,7 +83,7 @@ mln_bignum_t *mln_bignum_dup(mln_bignum_t *bn)
 
     target->tag = bn->tag;
     target->length = bn->length;
-    memcpy(target->data, bn->data, bn->length);
+    memcpy(target->data, bn->data, bn->length*sizeof(mln_u64_t));
     return target;
 }
 
@@ -90,7 +94,7 @@ mln_bignum_t *mln_bignum_pool_dup(mln_alloc_t *pool, mln_bignum_t *bn)
 
     target->tag = bn->tag;
     target->length = bn->length;
-    memcpy(target->data, bn->data, bn->length);
+    memcpy(target->data, bn->data, bn->length*sizeof(mln_u64_t));
     return target;
 }
 
@@ -382,6 +386,17 @@ static inline void __mln_bignum_sub_core(mln_bignum_t *dest, mln_bignum_t *src)
 static inline void __mln_bignum_mul(mln_bignum_t *dest, mln_bignum_t *src)
 {
     mln_u32_t tag = dest->tag ^ src->tag;
+    if (src->length == 1) {
+        __mln_bignum_mul32(dest, src->data[0]);
+        dest->tag = tag;
+        return;
+    } else if (dest->length == 1) {
+        mln_bignum_t tmp = *src;
+        __mln_bignum_mul32(&tmp, dest->data[0]);
+        *dest = tmp;
+        dest->tag = tag;
+        return;
+    }
     mln_bignum_t res = {M_BIGNUM_POSITIVE, 0, {0}};
     mln_u64_t *data = res.data, tmp, *dest_data = dest->data, *src_data;
     mln_u64_t *dend, *send, *last = res.data + M_BIGNUM_SIZE;
@@ -393,11 +408,11 @@ static inline void __mln_bignum_mul(mln_bignum_t *dest, mln_bignum_t *src)
         for (; src_data<send && data < last; src_data++, data++) {
             tmp = (*dest_data) * (*src_data) + *data;
             *data = tmp % M_BIGNUM_UMAX;
-            if (data+1 < res.data+M_BIGNUM_SIZE) *(data+1) += tmp / M_BIGNUM_UMAX;
+            if (data+1 < last) *(data+1) += tmp / M_BIGNUM_UMAX;
         }
     }
     res.length = (data - res.data);
-    if (data < res.data+M_BIGNUM_SIZE && *data != 0) res.length++;
+    if (data < last && *data != 0) res.length++;
     res.tag = tag;
     *dest = res;
 }
@@ -412,18 +427,96 @@ int mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bignum_t *quotient
     return __mln_bignum_div(dest, src, quotient);
 }
 
+static inline int __mln_bignum_nmul(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int n)
+{
+    b &= 0xffffffff;
+    if (b == 0) {
+        memset(r, 0, n * sizeof(mln_u64_t));
+        return 0;
+    }
+    if (b == 1) {
+        memcpy(r, a, sizeof(mln_u64_t)*n);
+        return 0;
+    }
+
+    mln_u64_t c = 0;
+    for (; n > 0; n--, a++, r++) {
+        *r = *a * b + c;
+        c = *r / M_BIGNUM_UMAX;
+        *r %= M_BIGNUM_UMAX;
+    }
+    return c > 0;
+}
+
+static inline int __mln_bignum_nsbb(mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, int n)
+{
+    int c = 0;
+    for (; n > 0; n--, a++, b++, r++) {
+        if (*a < *b + c) {
+            *r = *a + M_BIGNUM_UMAX - *b - c;
+            c = 1;
+        } else {
+            *r = *a - *b - c;
+            c = 0;
+        }
+    }
+    return c;
+}
+
+static inline int __mln_bignum_nadc(mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, int n)
+{
+    int c = 0;
+    for (; n > 0; n--, a++, b++, r++) {
+        *r = *a + *b + c;
+        if (*r >= M_BIGNUM_UMAX) {
+            *r -= M_BIGNUM_UMAX;
+            c = 1;
+        } else {
+            c = 0;
+        }
+    }
+    return c;
+}
+
+static inline int __mln_bignum_ndiv(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int n)
+{
+    b &= 0xffffffff;
+    if (b == 0) return -1;
+    if (b == 1) {
+        memcpy(r, a, n*sizeof(mln_u64_t));
+        mln_u64_t *data = r + n - 1;
+        for (; data >= r && *data==0; data--)
+            ;
+        return data < r? 0: data - r + 1;
+    }
+    mln_u64_t *dest_data, *data, tmp = 0;
+    dest_data = a + n - 1;
+    data = r + n - 1;
+    mln_u32_t len = 0;
+
+    while (dest_data >= a) {
+        tmp += *dest_data;
+        *data = tmp / b;
+        if (!len && *data) len = data - r + 1;
+        data--;
+        tmp %= b;
+        tmp *= M_BIGNUM_UMAX;
+        dest_data--;
+    }
+    return len;
+}
+
 static inline int __mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bignum_t *quotient)
 {
     int ret;
     mln_u32_t tag = dest->tag ^ src->tag;
 
     if (src->length == 0) return -1;
-    if (src->length == 1 && src->data[0] == 1) {
-        if (quotient != NULL) {
-            *quotient = *dest;
-            quotient->tag = tag;
-        }
-        memset(dest, 0, sizeof(mln_bignum_t));
+    if (src->length == 1) {
+        int ret = __mln_bignum_div32(dest, src->data[0], quotient);
+        if (ret < 0) return -1;
+        dest->tag = tag;
+        if (quotient != NULL) quotient->tag = tag;
         return 0;
     }
 
@@ -444,45 +537,57 @@ static inline int __mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bi
         return 0;
     }
 
-    mln_bignum_t res = {M_BIGNUM_POSITIVE, 0, {0}}, tmp = *src;
-    mln_bignum_t one = {M_BIGNUM_POSITIVE, 1, {0}};
-    one.data[0] = 1;
-    mln_u32_t srctag = src->tag;
-    mln_u32_t sbit, i, end;
-    dest->tag = src->tag = M_BIGNUM_POSITIVE;
 
-    i = (src->length << 5) - 1;
-    end = ((src->length - 1) << 5);
-    for (; i >= end; i--) {
-        if (__mln_bignum_testBit(src, i)) break;
-    }
-    sbit = i;
-
-    i = (dest->length << 5) - 1;
-    end = ((dest->length - 1) << 5);
-    for (; i >= end; i--) {
-        if (__mln_bignum_testBit(dest, i)) break;
-    }
-
-    i -= sbit;
-    __mln_bignum_leftShift(&tmp, i);
-    if (quotient != NULL) __mln_bignum_leftShift(&one, i);
-
-    do {
-        while (__mln_bignum_absCompare(dest, &tmp) < 0) {
-            __mln_bignum_rightShift(&tmp, 1);
-            if (quotient != NULL) __mln_bignum_rightShift(&one, 1);
-        }
-        if (quotient != NULL) __mln_bignum_add(&res, &one);
-        __mln_bignum_sub_core(dest, &tmp);
-    } while (__mln_bignum_absCompare(dest, src) >= 0);
-
+    mln_u64_t ddata[M_BIGNUM_SIZE+1], sdata[M_BIGNUM_SIZE+1], tmp[M_BIGNUM_SIZE+1];
+    int dlen = dest->length, slen = src->length, j;
+    mln_u64_t *pd = ddata, *ps = sdata, *pr = NULL, q, r, d, t, v_n;
     if (quotient != NULL) {
-        *quotient = res;
+        memset(quotient, 0, sizeof(mln_bignum_t));
+        pr = &quotient->data[dlen-slen];
+    }
+
+    /*D1 classical algorithm*/
+    memcpy(pd, dest->data, dlen*sizeof(mln_u64_t));
+    memcpy(ps, src->data, slen*sizeof(mln_u64_t));
+    pd[dlen] = ps[slen] = 0;
+    d = M_BIGNUM_UMAX / (ps[slen-1] + 1);
+    __mln_bignum_nmul(pd, d, pd, dlen+1);
+    __mln_bignum_nmul(ps, d, ps, slen);
+    v_n = ps[slen-1];
+
+    /*D2 classical algorithm*/
+    for (j = dlen - slen; j >= 0; j--) {
+        /*D3 classical algorithm*/
+        t = pd[j+slen]*M_BIGNUM_UMAX + pd[j+slen-1];
+        q = t / v_n;
+        r = t % v_n;
+
+        t = pd[j+slen-2];
+        while (q == M_BIGNUM_UMAX || q*ps[slen-2] > M_BIGNUM_UMAX*r+t) {
+            q--;
+            r += v_n;
+            if (r >= M_BIGNUM_UMAX) break;
+        }
+
+        /*D4-7 classical algorithm*/
+        __mln_bignum_nmul(ps, q, tmp, slen+1);
+        if (__mln_bignum_nsbb(pd+j, tmp, pd+j, slen+1)) {
+            q--;
+            __mln_bignum_nadc(pd+j, ps, pd+j, slen+1);
+        }
+        if (pr != NULL) *pr-- = q;
+    }
+
+    /*D8 classical algorithm*/
+    if (quotient != NULL) {
+        j = dlen - slen;
+        quotient->length = *(quotient->data + j)? j+1: j;
         quotient->tag = tag;
     }
-    if (dest->length) dest->tag = tag;
-    src->tag = srctag;
+
+    memset(dest, 0, sizeof(mln_bignum_t));
+    dest->length = __mln_bignum_ndiv(pd, d, dest->data, slen);
+    dest->tag = tag;
 
     return 0;
 }
@@ -514,27 +619,25 @@ static inline int __mln_bignum_pwr(mln_bignum_t *dest, mln_bignum_t *exponent, m
 
     if (mod != NULL) {
         for (--i; i>= 0; i--) {
-            __mln_bignum_mul(&x, &x);
-            if (__mln_bignum_div(&x, mod, NULL) < 0) {
+            __mln_bignum_mul(dest, dest);
+            if (__mln_bignum_div(dest, mod, NULL) < 0) {
                 return -1;
             }
             if (__mln_bignum_testBit(exponent, i)) {
-                __mln_bignum_mul(&x, dest);
-                if (__mln_bignum_div(&x, mod, NULL) < 0) {
+                __mln_bignum_mul(dest, &x);
+                if (__mln_bignum_div(dest, mod, NULL) < 0) {
                     return -1;
                 }
             }
         }
     } else {
         for (--i; i>= 0; i--) {
-            __mln_bignum_mul(&x, &x);
+            __mln_bignum_mul(dest, dest);
             if (__mln_bignum_testBit(exponent, i)) {
-                __mln_bignum_mul(&x, dest);
+                __mln_bignum_mul(dest, &x);
             }
         }
     }
-
-    *dest = x;
 
     return 0;
 }
@@ -692,6 +795,82 @@ void mln_bignum_rightShift(mln_bignum_t *bn, mln_u32_t n)
     __mln_bignum_rightShift(bn, n);
 }
 
+static inline void __mln_bignum_mul32(mln_bignum_t *dest, mln_s64_t src)
+{
+    mln_u32_t tag;
+    mln_u64_t *dest_data = dest->data;
+    mln_u64_t *dend, carry;
+
+    if (src < 0) {
+        tag = dest->tag ^ M_BIGNUM_NEGATIVE;
+        src = -src;
+    } else {
+        tag = dest->tag ^ M_BIGNUM_POSITIVE;
+    }
+    src &= 0xffffffff;
+
+    carry = 0;
+    for (dend = dest->data+dest->length; dest_data<dend; dest_data++) {
+        (*dest_data) = (*dest_data) * src + carry;
+        carry = *dest_data / M_BIGNUM_UMAX;
+        *dest_data %= M_BIGNUM_UMAX;
+    }
+    while (carry) {
+        if (dest_data >= dest->data+M_BIGNUM_SIZE) break;
+        *dest_data += carry;
+        carry = *dest_data / M_BIGNUM_UMAX;
+        *dest_data %= M_BIGNUM_UMAX;
+        dest->length++;
+    }
+    dest->tag = tag;
+}
+
+static inline int __mln_bignum_div32(mln_bignum_t *dest, mln_s64_t src, mln_bignum_t *quotient)
+{
+    if (src == 0) return -1;
+    mln_u32_t tag = src < 0? dest->tag ^ M_BIGNUM_NEGATIVE: dest->tag ^ M_BIGNUM_POSITIVE;
+    src &= 0xffffffff;
+    if (src == 1) {
+        dest->tag = tag;
+        if (quotient != NULL) *quotient = *dest;
+        memset(dest, 0, sizeof(mln_bignum_t));
+        return 0;
+    }
+    if (dest->length == 0) {
+        if (quotient != NULL) memset(quotient, 0, sizeof(mln_bignum_t));
+        return 0;
+    }
+
+    mln_u64_t *dest_data = dest->data + dest->length - 1;
+    mln_u64_t *end = dest->data, *data = NULL;
+    mln_u64_t tmp = 0;
+    if (quotient != NULL) {
+        memset(quotient, 0, sizeof(mln_bignum_t));
+        quotient->length = dest->length;
+        quotient->tag = tag;
+    }
+
+    if (*dest_data < src) {
+        tmp = *dest_data * M_BIGNUM_UMAX;
+        *dest_data-- = 0;
+        if (quotient != NULL) quotient->length--;
+    }
+    if (quotient != NULL) data = quotient->data + quotient->length - 1;
+
+    while (dest_data >= end) {
+        tmp += *dest_data;
+        if (data != NULL) *data-- = tmp / src;
+        tmp %= src;
+        tmp *= M_BIGNUM_UMAX;
+        *dest_data-- = 0;
+    }
+
+    dest->tag = tag;
+    dest->length = tmp? 1: 0;
+    dest->data[0] = tmp / M_BIGNUM_UMAX;
+    return 0;
+}
+
 void mln_bignum_dump(mln_bignum_t *bn)
 {
     fprintf(stderr, "Tag: %s\n", bn->tag==M_BIGNUM_POSITIVE?"+":"-");
@@ -825,7 +1004,7 @@ lp:
 
 int mln_bignum_prime(mln_bignum_t *res, mln_u32_t bitwidth)
 {
-    if (bitwidth > M_BIGNUM_BITS || bitwidth < 3) return -1;
+    if (bitwidth > M_BIGNUM_BITS>>1 || bitwidth < 3) return -1;
 
     mln_bignum_t prime, tmp, one = {M_BIGNUM_POSITIVE, 1, {0}};
     one.data[0] = 1;
