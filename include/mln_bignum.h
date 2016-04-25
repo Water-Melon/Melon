@@ -14,6 +14,7 @@
 #define M_BIGNUM_SIZE     128
 #define M_BIGNUM_BITS     4096
 #define M_BIGNUM_UMAX     ((mln_u64_t)0x100000000llu)
+#define M_BIGNUM_SHIFT    32
 
 typedef struct {
     mln_u32_t tag;
