@@ -42,7 +42,7 @@ __mln_bignum_rightShift(mln_bignum_t *bn, mln_u32_t n);
 static inline void
 __mln_bignum_mul_word(mln_bignum_t *dest, mln_s64_t src);
 static inline int
-__mln_bignum_div32(mln_bignum_t *dest, mln_s64_t src, mln_bignum_t *quotient);
+__mln_bignum_div_word(mln_bignum_t *dest, mln_s64_t src, mln_bignum_t *quotient);
 /*prime*/
 static inline void
 mln_bignum_seperate(mln_u32_t *pwr, mln_bignum_t *odd);
@@ -519,7 +519,7 @@ static inline int __mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bi
 
     if (src->length == 0) return -1;
     if (src->length == 1) {
-        int ret = __mln_bignum_div32(dest, src->data[0], quotient);
+        int ret = __mln_bignum_div_word(dest, src->data[0], quotient);
         if (ret < 0) return -1;
         dest->tag = tag;
         if (quotient != NULL) quotient->tag = tag;
@@ -833,7 +833,7 @@ static inline void __mln_bignum_mul_word(mln_bignum_t *dest, mln_s64_t src)
     dest->tag = tag;
 }
 
-static inline int __mln_bignum_div32(mln_bignum_t *dest, mln_s64_t src, mln_bignum_t *quotient)
+static inline int __mln_bignum_div_word(mln_bignum_t *dest, mln_s64_t src, mln_bignum_t *quotient)
 {
     if (src == 0) return -1;
     mln_u32_t tag = src < 0? dest->tag ^ M_BIGNUM_NEGATIVE: dest->tag ^ M_BIGNUM_POSITIVE;
