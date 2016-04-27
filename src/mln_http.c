@@ -956,7 +956,7 @@ static int mln_http_hash_calc(mln_hash_t *h, void *key)
 
 static int mln_http_hash_cmp(mln_hash_t *h, void *key1, void *key2)
 {
-    return !mln_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
+    return !mln_strcasecmp((mln_string_t *)key1, (mln_string_t *)key2);
 }
 
 /*
