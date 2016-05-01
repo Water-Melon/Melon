@@ -199,31 +199,6 @@ void *mln_hash_search(mln_hash_t *h, void *key)
     return he->val;
 }
 
-void *mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx)
-{
-    if (*ctx != NULL) {
-        mln_hash_entry_t *he = *((mln_hash_entry_t **)ctx);
-        for (; he != NULL; he = he->next) {
-            if (h->cmp(h, key, he->key)) break;
-        }
-        if (he == NULL) {
-            *ctx = NULL;
-            return NULL;
-        }
-        *ctx = (int *)(he->next);
-        return he->val;
-    }
-    mln_u32_t index = h->hash(h, key);
-    mln_hash_mgr_t *mgr = &(h->tbl[index]);
-    mln_hash_entry_t *he;
-    for (he = mgr->head; he != NULL; he = he->next) {
-        if (h->cmp(h, key, he->key)) break;
-    }
-    if (he == NULL) return NULL;
-    *ctx = (int *)(he->next);
-    return he->val;
-}
-
 void mln_hash_remove(mln_hash_t *h, void *key, mln_hash_flag_t flg)
 {
     mln_u32_t index = h->hash(h, key);

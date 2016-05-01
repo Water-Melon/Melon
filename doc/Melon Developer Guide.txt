@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.4.3
+Melon Version 1.4.2
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -59,8 +59,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.4.3.
-  b) Change directory to the melon-1.4.3/.
+  a) Download and decompress melon-1.4.2.
+  b) Change directory to the melon-1.4.2/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.4.3/include/mln_types.h.
+Their definitions can be found in melon-1.4.2/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -256,20 +256,11 @@ Their definitions can be found in melon-1.4.3/include/mln_types.h.
        This interface searches the value data according to
        the key.
 
-    d) void *mln_hash_search_iterator(mln_hash_t *h,
-                                      void *key,
-                                      int **ctx);
-       The same as 'mln_hash_search()', and it can keep looking
-       for the next one whose key is matched by 'key'.
-       'ctx' is just an int ** variable, the initial value of
-       '*ctx' must be NULL. If the return value is the last
-       matched element in the hash table, '*ctx' will be NULL.
-
-    e) int mln_hash_insert(mln_hash_t *h, void *key, void *val);
+    d) int mln_hash_insert(mln_hash_t *h, void *key, void *val);
        It inserts a key-value into the hash table.
        If malloc() cannot allocate memory, -1 will be returned.
 
-    f) void mln_hash_remove(mln_hash_t *h,
+    e) void mln_hash_remove(mln_hash_t *h,
                             void *key,
                             mln_hash_flag_t flg);
        It removes a key-value from the hash table.
@@ -277,7 +268,7 @@ Their definitions can be found in melon-1.4.3/include/mln_types.h.
        'flg' is not M_HASH_F_NONE, the element's key and (or)
        value will be freed at the same time.
 
-    g) int mln_hash_scan_all(mln_hash_t *h,
+    f) int mln_hash_scan_all(mln_hash_t *h,
                              hash_scan_handler handler,
                              void *udata);
        This interface is used to scan the whole table and
@@ -285,23 +276,23 @@ Their definitions can be found in melon-1.4.3/include/mln_types.h.
        The third argument of handler is the 'udata' provided
        by caller.
 
-    h) void *mln_hash_change_value(mln_hash_t *h,
+    g) void *mln_hash_change_value(mln_hash_t *h,
                                    void *key,
                                    void *new_value);
        This interface is used to change the value that is
        indicated by 'key'.
        The old value will be returned.
 
-    i) int mln_hash_key_exist(mln_hash_t *h, void *key);
+    h) int mln_hash_key_exist(mln_hash_t *h, void *key);
        Test whether the 'key' is existent.
 
-    j) void mln_hash_reset(mln_hash_t *h, mln_hash_flag_t flg);
+    i) void mln_hash_reset(mln_hash_t *h, mln_hash_flag_t flg);
        Reset hash table. It will clear all entries in 'h'.
        If flg is not M_HASH_F_NONE and 'h->free_key' and (or)
        'h->free_val' are (is) not NULL, all entries will free
        their key and (or) value at the same time.
 
-    k) mln_hash_replace(mln_hash_t *h, void *key, void *val);
+    j) mln_hash_replace(mln_hash_t *h, void *key, void *val);
        Replace the 'key' and 'val' to an exitent k-v entry which
        is located by 'key'. If k-v entry is not existent, a
        new key-val entry will be created and insert into 'h'.
