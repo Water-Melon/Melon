@@ -67,6 +67,8 @@ extern void
 mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg) __NONNULL1(1);
 extern void *
 mln_hash_search(mln_hash_t *h, void *key) __NONNULL2(1,2);
+extern void *
+mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx) __NONNULL3(1,2,3);
 /*
  * mln_hash_replace():
  * The second and third arguments are all second rank pointer variables.
