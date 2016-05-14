@@ -180,6 +180,8 @@ extern int mln_http_parse(mln_http_t *http, mln_chain_t **in);
 extern int mln_http_generate(mln_http_t *http, mln_chain_t **out_head, mln_chain_t **out_tail);
 extern int mln_http_set_field(mln_http_t *http, mln_string_t *key, mln_string_t *val);
 extern mln_string_t *mln_http_get_field(mln_http_t *http, mln_string_t *key);
+extern mln_string_t *mln_http_field_iterator(mln_http_t *http, mln_string_t *key);
+extern void mln_http_drop_field(mln_http_t *http, mln_string_t *key);
 
 extern void mln_http_dump(mln_http_t *http);
 

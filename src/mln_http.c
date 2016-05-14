@@ -820,6 +820,56 @@ mln_string_t *mln_http_get_field(mln_http_t *http, mln_string_t *key)
     return (mln_string_t *)mln_hash_search(header_fields, key);
 }
 
+mln_string_t *mln_http_field_iterator(mln_http_t *http, mln_string_t *key)
+{
+    int *ctx = NULL;
+    mln_string_t *val;
+    mln_u8ptr_t buf;
+    mln_u32_t size = 0, cnt = 0;
+    mln_alloc_t *pool = mln_http_get_pool(http);
+    mln_hash_t *header = mln_http_get_header(http);
+
+    do {
+        val = mln_hash_search_iterator(header, key, &ctx);
+        if (val != NULL) {
+            size += (val->len + 1);
+            cnt++;
+        }
+    } while (ctx != NULL);
+    if (cnt < 1) return NULL;
+
+    buf = (mln_u8ptr_t)mln_alloc_m(pool, size+1);
+    if (buf == NULL) return NULL;
+    size = 0;
+    do {
+        val = mln_hash_search_iterator(header, key, &ctx);
+        if (val != NULL) {
+            memcpy(buf+size, val->str, val->len);
+            size += val->len;
+            if (cnt-- > 1) buf[size++] = ',';
+        }
+    } while (ctx != NULL);
+
+    mln_string_t tmp;
+    tmp.str = (mln_s8ptr_t)buf;
+    tmp.len = size;
+    tmp.is_referred = 1;
+    val = mln_dup_string_pool(pool, &tmp);
+    mln_alloc_free(buf);
+
+    return val;
+}
+
+void mln_http_drop_field(mln_http_t *http, mln_string_t *key)
+{
+    if (http == NULL || key == NULL) return;
+
+    mln_string_t *val;
+    mln_hash_t *header = mln_http_get_header(http);
+    while ((val = (mln_string_t *)mln_hash_search(header, key)) != NULL) {
+        mln_hash_remove(header, key, M_HASH_F_KV);
+    }
+}
 
 static inline int mln_http_atou(mln_string_t *s, mln_u32_t *status)
 {

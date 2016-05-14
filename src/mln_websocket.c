@@ -1,0 +1,970 @@
+
+/*
+ * Copyright (C) Niklaus F.Schen.
+ */
+
+#include <stdio.h>
+#include <sys/time.h>
+#include <stdlib.h>
+#include "mln_websocket.h"
+#include "mln_regexp.h"
+#include "mln_sha.h"
+#include "mln_base64.h"
+#include <sys/time.h>
+
+static int mln_websocket_hash_calc(mln_hash_t *h, void *key);
+static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2);
+static void mln_websocket_hash_free(void *data);
+static int mln_websocket_match_scan(void *key, void *val, void *data);
+static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey);
+static mln_string_t *mln_websocket_accept_field(mln_http_t *http);
+static int mln_websocket_scan_set_fields(void *key, void *val, void *data);
+static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *pool);
+static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_string_t *in);
+static mln_u32_t mln_websocket_maskingKey_generate(void);
+
+int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
+{
+    struct mln_hash_attr hattr;
+    hattr.hash = mln_websocket_hash_calc;
+    hattr.cmp = mln_websocket_hash_cmp;
+    hattr.free_key = mln_websocket_hash_free;
+    hattr.free_val = mln_websocket_hash_free;
+    hattr.len_base = 37;
+    hattr.expandable = 0;
+    hattr.calc_prime = 0;
+
+    ws->http = http;
+    ws->pool = mln_http_get_pool(http);
+    ws->connection = mln_http_get_connection(http);
+    if ((ws->fields = mln_hash_init(&hattr)) == NULL) return -1;
+    ws->uri = ws->args = ws->key = NULL;
+
+    ws->data = NULL;
+    ws->content = NULL;
+    ws->extension_handler = NULL;
+    ws->contentLen = 0;
+    ws->contentFree = 0;
+    ws->fin = 0;
+    ws->rsv1 = ws->rsv2 = ws->rsv3 = 0;
+    ws->opcode = 0;
+    ws->mask = 0;
+    ws->status = 0;
+    ws->maskingKey = 0;
+
+    return 0;
+}
+
+static int mln_websocket_hash_calc(mln_hash_t *h, void *key)
+{
+    mln_string_t *k = (mln_string_t *)key;
+    int index = 0;
+    mln_s8ptr_t p, end;
+
+    for (p = k->str, end = k->str+k->len; p < end; p++) {
+        index += (*p * 3);
+    }
+    if (index < 0) index = -index;
+    index %= h->len;
+
+    return index;
+}
+
+static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2)
+{
+    return !mln_strcasecmp((mln_string_t *)key1, (mln_string_t *)key2);
+}
+
+static void mln_websocket_hash_free(void *data)
+{
+    if (data == NULL) return;
+    mln_free_string_pool((mln_string_t *)data);
+}
+
+mln_websocket_t *mln_websocket_new(mln_http_t *http)
+{
+    mln_websocket_t *ws = (mln_websocket_t *)mln_alloc_m(mln_http_get_pool(http), sizeof(mln_websocket_t));
+    if (ws == NULL) return NULL;
+    if (mln_websocket_init(ws, http) < 0) {
+        free(ws);
+        return NULL;
+    }
+    return ws;
+}
+
+void mln_websocket_destroy(mln_websocket_t *ws)
+{
+    if (ws == NULL) return;
+    if (ws->fields != NULL) mln_hash_destroy(ws->fields, M_HASH_F_KV);
+    if (ws->uri != NULL) mln_free_string_pool(ws->uri);
+    if (ws->args != NULL) mln_free_string_pool(ws->args);
+    if (ws->key != NULL) mln_free_string_pool(ws->key);
+    if (ws->contentFree) mln_alloc_free(ws->content);
+}
+
+void mln_websocket_free(mln_websocket_t *ws)
+{
+    if (ws == NULL) return;
+    mln_websocket_destroy(ws);
+    mln_alloc_free(ws);
+}
+
+void mln_websocket_reset(mln_websocket_t *ws)
+{
+    if (ws->fields != NULL) {
+        mln_hash_reset(ws->fields, M_HASH_F_KV);
+    }
+    if (ws->uri != NULL) {
+        mln_free_string_pool(ws->uri);
+        ws->uri = NULL;
+    }
+    if (ws->args != NULL) {
+        mln_free_string_pool(ws->args);
+        ws->args = NULL;
+    }
+    if (ws->key != NULL) {
+        mln_free_string_pool(ws->key);
+        ws->key = NULL;
+    }
+
+    ws->data = NULL;
+    if (ws->contentFree) {
+        ws->contentFree = 0;
+        mln_alloc_free(ws->content);
+        ws->content = NULL;
+    } else {
+        ws->content = NULL;
+    }
+    ws->extension_handler = NULL;
+    ws->contentLen = 0;
+    ws->fin = 0;
+    ws->rsv1 = ws->rsv2 = ws->rsv3 = 0;
+    ws->opcode = 0;
+    ws->mask = 0;
+    ws->status = 0;
+    ws->maskingKey = 0;
+}
+
+
+int mln_websocket_isWebsocket(mln_http_t *http)
+{
+    mln_string_t key = mln_string("Upgrade");
+    mln_string_t val = mln_string("websocket");
+    mln_string_t *tmp = mln_http_get_field(http, &key);
+    if (tmp == NULL || mln_strcasecmp(&val, tmp)) return M_WS_RET_NOTWS;
+    if (mln_http_get_type(http) != M_HTTP_REQUEST) return M_WS_RET_ERROR;
+    return M_WS_RET_OK;
+}
+
+int mln_websocket_validate(mln_websocket_t *ws)
+{
+    mln_http_t *http = ws->http;
+    if (mln_http_get_status(http) != M_HTTP_SWITCHING_PROTOCOLS) return M_WS_RET_NOTWS;
+
+    mln_string_t upgrade_key = mln_string("Upgrade");
+    mln_string_t upgrade_val = mln_string("websocket");
+    mln_string_t connection_key = mln_string("Connection");
+    mln_string_t *tmp;
+
+    tmp = mln_http_get_field(http, &upgrade_key);
+    if (tmp == NULL || mln_strcasecmp(tmp, &upgrade_val)) return M_WS_RET_NOTWS;
+    tmp = mln_http_get_field(http, &connection_key);
+    if (tmp == NULL || mln_strcasecmp(tmp, &upgrade_key)) return M_WS_RET_NOTWS;
+    int ret = mln_websocket_validate_accept(http, ws->key);
+    if (ret != M_WS_RET_OK) return ret;
+    if (mln_http_get_type(http) != M_HTTP_RESPONSE) return M_WS_RET_ERROR;
+
+    return M_WS_RET_OK;
+}
+
+static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey)
+{
+    mln_sha1_t s;
+    mln_sha1_init(&s);
+    mln_alloc_t *pool = mln_http_get_pool(http);
+    mln_string_t key = mln_string("Sec-WebSocket-Accept");
+    mln_string_t *val = mln_http_get_field(http, &key);
+    if (val == NULL) return M_WS_RET_NOTWS;
+    char guid[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+    mln_u8ptr_t buf = (mln_u8ptr_t)mln_alloc_m(pool, wskey->len+sizeof(guid));
+    if (buf == NULL) return -1;
+    memcpy(buf, wskey->str, wskey->len);
+    memcpy(buf+wskey->len, guid, sizeof(guid));
+    mln_sha1_calc(&s, buf, wskey->len+sizeof(guid)-1, 1);
+    mln_alloc_free(buf);
+    buf = NULL;
+    mln_u8_t tmp[20];
+    mln_uauto_t len = 0;
+    mln_sha1_toBytes(&s, tmp, sizeof(tmp));
+    if (mln_base64_encode_pool(pool, tmp, sizeof(tmp), &buf, &len) < 0) return -1;
+    key.str = (mln_s8ptr_t)buf;
+    key.len = len;
+    key.is_referred = 1;
+    int ret = mln_strcasecmp(&key, val);
+    mln_base64_free_pool(buf);
+    return ret? M_WS_RET_ERROR: M_WS_RET_OK;
+}
+
+int mln_websocket_set_field(mln_websocket_t *ws, mln_string_t *key, mln_string_t *val)
+{
+    mln_string_t *dup_key, *dup_val;
+    dup_key = mln_dup_string_pool(ws->pool, key);
+    if (dup_key == NULL) return M_WS_RET_FAILED;
+    dup_val = mln_dup_string_pool(ws->pool, val);
+    if (dup_val == NULL) {
+        mln_free_string_pool(dup_key);
+        return M_WS_RET_FAILED;
+    }
+    int ret = mln_hash_replace(ws->fields, &dup_key, &dup_val);
+    mln_free_string_pool(dup_key);
+    mln_free_string_pool(dup_val);
+    return ret<0? M_WS_RET_FAILED: M_WS_RET_OK;
+}
+
+mln_string_t *mln_websocket_get_field(mln_websocket_t *ws, mln_string_t *key)
+{
+    return (mln_string_t *)mln_hash_search(ws->fields, key);
+}
+
+int mln_websocket_match(mln_websocket_t *ws)
+{
+    if (mln_hash_scan_all(ws->fields, mln_websocket_match_scan, ws->http) < 0)
+        return M_WS_RET_ERROR;
+    return M_WS_RET_OK;
+}
+
+static int mln_websocket_match_scan(void *key, void *val, void *data)
+{
+    mln_string_t *tmp = mln_http_get_field((mln_http_t *)data, (mln_string_t *)key);
+    if (tmp == NULL) return -1;
+    if (val != NULL && mln_reg_match(val, tmp) < 0) return -1;
+    return 0;
+}
+
+int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t **chead, mln_chain_t **ctail)
+{
+    mln_string_t *tmp;
+    mln_http_t *http = ws->http;
+
+    mln_string_t protocol_key = mln_string("Sec-WebSocket-Protocol");
+    mln_string_t *protocol_val = NULL;
+    tmp = mln_http_field_iterator(http, &protocol_key);
+    if (tmp) {
+        protocol_val = mln_dup_string_pool(ws->pool, tmp);
+        if (protocol_val == NULL) return M_WS_RET_FAILED;
+    }
+
+    mln_string_t extension_key = mln_string("Sec-WebSocket-Extensions");
+    mln_string_t *extension_val = NULL;
+    tmp = mln_http_field_iterator(http, &extension_key);
+    if (tmp) {
+        extension_val = mln_websocket_extension_tokens(ws->pool, tmp);
+        if (extension_val == NULL) {
+            if (protocol_val != NULL) mln_free_string_pool(protocol_val);
+            return M_WS_RET_FAILED;
+        }
+    }
+
+    mln_string_t *accept = mln_websocket_accept_field(http);
+    if (accept == NULL) {
+        if (protocol_val != NULL) mln_free_string_pool(protocol_val);
+        if (extension_val != NULL) mln_free_string_pool(extension_val);
+        return M_WS_RET_FAILED;
+    }
+
+    mln_http_reset(http);
+    mln_http_set_status(http, M_HTTP_SWITCHING_PROTOCOLS);
+    mln_http_set_version(http, M_HTTP_VERSION_1_1);
+    mln_http_set_type(http, M_HTTP_RESPONSE);
+    mln_http_set_handler(http, NULL);
+
+    mln_string_t upgrade_key = mln_string("Upgrade");
+    mln_string_t upgrade_val = mln_string("websocket");
+    mln_string_t connection_key = mln_string("Connection");
+    mln_string_t accept_key = mln_string("Sec-WebSocket-Accept");
+
+
+    if (protocol_val != NULL) {
+        if (mln_http_set_field(http, &protocol_key, protocol_val) != M_HTTP_RET_OK) {
+            if (protocol_val != NULL) mln_free_string_pool(protocol_val);
+            if (extension_val != NULL) mln_free_string_pool(extension_val);
+            if (accept != NULL) mln_free_string_pool(accept);
+            return M_WS_RET_FAILED;
+        }
+    }
+    if (extension_val != NULL) {
+        if (mln_http_set_field(http, &extension_key, extension_val) != M_HTTP_RET_OK) {
+            if (extension_val != NULL) mln_free_string_pool(extension_val);
+            if (accept != NULL) mln_free_string_pool(accept);
+            return M_WS_RET_FAILED;
+        }
+    }
+    if (mln_http_set_field(http, &accept_key, accept) != M_HTTP_RET_OK) {
+        mln_free_string_pool(accept);
+        return M_WS_RET_FAILED;
+    }
+    if (mln_http_set_field(http, &upgrade_key, &upgrade_val) != M_HTTP_RET_OK) return M_WS_RET_FAILED;
+    if (mln_http_set_field(http, &connection_key, &upgrade_key) != M_HTTP_RET_OK) return M_WS_RET_FAILED;
+
+    if (mln_hash_scan_all(ws->fields, mln_websocket_scan_set_fields, http) < 0)
+        return M_WS_RET_FAILED;
+
+    if (mln_http_generate(http, chead, ctail) == M_HTTP_RET_ERROR) return M_WS_RET_FAILED;
+
+    return M_WS_RET_OK;
+}
+
+static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_string_t *in)
+{
+    mln_string_t *tmp = mln_dup_string_pool(pool, in);
+    if (tmp == NULL) return NULL;
+    mln_string_t *array = mln_slice(tmp, ",");
+    if (array == NULL) {
+        mln_free_string_pool(tmp);
+        return NULL;
+    }
+    mln_string_t *p = array;
+    mln_s8ptr_t pos, buf;
+    mln_uauto_t size = 0;
+    for (; p->str != NULL; p++) {
+        if ((pos = strchr(p->str, ';')) == NULL) {
+            size += (p->len + 1);
+        } else {
+            size += (pos - p->str + 1);
+        }
+    }
+    size--;
+    buf = (mln_s8ptr_t)mln_alloc_m(pool, size);
+    if (buf == NULL) {
+        mln_slice_free(array);
+        mln_free_string_pool(tmp);
+        return NULL;
+    }
+    for (size = 0, p = array; p->str != NULL; p++) {
+        if ((pos = strchr(p->str, ';')) == NULL) {
+            memcpy(buf+size, p->str, p->len);
+            size += p->len;
+        } else {
+            memcpy(buf+size, p->str, pos-p->str);
+            size += (pos - p->str);
+        }
+        buf[size++] = ',';
+    }
+    buf[--size] = '0';
+    mln_slice_free(array);
+    mln_free_string_pool(tmp);
+
+    mln_string_t t;
+    t.str = buf;
+    t.len = size;
+    t.is_referred = 1;
+    tmp = mln_dup_string_pool(pool, &t);
+    mln_alloc_free(buf);
+    return tmp;
+}
+
+static int mln_websocket_scan_set_fields(void *key, void *val, void *data)
+{
+    return mln_http_set_field((mln_http_t *)data, (mln_string_t *)key, (mln_string_t *)val)==M_HTTP_RET_OK?0:-1;
+}
+
+static mln_string_t *mln_websocket_accept_field(mln_http_t *http)
+{
+    mln_sha1_t s;
+    mln_sha1_init(&s);
+    mln_alloc_t *pool = mln_http_get_pool(http);
+    mln_string_t key = mln_string("Sec-WebSocket-Key");
+    mln_string_t *val = mln_http_get_field(http, &key);
+    char guid[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+    mln_u8ptr_t buf = (mln_u8ptr_t)mln_alloc_m(pool, val->len+sizeof(guid));
+    if (buf == NULL) return NULL;
+    memcpy(buf, val->str, val->len);
+    memcpy(buf+val->len, guid, sizeof(guid));
+    mln_sha1_calc(&s, buf, val->len+sizeof(guid)-1, 1);
+    mln_alloc_free(buf);
+    buf = NULL;
+    mln_u8_t tmp[20];
+    mln_uauto_t len = 0;
+    mln_sha1_toBytes(&s, tmp, sizeof(tmp));
+    if (mln_base64_encode_pool(pool, tmp, sizeof(tmp), &buf, &len) < 0) return NULL;
+    key.str = (mln_s8ptr_t)buf;
+    key.len = len;
+    key.is_referred = 1;
+    val = mln_dup_string_pool(pool, &key);
+    mln_base64_free_pool(buf);
+    return val;
+}
+
+int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **chead, mln_chain_t **ctail)
+{
+    mln_http_t *http = ws->http;
+    mln_alloc_t *pool = ws->pool;
+
+    mln_string_t *dup_uri = NULL;
+    if (ws->uri == NULL) {
+        mln_string_t tmp = mln_string("/");
+        dup_uri = mln_dup_string_pool(pool, &tmp);
+    } else {
+        dup_uri = mln_dup_string_pool(pool, ws->uri);
+    }
+    if (dup_uri == NULL) return M_WS_RET_FAILED;
+    mln_string_t *dup_args = NULL;
+    if (ws->args != NULL) {
+        dup_args = mln_dup_string_pool(pool, ws->args);
+        if (dup_args == NULL) {
+            mln_free_string_pool(dup_uri);
+            return M_WS_RET_FAILED;
+        }
+    }
+
+    mln_http_reset(http);
+    mln_http_set_method(http, M_HTTP_GET);
+    mln_http_set_version(http, M_HTTP_VERSION_1_1);
+    mln_http_set_type(http, M_HTTP_REQUEST);
+    mln_http_set_uri(http, dup_uri);
+    if (dup_args != NULL) mln_http_set_args(http, dup_args);
+    mln_http_set_handler(http, NULL);
+
+    mln_string_t upgrade_key = mln_string("Upgrade");
+    mln_string_t upgrade_val = mln_string("websocket");
+    mln_string_t connection_key = mln_string("Connection");
+    mln_string_t version_key = mln_string("Sec-WebSocket-Version");
+    mln_string_t version_val = mln_string("13");
+    mln_string_t key_key = mln_string("Sec-WebSocket-Key");
+    mln_string_t *key_val = mln_websocket_client_handshake_key_generate(pool);
+    if (key_val == NULL) return M_WS_RET_FAILED;
+    if (mln_http_set_field(http, &key_key, key_val) < 0) {
+        mln_free_string_pool(key_val);
+        return M_WS_RET_FAILED;
+    }
+    if (mln_http_set_field(http, &upgrade_key, &upgrade_val) < 0) return M_WS_RET_FAILED;
+    if (mln_http_set_field(http, &connection_key, &upgrade_key) < 0) return M_WS_RET_FAILED;
+    if (mln_http_set_field(http, &version_key, &version_val) < 0) return M_WS_RET_FAILED;
+
+    if (mln_hash_scan_all(ws->fields, mln_websocket_scan_set_fields, http) < 0)
+        return M_WS_RET_FAILED;
+
+    if (mln_http_generate(http, chead, ctail) == M_HTTP_RET_ERROR) return M_WS_RET_FAILED;
+
+    return M_WS_RET_OK;
+}
+
+static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *pool)
+{
+    struct timeval tv;
+    mln_u8_t buf[16];
+    mln_u32_t i, tmp;
+    mln_u8ptr_t out = NULL;
+    mln_uauto_t outlen = 0;
+    mln_string_t s, *sdup;
+
+    gettimeofday(&tv, NULL);
+    srand(tv.tv_sec*1000000+tv.tv_usec);
+    for (i = 0; i < 4; i++) {
+        tmp = (mln_u32_t)rand();
+        buf[i*4] = (tmp >> 24) & 0xff;
+        buf[i*4+1] = (tmp >> 16) & 0xff;
+        buf[i*4+2] = (tmp >> 8) & 0xff;
+        buf[i*4+3] = tmp & 0xff;
+        srand(tmp>>16|tmp<<16);
+    }
+
+    if (mln_base64_encode_pool(pool, buf, sizeof(buf), &out, &outlen) < 0) return NULL;
+    s.str = (mln_s8ptr_t)out;
+    s.len = outlen;
+    s.is_referred = 1;
+    sdup = mln_dup_string_pool(pool, &s);
+    mln_base64_free_pool(out);
+    return sdup;
+}
+
+
+int mln_websocket_text_generate(mln_websocket_t *ws, \
+                                mln_chain_t **out_cnode, \
+                                mln_u8ptr_t buf, \
+                                mln_size_t len, \
+                                mln_u32_t flags)
+{
+    if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
+
+    if (mln_websocket_get_contentFree(ws)) {
+        mln_alloc_free(mln_websocket_get_content(ws));
+        mln_websocket_reset_contentFree(ws);
+    }
+    mln_websocket_set_content(ws, buf);
+    mln_websocket_set_contentLen(ws, len);
+    mln_websocket_reset_contentFree(ws);
+    if (flags & M_WS_FLAG_END) mln_websocket_set_fin(ws);
+    else mln_websocket_reset_fin(ws);
+    mln_websocket_reset_rsv1Bit(ws);
+    mln_websocket_reset_rsv2Bit(ws);
+    mln_websocket_reset_rsv3Bit(ws);
+    if (flags & M_WS_FLAG_NEW) mln_websocket_set_opcode(ws, M_WS_OPCODE_TEXT);
+    else mln_websocket_set_opcode(ws, M_WS_OPCODE_CONTINUE);
+    if (flags & M_WS_FLAG_CLIENT) {
+        mln_websocket_set_maskBit(ws);
+        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+    } else {
+        mln_websocket_reset_maskBit(ws);
+    }
+
+    return mln_websocket_generate(ws, out_cnode);
+}
+
+int mln_websocket_binary_generate(mln_websocket_t *ws, \
+                                  mln_chain_t **out_cnode, \
+                                  void *buf, \
+                                  mln_size_t len, \
+                                  mln_u32_t flags)
+{
+    if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
+
+    if (mln_websocket_get_contentFree(ws)) {
+        mln_alloc_free(mln_websocket_get_content(ws));
+        mln_websocket_reset_contentFree(ws);
+    }
+    mln_websocket_set_content(ws, buf);
+    mln_websocket_set_contentLen(ws, len);
+    mln_websocket_reset_contentFree(ws);
+    if (flags & M_WS_FLAG_END) mln_websocket_set_fin(ws);
+    else mln_websocket_reset_fin(ws);
+    mln_websocket_reset_rsv1Bit(ws);
+    mln_websocket_reset_rsv2Bit(ws);
+    mln_websocket_reset_rsv3Bit(ws);
+    if (flags & M_WS_FLAG_NEW) mln_websocket_set_opcode(ws, M_WS_OPCODE_BINARY);
+    else mln_websocket_set_opcode(ws, M_WS_OPCODE_CONTINUE);
+    if (flags & M_WS_FLAG_CLIENT) {
+        mln_websocket_set_maskBit(ws);
+        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+    } else {
+        mln_websocket_reset_maskBit(ws);
+    }
+
+    return mln_websocket_generate(ws, out_cnode);
+}
+
+int mln_websocket_close_generate(mln_websocket_t *ws, \
+                                 mln_chain_t **out_cnode, \
+                                 char *reason, \
+                                 mln_u16_t status, \
+                                 mln_u32_t flags)
+{
+    if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
+
+    if (mln_websocket_get_contentFree(ws)) {
+        mln_alloc_free(mln_websocket_get_content(ws));
+        mln_websocket_reset_contentFree(ws);
+    }
+    mln_websocket_set_content(ws, reason);
+    if (reason == NULL) mln_websocket_set_contentLen(ws, 0);
+    else mln_websocket_set_contentLen(ws, strlen(reason));
+    mln_websocket_set_fin(ws);
+    mln_websocket_reset_rsv1Bit(ws);
+    mln_websocket_reset_rsv2Bit(ws);
+    mln_websocket_reset_rsv3Bit(ws);
+    mln_websocket_set_opcode(ws, M_WS_OPCODE_CLOSE);
+
+    if (flags & M_WS_FLAG_CLIENT) {
+        mln_websocket_set_maskBit(ws);
+        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+    } else {
+        mln_websocket_reset_maskBit(ws);
+    }
+
+    return mln_websocket_generate(ws, out_cnode);
+}
+
+int mln_websocket_ping_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u32_t flags)
+{
+    if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
+
+    if (mln_websocket_get_contentFree(ws)) {
+        mln_alloc_free(mln_websocket_get_content(ws));
+    }
+    mln_websocket_set_content(ws, NULL);
+    mln_websocket_set_contentLen(ws, 0);
+    mln_websocket_reset_contentFree(ws);
+    mln_websocket_set_fin(ws);
+    mln_websocket_reset_rsv1Bit(ws);
+    mln_websocket_reset_rsv2Bit(ws);
+    mln_websocket_reset_rsv3Bit(ws);
+    mln_websocket_set_opcode(ws, M_WS_OPCODE_PING);
+
+    if (flags & M_WS_FLAG_CLIENT) {
+        mln_websocket_set_maskBit(ws);
+        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+    } else {
+        mln_websocket_reset_maskBit(ws);
+    }
+
+    return mln_websocket_generate(ws, out_cnode);
+}
+
+int mln_websocket_pong_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u32_t flags)
+{
+    if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
+
+    if (mln_websocket_get_contentFree(ws)) {
+        mln_alloc_free(mln_websocket_get_content(ws));
+    }
+    mln_websocket_set_content(ws, NULL);
+    mln_websocket_set_contentLen(ws, 0);
+    mln_websocket_reset_contentFree(ws);
+    mln_websocket_set_fin(ws);
+    mln_websocket_reset_rsv1Bit(ws);
+    mln_websocket_reset_rsv2Bit(ws);
+    mln_websocket_reset_rsv3Bit(ws);
+    mln_websocket_set_opcode(ws, M_WS_OPCODE_PONG);
+
+    if (flags & M_WS_FLAG_CLIENT) {
+        mln_websocket_set_maskBit(ws);
+        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+    } else {
+        mln_websocket_reset_maskBit(ws);
+    }
+
+    return mln_websocket_generate(ws, out_cnode);
+}
+
+static mln_u32_t mln_websocket_maskingKey_generate(void)
+{
+    struct timeval tv;
+    mln_uauto_t tmp = (mln_uauto_t)&tv;
+    gettimeofday(&tv, NULL);
+    srand(tv.tv_sec*1000000+tv.tv_usec);
+    return ((mln_u32_t)tmp | (mln_u32_t)rand());
+}
+
+int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode)
+{
+    mln_size_t size = 2;
+    mln_u8ptr_t buf, p;
+    mln_buf_t *b;
+    mln_chain_t *c;
+    mln_alloc_t *pool = ws->pool;
+    mln_u8_t payload_length = 0;
+    mln_u8ptr_t content = NULL;
+    mln_u64_t clen = 0;
+    mln_u32_t opcode = mln_websocket_get_opcode(ws);
+
+    if (mln_websocket_get_extHandler(ws) != NULL) {
+        int ret = mln_websocket_get_extHandler(ws)(ws);
+        if (ret != M_WS_RET_OK) return ret;
+    }
+
+    content = (mln_u8ptr_t)mln_websocket_get_content(ws);
+    clen = mln_websocket_get_contentLen(ws);
+    if (content == NULL && clen) return M_WS_RET_ERROR;
+
+    if (opcode == M_WS_OPCODE_CLOSE) {
+        clen += 2;
+    }
+    if ((opcode == M_WS_OPCODE_CLOSE || \
+         opcode == M_WS_OPCODE_PING || \
+         opcode == M_WS_OPCODE_PONG) && \
+        clen > 125)
+        return M_WS_RET_ERROR;
+
+    if (clen > 125) {
+        if ((clen >> 16)) {
+            size += 8;
+            payload_length = 127;
+        } else {
+            size += 2;
+            payload_length = 126;
+        }
+    } else {
+        payload_length = clen;
+    }
+    size += clen;
+
+    if (mln_websocket_get_maskBit(ws)) size += 4;
+
+    c = mln_chain_new(pool);
+    if (c == NULL) return M_WS_RET_FAILED;
+    b = mln_buf_new(pool);
+    if (b == NULL) {
+        mln_chain_pool_release(c);
+        return M_WS_RET_FAILED;
+    }
+    c->buf = b;
+    buf = (mln_u8ptr_t)mln_alloc_m(pool, size);
+    if (buf == NULL) {
+        mln_chain_pool_release(c);
+        return M_WS_RET_FAILED;
+    }
+    b->send_pos = b->pos = b->start = buf;
+    b->end = b->last = buf + size;
+    b->in_memory = 1;
+    b->last_buf = 1;
+    if (mln_websocket_get_fin(ws)) b->last_in_chain = 1;
+    *out_cnode = c;
+
+    p = buf;
+    *p = 0;
+    if (mln_websocket_get_fin(ws)) *p |= 0x80;
+    if (mln_websocket_get_rsv1Bit(ws)) *p |= 0x40;
+    if (mln_websocket_get_rsv2Bit(ws)) *p |= 0x20;
+    if (mln_websocket_get_rsv3Bit(ws)) *p |= 0x10;
+    *p++ |= (opcode & 0xf);
+
+    *p = 0;
+    if (mln_websocket_get_maskBit(ws)) *p |= 0x80;
+    *p++ |= (payload_length & 0x7f);
+
+    if (payload_length == 126) {
+        *p++ = ((clen >> 8) & 0xff);
+        *p++ = (clen & 0xff);
+    } else if (payload_length == 127) {
+        *p++ = ((clen >> 56) & 0xff);
+        *p++ = ((clen >> 48) & 0xff);
+        *p++ = ((clen >> 40) & 0xff);
+        *p++ = ((clen >> 32) & 0xff);
+        *p++ = ((clen >> 24) & 0xff);
+        *p++ = ((clen >> 16) & 0xff);
+        *p++ = ((clen >> 8) & 0xff);
+        *p++ = (clen & 0xff);
+    }
+
+    if (mln_websocket_get_maskBit(ws)) {
+        mln_u8_t tmpkey[4];
+        mln_u32_t i, j, m = mln_websocket_get_maskingKey(ws);
+        mln_u8ptr_t pc = (mln_u8ptr_t)content;
+        *p++ = tmpkey[0] = ((m >> 24) & 0xff);
+        *p++ = tmpkey[1] = ((m >> 16) & 0xff);
+        *p++ = tmpkey[2] = ((m >> 8) & 0xff);
+        *p++ = tmpkey[3] = (m & 0xff);
+
+        i = 0;
+        if (opcode == M_WS_OPCODE_CLOSE) {
+            *p++ = ((mln_websocket_get_status(ws) >> 8) & 0xff) ^ tmpkey[i++%4];
+            *p++ = (mln_websocket_get_status(ws) & 0xff) ^ tmpkey[i++%4];
+        }
+        for (j = 0; i < clen; i++, j++) {
+            *p++ = pc[j] ^ tmpkey[i%4];
+        }
+    } else {
+        if (opcode == M_WS_OPCODE_CLOSE) {
+            *p++ = (mln_websocket_get_status(ws) >> 8) & 0xff;
+            *p++ = mln_websocket_get_status(ws) & 0xff;
+            clen -= 2;
+        }
+        if (content != NULL) memcpy(p, content, clen);
+    }
+
+    return M_WS_RET_OK;
+}
+
+int mln_websocket_parse(mln_websocket_t *ws, mln_chain_t **in)
+{
+    mln_chain_t *c = *in;
+    mln_u8ptr_t p = NULL, end = NULL, content = NULL;
+    mln_u64_t len, i, tmp;
+    mln_u32_t maskingKey = 0;
+    mln_u8_t b1 = 0, b2 = 0;
+
+    for (i = 0; c != NULL; c = c->next) {
+        if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
+        p = c->buf->send_pos;
+        for (end = c->buf->end; p < end; p++) {
+             if (i == 0) {
+                 b1 = *p;
+                 i++;
+             } else {
+                 b2 = *p++;
+                 i++;
+                 break;
+             }
+        }
+        if (i >= 2) break;
+    }
+    if (i < 2) return M_WS_RET_NOTYET;
+
+    len = b2 & 0x7f;
+    if (len == 127) {
+        tmp = p - end;
+        if (tmp > 8) tmp = 8;
+        len = 0;
+        i = 0;
+again127:
+        for (; i < tmp; i++) {
+            len |= ((*p++) << ((7 - i)<<3));
+        }
+        if (tmp < 8) {
+            for (c = c->next; c != NULL; c = c->next) {
+                if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
+                p = c->buf->send_pos;
+                end = c->buf->end;
+                break;
+            }
+            if (c == NULL) return M_WS_RET_NOTYET;
+            tmp = (8-tmp > p-end)? tmp+(mln_u32_t)(p-end): 8;
+            goto again127;
+        }
+    } else if (len == 126) {
+        tmp = p - end;
+        if (tmp > 2) tmp = 2;
+        len = 0;
+        i = 0;
+again126:
+        for (; i < tmp; i++) {
+            len |= ((*p++) << ((1 - i)<<3));
+        }
+        if (tmp < 2) {
+            for (c = c->next; c != NULL; c = c->next) {
+                if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
+                p = c->buf->send_pos;
+                end = c->buf->end;
+                break;
+            }
+            if (c == NULL) return M_WS_RET_NOTYET;
+            tmp = (2-tmp > p-end)? tmp+(mln_u32_t)(p-end): 2;
+            goto again126;
+        }
+    }
+
+    if (b2 & 0x80) {
+        tmp = p - end;
+        if (tmp > 4) tmp = 4;
+        i = 0;
+againm:
+        for (; i < tmp; i++) {
+            maskingKey |= ((*p++) << ((3 - i) << 3));
+        }
+        if (tmp < 4) {
+            for (c = c->next; c != NULL; c = c->next) {
+                if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
+                p = c->buf->send_pos;
+                end = c->buf->end;
+                break;
+            }
+            if (c == NULL) return M_WS_RET_NOTYET;
+            tmp = (4-tmp > p-end)? tmp+(mln_u32_t)(p-end): 4;
+            goto againm;
+        }
+    }
+
+    if (len) {
+        if ((b1&0xf) == M_WS_OPCODE_CLOSE && len > 1) {
+            mln_u16_t status = 0;
+
+            tmp = p - end;
+            if (tmp > 2) tmp = 2;
+            i = 0;
+against:
+            for (; i < tmp; i++) {
+                status |= ((*p++) << ((1 - i)<<3));
+            }
+            if (tmp < 2) {
+                for (c = c->next; c != NULL; c = c->next) {
+                    if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
+                    p = c->buf->send_pos;
+                    end = c->buf->end;
+                    break;
+                }
+                if (c == NULL) return M_WS_RET_NOTYET;
+                tmp = (2-tmp > p-end)? tmp+(mln_u32_t)(p-end): 2;
+                goto against;
+            }
+
+            mln_websocket_set_status(ws, status);
+            len -= 2;
+        } else {
+            mln_websocket_set_status(ws, 0);
+        }
+        content = (mln_u8ptr_t)mln_alloc_m(mln_websocket_get_pool(ws), len);
+        if (content == NULL) return M_WS_RET_FAILED;
+        tmp = p - end;
+        if (tmp > len) tmp = len;
+        i = 0;
+againc:
+        if (tmp > 0) memcpy(content+i, p, tmp);
+        i += tmp;
+        p += tmp;
+        if (tmp < len) {
+            for (c = c->next; c != NULL; c = c->next) {
+                if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
+                p = c->buf->send_pos;
+                end = c->buf->end;
+                break;
+            }
+            if (c == NULL) {
+                mln_alloc_free(content);
+                return M_WS_RET_NOTYET;
+            }
+            tmp = (len-tmp > p-end)? p-end: len-tmp;
+            goto againc;
+        }
+    }
+
+    if (mln_websocket_get_contentFree(ws)) {
+        mln_alloc_free(mln_websocket_get_content(ws));
+        mln_websocket_reset_contentFree(ws);
+    }
+    mln_websocket_set_content(ws, content);
+    if (content != NULL) mln_websocket_set_contentFree(ws);
+    mln_websocket_set_contentLen(ws, len);
+    if (b1 & 0x80) mln_websocket_set_fin(ws);
+    else mln_websocket_reset_fin(ws);
+    if (b1 & 0x40) mln_websocket_set_rsv1Bit(ws);
+    else mln_websocket_reset_rsv1Bit(ws);
+    if (b1 & 0x20) mln_websocket_set_rsv2Bit(ws);
+    else mln_websocket_reset_rsv2Bit(ws);
+    if (b1 & 0x10) mln_websocket_set_rsv3Bit(ws);
+    else mln_websocket_reset_rsv3Bit(ws);
+    mln_websocket_set_opcode(ws, b1&0xf);
+    if (b2 & 0x80) mln_websocket_set_maskBit(ws);
+    else mln_websocket_reset_maskBit(ws);
+    if (b2 & 0x80) mln_websocket_set_maskingKey(ws, maskingKey);
+    else mln_websocket_set_maskingKey(ws, 0);
+
+    if (mln_websocket_get_maskBit(ws)) {
+        mln_u8_t tmpkey[4];
+        mln_u16_t status = mln_websocket_get_status(ws);
+        tmpkey[0] = (maskingKey >> 24) & 0xff;
+        tmpkey[1] = (maskingKey >> 16) & 0xff;
+        tmpkey[2] = (maskingKey >> 8) & 0xff;
+        tmpkey[3] = maskingKey & 0xff;
+        i = 0;
+        if (mln_websocket_get_opcode(ws) == M_WS_OPCODE_CLOSE && status != 0) {
+            status = ((((status >> 8) & 0xff) ^ tmpkey[i++%4]) << 8) | (status & 0xff);
+            status = (((status >> 8) & 0xff) << 8) | ((status & 0xff) ^ tmpkey[i++%4]);
+            mln_websocket_set_status(ws, status);
+        }
+        if (content != NULL) {
+            for (tmp = 0; tmp < len; tmp++) {
+                content[tmp] ^= tmpkey[i++%4];
+            }
+        }
+    }
+
+    if (mln_websocket_get_extHandler(ws) != NULL) {
+        int ret = mln_websocket_get_extHandler(ws)(ws);
+        if (ret != M_WS_RET_OK) return ret;
+    }
+
+    if (c != NULL && c->buf != NULL) c->buf->send_pos = p;
+    for (; c != NULL; c = c->next) {
+        if (c->buf == NULL || mln_buf_left_size(c->buf)==0) continue;
+        break;
+    }
+
+    if (c == NULL) {
+        mln_chain_pool_release_all(*in);
+        *in = NULL;
+    } else {
+        if (c != *in) {
+            mln_chain_t *tmpc = *in;
+            *in = c;
+            for (c = tmpc; c->next != *in; c = c->next)
+                ;
+            c->next = NULL;
+            mln_chain_pool_release_all(tmpc);
+        }
+    }
+
+    return M_WS_RET_OK;
+}
+
