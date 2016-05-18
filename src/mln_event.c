@@ -1079,7 +1079,7 @@ mln_event_set_fd_block(int fd)
         return;\
     }
 #if defined(MLN_EPOLL)
-void mln_dispatch(mln_event_t *event)
+void mln_event_dispatch(mln_event_t *event)
 {
     __uint32_t mod_event;
     int nfds, n, oneshot, other_oneshot, ret;
@@ -1168,7 +1168,7 @@ void mln_dispatch(mln_event_t *event)
     }
 }
 #elif defined(MLN_KQUEUE)
-void mln_dispatch(mln_event_t *event)
+void mln_event_dispatch(mln_event_t *event)
 {
     int nfds, n, ret;
     mln_event_desc_t *ed;
@@ -1244,7 +1244,7 @@ void mln_dispatch(mln_event_t *event)
     }
 }
 #else
-void mln_dispatch(mln_event_t *event)
+void mln_event_dispatch(mln_event_t *event)
 {
     int nfds, fd, ret;
     mln_event_desc_t *ed;

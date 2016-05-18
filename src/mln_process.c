@@ -7,6 +7,6 @@
 
 void mln_worker_process(mln_event_t *ev)
 {
-    mln_dispatch(ev);
+    mln_event_dispatch(ev);
 }
 

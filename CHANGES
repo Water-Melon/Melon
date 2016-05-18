@@ -1,3 +1,7 @@
+Changes with melon 1.5.1                                          17 May 2016
+    *) Normalized many functions' name.
+    *) Fixed a bug of timestamp in log.
+
 Changes with melon 1.5.0                                          14 May 2016
     *) Added two interfaces for HTTP.
     *) Added websocket.

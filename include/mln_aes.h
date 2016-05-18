@@ -38,9 +38,9 @@ typedef struct {
 
 extern int mln_aes_init(mln_aes_t *a, mln_u8ptr_t key, mln_u32_t bits) __NONNULL2(1,2);
 extern mln_aes_t *mln_aes_new(mln_u8ptr_t key, mln_u32_t bits) __NONNULL1(1);
-extern mln_aes_t *mln_aes_new_pool(mln_alloc_t *pool, mln_u8ptr_t key, mln_u32_t bits) __NONNULL2(1,2);
+extern mln_aes_t *mln_aes_pool_new(mln_alloc_t *pool, mln_u8ptr_t key, mln_u32_t bits) __NONNULL2(1,2);
 extern void mln_aes_free(mln_aes_t *a);
-extern void mln_aes_free_pool(mln_aes_t *a);
+extern void mln_aes_pool_free(mln_aes_t *a);
 extern int mln_aes_encrypt(mln_aes_t *a, mln_u8ptr_t text);
 extern int mln_aes_decrypt(mln_aes_t *a, mln_u8ptr_t cipher);
 

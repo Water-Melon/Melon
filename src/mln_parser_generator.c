@@ -100,7 +100,7 @@ mln_pg_token_t *mln_pg_token_new(mln_string_t *token, mln_u32_t nr_rule)
     t->type = -1;
     t->is_nonterminal = 0;
     t->is_nullable = 0;
-    t->token = mln_dup_string(token);
+    t->token = mln_string_dup(token);
     if (t->token == NULL) {
         mln_pg_token_free(t);
         return NULL;
@@ -137,7 +137,7 @@ void mln_pg_token_free(void *token)
     if (token == NULL) return;
     mln_pg_token_t *t = (mln_pg_token_t *)token;
     if (t->token != NULL)
-        mln_free_string(t->token);
+        mln_string_free(t->token);
     if (t->first_set != NULL)
         mln_rbtree_destroy(t->first_set);
     if (t->follow_set != NULL)

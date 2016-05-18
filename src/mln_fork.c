@@ -197,7 +197,7 @@ int do_fork(void)
     mln_sauto_t n_worker_proc = 0;
     mln_conf_cmd_t *cmd = cd->search(cd, "worker_proc");
     if (cmd != NULL) {
-        if (mln_get_cmd_args_num(cmd) > 1) {
+        if (mln_conf_get_argNum(cmd) > 1) {
             mln_log(error, "Too many arguments follow 'worker_proc'.\n");
             exit(1);
         }
@@ -222,7 +222,7 @@ int do_fork(void)
     mln_u32_t i, n_args;
     mln_conf_item_t *arg_ci;
     mln_s8ptr_t *v_args;
-    mln_u32_t n = mln_get_cmd_num(cf, "exec_proc");
+    mln_u32_t n = mln_conf_get_cmdNum(cf, "exec_proc");
     if (n == 0) return 1;
 
     v = (mln_conf_cmd_t **)calloc(n+1, sizeof(mln_conf_cmd_t *));
@@ -230,9 +230,9 @@ int do_fork(void)
         mln_log(error, "No memory.\n");
         return -1;
     }
-    mln_get_all_cmds(cf, "exec_proc", v);
+    mln_conf_get_cmds(cf, "exec_proc", v);
     for (cc = v; *cc != NULL; cc++) {
-        n_args = mln_get_cmd_args_num(*cc);
+        n_args = mln_conf_get_argNum(*cc);
         if (n_args == 0) {
             mln_log(error, "Demand arguments in 'exec_proc'.\n");
             exit(1);
@@ -250,9 +250,9 @@ int do_fork(void)
             }
             v_args[i] = arg_ci->val.s->str;
         }
-        if (!mln_const_strcmp((*cc)->cmd_name, "keepalive")) {
+        if (!mln_string_constStrcmp((*cc)->cmd_name, "keepalive")) {
             mln_fork_spawn(M_PST_SUP, v_args, n_args, NULL);
-        } else if (!mln_const_strcmp((*cc)->cmd_name, "default")) {
+        } else if (!mln_string_constStrcmp((*cc)->cmd_name, "default")) {
             mln_fork_spawn(M_PST_DFL, v_args, n_args, NULL);
         } else {
             mln_log(error, "Invalid command '%s' in 'exec_proc'.\n", (*cc)->cmd_name->str);
@@ -353,7 +353,7 @@ do_fork_core(enum proc_exec_type etype, \
          * If fd is blocking model, the parent routine would be blocked
          * in read(). Because there is a moment that child process not be built yet,
          * but parent process have already added the fd into the epoll and
-         * jump into the mln_dispatch().
+         * jump into the mln_event_dispatch().
          * And then, child process built, that would make the event
          * which is triggered in parent process to be a lie.
          */

@@ -11,7 +11,7 @@
 #include "mln_hash.h"
 #include "mln_alloc.h"
 
-typedef struct mln_file_set_s mln_file_set_t;
+typedef struct mln_fileset_s mln_fileset_t;
 
 typedef struct mln_file_s {
     mln_string_t      *file_path;
@@ -24,10 +24,10 @@ typedef struct mln_file_s {
     size_t             refer_cnt;
     struct mln_file_s *prev;
     struct mln_file_s *next;
-    mln_file_set_t    *fset;
+    mln_fileset_t    *fset;
 } mln_file_t;
 
-struct mln_file_set_s {
+struct mln_fileset_s {
     mln_alloc_t       *pool;
     mln_hash_t        *reg_file_hash;
     mln_file_t        *reg_free_head;
@@ -36,11 +36,11 @@ struct mln_file_set_s {
 };
 
 #define mln_file_fd(pfile) ((pfile)->fd)
-extern mln_file_set_t *mln_file_set_init(mln_size_t max_file);
-extern void mln_file_set_destroy(mln_file_set_t *fs);
-extern mln_file_t *mln_file_open(mln_file_set_t *fs, const char *filepath) __NONNULL2(1,2);
+extern mln_fileset_t *mln_fileset_init(mln_size_t max_file);
+extern void mln_fileset_destroy(mln_fileset_t *fs);
+extern mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath) __NONNULL2(1,2);
 extern void mln_file_close(void *pfile);
-extern mln_file_t *mln_file_tmp_open(mln_alloc_t *pool) __NONNULL1(1);
+extern mln_file_t *mln_file_open_tmp(mln_alloc_t *pool) __NONNULL1(1);
 
 #endif
 

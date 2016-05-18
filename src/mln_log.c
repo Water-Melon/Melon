@@ -91,23 +91,24 @@ mln_get_localtime(struct timeval *tv, struct localtime_s *lc)
 {
     long days = tv->tv_sec / 86400;
     long subsec = tv->tv_sec % 86400;
-    long i = 365;
+    long cnt = 0;
     lc->year = lc->month = 0;
-    while (i < days) {
-        lc->year++;
+    while (cnt + 365 <= days) {
         if (mln_is_leap(1970+lc->year))
-            i++;
-        i += 365;
+            cnt++;
+        cnt += 365;
+        lc->year++;
     }
     lc->year += 1970;
     int is_leap_year = mln_is_leap(lc->year);
-    long subdays = days - (i - 365);
-    long cnt = 0;
-    while (cnt < subdays) {
+    long subdays = days - cnt;
+    cnt = 0;
+    while (cnt + mon_days[is_leap_year][lc->month] < subdays) {
         cnt += mon_days[is_leap_year][lc->month];
         lc->month++;
     }
-    lc->day = subdays - (cnt - mon_days[is_leap_year][lc->month-1]) + 1;
+    lc->month++;
+    lc->day = subdays - cnt + 1;
     lc->hour = subsec / 3600;
     lc->minute = (subsec % 3600) / 60;
     lc->second = (subsec % 3600) % 60;
@@ -121,7 +122,7 @@ int mln_log_init(int in_daemon)
     mln_log_t *log = &gLog;
     char *ab_path, path[M_LOG_PATH_LEN];
 
-    ab_path = mln_get_path();
+    ab_path = mln_path();
 
     memset(path, 0, M_LOG_PATH_LEN);
     snprintf(path, M_LOG_PATH_LEN-1, "%s/logs", ab_path);
@@ -192,7 +193,8 @@ mln_log_get_log(mln_log_t *log, int is_init)
     mln_conf_domain_t *cd;
     mln_conf_cmd_t *cc;
     mln_conf_item_t *ci;
-    mln_string_t path;
+    char *path_str = NULL;
+    mln_u32_t path_len = 0;
     char buf[M_LOG_PATH_LEN] = {0}, *p;
     char default_dir[] = "logs", default_file[] = "melon.log";
     int fd;
@@ -201,11 +203,11 @@ mln_log_get_log(mln_log_t *log, int is_init)
     cd = cf->search(cf, "main");
     cc = cd->search(cd, log_path_cmd);
     if (cc == NULL) {
-        path.len = snprintf(buf, sizeof(buf)-1, "%s/%s/%s", \
-                            mln_get_path(), default_dir, default_file);
-        path.str = buf;
+        path_len = snprintf(buf, sizeof(buf)-1, "%s/%s/%s", \
+                            mln_path(), default_dir, default_file);
+        path_str = buf;
     } else {
-        if (mln_get_cmd_args_num(cc) != 1) {
+        if (mln_conf_get_argNum(cc) != 1) {
             fprintf(stderr, "%s(): Invalid command '%s' in domain 'main'.\n", \
                     __FUNCTION__, log_path_cmd);
             return -1;
@@ -217,18 +219,18 @@ mln_log_get_log(mln_log_t *log, int is_init)
             return -1;
         }
         if ((ci->val.s->str)[0] != '/') {
-            path.len = snprintf(buf, sizeof(buf)-1, "%s/%s", \
-                                mln_get_path(), ci->val.s->str);
-            path.str = buf;
+            path_len = snprintf(buf, sizeof(buf)-1, "%s/%s", \
+                                mln_path(), ci->val.s->str);
+            path_str = buf;
         } else {
-            path.len = ci->val.s->len > M_LOG_PATH_LEN-1? M_LOG_PATH_LEN-1: ci->val.s->len;
-            path.str = ci->val.s->str;
+            path_len = ci->val.s->len > M_LOG_PATH_LEN-1? M_LOG_PATH_LEN-1: ci->val.s->len;
+            path_str = ci->val.s->str;
         }
     }
 
-    fd = open(path.str, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+    fd = open(path_str, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
     if (fd < 0) {
-        fprintf(stderr, "%s(): open '%s' failed. %s\n", __FUNCTION__, path.str, strerror(errno));
+        fprintf(stderr, "%s(): open '%s' failed. %s\n", __FUNCTION__, path_str, strerror(errno));
         return -1;
     }
 
@@ -242,12 +244,12 @@ mln_log_get_log(mln_log_t *log, int is_init)
     }
 
     log->fd = fd;
-    memcpy(log->log_path, path.str, path.len);
-    log->log_path[path.len] = 0;
-    for (p = &(path.str[path.len - 1]); p >= path.str && *p != '/'; p--)
+    memcpy(log->log_path, path_str, path_len);
+    log->log_path[path_len] = 0;
+    for (p = &(path_str[path_len - 1]); p >= path_str && *p != '/'; p--)
         ;
-    memcpy(log->dir_path, path.str, p - path.str);
-    log->dir_path[p - path.str] = 0;
+    memcpy(log->dir_path, path_str, p - path_str);
+    log->dir_path[p - path_str] = 0;
 
     return 0;
 }
@@ -307,15 +309,15 @@ static int mln_log_set_level(mln_log_t *log, int is_init)
             mln_log(error, "Parameter type of command 'log_level' error.\n");
         return -1;
     }
-    if (!mln_const_strcmp(ci->val.s, "none")) {
+    if (!mln_string_constStrcmp(ci->val.s, "none")) {
         log->level = none;
-    } else if (!mln_const_strcmp(ci->val.s, "report")) {
+    } else if (!mln_string_constStrcmp(ci->val.s, "report")) {
         log->level = report;
-    } else if (!mln_const_strcmp(ci->val.s, "debug")) {
+    } else if (!mln_string_constStrcmp(ci->val.s, "debug")) {
         log->level = debug;
-    } else if (!mln_const_strcmp(ci->val.s, "warn")) {
+    } else if (!mln_string_constStrcmp(ci->val.s, "warn")) {
         log->level = warn;
-    } else if (!mln_const_strcmp(ci->val.s, "error")) {
+    } else if (!mln_string_constStrcmp(ci->val.s, "error")) {
         log->level = error;
     } else {
         if (is_init)
@@ -527,17 +529,17 @@ int mln_log_get_fd(void)
     return gLog.fd;
 }
 
-char *mln_log_get_dir_path(void)
+char *mln_log_getDirPath(void)
 {
     return gLog.dir_path;
 }
 
-char *mln_log_get_log_path(void)
+char *mln_log_getLogPath(void)
 {
     return gLog.log_path;
 }
 
-char *mln_log_get_pid_path(void)
+char *mln_log_getPidPath(void)
 {
     return gLog.pid_path;
 }

@@ -46,11 +46,11 @@ mln_passwd_lex_nums_handler(mln_lex_t *lex, void *data)
 {
     char c;
     while ( 1 ) {
-        c = mln_geta_char(lex);
+        c = mln_lex_getAChar(lex);
         if (c == MLN_ERR) return NULL;
         if (c == MLN_EOF) break;
         if (c == '\n') break;
-        if (mln_puta_char(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
     }
     return mln_passwd_lex_new(lex, PWD_TK_COMMENT);
 }
@@ -90,7 +90,7 @@ static int mln_sys_core_modify(void)
     if (ci->type == CONF_INT) {
         core_file_size = (rlim_t)ci->val.i;
     } else if (ci->type == CONF_STR) {
-        if (mln_const_strcmp(ci->val.s, mln_limit_unlimited)) {
+        if (mln_string_constStrcmp(ci->val.s, mln_limit_unlimited)) {
             fprintf(stderr, "Invalid argument of %s.\n", mln_core_file_cmd);
             return -1;
         }
@@ -133,7 +133,7 @@ static int mln_sys_nofile_modify(void)
     if (ci->type == CONF_INT) {
         nofile = (rlim_t)ci->val.i;
     } else if (ci->type == CONF_STR) {
-        if (mln_const_strcmp(ci->val.s, mln_limit_unlimited)) {
+        if (mln_string_constStrcmp(ci->val.s, mln_limit_unlimited)) {
             fprintf(stderr, "Invalid argument of %s.\n", mln_nofile_cmd);
             return -1;
         }
@@ -313,13 +313,13 @@ err:
     mln_lex_destroy(lex);
 
     /*set log files' uid & gid*/
-    char *path = mln_log_get_dir_path();
+    char *path = mln_log_getDirPath();
     if (!access(path, F_OK))
         chown(path, uid, gid);
-    path = mln_log_get_log_path();
+    path = mln_log_getLogPath();
     if (!access(path, F_OK))
         chown(path, uid, gid);
-    path = mln_log_get_pid_path();
+    path = mln_log_getPidPath();
     if (!access(path, F_OK))
         chown(path, uid, gid);
 
@@ -380,7 +380,7 @@ static int
 mln_boot_version(const char *boot_str, const char *alias)
 {
     printf("Melon Platform.\n");
-    printf("Version 1.5.0.\n");
+    printf("Version 1.5.1.\n");
     printf("Copyright (C) Niklaus F.Schen (Chinese name: Shen Fanchen).\n");
     exit(0);
     return 0;
@@ -392,7 +392,7 @@ mln_boot_reload(const char *boot_str, const char *alias)
     char buf[1024] = {0};
     int fd, n, pid;
 
-    snprintf(buf, sizeof(buf)-1, "%s/logs/melon.pid", mln_get_path());
+    snprintf(buf, sizeof(buf)-1, "%s/logs/melon.pid", mln_path());
     fd = open(buf, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "'melon.pid' not existent.\n");
@@ -417,7 +417,7 @@ mln_boot_stop(const char *boot_str, const char *alias)
     char buf[1024] = {0};
     int fd, n, pid;
 
-    snprintf(buf, sizeof(buf)-1, "%s/logs/melon.pid", mln_get_path());
+    snprintf(buf, sizeof(buf)-1, "%s/logs/melon.pid", mln_path());
     fd = open(buf, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "'melon.pid' not existent.\n");

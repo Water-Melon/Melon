@@ -52,7 +52,7 @@ mln_md5_t *mln_md5_new(void)
     return m;
 }
 
-mln_md5_t *mln_md5_new_pool(mln_alloc_t *pool)
+mln_md5_t *mln_md5_pool_new(mln_alloc_t *pool)
 {
     mln_md5_t *m = (mln_md5_t *)mln_alloc_m(pool, sizeof(mln_md5_t));
     if (m == NULL) return m;
@@ -66,7 +66,7 @@ void mln_md5_free(mln_md5_t *m)
     free(m);
 }
 
-void mln_md5_free_pool(mln_md5_t *m)
+void mln_md5_pool_free(mln_md5_t *m)
 {
     if (m == NULL) return;
     mln_alloc_free(m);

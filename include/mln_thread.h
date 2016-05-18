@@ -73,7 +73,7 @@ struct mln_thread_s {
 };
 
 extern void
-mln_thread_clear_msg(mln_thread_msg_t *msg);
+mln_thread_clearMsg(mln_thread_msg_t *msg);
 extern int
 mln_load_thread(mln_event_t *ev) __NONNULL1(1);
 extern int
@@ -86,6 +86,6 @@ extern void mln_thread_exit(int exit_code);
  * mln_thread_kill() called by main thread only.
  */
 extern void mln_thread_kill(mln_string_t *alias);
-extern void mln_set_cleanup(void (*tcleanup)(void *), void *data);
+extern void mln_thread_setCleanup(void (*tcleanup)(void *), void *data);
 #endif
 

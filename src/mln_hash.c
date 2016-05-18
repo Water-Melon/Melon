@@ -33,14 +33,14 @@ mln_hash_init(struct mln_hash_attr *attr)
     h->cmp = attr->cmp;
     h->free_key = attr->free_key;
     h->free_val = attr->free_val;
-    h->len = attr->calc_prime? mln_calc_prime(attr->len_base): attr->len_base;
+    h->len = attr->calc_prime? mln_prime_calc(attr->len_base): attr->len_base;
     h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
     if (h->tbl == NULL) {
         free(h);
         return NULL;
     }
     h->nr_nodes = 0;
-    h->threshold = attr->calc_prime? mln_calc_prime(h->len << 1): h->len << 1;
+    h->threshold = attr->calc_prime? mln_prime_calc(h->len << 1): h->len << 1;
     h->expandable = attr->expandable;
     h->calc_prime = attr->calc_prime;
     if (h->len == 0 || \
@@ -125,7 +125,7 @@ static inline void mln_hash_reduce(mln_hash_t *h)
 {
     mln_hash_mgr_t *old_tbl = h->tbl;
     mln_u32_t len = h->len;
-    h->len = h->calc_prime? mln_calc_prime(h->threshold >> 2): h->threshold >> 2;
+    h->len = h->calc_prime? mln_prime_calc(h->threshold >> 2): h->threshold >> 2;
     if (h->len == 0) h->len = 1;
     h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
     if (h->tbl == NULL) {
@@ -133,7 +133,7 @@ static inline void mln_hash_reduce(mln_hash_t *h)
         h->len = len;
         return;
     }
-    h->threshold = h->calc_prime? mln_calc_prime(h->threshold >> 1): h->threshold >> 1;
+    h->threshold = h->calc_prime? mln_prime_calc(h->threshold >> 1): h->threshold >> 1;
     mln_move_hash_entry(h, old_tbl, len);
     free(old_tbl);
 }
@@ -142,14 +142,14 @@ static inline void mln_hash_expand(mln_hash_t *h)
 {
     mln_hash_mgr_t *old_tbl = h->tbl;
     mln_u32_t len = h->len;
-    h->len = h->calc_prime? mln_calc_prime(len + (len >> 1)): (len + (len >> 1));
+    h->len = h->calc_prime? mln_prime_calc(len + (len >> 1)): (len + (len >> 1));
     h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
     if (h->tbl == NULL) {
         h->tbl = old_tbl;
         h->len = len;
         return;
     }
-    h->threshold = h->calc_prime? mln_calc_prime(h->threshold + (h->threshold >> 1)): \
+    h->threshold = h->calc_prime? mln_prime_calc(h->threshold + (h->threshold >> 1)): \
                                   (h->threshold + (h->threshold >> 1));
     mln_move_hash_entry(h, old_tbl, len);
     free(old_tbl);

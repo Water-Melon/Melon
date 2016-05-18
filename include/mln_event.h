@@ -155,7 +155,7 @@ mln_event_init(mln_u32_t is_main);
 extern void
 mln_event_destroy(mln_event_t *ev) __NONNULL1(1);
 extern void
-mln_dispatch(mln_event_t *event) __NONNULL1(1);
+mln_event_dispatch(mln_event_t *event) __NONNULL1(1);
 extern int
 mln_event_set_fd(mln_event_t *event, \
                  int fd, \

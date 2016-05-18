@@ -91,7 +91,7 @@ void mln_json_free(void *json)
             break;
         case M_JSON_STRING:
             if (j->data.m_j_string != NULL) {
-                mln_free_string(j->data.m_j_string);
+                mln_string_free(j->data.m_j_string);
             }
             break;
         case M_JSON_NONE:
@@ -286,6 +286,7 @@ mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     char *p, hex;
     int c = 0, plen, count = 0;
     mln_string_t *str;
+    mln_s8ptr_t buf;
 
     jstr++;
     len--;
@@ -299,33 +300,33 @@ mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     }
     if (plen <= 0 && c != M_JSON_STRQUOT) return -1;
 
-    str = (mln_string_t *)malloc(sizeof(mln_string_t));
-    if (str == NULL) return -1;
-    str->str = (mln_s8ptr_t)malloc(count + 1);
-    if (str->str == NULL) {
-        free(str);
-        return -1;
-    }
+    buf = (mln_s8ptr_t)malloc(count + 1);
+    if (buf == NULL) return -1;
 
     for (count = 0, p = jstr, plen = len; plen > 0; count++) {
         c = mln_json_get_char(&p, &plen);
         if (c == M_JSON_STRQUOT) break;
         if (c == M_JSON_HEX) {
-            if (mln_json_trans_hex(p, plen, &hex) < 0)
+            if (mln_json_trans_hex(p, plen, &hex) < 0) {
+                free(buf);
                 return -1;
+            }
             p += 2; plen -= 2;
-            str->str[count++] = hex;
-            if (mln_json_trans_hex(p, plen, &hex) < 0)
+            buf[count++] = hex;
+            if (mln_json_trans_hex(p, plen, &hex) < 0) {
+                free(buf);
                 return -1;
+            }
             p += 2; plen -= 2;
-            str->str[count] = hex;
+            buf[count] = hex;
             continue;
         }
-        str->str[count] = c;
+        buf[count] = c;
     }
-    str->str[count] = 0;
-    str->len = count;
-    str->is_referred = 0;
+    buf[count] = 0;
+    str = mln_string_nConstDup(buf, count);
+    free(buf);
+    if (str == NULL) return -1;
 
     j->index = index;
     j->type = M_JSON_STRING;
@@ -475,15 +476,9 @@ mln_string_t *mln_json_generate(mln_json_t *j)
     n = mln_json_write_content(j, buf);
     buf[n] = 0;
 
-    s = (mln_string_t *)malloc(sizeof(mln_string_t));
-    if (s == NULL) {
-        free(buf);
-        return NULL;
-    }
-
-    s->str = buf;
-    s->len = n;
-    s->is_referred = 0;
+    s = mln_string_nConstDup(buf, n);
+    free(buf);
+    if (s == NULL) return NULL;
 
     return s;
 }
@@ -820,7 +815,7 @@ static int mln_json_hash_calc(mln_hash_t *h, void *key)
 
 static int mln_json_hash_cmp(mln_hash_t *h, void *key1, void *key2)
 {
-    return !mln_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
+    return !mln_string_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
 }
 
 static void mln_json_obj_free(void *data)
@@ -1121,7 +1116,7 @@ void mln_json_reset(mln_json_t *j)
             break;
         case M_JSON_STRING:
             if (j->data.m_j_string != NULL) {
-                mln_free_string(j->data.m_j_string);
+                mln_string_free(j->data.m_j_string);
             }
             break;
         default:

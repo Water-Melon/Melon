@@ -138,7 +138,7 @@ mln_aes_t *mln_aes_new(mln_u8ptr_t key, mln_u32_t bits)
     return a;
 }
 
-mln_aes_t *mln_aes_new_pool(mln_alloc_t *pool, mln_u8ptr_t key, mln_u32_t bits)
+mln_aes_t *mln_aes_pool_new(mln_alloc_t *pool, mln_u8ptr_t key, mln_u32_t bits)
 {
     mln_aes_t *a = (mln_aes_t *)mln_alloc_m(pool, sizeof(mln_aes_t));
     if (a == NULL) return NULL;
@@ -152,7 +152,7 @@ void mln_aes_free(mln_aes_t *a)
     free(a);
 }
 
-void mln_aes_free_pool(mln_aes_t *a)
+void mln_aes_pool_free(mln_aes_t *a)
 {
     if (a == NULL) return;
     mln_alloc_free(a);

@@ -145,7 +145,7 @@ mln_des_t *mln_des_new(mln_u64_t key)
     return d;
 }
 
-mln_des_t *mln_des_new_pool(mln_alloc_t *pool, mln_u64_t key)
+mln_des_t *mln_des_pool_new(mln_alloc_t *pool, mln_u64_t key)
 {
     mln_des_t *d = (mln_des_t *)mln_alloc_m(pool, sizeof(mln_des_t));
     if (d == NULL) return NULL;
@@ -159,7 +159,7 @@ void mln_des_free(mln_des_t *d)
     free(d);
 }
 
-void mln_des_free_pool(mln_des_t *d)
+void mln_des_pool_free(mln_des_t *d)
 {
     if (d == NULL) return;
     mln_alloc_free(d);
@@ -313,7 +313,7 @@ mln_3des_t *mln_3des_new(mln_u64_t key1, mln_u64_t key2)
     return _3d;
 }
 
-mln_3des_t *mln_3des_new_pool(mln_alloc_t *pool, mln_u64_t key1, mln_u64_t key2)
+mln_3des_t *mln_3des_pool_new(mln_alloc_t *pool, mln_u64_t key1, mln_u64_t key2)
 {
     mln_3des_t *_3d = (mln_3des_t *)mln_alloc_m(pool, sizeof(mln_3des_t));
     if (_3d == NULL) return NULL;
@@ -327,7 +327,7 @@ void mln_3des_free(mln_3des_t *tdes)
     free(tdes);
 }
 
-void mln_3des_free_pool(mln_3des_t *tdes)
+void mln_3des_pool_free(mln_3des_t *tdes)
 {
     if (tdes == NULL) return;
     mln_alloc_free(tdes);

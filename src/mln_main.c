@@ -87,7 +87,7 @@ static void mln_master_routine(void)
         mln_log(error, "mln_event_set_signal() failed.\n");
         exit(1);
     }
-    mln_dispatch(ev);
+    mln_event_dispatch(ev);
     mln_event_destroy(ev);
 }
 
@@ -123,7 +123,7 @@ static void mln_worker_routine(void)
     if (i_thread_mode) {
         if (mln_load_thread(ev) < 0)
             exit(1);
-        mln_dispatch(ev);
+        mln_event_dispatch(ev);
     } else {
         mln_worker_process(ev);
     }

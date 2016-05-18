@@ -20,7 +20,7 @@ int haha_main(int argc, char **argv)
         return -1;
     }
     mln_log(debug, "!!!src:%s auto:%l char:%c\n", msg.src->str, msg.sauto, msg.c);
-    mln_thread_clear_msg(&msg);
+    mln_thread_clearMsg(&msg);
   }
     return 0;
 }

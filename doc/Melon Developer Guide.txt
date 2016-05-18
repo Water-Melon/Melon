@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.5.0
+Melon Version 1.5.1
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -58,8 +58,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.5.0.
-  b) Change directory to the melon-1.5.0/.
+  a) Download and decompress melon-1.5.1.
+  b) Change directory to the melon-1.5.1/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -71,98 +71,105 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.5.0/include/mln_types.h.
+Their definitions can be found in melon-1.5.1/include/mln_types.h.
 
 4.Interfaces
   1) String
-    a) mln_string_t *mln_new_string(const char *s);
+    a) mln_string_t *mln_string_new(const char *s);
        This interface returns a mln_string_t object which is allocated by malloc(). And its content is varied by the
        argument. If the memory is not enough, NULL will be returned.
 
-    b) mln_string_t *mln_dup_string(mln_string_t *str);
+    b) mln_string_t *mln_string_dup(mln_string_t *str);
        It duplicates the argument and returns a new object.
        The new object is allocated by malloc().
 
-    c) mln_string_t *mln_ndup_string(mln_string_t *str, mln_s32_t size);
-       It is the same as mln_dup_string(), but the second argument indicates the length of the duplication.
+    c) mln_string_t *mln_string_nDup(mln_string_t *str, mln_s32_t size);
+       It is the same as mln_string_dup(), but the second argument indicates the length of the duplication.
 
-    d) mln_string_t *mln_refer_string(mln_string_t *str);
+    d) mln_string_t *mln_string_nConstDup(char *str, mln_s32_t size);
+       It is the same as mln_string_nDup(), but the type of the first argument is char *.
+
+    e) mln_string_t *mln_string_refDup(mln_string_t *str);
        This interface creates a new pointer which points to the same string contents that pointed by the argument.
-       It won't free the string contents when mln_free_string() is called.
+       It won't free the string contents when mln_string_free() is called.
 
-    e) mln_string_t *mln_refer_const_string(char *s);
-       It is the same as mln_refer_string() but the argument type.
+    f) mln_string_t *mln_string_refConstDup(char *s);
+       It is the same as mln_string_refDup() but the argument type.
 
-    f) void mln_free_string(mln_string_t *str);
+    g) void mln_string_free(mln_string_t *str);
        It is used to free mln_string_t.
-       If 'str' is initialized by mln_refer_string() or mln_refer_const_string(), the string contents will be freed
+       If 'str' is initialized by mln_string_refDup() or mln_string_refConstDup(), the string contents will be freed
        at the same time.
 
-    g) int mln_strcmp(mln_string_t *s1, mln_string_t *s2);
+    h) int mln_string_strcmp(mln_string_t *s1, mln_string_t *s2);
        It is the same as strcmp() but the arguments' type.
 
-    h) int mln_const_strcmp(mln_string_t *s1, const char *s2);
-       This interface is the same as mln_strcmp() but the type of the second argument.
+    i) int mln_string_constStrcmp(mln_string_t *s1, const char *s2);
+       This interface is the same as mln_string_strcmp() but the type of the second argument.
 
-    i) int mln_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
+    j) int mln_string_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
        It is the same as strncmp().
 
-    j) int mln_const_strncmp(mln_string_t *s1, const char *s2, mln_u32_t n);
-       It is the same as mln_strncmp() but the type of the second argument.
+    k) int mln_string_constStrncmp(mln_string_t *s1, const char *s2, mln_u32_t n);
+       It is the same as mln_string_strncmp() but the type of the second argument.
 
-    k) int mln_strcasecmp(mln_string_t *s1, mln_string_t *s2);
+    l) int mln_string_strcasecmp(mln_string_t *s1, mln_string_t *s2);
        It is the same as strcasecmp().
 
-    l) int mln_const_strcasecmp(mln_string_t *s1, const char *s2);
-       It is the same as mln_strcasecmp() but the type of the second argument.
+    m) int mln_string_constStrcasecmp(mln_string_t *s1, const char *s2);
+       It is the same as mln_string_strcasecmp() but the type of the second argument.
 
-    m) int mln_const_strncasecmp(mln_string_t *s1, const char *s2, mln_u32_t n); 
+    n) int mln_string_constStrncasecmp(mln_string_t *s1, const char *s2, mln_u32_t n); 
        It is the same as strncasecmp().
 
-    n) int mln_strncasecmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
-       It is the same as mln_strncasecmp() but the type of the second argument.
+    o) int mln_string_strncasecmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
+       It is the same as mln_string_strncmp() but the type of the second argument.
 
-    o) char *mln_strstr(mln_string_t *text, mln_string_t *pattern);
+    p) char *mln_string_strstr(mln_string_t *text, mln_string_t *pattern);
        It is the same as strstr().
 
-    p) char *mln_const_strstr(mln_string_t *text, const char *pattern);
-       It is the same as mln_strstr() but the type of the second argument.
+    q) char *mln_string_constStrstr(mln_string_t *text, const char *pattern);
+       It is the same as mln_string_strstr() but the type of the second argument.
 
-    q) mln_string_t *mln_str_strstr(mln_string_t *text, mln_string_t *pattern);
+    r) mln_string_t *mln_string_S_strstr(mln_string_t *text, mln_string_t *pattern);
        It is used to get a string which starts from the position that is matched with 'pattern'.
 
-    r) mln_string_t *mln_str_const_strstr(mln_string_t *text, const char *pattern);
-       The same as mln_str_strstr() but the type of the second argument.
+    s) mln_string_t *mln_string_S_constStrstr(mln_string_t *text, const char *pattern);
+       The same as mln_string_S_strstr() but the type of the second argument.
 
-    s) char *mln_kmp_strstr(mln_string_t *text, mln_string_t *pattern);
-    t) char *mln_const_kmp_strstr(mln_string_t *text, const char *pattern);
-    u) mln_string_t *mln_str_kmp_strstr(mln_string_t *text, mln_string_t *pattern);
-    v) mln_string_t *mln_str_const_kmp_strstr(mln_string_t *text, const char *pattern);
-       These four interfaces are the same as mln_strstr(), mln_const_strstr(), mln_str_strstr() and
-       mln_str_const_strstr(), but implemented by KMP algorithm.
+    t) char *mln_string_KMPStrstr(mln_string_t *text, mln_string_t *pattern);
+    u) char *mln_string_KMPConstStrstr(mln_string_t *text, const char *pattern);
+    v) mln_string_t *mln_string_S_KMPStrstr(mln_string_t *text, mln_string_t *pattern);
+    w) mln_string_t *mln_string_S_KMPConstStrstr(mln_string_t *text, const char *pattern);
+       These four interfaces are the same as mln_string_strstr(), mln_string_constStrstr(), mln_string_S_strstr() and
+       mln_string_S_constStrstr(), but implemented by KMP algorithm.
 
-    w) mln_string_t *mln_slice(mln_string_t *s, const char *sep_array /*ended by \0*/);
+    x) mln_string_t *mln_string_slice(mln_string_t *s, const char *sep_array /*ended by \0*/);
        Slice string into several pieces.
        Slicing characters can be given by the second argument.
-       This interface has a side-effect that the string buffer will be destroyed. So you can call mln_dup_string() or
-       mln_ndup_string() at first.
+       This interface has a side-effect that the string buffer will be destroyed. So you can call mln_string_dup() or
+       mln_string_nDup() at first.
        The return value is a vector, and its last element is NULL.
 
-    x) void mln_slice_free(mln_string_t *array);
-       This interface frees the vector that mln_slice() returned.
+    y) void mln_string_slice_free(mln_string_t *array);
+       This interface frees the vector that mln_string_slice() returned.
 
-    y) mln_string(s);
+    z) mln_string(s);
        This interface is used to create a string on stack. Its content is 's', and its length is sizeof(s)-1.
 
-    z) mln_string_set(pstring,s);
+    aa) mln_string_set(pstring,s);
        This interface is used to set the content of 'pstring', its 'str' is 's', its length is 'strlen(s)' and its
        'is_referred' will be set 1.
 
-    aa) mln_string_t *mln_new_string_pool(mln_alloc_t *pool, const char *s);
-       This interface is the same as 'mln_new_string' but allocated from a memory pool.
+    ab) mln_string_nSet(pstring,s,n);
+       This interface is used to set the content of 'pstring', its 'str' is 's', its length is 'n' and its
+       'is_referred' will be set 1.
 
-    ab) void mln_free_string_pool(mln_string_t *str);
-       This interface is the same as 'mln_free_string' but freed to a memory pool.
+    ac) mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s);
+       This interface is the same as 'mln_string_new' but allocated from a memory pool.
+
+    ad) void mln_string_pool_free(mln_string_t *str);
+       This interface is the same as 'mln_string_free' but freed to a memory pool.
 
   2) Hash Table
     struct mln_hash_attr {
@@ -364,12 +371,12 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
        argument of mln_rbtree_scan_all().
 
   5) Path
-    a) char *mln_get_path(void);
+    a) char *mln_path(void);
        Depending on the parameter of shell script 'install', the installation path can be specified.
        We have to get the absolute path because some components need it.
 
   6) Prime number Generator
-    a) mln_u32_t mln_calc_prime(mln_u32_t n);
+    a) mln_u32_t mln_prime_calc(mln_u32_t n);
        It returns a prime number which is equal to or greater than n.
 
   7) Lock
@@ -407,13 +414,13 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
            %s, %l, %d, %c, %f, %x, %X (=%lx in printf()), %u and %U (=%lu in printf()).
        Depending on the format control characters in msg, the rest arguments can be none or even more than one.
 
-    b) char *mln_log_get_dir_path(void);
+    b) char *mln_log_getDirPath(void);
        It returns the path of log files' directory.
 
-    c) char *mln_log_get_log_path(void);
+    c) char *mln_log_getLogPath(void);
        It returns the path of a log file.
 
-    d) char *mln_log_get_pid_path(void);
+    d) char *mln_log_getPidPath(void);
        It returns the path of a pid file.
        The pid of the parent process is recorded in this file.
 
@@ -507,29 +514,29 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
      b) char *mln_lex_strerror(mln_lex_t *lex);
         As strerror(), this function will return an error message.
 
-     c) char mln_geta_char(mln_lex_t *lex);
+     c) char mln_lex_getAChar(mln_lex_t *lex);
         Get the next character from a file or a string buffer.
         If lexer encounters EOF, MLN_EOF will be returned.
         If it encounters an error, MLN_ERR will be returned and error number will be set.
 
-     d) int mln_puta_char(mln_lex_t *lex, char c);
+     d) int mln_lex_putAChar(mln_lex_t *lex, char c);
         It puts a character into the result buffer which is a string that xxx_token() returned.
         If it encounters an error, MLN_ERR will be returned and the error number will be set.
 
-     e) void mln_step_back(mln_lex_t *lex);
+     e) void mln_lex_stepBack(mln_lex_t *lex);
         It steps back a character.
-        If this interface is called between calling mln_geta_char() twice, the returned characters via calling
-        mln_geta_char() twice are the same.
+        If this interface is called between calling mln_lex_getAChar() twice, the returned characters via calling
+        mln_lex_getAChar() twice are the same.
 
-     f) int mln_isletter(char c);
+     f) int mln_lex_isLetter(char c);
         This interface is equivalent to
         if (c == '_' || isalpha(c)).
 
-     g) int mln_isoctal(char c);
+     g) int mln_lex_isOct(char c);
         This interface is equivalent to
         if (c >= '0' && c < '8').
 
-     h) int mln_ishex(char c);
+     h) int mln_lex_isHex(char c);
         This interface is equivalent to
         if (isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')).
 
@@ -625,15 +632,15 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
         Then we can use its 'search' to find out the domain that we need.
         The return value won't be NULL until Melon crashed.
 
-     b) mln_u32_t mln_get_cmd_num(mln_conf_t *cf, char *domain);
+     b) mln_u32_t mln_conf_get_cmdNum(mln_conf_t *cf, char *domain);
         It returns the number of commands in the domain.
         If domain is not existent, NULL will be returned.
 
-     c) void mln_get_all_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **vector);
+     c) void mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **vector);
         It puts all commands in the domain into the third argument.
         Vector should be allocated before calling.
 
-     d) mln_u32_t mln_get_cmd_args_num(mln_conf_cmd_t *cc);
+     d) mln_u32_t mln_conf_get_argNum(mln_conf_cmd_t *cc);
         It returns the number of items which belong to 'cc'.
 
      e) mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data);
@@ -722,7 +729,7 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
         When a signal raised, the handlers that are whether in the same event object or not, will be called in their
         thread.
 
-     f) void mln_dispatch(mln_event_t *event);
+     f) void mln_event_dispatch(mln_event_t *event);
         It dispatches every event.
         If a routine jumps into this function, it won't be out until encountering two situations:
             calling mln_event_set_break() to break out
@@ -730,7 +737,7 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
             a child process is forked.
 
      g) void mln_event_set_break(mln_event_t *ev);
-        It lets the routine break out from mln_dispatch().
+        It lets the routine break out from mln_event_dispatch().
 
      h) void mln_event_set_callback(mln_event_t *ev, dispatch_callback dc, void *dc_data);
         Besides fd, timer and signal callback handlers, there is another one (this) can be called to process some
@@ -1129,20 +1136,20 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
         Release whole chain node.
 
   19) File
-     a) mln_file_set_t *mln_file_set_init(mln_size_t max_file);
+     a) mln_fileset_t *mln_fileset_init(mln_size_t max_file);
         Create and initilize a file set.
 
-     b) void mln_file_set_destroy(mln_file_set_t *fset);
+     b) void mln_fileset_destroy(mln_fileset_t *fset);
         Destroy a file set and release all file descriptors that it cached.
 
-     c) mln_file_t *mln_file_open(mln_file_set_t *fset, const char *filepath);
+     c) mln_file_t *mln_file_open(mln_fileset_t *fset, const char *filepath);
         Open a file. And this file must be opened with read-only.
         This file object will be cached in 'fset'.
 
      d) void mln_file_close(void *pfile);
         Close a file. If 'pfile' is a regular file, it will be cached in its file set. Otherwise, it will be freed.
 
-     e) mln_file_t *mln_file_tmp_open(mln_alloc_t *pool);
+     e) mln_file_t *mln_file_open_tmp(mln_alloc_t *pool);
         Open a temporary file. This file will be created and opened with 'O_RDWR'.
 
      f) mln_file_fd(pfile);
@@ -1583,13 +1590,13 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
       b) mln_md5_t *mln_md5_new(void);
          Create a new MD5 instance.
 
-      c) mln_md5_t *mln_md5_new_pool(mln_alloc_t *pool);
+      c) mln_md5_t *mln_md5_pool_new(mln_alloc_t *pool);
          Create a new MD5 instance on 'pool'.
 
       d) void mln_md5_free(mln_md5_t *m);
          Free a MD5 instance.
 
-      e) void mln_md5_free_pool(mln_md5_t *m);
+      e) void mln_md5_pool_free(mln_md5_t *m);
          Free a MD5 instance to a memory pool.
 
       f) void mln_md5_calc(mln_md5_t *m, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last);
@@ -1617,13 +1624,13 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
       b) mln_sha1_t *mln_sha1_new(void);
          Create a new SHA1 instance on heap.
 
-      c) mln_sha1_t *mln_sha1_new_pool(mln_alloc_t *pool);
+      c) mln_sha1_t *mln_sha1_pool_new(mln_alloc_t *pool);
          Create a new SHA1 instance on 'pool'.
 
       d) void mln_sha1_free(mln_sha1_t *s);
          Free SHA1 instance.
 
-      e) void mln_sha1_free_pool(mln_sha1_t *s);
+      e) void mln_sha1_pool_free(mln_sha1_t *s);
          Free SHA1 instance to a memory pool.
 
       f) void mln_sha1_calc(mln_sha1_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last);
@@ -1653,13 +1660,13 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
       b) mln_des_t *mln_des_new(mln_u64_t key);
          Create a new DES instance.
 
-      c) mln_des_t *mln_des_new_pool(mln_alloc_t *pool, mln_u64_t key);
+      c) mln_des_t *mln_des_pool_new(mln_alloc_t *pool, mln_u64_t key);
          Same as 'mln_des_new', but allocated on 'pool'.
 
       d) void mln_des_free(mln_des_t *d);
          Free a DES instance.
 
-      e) void mln_des_free_pool(mln_des_t *d);
+      e) void mln_des_pool_free(mln_des_t *d);
          Free a DES instance to a memory pool.
 
       f) mln_u64_t mln_des(mln_des_t *d, mln_u64_t msg, mln_u32_t is_encrypt);
@@ -1687,13 +1694,13 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
       i) mln_3des_t *mln_3des_new(mln_u64_t key1, mln_u64_t key2);
          Create a new 3DES instance.
 
-      j) mln_3des_t *mln_3des_new_pool(mln_alloc_t *pool, mln_u64_t key1, mln_u64_t key2);
+      j) mln_3des_t *mln_3des_pool_new(mln_alloc_t *pool, mln_u64_t key1, mln_u64_t key2);
          Same as 'mln_3des_new', but allocated on 'pool'.
 
       k) void mln_3des_free(mln_3des_t *tdes);
          Free 3DES instance.
 
-      l) void mln_3des_free_pool(mln_3des_t *tdes);
+      l) void mln_3des_pool_free(mln_3des_t *tdes);
          Free 3Des instance to a memory pool.
 
       m) mln_u64_t mln_3des(mln_3des_t *tdes, mln_u64_t msg, mln_u32_t is_encrypt);
@@ -1736,13 +1743,13 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
          Create a new AES instance from the heap.
          The values of 'bits' are the same as 'mln_aes_init()'.
 
-      c) mln_aes_t *mln_aes_new_pool(mln_alloc_t *pool, mln_u8ptr_t key, mln_u32_t bits);
+      c) mln_aes_t *mln_aes_pool_new(mln_alloc_t *pool, mln_u8ptr_t key, mln_u32_t bits);
          The same as 'mln_aes_new()', but the instance is allocated from 'pool'.
 
       d) void mln_aes_free(mln_aes_t *a);
          Free an AES instance to the heap.
 
-      e) void mln_aes_free_pool(mln_aes_t *a);
+      e) void mln_aes_pool_free(mln_aes_t *a);
          Free an AES instance to a memory pool.
 
       f) int mln_aes_encrypt(mln_aes_t *a, mln_u8ptr_t text);
@@ -1761,7 +1768,7 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
          Encode 'in' in Base64. 'out' and 'outlen' are output arguments.
          It will return -1 if memory not enough.
 
-      b) int mln_base64_encode_pool(mln_alloc_t *pool,
+      b) int mln_base64_pool_encode(mln_alloc_t *pool,
                                     mln_u8ptr_t in,
                                     mln_uauto_t inlen,
                                     mln_u8ptr_t *out,
@@ -1775,7 +1782,7 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
          Decode 'in'. 'out' and 'outlen' are output arguments.
          It will return -1 if memory not enough.
 
-      d) int mln_base64_decode_pool(mln_alloc_t *pool,
+      d) int mln_base64_pool_decode(mln_alloc_t *pool,
                                     mln_u8ptr_t in,
                                     mln_uauto_t inlen,
                                     mln_u8ptr_t *out,
@@ -1785,20 +1792,20 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
       e) void mln_base64_free(mln_u8ptr_t data);
          Free 'data' which is returned by encode and decode functions via argument 'out'.
 
-      f) void mln_base64_free_pool(mln_u8ptr_t data);
+      f) void mln_base64_pool_free(mln_u8ptr_t data);
          Same as 'mln_base64_free' but free memory to a pool.
 
   30) RSA
       a) mln_rsa_key_t *mln_rsa_key_new(void);
          Create a new RSA key instance.
 
-      b) mln_rsa_key_t *mln_rsa_key_new_pool(mln_alloc_t *pool);
+      b) mln_rsa_key_t *mln_rsa_key_pool_new(mln_alloc_t *pool);
          Create a new RSA key instance via a memory pool.
 
       c) void mln_rsa_key_free(mln_rsa_key_t *key);
          Free RSA key instance.
 
-      d) void mln_rsa_key_free_pool(mln_rsa_key_t *key);
+      d) void mln_rsa_key_pool_free(mln_rsa_key_t *key);
          Free RSA key instance to the memory pool.
 
       e) int mln_rsa_keyGenerate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits);
@@ -2252,11 +2259,11 @@ Their definitions can be found in melon-1.5.0/include/mln_types.h.
    need_clear -- indicates whether the 'pdata' should be freed.
    The rest variables can be used to pass some arguments and (or) a function pointer.
    There are three interfaces we should know:
-   a) void mln_thread_clear_msg(mln_thread_msg_t *msg);
+   a) void mln_thread_clearMsg(mln_thread_msg_t *msg);
       Free msg's memory.
 
    b) void mln_thread_exit(int exit_code);
       Exit the thread.
 
-   c) void mln_set_cleanup(void (*tcleanup)(void *), void *data);
+   c) void mln_thread_setCleanup(void (*tcleanup)(void *), void *data);
       Set a cleanup function that will be called after the thread exited.

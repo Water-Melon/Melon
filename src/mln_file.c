@@ -22,12 +22,12 @@ static int mln_file_set_hash(mln_hash_t *h, void *key);
 static int mln_file_set_cmp(mln_hash_t *h, void *key1, void *key2);
 static void mln_file_free(void *pfile);
 
-mln_file_set_t *mln_file_set_init(mln_size_t max_file)
+mln_fileset_t *mln_fileset_init(mln_size_t max_file)
 {
     struct mln_hash_attr attr;
-    mln_file_set_t *fs;
+    mln_fileset_t *fs;
 
-    fs = (mln_file_set_t *)malloc(sizeof(mln_file_set_t));
+    fs = (mln_fileset_t *)malloc(sizeof(mln_fileset_t));
     if (fs == NULL) {
         return NULL;
     }
@@ -76,10 +76,10 @@ static int mln_file_set_hash(mln_hash_t *h, void *key)
 
 static int mln_file_set_cmp(mln_hash_t *h, void *key1, void *key2)
 {
-    return !mln_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
+    return !mln_string_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
 }
 
-void mln_file_set_destroy(mln_file_set_t *fs)
+void mln_fileset_destroy(mln_fileset_t *fs)
 {
     if (fs == NULL) return;
 
@@ -91,7 +91,7 @@ void mln_file_set_destroy(mln_file_set_t *fs)
 }
 
 
-mln_file_t *mln_file_open(mln_file_set_t *fs, const char *filepath)
+mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
 {
     mln_file_t *f;
     mln_string_t path;
@@ -105,21 +105,21 @@ mln_file_t *mln_file_open(mln_file_set_t *fs, const char *filepath)
         if (f == NULL) {
             return NULL;
         }
-        f->file_path = mln_new_string_pool(fs->pool, filepath);
+        f->file_path = mln_string_pool_new(fs->pool, filepath);
         if (f->file_path == NULL) {
             mln_alloc_free(f);
             return NULL;
         }
         f->fd = open(filepath, O_RDONLY);
         if (f->fd < 0) {
-            mln_free_string_pool(f->file_path);
+            mln_string_pool_free(f->file_path);
             mln_alloc_free(f);
             return NULL;
         }
         f->is_tmp = 0;
         if (fstat(f->fd, &st) < 0) {
             close(f->fd);
-            mln_free_string_pool(f->file_path);
+            mln_string_pool_free(f->file_path);
             mln_alloc_free(f);
             return NULL;
         }
@@ -132,7 +132,7 @@ mln_file_t *mln_file_open(mln_file_set_t *fs, const char *filepath)
         f->fset = fs;
         if (mln_hash_insert(fs->reg_file_hash, f->file_path, f) < 0) {
             close(f->fd);
-            mln_free_string_pool(f->file_path);
+            mln_string_pool_free(f->file_path);
             mln_alloc_free(f);
             return NULL;
         }
@@ -150,7 +150,7 @@ void mln_file_close(void *pfile)
     if (pfile == NULL) return;
 
     mln_file_t *f = (mln_file_t *)pfile;
-    mln_file_set_t *fs;
+    mln_fileset_t *fs;
 
     if (f->is_tmp) {
         if (f->fd >= 0)
@@ -179,12 +179,12 @@ static void mln_file_free(void *pfile)
 
     mln_file_t *f = (mln_file_t *)pfile;
     if (f->file_path != NULL)
-        mln_free_string_pool(f->file_path);
+        mln_string_pool_free(f->file_path);
     if (f->fd >= 0) close(f->fd);
     mln_alloc_free(f);
 }
 
-mln_file_t *mln_file_tmp_open(mln_alloc_t *pool)
+mln_file_t *mln_file_open_tmp(mln_alloc_t *pool)
 {
     char dir_path[1024] = {0};
     char tmp_path[1024] = {0};
@@ -192,7 +192,7 @@ mln_file_t *mln_file_tmp_open(mln_alloc_t *pool)
     unsigned long suffix;
     mln_file_t *f;
 
-    snprintf(dir_path, sizeof(dir_path)-1, "%s/%s", mln_get_path(), mln_file_tmp_dir);
+    snprintf(dir_path, sizeof(dir_path)-1, "%s/%s", mln_path(), mln_file_tmp_dir);
     if (mkdir(dir_path, S_IRWXU) < 0) {
         if (errno != EEXIST) {
             return NULL;

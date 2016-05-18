@@ -12,7 +12,7 @@ mln_rsa_key_t *mln_rsa_key_new(void)
     return (mln_rsa_key_t *)malloc(sizeof(mln_rsa_key_t));
 }
 
-mln_rsa_key_t *mln_rsa_key_new_pool(mln_alloc_t *pool)
+mln_rsa_key_t *mln_rsa_key_pool_new(mln_alloc_t *pool)
 {
     return (mln_rsa_key_t *)mln_alloc_m(pool, sizeof(mln_rsa_key_t));
 }
@@ -23,7 +23,7 @@ void mln_rsa_key_free(mln_rsa_key_t *key)
     free(key);
 }
 
-void mln_rsa_key_free_pool(mln_rsa_key_t *key)
+void mln_rsa_key_pool_free(mln_rsa_key_t *key)
 {
     if (key == NULL) return;
     mln_alloc_free(key);

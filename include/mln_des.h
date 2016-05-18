@@ -45,9 +45,9 @@ typedef struct {
 
 extern void mln_des_init(mln_des_t *d, mln_u64_t key) __NONNULL1(1);
 extern mln_des_t *mln_des_new(mln_u64_t key);
-extern mln_des_t *mln_des_new_pool(mln_alloc_t *pool, mln_u64_t key) __NONNULL1(1);
+extern mln_des_t *mln_des_pool_new(mln_alloc_t *pool, mln_u64_t key) __NONNULL1(1);
 extern void mln_des_free(mln_des_t *d);
-extern void mln_des_free_pool(mln_des_t *d);
+extern void mln_des_pool_free(mln_des_t *d);
 extern mln_u64_t mln_des(mln_des_t *d, mln_u64_t msg, mln_u32_t is_encrypt) __NONNULL1(1);
 extern void mln_des_buf(mln_des_t *d, \
                         mln_u8ptr_t in, mln_uauto_t inlen, \
@@ -62,9 +62,9 @@ typedef struct {
 
 extern void mln_3des_init(mln_3des_t *tdes, mln_u64_t key1, mln_u64_t key2) __NONNULL1(1);
 extern mln_3des_t *mln_3des_new(mln_u64_t key1, mln_u64_t key2);
-extern mln_3des_t *mln_3des_new_pool(mln_alloc_t *pool, mln_u64_t key1, mln_u64_t key2) __NONNULL1(1);
+extern mln_3des_t *mln_3des_pool_new(mln_alloc_t *pool, mln_u64_t key1, mln_u64_t key2) __NONNULL1(1);
 extern void mln_3des_free(mln_3des_t *tdes);
-extern void mln_3des_free_pool(mln_3des_t *tdes);
+extern void mln_3des_pool_free(mln_3des_t *tdes);
 extern mln_u64_t mln_3des(mln_3des_t *tdes, mln_u64_t msg, mln_u32_t is_encrypt) __NONNULL1(1);
 extern void mln_3des_buf(mln_3des_t *tdes, \
                          mln_u8ptr_t in, mln_uauto_t inlen, \

@@ -35,7 +35,7 @@ mln_sha1_t *mln_sha1_new(void)
     return s;
 }
 
-mln_sha1_t *mln_sha1_new_pool(mln_alloc_t *pool)
+mln_sha1_t *mln_sha1_pool_new(mln_alloc_t *pool)
 {
     mln_sha1_t *s = (mln_sha1_t *)mln_alloc_m(pool, sizeof(mln_sha1_t));
     if (s == NULL) return NULL;
@@ -49,7 +49,7 @@ void mln_sha1_free(mln_sha1_t *s)
     free(s);
 }
 
-void mln_sha1_free_pool(mln_sha1_t *s)
+void mln_sha1_pool_free(mln_sha1_t *s)
 {
     if (s == NULL) return;
     mln_alloc_free(s);

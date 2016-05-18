@@ -12,7 +12,7 @@
 static inline int *compute_prefix_function(const char *pattern, int m);
 static inline char *
 kmp_string_match(char *text, const char *pattern, int text_len, int pattern_len) __NONNULL2(1,2);
-static mln_string_t *mln_slice_recursive(char *s, int len, char *ascii, int cnt) __NONNULL2(1,3);
+static mln_string_t *mln_string_slice_recursive(char *s, int len, char *ascii, int cnt) __NONNULL2(1,3);
 static inline mln_string_t *mln_assign_string(char *s, mln_s32_t len);
 
 static inline mln_string_t *mln_assign_string(char *s, mln_s32_t len)
@@ -26,7 +26,7 @@ static inline mln_string_t *mln_assign_string(char *s, mln_s32_t len)
     return str;
 }
 
-mln_string_t *mln_new_string_pool(mln_alloc_t *pool, const char *s)
+mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s)
 {
     mln_string_t *str = (mln_string_t *)mln_alloc_m(pool, sizeof(mln_string_t));
     if (str == NULL) return NULL;
@@ -49,7 +49,7 @@ mln_string_t *mln_new_string_pool(mln_alloc_t *pool, const char *s)
     return str;
 }
 
-mln_string_t *mln_new_string(const char *s)
+mln_string_t *mln_string_new(const char *s)
 {
     mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t));
     if (str == NULL) return NULL;
@@ -72,7 +72,7 @@ mln_string_t *mln_new_string(const char *s)
     return str;
 }
 
-mln_string_t *mln_dup_string(mln_string_t *str)
+mln_string_t *mln_string_dup(mln_string_t *str)
 {
     mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
     if (s == NULL) return NULL;
@@ -88,7 +88,7 @@ mln_string_t *mln_dup_string(mln_string_t *str)
     return s;
 }
 
-mln_string_t *mln_dup_string_pool(mln_alloc_t *pool, mln_string_t *str)
+mln_string_t *mln_string_pool_dup(mln_alloc_t *pool, mln_string_t *str)
 {
     mln_string_t *s = (mln_string_t *)mln_alloc_m(pool, sizeof(mln_string_t));
     if (s == NULL) return NULL;
@@ -104,7 +104,7 @@ mln_string_t *mln_dup_string_pool(mln_alloc_t *pool, mln_string_t *str)
     return s;
 }
 
-mln_string_t *mln_ndup_string(mln_string_t *str, mln_s32_t size)
+mln_string_t *mln_string_nDup(mln_string_t *str, mln_s32_t size)
 {
     if (size <= 0) return NULL;
     mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
@@ -122,7 +122,24 @@ mln_string_t *mln_ndup_string(mln_string_t *str, mln_s32_t size)
     return s;
 }
 
-mln_string_t *mln_refer_string(mln_string_t *str)
+mln_string_t *mln_string_nConstDup(char *str, mln_s32_t size)
+{
+    if (size <= 0) return NULL;
+    mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
+    if (s == NULL) return NULL;
+    s->str = (mln_s8ptr_t)malloc(size + 1);
+    if (s->str == NULL) {
+        free(s);
+        return NULL;
+    }
+    memcpy(s->str, str, size);
+    s->str[size] = 0;
+    s->len = size;
+    s->is_referred = 0;
+    return s;
+}
+
+mln_string_t *mln_string_refDup(mln_string_t *str)
 {
     mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
     if (s == NULL) return NULL;
@@ -132,7 +149,7 @@ mln_string_t *mln_refer_string(mln_string_t *str)
     return s;
 }
 
-mln_string_t *mln_refer_const_string(char *s)
+mln_string_t *mln_string_refConstDup(char *s)
 {
     mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t));
     if (s == NULL) return NULL;
@@ -142,7 +159,7 @@ mln_string_t *mln_refer_const_string(char *s)
     return str;
 }
 
-void mln_free_string(mln_string_t *str)
+void mln_string_free(mln_string_t *str)
 {
     if (str == NULL) return;
     if (!str->is_referred && str->str != NULL)
@@ -150,7 +167,7 @@ void mln_free_string(mln_string_t *str)
     free(str);
 }
 
-void mln_free_string_pool(mln_string_t *str)
+void mln_string_pool_free(mln_string_t *str)
 {
     if (str == NULL) return;
     if (!str->is_referred && str->str != NULL)
@@ -158,7 +175,7 @@ void mln_free_string_pool(mln_string_t *str)
     mln_alloc_free(str);
 }
 
-int mln_strcmp(mln_string_t *s1, mln_string_t *s2)
+int mln_string_strcmp(mln_string_t *s1, mln_string_t *s2)
 {
     if (s1 == s2 || s1->str == s2->str) return 0;
     if (s1->len != s2->len) return s1->len - s2->len;
@@ -179,7 +196,7 @@ int mln_strcmp(mln_string_t *s1, mln_string_t *s2)
     return 0;
 }
 
-int mln_const_strcmp(mln_string_t *s1, const char *s2)
+int mln_string_constStrcmp(mln_string_t *s1, const char *s2)
 {
     if (s1->str == s2) return 0;
     mln_s32_t len = strlen(s2);
@@ -202,7 +219,7 @@ int mln_const_strcmp(mln_string_t *s1, const char *s2)
     return 0;
 }
 
-int mln_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n)
+int mln_string_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n)
 {
     if (s1 == s2 || s1->str == s2->str) return 0;
     if (s1->len < n || s2->len < n) return -1;
@@ -224,7 +241,7 @@ int mln_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n)
     return 0;
 }
 
-int mln_const_strncmp(mln_string_t *s1, const char *s2, mln_u32_t n)
+int mln_string_constStrncmp(mln_string_t *s1, const char *s2, mln_u32_t n)
 {
     if (s1->str == s2) return 0;
     mln_s32_t len = strlen(s2);
@@ -248,21 +265,21 @@ int mln_const_strncmp(mln_string_t *s1, const char *s2, mln_u32_t n)
     return 0;
 }
 
-int mln_strcasecmp(mln_string_t *s1, mln_string_t *s2)
+int mln_string_strcasecmp(mln_string_t *s1, mln_string_t *s2)
 {
     if (s1 == s2 || s1->str == s2->str) return 0;
     if (s1->len != s2->len) return s1->len - s2->len;
     return strncasecmp(s1->str, s2->str, s1->len);
 }
 
-int mln_strncasecmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n)
+int mln_string_strncasecmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n)
 {
     if (s1 == s2 || s1->str == s2->str) return 0;
     if (s1->len < n || s2->len < n) return -1;
     return strncasecmp(s1->str, s2->str, n);
 }
 
-int mln_const_strcasecmp(mln_string_t *s1, const char *s2)
+int mln_string_constStrcasecmp(mln_string_t *s1, const char *s2)
 {
     if (s1->str == s2) return 0;
     mln_s32_t len = strlen(s2);
@@ -270,7 +287,7 @@ int mln_const_strcasecmp(mln_string_t *s1, const char *s2)
     return strncasecmp(s1->str, s2, len);
 }
 
-int mln_const_strncasecmp(mln_string_t *s1, const char *s2, mln_u32_t n)
+int mln_string_constStrncasecmp(mln_string_t *s1, const char *s2, mln_u32_t n)
 {
     if (s1->str == s2) return 0;
     mln_s32_t len = strlen(s2);
@@ -278,58 +295,58 @@ int mln_const_strncasecmp(mln_string_t *s1, const char *s2, mln_u32_t n)
     return strncasecmp(s1->str, s2, n);
 }
 
-char *mln_strstr(mln_string_t *text, mln_string_t *pattern)
+char *mln_string_strstr(mln_string_t *text, mln_string_t *pattern)
 {
     if (text == pattern || text->str == pattern->str)
         return text->str;
     return strstr(text->str, pattern->str);
 }
 
-char *mln_const_strstr(mln_string_t *text, const char *pattern)
+char *mln_string_constStrstr(mln_string_t *text, const char *pattern)
 {
     if (text->str == pattern)
         return text->str;
     return strstr(text->str, pattern);
 }
 
-mln_string_t *mln_str_strstr(mln_string_t *text, mln_string_t *pattern)
+mln_string_t *mln_string_S_strstr(mln_string_t *text, mln_string_t *pattern)
 {
-    char *p = mln_strstr(text, pattern);
+    char *p = mln_string_strstr(text, pattern);
     if (p == NULL) return NULL;
     return mln_assign_string(p, text->len - (p - text->str));
 }
 
-mln_string_t *mln_str_const_strstr(mln_string_t *text, const char *pattern)
+mln_string_t *mln_string_S_constStrstr(mln_string_t *text, const char *pattern)
 {
-    char *p = mln_const_strstr(text, pattern);
+    char *p = mln_string_constStrstr(text, pattern);
     if (p == NULL) return NULL;
     return mln_assign_string(p, text->len - (p - text->str));
 }
 
-char *mln_kmp_strstr(mln_string_t *text, mln_string_t *pattern)
+char *mln_string_KMPStrstr(mln_string_t *text, mln_string_t *pattern)
 {
     if (text == pattern || text->str == pattern->str)
         return text->str;
     return kmp_string_match(text->str, pattern->str, text->len, pattern->len);
 }
 
-char *mln_const_kmp_strstr(mln_string_t *text, const char *pattern)
+char *mln_string_KMPConstStrstr(mln_string_t *text, const char *pattern)
 {
     if (text->str == pattern)
         return text->str;
     return kmp_string_match(text->str, pattern, text->len, strlen(pattern));
 }
 
-mln_string_t *mln_str_kmp_strstr(mln_string_t *text, mln_string_t *pattern)
+mln_string_t *mln_string_S_KMPStrstr(mln_string_t *text, mln_string_t *pattern)
 {
-    char *p = mln_kmp_strstr(text, pattern);
+    char *p = mln_string_KMPStrstr(text, pattern);
     if (p == NULL) return NULL;
     return mln_assign_string(p, text->len - (p - text->str));
 }
 
-mln_string_t *mln_str_const_kmp_strstr(mln_string_t *text, const char *pattern)
+mln_string_t *mln_string_S_KMPConstStrstr(mln_string_t *text, const char *pattern)
 {
-    char *p = mln_const_kmp_strstr(text, pattern);
+    char *p = mln_string_KMPConstStrstr(text, pattern);
     if (p == NULL) return NULL;
     return mln_assign_string(p, text->len - (p - text->str));
 }
@@ -381,17 +398,17 @@ static inline int *compute_prefix_function(const char *pattern, int m)
     return shift;
 }
 
-mln_string_t *mln_slice(mln_string_t *s, const char *sep_array/*ended by \0*/)
+mln_string_t *mln_string_slice(mln_string_t *s, const char *sep_array/*ended by \0*/)
 {
     const char *ps;
     char ascii[256] = {0};
     for (ps = sep_array; *ps != 0; ps++) {
         ascii[(int)(*ps)] = 1;
     }
-    return mln_slice_recursive(s->str, s->len, ascii, 1);
+    return mln_string_slice_recursive(s->str, s->len, ascii, 1);
 }
 
-static mln_string_t *mln_slice_recursive(char *s, int len, char *ascii, int cnt)
+static mln_string_t *mln_string_slice_recursive(char *s, int len, char *ascii, int cnt)
 {
     char *jmp_ascii, *end = s + len;
     for (jmp_ascii = s; jmp_ascii < end; jmp_ascii++) {
@@ -411,7 +428,7 @@ static mln_string_t *mln_slice_recursive(char *s, int len, char *ascii, int cnt)
     for (jmp_valid = jmp_ascii; jmp_valid < end; jmp_valid++) {
         if (ascii[(int)(*jmp_valid)]) break;
     }
-    mln_string_t *array = mln_slice_recursive(jmp_valid, len-(jmp_valid-s), ascii, cnt);
+    mln_string_t *array = mln_string_slice_recursive(jmp_valid, len-(jmp_valid-s), ascii, cnt);
     if (array == NULL) return NULL;
     array[cnt-2].str = jmp_ascii;
     array[cnt-2].len = jmp_valid - jmp_ascii;
@@ -419,7 +436,7 @@ static mln_string_t *mln_slice_recursive(char *s, int len, char *ascii, int cnt)
     return array;
 }
 
-void mln_slice_free(mln_string_t *array)
+void mln_string_slice_free(mln_string_t *array)
 {
     free(array);
 }

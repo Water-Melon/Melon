@@ -158,17 +158,17 @@ mln_lex_destroy(mln_lex_t *lex);
 extern char *
 mln_lex_strerror(mln_lex_t *lex) __NONNULL1(1);
 extern char
-mln_geta_char(mln_lex_t *lex) __NONNULL1(1);
+mln_lex_getAChar(mln_lex_t *lex) __NONNULL1(1);
 extern int
-mln_puta_char(mln_lex_t *lex, char c) __NONNULL1(1);
+mln_lex_putAChar(mln_lex_t *lex, char c) __NONNULL1(1);
 extern void
-mln_step_back(mln_lex_t *lex) __NONNULL1(1);
+mln_lex_stepBack(mln_lex_t *lex) __NONNULL1(1);
 extern int
-mln_isletter(char c);
+mln_lex_isLetter(char c);
 extern int
-mln_isoctal(char c);
+mln_lex_isOct(char c);
 extern int
-mln_ishex(char c);
+mln_lex_isHex(char c);
 
 
 /*
@@ -491,9 +491,9 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
             return NULL;\
         }\
         if (type != TK_PREFIX##_TK_EOF) \
-            ptr->text = mln_new_string(lex->result_buf);\
+            ptr->text = mln_string_new(lex->result_buf);\
         else \
-            ptr->text = mln_new_string(MLN_EOF_TEXT);\
+            ptr->text = mln_string_new(MLN_EOF_TEXT);\
         if (ptr->text == NULL) {\
             free(ptr);\
             lex->error = MLN_LEX_ENMEM;\
@@ -511,7 +511,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
     void PREFIX_NAME##_free(PREFIX_NAME##_struct_t *ptr)\
     {\
         if (ptr == NULL) return ;\
-        if (ptr->text != NULL) mln_free_string(ptr->text);\
+        if (ptr->text != NULL) mln_string_free(ptr->text);\
         free(ptr);\
     }\
     \
@@ -542,7 +542,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
     \
     PREFIX_NAME##_struct_t *PREFIX_NAME##_token(mln_lex_t *lex) \
     {\
-        char c = mln_geta_char(lex);\
+        char c = mln_lex_getAChar(lex);\
         if (c == MLN_ERR) return NULL;\
 lp:\
         switch (c) {\
@@ -552,7 +552,7 @@ lp:\
                  {\
                      while (c == '\n') {\
                          lex->line++;\
-                         c = mln_geta_char(lex);\
+                         c = mln_lex_getAChar(lex);\
                          if (c == MLN_ERR) return NULL;\
                      };\
                      goto lp;\
@@ -561,31 +561,31 @@ lp:\
             case ' ':\
                  {\
                      while (c == ' ' || c == '\t') {\
-                         c = mln_geta_char(lex);\
+                         c = mln_lex_getAChar(lex);\
                          if (c == MLN_ERR) return NULL;\
                      }\
                      goto lp;\
                  }\
             default:\
                 {\
-                    if (mln_isletter(c)) {\
-                        while (mln_isletter(c) || isdigit(c)) {\
-                            if (mln_puta_char(lex, c) == MLN_ERR) return NULL;\
-                            c = mln_geta_char(lex);\
+                    if (mln_lex_isLetter(c)) {\
+                        while (mln_lex_isLetter(c) || isdigit(c)) {\
+                            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
+                            c = mln_lex_getAChar(lex);\
                             if (c == MLN_ERR) return NULL;\
                         }\
-                        mln_step_back(lex);\
+                        mln_lex_stepBack(lex);\
                         if (lex->result_buf[0] == '_' && lex->result_buf[1] == 0) {\
                             return PREFIX_NAME##_process_spec_char(lex, '_');\
                         }\
                         return PREFIX_NAME##_process_keywords(lex);\
                     } else if (isdigit(c)) {\
                         while ( 1 ) {\
-                            if (mln_puta_char(lex, c) == MLN_ERR) return NULL;\
-                            c = mln_geta_char(lex);\
+                            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
+                            c = mln_lex_getAChar(lex);\
                             if (c == MLN_ERR) return NULL;\
                             if (!isdigit(c) && !isalpha(c) && c != '.') {\
-                                mln_step_back(lex);\
+                                mln_lex_stepBack(lex);\
                                 break;\
                             }\
                         }\
@@ -594,7 +594,7 @@ lp:\
                         if (*chk == '0') {\
                             if (*(chk+1) == 'x') {\
                                 for (chk += 2; chk != lex->result_cur_ptr; chk++) {\
-                                    if (!mln_ishex(*chk)) {\
+                                    if (!mln_lex_isHex(*chk)) {\
                                         lex->error = MLN_LEX_EINVHEX;\
                                         return NULL;\
                                     }\
@@ -604,7 +604,7 @@ lp:\
                                 return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_DEC);\
                             } else {\
                                 for (chk++; chk != lex->result_cur_ptr; chk++) {\
-                                    if (!mln_isoctal(*chk)) {\
+                                    if (!mln_lex_isOct(*chk)) {\
                                         mln_s32_t dot_cnt = 0;\
                                         for (; chk != lex->result_cur_ptr; chk++) {\
                                             if (*chk == '.') dot_cnt++;\
@@ -639,7 +639,7 @@ lp:\
                             return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_DEC);\
                         }\
                     } else {\
-                        if (mln_puta_char(lex, c) == MLN_ERR) return NULL;\
+                        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
                         PREFIX_NAME##_struct_t *tmp = PREFIX_NAME##_process_spec_char(lex, c);\
                         if (tmp == NULL) break; \
                         return tmp;\
@@ -655,7 +655,7 @@ lp:\
         PREFIX_NAME##_struct_t *src = (PREFIX_NAME##_struct_t *)ptr;\
         PREFIX_NAME##_struct_t *dest = (PREFIX_NAME##_struct_t *)malloc(sizeof(PREFIX_NAME##_struct_t));\
         if (dest == NULL) return NULL;\
-        dest->text = mln_dup_string(src->text);\
+        dest->text = mln_string_dup(src->text);\
         if (dest->text == NULL) {\
             free(dest);\
             return NULL;\

@@ -72,13 +72,13 @@ static int mln_websocket_hash_calc(mln_hash_t *h, void *key)
 
 static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2)
 {
-    return !mln_strcasecmp((mln_string_t *)key1, (mln_string_t *)key2);
+    return !mln_string_strcasecmp((mln_string_t *)key1, (mln_string_t *)key2);
 }
 
 static void mln_websocket_hash_free(void *data)
 {
     if (data == NULL) return;
-    mln_free_string_pool((mln_string_t *)data);
+    mln_string_pool_free((mln_string_t *)data);
 }
 
 mln_websocket_t *mln_websocket_new(mln_http_t *http)
@@ -96,9 +96,9 @@ void mln_websocket_destroy(mln_websocket_t *ws)
 {
     if (ws == NULL) return;
     if (ws->fields != NULL) mln_hash_destroy(ws->fields, M_HASH_F_KV);
-    if (ws->uri != NULL) mln_free_string_pool(ws->uri);
-    if (ws->args != NULL) mln_free_string_pool(ws->args);
-    if (ws->key != NULL) mln_free_string_pool(ws->key);
+    if (ws->uri != NULL) mln_string_pool_free(ws->uri);
+    if (ws->args != NULL) mln_string_pool_free(ws->args);
+    if (ws->key != NULL) mln_string_pool_free(ws->key);
     if (ws->contentFree) mln_alloc_free(ws->content);
 }
 
@@ -115,15 +115,15 @@ void mln_websocket_reset(mln_websocket_t *ws)
         mln_hash_reset(ws->fields, M_HASH_F_KV);
     }
     if (ws->uri != NULL) {
-        mln_free_string_pool(ws->uri);
+        mln_string_pool_free(ws->uri);
         ws->uri = NULL;
     }
     if (ws->args != NULL) {
-        mln_free_string_pool(ws->args);
+        mln_string_pool_free(ws->args);
         ws->args = NULL;
     }
     if (ws->key != NULL) {
-        mln_free_string_pool(ws->key);
+        mln_string_pool_free(ws->key);
         ws->key = NULL;
     }
 
@@ -151,7 +151,7 @@ int mln_websocket_isWebsocket(mln_http_t *http)
     mln_string_t key = mln_string("Upgrade");
     mln_string_t val = mln_string("websocket");
     mln_string_t *tmp = mln_http_get_field(http, &key);
-    if (tmp == NULL || mln_strcasecmp(&val, tmp)) return M_WS_RET_NOTWS;
+    if (tmp == NULL || mln_string_strcasecmp(&val, tmp)) return M_WS_RET_NOTWS;
     if (mln_http_get_type(http) != M_HTTP_REQUEST) return M_WS_RET_ERROR;
     return M_WS_RET_OK;
 }
@@ -167,9 +167,9 @@ int mln_websocket_validate(mln_websocket_t *ws)
     mln_string_t *tmp;
 
     tmp = mln_http_get_field(http, &upgrade_key);
-    if (tmp == NULL || mln_strcasecmp(tmp, &upgrade_val)) return M_WS_RET_NOTWS;
+    if (tmp == NULL || mln_string_strcasecmp(tmp, &upgrade_val)) return M_WS_RET_NOTWS;
     tmp = mln_http_get_field(http, &connection_key);
-    if (tmp == NULL || mln_strcasecmp(tmp, &upgrade_key)) return M_WS_RET_NOTWS;
+    if (tmp == NULL || mln_string_strcasecmp(tmp, &upgrade_key)) return M_WS_RET_NOTWS;
     int ret = mln_websocket_validate_accept(http, ws->key);
     if (ret != M_WS_RET_OK) return ret;
     if (mln_http_get_type(http) != M_HTTP_RESPONSE) return M_WS_RET_ERROR;
@@ -197,28 +197,26 @@ static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey)
     mln_u8_t tmp[20];
     mln_uauto_t len = 0;
     mln_sha1_toBytes(&s, tmp, sizeof(tmp));
-    if (mln_base64_encode_pool(pool, tmp, sizeof(tmp), &buf, &len) < 0) return -1;
-    key.str = (mln_s8ptr_t)buf;
-    key.len = len;
-    key.is_referred = 1;
-    int ret = mln_strcasecmp(&key, val);
-    mln_base64_free_pool(buf);
+    if (mln_base64_pool_encode(pool, tmp, sizeof(tmp), &buf, &len) < 0) return -1;
+    mln_string_nSet(&key, buf, len);
+    int ret = mln_string_strcasecmp(&key, val);
+    mln_base64_pool_free(buf);
     return ret? M_WS_RET_ERROR: M_WS_RET_OK;
 }
 
 int mln_websocket_set_field(mln_websocket_t *ws, mln_string_t *key, mln_string_t *val)
 {
     mln_string_t *dup_key, *dup_val;
-    dup_key = mln_dup_string_pool(ws->pool, key);
+    dup_key = mln_string_pool_dup(ws->pool, key);
     if (dup_key == NULL) return M_WS_RET_FAILED;
-    dup_val = mln_dup_string_pool(ws->pool, val);
+    dup_val = mln_string_pool_dup(ws->pool, val);
     if (dup_val == NULL) {
-        mln_free_string_pool(dup_key);
+        mln_string_pool_free(dup_key);
         return M_WS_RET_FAILED;
     }
     int ret = mln_hash_replace(ws->fields, &dup_key, &dup_val);
-    mln_free_string_pool(dup_key);
-    mln_free_string_pool(dup_val);
+    mln_string_pool_free(dup_key);
+    mln_string_pool_free(dup_val);
     return ret<0? M_WS_RET_FAILED: M_WS_RET_OK;
 }
 
@@ -251,7 +249,7 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
     mln_string_t *protocol_val = NULL;
     tmp = mln_http_field_iterator(http, &protocol_key);
     if (tmp) {
-        protocol_val = mln_dup_string_pool(ws->pool, tmp);
+        protocol_val = mln_string_pool_dup(ws->pool, tmp);
         if (protocol_val == NULL) return M_WS_RET_FAILED;
     }
 
@@ -261,15 +259,15 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
     if (tmp) {
         extension_val = mln_websocket_extension_tokens(ws->pool, tmp);
         if (extension_val == NULL) {
-            if (protocol_val != NULL) mln_free_string_pool(protocol_val);
+            if (protocol_val != NULL) mln_string_pool_free(protocol_val);
             return M_WS_RET_FAILED;
         }
     }
 
     mln_string_t *accept = mln_websocket_accept_field(http);
     if (accept == NULL) {
-        if (protocol_val != NULL) mln_free_string_pool(protocol_val);
-        if (extension_val != NULL) mln_free_string_pool(extension_val);
+        if (protocol_val != NULL) mln_string_pool_free(protocol_val);
+        if (extension_val != NULL) mln_string_pool_free(extension_val);
         return M_WS_RET_FAILED;
     }
 
@@ -287,21 +285,21 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
 
     if (protocol_val != NULL) {
         if (mln_http_set_field(http, &protocol_key, protocol_val) != M_HTTP_RET_OK) {
-            if (protocol_val != NULL) mln_free_string_pool(protocol_val);
-            if (extension_val != NULL) mln_free_string_pool(extension_val);
-            if (accept != NULL) mln_free_string_pool(accept);
+            if (protocol_val != NULL) mln_string_pool_free(protocol_val);
+            if (extension_val != NULL) mln_string_pool_free(extension_val);
+            if (accept != NULL) mln_string_pool_free(accept);
             return M_WS_RET_FAILED;
         }
     }
     if (extension_val != NULL) {
         if (mln_http_set_field(http, &extension_key, extension_val) != M_HTTP_RET_OK) {
-            if (extension_val != NULL) mln_free_string_pool(extension_val);
-            if (accept != NULL) mln_free_string_pool(accept);
+            if (extension_val != NULL) mln_string_pool_free(extension_val);
+            if (accept != NULL) mln_string_pool_free(accept);
             return M_WS_RET_FAILED;
         }
     }
     if (mln_http_set_field(http, &accept_key, accept) != M_HTTP_RET_OK) {
-        mln_free_string_pool(accept);
+        mln_string_pool_free(accept);
         return M_WS_RET_FAILED;
     }
     if (mln_http_set_field(http, &upgrade_key, &upgrade_val) != M_HTTP_RET_OK) return M_WS_RET_FAILED;
@@ -317,11 +315,11 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
 
 static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_string_t *in)
 {
-    mln_string_t *tmp = mln_dup_string_pool(pool, in);
+    mln_string_t *tmp = mln_string_pool_dup(pool, in);
     if (tmp == NULL) return NULL;
-    mln_string_t *array = mln_slice(tmp, ",");
+    mln_string_t *array = mln_string_slice(tmp, ",");
     if (array == NULL) {
-        mln_free_string_pool(tmp);
+        mln_string_pool_free(tmp);
         return NULL;
     }
     mln_string_t *p = array;
@@ -337,8 +335,8 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
     size--;
     buf = (mln_s8ptr_t)mln_alloc_m(pool, size);
     if (buf == NULL) {
-        mln_slice_free(array);
-        mln_free_string_pool(tmp);
+        mln_string_slice_free(array);
+        mln_string_pool_free(tmp);
         return NULL;
     }
     for (size = 0, p = array; p->str != NULL; p++) {
@@ -352,14 +350,12 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
         buf[size++] = ',';
     }
     buf[--size] = '0';
-    mln_slice_free(array);
-    mln_free_string_pool(tmp);
+    mln_string_slice_free(array);
+    mln_string_pool_free(tmp);
 
     mln_string_t t;
-    t.str = buf;
-    t.len = size;
-    t.is_referred = 1;
-    tmp = mln_dup_string_pool(pool, &t);
+    mln_string_nSet(&t, buf, size);
+    tmp = mln_string_pool_dup(pool, &t);
     mln_alloc_free(buf);
     return tmp;
 }
@@ -388,12 +384,10 @@ static mln_string_t *mln_websocket_accept_field(mln_http_t *http)
     mln_u8_t tmp[20];
     mln_uauto_t len = 0;
     mln_sha1_toBytes(&s, tmp, sizeof(tmp));
-    if (mln_base64_encode_pool(pool, tmp, sizeof(tmp), &buf, &len) < 0) return NULL;
-    key.str = (mln_s8ptr_t)buf;
-    key.len = len;
-    key.is_referred = 1;
-    val = mln_dup_string_pool(pool, &key);
-    mln_base64_free_pool(buf);
+    if (mln_base64_pool_encode(pool, tmp, sizeof(tmp), &buf, &len) < 0) return NULL;
+    mln_string_nSet(&key, buf, len);
+    val = mln_string_pool_dup(pool, &key);
+    mln_base64_pool_free(buf);
     return val;
 }
 
@@ -405,16 +399,16 @@ int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **
     mln_string_t *dup_uri = NULL;
     if (ws->uri == NULL) {
         mln_string_t tmp = mln_string("/");
-        dup_uri = mln_dup_string_pool(pool, &tmp);
+        dup_uri = mln_string_pool_dup(pool, &tmp);
     } else {
-        dup_uri = mln_dup_string_pool(pool, ws->uri);
+        dup_uri = mln_string_pool_dup(pool, ws->uri);
     }
     if (dup_uri == NULL) return M_WS_RET_FAILED;
     mln_string_t *dup_args = NULL;
     if (ws->args != NULL) {
-        dup_args = mln_dup_string_pool(pool, ws->args);
+        dup_args = mln_string_pool_dup(pool, ws->args);
         if (dup_args == NULL) {
-            mln_free_string_pool(dup_uri);
+            mln_string_pool_free(dup_uri);
             return M_WS_RET_FAILED;
         }
     }
@@ -436,7 +430,7 @@ int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **
     mln_string_t *key_val = mln_websocket_client_handshake_key_generate(pool);
     if (key_val == NULL) return M_WS_RET_FAILED;
     if (mln_http_set_field(http, &key_key, key_val) < 0) {
-        mln_free_string_pool(key_val);
+        mln_string_pool_free(key_val);
         return M_WS_RET_FAILED;
     }
     if (mln_http_set_field(http, &upgrade_key, &upgrade_val) < 0) return M_WS_RET_FAILED;
@@ -471,12 +465,10 @@ static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *po
         srand(tmp>>16|tmp<<16);
     }
 
-    if (mln_base64_encode_pool(pool, buf, sizeof(buf), &out, &outlen) < 0) return NULL;
-    s.str = (mln_s8ptr_t)out;
-    s.len = outlen;
-    s.is_referred = 1;
-    sdup = mln_dup_string_pool(pool, &s);
-    mln_base64_free_pool(out);
+    if (mln_base64_pool_encode(pool, buf, sizeof(buf), &out, &outlen) < 0) return NULL;
+    mln_string_nSet(&s, out, outlen);
+    sdup = mln_string_pool_dup(pool, &s);
+    mln_base64_pool_free(out);
     return sdup;
 }
 

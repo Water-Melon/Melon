@@ -786,7 +786,7 @@ mln_tcp_conn_recv_chain_file(int sockfd, \
     if (n <= 0) return n;
 
     if (last == NULL) {
-        if ((b->file = mln_file_tmp_open(pool)) == NULL) {
+        if ((b->file = mln_file_open_tmp(pool)) == NULL) {
             return -1;
         }
         b->file_send_pos = b->file_pos = 0;

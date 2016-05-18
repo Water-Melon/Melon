@@ -52,7 +52,7 @@ mln_thread_init(struct mln_thread_attr *attr) __NONNULL1(1);
 static void
 mln_thread_destroy(mln_event_t *ev, mln_thread_t *t);
 static void
-mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t);
+mln_thread_clearMsg_queue(mln_event_t *ev, mln_thread_t *t);
 static int
 mln_thread_hash_init(void);
 static int
@@ -86,7 +86,7 @@ mln_thread_init(struct mln_thread_attr *attr)
     mln_thread_t *t = (mln_thread_t *)malloc(sizeof(mln_thread_t));
     if (t == NULL) return NULL;
     t->thread_main = attr->thread_main;
-    t->alias = mln_new_string(attr->alias);
+    t->alias = mln_string_new(attr->alias);
     if (t->alias == NULL) {
         free(t);
         return NULL;
@@ -97,7 +97,7 @@ mln_thread_init(struct mln_thread_attr *attr)
     t->is_created = 0;
     t->stype = attr->stype;
     if (mln_tcp_conn_init(&(t->conn), attr->sockfd) < 0) {
-        mln_free_string(t->alias);
+        mln_string_free(t->alias);
         free(t);
         return NULL;
     }
@@ -115,7 +115,7 @@ mln_thread_destroy(mln_event_t *ev, mln_thread_t *t)
 
     if (t == NULL) return;
     if (t->alias != NULL)
-        mln_free_string(t->alias);
+        mln_string_free(t->alias);
     if (t->argv != NULL) {
         if (t->argv[t->argc-1] != NULL)
             free(t->argv[t->argc-1]);
@@ -138,12 +138,12 @@ mln_thread_destroy(mln_event_t *ev, mln_thread_t *t)
     c = mln_tcp_conn_get_head(&(t->conn), M_C_RECV);
     mln_thread_itc_chain_release_msg(c);
     mln_tcp_conn_destroy(&(t->conn));
-    mln_thread_clear_msg_queue(ev, t);
+    mln_thread_clearMsg_queue(ev, t);
     free(t);
 }
 
 static void
-mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t)
+mln_thread_clearMsg_queue(mln_event_t *ev, mln_thread_t *t)
 {
     mln_thread_msgq_t *tmq;
     while ((tmq = t->local_head) != NULL) {
@@ -157,7 +157,7 @@ mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t)
             msg_local_chain_del(&(sender->local_head), &(sender->local_tail), tmq);
         }
         msg_dest_chain_del(&(t->dest_head), &(t->dest_tail), tmq);
-        mln_thread_clear_msg(&(tmq->msg));
+        mln_thread_clearMsg(&(tmq->msg));
         mln_thread_msgq_destroy(tmq);
     }
 }
@@ -165,15 +165,15 @@ mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t)
 /*
  * msg
  */
-void mln_thread_clear_msg(mln_thread_msg_t *msg)
+void mln_thread_clearMsg(mln_thread_msg_t *msg)
 {
     if (msg == NULL) return;
     if (msg->dest != NULL) {
-        mln_free_string(msg->dest);
+        mln_string_free(msg->dest);
         msg->dest = NULL;
     }
     if (msg->src != NULL) {
-        mln_free_string(msg->src);
+        mln_string_free(msg->src);
         msg->src = NULL;
     }
     msg->pfunc = NULL;
@@ -198,7 +198,7 @@ int mln_load_thread(mln_event_t *ev)
         abort();
     }
 
-    mln_u32_t nr_cmds = mln_get_cmd_num(cf, thread_domain);
+    mln_u32_t nr_cmds = mln_conf_get_cmdNum(cf, thread_domain);
     if (nr_cmds == 0) return 0;
 
     mln_conf_cmd_t **v = (mln_conf_cmd_t **)calloc(nr_cmds, sizeof(mln_conf_cmd_t *));;
@@ -207,7 +207,7 @@ int mln_load_thread(mln_event_t *ev)
         mln_hash_destroy(thread_hash, M_HASH_F_NONE);
         return -1;
     }
-    mln_get_all_cmds(cf, thread_domain, v);
+    mln_conf_get_cmds(cf, thread_domain, v);
 
     mln_u32_t i;
     for (i = 0; i < nr_cmds; i++) {
@@ -225,16 +225,16 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
     mln_conf_item_t *ci;
     int fds[2];
     struct mln_thread_attr thattr;
-    if (!mln_const_strcmp(cc->cmd_name, thread_s_restart)) {
+    if (!mln_string_constStrcmp(cc->cmd_name, thread_s_restart)) {
         thattr.stype = THREAD_RESTART;
-    } else if (!mln_const_strcmp(cc->cmd_name, thread_s_default)) {
+    } else if (!mln_string_constStrcmp(cc->cmd_name, thread_s_default)) {
         thattr.stype = THREAD_DEFAULT;
     } else {
         mln_log(error, "No such command '%s' in domain '%s'.\n", \
                 cc->cmd_name, thread_domain);
         return;
     }
-    nr_args = mln_get_cmd_args_num(cc);
+    nr_args = mln_conf_get_argNum(cc);
     if (nr_args < 1) {
         mln_log(error, "Invalid arguments in domain '%s'.\n", thread_domain);
         return;
@@ -374,7 +374,7 @@ mln_thread_itc_chain_release_msg(mln_chain_t *c)
 
     for (; c != NULL; c = c->next) {
         if ((b = c->buf)== NULL) continue;
-        mln_thread_clear_msg((mln_thread_msg_t *)(b->pos));
+        mln_thread_clearMsg((mln_thread_msg_t *)(b->pos));
     }
 }
 
@@ -428,10 +428,10 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
         }
 
         m = &(tmq->msg);
-        m->src = mln_dup_string(t->alias);
+        m->src = mln_string_dup(t->alias);
         if (m->src == NULL) {
             mln_log(error, "No memory.\n");
-            mln_thread_clear_msg(&(tmq->msg));
+            mln_thread_clearMsg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             continue;
         }
@@ -439,7 +439,7 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
         target = (mln_thread_t *)mln_hash_search(thread_hash, m->dest);
         if (target == NULL) {
             mln_log(report, "No such thread named '%s'.\n", m->dest->str);
-            mln_thread_clear_msg(&(tmq->msg));
+            mln_thread_clearMsg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             continue;
         }
@@ -504,14 +504,14 @@ again:
         c = mln_chain_new(pool);
         if (c == NULL) {
             mln_log(error, "No memory.\n");
-            mln_thread_clear_msg(&(tmq->msg));
+            mln_thread_clearMsg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             continue;
         }
         b = mln_buf_new(pool);
         if (b == NULL) {
             mln_log(error, "No memory.\n");
-            mln_thread_clear_msg(&(tmq->msg));
+            mln_thread_clearMsg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             mln_chain_pool_release(c);
             continue;
@@ -520,7 +520,7 @@ again:
         buf = (mln_u8ptr_t)mln_alloc_m(pool, sizeof(mln_thread_msg_t));
         if (buf == NULL) {
             mln_log(error, "No memory.\n");
-            mln_thread_clear_msg(&(tmq->msg));
+            mln_thread_clearMsg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             mln_chain_pool_release(c);
             continue;
@@ -582,7 +582,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
     mln_chain_pool_release_all(c);
     mln_chain_pool_release_all(mln_tcp_conn_remove(&(t->conn), M_C_SENT));
 
-    mln_thread_clear_msg_queue(ev, t);
+    mln_thread_clearMsg_queue(ev, t);
 
     int fds[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
@@ -653,7 +653,7 @@ mln_thread_hash_cmp(mln_hash_t *h, void *k1, void *k2)
 {
     mln_string_t *str1 = (mln_string_t *)k1;
     mln_string_t *str2 = (mln_string_t *)k2;
-    return !mln_strcmp(str1, str2);
+    return !mln_string_strcmp(str1, str2);
 }
 
 /*
@@ -676,7 +676,7 @@ void mln_thread_kill(mln_string_t *alias)
     pthread_cancel(t->tid);
 }
 
-void mln_set_cleanup(void (*tcleanup)(void *), void *data)
+void mln_thread_setCleanup(void (*tcleanup)(void *), void *data)
 {
     thread_cleanup = tcleanup;
     thread_data = data;

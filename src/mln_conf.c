@@ -84,7 +84,7 @@ mln_conf_item_init(mln_conf_lex_struct_t *cls, mln_conf_item_t *ci) __NONNULL2(1
 static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current) __NONNULL2(1,2);
 static mln_conf_item_t *
 mln_conf_search_item(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
-static int mln_get_all_cmds_scan(void *key, void *val, void *udata);
+static int mln_conf_get_cmds_scan(void *key, void *val, void *udata);
 static int mln_conf_dump_conf_scan(void *key, void *val, void *udata);
 static int mln_conf_dump_domain_scan(void *key, void *val, void *udata);
 /*for hook*/
@@ -100,14 +100,14 @@ mln_conf_lex_sglq_handler(mln_lex_t *lex, void *data)
 {
     lex->result_buf[0] = 0;
     lex->result_cur_ptr = lex->result_buf;
-    char c = mln_geta_char(lex);
+    char c = mln_lex_getAChar(lex);
     if (c == MLN_ERR) return NULL;
     if (!isascii(c) || c == '\'') {
         lex->error = MLN_LEX_EINVCHAR;
         return NULL;
     }
     if (mln_get_char(lex, c) < 0) return NULL;
-    if ((c = mln_geta_char(lex)) == MLN_ERR) return NULL;
+    if ((c = mln_lex_getAChar(lex)) == MLN_ERR) return NULL;
     if (c != '\'') {
         lex->error = MLN_LEX_EINVCHAR;
         return NULL;
@@ -120,44 +120,44 @@ mln_get_char(mln_lex_t *lex, char c)
 {
     if (c == '\\') {
         char n;
-        if ((n = mln_geta_char(lex)) == MLN_ERR) return -1;
+        if ((n = mln_lex_getAChar(lex)) == MLN_ERR) return -1;
         switch ( n ) {
             case '\"':
-                if (mln_puta_char(lex, n) == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, n) == MLN_ERR) return -1;
                 break;
             case '\'':
-                if (mln_puta_char(lex, n) == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, n) == MLN_ERR) return -1;
                 break;
             case 'n':
-                if (mln_puta_char(lex, '\n') == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, '\n') == MLN_ERR) return -1;
                 break;
             case 't':
-                if (mln_puta_char(lex, '\t') == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, '\t') == MLN_ERR) return -1;
                 break;
             case 'b':
-                if (mln_puta_char(lex, '\b') == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, '\b') == MLN_ERR) return -1;
                 break;
             case 'a':
-                if (mln_puta_char(lex, '\a') == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, '\a') == MLN_ERR) return -1;
                 break;
             case 'f':
-                if (mln_puta_char(lex, '\f') == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, '\f') == MLN_ERR) return -1;
                 break;
             case 'r':
-                if (mln_puta_char(lex, '\r') == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, '\r') == MLN_ERR) return -1;
                 break;
             case 'v':
-                if (mln_puta_char(lex, '\v') == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, '\v') == MLN_ERR) return -1;
                 break;
             case '\\':
-                if (mln_puta_char(lex, '\\') == MLN_ERR) return -1;
+                if (mln_lex_putAChar(lex, '\\') == MLN_ERR) return -1;
                 break;
             default:
                 lex->error = MLN_LEX_EINVCHAR;
                 return -1;
         }
     } else {
-        if (mln_puta_char(lex, c) == MLN_ERR) return -1;
+        if (mln_lex_putAChar(lex, c) == MLN_ERR) return -1;
     }
     return 0;
 }
@@ -169,7 +169,7 @@ mln_conf_lex_dblq_handler(mln_lex_t *lex, void *data)
     lex->result_cur_ptr = lex->result_buf;
     char c;
     while ( 1 ) {
-        c = mln_geta_char(lex);
+        c = mln_lex_getAChar(lex);
         if (c == MLN_ERR) return NULL;
         if (c == MLN_EOF) {
             lex->error = MLN_LEX_EINVEOF;
@@ -184,51 +184,51 @@ mln_conf_lex_dblq_handler(mln_lex_t *lex, void *data)
 static mln_conf_lex_struct_t *
 mln_conf_lex_slash_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_geta_char(lex);
+    char c = mln_lex_getAChar(lex);
     if (c == MLN_ERR) return NULL;
     if (c == '*') {
-        if (mln_puta_char(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
         while ( 1 ) {
-            c = mln_geta_char(lex);
+            c = mln_lex_getAChar(lex);
             if (c == MLN_ERR) return NULL;
             if (c == MLN_EOF) {
-                mln_step_back(lex);
+                mln_lex_stepBack(lex);
                 break;
             }
             if (c == '\n') lex->line++;
             if (c == '*') {
-                if (mln_puta_char(lex, c) == MLN_ERR) return NULL;
-                c = mln_geta_char(lex);
+                if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+                c = mln_lex_getAChar(lex);
                 if (c == MLN_ERR) return NULL;
                 if (c == MLN_EOF) {
-                    mln_step_back(lex);
+                    mln_lex_stepBack(lex);
                     break;
                 }
                 if (c == '\n') lex->line++;
                 if (c == '/') {
-                    if (mln_puta_char(lex, c) == MLN_ERR) return NULL;
+                    if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
                     break;
                 }
             }
-            if (mln_puta_char(lex, c) == MLN_ERR) return NULL;
+            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
         }
     } else if (c == '/') {
-        if (mln_puta_char(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
         while ( 1 ) {
-            c = mln_geta_char(lex);
+            c = mln_lex_getAChar(lex);
             if (c == MLN_ERR) return NULL;
             if (c == MLN_EOF) {
-                mln_step_back(lex);
+                mln_lex_stepBack(lex);
                 break;
             }
             if (c == '\n') {
-                mln_step_back(lex);
+                mln_lex_stepBack(lex);
                 break;
             }
-            if (mln_puta_char(lex, c) == MLN_ERR) return NULL;
+            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
         }
     } else {
-        mln_step_back(lex);
+        mln_lex_stepBack(lex);
         return mln_conf_lex_new(lex, CONF_TK_SLASH);
     }
     return mln_conf_lex_new(lex, CONF_TK_COMMENT);
@@ -315,7 +315,7 @@ static inline mln_conf_t *mln_conf_init(void)
         free(cf);
         return NULL;
     }
-    mln_size_t path_len = strlen(mln_get_path());
+    mln_size_t path_len = strlen(mln_path());
     char *conf_file_path = malloc(path_len + sizeof(conf_filename) + 1);
     if (conf_file_path == NULL) {
         fprintf(stderr, "No memory.\n");
@@ -323,7 +323,7 @@ static inline mln_conf_t *mln_conf_init(void)
         free(cf);
         return NULL;
     }
-    memcpy(conf_file_path, mln_get_path(), path_len);
+    memcpy(conf_file_path, mln_path(), path_len);
     conf_file_path[path_len] = '/';
     memcpy(conf_file_path+path_len+1, conf_filename, sizeof(conf_filename));
     struct mln_lex_attr lattr;
@@ -349,7 +349,7 @@ static inline mln_conf_t *mln_conf_init(void)
         mln_conf_destroy(cf);
         return NULL;
     }
-    mln_string_t *main_domain = mln_dup_string(&default_domain);
+    mln_string_t *main_domain = mln_string_dup(&default_domain);
     if (main_domain == NULL) {
         fprintf(stderr, "No memory.\n");
         mln_conf_domain_destroy((void *)cd);
@@ -358,7 +358,7 @@ static inline mln_conf_t *mln_conf_init(void)
     }
     if (mln_hash_insert(cf->domain_hash_tbl, main_domain, cd) < 0) {
         fprintf(stderr, "No memory.\n");
-        mln_free_string(main_domain);
+        mln_string_free(main_domain);
         mln_conf_domain_destroy((void *)cd);
         mln_conf_destroy(cf);
         return NULL;
@@ -399,7 +399,7 @@ mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name)
     cd = (mln_conf_domain_t *)malloc(sizeof(mln_conf_domain_t));
     if (cd == NULL) return NULL;
     cd->search = mln_conf_search_cmd;
-    cd->domain_name = mln_dup_string(domain_name);
+    cd->domain_name = mln_string_dup(domain_name);
     if (cd->domain_name == NULL) {
         free(cd);
         return NULL;
@@ -414,7 +414,7 @@ mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name)
     hattr.calc_prime = 0;
     cd->cmd_hash_tbl = mln_hash_init(&hattr);
     if (cd->cmd_hash_tbl == NULL) {
-        mln_free_string(cd->domain_name);
+        mln_string_free(cd->domain_name);
         free(cd);
         return NULL;
     }
@@ -427,7 +427,7 @@ mln_conf_domain_destroy(void *data)
     if (data == NULL) return;
     mln_conf_domain_t *cd = (mln_conf_domain_t *)data;
     if (cd->domain_name != NULL) {
-        mln_free_string(cd->domain_name);
+        mln_string_free(cd->domain_name);
         cd->domain_name = NULL;
     }
     if (cd->cmd_hash_tbl != NULL) {
@@ -454,23 +454,21 @@ mln_conf_domain_calc_hash(mln_hash_t *h, void *key)
 static int
 mln_conf_domain_cmp(mln_hash_t *h, void *key1, void *key2)
 {
-    return !mln_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
+    return !mln_string_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
 }
 
 static void
 mln_conf_key_free(void *key)
 {
     if (key == NULL) return;
-    mln_free_string((mln_string_t *)key);
+    mln_string_free((mln_string_t *)key);
 }
 
 static mln_conf_domain_t *
 mln_conf_search_domain(mln_conf_t *cf, char *domain_name)
 {
     mln_string_t str;
-    str.str = domain_name;
-    str.len = strlen(domain_name);
-    str.is_referred = 1;
+    mln_string_set(&str, domain_name);
     return mln_hash_search(cf->domain_hash_tbl, &str);
 }
 
@@ -481,7 +479,7 @@ mln_conf_cmd_init(mln_string_t *cmd_name)
     mln_conf_cmd_t *cc;
     cc = (mln_conf_cmd_t *)malloc(sizeof(mln_conf_cmd_t));
     if (cc == NULL) return NULL;
-    cc->cmd_name = mln_dup_string(cmd_name);
+    cc->cmd_name = mln_string_dup(cmd_name);
     if (cc->cmd_name == NULL) {
         free(cc);
         return NULL;
@@ -498,7 +496,7 @@ mln_conf_cmd_destroy(void *data)
     if (data == NULL) return ;
     mln_conf_cmd_t *cc = (mln_conf_cmd_t *)data;
     if (cc->cmd_name != NULL) {
-        mln_free_string(cc->cmd_name);
+        mln_string_free(cc->cmd_name);
         cc->cmd_name = NULL;
     }
     if (cc->arg_tbl != NULL) {
@@ -508,7 +506,7 @@ mln_conf_cmd_destroy(void *data)
             ci = &(cc->arg_tbl[i]);
             if (ci->type == CONF_NONE) continue;
             if (ci->type == CONF_STR) {
-                mln_free_string(ci->val.s);
+                mln_string_free(ci->val.s);
                 ci->val.s = NULL;
             }
         }
@@ -536,16 +534,14 @@ mln_conf_cmd_calc_hash(mln_hash_t *h, void *key)
 static int
 mln_conf_cmd_cmp(mln_hash_t *h, void *key1, void *key2)
 {
-    return !mln_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
+    return !mln_string_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
 }
 
 static mln_conf_cmd_t *
 mln_conf_search_cmd(mln_conf_domain_t *cd, char *cmd_name)
 {
     mln_string_t str;
-    str.str = cmd_name;
-    str.len = strlen(cmd_name);
-    str.is_referred = 1;
+    mln_string_set(&str, cmd_name);
     return mln_hash_search(cd->cmd_hash_tbl, &str);
 }
 
@@ -583,7 +579,7 @@ mln_conf_item_init(mln_conf_lex_struct_t *cls, mln_conf_item_t *ci)
             break;
         case CONF_TK_STRING:
             ci->type = CONF_STR;
-            ci->val.s = mln_dup_string(cls->text);
+            ci->val.s = mln_string_dup(cls->text);
             if (ci->val.s == NULL) {
                 fprintf(stderr, "No memory.\n");
                 return -1;
@@ -675,7 +671,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
             mln_conf_lex_free(fir);
             break;
         } else if (fir->type == CONF_TK_RBRACE) {
-            if (mln_strcmp(current->domain_name, &default_domain)) {
+            if (mln_string_strcmp(current->domain_name, &default_domain)) {
                 mln_conf_lex_free(fir);
                 return 0;
             }
@@ -702,12 +698,12 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
         /*as domain*/
         if (next->type == CONF_TK_LBRACE) {
             mln_conf_lex_free(next);
-            if (mln_strcmp(current->domain_name, &default_domain)) {
+            if (mln_string_strcmp(current->domain_name, &default_domain)) {
                 CONF_ERR(fir, "Illegal domain");
                 mln_conf_lex_free(fir);
                 return -1;
             }
-            tk = mln_dup_string(fir->text);
+            tk = mln_string_dup(fir->text);
             mln_conf_lex_free(fir);
             if (tk == NULL) {
                 fprintf(stderr, "No memory.\n");
@@ -716,12 +712,12 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
             cd = mln_conf_domain_init(cf, tk);
             if (cd == NULL) {
                 fprintf(stderr, "No memory.\n");
-                mln_free_string(tk);
+                mln_string_free(tk);
                 return -1;
             }
             if (mln_hash_insert(cf->domain_hash_tbl, tk, cd) < 0) {
                 fprintf(stderr, "No memory.\n");
-                mln_free_string(tk);
+                mln_string_free(tk);
                 mln_conf_domain_destroy(cd);
                 return -1;
             }
@@ -729,7 +725,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
             continue;
         }
         /*as command*/
-        tk = mln_dup_string(fir->text);
+        tk = mln_string_dup(fir->text);
         mln_conf_lex_free(fir);
         if (tk == NULL) {
             fprintf(stderr, "No memory.\n");
@@ -739,14 +735,14 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
         cmd = mln_conf_cmd_init(tk);
         if (cmd == NULL) {
             fprintf(stderr, "No memory.\n");
-            mln_free_string(tk);
+            mln_string_free(tk);
             mln_conf_lex_free(next);
             return -1;
         }
         if (mln_hash_insert(current->cmd_hash_tbl, tk, cmd) < 0) {
             fprintf(stderr, "No memory.\n");
             mln_conf_cmd_destroy(cmd);
-            mln_free_string(tk);
+            mln_string_free(tk);
             mln_conf_lex_free(next);
             return -1;
         }
@@ -850,7 +846,7 @@ mln_conf_t *mln_get_conf(void)
     return gConf;
 }
 
-mln_u32_t mln_get_cmd_num(mln_conf_t *cf, char *domain)
+mln_u32_t mln_conf_get_cmdNum(mln_conf_t *cf, char *domain)
 {
     mln_conf_domain_t *cd = cf->search(cf, domain);
     if (cd == NULL) return 0;
@@ -862,27 +858,27 @@ struct conf_cmds_scan_s {
     mln_u32_t        pos;
 };
 
-void mln_get_all_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **v)
+void mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **v)
 {
     mln_conf_domain_t *cd = cf->search(cf, domain);
     if (cd == NULL) return;
     struct conf_cmds_scan_s ccs;
     ccs.cc = v;
     ccs.pos = 0;
-    if (mln_hash_scan_all(cd->cmd_hash_tbl, mln_get_all_cmds_scan, (void *)&ccs) < 0) {
+    if (mln_hash_scan_all(cd->cmd_hash_tbl, mln_conf_get_cmds_scan, (void *)&ccs) < 0) {
         mln_log(error, "Shouldn't be here.\n");
         abort();
     }
 }
 
-static int mln_get_all_cmds_scan(void *key, void *val, void *udata)
+static int mln_conf_get_cmds_scan(void *key, void *val, void *udata)
 {
     struct conf_cmds_scan_s *ccs = (struct conf_cmds_scan_s *)udata;
     ccs->cc[(ccs->pos)++] = (mln_conf_cmd_t *)val;
     return 0;
 }
 
-mln_u32_t mln_get_cmd_args_num(mln_conf_cmd_t *cc)
+mln_u32_t mln_conf_get_argNum(mln_conf_cmd_t *cc)
 {
     return cc->n_args;
 }
@@ -890,7 +886,7 @@ mln_u32_t mln_get_cmd_args_num(mln_conf_cmd_t *cc)
 /*
  * dump
  */
-void mln_dump_conf(void)
+void mln_conf_dump(void)
 {
     printf("CONFIGURATIONS:\n");
     mln_hash_scan_all(gConf->domain_hash_tbl, mln_conf_dump_conf_scan, NULL);

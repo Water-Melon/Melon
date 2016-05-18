@@ -50,13 +50,13 @@ echo -e "Installation Path \t[$install_path]"
 #build path.c & h
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
 echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
-echo -e "\nextern char *mln_get_path(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_path(void);" >> include/mln_path.h
 echo -e "\n#endif\n" >> include/mln_path.h
 
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > src/mln_path.c
 echo "#include \"mln_path.h\"" >> src/mln_path.c
 echo -e "\nchar install_path[] = \"$install_path\";" >> src/mln_path.c
-echo -e "\nchar *mln_get_path(void)\n{" >> src/mln_path.c
+echo -e "\nchar *mln_path(void)\n{" >> src/mln_path.c
 echo "    return install_path;" >> src/mln_path.c
 echo "}" >> src/mln_path.c
 

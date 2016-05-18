@@ -53,7 +53,7 @@ int mln_base64_encode(mln_u8ptr_t in, mln_uauto_t inlen, \
     return 0;
 }
 
-int mln_base64_encode_pool(mln_alloc_t *pool, \
+int mln_base64_pool_encode(mln_alloc_t *pool, \
                            mln_u8ptr_t in, mln_uauto_t inlen, \
                            mln_u8ptr_t *out, mln_uauto_t *outlen)
 {
@@ -150,7 +150,7 @@ int mln_base64_decode(mln_u8ptr_t in, mln_uauto_t inlen, \
     return 0;
 }
 
-int mln_base64_decode_pool(mln_alloc_t *pool, \
+int mln_base64_pool_decode(mln_alloc_t *pool, \
                            mln_u8ptr_t in, mln_uauto_t inlen, \
                            mln_u8ptr_t *out, mln_uauto_t *outlen)
 {
@@ -208,7 +208,7 @@ void mln_base64_free(mln_u8ptr_t data)
     free(data);
 }
 
-void mln_base64_free_pool(mln_u8ptr_t data)
+void mln_base64_pool_free(mln_u8ptr_t data)
 {
     if (data == NULL) return;
     mln_alloc_free(data);
