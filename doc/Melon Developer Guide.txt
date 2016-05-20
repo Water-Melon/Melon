@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.5.1
+Melon Version 1.5.2
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -58,8 +58,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.5.1.
-  b) Change directory to the melon-1.5.1/.
+  a) Download and decompress melon-1.5.2.
+  b) Change directory to the melon-1.5.2/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -71,7 +71,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.5.1/include/mln_types.h.
+Their definitions can be found in melon-1.5.2/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -1618,14 +1618,14 @@ Their definitions can be found in melon-1.5.1/include/mln_types.h.
 
   25) SHA1
       a) void mln_sha1_init(mln_sha1_t *s);
-         Inialize a SHA1 instance.
+         Initialize a SHA1 instance.
          's' can be allocated on stack or heap.
 
       b) mln_sha1_t *mln_sha1_new(void);
-         Create a new SHA1 instance on heap.
+         Create and initialize a new SHA1 instance on heap.
 
       c) mln_sha1_t *mln_sha1_pool_new(mln_alloc_t *pool);
-         Create a new SHA1 instance on 'pool'.
+         Create and initialize a new SHA1 instance on 'pool'.
 
       d) void mln_sha1_free(mln_sha1_t *s);
          Free SHA1 instance.
@@ -1650,6 +1650,32 @@ Their definitions can be found in melon-1.5.1/include/mln_types.h.
          Put SHA1 result into 'buf'.
          'len' is the length of 'buf'.
          The data filled in 'buf' is a hex string.
+
+      i) void mln_sha256_init(mln_sha256_t *s);
+         Initialize a SHA256 instance.
+         's' can be allocated on stack or heap.
+
+      j) mln_sha256_t *mln_sha256_new(void);
+         Create and initialize a new SHA256 instance on heap.
+
+      k) mln_sha256_t *mln_sha256_pool_new(mln_alloc_t *pool);
+         Create and initialize a new SHA256 instance on 'pool'.
+
+      l) void mln_sha256_free(mln_sha256_t *s);
+         Free SHA256 instance.
+
+      m) void mln_sha256_pool_free(mln_sha256_t *s);
+         Free SHA256 instance to a memory pool.
+
+      n) void mln_sha256_calc(mln_sha256_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last);
+         SHA256 calculation.
+         All arguments are the same as 'mln_sha1_calc()'.
+
+      o) void mln_sha256_toBytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len);
+         The same as 'mln_sha1_toBytes()', but the first argument.
+
+      p) void mln_sha256_toString(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len);
+         The same as 'mln_sha1_toString()', but the first argument.
 
   26) DES
       a) void mln_des_init(mln_des_t *d, mln_u64_t key);
