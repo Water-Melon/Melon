@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.5.2
+Melon Version 1.5.3
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -58,8 +58,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.5.2.
-  b) Change directory to the melon-1.5.2/.
+  a) Download and decompress melon-1.5.3.
+  b) Change directory to the melon-1.5.3/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -71,7 +71,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.5.2/include/mln_types.h.
+Their definitions can be found in melon-1.5.3/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -1582,6 +1582,25 @@ Their definitions can be found in melon-1.5.2/include/mln_types.h.
                                     mln_bignum_t *gcd);
          Extend Eulid calculation.
 
+      v) mln_bignum_isPositive(pbn);
+         Test whether 'pbn' is positive or not.
+
+      w) mln_bignum_isNegative(pbn);
+         Test whether 'pbn' is negative or not.
+
+      x) mln_bignum_getLength(pbn);
+         Get the number of 4-octet data;
+         So if we want to get the number of bytes, we can 'mln_bignum_getLength(pbn) * 4'.
+
+      y) mln_bignum_zero();
+         Initialize a big number to be zero.
+
+      z) int mln_bignum_i2osp(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len);
+         Transform 'buf' into a mln_bignum_t 'n'.
+
+      aa) int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len);
+         Transform 'n' into an octet string 'buf'.
+
   24) MD5
       a) void mln_md5_init(mln_md5_t *m);
          Initialize a MD5 instance.
@@ -1837,8 +1856,27 @@ Their definitions can be found in melon-1.5.2/include/mln_types.h.
       e) int mln_rsa_keyGenerate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits);
          Generate a couple of RSA keys.
 
-      f) int mln_rsa_calc(mln_rsa_key_t *key, mln_bignum_t *in, mln_bignum_t *out);
-         RSA encrypt and decrypt.
+      f) mln_string_t *mln_RSAESPKCS1V15PubEncrypt(mln_rsa_key_t *pub, mln_string_t *text);
+         RSAAES-PKCS1-V1.5 public key encryption.
+
+      g) mln_string_t *mln_RSAESPKCS1V15PubDecrypt(mln_rsa_key_t *pub, mln_string_t *cipher);
+         RSAAES-PKCS1-V1.5 public key decryption.
+
+      h) mln_string_t *mln_RSAESPKCS1V15PriEncrypt(mln_rsa_key_t *pri, mln_string_t *text);
+         RSAAES-PKCS1-V1.5 private key encryption.
+
+      i) mln_string_t *mln_RSAESPKCS1V15PriDecrypt(mln_rsa_key_t *pri, mln_string_t *cipher);
+         RSAAES-PKCS1-V1.5 private key decryption.
+
+      j) void mln_RSAESPKCS1V15Free(mln_string_t *s);
+         Free the return value of 'mln_RSAESPKCS1V15PubEncrypt()', 'mln_RSAESPKCS1V15PubDecrypt()',
+         'mln_RSAESPKCS1V15PriEncrypt()', 'mln_RSAESPKCS1V15PriDecrypt()', 'mln_RSASSAPKCS1V15SIGN()'.
+
+      k) mln_string_t *mln_RSASSAPKCS1V15SIGN(mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType);
+         RSASSA-PKCS1-V1.5 signature.
+
+      l) int mln_RSASSAPKCS1V15VERIFY(mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s, mln_u32_t hashType);
+         RSASSA-PKCS1-V1.5 verification.
 
   31) Websocket
       Just like HTTP, the interfaces of websocket don't focus on the details of protocol transmition.

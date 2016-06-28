@@ -963,18 +963,16 @@ mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
     mln_bignum_positive(bn);
     mln_u64_t *data = bn->data;
     gettimeofday(&tv, NULL);
-    srand(tv.tv_sec*1000000+tv.tv_usec);
-    mln_u32_t val, times = bitwidth / 32, off;
+    mln_u32_t val = tv.tv_sec*1000000+tv.tv_usec, times = bitwidth / 32, off;
     mln_s32_t i;
 
     for (i = 0; i < times; i++) {
-        val = (mln_u32_t)rand();
-        srand(val);
+        val = (mln_u32_t)rand_r(&val);
         data[i] = ((mln_u64_t)val & 0xffffffff);
     }
 
     if ((off = bitwidth % 32)) {
-        data[i] = (((mln_u64_t)rand() * 0xfdfd) & 0xffffffff);
+        data[i] = (((mln_u64_t)rand_r(&val) * 0xfdfd) & 0xffffffff);
         data[i] |= ((mln_u64_t)1 << (off-1));
         data[i] <<= (64 - off);
         data[i] >>= (64 - off);
@@ -986,8 +984,8 @@ mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
         } else {
             if (data[i-1] == 0) {
                 gettimeofday(&tv, NULL);
-                srand(tv.tv_sec*1000000+tv.tv_usec);
-                data[i-1] = (mln_u32_t)rand();
+                val = tv.tv_sec*1000000+tv.tv_usec;
+                data[i-1] = (mln_u32_t)rand_r(&val);
                 data[i-1] |= 0x80000000;
             }
             bn->length = i;
@@ -1001,11 +999,12 @@ mln_bignum_random_scope(mln_bignum_t *bn, mln_u32_t bitwidth, mln_bignum_t *max)
 {
     mln_u32_t width;
     struct timeval tv;
+    mln_u32_t val;
 
 lp:
     gettimeofday(&tv, NULL);
-    srand(tv.tv_sec*1000000+tv.tv_usec);
-    width = (mln_u32_t)rand() % bitwidth;
+    val = tv.tv_sec*1000000+tv.tv_usec;
+    width = (mln_u32_t)rand_r(&val) % bitwidth;
     if (width < 2) goto lp;
     mln_bignum_random_prime(bn, width);
 }
@@ -1056,6 +1055,56 @@ int mln_bignum_extendEulid(mln_bignum_t *a, mln_bignum_t *b, mln_bignum_t *x, ml
     __mln_bignum_mul(&tmp, &ty);
     __mln_bignum_sub(&tx, &tmp);
     if (y != NULL) *y = tx;
+    return 0;
+}
+
+int mln_bignum_i2osp(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
+{
+    if (n->tag == M_BIGNUM_NEGATIVE || (n->length<<2) > len) return -1;
+
+    mln_u64_t *p = n->data + n->length - 1, *end = n->data;
+    mln_size_t i, max = len - (n->length << 2);
+    for (i = 0; i < max; i++) {
+        buf[i] = 0;
+    }
+    for (; p >= end; p--) {
+        buf[i++] = (*p >> 24) & 0xff;
+        buf[i++] = (*p >> 16) & 0xff;
+        buf[i++] = (*p >> 8) & 0xff;
+        buf[i++] = *p & 0xff;
+    }
+    return 0;
+}
+
+int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
+{
+    if (len > (M_BIGNUM_SIZE<<2)) return -1;
+
+    mln_u64_t *data = n->data;
+    mln_u8ptr_t p = buf + len - 1;
+    while (1) {
+        *data = 0;
+        if (p < buf) break;
+        (*data) |= (((mln_u64_t)(*p--)));
+        if (p < buf) {
+            data++;
+            break;
+        }
+        (*data) |= (((mln_u64_t)(*p--)) << 8);
+        if (p < buf) {
+            data++;
+            break;
+        }
+        (*data) |= (((mln_u64_t)(*p--)) << 16);
+        if (p < buf) {
+            data++;
+            break;
+        }
+        (*data) |= (((mln_u64_t)(*p--)) << 24);
+        data++;
+    }
+    n->length = data - n->data;
+    mln_bignum_positive(n);
     return 0;
 }
 

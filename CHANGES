@@ -1,3 +1,7 @@
+Changes with melon 1.5.3                                          28 Jun 2016
+    *) Added some interfaces for RSA
+    *) Added some interfaces for Big number.
+
 Changes with melon 1.5.2                                          20 May 2016
     *) Added SHA256.
 
