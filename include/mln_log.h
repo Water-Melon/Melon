@@ -18,15 +18,6 @@ enum log_level {
     error
 };
 
-struct localtime_s {
-    long           year;
-    long           month;
-    long           day;
-    long           hour;
-    long           minute;
-    long           second;
-};
-
 typedef struct {
     char           dir_path[M_LOG_PATH_LEN];
     char           pid_path[M_LOG_PATH_LEN];

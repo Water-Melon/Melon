@@ -15,9 +15,11 @@
 #define M_F_TYPELEN   sizeof(mln_u32_t)
 #define M_F_LENLEN    sizeof(mln_u32_t)
 
+typedef struct mln_fork_s mln_fork_t;
+
 typedef void (*clr_handler)(void *);
 
-typedef int (*scan_handler)(mln_event_t *, void *);
+typedef int (*scan_handler)(mln_event_t *, mln_fork_t *, void *);
 /*ipc handler*/
 typedef void (*ipc_handler)(mln_event_t *, \
                             void *, /*mln_fork_t or mln_tcp_conn_t*/\
@@ -49,7 +51,7 @@ struct mln_fork_attr {
     enum proc_state_type     stype;
 };
 
-typedef struct mln_fork_s {
+struct mln_fork_s {
     struct mln_fork_s       *prev;
     struct mln_fork_s       *next;
     mln_s8ptr_t             *args;
@@ -63,7 +65,7 @@ typedef struct mln_fork_s {
     void                    *msg_content;
     enum proc_exec_type      etype;
     enum proc_state_type     stype;
-} mln_fork_t;
+};
 
 extern int mln_pre_fork(void);
 extern void
@@ -71,7 +73,7 @@ mln_set_master_ipc_handler(mln_ipc_handler_t *ih) __NONNULL1(1);
 extern void
 mln_set_worker_ipc_handler(mln_ipc_handler_t *ih) __NONNULL1(1);
 extern int
-mln_fork_scan_all(mln_event_t *ev, scan_handler handler) __NONNULL1(1);
+mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data) __NONNULL1(1);
 extern mln_tcp_conn_t *mln_fork_get_master_connection(void);
 extern int do_fork(void);
 /*

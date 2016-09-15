@@ -8,11 +8,11 @@
 #include <stdlib.h>
 
 #define CONF_ERR(TK,MSG); \
-    fprintf(stderr, "Configuration error. %d: \"%s\" %s.\n", (TK)->line, (TK)->text->str, MSG);\
+    fprintf(stderr, "Configuration error. %d: \"%s\" %s.\n", (TK)->line, (char *)((TK)->text->data), MSG);\
 
 mln_conf_hook_t *gConfHookHead = NULL, *gConfHookTail = NULL;
 mln_conf_t *gConf = NULL;
-mln_string_t default_domain = {"main", 4, 1};
+mln_string_t default_domain = {(mln_u8ptr_t)"main", 4, 1};
 char conf_filename[] = "conf/melon.conf";
 char *conf_keywords[] = {
     "on",
@@ -59,11 +59,7 @@ mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name) __NONNULL2(1,2);
 static void
 mln_conf_domain_destroy(void *data) __NONNULL1(1);
 static int
-mln_conf_domain_calc_hash(mln_hash_t *h, void *key) __NONNULL2(1,2);
-static int
-mln_conf_domain_cmp(mln_hash_t *h, void *key1, void *key2) __NONNULL3(1,2,3);
-static void
-mln_conf_key_free(void *key);
+mln_conf_domain_cmp(const void *data1, const void *data2);
 static mln_conf_domain_t *
 mln_conf_search_domain(mln_conf_t *cf, char *domain_name) __NONNULL2(1,2);
 /*for mln_conf_cmd_t*/
@@ -72,9 +68,7 @@ mln_conf_cmd_init(mln_string_t *cmd_name) __NONNULL1(1);
 static void
 mln_conf_cmd_destroy(void *data);
 static int
-mln_conf_cmd_calc_hash(mln_hash_t *h, void *key) __NONNULL2(1,2);
-static int
-mln_conf_cmd_cmp(mln_hash_t *h, void *key1, void *key2) __NONNULL3(1,2,3);
+mln_conf_cmd_cmp(const void *data1, const void *data2);
 static mln_conf_cmd_t *
 mln_conf_search_cmd(mln_conf_domain_t *cd, char *cmd_name) __NONNULL2(1,2);
 /*for mln_conf_item_t*/
@@ -84,9 +78,9 @@ mln_conf_item_init(mln_conf_lex_struct_t *cls, mln_conf_item_t *ci) __NONNULL2(1
 static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current) __NONNULL2(1,2);
 static mln_conf_item_t *
 mln_conf_search_item(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
-static int mln_conf_get_cmds_scan(void *key, void *val, void *udata);
-static int mln_conf_dump_conf_scan(void *key, void *val, void *udata);
-static int mln_conf_dump_domain_scan(void *key, void *val, void *udata);
+static int mln_conf_get_cmds_scan(void *rn_data, void *udata);
+static int mln_conf_dump_conf_scan(void *rn_data, void *udata);
+static int mln_conf_dump_domain_scan(void *rn_data, void *udata);
 /*for hook*/
 static mln_conf_hook_t *mln_conf_hook_init(void);
 static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
@@ -266,18 +260,18 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
         }
         if (clst->type == CONF_TK_DEC || clst->type == CONF_TK_REAL) {
             if (!sub_mark) break;
-            mln_s32_t len = clst->text->len + 2;
-            mln_s8ptr_t s = (mln_s8ptr_t)malloc(len);
+            mln_u64_t len = clst->text->len + 2;
+            mln_u8ptr_t s = (mln_u8ptr_t)malloc(len);
             if (s == NULL) {
                 lex->error = MLN_LEX_ENMEM;
                 mln_conf_lex_free(clst);
                 return NULL;
             }
             s[0] = '-';
-            memcpy(s+1, clst->text->str, clst->text->len);
+            memcpy(s+1, clst->text->data, clst->text->len);
             s[len-1] = 0;
-            free(clst->text->str);
-            clst->text->str = s;
+            free(clst->text->data);
+            clst->text->data = s;
             break;
         } else {
             if (!sub_mark) break;
@@ -295,31 +289,28 @@ static inline mln_conf_t *mln_conf_init(void)
 {
     mln_conf_lex_lex_dup(NULL);/*nothing to do, just get rid of compiler's warnging*/
     mln_conf_t *cf;
+    mln_rbtree_node_t *rn;
     cf = (mln_conf_t *)malloc(sizeof(mln_conf_t));
     if (cf == NULL) {
         fprintf(stderr, "No memory.\n");
         return NULL;
     }
     cf->search = mln_conf_search_domain;
-    struct mln_hash_attr hattr;
-    hattr.hash = mln_conf_domain_calc_hash;
-    hattr.cmp = mln_conf_domain_cmp;
-    hattr.free_key = mln_conf_key_free;
-    hattr.free_val = mln_conf_domain_destroy;
-    hattr.len_base = MLN_CONF_HASH_LEN;
-    hattr.expandable = 1;
-    hattr.calc_prime = 0;
-    cf->domain_hash_tbl = mln_hash_init(&hattr);
-    if (cf->domain_hash_tbl == NULL) {
+
+    struct mln_rbtree_attr rbattr;
+    rbattr.cmp = mln_conf_domain_cmp;
+    rbattr.data_free = mln_conf_domain_destroy;
+    if ((cf->domain = mln_rbtree_init(&rbattr)) == NULL) {
         fprintf(stderr, "No memory.\n");
         free(cf);
         return NULL;
     }
+
     mln_size_t path_len = strlen(mln_path());
     char *conf_file_path = malloc(path_len + sizeof(conf_filename) + 1);
     if (conf_file_path == NULL) {
         fprintf(stderr, "No memory.\n");
-        mln_hash_destroy(cf->domain_hash_tbl, M_HASH_F_KV);
+        mln_rbtree_destroy(cf->domain);
         free(cf);
         return NULL;
     }
@@ -339,7 +330,7 @@ static inline mln_conf_t *mln_conf_init(void)
     MLN_LEX_INIT_WITH_HOOKS(mln_conf_lex, cf->lex, &lattr);
     free(conf_file_path);
     if (cf->lex == NULL) {
-        mln_hash_destroy(cf->domain_hash_tbl, M_HASH_F_KV);
+        mln_rbtree_destroy(cf->domain);
         free(cf);
         return NULL;
     }
@@ -349,20 +340,13 @@ static inline mln_conf_t *mln_conf_init(void)
         mln_conf_destroy(cf);
         return NULL;
     }
-    mln_string_t *main_domain = mln_string_dup(&default_domain);
-    if (main_domain == NULL) {
+    if ((rn = mln_rbtree_new_node(cf->domain, cd)) == NULL) {
         fprintf(stderr, "No memory.\n");
         mln_conf_domain_destroy((void *)cd);
         mln_conf_destroy(cf);
         return NULL;
     }
-    if (mln_hash_insert(cf->domain_hash_tbl, main_domain, cd) < 0) {
-        fprintf(stderr, "No memory.\n");
-        mln_string_free(main_domain);
-        mln_conf_domain_destroy((void *)cd);
-        mln_conf_destroy(cf);
-        return NULL;
-    }
+    mln_rbtree_insert(cf->domain, rn);
     return cf;
 }
 
@@ -374,9 +358,9 @@ mln_conf_destroy(mln_conf_t *cf)
         mln_lex_destroy(cf->lex);
         cf->lex = NULL;
     }
-    if (cf->domain_hash_tbl != NULL) {
-        mln_hash_destroy(cf->domain_hash_tbl, M_HASH_F_KV);
-        cf->domain_hash_tbl = NULL;
+    if (cf->domain != NULL) {
+        mln_rbtree_destroy(cf->domain);
+        cf->domain = NULL;
     }
     free(cf);
 }
@@ -404,16 +388,10 @@ mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name)
         free(cd);
         return NULL;
     }
-    struct mln_hash_attr hattr;
-    hattr.hash = mln_conf_cmd_calc_hash;
-    hattr.cmp = mln_conf_cmd_cmp;
-    hattr.free_key = mln_conf_key_free;
-    hattr.free_val = mln_conf_cmd_destroy;
-    hattr.len_base = MLN_CONF_HASH_LEN;
-    hattr.expandable = 1;
-    hattr.calc_prime = 0;
-    cd->cmd_hash_tbl = mln_hash_init(&hattr);
-    if (cd->cmd_hash_tbl == NULL) {
+    struct mln_rbtree_attr rbattr;
+    rbattr.cmp = mln_conf_cmd_cmp;
+    rbattr.data_free = mln_conf_cmd_destroy;
+    if ((cd->cmd = mln_rbtree_init(&rbattr)) == NULL) {
         mln_string_free(cd->domain_name);
         free(cd);
         return NULL;
@@ -430,46 +408,32 @@ mln_conf_domain_destroy(void *data)
         mln_string_free(cd->domain_name);
         cd->domain_name = NULL;
     }
-    if (cd->cmd_hash_tbl != NULL) {
-        mln_hash_destroy(cd->cmd_hash_tbl, M_HASH_F_KV);
-        cd->cmd_hash_tbl = NULL;
+    if (cd->cmd != NULL) {
+        mln_rbtree_destroy(cd->cmd);
+        cd->cmd = NULL;
     }
     free(cd);
 }
 
 static int
-mln_conf_domain_calc_hash(mln_hash_t *h, void *key)
+mln_conf_domain_cmp(const void *data1, const void *data2)
 {
-    mln_string_t *s = (mln_string_t *)key;
-    mln_s8ptr_t p, end = s->str + s->len;
-    int index = 0;
-    for (p = s->str; p < end; p++) {
-        index += ((*p) * 65599);
-        index %= h->len;
-        if (index < 0) index = -index;
-    }
-    return index;
-}
-
-static int
-mln_conf_domain_cmp(mln_hash_t *h, void *key1, void *key2)
-{
-    return !mln_string_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
-}
-
-static void
-mln_conf_key_free(void *key)
-{
-    if (key == NULL) return;
-    mln_string_free((mln_string_t *)key);
+    mln_conf_domain_t *d1 = (mln_conf_domain_t *)data1;
+    mln_conf_domain_t *d2 = (mln_conf_domain_t *)data2;
+    return mln_string_strcmp(d1->domain_name, d2->domain_name);
 }
 
 static mln_conf_domain_t *
 mln_conf_search_domain(mln_conf_t *cf, char *domain_name)
 {
     mln_string_t str;
+    mln_rbtree_node_t *rn;
+    mln_conf_domain_t tmp;
     mln_string_set(&str, domain_name);
-    return mln_hash_search(cf->domain_hash_tbl, &str);
+    tmp.domain_name = &str;
+    rn = mln_rbtree_search(cf->domain, cf->domain->root, &tmp);
+    if (mln_rbtree_null(rn, cf->domain)) return NULL;
+    return (mln_conf_domain_t *)(rn->data);
 }
 
     /*mln_conf_cmd_t*/
@@ -518,31 +482,25 @@ mln_conf_cmd_destroy(void *data)
 }
 
 static int
-mln_conf_cmd_calc_hash(mln_hash_t *h, void *key)
+mln_conf_cmd_cmp(const void *data1, const void *data2)
 {
-    mln_string_t *s = (mln_string_t *)key;
-    mln_s32_t i;
-    int index = 0;
-    char *p = s->str;
-    for (i = 0; i<s->len; i++) {
-        index += (p[i] * 65599);
-        index %= h->len;
-    }
-    return index;
-}
-
-static int
-mln_conf_cmd_cmp(mln_hash_t *h, void *key1, void *key2)
-{
-    return !mln_string_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
+    mln_conf_cmd_t *c1 = (mln_conf_cmd_t *)data1;
+    mln_conf_cmd_t *c2 = (mln_conf_cmd_t *)data2;
+    return mln_string_strcmp(c1->cmd_name, c2->cmd_name);
 }
 
 static mln_conf_cmd_t *
 mln_conf_search_cmd(mln_conf_domain_t *cd, char *cmd_name)
 {
     mln_string_t str;
+    mln_conf_cmd_t cmd;
+    mln_rbtree_node_t *rn;
+
+    cmd.cmd_name = &str;
     mln_string_set(&str, cmd_name);
-    return mln_hash_search(cd->cmd_hash_tbl, &str);
+    rn = mln_rbtree_search(cd->cmd, cd->cmd->root, &cmd);
+    if (mln_rbtree_null(rn, cd->cmd)) return NULL;
+    return (mln_conf_cmd_t *)(rn->data);
 }
 
     /*mln_conf_item_t*/
@@ -571,11 +529,11 @@ mln_conf_item_init(mln_conf_lex_struct_t *cls, mln_conf_item_t *ci)
     switch (cls->type) {
         case CONF_TK_DEC:
             ci->type = CONF_INT;
-            ci->val.i = atol(cls->text->str);
+            ci->val.i = atol((char *)(cls->text->data));
             break;
         case CONF_TK_REAL:
             ci->type = CONF_FLOAT;
-            ci->val.f = atof(cls->text->str);
+            ci->val.f = atof((char *)(cls->text->data));
             break;
         case CONF_TK_STRING:
             ci->type = CONF_STR;
@@ -595,7 +553,7 @@ mln_conf_item_init(mln_conf_lex_struct_t *cls, mln_conf_item_t *ci)
             break;
         case CONF_TK_CHAR:
             ci->type = CONF_CHAR;
-            ci->val.c = (mln_s8_t)(cls->text->str[0]);
+            ci->val.c = (mln_s8_t)(cls->text->data[0]);
             break;
         default:
             fprintf(stderr, "No such token type.\n");
@@ -661,7 +619,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
     mln_conf_lex_struct_t *fir, *next;
     mln_conf_cmd_t *cmd;
     mln_conf_domain_t *cd;
-    mln_string_t *tk;
+    mln_rbtree_node_t *rn;
     while ( 1 ) {
         fir = mln_conf_token(cf->lex);
         if (fir == NULL) {
@@ -703,49 +661,39 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
                 mln_conf_lex_free(fir);
                 return -1;
             }
-            tk = mln_string_dup(fir->text);
+
+            cd = mln_conf_domain_init(cf, fir->text);
             mln_conf_lex_free(fir);
-            if (tk == NULL) {
-                fprintf(stderr, "No memory.\n");
-                return -1;
-            }
-            cd = mln_conf_domain_init(cf, tk);
             if (cd == NULL) {
                 fprintf(stderr, "No memory.\n");
-                mln_string_free(tk);
                 return -1;
             }
-            if (mln_hash_insert(cf->domain_hash_tbl, tk, cd) < 0) {
+            if ((rn = mln_rbtree_new_node(cf->domain, cd)) == NULL) {
                 fprintf(stderr, "No memory.\n");
-                mln_string_free(tk);
                 mln_conf_domain_destroy(cd);
                 return -1;
             }
+            mln_rbtree_insert(cf->domain, rn);
+
             if (_mln_conf_load(cf, cd) < 0) return -1;
             continue;
         }
         /*as command*/
-        tk = mln_string_dup(fir->text);
+        cmd = mln_conf_cmd_init(fir->text);
         mln_conf_lex_free(fir);
-        if (tk == NULL) {
-            fprintf(stderr, "No memory.\n");
-            mln_conf_lex_free(next);
-            return -1;
-        }
-        cmd = mln_conf_cmd_init(tk);
         if (cmd == NULL) {
             fprintf(stderr, "No memory.\n");
-            mln_string_free(tk);
             mln_conf_lex_free(next);
             return -1;
         }
-        if (mln_hash_insert(current->cmd_hash_tbl, tk, cmd) < 0) {
+        if ((rn = mln_rbtree_new_node(current->cmd, cmd)) == NULL) {
             fprintf(stderr, "No memory.\n");
             mln_conf_cmd_destroy(cmd);
-            mln_string_free(tk);
             mln_conf_lex_free(next);
             return -1;
         }
+        mln_rbtree_insert(current->cmd, rn);
+
         if (mln_conf_item_recursive(cf, cmd, next, 0) < 0) return -1;
         /*
          * we don't need to free the pointer 'next' here,
@@ -759,7 +707,11 @@ int mln_conf_load(void)
 {
     gConf = mln_conf_init();
     if (gConf == NULL) return -1;
-    mln_conf_domain_t *cd = mln_hash_search(gConf->domain_hash_tbl, &default_domain);
+    mln_rbtree_node_t *rn;
+    mln_conf_domain_t *cd, tmp;
+    tmp.domain_name = &default_domain;
+    rn = mln_rbtree_search(gConf->domain, gConf->domain->root, &tmp);
+    cd = (mln_conf_domain_t *)(rn->data);
     mln_s32_t ret = _mln_conf_load(gConf, cd);
     mln_conf_destroy_lex(gConf);
     if (ret < 0) {
@@ -850,7 +802,7 @@ mln_u32_t mln_conf_get_cmdNum(mln_conf_t *cf, char *domain)
 {
     mln_conf_domain_t *cd = cf->search(cf, domain);
     if (cd == NULL) return 0;
-    return cd->cmd_hash_tbl->nr_nodes;
+    return cd->cmd->nr_node;
 }
 
 struct conf_cmds_scan_s {
@@ -865,16 +817,16 @@ void mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **v)
     struct conf_cmds_scan_s ccs;
     ccs.cc = v;
     ccs.pos = 0;
-    if (mln_hash_scan_all(cd->cmd_hash_tbl, mln_conf_get_cmds_scan, (void *)&ccs) < 0) {
+    if (mln_rbtree_scan_all(cd->cmd, cd->cmd->root, mln_conf_get_cmds_scan, (void *)&ccs) < 0) {
         mln_log(error, "Shouldn't be here.\n");
         abort();
     }
 }
 
-static int mln_conf_get_cmds_scan(void *key, void *val, void *udata)
+static int mln_conf_get_cmds_scan(void *rn_data, void *udata)
 {
     struct conf_cmds_scan_s *ccs = (struct conf_cmds_scan_s *)udata;
-    ccs->cc[(ccs->pos)++] = (mln_conf_cmd_t *)val;
+    ccs->cc[(ccs->pos)++] = (mln_conf_cmd_t *)rn_data;
     return 0;
 }
 
@@ -889,21 +841,21 @@ mln_u32_t mln_conf_get_argNum(mln_conf_cmd_t *cc)
 void mln_conf_dump(void)
 {
     printf("CONFIGURATIONS:\n");
-    mln_hash_scan_all(gConf->domain_hash_tbl, mln_conf_dump_conf_scan, NULL);
+    mln_rbtree_scan_all(gConf->domain, gConf->domain->root, mln_conf_dump_conf_scan, NULL);
 }
 
-static int mln_conf_dump_conf_scan(void *key, void *val, void *udata)
+static int mln_conf_dump_conf_scan(void *rn_data, void *udata)
 {
-    mln_conf_domain_t *cd = (mln_conf_domain_t *)val;
-    printf("\tDOMAIN [%s]:\n", cd->domain_name->str);
-    mln_hash_scan_all(cd->cmd_hash_tbl, mln_conf_dump_domain_scan, NULL);
+    mln_conf_domain_t *cd = (mln_conf_domain_t *)rn_data;
+    printf("\tDOMAIN [%s]:\n", (char *)(cd->domain_name->data));
+    mln_rbtree_scan_all(cd->cmd, cd->cmd->root, mln_conf_dump_domain_scan, NULL);
     return 0;
 }
 
-static int mln_conf_dump_domain_scan(void *key, void *val, void *udata)
+static int mln_conf_dump_domain_scan(void *rn_data, void *udata)
 {
-    mln_conf_cmd_t *cc = (mln_conf_cmd_t *)val;
-    printf("\t\tCOMMAND [%s]:\n", cc->cmd_name->str);
+    mln_conf_cmd_t *cc = (mln_conf_cmd_t *)rn_data;
+    printf("\t\tCOMMAND [%s]:\n", (char *)(cc->cmd_name->data));
     mln_s32_t i;
     mln_conf_item_t *ci;
     for (i = 0; i < cc->n_args; i++) {
@@ -911,7 +863,7 @@ static int mln_conf_dump_domain_scan(void *key, void *val, void *udata)
         printf("\t\t\t");
         switch (ci->type) {
             case CONF_STR:
-                printf("STRING [%s]\n", ci->val.s->str);
+                printf("STRING [%s]\n", (char *)(ci->val.s->data));
                 break;
             case CONF_CHAR:
                 printf("CHAR [%c]\n", ci->val.c);

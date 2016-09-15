@@ -3,8 +3,8 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
-#ifndef __MLN_PASERT_GENERATOR_H
-#define __MLN_PASERT_GENERATOR_H
+#ifndef __MLN_PARSERT_GENERATOR_H
+#define __MLN_PARSERT_GENERATOR_H
 
 #include "mln_lex.h"
 #include "mln_types.h"
@@ -95,7 +95,7 @@ typedef struct {
 } mln_pg_shift_tbl_t;
 
 struct mln_pg_calc_info_s {
-    mln_hash_t               *hash;
+    mln_rbtree_t             *tree;
     mln_pg_state_t           *head;
     mln_pg_state_t           *tail;
     mln_sauto_t               id_counter;
@@ -169,7 +169,7 @@ extern void mln_pg_item_free(mln_pg_item_t *item);
 extern mln_pg_state_t *mln_pg_state_new(void);
 extern void mln_pg_state_free(mln_pg_state_t *s);
 extern int mln_pg_token_rbtree_cmp(const void *data1, const void *data2);
-extern int mln_pg_map_hash_calc(mln_hash_t *h, void *key);
+extern mln_u64_t mln_pg_map_hash_calc(mln_hash_t *h, void *key);
 extern int mln_pg_map_hash_cmp(mln_hash_t *h, void *key1, void *key2);
 extern void mln_pg_map_hash_free(void *data);
 extern int
@@ -186,7 +186,7 @@ extern int mln_pg_goto(struct mln_pg_calc_info_s *pci);
 extern void mln_pg_output_state(mln_pg_state_t *s);
 
 
-#define MLN_DECLARE_PASER_GENERATOR(SCOPE,PREFIX_NAME,TK_PREFIX,...); \
+#define MLN_DECLARE_PARSER_GENERATOR(SCOPE,PREFIX_NAME,TK_PREFIX,...); \
 MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(SCOPE,PREFIX_NAME,TK_PREFIX,## __VA_ARGS__);\
 struct PREFIX_NAME##_preprocess_attr {\
     mln_hash_t               *map_tbl;/*output*/\
@@ -247,7 +247,7 @@ SCOPE int PREFIX_NAME##_err_recover(struct mln_sys_parse_attr *spattr, mln_uauto
 
 
 
-#define MLN_DEFINE_PASER_GENERATOR(SCOPE,PREFIX_NAME,TK_PREFIX,...); \
+#define MLN_DEFINE_PARSER_GENERATOR(SCOPE,PREFIX_NAME,TK_PREFIX,...); \
 MLN_DEFINE_TOKEN(PREFIX_NAME,TK_PREFIX,## __VA_ARGS__);\
 \
 SCOPE int PREFIX_NAME##_reduce_scan(void *rn_data, void *udata)\
@@ -261,10 +261,10 @@ SCOPE int PREFIX_NAME##_reduce_scan(void *rn_data, void *udata)\
     {\
         if (sh[index].type == M_PG_ACCEPT || sh[index].type == M_PG_REDUCE) {\
             mln_log(error, "State:%d token[%s] Reduce-Reduce conflict.\n", \
-                    info->state->id, tk->token->str);\
+                    info->state->id, (char *)(tk->token->data));\
         } else {\
             mln_log(error, "State:%d token[%s] Shift-Reduce conflict.\n", \
-                    info->state->id, tk->token->str);\
+                    info->state->id, (char *)(tk->token->data));\
         }\
         *(info->failed) = 1;\
     }\
@@ -331,10 +331,10 @@ SCOPE mln_pg_shift_tbl_t *PREFIX_NAME##_build_shift_tbl(struct mln_pg_calc_info_
                 if (sh[index].type != M_PG_ERROR && (sh[index].type != type || sh[index].index != it->goto_id)) {\
                     if (sh[index].type == M_PG_ACCEPT || sh[index].type == M_PG_REDUCE) {\
                         mln_log(error, "State:%l token:[%s] Shift-Reduce conflict.\n", \
-                                s->id, (it->rule->rights[it->pos])->token->str);\
+                                s->id, (char *)((it->rule->rights[it->pos])->token->data));\
                     } else {\
                         mln_log(error, "State:%l token:[%s] Shift-Shift conflict.\n", \
-                                s->id, (it->rule->rights[it->pos])->token->str);\
+                                s->id, (char *)((it->rule->rights[it->pos])->token->data));\
                     }\
                     failed = 1;\
                 }\
@@ -373,13 +373,13 @@ SCOPE mln_pg_token_t * \
 PREFIX_NAME##_pg_create_token(struct PREFIX_NAME##_preprocess_attr *attr, PREFIX_NAME##_struct_t *pgs, int index)\
 {\
     int *type_val;\
-    if ((type_val = (int *)mln_hash_search(attr->map_tbl, pgs->text->str)) == NULL) {\
+    if ((type_val = (int *)mln_hash_search(attr->map_tbl, pgs->text->data)) == NULL) {\
         mln_s8ptr_t new_str = (mln_s8ptr_t)malloc(pgs->text->len+1);\
         if (new_str == NULL) {\
             mln_log(error, "No memory.\n");\
             return NULL;\
         }\
-        memcpy(new_str, pgs->text->str, pgs->text->len);\
+        memcpy(new_str, pgs->text->data, pgs->text->len);\
         new_str[pgs->text->len] = 0;\
         type_val = (int *)malloc(sizeof(int));\
         if (type_val == NULL) {\
@@ -906,9 +906,9 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
                 failed = 1;\
                 mln_s8ptr_t name = NULL;\
                 if ((*la)->token_type != TK_PREFIX##_TK_EOF && (*la)->data != NULL) \
-                    name = ((PREFIX_NAME##_struct_t *)((*la)->data))->text->str;\
+                    name = (mln_s8ptr_t)(((PREFIX_NAME##_struct_t *)((*la)->data))->text->data);\
                 mln_log(error, "%s%s%d: Parse Error: Illegal token%s%s%s\n", \
-                        spattr->lex->filename!=NULL?spattr->lex->filename->str:" ", \
+                        spattr->lex->filename!=NULL?(char *)(spattr->lex->filename->data):" ", \
                         spattr->lex->filename!=NULL?":":" ",\
                         *is_reduce?top->line:(*la)->line, \
                         name==NULL? ".": " nearby '", \

@@ -780,11 +780,11 @@ static inline int mln_get_length(char *s, int len)
 
 int mln_reg_match(mln_string_t *exp, mln_string_t *text)
 {
-    return mln_match_here(M_REGEXP_MASK_NEW, exp->str, text->str, exp->len, text->len);
+    return mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len);
 }
 
 int mln_reg_equal(mln_string_t *exp, mln_string_t *text)
 {
-    return !mln_match_here(M_REGEXP_MASK_NEW, exp->str, text->str, exp->len, text->len);
+    return !mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len);
 }
 

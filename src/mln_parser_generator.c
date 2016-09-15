@@ -42,9 +42,7 @@ mln_pg_output_token_scan(void *rn_data, void *udata);
 static int
 mln_pg_output_token_set_scan(void *rn_data, void *udata);
 static int
-mln_pg_calc_info_hash(mln_hash_t *h, void *key);
-static int
-mln_pg_calc_info_cmp(mln_hash_t *h, void *key1, void *key2);
+mln_pg_calc_info_cmp(const void *data1, const void *data2);
 static int
 mln_pg_goto_la_scan(void *rn_data, void *udata);
 static int
@@ -154,15 +152,15 @@ int mln_pg_token_rbtree_cmp(const void *data1, const void *data2)
     return ((mln_pg_token_t *)data1)->type - ((mln_pg_token_t *)data2)->type;
 }
 
-int mln_pg_map_hash_calc(mln_hash_t *h, void *key)
+mln_u64_t mln_pg_map_hash_calc(mln_hash_t *h, void *key)
 {
-    mln_u32_t sum = 0;
+    mln_u64_t sum = 0;
     char *p = (char *)key;
     for (; *p != 0; p++) {
         sum += (*p * 65599);
         sum %= h->len;
     }
-    return (int)sum;
+    return sum;
 }
 
 int mln_pg_map_hash_cmp(mln_hash_t *h, void *key1, void *key2)
@@ -248,16 +246,10 @@ int mln_pg_calc_info_init(struct mln_pg_calc_info_s *pci, \
                           mln_pg_rule_t *rule, \
                           mln_u32_t nr_rule)
 {
-    struct mln_hash_attr hattr;
-    hattr.hash = mln_pg_calc_info_hash;
-    hattr.cmp = mln_pg_calc_info_cmp;
-    hattr.free_key = NULL;
-    hattr.free_val = NULL;
-    hattr.len_base = M_PG_DFL_HASHLEN;
-    hattr.expandable = 0;
-    hattr.calc_prime = 0;
-    pci->hash = mln_hash_init(&hattr);
-    if (pci->hash == NULL) {
+    struct mln_rbtree_attr rbattr;
+    rbattr.cmp = mln_pg_calc_info_cmp;
+    rbattr.data_free = NULL;
+    if ((pci->tree = mln_rbtree_init(&rbattr)) == NULL) {
         return -1;
     }
     pci->head = NULL;
@@ -272,8 +264,7 @@ int mln_pg_calc_info_init(struct mln_pg_calc_info_s *pci, \
 void mln_pg_calc_info_destroy(struct mln_pg_calc_info_s *pci)
 {
     if (pci == NULL) return;
-    if (pci->hash != NULL)
-        mln_hash_destroy(pci->hash, M_HASH_F_NONE);
+    if (pci->tree != NULL) mln_rbtree_destroy(pci->tree);
     mln_pg_state_t *s;
     while ((s = pci->head) != NULL) {
         mln_state_chain_del(&(pci->head), &(pci->tail), s);
@@ -282,19 +273,14 @@ void mln_pg_calc_info_destroy(struct mln_pg_calc_info_s *pci)
 }
 
 static int
-mln_pg_calc_info_hash(mln_hash_t *h, void *key)
+mln_pg_calc_info_cmp(const void *data1, const void *data2)
 {
-    mln_pg_state_t *s = (mln_pg_state_t *)key;
-    return s->input->type % h->len;
-}
-
-static int
-mln_pg_calc_info_cmp(mln_hash_t *h, void *key1, void *key2)
-{
-    mln_pg_state_t *s1 = (mln_pg_state_t *)key1;
-    mln_pg_state_t *s2 = (mln_pg_state_t *)key2;
-    if (s1->input != s2->input) return 0;
-    if (s1->nr_item != s2->nr_item) return 0;
+    mln_pg_state_t *s1 = (mln_pg_state_t *)data1;
+    mln_pg_state_t *s2 = (mln_pg_state_t *)data2;
+    if (s1->input > s2->input) return 1;
+    if (s1->input < s2->input) return -1;
+    if (s1->nr_item > s2->nr_item) return 1;
+    if (s1->nr_item < s2->nr_item) return -1;
 
     mln_sauto_t nr_match = 0;
     mln_pg_item_t *it1, *it2;
@@ -306,8 +292,9 @@ mln_pg_calc_info_cmp(mln_hash_t *h, void *key1, void *key2)
             }
         }
     }
-    if (nr_match == s1->nr_item) return 1;
-    return 0;
+    if (s1->nr_item > nr_match) return 1;
+    if (nr_match == s1->nr_item) return 0;
+    return -1;
 }
 
 /*
@@ -619,6 +606,8 @@ mln_pg_closure_rbtree_scan(void *rn_data, void *udata)
  */
 int mln_pg_goto(struct mln_pg_calc_info_s *pci)
 {
+    mln_rbtree_t *tree = pci->tree;
+    mln_rbtree_node_t *rn;
     mln_u32_t nr_end, nr_cnt;
     mln_pg_token_t *tk;
     mln_pg_state_t *new_s, *tmp_s;
@@ -640,11 +629,12 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
     new_it->rule = &pci->rule[0];
     mln_item_chain_add(&(s->head), &(s->tail), new_it);
     s->nr_item++;
-    if (mln_hash_insert(pci->hash, s, s) < 0) {
+    if ((rn = mln_rbtree_new_node(tree, s)) == NULL) {
         mln_log(error, "No memory.\n");
         mln_pg_state_free(s);
         return -1;
     }
+    mln_rbtree_insert(tree, rn);
     mln_state_chain_add(&(pci->head), &(pci->tail), s);
     mln_q_state_chain_add(&q_head, &q_tail, s);
     if (mln_pg_closure(s, pci->rule, pci->nr_rule) < 0) {
@@ -706,7 +696,9 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
                 return -1;
             }
 
-            if ((tmp_s = mln_hash_search(pci->hash, new_s)) != NULL) {
+            rn = mln_rbtree_search(tree, tree->root, new_s);
+            if (!mln_rbtree_null(rn, tree)) {
+                tmp_s = (mln_pg_state_t *)(rn->data);
                 if (mln_pg_state_duplicate(&q_head, &q_tail, tmp_s, new_s) < 0) {
                     mln_pg_state_free(new_s);
                     return -1;
@@ -715,11 +707,12 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
                 new_s = tmp_s;
             } else {
                 new_s->id = (pci->id_counter)++;
-                if (mln_hash_insert(pci->hash, new_s, new_s) < 0) {
+                if ((rn = mln_rbtree_new_node(tree, new_s)) == NULL) {
                     mln_log(error, "No memory.\n");
                     mln_pg_state_free(new_s);
                     return -1;
                 }
+                mln_rbtree_insert(tree, rn);
                 mln_state_chain_add(&(pci->head), &(pci->tail), new_s);
                 mln_q_state_chain_add(&q_head, &q_tail, new_s);
             }
@@ -815,10 +808,10 @@ void mln_pg_output_token(mln_rbtree_t *tree, mln_pg_rule_t *r, mln_u32_t nr_rule
     printf("RULE:\n");
     for (i = 0; i < nr_rule; i++) {
         pr = &r[i];
-        printf("No.%d %s->", i, pr->left->token->str);
+        printf("No.%d %s->", i, (char *)(pr->left->token->data));
         for (j = 0; j < pr->nr_right; j++) {
             tk = pr->rights[j];
-            printf("%s ", tk->token->str);
+            printf("%s ", (char *)(tk->token->data));
         }
         printf("\n");
     }
@@ -831,7 +824,7 @@ static int
 mln_pg_output_token_scan(void *rn_data, void *udata)
 {
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
-    printf("[%s]:", tk->token->str);
+    printf("[%s]:", (char *)(tk->token->data));
     printf("%d %s %s\n", tk->type, \
            tk->is_nonterminal?"Nonterminal":"Terminal", \
            tk->is_nullable?"Nullable":"Unnullable");
@@ -849,7 +842,7 @@ static int
 mln_pg_output_token_set_scan(void *rn_data, void *udata)
 {
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
-    printf("[%s] ", tk->token->str);
+    printf("[%s] ", (char *)(tk->token->data));
     return 0;
 }
 
@@ -861,16 +854,16 @@ void mln_pg_output_state(mln_pg_state_t *s)
     for (; s != NULL; s = s->next) {
         printf("State %ld: input: [%s] nr_item:%llu\n", \
                s->id, \
-               s->input==NULL?"(null)":s->input->token->str, \
+               s->input==NULL?"(null)":(char *)(s->input->token->data), \
                (unsigned long long)(s->nr_item));
         printf("Items:\n");
         for (it = s->head; it != NULL; it = it->next) {
-            printf("rule: %s->", it->rule->left->token->str);
+            printf("rule: %s->", (char *)(it->rule->left->token->data));
             for (i = 0; i < it->rule->nr_right; i++) {
                 if (it->pos == i) printf(".");
-                printf(" %s", (it->rule->rights[i])->token->str);
+                printf(" %s", (char *)((it->rule->rights[i])->token->data));
             }
-            printf("\t\tread:[%s] goto_id:%ld", it->read==NULL?"(null)":it->read->token->str, it->goto_id);
+            printf("\t\tread:[%s] goto_id:%ld", it->read==NULL?"(null)":(char *)(it->read->token->data), it->goto_id);
             printf("\tLookahead:");
             mln_rbtree_scan_all(it->lookahead_set, it->lookahead_set->root, mln_pg_output_state_scan, NULL);
             printf("\n");
@@ -882,7 +875,7 @@ void mln_pg_output_state(mln_pg_state_t *s)
 static int
 mln_pg_output_state_scan(void *rn_data, void *udata)
 {
-    printf(" %s", ((mln_pg_token_t *)rn_data)->token->str);
+    printf(" %s", (char *)(((mln_pg_token_t *)rn_data)->token->data));
     return 0;
 }
 

@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.5.3
+Melon Version 1.5.4
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -58,8 +58,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.5.3.
-  b) Change directory to the melon-1.5.3/.
+  a) Download and decompress melon-1.5.4.
+  b) Change directory to the melon-1.5.4/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -71,7 +71,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.5.3/include/mln_types.h.
+Their definitions can be found in melon-1.5.4/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -177,12 +177,12 @@ Their definitions can be found in melon-1.5.3/include/mln_types.h.
         hash_cmp_handler     cmp;
         hash_free_handler    free_key;
         hash_free_handler    free_val;
-        mln_u32_t            len_base;
+        mln_u64_t            len_base;
         mln_u32_t            expandable:1;
         mln_u32_t            calc_prime:1;
     };
     typedef int  (*hash_scan_handler)(void * /*key*/, void * /*val*/, void *);
-    typedef int  (*hash_calc_handler)(mln_hash_t *, void *);
+    typedef mln_u64_t  (*hash_calc_handler)(mln_hash_t *, void *);
     /*
      * cmp_handler's return value: 0 -- not matched, !0 -- matched.
      */
@@ -1872,11 +1872,20 @@ Their definitions can be found in melon-1.5.3/include/mln_types.h.
          Free the return value of 'mln_RSAESPKCS1V15PubEncrypt()', 'mln_RSAESPKCS1V15PubDecrypt()',
          'mln_RSAESPKCS1V15PriEncrypt()', 'mln_RSAESPKCS1V15PriDecrypt()', 'mln_RSASSAPKCS1V15SIGN()'.
 
-      k) mln_string_t *mln_RSASSAPKCS1V15SIGN(mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType);
+      k) mln_string_t *mln_RSASSAPKCS1V15SIGN(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType);
          RSASSA-PKCS1-V1.5 signature.
 
-      l) int mln_RSASSAPKCS1V15VERIFY(mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s, mln_u32_t hashType);
+      l) int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s, mln_u32_t hashType);
          RSASSA-PKCS1-V1.5 verification.
+
+      m) mln_RSAPublicKey_getValue(pkey,modulus,exponent);
+         Get modulus and exponent from 'pkey'.
+
+      n) mln_RSAPublicKey_getValueRef(pkey,pmodulus,pexponent);
+         Get the pointers of modulus and exponent from 'pkey'.
+
+      o) mln_RSAPublicKey_setValue(pkey,modulus,exponent);
+         Set modulus and exponent into 'pkey'.
 
   31) Websocket
       Just like HTTP, the interfaces of websocket don't focus on the details of protocol transmition.
@@ -1961,7 +1970,6 @@ Their definitions can be found in melon-1.5.3/include/mln_types.h.
 
       o) int mln_websocket_close_generate(mln_websocket_t *ws,
                                           mln_chain_t **out_cnode,
-                                          char *reason,
                                           mln_u16_t status,
                                           mln_u32_t flags);
          Generate a control data frame for websocket closure.
@@ -2132,6 +2140,170 @@ Their definitions can be found in melon-1.5.3/include/mln_types.h.
       bh) mln_websocket_get_maskingKey(ws);
          Get masking key from 'ws'.
 
+  32) Tools
+      a) void mln_UTCTime(time_t tm, struct UTCTime_s *uc);
+         Parse 'tm' into structure UTCTime.
+         The definition of structure UTCTime_s is
+             struct UTCTime_s {
+                 long        year;
+                 long        month;
+                 long        day;
+                 long        hour;
+                 long        minute;
+                 long        second;
+             };
+
+      b) int mln_s2Time(time_t *tm, mln_string_t *s, int type)
+         Parse 's' into 'tm'.
+         The type of 's' is indicated by 'type', its value are:
+             I.  M_TOOLS_TIME_UTC
+             II. M_TOOLS_TIME_GENERALIZEDTIME
+
+  33) ASN.1
+      There are two parts, one is about decode, the other one is about encode.
+      I. decode
+      a) mln_asn1_deResult_getClass(pres);
+         Get the class of decoded ASN.1 string.
+
+      b) mln_asn1_deResult_getIdent(pres);
+         Get the identifier of decoded ASN1.1 string.
+
+      c) mln_asn1_deResult_setIdent(pres,id);
+         Set the identifier.
+
+      d) mln_asn1_deResult_isStructure(pres);
+         Test whether the decoded result is a structure or not.
+
+      e) mln_asn1_deResult_getCode(pres);
+         Get the ASN.1 code which is relative to the decoded result.
+
+      f) mln_asn1_deResult_getCodeLength(pres);
+         Get the length of ASN.1 code which is relative to the decoded result.
+
+      g) mln_asn1_deResult_getNContent(pres);
+         Get the number of sub-result.
+
+      h) mln_asn1_deResult_t *mln_asn1_decodeChain(mln_chain_t *in, int *err, mln_alloc_t *pool);
+         Decode ASN.1 string from chain 'in'.
+
+      i) mln_asn1_deResult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_alloc_t *pool);
+         Decode ASN.1 string from 'data'.
+         'data' do not need to free. It will be freed while the function 'mln_asn1_deResult_free' called.
+
+      j) mln_asn1_deResult_t *mln_asn1_decodeRef(void *data, mln_u64_t len, int *err, mln_alloc_t *pool);
+         Decode ASN.1 string from 'data'.
+         'data' should be free explicitly. It won't be freed while the function 'mln_asn1_deResult_free' called.
+
+      k) void mln_asn1_deResult_free(mln_asn1_deResult_t *res);
+         Free 'mln_asn1_deResult_t' data.
+
+      l) mln_asn1_deResult_t *mln_asn1_deResult_getContent(mln_asn1_deResult_t *res, mln_u32_t index);
+         Get the sub-result which is indicated by 'index' from 'res'.
+
+      m) void mln_asn1_deResult_dump(mln_asn1_deResult_t *res);
+         Dump decoded result and its sub-results.
+
+      II. encode
+      a) mln_asn1_enResult_setPool(pres,p);
+         Set a memory pool into a encode-result object.
+
+      b) mln_asn1_enResult_getPool(pres);
+         Get the memory from 'pres'.
+
+      c) mln_asn1_enResult_setClass(pres,c);
+         Set a class into 'pres'.
+
+      d) mln_asn1_enResult_getClass(pres);
+         Get the class from 'pres'.
+
+      e) mln_asn1_enResult_setIsStruct(pres);
+         Set 'pres' to be a structure.
+
+      f) mln_asn1_enResult_resetIsStruct(pres);
+         Set 'pres' to be a non-structure.
+
+      g) mln_asn1_enResult_getIsStruct(pres);
+         Get the flag of 'isStruct' for testing whether 'pres' is structure or not.
+
+      h) mln_asn1_enResult_setIdent(pres,id);
+         Set an identifier into 'pres'.
+
+      i) mln_asn1_enResult_getIdent(pres);
+         Get the identifier of 'pres'.
+
+      j) int mln_asn1_enResult_init(mln_asn1_enResult_t *res, mln_alloc_t *pool);
+         Initialize an encode-result structure.
+
+      k) void mln_asn1_enResult_destroy(mln_asn1_enResult_t *res);
+         Destroy an encode-result structure.
+
+      l) mln_asn1_enResult_t *mln_asn1_enResult_new(mln_alloc_t *pool);
+         Create and initialize an encode-result structure.
+
+      m) void mln_asn1_enResult_free(mln_asn1_enResult_t *res);
+         Destroy and free an encode-result structure.
+
+      n) int mln_asn1_encode_boolean(mln_asn1_enResult_t *res, mln_u8_t val);
+         Encode 'res' into an ASN.1 string of boolean.
+
+      o) int mln_asn1_encode_integer(mln_asn1_enResult_t *res, mln_u8ptr_t ints, mln_u64_t nints);
+         Encode 'res' into an ASN.1 string of integer.
+
+      p) int mln_asn1_encode_bitString(mln_asn1_enResult_t *res, mln_u8ptr_t bits, mln_u64_t nbits);
+         Encode 'res' into an ASN.1 string of bit string.
+
+      q) int mln_asn1_encode_octetString(mln_asn1_enResult_t *res, mln_u8ptr_t octets, mln_u64_t n);
+         Encode 'res' into an ASN.1 string of octet string.
+
+      r) int mln_asn1_encode_null(mln_asn1_enResult_t *res);
+         Encode 'res' into an ASN.1 string of null.
+
+      s) int mln_asn1_encode_objectIdentifier(mln_asn1_enResult_t *res, mln_u8ptr_t oid, mln_u64_t n);
+         Encode 'res' into an ASN.1 string of object identifier.
+
+      t) int mln_asn1_encode_utf8String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_t slen);
+         Encode 'res' into an ASN.1 string of UTF8string.
+
+      u) int mln_asn1_encode_printableString(mln_asn1_enResult_t *res, mln_s8ptr_t s, mln_u64_t slen);
+         Encode 'res' into an ASN.1 string of printableString.
+
+      v) int mln_asn1_encode_t61String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_t slen);
+         Encode 'res' into an ASN.1 string of T61String.
+
+      w) int mln_asn1_encode_ia5String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_t slen);
+         Encode 'res' into an ASN.1 string of IA5String.
+
+      x) int mln_asn1_encode_utctime(mln_asn1_enResult_t *res, time_t time);
+         Encode 'res' into an ASN.1 string of UTC time.
+
+      y) int mln_asn1_encode_generalizedTime(mln_asn1_enResult_t *res, time_t time);
+         Encode 'res' into an ASN.1 string of Generalized time.
+
+      z) int mln_asn1_encode_sequence(mln_asn1_enResult_t *res);
+         Encode all sub-contents of 'res' into an ASN.1 string of Sequence.
+
+      aa) mln_asn1_encode_sequenceOf(res);
+         Encode all sub-contents of 'res' into an ASN.1 string of Sequence of.
+
+      ab) int mln_asn1_encode_set(mln_asn1_enResult_t *res);
+         Encode all sub-contents of 'res' into an ASN.1 string of Set.
+
+      ac) int mln_asn1_encode_setOf(mln_asn1_enResult_t *res);
+         Encode all sub-contents of 'res' into an ASN.1 string of Set of.
+
+      ad) int mln_asn1_encode_merge(mln_asn1_enResult_t *dest, mln_asn1_enResult_t *src);
+         Merge all sub-contents of 'dest' and 'src' into 'dest'.
+
+      ae) int mln_asn1_encode_transChainOnce(mln_asn1_enResult_t *res, mln_chain_t **head, mln_chain_t **tail);
+         Transform 'res' into an ASN.1 string stored in a chain.
+
+      af) int mln_asn1_enResult_getContent(mln_asn1_enResult_t *res, mln_u32_t index, mln_u8ptr_t *buf, mln_u64_t *len);
+         Get the sub-content which is indicated by 'index' from 'res'.
+
+      ag) int mln_asn1_encode_implicit(mln_asn1_enResult_t *res, mln_u32_t ident, mln_u32_t index);
+         Transform the content which is indicated by 'index' into Implicit type whose class will be set
+         'M_ASN1_CLASS_CONTEXT_SPECIFIC' and identifier will be replaced by 'ident'.
+
 5. Process Module Development
    In Melon, there are two methods to develop process module.
    Let us discuss the first method.
@@ -2202,11 +2374,10 @@ Their definitions can be found in melon-1.5.3/include/mln_types.h.
    About IPC, there is a case that the master may send a message to all child processes. Based on this case, Melon
    provides an interface to scan and process all child processes' objects.
    Its prototype is
-       int mln_fork_scan_all(mln_event_t *ev, mln_u32_t flag, int timeout_ms, ev_fd_handler fd_handler);
-   ev -- is the event object of the master process.
-   flag -- is the event flag which is bound with the file descriptor that connects every child process and the master.
-   timeout_ms -- is the event timer.
-   fd_handler -- is the event handler.
+       int mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data);
+       ev -- is the event object of the master process.
+       handler -- is a callback function to process everyone child process object.
+       data -- is a user data.
    Melon also provides other interfaces:
        1) mln_tcp_conn_t *mln_fork_get_master_connection(void);
           Get the connection that is used to communicate with master process.

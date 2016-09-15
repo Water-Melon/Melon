@@ -8,10 +8,10 @@
 mln_buf_t *mln_buf_new(mln_alloc_t *pool)
 {
     mln_buf_t *b = mln_alloc_m(pool, sizeof(mln_buf_t));
-    b->send_pos = b->pos = b->last = NULL;
+    b->left_pos = b->pos = b->last = NULL;
     b->start = b->end = NULL;
     b->shadow = NULL;
-    b->file_send_pos = b->file_pos = b->file_last = 0;
+    b->file_left_pos = b->file_pos = b->file_last = 0;
     b->file = NULL;
     b->temporary = b->mmap = b->in_memory = b->in_file = 0;
     b->flush = b->sync = b->last_buf = b->last_in_chain = 0;

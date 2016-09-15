@@ -11,7 +11,7 @@
 static inline mln_json_obj_t *mln_json_obj_new(void);
 static inline int mln_json_trans_hex(char *jstr, int len, char *c);
 static inline int mln_json_get_char(char **s, int *len);
-static int mln_json_hash_calc(mln_hash_t *h, void *key);
+static mln_u64_t mln_json_hash_calc(mln_hash_t *h, void *key);
 static int mln_json_hash_cmp(mln_hash_t *h, void *key1, void *key2);
 static void mln_json_obj_free(void *data);
 static int mln_json_rbtree_cmp(const void *data1, const void *data2);
@@ -56,7 +56,7 @@ mln_json_t *mln_json_parse(mln_string_t *jstr)
     mln_json_t *j = mln_json_new();
     if (j == NULL) return NULL;
 
-    if (mln_json_parse_json(j, jstr->str, jstr->len, 0) != 0) {
+    if (mln_json_parse_json(j, (char *)(jstr->data), jstr->len, 0) != 0) {
         mln_json_free(j);
         return NULL;
     }
@@ -533,7 +533,7 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
         case M_JSON_STRING:
             *buf++ = '\"'; length++;
             if ((s = j->data.m_j_string) != NULL) {
-                memcpy(buf, s->str, s->len);
+                memcpy(buf, s->data, s->len);
                 buf += s->len;
                 length += s->len;
             }
@@ -798,19 +798,18 @@ static inline int mln_json_get_char(char **s, int *len)
     return *save;
 }
 
-static int mln_json_hash_calc(mln_hash_t *h, void *key)
+static mln_u64_t mln_json_hash_calc(mln_hash_t *h, void *key)
 {
     mln_string_t *str = (mln_string_t *)key;
-    mln_s8ptr_t s = str->str, end = str->str + str->len;
-    mln_u32_t tbl_len = h->len;
-    int index = 0;
+    mln_u8ptr_t s, end = str->data + str->len;
+    mln_u64_t index = 0, tbl_len = h->len;
 
-    for (; s < end; s++) {
-        index += (*s * 65599);
+    for (s = str->data; s < end; s++) {
+        index += (((mln_u64_t)(*s)) * 65599);
         index %= tbl_len;
     }
 
-    return index < 0? -index: index;
+    return index;
 }
 
 static int mln_json_hash_cmp(mln_hash_t *h, void *key1, void *key2)
@@ -886,8 +885,8 @@ void mln_json_dump(mln_json_t *j, int n_space, char *prefix)
                                     &space);
             break;
         case M_JSON_STRING:
-            if (j->data.m_j_string != NULL && j->data.m_j_string->str != NULL)
-                printf("type:string val:[%s]\n", j->data.m_j_string->str);
+            if (j->data.m_j_string != NULL && j->data.m_j_string->data != NULL)
+                printf("type:string val:[%s]\n", (char *)(j->data.m_j_string->data));
             break;
         case M_JSON_NUM:
             printf("type:number val:[%f]\n", j->data.m_j_number);

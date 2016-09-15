@@ -1384,7 +1384,7 @@ mln_event_deal_active_fd(mln_event_t *event)
 static inline void
 mln_event_deal_fd_timeout(mln_event_t *event, int *ret)
 {
-    mln_uauto_t now;
+    mln_u64_t now;
     struct timeval tv;
     gettimeofday(&tv, NULL);
     now = tv.tv_sec * 1000000 + tv.tv_usec;

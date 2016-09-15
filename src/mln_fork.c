@@ -248,14 +248,14 @@ int do_fork(void)
                 mln_log(error, "Demand string arguments in 'exec_proc'.\n");
                 exit(1);
             }
-            v_args[i] = arg_ci->val.s->str;
+            v_args[i] = (char *)(arg_ci->val.s->data);
         }
         if (!mln_string_constStrcmp((*cc)->cmd_name, "keepalive")) {
             mln_fork_spawn(M_PST_SUP, v_args, n_args, NULL);
         } else if (!mln_string_constStrcmp((*cc)->cmd_name, "default")) {
             mln_fork_spawn(M_PST_DFL, v_args, n_args, NULL);
         } else {
-            mln_log(error, "Invalid command '%s' in 'exec_proc'.\n", (*cc)->cmd_name->str);
+            mln_log(error, "Invalid command '%s' in 'exec_proc'.\n", (char *)((*cc)->cmd_name->data));
             exit(1);
         }
     }
@@ -474,12 +474,12 @@ void mln_fork_worker_set_events(mln_event_t *ev)
     }
 }
 
-int mln_fork_scan_all(mln_event_t *ev, scan_handler handler)
+int mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data)
 {
     mln_fork_t *f;
     for (f = worker_list_head; f != NULL; f = f->next) {
         if (handler != NULL) {
-            if (handler(ev, f) < 0) return -1;
+            if (handler(ev, f, data) < 0) return -1;
         }
     }
     return 0;
@@ -552,14 +552,14 @@ mln_ipc_get_buf_with_len(mln_tcp_conn_t *tc, void *buf, mln_size_t len)
         }
         size = mln_buf_left_size(b);
         if (size > len) {
-            memcpy(pos, b->send_pos, len);
-            b->send_pos += len;
+            memcpy(pos, b->left_pos, len);
+            b->left_pos += len;
             break;
         }
-        memcpy(pos, b->send_pos, size);
+        memcpy(pos, b->left_pos, size);
         pos += size;
         len -= size;
-        b->send_pos += size;
+        b->left_pos += size;
         mln_chain_pool_release(mln_tcp_conn_pop(tc, M_C_RECV));
         if (len == 0) break;
     }
@@ -582,12 +582,12 @@ mln_ipc_discard_bytes(mln_tcp_conn_t *tc, mln_size_t size)
         }
         left_size = mln_buf_left_size(b);
         if (left_size > size) {
-            b->send_pos += size;
+            b->left_pos += size;
             size = 0;
             break;
         }
 
-        b->send_pos += left_size;
+        b->left_pos += left_size;
         size -= left_size;
         mln_chain_pool_release(mln_tcp_conn_pop(tc, M_C_RECV));
         if (size == 0) return 0;
@@ -794,7 +794,7 @@ int mln_ipc_master_send_prepare(mln_event_t *ev, \
         return -1;
     }
 
-    b->send_pos = b->pos = b->start = buf;
+    b->left_pos = b->pos = b->start = buf;
     b->last = b->end = buf + buflen;
     b->in_memory = 1;
     b->last_buf = 1;
@@ -881,7 +881,7 @@ int mln_ipc_worker_send_prepare(mln_event_t *ev, \
         return -1;
     }
 
-    b->send_pos = b->pos = b->start = buf;
+    b->left_pos = b->pos = b->start = buf;
     b->last = b->end = buf + buflen;
     b->in_memory = 1;
     b->last_buf = 1;

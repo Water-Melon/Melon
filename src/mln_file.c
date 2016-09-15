@@ -18,13 +18,12 @@ MLN_CHAIN_FUNC_DECLARE(reg_file, \
                        mln_file_t, \
                        static inline void, \
                        __NONNULL3(1,2,3));
-static int mln_file_set_hash(mln_hash_t *h, void *key);
-static int mln_file_set_cmp(mln_hash_t *h, void *key1, void *key2);
+static int mln_file_set_cmp(const void *data1, const void *data2);
 static void mln_file_free(void *pfile);
 
 mln_fileset_t *mln_fileset_init(mln_size_t max_file)
 {
-    struct mln_hash_attr attr;
+    struct mln_rbtree_attr attr;
     mln_fileset_t *fs;
 
     fs = (mln_fileset_t *)malloc(sizeof(mln_fileset_t));
@@ -38,15 +37,9 @@ mln_fileset_t *mln_fileset_init(mln_size_t max_file)
         return NULL;
     }
 
-    attr.hash = mln_file_set_hash;
     attr.cmp = mln_file_set_cmp;
-    attr.free_key = NULL;
-    attr.free_val = mln_file_free;
-    attr.len_base = max_file >> 1;
-    attr.expandable = 0;
-    attr.calc_prime = 0;
-    fs->reg_file_hash = mln_hash_init(&attr);
-    if (fs->reg_file_hash == NULL) {
+    attr.data_free = mln_file_free;
+    if ((fs->reg_file_tree = mln_rbtree_init(&attr)) == NULL) {
         mln_alloc_destroy(fs->pool);
         free(fs);
         return NULL;
@@ -58,33 +51,19 @@ mln_fileset_t *mln_fileset_init(mln_size_t max_file)
     return fs;
 }
 
-static int mln_file_set_hash(mln_hash_t *h, void *key)
+static int mln_file_set_cmp(const void *data1, const void *data2)
 {
-    mln_string_t *str = (mln_string_t *)key;
-    mln_s8ptr_t s, send = str->str + str->len;
-    register int index = 0, steplen = (str->len >> 3) - 1;
-    if (steplen <= 0) steplen = 1;
-
-    for (s = str->str; s < send; s+=steplen) {
-        index += (*s * 3);
-    }
-    if (index < 0) index = -index;
-    index %= h->len;
-
-    return index;
-}
-
-static int mln_file_set_cmp(mln_hash_t *h, void *key1, void *key2)
-{
-    return !mln_string_strcmp((mln_string_t *)key1, (mln_string_t *)key2);
+    mln_file_t *f1 = (mln_file_t *)data1;
+    mln_file_t *f2 = (mln_file_t *)data2;
+    return mln_string_strcmp(f1->file_path, f2->file_path);
 }
 
 void mln_fileset_destroy(mln_fileset_t *fs)
 {
     if (fs == NULL) return;
 
-    if (fs->reg_file_hash != NULL)
-        mln_hash_destroy(fs->reg_file_hash, M_HASH_F_VAL);
+    if (fs->reg_file_tree != NULL)
+        mln_rbtree_destroy(fs->reg_file_tree);
     if (fs->pool != NULL)
         mln_alloc_destroy(fs->pool);
     free(fs);
@@ -93,25 +72,24 @@ void mln_fileset_destroy(mln_fileset_t *fs)
 
 mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
 {
-    mln_file_t *f;
+    mln_rbtree_node_t *rn;
+    mln_file_t *f, tmpf;
     mln_string_t path;
-    mln_string_set(&path, filepath);
 
-    f = mln_hash_search(fs->reg_file_hash, &path);
-    if (f == NULL) {
+    mln_string_set(&path, filepath);
+    tmpf.file_path = &path;
+    rn = mln_rbtree_search(fs->reg_file_tree, fs->reg_file_tree->root, &tmpf);
+    if (mln_rbtree_null(rn, fs->reg_file_tree)) {
         struct stat st;
 
-        f = (mln_file_t *)mln_alloc_m(fs->pool, sizeof(mln_file_t));
-        if (f == NULL) {
+        if ((f = (mln_file_t *)mln_alloc_m(fs->pool, sizeof(mln_file_t))) == NULL) {
             return NULL;
         }
-        f->file_path = mln_string_pool_new(fs->pool, filepath);
-        if (f->file_path == NULL) {
+        if ((f->file_path = mln_string_pool_new(fs->pool, filepath)) == NULL) {
             mln_alloc_free(f);
             return NULL;
         }
-        f->fd = open(filepath, O_RDONLY);
-        if (f->fd < 0) {
+        if ((f->fd = open(filepath, O_RDONLY)) < 0) {
             mln_string_pool_free(f->file_path);
             mln_alloc_free(f);
             return NULL;
@@ -130,12 +108,16 @@ mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
         f->refer_cnt = 0;
         reg_file_chain_add(&(fs->reg_free_head), &(fs->reg_free_tail), f);
         f->fset = fs;
-        if (mln_hash_insert(fs->reg_file_hash, f->file_path, f) < 0) {
+        if ((rn = mln_rbtree_new_node(fs->reg_file_tree, f)) == NULL) {
             close(f->fd);
             mln_string_pool_free(f->file_path);
             mln_alloc_free(f);
             return NULL;
         }
+        mln_rbtree_insert(fs->reg_file_tree, rn);
+        f->node = rn;
+    } else {
+        f = (mln_file_t *)(rn->data);
     }
 
     if (f->refer_cnt++ == 0) {
@@ -166,10 +148,11 @@ void mln_file_close(void *pfile)
     fs = f->fset;
     reg_file_chain_add(&(fs->reg_free_head), &(fs->reg_free_tail), f);
 
-    if (fs->reg_file_hash->nr_nodes > fs->max_file) {
+    if (fs->reg_file_tree->nr_node > fs->max_file) {
         f = fs->reg_free_head;
         reg_file_chain_del(&(fs->reg_free_head), &(fs->reg_free_tail), f);
-        mln_hash_remove(fs->reg_file_hash, f->file_path, M_HASH_F_VAL);
+        mln_rbtree_delete(fs->reg_file_tree, f->node);
+        mln_rbtree_free_node(fs->reg_file_tree, f->node);
     }
 }
 
@@ -211,6 +194,7 @@ mln_file_t *mln_file_open_tmp(mln_alloc_t *pool)
     f->refer_cnt = 0;
     f->prev = f->next = NULL;
     f->fset = NULL;
+    f->node = NULL;
 lp:
     gettimeofday(&now, NULL);
     suffix = now.tv_sec * 1000000 + now.tv_usec;

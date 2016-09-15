@@ -8,8 +8,8 @@
 #include "mln_string.h"
 #include "mln_connection.h"
 #include "mln_event.h"
+#include "mln_rbtree.h"
 
-#define THREAD_HASH_LEN 31
 #define THREAD_SOCKFD_LEN 128
 
 typedef int (*tentrance)(int, char **);
@@ -70,6 +70,7 @@ struct mln_thread_s {
     mln_thread_msgq_t         *local_tail;
     mln_thread_msgq_t         *dest_head;
     mln_thread_msgq_t         *dest_tail;
+    mln_rbtree_node_t         *node;
 };
 
 extern void

@@ -31,6 +31,10 @@ static int mln_set_id(void);
 static int mln_sys_core_modify(void);
 static int mln_sys_nofile_modify(void);
 
+long mon_days[2][12] = {
+    {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+    {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+};
 mln_boot_t boot_params[] = {
 {"--help", "-h", mln_boot_help, 0},
 {"--version", "-v", mln_boot_version, 0},
@@ -240,7 +244,7 @@ static int mln_set_id(void)
             mln_log(error, "Parameter type of command 'user' error.\n");
             return -1;
         }
-        keywords[0] = ci->val.s->str;
+        keywords[0] = (char *)(ci->val.s->data);
     }
 
     /*init lexer*/
@@ -301,14 +305,14 @@ err:
         mln_lex_destroy(lex);
         return -1;
     }
-    int uid = atoi(plst->text->str);
+    int uid = atoi((char *)(plst->text->data));
     mln_passwd_lex_free(plst);
     plst = mln_passwd_lex_token(lex);
     if (plst == NULL || plst->type != PWD_TK_COLON) goto err;
     mln_passwd_lex_free(plst);
     plst = mln_passwd_lex_token(lex);
     if (plst == NULL || plst->type != PWD_TK_DEC) goto err;
-    int gid = atoi(plst->text->str);
+    int gid = atoi((char *)(plst->text->data));
     mln_passwd_lex_free(plst);
     mln_lex_destroy(lex);
 
@@ -380,7 +384,7 @@ static int
 mln_boot_version(const char *boot_str, const char *alias)
 {
     printf("Melon Platform.\n");
-    printf("Version 1.5.3.\n");
+    printf("Version 1.5.4.\n");
     printf("Copyright (C) Niklaus F.Schen (Chinese name: Shen Fanchen).\n");
     exit(0);
     return 0;
@@ -434,5 +438,110 @@ mln_boot_stop(const char *boot_str, const char *alias)
     kill(pid, SIGKILL);
 
     exit(0);
+}
+
+/*
+ * time
+ */
+static inline int
+mln_is_leap(long year)
+{
+    if (((year%4 == 0) && (year%100 != 0)) || (year%400 == 0))
+        return 1;
+    return 0;
+}
+
+void mln_UTCTime(time_t tm, struct UTCTime_s *uc)
+{
+    long days = tm / 86400;
+    long subsec = tm % 86400;
+    long cnt = 0;
+    uc->year = uc->month = 0;
+    while ((mln_is_leap(1970+uc->year)? (cnt+366): (cnt+365)) <= days) {
+        if (mln_is_leap(1970+uc->year)) cnt += 366;
+        else cnt += 365;
+        uc->year++;
+    }
+    uc->year += 1970;
+    int is_leap_year = mln_is_leap(uc->year);
+    long subdays = days - cnt;
+    cnt = 0;
+    while (cnt + mon_days[is_leap_year][uc->month] <= subdays) {
+        cnt += mon_days[is_leap_year][uc->month];
+        uc->month++;
+    }
+    uc->month++;
+    uc->day = subdays - cnt + 1;
+    uc->hour = subsec / 3600;
+    uc->minute = (subsec % 3600) / 60;
+    uc->second = (subsec % 3600) % 60;
+}
+
+int mln_s2Time(time_t *tm, mln_string_t *s, int type)
+{
+    mln_u8ptr_t p, end;
+    time_t year = 0, month = 0, day = 0;
+    time_t hour = 0, minute = 0, second = 0;
+    time_t tmp;
+
+    switch (type) {
+        case M_TOOLS_TIME_UTC:
+            p = s->data;
+            end = s->data + s->len - 1;
+            if (s->len != 13 || (*end != 'Z' && *end != 'z')) return -1;
+            for (; p < end; p++) if (!isdigit(*p)) return -1;
+            p = s->data;
+            year = ((*p++) - '0') * 10;
+            year += ((*p++) - '0');
+            if (year >= 50) year += 1900;
+            else year += 2000;
+            break;
+        case M_TOOLS_TIME_GENERALIZEDTIME:
+            p = s->data;
+            end = s->data + s->len - 1;
+            if (s->len != 15 || (*end != 'Z' && *end != 'z')) return -1;
+            for (; p < end; p++) if (!isdigit(*p)) return -1;
+            p = s->data;
+            year = ((*p++) - '0') * 1000;
+            year += (((*p++) - '0') * 100);
+            year += (((*p++) - '0') * 10);
+            year += ((*p++) - '0');
+            break;
+        default:
+            return -1;
+    }
+    month = (*p++ - '0') * 10;
+    month += (*p++ - '0');
+    day = (*p++ - '0') * 10;
+    day += (*p++ - '0');
+    hour = (*p++ - '0') * 10;
+    hour += (*p++ - '0');
+    minute = (*p++ - '0') * 10;
+    minute += (*p++ - '0');
+    second = (*p++ - '0') * 10;
+    second += (*p++ - '0');
+    if (year < 1970 || \
+        month > 12 || \
+        day > mon_days[mln_is_leap(year)][month-1] || \
+        hour >= 24 || \
+        minute >= 60 || \
+        second >= 60)
+    {
+        return -1;
+    }
+
+    for (tmp = 1970; tmp < year; tmp++) {
+        day += (mln_is_leap(tmp)? 366: 365);
+    }
+    for (month--, tmp = 0; tmp < month; tmp++) {
+        day += (mon_days[mln_is_leap(year)][tmp]);
+    }
+    day--;
+    *tm = day * 86400;
+    if (hour || minute || second) {
+        *tm += (hour * 3600 + minute * 60 + second);
+    }
+
+    return 0;
 }
 

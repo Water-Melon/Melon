@@ -72,7 +72,7 @@ typedef struct mln_event_fd_s {
     void                    *timeout_data;
     ev_fd_handler            timeout_handler;
     mln_fheap_node_t        *timeout_node;
-    mln_uauto_t              end_us;
+    mln_u64_t                end_us;
     int                      fd;
     mln_u32_t                active_flag;
     mln_u32_t                in_process:1;

@@ -13,13 +13,13 @@
 #include "mln_file.h"
 
 typedef struct mln_buf_s {
-    mln_u8ptr_t         send_pos;
+    mln_u8ptr_t         left_pos;
     mln_u8ptr_t         pos;
     mln_u8ptr_t         last;
     mln_u8ptr_t         start;
     mln_u8ptr_t         end;
     struct mln_buf_s   *shadow;
-    mln_off_t           file_send_pos;
+    mln_off_t           file_left_pos;
     mln_off_t           file_pos;
     mln_off_t           file_last;
     mln_file_t         *file;
@@ -45,7 +45,7 @@ typedef struct mln_chain_s {
 
 #define mln_buf_left_size(pbuf) \
     ((pbuf) == NULL? 0: \
-        ((pbuf)->in_file? (pbuf)->file_last - (pbuf)->file_send_pos: (pbuf)->last - (pbuf)->send_pos))
+        ((pbuf)->in_file? (pbuf)->file_last - (pbuf)->file_left_pos: (pbuf)->last - (pbuf)->left_pos))
 
 #define mln_chain_add(pphead,pptail,c) \
 {\

@@ -20,6 +20,7 @@ typedef struct {
     mln_bignum_t dp;
     mln_bignum_t dq;
     mln_bignum_t qinv;
+    mln_u32_t    pwr:1;
 } mln_rsa_key_t;
 
 
@@ -33,8 +34,28 @@ extern mln_string_t *mln_RSAESPKCS1V15PubDecrypt(mln_rsa_key_t *pub, mln_string_
 extern mln_string_t *mln_RSAESPKCS1V15PriEncrypt(mln_rsa_key_t *pri, mln_string_t *text) __NONNULL2(1,2);
 extern mln_string_t *mln_RSAESPKCS1V15PriDecrypt(mln_rsa_key_t *pri, mln_string_t *cipher) __NONNULL2(1,2);
 extern void mln_RSAESPKCS1V15Free(mln_string_t *s);
-extern mln_string_t *mln_RSASSAPKCS1V15SIGN(mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType) __NONNULL2(1,2);
-extern int mln_RSASSAPKCS1V15VERIFY(mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s, mln_u32_t hashType) __NONNULL3(1,2,3);
+extern mln_string_t *
+mln_RSASSAPKCS1V15SIGN(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType) __NONNULL3(1,2,3);
+extern int
+mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s) __NONNULL4(1,2,3,4);
+#define mln_RSAPublicKey_setPwr(pkey)   ((pkey)->pwr = 1)
+#define mln_RSAPublicKey_resetPwr(pkey) ((pkey)->pwr = 0)
+#define mln_RSAPublicKey_getValueRef(pkey,pmodulus,pexponent); \
+{\
+    (pmodulus) = &((pkey)->n);\
+    (pexponent) = &((pkey)->ed);\
+}
+#define mln_RSAPublicKey_getValue(pkey,modulus,exponent); \
+{\
+    (modulus) = (pkey)->n;\
+    (exponent) = (pkey)->ed;\
+}
+#define mln_RSAPublicKey_setValue(pkey,modulus,exponent); \
+{\
+    (pkey)->n = (modulus);\
+    (pkey)->ed = (exponent);\
+    (pkey)->pwr = 1;\
+}
 
 #endif
 

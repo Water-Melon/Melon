@@ -12,7 +12,7 @@
 #include "mln_base64.h"
 #include <sys/time.h>
 
-static int mln_websocket_hash_calc(mln_hash_t *h, void *key);
+static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key);
 static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2);
 static void mln_websocket_hash_free(void *data);
 static int mln_websocket_match_scan(void *key, void *val, void *data);
@@ -55,19 +55,17 @@ int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
     return 0;
 }
 
-static int mln_websocket_hash_calc(mln_hash_t *h, void *key)
+static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key)
 {
     mln_string_t *k = (mln_string_t *)key;
-    int index = 0;
-    mln_s8ptr_t p, end;
+    mln_u64_t index = 0;
+    mln_u8ptr_t p, end = k->data + k->len;
 
-    for (p = k->str, end = k->str+k->len; p < end; p++) {
+    for (p = k->data; p < end; p++) {
         index += (*p * 3);
     }
-    if (index < 0) index = -index;
-    index %= h->len;
 
-    return index;
+    return index % h->len;
 }
 
 static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2)
@@ -189,7 +187,7 @@ static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey)
 
     mln_u8ptr_t buf = (mln_u8ptr_t)mln_alloc_m(pool, wskey->len+sizeof(guid));
     if (buf == NULL) return -1;
-    memcpy(buf, wskey->str, wskey->len);
+    memcpy(buf, wskey->data, wskey->len);
     memcpy(buf+wskey->len, guid, sizeof(guid));
     mln_sha1_calc(&s, buf, wskey->len+sizeof(guid)-1, 1);
     mln_alloc_free(buf);
@@ -325,11 +323,11 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
     mln_string_t *p = array;
     mln_s8ptr_t pos, buf;
     mln_uauto_t size = 0;
-    for (; p->str != NULL; p++) {
-        if ((pos = strchr(p->str, ';')) == NULL) {
+    for (; p->data != NULL; p++) {
+        if ((pos = strchr((char *)(p->data), ';')) == NULL) {
             size += (p->len + 1);
         } else {
-            size += (pos - p->str + 1);
+            size += (pos - (char *)(p->data) + 1);
         }
     }
     size--;
@@ -339,13 +337,13 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
         mln_string_pool_free(tmp);
         return NULL;
     }
-    for (size = 0, p = array; p->str != NULL; p++) {
-        if ((pos = strchr(p->str, ';')) == NULL) {
-            memcpy(buf+size, p->str, p->len);
+    for (size = 0, p = array; p->data != NULL; p++) {
+        if ((pos = strchr((char *)(p->data), ';')) == NULL) {
+            memcpy(buf+size, p->data, p->len);
             size += p->len;
         } else {
-            memcpy(buf+size, p->str, pos-p->str);
-            size += (pos - p->str);
+            memcpy(buf+size, p->data, pos-(char *)(p->data));
+            size += (pos - (char *)(p->data));
         }
         buf[size++] = ',';
     }
@@ -376,7 +374,7 @@ static mln_string_t *mln_websocket_accept_field(mln_http_t *http)
 
     mln_u8ptr_t buf = (mln_u8ptr_t)mln_alloc_m(pool, val->len+sizeof(guid));
     if (buf == NULL) return NULL;
-    memcpy(buf, val->str, val->len);
+    memcpy(buf, val->data, val->len);
     memcpy(buf+val->len, guid, sizeof(guid));
     mln_sha1_calc(&s, buf, val->len+sizeof(guid)-1, 1);
     mln_alloc_free(buf);
@@ -687,7 +685,7 @@ int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode)
         mln_chain_pool_release(c);
         return M_WS_RET_FAILED;
     }
-    b->send_pos = b->pos = b->start = buf;
+    b->left_pos = b->pos = b->start = buf;
     b->end = b->last = buf + size;
     b->in_memory = 1;
     b->last_buf = 1;
@@ -759,7 +757,7 @@ int mln_websocket_parse(mln_websocket_t *ws, mln_chain_t **in)
 
     for (i = 0; c != NULL; c = c->next) {
         if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
-        p = c->buf->send_pos;
+        p = c->buf->left_pos;
         for (end = c->buf->end; p < end; p++) {
              if (i == 0) {
                  b1 = *p;
@@ -787,7 +785,7 @@ again127:
         if (tmp < 8) {
             for (c = c->next; c != NULL; c = c->next) {
                 if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
-                p = c->buf->send_pos;
+                p = c->buf->left_pos;
                 end = c->buf->end;
                 break;
             }
@@ -807,7 +805,7 @@ again126:
         if (tmp < 2) {
             for (c = c->next; c != NULL; c = c->next) {
                 if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
-                p = c->buf->send_pos;
+                p = c->buf->left_pos;
                 end = c->buf->end;
                 break;
             }
@@ -828,7 +826,7 @@ againm:
         if (tmp < 4) {
             for (c = c->next; c != NULL; c = c->next) {
                 if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
-                p = c->buf->send_pos;
+                p = c->buf->left_pos;
                 end = c->buf->end;
                 break;
             }
@@ -852,7 +850,7 @@ against:
             if (tmp < 2) {
                 for (c = c->next; c != NULL; c = c->next) {
                     if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
-                    p = c->buf->send_pos;
+                    p = c->buf->left_pos;
                     end = c->buf->end;
                     break;
                 }
@@ -878,7 +876,7 @@ againc:
         if (tmp < len) {
             for (c = c->next; c != NULL; c = c->next) {
                 if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
-                p = c->buf->send_pos;
+                p = c->buf->left_pos;
                 end = c->buf->end;
                 break;
             }
@@ -937,7 +935,7 @@ againc:
         if (ret != M_WS_RET_OK) return ret;
     }
 
-    if (c != NULL && c->buf != NULL) c->buf->send_pos = p;
+    if (c != NULL && c->buf != NULL) c->buf->left_pos = p;
     for (; c != NULL; c = c->next) {
         if (c->buf == NULL || mln_buf_left_size(c->buf)==0) continue;
         break;

@@ -23,7 +23,7 @@ static void mln_get_root(void);
 static void mln_master_routine(void);
 static void mln_worker_routine(void);
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data);
-static int mln_conf_reload_scan_handler(mln_event_t *ev, void *data);
+static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data);
 
 int main(int argc, char *argv[])
 {
@@ -145,7 +145,7 @@ static void mln_get_root(void)
 
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data)
 {
-    if (mln_fork_scan_all(ev, mln_conf_reload_scan_handler) < 0) {
+    if (mln_fork_scan_all(ev, mln_conf_reload_scan_handler, NULL) < 0) {
         mln_log(error, "mln_fork_scan() failed.\n");
         return;
     }
@@ -155,10 +155,10 @@ static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data)
     }
 }
 
-static int mln_conf_reload_scan_handler(mln_event_t *ev, void *data)
+static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data)
 {
     char msg[] = "conf_reload";
 
-    return mln_ipc_master_send_prepare(ev, M_IPC_CONF_RELOAD, msg, sizeof(msg)-1, (mln_fork_t *)data);
+    return mln_ipc_master_send_prepare(ev, M_IPC_CONF_RELOAD, msg, sizeof(msg)-1, f);
 }
 

@@ -23,7 +23,7 @@ static inline int mln_http_process_line(mln_http_t *http, mln_chain_t **in, mln_
 static inline int mln_http_parse_headline(mln_http_t *http, mln_u8ptr_t buf, mln_size_t len);
 static inline int mln_http_parse_field(mln_http_t *http, mln_u8ptr_t buf, mln_size_t len);
 static void mln_http_hash_free(void *data);
-static int mln_http_hash_calc(mln_hash_t *h, void *key);
+static mln_u64_t mln_http_hash_calc(mln_hash_t *h, void *key);
 static int mln_http_hash_cmp(mln_hash_t *h, void *key1, void *key2);
 static inline int mln_http_atou(mln_string_t *s, mln_u32_t *status);
 static int mln_http_dump_scan(void *key, void *val, void *data);
@@ -153,7 +153,7 @@ static inline int mln_http_line_length(mln_http_t *http, mln_chain_t *in, mln_si
             in = in->next;
             continue;
         }
-        for (p = b->send_pos, end = b->last; p < end; p++) {
+        for (p = b->left_pos, end = b->last; p < end; p++) {
             if (*p == (mln_u8_t)'\n') break;
             length++;
         }
@@ -194,11 +194,11 @@ static inline int mln_http_process_line(mln_http_t *http, mln_chain_t **in, mln_
             continue;
         }
         while (mln_buf_left_size(b) > 0) {
-            if (*(b->send_pos) == '\n') break;
-            *p++ = *(b->send_pos++);
+            if (*(b->left_pos) == '\n') break;
+            *p++ = *(b->left_pos++);
         }
         if (mln_buf_left_size(b) > 0) {
-            b->send_pos++;
+            b->left_pos++;
             break;
         }
     }
@@ -620,7 +620,7 @@ mln_http_generate_write(struct mln_http_chain_s *hc, void *buf, mln_size_t size)
                 return M_HTTP_RET_ERROR;
             }
 
-            b->send_pos = b->pos = b->start = buffer;
+            b->left_pos = b->pos = b->start = buffer;
             b->last = b->end = buffer;
             b->in_memory = 1;
             b->last_buf = 1;
@@ -674,7 +674,7 @@ mln_http_generate_version(struct mln_http_chain_s *hc)
     }
 
     mln_string_t *p = &http_version[version];
-    if (mln_http_generate_write(hc, p->str, p->len) == M_HTTP_RET_ERROR) {
+    if (mln_http_generate_write(hc, p->data, p->len) == M_HTTP_RET_ERROR) {
         return M_HTTP_RET_ERROR;
     }
     return M_HTTP_RET_OK;
@@ -695,11 +695,11 @@ mln_http_generate_status(struct mln_http_chain_s *hc)
         return M_HTTP_RET_ERROR;
     }
 
-    if (mln_http_generate_write(hc, map->code_str.str, map->code_str.len) == M_HTTP_RET_ERROR)
+    if (mln_http_generate_write(hc, map->code_str.data, map->code_str.len) == M_HTTP_RET_ERROR)
         return M_HTTP_RET_ERROR;
     if (mln_http_generate_write(hc, " ", 1) == M_HTTP_RET_ERROR)
         return M_HTTP_RET_ERROR;
-    if (mln_http_generate_write(hc, map->msg_str.str, map->msg_str.len) == M_HTTP_RET_ERROR)
+    if (mln_http_generate_write(hc, map->msg_str.data, map->msg_str.len) == M_HTTP_RET_ERROR)
         return M_HTTP_RET_ERROR;
 
     return M_HTTP_RET_OK;
@@ -715,7 +715,7 @@ mln_http_generate_method(struct mln_http_chain_s *hc)
     }
 
     mln_string_t *p = &http_method[method];
-    if (mln_http_generate_write(hc, p->str, p->len) == M_HTTP_RET_ERROR)
+    if (mln_http_generate_write(hc, p->data, p->len) == M_HTTP_RET_ERROR)
         return M_HTTP_RET_ERROR;
 
     return M_HTTP_RET_OK;
@@ -729,7 +729,7 @@ mln_http_generate_uri(struct mln_http_chain_s *hc)
         if (mln_http_generate_write(hc, "/", 1) == M_HTTP_RET_ERROR)
             return M_HTTP_RET_ERROR;
     } else {
-        if (mln_http_generate_write(hc, uri->str, uri->len) == M_HTTP_RET_ERROR)
+        if (mln_http_generate_write(hc, uri->data, uri->len) == M_HTTP_RET_ERROR)
             return M_HTTP_RET_ERROR;
     }
 
@@ -737,7 +737,7 @@ mln_http_generate_uri(struct mln_http_chain_s *hc)
     if (args != NULL) {
         if (mln_http_generate_write(hc, "?", 1) == M_HTTP_RET_ERROR)
             return M_HTTP_RET_ERROR;
-        if (mln_http_generate_write(hc, args->str, args->len) == M_HTTP_RET_ERROR)
+        if (mln_http_generate_write(hc, args->data, args->len) == M_HTTP_RET_ERROR)
             return M_HTTP_RET_ERROR;
     }
 
@@ -751,12 +751,12 @@ mln_http_generate_fields_hash_scan(void *key, void *val, void *data)
     mln_string_t *v = (mln_string_t *)val;
     struct mln_http_chain_s *hc = (struct mln_http_chain_s *)data;
 
-    if (mln_http_generate_write(hc, k->str, k->len) == M_HTTP_RET_ERROR)
+    if (mln_http_generate_write(hc, k->data, k->len) == M_HTTP_RET_ERROR)
         return -1;
     if (mln_http_generate_write(hc, ": ", 2) == M_HTTP_RET_ERROR)
         return -1;
     if (val != NULL) {
-        if (mln_http_generate_write(hc, v->str, v->len) == M_HTTP_RET_ERROR)
+        if (mln_http_generate_write(hc, v->data, v->len) == M_HTTP_RET_ERROR)
             return -1;
     }
     if (mln_http_generate_write(hc, "\r\n", 2) == M_HTTP_RET_ERROR)
@@ -826,7 +826,7 @@ mln_string_t *mln_http_field_iterator(mln_http_t *http, mln_string_t *key)
     do {
         val = mln_hash_search_iterator(header, key, &ctx);
         if (val != NULL) {
-            memcpy(buf+size, val->str, val->len);
+            memcpy(buf+size, val->data, val->len);
             size += val->len;
             if (cnt-- > 1) buf[size++] = ',';
         }
@@ -854,9 +854,9 @@ void mln_http_drop_field(mln_http_t *http, mln_string_t *key)
 static inline int mln_http_atou(mln_string_t *s, mln_u32_t *status)
 {
     mln_u32_t st = 0;
-    mln_s8ptr_t p, end = s->str + s->len;
+    mln_u8ptr_t p, end = s->data + s->len;
 
-    for (p = s->str; p < end; p++) {
+    for (p = s->data; p < end; p++) {
         if (!isdigit(*p)) return M_HTTP_RET_ERROR;
         st *= 10;
         st += (*p - '0');
@@ -969,19 +969,17 @@ static void mln_http_hash_free(void *data)
     mln_string_pool_free((mln_string_t *)data);
 }
 
-static int mln_http_hash_calc(mln_hash_t *h, void *key)
+static mln_u64_t mln_http_hash_calc(mln_hash_t *h, void *key)
 {
-    int index = 0;
+    mln_u64_t index = 0;
     mln_string_t *s = (mln_string_t *)key;
-    mln_s8ptr_t p, end = s->str + s->len;
+    mln_u8ptr_t p, end = s->data + s->len;
 
-    for (p = s->str; p < end; p++) {
-        index += (*p * 3);
+    for (p = s->data; p < end; p++) {
+        index += (((mln_u64_t)(*p)) * 3);
     }
-    if (index < 0) index = -index;
-    index %= h->len;
 
-    return index;
+    return index % h->len;
 }
 
 static int mln_http_hash_cmp(mln_hash_t *h, void *key1, void *key2)
@@ -999,17 +997,17 @@ void mln_http_dump(mln_http_t *http)
 
     if (http->uri != NULL) {
         printf("\tURI:[");fflush(stdout);
-        write(STDOUT_FILENO, http->uri->str, http->uri->len);
+        write(STDOUT_FILENO, http->uri->data, http->uri->len);
         printf("]\n");
     }
     if (http->args != NULL) {
         printf("\tARGS:[");fflush(stdout);
-        write(STDOUT_FILENO, http->args->str, http->args->len);
+        write(STDOUT_FILENO, http->args->data, http->args->len);
         printf("]\n");
     }
     if (http->response_msg != NULL) {
         printf("\tRESPONSE_MSG:[");fflush(stdout);
-        write(STDOUT_FILENO, http->response_msg->str, http->response_msg->len);
+        write(STDOUT_FILENO, http->response_msg->data, http->response_msg->len);
         printf("]\n");
     }
     printf("\tstatus_code:%u\n", http->status);
@@ -1022,7 +1020,9 @@ void mln_http_dump(mln_http_t *http)
 
 static int mln_http_dump_scan(void *key, void *val, void *data)
 {
-    printf("\t\tkey:[%s] value:[%s]\n", ((mln_string_t *)key)->str, val == NULL?"NULL":((mln_string_t *)val)->str);
+    printf("\t\tkey:[%s] value:[%s]\n", \
+           (char *)(((mln_string_t *)key)->data), \
+           val == NULL?"NULL":(char *)(((mln_string_t *)val)->data));
 
     return 0;
 }

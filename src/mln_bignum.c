@@ -398,6 +398,11 @@ static inline void __mln_bignum_mul(mln_bignum_t *dest, mln_bignum_t *src)
         return;
     }
     mln_bignum_t res = {M_BIGNUM_POSITIVE, 0, {0}};
+    if (!__mln_bignum_absCompare(dest, &res) || !__mln_bignum_absCompare(src, &res)) {
+        *dest = res;
+        return;
+    }
+
     mln_u64_t *data = res.data, tmp, *dest_data = dest->data, *src_data;
     mln_u64_t *dend, *send, *last = res.data + M_BIGNUM_SIZE;
 
@@ -986,8 +991,8 @@ mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
                 gettimeofday(&tv, NULL);
                 val = tv.tv_sec*1000000+tv.tv_usec;
                 data[i-1] = (mln_u32_t)rand_r(&val);
-                data[i-1] |= 0x80000000;
             }
+            data[i-1] |= 0x80000000;
             bn->length = i;
             data[0] |= 1;
         }
@@ -1020,7 +1025,7 @@ int mln_bignum_prime(mln_bignum_t *res, mln_u32_t bitwidth)
     while (1) {
         mln_bignum_random_prime(&prime, bitwidth);
         if (__mln_bignum_absCompare(&prime, &one) <= 0) continue;
-        times = bitwidth<=16? 4: bitwidth >> 4;
+        times = bitwidth<=512? 4: bitwidth >> 9;
         for (; times > 0; times--) {
             mln_bignum_random_scope(&tmp, bitwidth, &prime);
             if (mln_bignum_witness(&tmp, &prime)) break;
@@ -1032,6 +1037,7 @@ int mln_bignum_prime(mln_bignum_t *res, mln_u32_t bitwidth)
     return 0;
 }
 
+#if 0
 int mln_bignum_extendEulid(mln_bignum_t *a, mln_bignum_t *b, mln_bignum_t *x, mln_bignum_t *y, mln_bignum_t *gcd)
 {
     mln_bignum_t tx, ty, t, tmp;
@@ -1057,21 +1063,67 @@ int mln_bignum_extendEulid(mln_bignum_t *a, mln_bignum_t *b, mln_bignum_t *x, ml
     if (y != NULL) *y = tx;
     return 0;
 }
+#else
+int mln_bignum_extendEulid(mln_bignum_t *a, mln_bignum_t *b, mln_bignum_t *x, mln_bignum_t *y)
+{
+    mln_bignum_t m = *a, n = *b;
+    mln_bignum_t r, q, tmp;
+    mln_bignum_t tmpx, tmpy, zero = mln_bignum_zero();;
+    mln_bignum_t x0 = {M_BIGNUM_POSITIVE, 1, {0}};
+    x0.data[0] = 1;
+    mln_bignum_t y0 = zero;
+    mln_bignum_t x1 = zero;
+    mln_bignum_t y1 = {M_BIGNUM_POSITIVE, 1, {0}};
+    y1.data[0] = 1;
+    tmpx = x1;
+    tmpy = y1;
 
+    r = m;
+    if (__mln_bignum_div(&r, &n, &q) < 0) return -1;
+
+    while (__mln_bignum_compare(&r, &zero) > 0) {
+        tmp = q;
+        __mln_bignum_mul(&tmp, &x1);
+        tmpx = x0;
+        __mln_bignum_sub(&tmpx, &tmp);
+
+        tmp = q;
+        __mln_bignum_mul(&tmp, &y1);
+        tmpy = y0;
+        __mln_bignum_sub(&tmpy, &tmp);
+
+        x0 = x1;
+        y0 = y1;
+        x1 = tmpx;
+        y1 = tmpy;
+        m = n;
+        n = r;
+        r = m;
+        if (__mln_bignum_div(&r, &n, &q) < 0) return -1;
+    }
+
+    if (x != NULL) *x = tmpx;
+    if (y != NULL) *y = tmpy;
+
+    return 0;
+}
+#endif
+
+#if 1
 int mln_bignum_i2osp(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
 {
     if (n->tag == M_BIGNUM_NEGATIVE || (n->length<<2) > len) return -1;
 
     mln_u64_t *p = n->data + n->length - 1, *end = n->data;
-    mln_size_t i, max = len - (n->length << 2);
-    for (i = 0; i < max; i++) {
-        buf[i] = 0;
+    mln_size_t max = len - (n->length << 2);
+    while (max--) {
+        *buf++ = 0;
     }
     for (; p >= end; p--) {
-        buf[i++] = (*p >> 24) & 0xff;
-        buf[i++] = (*p >> 16) & 0xff;
-        buf[i++] = (*p >> 8) & 0xff;
-        buf[i++] = *p & 0xff;
+        *buf++ = (*p >> 24) & 0xff;
+        *buf++ = (*p >> 16) & 0xff;
+        *buf++ = (*p >> 8) & 0xff;
+        *buf++ = *p & 0xff;
     }
     return 0;
 }
@@ -1080,31 +1132,166 @@ int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
 {
     if (len > (M_BIGNUM_SIZE<<2)) return -1;
 
+    *n = (mln_bignum_t)mln_bignum_zero();
     mln_u64_t *data = n->data;
     mln_u8ptr_t p = buf + len - 1;
-    while (1) {
-        *data = 0;
-        if (p < buf) break;
-        (*data) |= (((mln_u64_t)(*p--)));
-        if (p < buf) {
-            data++;
-            break;
+    mln_size_t i = 0;
+    while (p >= buf) {
+        (*data) |= (((mln_u64_t)(*p--)) << i);
+        if (i >= 24) {
+            *data++ &= 0xffffffff;
+            i = 0;
+            continue;
         }
-        (*data) |= (((mln_u64_t)(*p--)) << 8);
-        if (p < buf) {
-            data++;
-            break;
-        }
-        (*data) |= (((mln_u64_t)(*p--)) << 16);
-        if (p < buf) {
-            data++;
-            break;
-        }
-        (*data) |= (((mln_u64_t)(*p--)) << 24);
-        data++;
+        i += 8;
     }
-    n->length = data - n->data;
-    mln_bignum_positive(n);
+
+    n->length = i? (data-n->data+1): (data-n->data);
     return 0;
 }
+
+#else
+int mln_bignum_i2osp(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
+{
+    if (n->tag == M_BIGNUM_NEGATIVE || (n->length<<2) > len) return -1;
+
+    mln_u64_t *p = n->data, *end = n->data + n->length;
+    mln_size_t max = len - (n->length << 2);
+    while (max--) {
+        *buf++ = 0;
+    }
+    for (; p < end; p++) {
+        *buf++ = *p & 0xff;
+        *buf++ = (*p >> 8) & 0xff;
+        *buf++ = (*p >> 16) & 0xff;
+        *buf++ = (*p >> 24) & 0xff;
+    }
+    return 0;
+}
+
+int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
+{
+    if (len > (M_BIGNUM_SIZE<<2)) return -1;
+
+    *n = (mln_bignum_t)mln_bignum_zero();
+    mln_u64_t *data = n->data;
+    mln_u8ptr_t end = buf+len;
+    mln_size_t i = 0;
+    while (buf < end) {
+        (*data) |= (((mln_u64_t)(*buf++)) << i);
+        if (i >= 24) {
+            *data++ &= 0xffffffff;
+            i = 0;
+            continue;
+        }
+        i += 8;
+    }
+
+    n->length = i? (data-n->data+1): (data-n->data);
+    return 0;
+}
+#endif
+
+#if 1
+int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
+{
+    mln_u64_t *p, *end;
+    int pos = 3, length = n->length << 2;
+    p = n->data + n->length - 1;
+    if (!(((*p) >> 24) & 0xff)) {
+        pos--, length--;
+        if (!(((*p) >> 16) & 0xff)) {
+            pos--, length--;
+            if (!(((*p) >> 8) & 0xff)) {
+                pos--, length--;
+            }
+        }
+    }
+
+    if (((*p) >> (pos << 3)) & 0x80) *buf++ = 0, length++;
+
+    for (end = n->data; len > 0 && p >= end; len--) {
+        *buf++ = ((*p) >> (pos << 3)) & 0xff;
+        if (--pos < 0) {
+            p--;
+            pos = 3;
+        }
+    }
+
+    return length;
+}
+
+int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
+{
+    if (buf == NULL || len == 0) return 0;
+    if (*buf == 0) len--, buf++;
+    if (len > (M_BIGNUM_SIZE<<2)) return -1;
+    *n = (mln_bignum_t)mln_bignum_zero();
+
+    mln_u8ptr_t p = buf + len - 1;
+    mln_u64_t *data = n->data;
+    mln_size_t i = 0;
+    while (p >= buf) {
+        *data |= ((*p--) << i);
+        if (i >= 24) {
+            i = 0;
+            *data &= 0xffffffff;
+            data++;
+            continue;
+        }
+        i += 8;
+    }
+    n->length = i? (data-n->data+1): (data-n->data);
+    return 0;
+}
+#else
+int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
+{
+    if (len == 0 || buf == NULL) return 0;
+
+    mln_u8ptr_t save = buf;
+    mln_u64_t *p = n->data;
+    mln_u64_t *end = n->data + n->length;
+    if (p[0] & 0x80) {
+        *buf++ = 0;
+        len--;
+        if (len <= 0) return buf-save;
+    }
+    for (; p < end; p++) {
+        *buf++ = (*p & 0xff);
+        if (--len <= 0) return buf-save;
+        *buf++ = ((*p >> 8) & 0xff);
+        if (--len <= 0) return buf-save;
+        *buf++ = ((*p >> 16) & 0xff);
+        if (--len <= 0) return buf-save;
+        *buf++ = ((*p >> 24) & 0xff);
+        if (--len <= 0) return buf-save;
+    }
+
+    return buf-save;
+}
+
+int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
+{
+    if (buf == NULL || len == 0) return 0;
+    if (*buf == 0) len--, buf++;
+    if (len > (M_BIGNUM_SIZE<<2)) return -1;
+    *n = (mln_bignum_t)mln_bignum_zero();
+
+    mln_u64_t *p = n->data;
+    mln_size_t i;
+    for (i = 0; len; len--) {
+        (*p) |= ((*buf++) << i);
+        if (i >= 24) {
+            (*p++) &= 0xffffffff;
+            i = 0;
+            continue;
+        }
+        i += 8;
+    }
+    n->length = i? (p-n->data+1): (p-n->data);
+
+    return 0;
+}
+#endif
 

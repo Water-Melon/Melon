@@ -17,6 +17,7 @@
 #include "mln_log.h"
 #include "mln_conf.h"
 #include "mln_path.h"
+#include "mln_tools.h"
 
 /*
  * declarations
@@ -40,10 +41,6 @@ static int mln_log_get_log(mln_log_t *log, int is_init);
 /*
  * global variables
  */
-long mon_days[2][12] = {
-    {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
-    {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-};
 char log_err_level[] = "Log level permission deny.";
 char log_err_fmt[] = "Log message format error.";
 char log_path_cmd[] = "log_path";
@@ -74,45 +71,6 @@ static void mln_file_unlock(int fd)
     fcntl(fd, F_SETLKW, &fl); 
 }
 
-
-/*
- * time
- */
-static inline int
-mln_is_leap(long year)
-{
-    if (((year%4 == 0) && (year%100 != 0)) || (year%400 == 0))
-        return 1;
-    return 0;
-}
-
-static void
-mln_get_localtime(struct timeval *tv, struct localtime_s *lc)
-{
-    long days = tv->tv_sec / 86400;
-    long subsec = tv->tv_sec % 86400;
-    long cnt = 0;
-    lc->year = lc->month = 0;
-    while (cnt + 365 <= days) {
-        if (mln_is_leap(1970+lc->year))
-            cnt++;
-        cnt += 365;
-        lc->year++;
-    }
-    lc->year += 1970;
-    int is_leap_year = mln_is_leap(lc->year);
-    long subdays = days - cnt;
-    cnt = 0;
-    while (cnt + mon_days[is_leap_year][lc->month] < subdays) {
-        cnt += mon_days[is_leap_year][lc->month];
-        lc->month++;
-    }
-    lc->month++;
-    lc->day = subdays - cnt + 1;
-    lc->hour = subsec / 3600;
-    lc->minute = (subsec % 3600) / 60;
-    lc->second = (subsec % 3600) % 60;
-}
 
 /*
  * gLog
@@ -218,13 +176,13 @@ mln_log_get_log(mln_log_t *log, int is_init)
                     __FUNCTION__, log_path_cmd);
             return -1;
         }
-        if ((ci->val.s->str)[0] != '/') {
+        if ((ci->val.s->data)[0] != '/') {
             path_len = snprintf(buf, sizeof(buf)-1, "%s/%s", \
-                                mln_path(), ci->val.s->str);
+                                mln_path(), (char *)(ci->val.s->data));
             path_str = buf;
         } else {
             path_len = ci->val.s->len > M_LOG_PATH_LEN-1? M_LOG_PATH_LEN-1: ci->val.s->len;
-            path_str = ci->val.s->str;
+            path_str = (char *)(ci->val.s->data);
         }
     }
 
@@ -383,15 +341,15 @@ _mln_sys_log_process(mln_log_t *log, \
     if (level < log->level) return;
     int n;
     struct timeval tv;
-    struct localtime_s lc;
+    struct UTCTime_s uc;
     gettimeofday(&tv, NULL);
-    mln_get_localtime(&tv, &lc);
+    mln_UTCTime(tv.tv_sec, &uc);
     char line_str[256] = {0};
     if (level > none) {
         n = snprintf(line_str, sizeof(line_str)-1, \
                          "%02ld/%02ld/%ld %02ld:%02ld:%02ld GMT ", \
-                         lc.month, lc.day, lc.year, \
-                         lc.hour, lc.minute, lc.second);
+                         uc.month, uc.day, uc.year, \
+                         uc.hour, uc.minute, uc.second);
         mln_log_write(log, (void *)line_str, n);
     }
     switch (level) {

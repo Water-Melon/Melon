@@ -11,7 +11,7 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include "mln_thread.h"
-#include "mln_hash.h"
+#include "mln_rbtree.h"
 #include "mln_conf.h"
 #include "mln_log.h"
 #include "mln_thread_module.h"
@@ -22,7 +22,7 @@
 __thread void (*thread_cleanup)(void *) = NULL;
 __thread void *thread_data = NULL;
 __thread mln_thread_t *mThread = NULL;
-mln_hash_t *thread_hash = NULL;
+mln_rbtree_t *thread_tree = NULL;
 char thread_domain[] = "thread_exec";
 char thread_s_restart[] = "restart";
 char thread_s_default[] = "default";
@@ -54,11 +54,9 @@ mln_thread_destroy(mln_event_t *ev, mln_thread_t *t);
 static void
 mln_thread_clearMsg_queue(mln_event_t *ev, mln_thread_t *t);
 static int
-mln_thread_hash_init(void);
+mln_thread_rbtree_init(void);
 static int
-mln_thread_hash_calc(mln_hash_t *h, void *key);
-static int
-mln_thread_hash_cmp(mln_hash_t *h, void *k1, void *k2);
+mln_thread_rbtree_cmp(const void *data1, const void *data2);
 static void *
 mln_thread_launcher(void *args);
 static void
@@ -188,7 +186,7 @@ void mln_thread_clearMsg(mln_thread_msg_t *msg)
  */
 int mln_load_thread(mln_event_t *ev)
 {
-    if (mln_thread_hash_init() < 0) {
+    if (mln_thread_rbtree_init() < 0) {
         mln_log(error, "No memory.\n");
         return -1;
     }
@@ -204,7 +202,8 @@ int mln_load_thread(mln_event_t *ev)
     mln_conf_cmd_t **v = (mln_conf_cmd_t **)calloc(nr_cmds, sizeof(mln_conf_cmd_t *));;
     if (v == NULL) {
         mln_log(error, "No memory.\n");
-        mln_hash_destroy(thread_hash, M_HASH_F_NONE);
+        mln_rbtree_destroy(thread_tree);
+        thread_tree = NULL;
         return -1;
     }
     mln_conf_get_cmds(cf, thread_domain, v);
@@ -250,7 +249,7 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
             free(thattr.argv);
             return;
         }
-        thattr.argv[i-1] = ci->val.s->str;
+        thattr.argv[i-1] = (char *)(ci->val.s->data);
     }
 
     thattr.alias = thattr.argv[0];
@@ -286,6 +285,7 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
  */
 int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
 {
+    mln_rbtree_node_t *rn;
     if (t->argv[t->argc-1] == NULL) {
         char *int_str = (char *)malloc(THREAD_SOCKFD_LEN);
         if (int_str == NULL) {
@@ -296,10 +296,11 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
     }
     memset(t->argv[t->argc-1], 0, THREAD_SOCKFD_LEN);
     snprintf(t->argv[t->argc-1], THREAD_SOCKFD_LEN-1, "%d", t->peerfd);
-    if (mln_hash_insert(thread_hash, t->alias, t) < 0) {
+    if ((rn = mln_rbtree_new_node(thread_tree, t)) == NULL) {
         mln_log(error, "No memory.\n");
         return -1;
     }
+    mln_rbtree_insert(thread_tree, rn);
     if (mln_event_set_fd(ev, \
                          mln_tcp_conn_get_fd(&(t->conn)), \
                          M_EV_RECV|M_EV_NONBLOCK, \
@@ -308,7 +309,9 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
                          mln_main_thread_itc_recv_handler) < 0)
     {
         mln_log(error, "mln_event_set_fd failed.\n");
-        mln_hash_remove(thread_hash, t->alias, M_HASH_F_NONE);
+        mln_rbtree_delete(thread_tree, rn);
+        mln_rbtree_free_node(thread_tree, rn);
+        t->node = NULL;
         return -1;
     }
     int err;
@@ -320,10 +323,13 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
                          M_EV_UNLIMITED, \
                          NULL, \
                          NULL);
-        mln_hash_remove(thread_hash, t->alias, M_HASH_F_NONE);
+        mln_rbtree_delete(thread_tree, rn);
+        mln_rbtree_free_node(thread_tree, rn);
+        t->node = NULL;
         return -1;
     }
     t->is_created = 1;
+    t->node = rn;
     return 0;
 }
 
@@ -352,14 +358,14 @@ mln_itc_get_buf_with_len(mln_tcp_conn_t *tc, void *buf, mln_size_t len)
         }
         size = mln_buf_left_size(b);
         if (size > len) {
-            memcpy(pos, b->send_pos, len);
-            b->send_pos += len;
+            memcpy(pos, b->left_pos, len);
+            b->left_pos += len;
             break;
         }
-        memcpy(pos, b->send_pos, size);
+        memcpy(pos, b->left_pos, size);
         pos += size;
         len -= size;
-        b->send_pos += size;
+        b->left_pos += size;
         mln_chain_pool_release(mln_tcp_conn_pop(tc, M_C_RECV));
         if (len == 0) break;
     }
@@ -414,7 +420,8 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
     mln_tcp_conn_t *conn = &(t->conn);
     mln_thread_msg_t msg, *m;
     mln_thread_msgq_t *tmq;
-    mln_thread_t *target;
+    mln_thread_t *target, tmp;
+    mln_rbtree_node_t *rn;
 
     while (1) {
         if (mln_itc_get_buf_with_len(conn, &msg, sizeof(msg)) < 0) {
@@ -436,14 +443,16 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
             continue;
         }
 
-        target = (mln_thread_t *)mln_hash_search(thread_hash, m->dest);
-        if (target == NULL) {
-            mln_log(report, "No such thread named '%s'.\n", m->dest->str);
+        tmp.alias = m->dest;
+        rn = mln_rbtree_search(thread_tree, thread_tree->root, &tmp);
+        if (mln_rbtree_null(rn, thread_tree)) {
+            mln_log(report, "No such thread named '%s'.\n", (char *)(m->dest->data));
             mln_thread_clearMsg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             continue;
         }
 
+        target = (mln_thread_t *)(rn->data);
         if (target->dest_head == NULL) {
             mln_event_set_fd(ev, \
                              mln_tcp_conn_get_fd(&(target->conn)), \
@@ -528,7 +537,7 @@ again:
 
         memcpy(buf, &(tmq->msg), sizeof(mln_thread_msg_t));
         mln_thread_msgq_destroy(tmq);
-        b->send_pos = b->pos = b->start = buf;
+        b->left_pos = b->pos = b->start = buf;
         b->last = b->end = buf + sizeof(mln_thread_msg_t);
         b->in_memory = 1;
         b->last_buf = 1;
@@ -545,7 +554,9 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
 {
     mln_chain_t *c;
 
-    mln_hash_remove(thread_hash, t->alias, M_HASH_F_NONE);
+    mln_rbtree_delete(thread_tree, t->node);
+    mln_rbtree_free_node(thread_tree, t->node);
+    t->node = NULL;
     mln_event_set_fd(ev, \
                      mln_tcp_conn_get_fd(&(t->conn)), \
                      M_EV_CLR, \
@@ -620,40 +631,23 @@ mln_thread_launcher(void *args)
   * hash
   */
 static int
-mln_thread_hash_init(void)
+mln_thread_rbtree_init(void)
 {
-    struct mln_hash_attr hattr;
-    hattr.hash = mln_thread_hash_calc;
-    hattr.cmp = mln_thread_hash_cmp;
-    hattr.free_key = NULL;
-    hattr.free_val = NULL;
-    hattr.len_base = THREAD_HASH_LEN;
-    hattr.expandable = 1;
-    hattr.calc_prime = 0;
-    thread_hash = mln_hash_init(&hattr);
-    if (thread_hash == NULL) return -1;
+    struct mln_rbtree_attr rbattr;
+    rbattr.cmp = mln_thread_rbtree_cmp;
+    rbattr.data_free = NULL;
+    if ((thread_tree = mln_rbtree_init(&rbattr)) == NULL) {
+        return -1;
+    }
     return 0;
 }
 
 static int
-mln_thread_hash_calc(mln_hash_t *h, void *key)
+mln_thread_rbtree_cmp(const void *data1, const void *data2)
 {
-    mln_string_t *str = (mln_string_t *)key;
-    mln_u32_t tmp = 0;
-    char *s = str->str;
-    char *end = str->str + str->len;
-    for(; s < end; s++) {
-        tmp += (((mln_u32_t)(*s)) * 65599);
-    }
-    return tmp % h->len;
-}
-
-static int
-mln_thread_hash_cmp(mln_hash_t *h, void *k1, void *k2)
-{
-    mln_string_t *str1 = (mln_string_t *)k1;
-    mln_string_t *str2 = (mln_string_t *)k2;
-    return !mln_string_strcmp(str1, str2);
+    mln_thread_t *t1 = (mln_thread_t *)data1;
+    mln_thread_t *t2 = (mln_thread_t *)data2;
+    return mln_string_strcmp(t1->alias, t2->alias);
 }
 
 /*
@@ -669,8 +663,12 @@ void mln_thread_exit(int exit_code)
 
 void mln_thread_kill(mln_string_t *alias)
 {
-    mln_thread_t *t = (mln_thread_t *)mln_hash_search(thread_hash, alias);
-    if (t == NULL) return;
+    mln_thread_t *t, tmp;
+    mln_rbtree_node_t *rn;
+    tmp.alias = alias;
+    rn = mln_rbtree_search(thread_tree, thread_tree->root, &tmp);
+    if (mln_rbtree_null(rn, thread_tree)) return;
+    t = (mln_thread_t *)(rn->data);
     close(t->peerfd);
     t->peerfd = -1;
     pthread_cancel(t->tid);

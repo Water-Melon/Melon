@@ -19,7 +19,7 @@ int haha_main(int argc, char **argv)
         mln_log(debug, "write error. n=%d. %s\n", n, strerror(errno));
         return -1;
     }
-    mln_log(debug, "!!!src:%s auto:%l char:%c\n", msg.src->str, msg.sauto, msg.c);
+    mln_log(debug, "!!!src:%s auto:%l char:%c\n", (char *)(msg.src->data), msg.sauto, msg.c);
     mln_thread_clearMsg(&msg);
   }
     return 0;

@@ -8,7 +8,7 @@
 
 #include "mln_types.h"
 #include "mln_string.h"
-#include "mln_hash.h"
+#include "mln_rbtree.h"
 #include "mln_alloc.h"
 
 typedef struct mln_fileset_s mln_fileset_t;
@@ -24,12 +24,13 @@ typedef struct mln_file_s {
     size_t             refer_cnt;
     struct mln_file_s *prev;
     struct mln_file_s *next;
-    mln_fileset_t    *fset;
+    mln_fileset_t     *fset;
+    mln_rbtree_node_t *node;
 } mln_file_t;
 
 struct mln_fileset_s {
     mln_alloc_t       *pool;
-    mln_hash_t        *reg_file_hash;
+    mln_rbtree_t      *reg_file_tree;
     mln_file_t        *reg_free_head;
     mln_file_t        *reg_free_tail;
     mln_size_t         max_file;

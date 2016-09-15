@@ -8,10 +8,8 @@
 
 #include "mln_lex.h"
 #include "mln_types.h"
-#include "mln_hash.h"
+#include "mln_rbtree.h"
 #include "mln_string.h"
-
-#define MLN_CONF_HASH_LEN 31
 
 typedef struct mln_conf_item_s    mln_conf_item_t;
 typedef struct mln_conf_domain_s  mln_conf_domain_t;
@@ -55,12 +53,12 @@ struct mln_conf_cmd_s {
 struct mln_conf_domain_s {
     search_cmd                     search;
     mln_string_t                  *domain_name;
-    mln_hash_t                    *cmd_hash_tbl;
+    mln_rbtree_t                  *cmd;
 };
 
 struct mln_conf_s {
     mln_lex_t                     *lex;
-    mln_hash_t                    *domain_hash_tbl;
+    mln_rbtree_t                  *domain;
     search_domain                  search;
 };
 

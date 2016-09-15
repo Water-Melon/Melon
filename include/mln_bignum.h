@@ -11,8 +11,8 @@
 
 #define M_BIGNUM_POSITIVE 0
 #define M_BIGNUM_NEGATIVE 1
-#define M_BIGNUM_SIZE     128
-#define M_BIGNUM_BITS     4096
+#define M_BIGNUM_SIZE     257
+#define M_BIGNUM_BITS     8224
 #define M_BIGNUM_UMAX     ((mln_u64_t)0x100000000llu)
 #define M_BIGNUM_SHIFT    32
 
@@ -48,9 +48,11 @@ extern int mln_bignum_testBit(mln_bignum_t *bn, mln_u32_t index) __NONNULL1(1);
 extern void mln_bignum_leftShift(mln_bignum_t *bn, mln_u32_t n) __NONNULL1(1);
 extern void mln_bignum_rightShift(mln_bignum_t *bn, mln_u32_t n) __NONNULL1(1);
 extern int mln_bignum_prime(mln_bignum_t *res, mln_u32_t bitwidth) __NONNULL1(1);
-extern int mln_bignum_extendEulid(mln_bignum_t *a, mln_bignum_t *b, mln_bignum_t *x, mln_bignum_t *y, mln_bignum_t *gcd) __NONNULL2(1,2);
+extern int mln_bignum_extendEulid(mln_bignum_t *a, mln_bignum_t *b, mln_bignum_t *x, mln_bignum_t *y) __NONNULL2(1,2);
 extern void mln_bignum_dump(mln_bignum_t *bn);
 extern int mln_bignum_i2osp(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len) __NONNULL2(1,2);
 extern int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len) __NONNULL2(1,2);
+extern int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len) __NONNULL2(1,2);
+extern int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len) __NONNULL2(1,2);
 
 #endif

@@ -10,8 +10,8 @@
 
 typedef struct mln_hash_s mln_hash_t;
 
-typedef int  (*hash_scan_handler)(void * /*key*/, void * /*val*/, void *);
-typedef int  (*hash_calc_handler)(mln_hash_t *, void *);
+typedef int (*hash_scan_handler)(void * /*key*/, void * /*val*/, void *);
+typedef mln_u64_t (*hash_calc_handler)(mln_hash_t *, void *);
 /*
  * cmp_handler's return value: 0 -- not matched, !0 -- matched.
  */
@@ -30,7 +30,7 @@ struct mln_hash_attr {
     hash_cmp_handler        cmp;
     hash_free_handler       free_key;
     hash_free_handler       free_val;
-    mln_u32_t               len_base;
+    mln_u64_t               len_base;
     mln_u32_t               expandable:1;
     mln_u32_t               calc_prime:1;
 };
@@ -53,7 +53,7 @@ struct mln_hash_s {
     hash_free_handler       free_key;
     hash_free_handler       free_val;
     mln_hash_mgr_t          *tbl;
-    mln_u32_t               len;
+    mln_u64_t               len;
     mln_u32_t               nr_nodes;
     mln_u32_t               threshold;
     mln_u32_t               expandable:1;

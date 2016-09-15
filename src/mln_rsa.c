@@ -10,21 +10,22 @@
 #include "mln_chain.h"
 #include "mln_md5.h"
 #include "mln_sha.h"
+#include "mln_asn1.h"
 
 static inline int mln_rsa_rsaep_rsadp(mln_rsa_key_t *key, mln_bignum_t *in, mln_bignum_t *out);
 static inline void mln_rsa_pub_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen);
 static inline void mln_rsa_pri_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen);
 static inline mln_u8ptr_t mln_rsa_antiPaddingPublic(mln_u8ptr_t in, mln_size_t len);
 static inline mln_u8ptr_t mln_rsa_antiPaddingPrivate(mln_u8ptr_t in, mln_size_t len);
-static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_string_t *m, mln_size_t emlen, mln_u32_t hashType);
-static inline mln_string_t *mln_octet_string_encode(mln_u8ptr_t hash, mln_u64_t hlen);
+static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_string_t *m, mln_u32_t hashType);
+static inline mln_string_t *mln_EMSAPKCS1V15_decode(mln_alloc_t *pool, mln_string_t *e, mln_u32_t *hashType);
 
 static mln_u8_t EMSAPKCS1V15_HASH_MD5[] = \
-{0x30, 0x20, 0x30, 0xc, 0x6, 0x8, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0xd, 0x2, 0x5, 0x5, 0x0, 0x4, 0x10};
+{0x2a, 0x86, 0x48, 0x86, 0xf7, 0xd, 0x2, 0x5};
 static mln_u8_t EMSAPKCS1V15_HASH_SHA1[] = \
-{0x30, 0x21, 0x30, 0x9, 0x6, 0x5, 0x2b, 0xe, 0x3, 0x2, 0x1a, 0x5, 0x0, 0x4, 0x14};
+{0x2b, 0xe, 0x3, 0x2, 0x1a};
 static mln_u8_t EMSAPKCS1V15_HASH_SHA256[] = \
-{0x30, 0x31, 0x30, 0xd, 0x6, 0x9, 0x60, 0x86, 0x48, 0x1, 0x65, 0x3, 0x4, 0x2, 0x1, 0x5, 0x0, 0x4, 0x20};
+{0x60, 0x86, 0x48, 0x1, 0x65, 0x3, 0x4, 0x2, 0x1};
 struct mln_EMSAPKCS1V15_HASH_s {
     mln_u8ptr_t digestAlgorithm;
     mln_size_t  len;
@@ -58,7 +59,7 @@ void mln_rsa_key_pool_free(mln_rsa_key_t *key)
 
 int mln_rsa_keyGenerate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits)
 {
-    if (bits <= 88 || bits > 2048) return -1;
+    if (bits <= 88 || bits > M_BIGNUM_BITS) return -1;
 
     mln_bignum_t p, q, n, phiN, one, d;
     mln_bignum_assign(&one, "1", 1);
@@ -66,25 +67,27 @@ int mln_rsa_keyGenerate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits)
 
 lp:
     while (1) {
-        if (mln_bignum_prime(&p, (bits>>1)-1) < 0) return -1;
-        if (mln_bignum_prime(&q, (bits>>1)-1) < 0) return -1;;
+        if (mln_bignum_prime(&p, (bits>>1)+1) < 0) return -1;
+        if (mln_bignum_prime(&q, (bits>>1)) < 0) return -1;;
         if (mln_bignum_compare(&p, &q)) break;
     }
     n = p;
 
     mln_bignum_mul(&n, &q);
 
+    if (!mln_bignum_testBit(&n, bits-1)) goto lp;
+
     if (pub != NULL) {
         pub->p = p;
         pub->q = q;
-        if (mln_bignum_extendEulid(&q, &p, &(pub->qinv), NULL, NULL) < 0) goto lp;
-        if (mln_bignum_isNegative(&(pub->qinv))) goto lp;
+        if (mln_bignum_extendEulid(&q, &p, &(pub->qinv), NULL) < 0) goto lp;
+        if (mln_bignum_compare(&(pub->qinv), &one) < 0) goto lp;
     }
     if (pri != NULL) {
         pri->p = p;
         pri->q = q;
-        if (mln_bignum_extendEulid(&q, &p, &(pri->qinv), NULL, NULL) < 0) goto lp;
-        if (mln_bignum_isNegative(&(pri->qinv))) goto lp;
+        if (mln_bignum_extendEulid(&q, &p, &(pri->qinv), NULL) < 0) goto lp;
+        if (mln_bignum_compare(&(pri->qinv), &one) < 0) goto lp;
     }
     mln_bignum_sub(&p, &one);
     mln_bignum_sub(&q, &one);
@@ -95,8 +98,8 @@ lp:
 
     mln_bignum_assign(&e, "0x10001", 7);
 
-    if (mln_bignum_extendEulid(&e, &phiN, &d, NULL, NULL) < 0) goto lp;
-    if (mln_bignum_compare(&d, &one) <= 0) goto lp;
+    if (mln_bignum_extendEulid(&e, &phiN, &d, NULL) < 0) goto lp;
+    if (mln_bignum_compare(&d, &e) <= 0) goto lp;
 
     if (pub != NULL) {
         pub->n = n;
@@ -104,6 +107,7 @@ lp:
         pub->dp = pub->dq = e;
         mln_bignum_div(&(pub->dp), &tmpp_1, NULL);
         mln_bignum_div(&(pub->dq), &tmpq_1, NULL);
+        pub->pwr = 0;
     }
     if (pri != NULL) {
         pri->n = n;
@@ -111,6 +115,7 @@ lp:
         pri->dp = pri->dq = d;
         mln_bignum_div(&(pri->dp), &tmpp_1, NULL);
         mln_bignum_div(&(pri->dq), &tmpq_1, NULL);
+        pri->pwr = 0;
     }
 
     return 0;
@@ -118,7 +123,7 @@ lp:
 
 static inline int mln_rsa_rsaep_rsadp(mln_rsa_key_t *key, mln_bignum_t *in, mln_bignum_t *out)
 {
-    if (mln_bignum_absCompare(&(key->ed), &(key->p)) <= 0) {
+    if (key->pwr || mln_bignum_absCompare(&(key->ed), &(key->p)) <= 0) {
 in:
         if (mln_bignum_pwr(in, &(key->ed), &(key->n)) < 0) return -1;
         *out = *in;
@@ -211,7 +216,7 @@ mln_string_t *mln_RSAESPKCS1V15PubEncrypt(mln_rsa_key_t *pub, mln_string_t *text
 {
     mln_size_t nlen = mln_bignum_getLength(&(pub->n)) << 2;
     mln_u8ptr_t buf, p;
-    mln_u8ptr_t in = (mln_u8ptr_t)(text->str);
+    mln_u8ptr_t in = text->data;
     mln_string_t *ret = NULL, tmp;
     mln_size_t i = 0, len = text->len, sum;
 
@@ -255,14 +260,17 @@ mln_string_t *mln_RSAESPKCS1V15PubDecrypt(mln_rsa_key_t *pub, mln_string_t *ciph
 {
     mln_size_t nlen = mln_bignum_getLength(&(pub->n)) << 2;
     mln_u8ptr_t buf, p, pos;
-    mln_u8ptr_t in = (mln_u8ptr_t)(cipher->str);
+    mln_u8ptr_t in = cipher->data;
     mln_string_t *ret = NULL, tmp;
     mln_size_t len = cipher->len, sum = 0;
 
-    if (cipher->len < 11 || cipher->len % nlen) return NULL;
+    if (cipher->len < 11 || cipher->len % nlen) {
+        return NULL;
+    }
 
-    buf = (mln_u8ptr_t)malloc(cipher->len);
-    if (buf == NULL) return NULL;
+    if ((buf = (mln_u8ptr_t)malloc(cipher->len)) == NULL) {
+        return NULL;
+    }
     p = buf;
 
     while (len > 0) {
@@ -306,16 +314,14 @@ mln_string_t *mln_RSAESPKCS1V15PriEncrypt(mln_rsa_key_t *pri, mln_string_t *text
 {
     mln_size_t nlen = mln_bignum_getLength(&(pri->n)) << 2;
     mln_u8ptr_t buf, p;
-    mln_u8ptr_t in = (mln_u8ptr_t)(text->str);
+    mln_u8ptr_t in = text->data;
     mln_string_t *ret = NULL, tmp;
     mln_size_t i = 0, len = text->len, sum;
 
     if (nlen-11 < text->len) return NULL;
 
     sum = (len / (nlen-11)) * nlen + (len % (nlen-11))? nlen: 0;
-    buf = (mln_u8ptr_t)malloc(sum);
-    if (buf == NULL) return NULL;
-    p = buf;
+    if ((p = buf = (mln_u8ptr_t)malloc(sum)) == NULL) return NULL;
 
     while (len > 0) {
         mln_bignum_t num = mln_bignum_zero();
@@ -350,7 +356,7 @@ mln_string_t *mln_RSAESPKCS1V15PriDecrypt(mln_rsa_key_t *pri, mln_string_t *ciph
 {
     mln_size_t nlen = mln_bignum_getLength(&(pri->n)) << 2;
     mln_u8ptr_t buf, p, pos;
-    mln_u8ptr_t in = (mln_u8ptr_t)(cipher->str);
+    mln_u8ptr_t in = cipher->data;
     mln_string_t *ret = NULL, tmp;
     mln_size_t len = cipher->len, sum = 0;
 
@@ -407,21 +413,19 @@ void mln_RSAESPKCS1V15Free(mln_string_t *s)
 /*
  * Sign & verify
  */
-static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_string_t *m, mln_size_t emlen, mln_u32_t hashType)
+static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_string_t *m, mln_u32_t hashType)
 {
-    mln_u8ptr_t hashval = NULL, em;
-    mln_size_t hlen = 0;
-    mln_string_t *ret, tmp, *osh;
+    mln_u8_t hashval[32] = {0};
+    mln_u64_t hlen = 0;
+    mln_asn1_enResult_t res, dres;
+    mln_string_t *ret, tmp;
 
-    /*hash*/
     switch (hashType) {
         case M_EMSAPKCS1V15_HASH_MD5:
         {
             mln_md5_t md5;
             mln_md5_init(&md5);
-            mln_md5_calc(&md5, (mln_u8ptr_t)(m->str), m->len, 1);
-            hashval = (mln_u8ptr_t)malloc(16);
-            if (hashval == NULL) return NULL;
+            mln_md5_calc(&md5, m->data, m->len, 1);
             hlen = 16;
             mln_md5_toBytes(&md5, hashval, hlen);
             break;
@@ -430,9 +434,7 @@ static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_string_t *m, mln_size_t 
         {
             mln_sha1_t sha1;
             mln_sha1_init(&sha1);
-            mln_sha1_calc(&sha1, (mln_u8ptr_t)(m->str), m->len, 1);
-            hashval = (mln_u8ptr_t)malloc(20);
-            if (hashval == NULL) return NULL;
+            mln_sha1_calc(&sha1, m->data, m->len, 1);
             hlen = 20;
             mln_sha1_toBytes(&sha1, hashval, hlen);
             break;
@@ -441,9 +443,7 @@ static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_string_t *m, mln_size_t 
         {
             mln_sha256_t sha256;
             mln_sha256_init(&sha256);
-            mln_sha256_calc(&sha256, (mln_u8ptr_t)(m->str), m->len, 1);
-            hashval = (mln_u8ptr_t)malloc(32);
-            if (hashval == NULL) return NULL;
+            mln_sha256_calc(&sha256, m->data, m->len, 1);
             hlen = 32;
             mln_sha256_toBytes(&sha256, hashval, hlen);
             break;
@@ -451,173 +451,272 @@ static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_string_t *m, mln_size_t 
         default: return NULL;
     }
 
-    /*asn.1*/
-    osh = mln_octet_string_encode(hashval, hlen);
-    free(hashval);
-    if (osh == NULL) return NULL;
-    hashval = (mln_u8ptr_t)malloc(osh->len + EMSAPKCS1V15_HASH[hashType].len);
-    if (hashval == NULL) {
-        mln_string_free(osh);
+    if (mln_asn1_enResult_init(&res, pool) != M_ASN1_RET_OK) {
         return NULL;
     }
-    memcpy(hashval, EMSAPKCS1V15_HASH[hashType].digestAlgorithm, EMSAPKCS1V15_HASH[hashType].len);
-    memcpy(hashval+EMSAPKCS1V15_HASH[hashType].len, osh->str, osh->len);
+    if (mln_asn1_encode_objectIdentifier(&res, \
+                                         EMSAPKCS1V15_HASH[hashType].digestAlgorithm, \
+                                         EMSAPKCS1V15_HASH[hashType].len) != M_ASN1_RET_OK)
+    {
+err:
+        mln_asn1_enResult_destroy(&res);
+        return NULL;
+    }
+    if (mln_asn1_encode_null(&res) != M_ASN1_RET_OK) {
+        goto err;
+    }
+    if (mln_asn1_encode_sequence(&res) != M_ASN1_RET_OK) {
+        goto err;
+    }
 
-    /*test len*/
-    if (emlen < osh->len+EMSAPKCS1V15_HASH[hashType].len+11) {
-        mln_string_free(osh);
-        free(hashval);
-        return NULL;
+    if (mln_asn1_enResult_init(&dres, pool) != M_ASN1_RET_OK) {
+        goto err;
+    }
+    if (mln_asn1_encode_octetString(&dres, hashval, hlen) != M_ASN1_RET_OK) {
+        mln_asn1_enResult_destroy(&dres);
+        goto err;
+    }
+    if (mln_asn1_encode_merge(&res, &dres) != M_ASN1_RET_OK) {
+        mln_asn1_enResult_destroy(&dres);
+        goto err;
+    }
+    mln_asn1_enResult_destroy(&dres);
+
+    if (mln_asn1_encode_sequence(&res) != M_ASN1_RET_OK) {
+        goto err;
     }
 
-    /*padding*/
-    em = (mln_u8ptr_t)malloc(emlen);
-    if (em == NULL) {
-        mln_string_free(osh);
-        free(hashval);
-        return NULL;
+    if (mln_asn1_enResult_getContent(&res, 0, &(tmp.data), (mln_u64_t *)&(tmp.len)) != M_ASN1_RET_OK) {
+        goto err;
     }
-    mln_rsa_pri_padding(hashval, osh->len+EMSAPKCS1V15_HASH[hashType].len, em, emlen);
-    mln_string_free(osh);
-    free(hashval);
-    mln_string_nSet(&tmp, em, emlen);
-    ret = mln_string_dup(&tmp);
-    free(em);
+
+    if ((ret = mln_string_dup(&tmp)) == NULL) {
+        goto err;
+    }
+    mln_asn1_enResult_destroy(&res);
+
     return ret;
 }
 
-static inline mln_string_t *mln_octet_string_encode(mln_u8ptr_t hash, mln_u64_t hlen)
+mln_string_t *mln_RSASSAPKCS1V15SIGN(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType)
+{
+    mln_string_t *ret = NULL, tmp, *em;
+    mln_u8ptr_t buf, p, q;
+    mln_u64_t len = 4096, left, n, k;
+    k = (mln_bignum_getLength(&(pri->n)) << 2) - 11;
+
+    if (k < 1) return NULL;
+
+    if ((em = mln_EMSAPKCS1V15_encode(pool, m, hashType)) == NULL) return NULL;
+
+    if ((buf = (mln_u8ptr_t)malloc(len)) == NULL) {
+err:
+        mln_string_free(em);
+        return NULL;
+    }
+    p = buf;
+    q = em->data;
+    left = em->len;
+
+    while (left > 0) {
+        n = left>k? k: left; /*30 see rfc2312 - page 8 - Notes 1.*/
+        left -= n;
+        mln_string_nSet(&tmp, q, n);
+        q += n;
+        if ((ret = mln_RSAESPKCS1V15PriEncrypt(pri, &tmp)) == NULL) {
+            free(buf);
+            goto err;
+        }
+        if (len-(p-buf) < ret->len) {
+            len += (len >> 1);
+            mln_u64_t diff = p - buf;
+            mln_u8ptr_t ptr = (mln_u8ptr_t)realloc(buf, len);
+            if (ptr == NULL) {
+                free(buf);
+                goto err;
+            }
+            buf = ptr;
+            p = ptr + diff;
+        }
+        memcpy(p, ret->data, ret->len);
+        p += ret->len;
+        mln_string_free(ret);
+    }
+    mln_string_free(em);
+    mln_string_nSet(&tmp, buf, p-buf);
+    if ((ret = mln_string_dup(&tmp)) == NULL) {
+        free(buf);
+        goto err;
+    }
+    free(buf);
+    return ret;
+}
+
+int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s)
 {
     mln_string_t tmp, *ret;
-    mln_u8ptr_t buf = NULL;
-    mln_size_t len = 0;
+    mln_u8ptr_t buf, p, q, end;
+    mln_u64_t len = 4096;
+    mln_size_t n = mln_bignum_getLength(&(pub->n)) << 2;
+    mln_u8_t hashval[32] = {0};
+    mln_size_t hlen;
+    mln_u32_t hashType;
 
-    if (hlen <= 127) {
-        len = 2 + hlen;
-        buf = (mln_u8ptr_t)malloc(len);
-        if (buf == NULL) return NULL;
-        buf[0] = 0x4;
-        buf[1] = hlen;
-        memcpy(&buf[2], hash, hlen);
-    } else if (hlen <= 255) {
-        len = 3 + hlen;
-        buf = (mln_u8ptr_t)malloc(len);
-        if (buf == NULL) return NULL;
-        buf[0] = 0x4;
-        buf[1] = 0x81;
-        buf[2] = hlen;
-        memcpy(&buf[3], hash, hlen);
-    } else if (hlen <= 65535) {
-        len = 4 + hlen;
-        buf = (mln_u8ptr_t)malloc(len);
-        if (buf == NULL) return NULL;
-        buf[0] = 0x4;
-        buf[1] = 0x82;
-        buf[2] = (hlen >> 8) & 0xff;
-        buf[3] = hlen & 0xff;
-        memcpy(&buf[4], hash, hlen);
-    } else if (hlen <= ~((mln_u32_t)0)) {
-        len = 6 + hlen;
-        buf = (mln_u8ptr_t)malloc(len);
-        if (buf == NULL) return NULL;
-        buf[0] = 0x4;
-        buf[1] = 0x84;
-        buf[2] = (hlen >> 24) & 0xff;
-        buf[3] = (hlen >> 16) & 0xff;
-        buf[4] = (hlen >> 8) & 0xff;
-        buf[5] = hlen & 0xff;
-        memcpy(&buf[6], hash, hlen);
-    } else {
-        len = 10 + hlen;
-        buf = (mln_u8ptr_t)malloc(len);
-        if (buf == NULL) return NULL;
-        buf[0] = 0x4;
-        buf[1] = 0x88;
-        buf[2] = (hlen >> 56) & 0xff;
-        buf[3] = (hlen >> 48) & 0xff;
-        buf[4] = (hlen >> 40) & 0xff;
-        buf[5] = (hlen >> 32) & 0xff;
-        buf[6] = (hlen >> 24) & 0xff;
-        buf[7] = (hlen >> 16) & 0xff;
-        buf[8] = (hlen >> 8) & 0xff;
-        buf[9] = hlen & 0xff;
-        memcpy(&buf[10], hash, hlen);
+    if (s->len % n) {
+        return -1;
     }
 
-    mln_string_nSet(&tmp, buf, len);
+    if ((buf = (mln_u8ptr_t)malloc(len)) == NULL) {
+        return -1;
+    }
+
+    p = buf;
+    q = s->data;
+    end = s->data + s->len;
+
+    while (q < end) {
+        mln_string_nSet(&tmp, q, n);
+        if ((ret = mln_RSAESPKCS1V15PubDecrypt(pub, &tmp)) == NULL) {
+            free(buf);
+            return -1;
+        }
+
+        if (len-(p-buf) < ret->len) {
+            mln_u8ptr_t ptr;
+            mln_u64_t diff = p - buf;
+            len += (len >> 1);
+            if ((ptr = (mln_u8ptr_t)realloc(buf, len)) == NULL) {
+                mln_string_free(ret);
+                free(buf);
+                return -1;
+            }
+            buf = ptr;
+            p = ptr + diff;
+        }
+        memcpy(p, ret->data, ret->len);
+        p += ret->len;
+        q += n;
+        mln_string_free(ret);
+    }
+    mln_string_nSet(&tmp, buf, p - buf);
+
+    if ((ret = mln_EMSAPKCS1V15_decode(pool, &tmp, &hashType)) == NULL) {
+        free(buf);
+        return -1;
+    }
+    free(buf);
+
+    switch (hashType) {
+        case M_EMSAPKCS1V15_HASH_MD5:
+        {
+            mln_md5_t md5;
+            mln_md5_init(&md5);
+            mln_md5_calc(&md5, m->data, m->len, 1);
+            hlen = 16;
+            mln_md5_toBytes(&md5, hashval, hlen);
+            break;
+        }
+        case M_EMSAPKCS1V15_HASH_SHA1:
+        {
+            mln_sha1_t sha1;
+            mln_sha1_init(&sha1);
+            mln_sha1_calc(&sha1, m->data, m->len, 1);
+            hlen = 20;
+            mln_sha1_toBytes(&sha1, hashval, hlen);
+            break;
+        }
+        case M_EMSAPKCS1V15_HASH_SHA256:
+        {
+            mln_sha256_t sha256;
+            mln_sha256_init(&sha256);
+            mln_sha256_calc(&sha256, m->data, m->len, 1);
+            hlen = 32;
+            mln_sha256_toBytes(&sha256, hashval, hlen);
+            break;
+        }
+        default:
+            mln_string_free(ret);
+            return -1;
+    }
+
+    if (ret->len != hlen || memcmp(ret->data, hashval, hlen)) {
+        mln_string_free(ret);
+        return -1;
+    }
+    mln_string_free(ret);
+    return 0;
+}
+
+static inline mln_string_t *mln_EMSAPKCS1V15_decode(mln_alloc_t *pool, mln_string_t *e, mln_u32_t *hashType)
+{
+    mln_asn1_deResult_t *res, *subRes, *ssubRes;
+    int err = M_ASN1_RET_OK;
+    mln_string_t *ret, tmp, t;
+    mln_u8ptr_t codeBuf;
+    mln_u64_t codeLen;
+    struct mln_EMSAPKCS1V15_HASH_s *p, *end;
+
+    if ((res = mln_asn1_decodeRef(e->data, e->len, &err, pool)) == NULL) {
+        return NULL;
+    }
+
+    if (mln_asn1_deResult_getIdent(res) != M_ASN1_ID_SEQUENCE || \
+        mln_asn1_deResult_getNContent(res) != 2)
+    {
+err:
+        mln_asn1_deResult_free(res);
+        return NULL;
+    }
+
+
+    subRes = mln_asn1_deResult_getContent(res, 0);
+    if (mln_asn1_deResult_getIdent(subRes) != M_ASN1_ID_SEQUENCE || \
+        mln_asn1_deResult_getNContent(subRes) != 2)
+    {
+        goto err;
+    }
+    ssubRes = mln_asn1_deResult_getContent(subRes, 0);
+    if (mln_asn1_deResult_getIdent(ssubRes) != M_ASN1_ID_OBJECT_IDENTIFIER) {
+        goto err;
+    }
+    if ((ssubRes = mln_asn1_deResult_getContent(ssubRes, 0)) == NULL) {
+        goto err;
+    }
+    codeBuf = mln_asn1_deResult_getCode(ssubRes);
+    codeLen = mln_asn1_deResult_getCodeLength(ssubRes);
+    mln_string_nSet(&tmp, codeBuf, codeLen);
+    p = EMSAPKCS1V15_HASH;
+    end = EMSAPKCS1V15_HASH + sizeof(EMSAPKCS1V15_HASH)/sizeof(struct mln_EMSAPKCS1V15_HASH_s);
+    for (; p < end; p++) {
+        mln_string_nSet(&t, p->digestAlgorithm, p->len);
+        if (!mln_string_strcmp(&tmp, &t)) break;
+    }
+    if (p >= end) goto err;
+    *hashType = p - EMSAPKCS1V15_HASH;
+
+    ssubRes = mln_asn1_deResult_getContent(subRes, 1);
+    if (mln_asn1_deResult_getIdent(ssubRes) != M_ASN1_ID_NULL || \
+        mln_asn1_deResult_getNContent(ssubRes) != 1)
+    {
+        goto err;
+    }
+    ssubRes = mln_asn1_deResult_getContent(ssubRes, 0);
+    if (mln_asn1_deResult_getCodeLength(ssubRes) != 0) {
+        goto err;
+    }
+    
+
+    subRes = mln_asn1_deResult_getContent(res, 1);
+    if (mln_asn1_deResult_getIdent(subRes) != M_ASN1_ID_OCTET_STRING || \
+        mln_asn1_deResult_getNContent(subRes) != 1)
+    {
+        goto err;
+    }
+    subRes = mln_asn1_deResult_getContent(subRes, 0);
+    mln_string_nSet(&tmp, mln_asn1_deResult_getCode(subRes), mln_asn1_deResult_getCodeLength(subRes));
     ret = mln_string_dup(&tmp);
-    free(buf);
+    mln_asn1_deResult_free(res);
+
     return ret;
-}
-
-mln_string_t *mln_RSASSAPKCS1V15SIGN(mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType)
-{
-    mln_string_t *em = mln_EMSAPKCS1V15_encode(m, (mln_bignum_getLength(&(pri->n))<<2), hashType);
-    if (em == NULL) return NULL;
-
-    if (em->len > (M_BIGNUM_SIZE<<2)) {
-        mln_string_free(em);
-        return NULL;
-    }
-
-    mln_bignum_t num;
-    if (mln_bignum_os2ip(&num, (mln_u8ptr_t)(em->str), em->len) < 0) {
-        mln_string_free(em);
-        return NULL;
-    }
-    mln_string_free(em);
-
-    if (mln_rsa_rsaep_rsadp(pri, &num, &num) < 0) {
-        return NULL;
-    }
-
-    mln_u8ptr_t buf = (mln_u8ptr_t)malloc(mln_bignum_getLength(&(pri->n))<<2);
-    if (buf == NULL) return NULL;
-    if (mln_bignum_i2osp(&num, buf, mln_bignum_getLength(&(pri->n))<<2) < 0) {
-        free(buf);
-        return NULL;
-    }
-    mln_string_t tmp;
-    mln_string_nSet(&tmp, buf, mln_bignum_getLength(&(pri->n))<<2);
-    mln_string_t *ret = mln_string_dup(&tmp);
-    free(buf);
-    return ret;
-}
-
-int mln_RSASSAPKCS1V15VERIFY(mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s, mln_u32_t hashType)
-{
-    if (s->len != (mln_bignum_getLength(&(pub->n)) << 2)) return -1;
-
-    mln_bignum_t num;
-    if (mln_bignum_os2ip(&num, (mln_u8ptr_t)(s->str), s->len) < 0) {
-        return -1;
-    }
-
-    if (mln_rsa_rsaep_rsadp(pub, &num, &num) < 0) {
-        return -1;
-    }
-
-    mln_u8ptr_t buf = (mln_u8ptr_t)malloc(mln_bignum_getLength(&(pub->n)) << 2);
-    if (buf == NULL) return -1;
-    if (mln_bignum_i2osp(&num, buf, mln_bignum_getLength(&(pub->n)) << 2) < 0) {
-        free(buf);
-        return -1;
-    }
-    mln_string_t tmp;
-    mln_string_nSet(&tmp, buf, mln_bignum_getLength(&(pub->n)) << 2);
-    mln_string_t *_em = mln_string_dup(&tmp);
-    free(buf);
-    if (_em == NULL) return -1;
-
-    mln_string_t *em = mln_EMSAPKCS1V15_encode(m, mln_bignum_getLength(&(pub->n))<<2, hashType);
-    if (em == NULL) {
-        mln_string_free(_em);
-        return -1;
-    }
-
-    int ret = mln_string_strcmp(em, _em);
-    mln_string_free(em);
-    mln_string_free(_em);
-    return ret==0? 0: -1;
 }
 

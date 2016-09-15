@@ -77,10 +77,10 @@ mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
     }
     if (lex->filename == NULL) return lex;
 
-    lex->fd = open(lex->filename->str, O_RDONLY);
+    lex->fd = open((char *)(lex->filename->data), O_RDONLY);
     if (lex->fd < 0) {
         mln_log(error, "Open file \"%s\" error. %s\n", \
-                lex->filename->str, strerror(errno));
+                (char *)(lex->filename->data), strerror(errno));
         mln_string_free(lex->filename);
         free(lex);
         return NULL;
@@ -115,7 +115,7 @@ char *mln_lex_strerror(mln_lex_t *lex)
 
     int n = 0;
     if (lex->fd >= 0)
-        n += snprintf(lex->err_msg + n, len - n, "%s:", lex->filename->str);
+        n += snprintf(lex->err_msg + n, len - n, "%s:", (char *)(lex->filename->data));
     n += snprintf(lex->err_msg + n, len - n, "%d: %s", lex->line, mln_lex_errmsg[lex->error]);
     if (lex->result_buf[0] != 0)
         n += snprintf(lex->err_msg + n, len - n, " \"%s\"", lex->result_buf);
