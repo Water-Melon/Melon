@@ -384,7 +384,7 @@ static int
 mln_boot_version(const char *boot_str, const char *alias)
 {
     printf("Melon Platform.\n");
-    printf("Version 1.5.4.\n");
+    printf("Version 1.5.5.\n");
     printf("Copyright (C) Niklaus F.Schen (Chinese name: Shen Fanchen).\n");
     exit(0);
     return 0;

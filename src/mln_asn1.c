@@ -580,11 +580,11 @@ int mln_asn1_encode_bitString(mln_asn1_enResult_t *res, mln_u8ptr_t bits, mln_u6
     buf[0] = (res->_class << 6) | ((res->isStruct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_BIT_STRING);
     mln_asn1_encode_fillLength(bytes, p);
     *p++ = (nbits % 8)? 8-(nbits % 8): 0;
-    memcpy(p, bits, bytes-1);
+    if (bytes-1) memcpy(p, bits, bytes-1);
     p += (bytes-1);
     if (nbits % 8) {
         p--;
-        *p = ((*p >> (8 - (nbits % 8))) & 0xff) << (nbits % 8);
+        *p = ((*p >> (8 - (nbits % 8))) & 0xff) << (8 - (nbits % 8));
     }
 
     if (mln_asn1_encode_addContent(res, buf, len) < 0) {

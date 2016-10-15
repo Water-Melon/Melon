@@ -1,3 +1,6 @@
+Changes with melon 1.5.5                                          15 Oct 2016
+    *) Fixed an error of ASN.1.
+
 Changes with melon 1.5.4                                          15 Sep 2016
     *) Added ASN.1 component.
     *) Updated RSA component.
