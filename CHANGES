@@ -1,3 +1,10 @@
+Changes with melon 1.5.6                                          23 Oct 2016
+    *) Updated lex component, support preprocessing.
+    *) Updated parser generator.
+    *) Updated configuration component to support preprocessing.
+    *) Updated stack component.
+    *) Updated misc tool functions.
+
 Changes with melon 1.5.5                                          15 Oct 2016
     *) Fixed an error of ASN.1.
 

@@ -248,17 +248,30 @@ static int mln_set_id(void)
     }
 
     /*init lexer*/
+    mln_alloc_t *pool;
+    mln_string_t tmp;
     mln_lex_hooks_t hooks;
+    mln_lex_t *lex;
+
+    mln_string_nSet(&tmp, filename, sizeof(filename)-1);
+
+    if ((pool = mln_alloc_init()) == NULL) {
+        mln_log(error, "No memory.\n");
+        return -1;
+    }
+
     memset(&hooks, 0, sizeof(hooks));
     hooks.nums_handler = (lex_hook)mln_passwd_lex_nums_handler;
-    lattr.input_type = mln_lex_file;
-    lattr.input.filename = filename;
+    lattr.pool = pool;
     lattr.keywords = keywords;
     lattr.hooks = &hooks;
-    mln_lex_t *lex;
-    MLN_LEX_INIT_WITH_HOOKS(mln_passwd_lex, lex, &lattr);
+    lattr.preprocess = 0;
+    lattr.type = M_INPUT_T_FILE;
+    lattr.data = &tmp;
+    mln_lex_initWithHooks(mln_passwd_lex, lex, &lattr);
     if (lex == NULL)  {
         mln_log(error, "No memory.\n");
+        mln_alloc_destroy(pool);
         return -1;
     }
 
@@ -276,6 +289,7 @@ static int mln_set_id(void)
         else mln_log(error, "User 'melon' not existed.\n");
         mln_passwd_lex_free(plst);
         mln_lex_destroy(lex);
+        mln_alloc_destroy(pool);
         return -1;
     }
     mln_passwd_lex_free(plst);
@@ -291,6 +305,7 @@ static int mln_set_id(void)
     if (plst == NULL) {
         mln_log(error, "%s\n", mln_lex_strerror(lex));
         mln_lex_destroy(lex);
+        mln_alloc_destroy(pool);
         return -1;
     }
     mln_passwd_lex_free(plst);
@@ -303,6 +318,7 @@ err:
         else mln_log(error, "Invalid ID.\n");
         mln_passwd_lex_free(plst);
         mln_lex_destroy(lex);
+        mln_alloc_destroy(pool);
         return -1;
     }
     int uid = atoi((char *)(plst->text->data));
@@ -315,6 +331,7 @@ err:
     int gid = atoi((char *)(plst->text->data));
     mln_passwd_lex_free(plst);
     mln_lex_destroy(lex);
+    mln_alloc_destroy(pool);
 
     /*set log files' uid & gid*/
     char *path = mln_log_getDirPath();

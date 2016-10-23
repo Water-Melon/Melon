@@ -7,8 +7,16 @@
 #include "mln_log.h"
 #include <stdlib.h>
 
-#define CONF_ERR(TK,MSG); \
-    fprintf(stderr, "Configuration error. %d: \"%s\" %s.\n", (TK)->line, (char *)((TK)->text->data), MSG);\
+#define CONF_ERR(lex,TK,MSG); \
+{\
+    mln_string_t *path = mln_lex_getCurFilename(lex);\
+    fprintf(stderr, "Configuration error. ");\
+    if (path != NULL) {\
+        write(STDERR_FILENO, path->data, path->len);\
+        write(STDERR_FILENO, ":", 1);\
+    }\
+    fprintf(stderr, "%d: \"%s\" %s.\n", (TK)->line, (char *)((TK)->text->data), MSG);\
+}
 
 mln_conf_hook_t *gConfHookHead = NULL, *gConfHookTail = NULL;
 mln_conf_t *gConf = NULL;
@@ -74,7 +82,7 @@ mln_conf_search_cmd(mln_conf_domain_t *cd, char *cmd_name) __NONNULL2(1,2);
 /*for mln_conf_item_t*/
 static int mln_isvalid_item(mln_conf_lex_struct_t *cls) __NONNULL1(1);
 static int
-mln_conf_item_init(mln_conf_lex_struct_t *cls, mln_conf_item_t *ci) __NONNULL2(1,2);
+mln_conf_item_init(mln_conf_t *cf, mln_conf_lex_struct_t *cls, mln_conf_item_t *ci) __NONNULL2(1,2);
 static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current) __NONNULL2(1,2);
 static mln_conf_item_t *
 mln_conf_search_item(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
@@ -92,18 +100,17 @@ static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
 static mln_conf_lex_struct_t *
 mln_conf_lex_sglq_handler(mln_lex_t *lex, void *data)
 {
-    lex->result_buf[0] = 0;
-    lex->result_cur_ptr = lex->result_buf;
+    mln_lex_cleanResult(lex);
     char c = mln_lex_getAChar(lex);
     if (c == MLN_ERR) return NULL;
     if (!isascii(c) || c == '\'') {
-        lex->error = MLN_LEX_EINVCHAR;
+        mln_lex_setError(lex, MLN_LEX_EINVCHAR);
         return NULL;
     }
     if (mln_get_char(lex, c) < 0) return NULL;
     if ((c = mln_lex_getAChar(lex)) == MLN_ERR) return NULL;
     if (c != '\'') {
-        lex->error = MLN_LEX_EINVCHAR;
+        mln_lex_setError(lex, MLN_LEX_EINVCHAR);
         return NULL;
     }
     return mln_conf_lex_new(lex, CONF_TK_CHAR);
@@ -147,7 +154,7 @@ mln_get_char(mln_lex_t *lex, char c)
                 if (mln_lex_putAChar(lex, '\\') == MLN_ERR) return -1;
                 break;
             default:
-                lex->error = MLN_LEX_EINVCHAR;
+                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
                 return -1;
         }
     } else {
@@ -159,14 +166,13 @@ mln_get_char(mln_lex_t *lex, char c)
 static mln_conf_lex_struct_t *
 mln_conf_lex_dblq_handler(mln_lex_t *lex, void *data)
 {
-    lex->result_buf[0] = 0;
-    lex->result_cur_ptr = lex->result_buf;
+    mln_lex_cleanResult(lex);
     char c;
     while ( 1 ) {
         c = mln_lex_getAChar(lex);
         if (c == MLN_ERR) return NULL;
         if (c == MLN_EOF) {
-            lex->error = MLN_LEX_EINVEOF;
+            mln_lex_setError(lex, MLN_LEX_EINVEOF);
             return NULL;
         }
         if (c == '\"') break;
@@ -186,7 +192,7 @@ mln_conf_lex_slash_handler(mln_lex_t *lex, void *data)
             c = mln_lex_getAChar(lex);
             if (c == MLN_ERR) return NULL;
             if (c == MLN_EOF) {
-                mln_lex_stepBack(lex);
+                mln_lex_stepBack(lex, c);
                 break;
             }
             if (c == '\n') lex->line++;
@@ -195,7 +201,7 @@ mln_conf_lex_slash_handler(mln_lex_t *lex, void *data)
                 c = mln_lex_getAChar(lex);
                 if (c == MLN_ERR) return NULL;
                 if (c == MLN_EOF) {
-                    mln_lex_stepBack(lex);
+                    mln_lex_stepBack(lex, c);
                     break;
                 }
                 if (c == '\n') lex->line++;
@@ -212,17 +218,17 @@ mln_conf_lex_slash_handler(mln_lex_t *lex, void *data)
             c = mln_lex_getAChar(lex);
             if (c == MLN_ERR) return NULL;
             if (c == MLN_EOF) {
-                mln_lex_stepBack(lex);
+                mln_lex_stepBack(lex, c);
                 break;
             }
             if (c == '\n') {
-                mln_lex_stepBack(lex);
+                mln_lex_stepBack(lex, c);
                 break;
             }
             if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
         }
     } else {
-        mln_lex_stepBack(lex);
+        mln_lex_stepBack(lex, c);
         return mln_conf_lex_new(lex, CONF_TK_SLASH);
     }
     return mln_conf_lex_new(lex, CONF_TK_COMMENT);
@@ -236,7 +242,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
         clst = mln_conf_lex_token(lex);
         if (clst == NULL) {
             if (sub_mark) {
-                lex->error = MLN_LEX_EINVCHAR;
+                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
                 return NULL;
             }
             break;
@@ -244,7 +250,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
         if (clst->type == CONF_TK_COMMENT) {
             mln_conf_lex_free(clst);
             if (sub_mark) {
-                lex->error = MLN_LEX_EINVCHAR;
+                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
                 return NULL;
             }
             continue;
@@ -252,7 +258,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
         if (clst->type == CONF_TK_SUB) {
             mln_conf_lex_free(clst);
             if (sub_mark) {
-                lex->error = MLN_LEX_EINVCHAR;
+                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
                 return NULL;
             }
             sub_mark = 1;
@@ -263,7 +269,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
             mln_u64_t len = clst->text->len + 2;
             mln_u8ptr_t s = (mln_u8ptr_t)malloc(len);
             if (s == NULL) {
-                lex->error = MLN_LEX_ENMEM;
+                mln_lex_setError(lex, MLN_LEX_ENMEM);
                 mln_conf_lex_free(clst);
                 return NULL;
             }
@@ -275,7 +281,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
             break;
         } else {
             if (!sub_mark) break;
-            lex->error = MLN_LEX_EINVCHAR;
+            mln_lex_setError(lex, MLN_LEX_EINVCHAR);
             mln_conf_lex_free(clst);
             return NULL;
         }
@@ -287,7 +293,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
     /*mln_conf_t*/
 static inline mln_conf_t *mln_conf_init(void)
 {
-    mln_conf_lex_lex_dup(NULL);/*nothing to do, just get rid of compiler's warnging*/
+    mln_conf_lex_lex_dup(NULL, NULL);/*nothing to do, just get rid of compiler's warnging*/
     mln_conf_t *cf;
     mln_rbtree_node_t *rn;
     cf = (mln_conf_t *)malloc(sizeof(mln_conf_t));
@@ -306,30 +312,46 @@ static inline mln_conf_t *mln_conf_init(void)
         return NULL;
     }
 
+    mln_alloc_t *pool;
+    mln_string_t path;
+    char *conf_file_path;
     mln_size_t path_len = strlen(mln_path());
-    char *conf_file_path = malloc(path_len + sizeof(conf_filename) + 1);
-    if (conf_file_path == NULL) {
+    mln_lex_hooks_t hooks;
+    struct mln_lex_attr lattr;
+
+    if ((pool = mln_alloc_init()) == NULL) {
         fprintf(stderr, "No memory.\n");
+        mln_rbtree_destroy(cf->domain);
+        free(cf);
+        return NULL;
+    }
+    if ((conf_file_path = (char *)mln_alloc_m(pool, path_len + sizeof(conf_filename) + 1)) == NULL) {
+        fprintf(stderr, "No memory.\n");
+        mln_alloc_destroy(pool);
         mln_rbtree_destroy(cf->domain);
         free(cf);
         return NULL;
     }
     memcpy(conf_file_path, mln_path(), path_len);
     conf_file_path[path_len] = '/';
-    memcpy(conf_file_path+path_len+1, conf_filename, sizeof(conf_filename));
-    struct mln_lex_attr lattr;
-    lattr.input_type = mln_lex_file;
-    lattr.input.filename = conf_file_path;
+    memcpy(conf_file_path+path_len+1, conf_filename, sizeof(conf_filename)-1);
+    mln_string_nSet(&path, conf_file_path, path_len + sizeof(conf_filename));
+
+    lattr.pool = pool;
     lattr.keywords = conf_keywords;
-    mln_lex_hooks_t hooks;
     memset(&hooks, 0, sizeof(hooks));
     hooks.slash_handler = (lex_hook)mln_conf_lex_slash_handler;
     hooks.sglq_handler = (lex_hook)mln_conf_lex_sglq_handler;
     hooks.dblq_handler = (lex_hook)mln_conf_lex_dblq_handler;
     lattr.hooks = &hooks;
-    MLN_LEX_INIT_WITH_HOOKS(mln_conf_lex, cf->lex, &lattr);
-    free(conf_file_path);
+    lattr.preprocess = 1;
+    lattr.type = M_INPUT_T_FILE;
+    lattr.data = &path;
+    mln_lex_initWithHooks(mln_conf_lex, cf->lex, &lattr);
+    mln_alloc_free(conf_file_path);
     if (cf->lex == NULL) {
+        fprintf(stderr, "No memory.\n");
+        mln_alloc_destroy(pool);
         mln_rbtree_destroy(cf->domain);
         free(cf);
         return NULL;
@@ -354,10 +376,7 @@ static void
 mln_conf_destroy(mln_conf_t *cf)
 {
     if (cf == NULL) return;
-    if (cf->lex != NULL) {
-        mln_lex_destroy(cf->lex);
-        cf->lex = NULL;
-    }
+    mln_conf_destroy_lex(cf);
     if (cf->domain != NULL) {
         mln_rbtree_destroy(cf->domain);
         cf->domain = NULL;
@@ -370,7 +389,9 @@ mln_conf_destroy_lex(mln_conf_t *cf)
 {
     if (cf == NULL) return;
     if (cf->lex != NULL) {
+        mln_alloc_t *pool = mln_lex_getPool(cf->lex);
         mln_lex_destroy(cf->lex);
+        mln_alloc_destroy(pool);
         cf->lex = NULL;
     }
 }
@@ -520,10 +541,10 @@ static int mln_isvalid_item(mln_conf_lex_struct_t *cls)
 }
 
 static int
-mln_conf_item_init(mln_conf_lex_struct_t *cls, mln_conf_item_t *ci)
+mln_conf_item_init(mln_conf_t *cf, mln_conf_lex_struct_t *cls, mln_conf_item_t *ci)
 {
     if (!mln_isvalid_item(cls)) {
-        CONF_ERR(cls, "Invalid type of item");
+        CONF_ERR(cf->lex, cls, "Invalid type of item");
         return -1;
     }
     switch (cls->type) {
@@ -583,7 +604,7 @@ mln_conf_item_recursive(mln_conf_t *cf, \
         return -1;
     }
     if (cls->type == CONF_TK_EOF) {
-        CONF_ERR(cls, "Invalid end of file");
+        CONF_ERR(cf->lex, cls, "Invalid end of file");
         mln_conf_lex_free(cls);
         return -1;
     }
@@ -608,7 +629,7 @@ mln_conf_item_recursive(mln_conf_t *cf, \
         return -1;
     }
     mln_conf_item_t *ci = &cc->arg_tbl[cnt];
-    int ret = mln_conf_item_init(cls, ci);
+    int ret = mln_conf_item_init(cf, cls, ci);
     mln_conf_lex_free(cls);
     if (ret < 0) return -1;
     return 0;
@@ -633,11 +654,11 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
                 mln_conf_lex_free(fir);
                 return 0;
             }
-            CONF_ERR(fir, "Invalid right brace");
+            CONF_ERR(cf->lex, fir, "Invalid right brace");
             mln_conf_lex_free(fir);
             return -1;
         } else if (fir->type != CONF_TK_ID) {
-            CONF_ERR(fir, "Unexpected token");
+            CONF_ERR(cf->lex, fir, "Unexpected token");
             mln_conf_lex_free(fir);
             return -1;
         }
@@ -648,7 +669,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
             return -1;
         }
         else if (next->type == CONF_TK_EOF) {
-            CONF_ERR(next, "Invalid end of file");
+            CONF_ERR(cf->lex, next, "Invalid end of file");
             mln_conf_lex_free(fir);
             mln_conf_lex_free(next);
             return -1;
@@ -657,7 +678,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
         if (next->type == CONF_TK_LBRACE) {
             mln_conf_lex_free(next);
             if (mln_string_strcmp(current->domain_name, &default_domain)) {
-                CONF_ERR(fir, "Illegal domain");
+                CONF_ERR(cf->lex, fir, "Illegal domain");
                 mln_conf_lex_free(fir);
                 return -1;
             }

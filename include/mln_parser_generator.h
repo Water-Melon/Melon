@@ -14,6 +14,7 @@
 #include "mln_rbtree.h"
 #include "mln_queue.h"
 #include "mln_stack.h"
+#include "mln_alloc.h"
 
 #define M_PG_DFL_HASHLEN 31
 #define M_PG_ERROR 0
@@ -137,6 +138,7 @@ typedef struct {
 } mln_parser_t;
 
 struct mln_parse_attr {
+    mln_alloc_t              *pool;
     mln_production_t         *prod_tbl;
     mln_lex_t                *lex;
     void                     *pg_data;
@@ -144,6 +146,7 @@ struct mln_parse_attr {
 };
 
 struct mln_sys_parse_attr {
+    mln_alloc_t              *pool;
     mln_parser_t             *p;
     mln_lex_t                *lex;
     mln_pg_shift_tbl_t       *tbl;
@@ -154,6 +157,7 @@ struct mln_sys_parse_attr {
 };
 
 struct mln_err_queue_s {
+    mln_alloc_t              *pool;
     mln_queue_t              *q;
     mln_uauto_t               index;
     mln_uauto_t               pos;
@@ -223,7 +227,7 @@ SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t 
 SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, enum factor_data_type data_type, \
                                               int token_type, mln_sauto_t cur_state, mln_u32_t line);\
 SCOPE void PREFIX_NAME##_factor_destroy(void *ptr);\
-SCOPE void *PREFIX_NAME##_factor_copy(void *ptr);\
+SCOPE void *PREFIX_NAME##_factor_copy(void *ptr, void *data);\
 SCOPE mln_parser_t *PREFIX_NAME##_parser_init(void);\
 SCOPE void PREFIX_NAME##_parser_destroy(mln_parser_t *p);\
 SCOPE int PREFIX_NAME##_parse(struct mln_parse_attr *pattr);\
@@ -565,25 +569,38 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
 \
     int ret;\
     mln_lex_t *lex = NULL;\
+    mln_alloc_t *pool;\
     struct mln_lex_attr lattr;\
+    mln_string_t tmp;\
     mln_production_t *prod = attr->prod_tbl;\
     mln_production_t *prodend = attr->prod_tbl + attr->nr_prod;\
+    if ((pool = mln_alloc_init()) == NULL) {\
+        mln_log(error, "No memory.\n");\
+        goto err2;\
+    }\
     for (; prod < prodend; prod++) {\
-        lattr.input_type = mln_lex_buf;\
-        lattr.input.file_buf = prod->production;\
+        mln_string_nSet(&tmp, prod->production, strlen(prod->production));\
+        lattr.pool = pool;\
         lattr.keywords = NULL;\
         lattr.hooks = NULL;\
+        lattr.preprocess = 0;\
+        lattr.type = M_INPUT_T_BUF;\
+        lattr.data = &tmp;\
         MLN_LEX_INIT_WITH_HOOKS(PREFIX_NAME, lex, &lattr);\
         if (lex == NULL) {\
             mln_log(error, "No memory.\n");\
-            goto err2;\
+            goto err3;\
         }\
         ret = PREFIX_NAME##_pg_process_token(attr, lex, prod);\
         mln_lex_destroy(lex);\
         if (ret < 0) goto err2;\
     }\
+    mln_alloc_destroy(pool);\
 \
     return 0;\
+\
+err3:\
+    mln_alloc_destroy(pool);\
 \
 err2:\
     mln_rbtree_destroy(attr->token_tree);\
@@ -699,16 +716,17 @@ SCOPE void PREFIX_NAME##_factor_destroy(void *ptr)\
     free(f);\
 }\
 \
-SCOPE void *PREFIX_NAME##_factor_copy(void *ptr)\
+SCOPE void *PREFIX_NAME##_factor_copy(void *ptr, void *data)\
 {\
-    if (ptr == NULL) return NULL;\
+    if (ptr == NULL || data == NULL) return NULL;\
+    mln_alloc_t *pool = (mln_alloc_t *)data;\
     mln_factor_t *src = (mln_factor_t *)ptr;\
     mln_factor_t *dest = (mln_factor_t *)malloc(sizeof(mln_factor_t));\
     if (dest == NULL) return NULL;\
     dest->data = NULL;\
     if (src->data != NULL) {\
         if (src->data_type == M_P_TERM) {\
-            dest->data = (void *)PREFIX_NAME##_lex_dup(src->data);\
+            dest->data = (void *)PREFIX_NAME##_lex_dup(pool, src->data);\
             if (dest->data == NULL) {\
                 free(dest);\
                 return NULL;\
@@ -812,6 +830,7 @@ SCOPE int PREFIX_NAME##_parse(struct mln_parse_attr *pattr)\
         return -1;\
     }\
     struct mln_sys_parse_attr spattr;\
+    spattr.pool = pattr->pool;\
     spattr.p = p;\
     spattr.lex = pattr->lex;\
     spattr.tbl = tbl;\
@@ -905,15 +924,27 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
             if (type == M_P_CUR_STACK) {\
                 failed = 1;\
                 mln_s8ptr_t name = NULL;\
+                mln_string_t *filename;\
                 if ((*la)->token_type != TK_PREFIX##_TK_EOF && (*la)->data != NULL) \
                     name = (mln_s8ptr_t)(((PREFIX_NAME##_struct_t *)((*la)->data))->text->data);\
-                mln_log(error, "%s%s%d: Parse Error: Illegal token%s%s%s\n", \
-                        spattr->lex->filename!=NULL?(char *)(spattr->lex->filename->data):" ", \
-                        spattr->lex->filename!=NULL?":":" ",\
-                        *is_reduce?top->line:(*la)->line, \
-                        name==NULL? ".": " nearby '", \
-                        name==NULL? " ": name, \
-                        name==NULL? " ": "'.");\
+                if ((filename = mln_lex_getCurFilename(spattr->lex)) == NULL) {\
+                    mln_log(error, "%d: Parse Error: Illegal token%s%s%s\n", \
+                            *is_reduce?top->line:(*la)->line, \
+                            name==NULL? ".": " nearby '", \
+                            name==NULL? " ": name, \
+                            name==NULL? " ": "'.");\
+                } else {\
+                    char fname[1024];\
+                    memcpy(fname, filename->data, filename->len>1023?1023:filename->len);\
+                    fname[filename->len>1023?1023:filename->len] = 0;\
+                    mln_log(error, "%s%s%d: Parse Error: Illegal token%s%s%s\n", \
+                            filename!=NULL? fname: " ", \
+                            filename!=NULL? ":": " ",\
+                            *is_reduce?top->line:(*la)->line, \
+                            name==NULL? ".": " nearby '", \
+                            name==NULL? " ": name, \
+                            name==NULL? " ": "'.");\
+                }\
                 if ((*la)->token_type == TK_PREFIX##_TK_EOF) break;\
                 ret = PREFIX_NAME##_err_process(spattr, M_P_ERR_MOD);\
                 if (ret >= 0) {\
@@ -984,7 +1015,7 @@ SCOPE int PREFIX_NAME##_err_recover(struct mln_sys_parse_attr *spattr, mln_uauto
 {\
     mln_parser_t *p = spattr->p;\
     mln_stack_destroy(p->cur_stack);\
-    p->cur_stack = mln_stack_dup(p->err_stack);\
+    p->cur_stack = mln_stack_dup(p->err_stack, spattr->pool);\
     if (p->cur_stack == NULL) {\
         mln_log(error, "No memory.\n");\
         return -1;\
@@ -1037,12 +1068,12 @@ SCOPE int PREFIX_NAME##_err_dup(struct mln_sys_parse_attr *spattr, mln_uauto_t p
         p->err_queue = NULL;\
     }\
 \
-    p->err_stack = mln_stack_dup(p->old_stack);\
+    p->err_stack = mln_stack_dup(p->old_stack, spattr->pool);\
     if (p->err_stack == NULL) {\
         mln_log(error, "No memory.\n");\
         return -1;\
     }\
-    p->err_la = PREFIX_NAME##_factor_copy(p->old_la);\
+    p->err_la = PREFIX_NAME##_factor_copy(p->old_la, spattr->pool);\
     if (p->err_la == NULL && p->old_la != NULL) {\
         mln_log(error, "No memory.\n");\
         mln_stack_destroy(p->err_stack);\
@@ -1064,6 +1095,7 @@ SCOPE int PREFIX_NAME##_err_dup(struct mln_sys_parse_attr *spattr, mln_uauto_t p
         return -1;\
     }\
     struct mln_err_queue_s eq;\
+    eq.pool = spattr->pool;\
     eq.q = p->err_queue;\
     eq.index = 0;\
     eq.pos = pos;\
@@ -1088,7 +1120,7 @@ SCOPE int PREFIX_NAME##_err_dup_scan(void *q_node, void *udata)\
         eq->index++;\
         return 0;\
     }\
-    mln_factor_t *f = PREFIX_NAME##_factor_copy((mln_factor_t *)q_node);\
+    mln_factor_t *f = PREFIX_NAME##_factor_copy((mln_factor_t *)q_node, eq->pool);\
     if (f == NULL) {\
         mln_log(error, "No memory.\n");\
         return -1;\
@@ -1172,7 +1204,7 @@ SCOPE int PREFIX_NAME##_shift(struct mln_sys_parse_attr *spattr, \
             return -1;\
         }\
         if (spattr->type == M_P_CUR_STACK) {\
-            mln_factor_t *new_f = PREFIX_NAME##_factor_copy(*la);\
+            mln_factor_t *new_f = PREFIX_NAME##_factor_copy(*la, spattr->pool);\
             *la = NULL;\
             if (new_f == NULL) {\
                 mln_log(error, "No memory.\n");\

@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.5.5
+Melon Version 1.5.6
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -58,8 +58,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.5.5.
-  b) Change directory to the melon-1.5.5/.
+  a) Download and decompress melon-1.5.6.
+  b) Change directory to the melon-1.5.6/.
   c) Execute shell command
          ./configure [--prefix=/...|--help]
          make
@@ -71,7 +71,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.5.5/include/mln_types.h.
+Their definitions can be found in melon-1.5.6/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -465,33 +465,61 @@ Their definitions can be found in melon-1.5.5/include/mln_types.h.
              struct mln_lex_attr attr;
              ... //Set some special characters' processing hooks.
              mln_lex_t *lex = NULL;
-             MLN_LEX_INIT_WITH_HOOKS(mln_test_lex, lex, &attr);
+             mln_lex_initWithHooks(mln_test_lex, lex, &attr);
 
          Now a lexer has been created. The structure of attr is defined as
              struct mln_lex_attr {
-                 enum {
-                     mln_lex_file,
-                     mln_lex_buf
-                 } input_type;
-                 union {
-                     mln_s8ptr_t   filename;
-                     /*
-                      * file_buf must be ended by '\0'.
-                      */
-                     mln_s8ptr_t   file_buf;
-                 } input;
-                 /*
-                  * keywords must be ended by NULL
-                  */
+                 mln_alloc_t        *pool;
                  char              **keywords;
-                 mln_lex_hooks_t   *hooks;
-             };
-         input_type -- is used to indicate the type of input, file or string buffer.
-         input -- maintains the relevant information of the
-         input, file name or string buffer.
+                 mln_lex_hooks_t    *hooks;
+                 mln_u32_t           preprocess:1;
+                 mln_u32_t           padding:31;
+                 mln_u32_t           type;
+                 mln_string_t       *data;
+              };
+         pool -- is a memory pool used in lexer. It is initilizaed by 'mln_alloc_init()'.
          keywords -- is a vector which records all keywords that we need and the last element in vector is NULL. 
+         hooks -- is a structure record all callback functions and their customized datas of speciall characters.
+         preprocess -- is a flag to switching on preprocessing or not.
+         type -- is a initial input stream type. Its value are:
+             MLN_INPUT_T_FILE -- file stream.
+             MLN_INPUT_T_BUF  -- buffer stream.
+         data -- is the initial input filename or buffer. It can be set NULL if user don't wanna set input stream now.
 
-     Even though, there are 39 functions has been built in step c), but only three of them should be concerned.
+     (5) Preprocessing.
+         The preprocessing function include three aspects.
+         <a> include
+         <b> define
+         <c> if
+
+         'include' is a capability to include other local file into the current input stream.
+         We can use it as,
+             @include "a.conf"
+         or
+             @include "/xxx/xxx/a.conf"
+
+         'define' is a capability to define a macro.
+         Example:
+             @define FOO 6  /*define a macro 'FOO' */
+             @FOO           /*use macro 'FOO', it should be start with '@'.*/
+             @undef FOO     /*undefine the macro 'FOO'*/
+         There are two macro will be defined automatically while initialized a lexer, '1' and 'true', their
+         content is nil.
+
+         'if' is a capability to choose which party input stream can be parsed to tokens.
+         It only support if, if-else.
+         Example:
+             @if true                  /*'true' is a pre-defined macro*/
+                 @define hello "world" /*define a macro named 'hello', its value is '"world"'.*/
+                 @define test          /*define a macro named 'test', its value is nil*/
+             @else
+                 @if !false            /*'false' is not defined, but have a prefix character '!' which means not,
+                                         so this condition is true*/
+                     @undef test       /*undefine macro 'test'.*/
+                 @endif
+             @endif
+         
+     Even though, there are a lot of functions has been built in step c), but only three of them should be concerned.
 
      a) mln_test_lex_struct_t *mln_test_lex_new(mln_lex_t *lex, enum mln_test_lex_enum type);
         It initializes a new token.
@@ -539,6 +567,46 @@ Their definitions can be found in melon-1.5.5/include/mln_types.h.
      h) int mln_lex_isHex(char c);
         This interface is equivalent to
         if (isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')).
+
+     i) int mln_lex_push_InputFileStream(mln_lex_t *lex, mln_string_t *path);
+        This interface is push a new file stream into 'lex'.
+        Then if we call PREFIX_NAME##_token(), it will return the token that came from the new file stream.
+
+     j) int mln_lex_push_InputBufStream(mln_lex_t *lex, mln_string_t *buf);
+        This interface is push a new buffer stream into 'lex'.
+        Then if we call PREFIX_NAME##_token(), it will return the token that came from the new buffer stream.
+
+     k) mln_lex_getPool(lex);
+        Get the memory pool from 'lex'.
+
+     l) mln_lex_cleanResult(lex);
+        Clean the result buf in 'lex'.
+
+     m) mln_lex_getCurFilename(lex);
+        Get the name of current file stream in 'lex'.
+
+     n) mln_lex_getResult(lex,res_pstr);
+        Get the result buf in 'lex' into 'res_pstr'.
+        The type of 'res_pstr' is 'mln_string_t *'.
+
+     o) mln_lex_setError(lex,err);
+        Set the error in 'lex'. The value of 'err' are:
+            MLN_LEX_SUCCEED
+            MLN_LEX_ENMEM
+            MLN_LEX_EINVCHAR
+            MLN_LEX_EINVHEX
+            MLN_LEX_EINVDEC
+            MLN_LEX_EINVOCT
+            MLN_LEX_EINVREAL
+            MLN_LEX_EREAD
+            MLN_LEX_EINVEOF
+            MLN_LEX_EINVEOL
+            MLN_LEX_EINPUTTYPE
+            MLN_LEX_EFPATH
+            MLN_LEX_EINCLUDELOOP
+            MLN_LEX_EUNKNOWNMACRO
+            MLN_LEX_EMANYMACRODEF
+            MLN_LEX_EINVMACRO
 
   10) Configuration
      As shown below, this is the architecture of configuration.
@@ -916,8 +984,16 @@ Their definitions can be found in melon-1.5.5/include/mln_types.h.
      f) void *mln_stack_top(mln_stack_t *st);
         It is used to get the top data in the stack.
 
-     g) mln_stack_t *mln_stack_dup(mln_stack_t *st);
+     g) mln_stack_t *mln_stack_dup(mln_stack_t *st, void *udata);
         It is used to duplicate a stack data.
+        'udata' is a customized data, it will be passed to the 'copy_handler'.
+
+     h) int mln_stack_scan_all(mln_stack_t *st, stack_scan scanner, void *data);
+        Scan all node in stack 'st'.
+        'scanner' is a handler function to process every stack node. Its prototype is,
+            typedef int (*stack_scan)(void *, void *);
+        the first argument is the data in stack node, the second argument is the same as
+        the 'data' passed to 'mln_stack_scan_all', that is a customized data.
 
   16) Parser and Parser Generator
      Parser can be used to parse a text which is in a file or buffer automatically.

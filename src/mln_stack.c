@@ -115,7 +115,7 @@ void *mln_stack_top(mln_stack_t *st)
 /*
  * dup
  */
-mln_stack_t *mln_stack_dup(mln_stack_t *st)
+mln_stack_t *mln_stack_dup(mln_stack_t *st, void *udata)
 {
     struct mln_stack_attr sattr;
     sattr.free_handler = st->free_handler;
@@ -128,7 +128,7 @@ mln_stack_t *mln_stack_dup(mln_stack_t *st)
         if (new_st->copy_handler == NULL) {
             data = scan->data;
         } else {
-            data = new_st->copy_handler(scan->data);
+            data = new_st->copy_handler(scan->data, udata);
             if (data == NULL) {
                 mln_stack_destroy(new_st);
                 return NULL;
@@ -142,5 +142,18 @@ mln_stack_t *mln_stack_dup(mln_stack_t *st)
         }
     }
     return new_st;
+}
+
+/*
+ * scan
+ */
+#include <stdio.h>
+int mln_stack_scan_all(mln_stack_t *st, stack_scan scanner, void *data)
+{
+    mln_stack_node_t *sn;
+    for (sn = st->top; sn != NULL; sn = sn->prev) {
+        if (scanner(sn->data, data) < 0) return -1;
+    }
+    return 0;
 }
 
