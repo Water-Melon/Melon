@@ -406,6 +406,12 @@ _mln_sys_log_process(mln_log_t *log, \
                 mln_log_write(log, (void *)s, strlen(s));
                 break;
             }
+            case 'S':
+            {
+                mln_string_t *s = va_arg(arg, mln_string_t *);
+                mln_log_write(log, s->data, s->len);
+                break;
+            }
             case 'l':
             {
                 memset(line_str, 0, sizeof(line_str));

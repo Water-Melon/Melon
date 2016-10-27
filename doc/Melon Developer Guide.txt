@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.5.6
+Melon Version 1.5.7
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -58,20 +58,21 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.5.6.
-  b) Change directory to the melon-1.5.6/.
+  a) Download and decompress melon-1.5.7.
+  b) Change directory to the melon-1.5.7/.
   c) Execute shell command
-         ./configure [--prefix=/...|--help]
+         ./configure [--prefix=/...|...|--help]
          make
          make modules (This is an optional step. If you want compile
                        your modules, you need to execute it.)
          make install
      --prefix indicate the installation path.
      --help   show help message.
+     More parameters see '--help'.
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.5.6/include/mln_types.h.
+Their definitions can be found in melon-1.5.7/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -411,7 +412,7 @@ Their definitions can be found in melon-1.5.6/include/mln_types.h.
            none, report, debug, warn and error.
        The initial log level can be set in the configuration file. The second argument is a string.
        It likes the first argument 'fmt' in printf(). And it supports some format control characters, such as
-           %s, %l, %d, %c, %f, %x, %X (=%lx in printf()), %u and %U (=%lu in printf()).
+           %s, %S, %l, %d, %c, %f, %x, %X (=%lx in printf()), %u and %U (=%lu in printf()).
        Depending on the format control characters in msg, the rest arguments can be none or even more than one.
 
     b) char *mln_log_getDirPath(void);

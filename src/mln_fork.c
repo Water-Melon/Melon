@@ -255,7 +255,7 @@ int do_fork(void)
         } else if (!mln_string_constStrcmp((*cc)->cmd_name, "default")) {
             mln_fork_spawn(M_PST_DFL, v_args, n_args, NULL);
         } else {
-            mln_log(error, "Invalid command '%s' in 'exec_proc'.\n", (char *)((*cc)->cmd_name->data));
+            mln_log(error, "Invalid command '%S' in 'exec_proc'.\n", (*cc)->cmd_name);
             exit(1);
         }
     }

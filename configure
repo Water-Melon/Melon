@@ -8,7 +8,8 @@
 #installation path
 install_path=`echo "/usr/local/melon"`
 malloc_type="default"
-jemalloc_path="nil";
+jemalloc_path="nil"
+target_name="melon"
 
 #get all parameters
 for param in $@
@@ -17,6 +18,7 @@ do
 		echo -e "\nMelon platform."
 		echo "Copyright (C) Niklaus F.Schen."
 		echo "Options:"
+		echo -e "\t--target=Binary_File_Name"
 		echo -e "\t--prefix=INSTALL_PATH"
 		echo -e "\t--with-salloc			Salloc is an implementation of malloc()."
 		echo -e "\t--with-jemalloc			Use jemalloc."
@@ -27,6 +29,8 @@ do
 	param_suffix=`echo $param|cut -d '=' -f 2`
 	if [ $param_prefix == "--prefix" ]; then
 		install_path=$param_suffix
+	elif [ $param_prefix == "--target" ]; then
+		target_name=$param_suffix
 	elif [ $param_prefix == "--with-salloc" ]; then
 		malloc_type="salloc"
 	elif [ $param_prefix == "--with-jemalloc" ]; then
@@ -47,6 +51,7 @@ fi
 
 #output installation path
 echo -e "Installation Path \t[$install_path]"
+echo -e "Binary File Name \t[$target_name]"
 #build path.c & h
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
 echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
@@ -259,7 +264,7 @@ echo "# Copyright (C) Niklaus F.Schen." >> Makefile
 echo "# " >> Makefile
 echo -e "CC\t\t= cc" >> Makefile
 echo -e "FLAGS\t\t= -Iinclude -c -Wall -ggdb -Werror -O3" >> Makefile
-echo -e "MELON\t\t= melon" >> Makefile
+echo -e "MELON\t\t= $target_name" >> Makefile
 echo -e "OBJS\t\t= \\" >> Makefile
 cnt=2
 sum=`ls -l src/|wc -l`

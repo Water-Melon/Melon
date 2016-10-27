@@ -1,3 +1,9 @@
+Changes with melon 1.5.7                                          27 Oct 2016
+    *) Added a parameter for script 'configure' to specify
+       the target binary file name.
+    *) Updated log component to support logging type 'mln_string_t'.
+    *) Fixed a mistake in parser generator component.
+
 Changes with melon 1.5.6                                          23 Oct 2016
     *) Updated lex component, support preprocessing.
     *) Updated parser generator.

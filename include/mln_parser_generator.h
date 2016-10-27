@@ -264,11 +264,11 @@ SCOPE int PREFIX_NAME##_reduce_scan(void *rn_data, void *udata)\
         (sh[index].type != M_PG_REDUCE || sh[index].index != info->item->rule - info->rule))\
     {\
         if (sh[index].type == M_PG_ACCEPT || sh[index].type == M_PG_REDUCE) {\
-            mln_log(error, "State:%d token[%s] Reduce-Reduce conflict.\n", \
-                    info->state->id, (char *)(tk->token->data));\
+            mln_log(error, "State:%d token[%S] Reduce-Reduce conflict.\n", \
+                    info->state->id, tk->token);\
         } else {\
-            mln_log(error, "State:%d token[%s] Shift-Reduce conflict.\n", \
-                    info->state->id, (char *)(tk->token->data));\
+            mln_log(error, "State:%d token[%S] Shift-Reduce conflict.\n", \
+                    info->state->id, tk->token);\
         }\
         *(info->failed) = 1;\
     }\
@@ -334,11 +334,11 @@ SCOPE mln_pg_shift_tbl_t *PREFIX_NAME##_build_shift_tbl(struct mln_pg_calc_info_
                     type = M_PG_SHIFT;\
                 if (sh[index].type != M_PG_ERROR && (sh[index].type != type || sh[index].index != it->goto_id)) {\
                     if (sh[index].type == M_PG_ACCEPT || sh[index].type == M_PG_REDUCE) {\
-                        mln_log(error, "State:%l token:[%s] Shift-Reduce conflict.\n", \
-                                s->id, (char *)((it->rule->rights[it->pos])->token->data));\
+                        mln_log(error, "State:%l token:[%S] Shift-Reduce conflict.\n", \
+                                s->id, (it->rule->rights[it->pos])->token);\
                     } else {\
-                        mln_log(error, "State:%l token:[%s] Shift-Shift conflict.\n", \
-                                s->id, (char *)((it->rule->rights[it->pos])->token->data));\
+                        mln_log(error, "State:%l token:[%S] Shift-Shift conflict.\n", \
+                                s->id, (it->rule->rights[it->pos])->token);\
                     }\
                     failed = 1;\
                 }\
@@ -586,7 +586,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
         lattr.preprocess = 0;\
         lattr.type = M_INPUT_T_BUF;\
         lattr.data = &tmp;\
-        MLN_LEX_INIT_WITH_HOOKS(PREFIX_NAME, lex, &lattr);\
+        mln_lex_initWithHooks(PREFIX_NAME, lex, &lattr);\
         if (lex == NULL) {\
             mln_log(error, "No memory.\n");\
             goto err3;\
