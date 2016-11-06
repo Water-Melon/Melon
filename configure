@@ -421,6 +421,24 @@ do
 		rm -f writev_test writev_test.c
 		continue
         fi
+
+        test $fname = "mln_thread_pool.c"
+	if [ $? -eq 0 ]; then
+		unix98=0
+	#test __USE_UNIX98
+		echo -e "#ifndef __USE_UNIX98\n#define __USE_UNIX98\n#endif\n#include <pthread.h>\n" > unix98_test.c
+		echo "int main(void){pthread_setconcurrency(0);return 0;}" >> unix98_test.c
+		cc -o unix98_test unix98_test.c -pthread 2>/dev/null
+		if [ "$?" == "0" ]; then
+			echo "__USE_UNIX98		[support]"
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_USE_UNIX98" >> Makefile
+		else
+			echo "__USE_UNIX98		[not support]"
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile
+		fi
+		rm -fr unix98_test unix98_test.c
+		continue
+	fi
 	echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile
 done
 echo "Configure done!"

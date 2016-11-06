@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.5.7
+Melon Version 1.5.8
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -58,8 +58,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.5.7.
-  b) Change directory to the melon-1.5.7/.
+  a) Download and decompress melon-1.5.8.
+  b) Change directory to the melon-1.5.8/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.5.7/include/mln_types.h.
+Their definitions can be found in melon-1.5.8/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -2380,6 +2380,66 @@ Their definitions can be found in melon-1.5.7/include/mln_types.h.
       ag) int mln_asn1_encode_implicit(mln_asn1_enResult_t *res, mln_u32_t ident, mln_u32_t index);
          Transform the content which is indicated by 'index' into Implicit type whose class will be set
          'M_ASN1_CLASS_CONTEXT_SPECIFIC' and identifier will be replaced by 'ident'.
+
+  34) Thread Pool
+      There is a problem in linux. I don't know whether it's a bug or not.
+      If I fork a child process in the callback function 'process_handler' which is running on child thread,
+      there is always 288-byte(64-bit)/144-byte(32-bit) block leak in child process.
+      I checked I had already freed all blocks which were allocated by malloc(). But it still existed.
+      I remember that there is a 288-byte(64-bit)/144-byte(32-bit) block allocated during calling pthread_create().
+      But in child process, I can not access that 288-byte(64-bit)/144-byte(32-bit) memory in user mode,
+      which means I can't free this memory block.
+      And there is another thing which is that FreeBSD 10.0 i386 can not support fork() in thread perfectly.
+      The child process will be blocked mostly. GDB can not attach that blocked process. Command 'truss' can not
+      see which syscall it encountered. So if someone can explain it, I wiil be so grateful while you contact me
+      immediately.
+      Now, I just wanna say, fork() in thread is NOT recommended.
+
+      There is a limitation to the thread pool. One process only can run it once. If you call this function in
+      more than one thread, the unknown error may be occured.
+
+      a) int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr);
+         This function is used to run (NOT only initialize) a thread pool.
+         The definition of 'tpattr' is,
+             struct mln_thread_pool_attr {
+                 void                              *dataForMain;
+                 mln_thread_process                 child_process_handler;
+                 mln_thread_process                 main_process_handler;
+                 mln_thread_dataFree                free_handler;
+                 mln_u64_t                          condTimeout; /*ms*/
+                 mln_u32_t                          max;
+                 mln_u32_t                          concurrency;
+             };
+         'dataForMain' -- this variable is only provided for main thread. It will be passed into the main thread
+                          callback function 'main_process_handler'.
+         'child_process_handler' -- this callback function is provided for child thread(s). It will be called after
+                                    the main thread dilivered a resource to child thread(s). Its prototype is,
+                                        typedef int (*mln_thread_process)(void *);
+                                    the argument is a resource structure pointer which is defined by user.
+                                    And user must release it in this callback function.
+         'main_process_handler' -- this callback function is provided for main thread. Its prototype is the same as
+                                   'child_process_handler''s. The argument is 'dataForMain', not resource.
+                                   When this thread pool running, the main thread is just simply to run this function.
+                                   If your routine in this function returned, the thread pool would be cleaned and
+                                   released.
+         'free_handler' -- this callback function is provided for releaseing those unused resources when thread pool
+                           quit. Its prototype is,
+                               typedef void (*mln_thread_dataFree)(void *);
+                           the argument is a resource structure pointer which thread pool wanna free.
+         'condTimeout' -- this variable indicates a millisecond timeout timer for child thread(s). when someone child
+                          thread's timer expired and there was no resource can be processed, this child thread would
+                          quit.
+         'max' -- the maximum number of child thread.
+         'concurrency' -- this variable will be passed to 'pthread_setconcurrency()'.
+                          This varibale may be ignored. Because, firstly not all OS platform support unix98,
+                          secondly some OS platform just do nothing in 'pthread_setconcurrency()'.
+
+      b) int mln_thread_pool_addResource(void *data);
+         This function is used to deliver a resource to someone child thread.
+         It only can be called in main thread, which means, the callback function 'main_process_handler'.
+
+      c) void mln_thread_quit(void);
+         This function can make thread pool quit.
 
 5. Process Module Development
    In Melon, there are two methods to develop process module.

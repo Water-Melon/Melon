@@ -1,3 +1,7 @@
+Changes with melon 1.5.8                                          06 Nov 2016
+    *) Added thread pool component.
+    *) Updated shell script 'configure'.
+
 Changes with melon 1.5.7                                          27 Oct 2016
     *) Added a parameter for script 'configure' to specify
        the target binary file name.
