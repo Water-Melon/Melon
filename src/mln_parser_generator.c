@@ -72,15 +72,6 @@ MLN_CHAIN_FUNC_DEFINE(mln_state, \
                       static void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DECLARE(mln_q_state, \
-                       mln_pg_state_t, \
-                       static void, \
-                       __NONNULL3(1,2,3));
-MLN_CHAIN_FUNC_DEFINE(mln_q_state, \
-                      mln_pg_state_t, \
-                      static void, \
-                      q_prev, \
-                      q_next);
 
 
 /*
@@ -222,7 +213,6 @@ mln_pg_state_t *mln_pg_state_new(void)
     s->tail = NULL;
     s->prev = NULL;
     s->next = NULL;
-    s->q_prev = NULL;
     s->q_next = NULL;
     s->nr_item = 0;
     return s;
@@ -604,6 +594,29 @@ mln_pg_closure_rbtree_scan(void *rn_data, void *udata)
 /*
  * goto
  */
+static inline void
+mln_pg_state_enqueue(mln_pg_state_t **head, mln_pg_state_t **tail, mln_pg_state_t *s)
+{
+    s->q_next = NULL;
+    if (*head == NULL) {
+        *head = *tail = s;
+        return;
+    }
+    (*tail)->q_next = s;
+    *tail = s;
+}
+
+static inline mln_pg_state_t *
+mln_pg_state_dequeue(mln_pg_state_t **head, mln_pg_state_t **tail)
+{
+    mln_pg_state_t *s = *head;
+    if (s == NULL) return NULL;
+    *head = s->q_next;
+    if (*head == NULL) *tail = NULL;
+    s->q_next = NULL;
+    return s;
+}
+
 int mln_pg_goto(struct mln_pg_calc_info_s *pci)
 {
     mln_rbtree_t *tree = pci->tree;
@@ -636,13 +649,12 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
     }
     mln_rbtree_insert(tree, rn);
     mln_state_chain_add(&(pci->head), &(pci->tail), s);
-    mln_q_state_chain_add(&q_head, &q_tail, s);
+    mln_pg_state_enqueue(&q_head, &q_tail, s);
     if (mln_pg_closure(s, pci->rule, pci->nr_rule) < 0) {
         return -1;
     }
 
-    while ((s = q_head) != NULL) {
-        mln_q_state_chain_del(&q_head, &q_tail, s);
+    while ((s = mln_pg_state_dequeue(&q_head, &q_tail)) != NULL) {
         for (save = s->head; save != NULL; save = save->next) {
             if (save->rule->nr_right == save->pos)
                 continue;
@@ -714,7 +726,7 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
                 }
                 mln_rbtree_insert(tree, rn);
                 mln_state_chain_add(&(pci->head), &(pci->tail), new_s);
-                mln_q_state_chain_add(&q_head, &q_tail, new_s);
+                mln_pg_state_enqueue(&q_head, &q_tail, new_s);
             }
 
             for (it = save; it != NULL; it = it->next) {
@@ -767,7 +779,8 @@ mln_pg_state_duplicate(mln_pg_state_t **q_head, \
                 }
                 if (change && !added) {
                     added = 1;
-                    mln_q_state_chain_add(q_head, q_tail, dest);
+                    if (dest->q_next == NULL && (*q_tail) != dest)
+                        mln_pg_state_enqueue(q_head, q_tail, dest);
                 }
                 break;
             }

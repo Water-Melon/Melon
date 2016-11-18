@@ -1,3 +1,7 @@
+Changes with melon 1.5.9                                          18 Nov 2016
+    *) Optimized lex component.
+    *) Fixed bugs of parser generator.
+
 Changes with melon 1.5.8                                          06 Nov 2016
     *) Added thread pool component.
     *) Updated shell script 'configure'.

@@ -22,10 +22,10 @@ mln_conf_hook_t *gConfHookHead = NULL, *gConfHookTail = NULL;
 mln_conf_t *gConf = NULL;
 mln_string_t default_domain = {(mln_u8ptr_t)"main", 4, 1};
 char conf_filename[] = "conf/melon.conf";
-char *conf_keywords[] = {
-    "on",
-    "off",
-    NULL
+mln_string_t conf_keywords[] = {
+    mln_string("on"),
+    mln_string("off"),
+    mln_string(NULL)
 };
 
 

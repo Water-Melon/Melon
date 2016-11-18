@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.5.8
+Melon Version 1.5.9
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -58,8 +58,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.5.8.
-  b) Change directory to the melon-1.5.8/.
+  a) Download and decompress melon-1.5.9.
+  b) Change directory to the melon-1.5.9/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.5.8/include/mln_types.h.
+Their definitions can be found in melon-1.5.9/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -1106,16 +1106,19 @@ Their definitions can be found in melon-1.5.8/include/mln_types.h.
      5. Initialize the lexer.
         We assume that the text which is going to be parsed is in a buffer not file.
 
-            char text[] = "**a = ***c";
+            mln_string_t test = mln_string("**a = ***c");
 
             char *keywords[] = {"for", NULL};
 
+            mln_alloc_t *pool = mln_alloc_init();
+
             mln_lex_t *lex = NULL;
             struct mln_lex_attr lattr;
-            lattr.input_type = mln_lex_buf;
-            lattr.input.file_buf = text;
             lattr.keywords = keywords;
             lattr.hooks = NULL;
+            lattr.preprocess = 1;
+            lattr.type = M_INPUT_T_BUF;
+            lattr.data = &test;
             lex = mln_lex_init(&lattr);
             if (lex == NULL) {
                 mln_log(error, "...\n");
@@ -1126,6 +1129,7 @@ Their definitions can be found in melon-1.5.8/include/mln_types.h.
      6. Parse
         Now, we can parse the text.
             struct mln_parse_attr pattr;
+            pattr.pool = pool;
             pattr.prod_tbl = prod_tbl;
             pattr.lex = lex;
             pattr.pg_data = data;

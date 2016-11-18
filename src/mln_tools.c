@@ -219,7 +219,7 @@ out:
 static int mln_set_id(void)
 {
     char filename[] = "/etc/passwd";
-    char *keywords[] = {"root", NULL};
+    mln_string_t keywords[] = {mln_string("root"), mln_string(NULL)};
     struct mln_lex_attr lattr;
 
     /*get user name*/
@@ -244,7 +244,7 @@ static int mln_set_id(void)
             mln_log(error, "Parameter type of command 'user' error.\n");
             return -1;
         }
-        keywords[0] = (char *)(ci->val.s->data);
+        keywords[0] = *(ci->val.s);
     }
 
     /*init lexer*/
@@ -401,7 +401,7 @@ static int
 mln_boot_version(const char *boot_str, const char *alias)
 {
     printf("Melon Platform.\n");
-    printf("Version 1.5.8.\n");
+    printf("Version 1.5.9.\n");
     printf("Copyright (C) Niklaus F.Schen (Chinese name: Shen Fanchen).\n");
     exit(0);
     return 0;

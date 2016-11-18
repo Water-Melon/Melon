@@ -127,7 +127,7 @@ typedef struct {
 
 struct mln_lex_attr {
     mln_alloc_t        *pool;
-    char              **keywords;
+    mln_string_t       *keywords;
     mln_lex_hooks_t    *hooks;
     mln_u32_t           preprocess:1;
     mln_u32_t           padding:31;
@@ -144,13 +144,18 @@ typedef struct {
     mln_u64_t           buf_len;
 } mln_lex_input_t;
 
+typedef struct {
+    mln_string_t       *keyword;
+    mln_uauto_t         val;
+} mln_lex_keyword_t;
+
 struct mln_lex_s {
     mln_alloc_t        *pool;
     mln_rbtree_t       *macros;
     mln_lex_input_t    *cur;
     mln_stack_t        *stack;
     mln_lex_hooks_t     hooks;
-    char              **keywords;
+    mln_rbtree_t       *keywords;
     mln_s8ptr_t         err_msg;
     mln_u8ptr_t         result_buf;
     mln_u8ptr_t         result_pos;
@@ -661,14 +666,16 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
     {\
         if (lex->keywords == NULL) return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_ID);\
         mln_string_t tmp;\
-        mln_s32_t i;\
         mln_u32_t diff = lex->result_pos - lex->result_buf;\
         mln_u8ptr_t p = lex->result_buf;\
-        for (i = 0; lex->keywords[i] != NULL; i++) {\
-            mln_string_nSet(&tmp, p, diff);\
-            if (!mln_string_constStrcmp(&tmp, lex->keywords[i])) {\
-                return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_KEYWORD_BEGIN+i+1);\
-            }\
+        mln_lex_keyword_t lk, *plk;\
+        mln_rbtree_node_t *rn;\
+        mln_string_nSet(&tmp, p, diff);\
+        lk.keyword = &tmp;\
+        rn = mln_rbtree_search(lex->keywords, lex->keywords->root, &lk);\
+        if (!mln_rbtree_null(rn, lex->keywords)) {\
+            plk = (mln_lex_keyword_t *)(rn->data);\
+            return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_KEYWORD_BEGIN+plk->val+1);\
         }\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_ID);\
     }\

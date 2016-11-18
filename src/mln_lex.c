@@ -141,6 +141,34 @@ static int mln_lex_macro_cmp(const void *data1, const void *data2)
     return mln_string_strcmp(lm1->key, lm2->key);
 }
 
+static inline mln_lex_keyword_t *
+mln_lex_keyword_new(mln_string_t *keyword, mln_uauto_t val)
+{
+    mln_lex_keyword_t *lk = (mln_lex_keyword_t *)malloc(sizeof(mln_lex_keyword_t));
+    if (lk == NULL) return NULL;
+    if ((lk->keyword = mln_string_dup(keyword)) == NULL) {
+        free(lk);
+        return NULL;
+    }
+    lk->val = val;
+    return lk;
+}
+
+static void mln_lex_keyword_free(void *data)
+{
+    if (data == NULL) return;
+    mln_lex_keyword_t *lk = (mln_lex_keyword_t *)data;
+    if (lk->keyword != NULL) mln_string_free(lk->keyword);
+    free(lk);
+}
+
+static int mln_lex_keywords_cmp(const void *data1, const void *data2)
+{
+    mln_lex_keyword_t *lk1 = (mln_lex_keyword_t *)data1;
+    mln_lex_keyword_t *lk2 = (mln_lex_keyword_t *)data2;
+    return mln_string_strcmp(lk1->keyword, lk2->keyword);
+}
+
 mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
 {
     mln_lex_macro_t *lm;
@@ -149,6 +177,8 @@ mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
     struct mln_stack_attr sattr;
     mln_string_t k1 = mln_string("1");
     mln_string_t k2 = mln_string("true");
+    mln_string_t *scan;
+    mln_lex_keyword_t *newkw;
     sattr.free_handler = mln_lex_input_free;
     sattr.copy_handler = NULL;
     mln_lex_t *lex;
@@ -191,7 +221,31 @@ err:
         memcpy(&(lex->hooks), attr->hooks, sizeof(mln_lex_hooks_t));
     else
         memset(&(lex->hooks), 0, sizeof(mln_lex_hooks_t));
-    lex->keywords = attr->keywords;
+
+    if (attr->keywords != NULL) {
+        rbattr.cmp = mln_lex_keywords_cmp;
+        rbattr.data_free = mln_lex_keyword_free;
+        if ((lex->keywords = mln_rbtree_init(&rbattr)) == NULL) {
+            mln_stack_destroy(lex->stack);
+            goto err;
+        }
+        for (scan = attr->keywords; scan->data != NULL; scan++) {
+            if ((newkw = mln_lex_keyword_new(scan, scan - attr->keywords)) == NULL) {
+                 mln_rbtree_destroy(lex->keywords);
+                 mln_stack_destroy(lex->stack);
+                 goto err;
+            }
+            if ((rn = mln_rbtree_new_node(lex->keywords, newkw)) == NULL) {
+                mln_lex_keyword_free(newkw);
+                mln_rbtree_destroy(lex->keywords);
+                mln_stack_destroy(lex->stack);
+                goto err;
+            }
+            mln_rbtree_insert(lex->keywords, rn);
+        }
+    } else {
+        lex->keywords = NULL;
+    }
     lex->err_msg = NULL;
     lex->result_buf = lex->result_pos = NULL;
     lex->result_buf_len = MLN_DEFAULT_BUFLEN;
@@ -232,6 +286,7 @@ void mln_lex_destroy(mln_lex_t *lex)
     if (lex->stack != NULL) mln_stack_destroy(lex->stack);
     if (lex->err_msg != NULL) mln_alloc_free(lex->err_msg);
     if (lex->result_buf != NULL) mln_alloc_free(lex->result_buf);
+    if (lex->keywords != NULL) mln_rbtree_destroy(lex->keywords);
     mln_alloc_free(lex);
 }
 

@@ -73,6 +73,7 @@ extern int spin_trylock(void *lock);
 #define MLN_CHAIN_FUNC_DEFINE(prefix,type,ret_attr,prev_ptr,next_ptr); \
     ret_attr prefix##_chain_add(type **head, type **tail, type *node) \
     {\
+        node->prev_ptr = node->next_ptr = NULL;\
         if (*head == NULL) {\
             *head = *tail = node;\
             return ;\
