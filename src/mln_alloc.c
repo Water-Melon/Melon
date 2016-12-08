@@ -3,6 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "mln_alloc.h"
@@ -239,7 +240,6 @@ void *mln_alloc_re(mln_alloc_t *pool, void *ptr, mln_size_t size)
     return new_ptr;
 }
 
-#include <stdio.h>
 void mln_alloc_free(void *ptr)
 {
     if (ptr == NULL) {

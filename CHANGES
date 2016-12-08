@@ -1,3 +1,8 @@
+Changes with melon 1.5.10                                         08 Dec 2016
+    *) Fixed bugs of parser generator.
+    *) Added an interface for thread pool.
+    *) Added a new component of AST.
+
 Changes with melon 1.5.9                                          18 Nov 2016
     *) Optimized lex component.
     *) Fixed bugs of parser generator.

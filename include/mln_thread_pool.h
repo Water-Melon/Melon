@@ -49,6 +49,7 @@ struct mln_thread_pool_s {
     mln_u32_t                          quit:1;
     mln_u32_t                          padding:31;
     mln_u64_t                          condTimeout;/*ms*/
+    mln_size_t                         nRes;
     mln_thread_process                 process_handler;
     mln_thread_dataFree                free_handler;
 };
@@ -66,4 +67,5 @@ struct mln_thread_pool_attr {
 extern int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr) __NONNULL1(1);
 extern int mln_thread_pool_addResource(void *data) __NONNULL1(1);
 extern void mln_thread_quit(void);
+extern mln_size_t mln_thread_ResourceNum(void);
 #endif

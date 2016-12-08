@@ -30,7 +30,6 @@
 #define M_P_ERR_MOD 1
 
 typedef void (*nonterm_free)(void *);
-typedef void *(*nonterm_copy)(void *);
 typedef struct mln_pg_rule_s mln_pg_rule_t;
 typedef struct mln_pg_token_s mln_pg_token_t;
 typedef struct mln_factor_s mln_factor_t;
@@ -114,7 +113,6 @@ struct mln_factor_s {
     void                     *data;
     enum factor_data_type     data_type;
     nonterm_free              nonterm_free_handler;
-    nonterm_copy              nonterm_copy_handler;
     mln_sauto_t               cur_state;
     int                       token_type;
     mln_u32_t                 line;
@@ -230,7 +228,7 @@ SCOPE void PREFIX_NAME##_factor_destroy(void *ptr);\
 SCOPE void *PREFIX_NAME##_factor_copy(void *ptr, void *data);\
 SCOPE mln_parser_t *PREFIX_NAME##_parser_init(void);\
 SCOPE void PREFIX_NAME##_parser_destroy(mln_parser_t *p);\
-SCOPE int PREFIX_NAME##_parse(struct mln_parse_attr *pattr);\
+SCOPE void *PREFIX_NAME##_parse(struct mln_parse_attr *pattr);\
 SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr);\
 SCOPE int PREFIX_NAME##_reduce_launcher(mln_stack_t *st, \
                                         mln_sauto_t *state, \
@@ -662,11 +660,11 @@ SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t 
         PREFIX_NAME##_preprocess_attr_free(&pattr);\
         return NULL;\
     }\
- /*   if (mln_pg_calc_follow(map, pattr.rule_tbl, nr_prod) < 0) {\
+    if (mln_pg_calc_follow(map, pattr.rule_tbl, nr_prod) < 0) {\
         free((void *)map);\
         PREFIX_NAME##_preprocess_attr_free(&pattr);\
         return NULL;\
-    }*/\
+    }\
     free((void *)map);\
 \
     mln_pg_token_t first_input = {NULL, NULL, NULL, NULL, NULL, TK_PREFIX##_TK_EOF, 0, 1};\
@@ -695,10 +693,9 @@ SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, enum factor_data_type 
     f->data = data;\
     f->data_type = data_type;\
     f->nonterm_free_handler = NULL;\
-    f->nonterm_copy_handler = NULL;\
     f->cur_state = cur_state;\
     f->token_type = token_type;\
-    f->line = 0;\
+    f->line = line;\
     return f;\
 }\
 \
@@ -731,21 +728,10 @@ SCOPE void *PREFIX_NAME##_factor_copy(void *ptr, void *data)\
                 free(dest);\
                 return NULL;\
             }\
-        } else {\
-            if (src->nonterm_copy_handler != NULL) {\
-                dest->data = src->nonterm_copy_handler(src->data);\
-                if (dest->data == NULL) {\
-                    free(dest);\
-                    return NULL;\
-                }\
-            } else {\
-                dest->data = src->data;\
-            }\
         }\
     }\
     dest->data_type = src->data_type;\
     dest->nonterm_free_handler = src->nonterm_free_handler;\
-    dest->nonterm_copy_handler = src->nonterm_copy_handler;\
     dest->token_type = src->token_type;\
     dest->cur_state = src->cur_state;\
     dest->line = src->line;\
@@ -821,13 +807,13 @@ SCOPE void PREFIX_NAME##_parser_destroy(mln_parser_t *p)\
 \
 /*====================parse=======================*/\
 \
-SCOPE int PREFIX_NAME##_parse(struct mln_parse_attr *pattr)\
+SCOPE void *PREFIX_NAME##_parse(struct mln_parse_attr *pattr)\
 {\
     mln_pg_shift_tbl_t *tbl = (mln_pg_shift_tbl_t *)(pattr->pg_data);\
     mln_parser_t *p = PREFIX_NAME##_parser_init();\
     if (p == NULL) {\
         mln_log(error, "No memory.\n");\
-        return -1;\
+        return NULL;\
     }\
     struct mln_sys_parse_attr spattr;\
     spattr.pool = pattr->pool;\
@@ -838,7 +824,15 @@ SCOPE int PREFIX_NAME##_parse(struct mln_parse_attr *pattr)\
     spattr.udata = pattr->udata;\
     spattr.type = M_P_CUR_STACK;\
     spattr.done = 0;\
-    int ret = PREFIX_NAME##_sys_parse(&spattr);\
+    mln_u8ptr_t ret = NULL;\
+    int rc = PREFIX_NAME##_sys_parse(&spattr);\
+    if (rc >= 0) {\
+        mln_factor_t *top = (mln_factor_t *)mln_stack_top(spattr.p->old_stack);\
+        if (top != NULL) {\
+            ret = (mln_u8ptr_t)(top->data);\
+            top->data = NULL;\
+        }\
+    }\
     PREFIX_NAME##_parser_destroy(p);\
     return ret;\
 }\
@@ -890,6 +884,7 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
     mln_shift_t *sh;\
     mln_u64_t state_type, col_index;\
     int failed = 0, ret, is_recovered = 0;\
+    mln_sauto_t failedType = -1, failedline = -1;\
     mln_factor_t *top = NULL;\
     while (1) {\
         if (*is_reduce) {\
@@ -922,7 +917,10 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
         } else if (state_type == M_PG_ERROR) {\
             if (is_recovered) return -1;\
             if (type == M_P_CUR_STACK) {\
+                if (failed && failedType == (*la)->token_type && failedline == (*la)->line) return -1;\
                 failed = 1;\
+                failedType = (*la)->token_type;\
+                failedline = (*la)->line;\
                 mln_s8ptr_t name = NULL;\
                 mln_string_t *filename;\
                 if ((*la)->token_type != TK_PREFIX##_TK_EOF && (*la)->data != NULL) \
