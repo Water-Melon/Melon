@@ -11,16 +11,13 @@
 typedef struct mln_lang_stm_s              mln_lang_stm_t;
 typedef struct mln_lang_funcdef_s          mln_lang_funcdef_t;
 typedef struct mln_lang_class_s            mln_lang_class_t;
-typedef struct mln_lang_extend_s           mln_lang_extend_t;
 typedef struct mln_lang_block_s            mln_lang_block_t;
 typedef struct mln_lang_while_s            mln_lang_while_t;
 typedef struct mln_lang_switch_s           mln_lang_switch_t;
 typedef struct mln_lang_switchstm_s        mln_lang_switchstm_t;
 typedef struct mln_lang_for_s              mln_lang_for_t;
 typedef struct mln_lang_if_s               mln_lang_if_t;
-typedef struct mln_lang_else_s             mln_lang_else_t;
 typedef struct mln_lang_exp_s              mln_lang_exp_t;
-typedef struct mln_lang_explist_s          mln_lang_explist_t;
 typedef struct mln_lang_assign_s           mln_lang_assign_t;
 typedef struct mln_lang_assign_tmp_s       mln_lang_assign_tmp_t;
 typedef struct mln_lang_logicLow_s         mln_lang_logicLow_t;
@@ -44,9 +41,6 @@ typedef struct mln_lang_locate_tmp_s       mln_lang_locate_tmp_t;
 typedef struct mln_lang_spec_s             mln_lang_spec_t;
 typedef struct mln_lang_factor_s           mln_lang_factor_t;
 typedef struct mln_lang_elemlist_s         mln_lang_elemlist_t;
-typedef struct mln_lang_elemval_s          mln_lang_elemval_t;
-typedef struct mln_lang_elemnext_s         mln_lang_elemnext_t;
-typedef struct mln_lang_number_s           mln_lang_number_t;
 typedef struct mln_lang_funccall_s         mln_lang_funccall_t;
 
 typedef enum {
