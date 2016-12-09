@@ -147,7 +147,7 @@ mln_u64_t mln_pg_map_hash_calc(mln_hash_t *h, void *key)
 {
     mln_u64_t sum = 0;
     char *p = (char *)key;
-    for (; *p != 0; p++) {
+    for (; *p != 0; ++p) {
         sum += (*p * 65599);
         sum %= h->len;
     }
@@ -277,7 +277,7 @@ mln_pg_calc_info_cmp(const void *data1, const void *data2)
     for (it1 = s1->head; it1 != NULL; it1 = it1->next) {
         for (it2 = s2->head; it2 != NULL; it2 = it2->next) {
             if (it1->rule == it2->rule && it1->pos == it2->pos) {
-                nr_match++;
+                ++nr_match;
                 break;
             }
         }
@@ -296,20 +296,20 @@ int mln_pg_calc_nullable(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
     mln_pg_token_t *tk;
     mln_pg_rule_t *pr;
     mln_rbtree_node_t *rn;
-    for (i = 0; i < nr_rule; i++) {
+    for (i = 0; i < nr_rule; ++i) {
         map[i] = 1;
     }
     while (change) {
         change = 0;
-        for (i = 0; i < nr_rule; i++) {
+        for (i = 0; i < nr_rule; ++i) {
             if (map[i] == 0) continue;
             map[i] = 0;
             pr = &r[i];
             if (pr->left->is_nullable) continue;
             nr_null = 0;
-            for (j = 0; j < pr->nr_right; j++) {
+            for (j = 0; j < pr->nr_right; ++j) {
                 tk = pr->rights[j];
-                if (tk->is_nullable) nr_null++;
+                if (tk->is_nullable) ++nr_null;
                 if (!tk->is_nonterminal) {
                     rn = mln_rbtree_search(tk->first_set, tk->first_set->root, tk);
                     if (mln_rbtree_null(rn, tk->first_set)) {
@@ -323,7 +323,7 @@ int mln_pg_calc_nullable(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
                 }
             }
             if (nr_null == pr->nr_right) {
-                for (k = 0; k < nr_rule; k++) {
+                for (k = 0; k < nr_rule; ++k) {
                     if (pr->left->right_rule_index[k])
                         map[k] = 1;
                 }
@@ -344,15 +344,15 @@ int mln_pg_calc_first(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
     mln_pg_rule_t *pr;
     mln_pg_token_t *tk;
     struct mln_pg_info info;
-    for (i = 0; i < nr_rule; i++)
+    for (i = 0; i < nr_rule; ++i)
         map[i] = 1;
     while (change) {
         change = 0;
-        for (i = 0; i < nr_rule; i++) {
+        for (i = 0; i < nr_rule; ++i) {
             if (map[i] == 0) continue;
             map[i] = 0;
             pr = &r[i];
-            for (j = 0; j < pr->nr_right; j++) {
+            for (j = 0; j < pr->nr_right; ++j) {
                 tk = pr->rights[j];
                 info.change = &change;
                 info.map = map;
@@ -390,7 +390,7 @@ mln_pg_calc_first_rbtree_scan(void *rn_data, void *udata)
     mln_rbtree_insert(dest, rn);
     *(pgi->change) = 1;
     int k;
-    for (k = 0; k < pgi->nr_rule; k++) {
+    for (k = 0; k < pgi->nr_rule; ++k) {
         if (pgi->tk->right_rule_index[k]) {
             pgi->map[k] = 1;
         }
@@ -408,16 +408,16 @@ int mln_pg_calc_follow(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
     mln_pg_token_t *tk, *behind;
     struct mln_pg_info info;
 
-    for (i = 0; i < nr_rule; i++)
+    for (i = 0; i < nr_rule; ++i)
         map[i] = 1;
     while (change) {
         change = 0;
-        for (i = 0; i < nr_rule; i++) {
+        for (i = 0; i < nr_rule; ++i) {
             if (map[i] == 0) continue;
             map[i] = 0;
             pr = &r[i];
             nr_null = 1;
-            for (j = pr->nr_right-1; j >= 0; j--) {
+            for (j = pr->nr_right-1; j >= 0; --j) {
                 tk = pr->rights[j];
                 if (nr_null && nr_null == pr->nr_right-j) {
                     info.change = &change;
@@ -432,7 +432,7 @@ int mln_pg_calc_follow(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
                     {
                         return -1;
                     }
-                    for (k = 1; k <= nr_null-1; k++) {
+                    for (k = 1; k <= nr_null-1; ++k) {
                         behind = pr->rights[j+k];
                         info.change = &change;
                         info.map = map;
@@ -448,7 +448,7 @@ int mln_pg_calc_follow(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
                         }
                     }
                 } else {
-                    for (k = 1; k <= nr_null+1; k++) {
+                    for (k = 1; k <= nr_null+1; ++k) {
                         behind = pr->rights[j+k];
                         info.change = &change;
                         info.map = map;
@@ -487,7 +487,7 @@ mln_pg_calc_follow_rbtree_scan(void *rn_data, void *udata)
     mln_rbtree_insert(dest, rn);
     *(pgi->change) = 1;
     int k;
-    for (k = 0; k < pgi->nr_rule; k++) {
+    for (k = 0; k < pgi->nr_rule; ++k) {
         if (pgi->tk->right_rule_index[k])
             pgi->map[k] = 1;
     }
@@ -511,7 +511,7 @@ int mln_pg_closure(mln_pg_state_t *s, mln_pg_rule_t *r, mln_u32_t nr_rule)
             if (item->rule->nr_right == item->pos) continue;
             tk = item->rule->rights[item->pos];
             if (!tk->is_nonterminal) continue;
-            for (i = 0; i < nr_rule; i++) {
+            for (i = 0; i < nr_rule; ++i) {
                 if (tk->left_rule_index[i] == 0) continue;
                 pr = &r[i];
                 new_it = mln_pg_rule_duplicate(s, pr, 0);
@@ -521,7 +521,7 @@ int mln_pg_closure(mln_pg_state_t *s, mln_pg_rule_t *r, mln_u32_t nr_rule)
                         mln_log(error, "No memory.\n");
                         return -1;
                     }
-                    s->nr_item++;
+                    ++(s->nr_item);
                     mln_item_chain_add(&(s->head), &(s->tail), new_it);
                     new_it->rule = pr;
                     new_it->pos = 0;
@@ -641,7 +641,7 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
     }
     new_it->rule = &pci->rule[0];
     mln_item_chain_add(&(s->head), &(s->tail), new_it);
-    s->nr_item++;
+    ++(s->nr_item);
     if ((rn = mln_rbtree_new_node(tree, s)) == NULL) {
         mln_log(error, "No memory.\n");
         mln_pg_state_free(s);
@@ -661,9 +661,9 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
             nr_end = nr_cnt = 0;
             tk = save->rule->rights[save->pos];
             for (it = save->prev; it != NULL; it = it->prev) {
-                nr_cnt++;
+                ++nr_cnt;
                 if (it->rule->nr_right == it->pos) {
-                    nr_end++;
+                    ++nr_end;
                     continue;
                 }
                 if (it->rule->rights[it->pos] == tk) {
@@ -688,7 +688,7 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
                     mln_pg_state_free(new_s);
                     return -1;
                 }
-                new_s->nr_item++;
+                ++(new_s->nr_item);
                 mln_item_chain_add(&(new_s->head), &(new_s->tail), new_it);
                 it->read = tk;
                 new_it->rule = it->rule;
@@ -819,10 +819,10 @@ void mln_pg_output_token(mln_rbtree_t *tree, mln_pg_rule_t *r, mln_u32_t nr_rule
     mln_pg_rule_t *pr;
     int i, j;
     printf("RULE:\n");
-    for (i = 0; i < nr_rule; i++) {
+    for (i = 0; i < nr_rule; ++i) {
         pr = &r[i];
         printf("No.%d %s->", i, (char *)(pr->left->token->data));
-        for (j = 0; j < pr->nr_right; j++) {
+        for (j = 0; j < pr->nr_right; ++j) {
             tk = pr->rights[j];
             printf("%s ", (char *)(tk->token->data));
         }
@@ -872,7 +872,7 @@ void mln_pg_output_state(mln_pg_state_t *s)
         printf("Items:\n");
         for (it = s->head; it != NULL; it = it->next) {
             printf("rule: %s->", (char *)(it->rule->left->token->data));
-            for (i = 0; i < it->rule->nr_right; i++) {
+            for (i = 0; i < it->rule->nr_right; ++i) {
                 if (it->pos == i) printf(".");
                 printf(" %s", (char *)((it->rule->rights[i])->token->data));
             }

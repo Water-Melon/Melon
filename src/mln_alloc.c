@@ -58,7 +58,7 @@ mln_alloc_mgr_table_init(mln_alloc_mgr_t *tbl)
     mln_alloc_mgr_t *am, *amprev;
     for (i = 0; i < M_ALLOC_MGR_LEN; i += M_ALLOC_MGR_GRAIN_SIZE) {
         blk_size = 0;
-        for (j = 0; j < i/M_ALLOC_MGR_GRAIN_SIZE + M_ALLOC_BEGIN_OFF; j++) {
+        for (j = 0; j < i/M_ALLOC_MGR_GRAIN_SIZE + M_ALLOC_BEGIN_OFF; ++j) {
              blk_size |= (((mln_size_t)1) << j);
         }
         am = &tbl[i];
@@ -82,7 +82,7 @@ void mln_alloc_destroy(mln_alloc_t *pool)
     amend = pool->mgr_tbl + M_ALLOC_MGR_LEN;
     mln_alloc_blk_t *ab;
 
-    for (am = pool->mgr_tbl; am < amend; am++) {
+    for (am = pool->mgr_tbl; am < amend; ++am) {
         while ((ab = am->free_head) != NULL) {
             mln_small_chain_del(&(am->free_head), &(am->free_tail), ab);
             free(ab);
@@ -119,7 +119,7 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
             if (am == NULL) return NULL;
 
             mln_alloc_mgr_t *amend = pool->mgr_tbl + M_ALLOC_MGR_LEN;
-            for (; am < amend; am++) {
+            for (; am < amend; ++am) {
                 if (am->free_head != NULL) {
                     goto out;
                 } 
@@ -174,14 +174,14 @@ mln_alloc_calc_divisor(mln_size_t size, mln_size_t start)
 #if defined(i386) || defined(__x86_64)
     register mln_size_t off = 0;
     __asm__("bsr %1, %0":"=r"(off):"m"(size));
-    off++;
+    ++off;
 #else
     mln_size_t off = sizeof(mln_size_t)<<3 - 1;
     while (off != 0) {
         if (((mln_size_t)1<<off) & size) break;
-        off--;
+        --off;
     }
-    off++;
+    ++off;
 #endif
     return (sizeof(mln_size_t)<<3) - off + start - 1;
 }
@@ -199,7 +199,7 @@ mln_alloc_get_mgr_by_size(mln_alloc_mgr_t *tbl, mln_size_t size)
 #else
     mln_size_t off = 0;
     int i;
-    for (i = (sizeof(mln_size_t)<<3) - 1; i >= 0; i--) {
+    for (i = (sizeof(mln_size_t)<<3) - 1; i >= 0; --i) {
         if (size & (((mln_size_t)1) << 1)) {
             off = i;
             break;
@@ -284,7 +284,7 @@ mln_alloc_reduce(mln_alloc_t *pool)
     mln_alloc_blk_t *blk = NULL;
     mln_alloc_mgr_t *am = &pool->mgr_tbl[M_ALLOC_MGR_LEN-1], *ambeg;
 
-    for (ambeg = pool->mgr_tbl; am >= ambeg; am--) {
+    for (ambeg = pool->mgr_tbl; am >= ambeg; --am) {
         while ((blk = am->free_head) != NULL) {
             if (pool->threshold >= pool->cur_size) {
                 return;

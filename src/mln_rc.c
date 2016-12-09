@@ -13,11 +13,11 @@ void mln_rc4_init(mln_u8ptr_t s, mln_u8ptr_t key, mln_uauto_t len)
     mln_u8_t tmp;
     mln_uauto_t k[256] = {0};
 
-    for (i = 0; i < 256; i++) {
+    for (i = 0; i < 256; ++i) {
         s[i] = i;
         k[i] = key[i % len];
     }
-    for (i = 0; i < 256; i++) {
+    for (i = 0; i < 256; ++i) {
         j = (j + s[i] + k[i]) % 256;
         tmp = s[i];
         s[i] = s[j];
@@ -33,7 +33,7 @@ void mln_rc4_calc(mln_u8ptr_t s, mln_u8ptr_t data, mln_uauto_t len)
 
     memcpy(stmp, s, sizeof(stmp));
 
-    for (k = 0; k < len; k++) {
+    for (k = 0; k < len; ++k) {
         i = (i + 1) % 256;
         j = (j + stmp[i]) % 256;
         tmp = stmp[i];

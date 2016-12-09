@@ -132,7 +132,7 @@ static inline void mln_md5_calc_block(mln_md5_t *m)
         group[j] |= ((m->buf[i++] & 0xff) << 8);
         group[j] |= ((m->buf[i++] & 0xff) << 16);
         group[j] |= ((m->buf[i++] & 0xff) << 24);
-        j++;
+        ++j;
     }
 
     __M_MD5_FF(a, b, c, d, group[0], s[0][0], ti[0][0]);
@@ -261,7 +261,7 @@ void mln_md5_toString(mln_md5_t *m, mln_s8ptr_t buf, mln_u32_t len)
     mln_u8_t bytes[16] = {0};
 
     mln_md5_toBytes(m, bytes, sizeof(bytes));
-    for (i = 0; i < sizeof(bytes); i++) {
+    for (i = 0; i < sizeof(bytes); ++i) {
         if (n >= len) break;
         n += snprintf(buf + n, len - n, "%02x", bytes[i]);
     }

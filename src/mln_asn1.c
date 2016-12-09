@@ -52,7 +52,7 @@ void mln_asn1_deResult_free(mln_asn1_deResult_t *res)
     if (res->contents != NULL) {
         mln_asn1_deResult_t **p, **pend;
         pend = res->contents + res->pos;
-        for (p = res->contents; p < pend; p++) {
+        for (p = res->contents; p < pend; ++p) {
             mln_asn1_deResult_free(*p);
         }
         mln_alloc_free(res->contents);
@@ -151,7 +151,7 @@ inc:
         if (p+(ch&0x7f) >= end) goto inc;
         memcpy(tmp, p, ch&0x7f);
         p += (ch & 0x7f);
-        for (q = tmp, qend = tmp+(ch&0x7f); q < qend; q++) {
+        for (q = tmp, qend = tmp+(ch&0x7f); q < qend; ++q) {
             length |= (*q << ((qend - q - 1) << 3));
         }
     } else {
@@ -230,7 +230,7 @@ static void mln_asn1_deResult_dump_recursive(mln_asn1_deResult_t *res, mln_u32_t
     char *unknown = "Unknown";
     char *pclass, *pident;
 
-    for (i = 0; i < nblank; i++) {
+    for (i = 0; i < nblank; ++i) {
         printf(" ");
     }
     switch (res->_class) {
@@ -282,17 +282,17 @@ static void mln_asn1_deResult_dump_recursive(mln_asn1_deResult_t *res, mln_u32_t
     printf("class:[%s][0x%x] isStruct:[%u] ident:[%s][0x%x] free:[%u] nContent:[%u]\n", \
             pclass, res->_class, res->isStruct, pident, res->ident, res->free, res->pos);
 
-    for (i = 0; i < nblank; i++) {
+    for (i = 0; i < nblank; ++i) {
         printf(" ");
     }
     printf("[");
-    for (i = 0; i < res->codeLen; i++) {
+    for (i = 0; i < res->codeLen; ++i) {
         printf("%02x ", res->codeBuf[i]);
     }
     printf("]\n");
 
     end = res->contents + res->pos;
-    for (p = res->contents; p < end; p++) {
+    for (p = res->contents; p < end; ++p) {
         mln_asn1_deResult_dump_recursive(*p, nblank+2);
     }
 }
@@ -321,7 +321,7 @@ void mln_asn1_enResult_destroy(mln_asn1_enResult_t *res)
     if (res->contents != NULL) {
         mln_string_t *s, *send;
         send = res->contents + res->pos;
-        for (s = res->contents; s < send; s++) {
+        for (s = res->contents; s < send; ++s) {
             mln_alloc_free(s->data);
         }
         mln_alloc_free(res->contents);
@@ -399,7 +399,7 @@ static int mln_asn1_encode_addContent(mln_asn1_enResult_t *res, mln_u8ptr_t buf,
             (len) += 2;\
         }\
     } else {\
-        (len)++;\
+        ++(len);\
     }\
 }
 
@@ -494,7 +494,7 @@ int mln_asn1_encode_sequence(mln_asn1_enResult_t *res)
     buf[0] = (res->_class << 6) | (1 << 5) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_SEQUENCE);
     mln_asn1_encode_fillLength(res->size, p);
     send = res->contents + res->pos;
-    for (s = res->contents; s < send; s++) {
+    for (s = res->contents; s < send; ++s) {
         memcpy(p, s->data, s->len);
         p += s->len;
         mln_alloc_free(s->data);
@@ -583,7 +583,7 @@ int mln_asn1_encode_bitString(mln_asn1_enResult_t *res, mln_u8ptr_t bits, mln_u6
     if (bytes-1) memcpy(p, bits, bytes-1);
     p += (bytes-1);
     if (nbits % 8) {
-        p--;
+        --p;
         *p = ((*p >> (8 - (nbits % 8))) & 0xff) << (8 - (nbits % 8));
     }
 
@@ -697,7 +697,7 @@ int mln_asn1_encode_utf8String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_
 int mln_asn1_encode_printableString(mln_asn1_enResult_t *res, mln_s8ptr_t s, mln_u64_t slen)
 {
     mln_s8ptr_t scan, end;
-    for (scan = s, end = s+slen; scan < end; scan++) {
+    for (scan = s, end = s+slen; scan < end; ++scan) {
         if (!isprint(*scan)) return M_ASN1_RET_ERROR;
     }
 
@@ -878,7 +878,7 @@ int mln_asn1_encode_set(mln_asn1_enResult_t *res)
 
     qsort(res->contents, res->pos, sizeof(mln_string_t), mln_encode_set_cmp);
     send = res->contents + res->pos;
-    for (s = res->contents; s < send; s++) {
+    for (s = res->contents; s < send; ++s) {
         memcpy(p, s->data, s->len);
         p += s->len;
         mln_alloc_free(s->data);
@@ -917,7 +917,7 @@ int mln_asn1_encode_setOf(mln_asn1_enResult_t *res)
 
     qsort(res->contents, res->pos, sizeof(mln_string_t), mln_encode_setOf_cmp);
     send = res->contents + res->pos;
-    for (s = res->contents; s < send; s++) {
+    for (s = res->contents; s < send; ++s) {
         memcpy(p, s->data, s->len);
         p += s->len;
         mln_alloc_free(s->data);
@@ -952,7 +952,7 @@ int mln_asn1_encode_merge(mln_asn1_enResult_t *dest, mln_asn1_enResult_t *src)
     mln_u8ptr_t buf;
 
     send = src->contents + src->pos;
-    for (s = src->contents; s < send; s++) {
+    for (s = src->contents; s < send; ++s) {
         if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, s->len)) == NULL) return M_ASN1_RET_ERROR;
         memcpy(buf, s->data, s->len);
         if (mln_asn1_encode_addContent(dest, buf, s->len) < 0) {
@@ -972,7 +972,7 @@ int mln_asn1_encode_transChainOnce(mln_asn1_enResult_t *res, mln_chain_t **head,
     mln_alloc_t *pool = mln_asn1_enResult_getPool(res);
 
     send = res->contents + res->pos;
-    for (s = res->contents; s < send; s++) {
+    for (s = res->contents; s < send; ++s) {
         if ((c = mln_chain_new(pool)) == NULL) return M_ASN1_RET_ERROR;
         if ((b = c->buf = mln_buf_new(pool)) == NULL) {
             mln_chain_pool_release(c);

@@ -186,7 +186,7 @@ int mln_string_strcmp(mln_string_t *s1, mln_string_t *s2)
             if (i1 < i2) return -1;
             i1 = i2 = k = 0;
         }
-        j++;
+        ++j;
     }
     if (i1 > i2) return 1;
     if (i1 < i2) return -1;
@@ -211,7 +211,7 @@ int mln_string_constStrcmp(mln_string_t *s1, char *s2)
             if (i1 < i2) return -1;
             i1 = i2 = k = 0;
         }
-        j++;
+        ++j;
     }
     if (i1 > i2) return 1;
     if (i1 < i2) return -1;
@@ -235,7 +235,7 @@ int mln_string_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n)
             if (i1 < i2) return -1;
             i1 = i2 = k = 0;
         }
-        j++;
+        ++j;
     }
     if (i1 > i2) return 1;
     if (i1 < i2) return -1;
@@ -260,7 +260,7 @@ int mln_string_constStrncmp(mln_string_t *s1, char *s2, mln_u32_t n)
             if (i1 < i2) return -1;
             i1 = i2 = k = 0;
         }
-        j++;
+        ++j;
     }
     if (i1 > i2) return 1;
     if (i1 < i2) return -1;
@@ -368,11 +368,11 @@ kmp_string_match(char *text, const char *pattern, int text_len, int pattern_len)
     int *shift = compute_prefix_function(pattern, pattern_len);
     if (shift == NULL) return NULL;
     int q = 0, i;
-    for (i = 0; i<text_len; i++) {
+    for (i = 0; i<text_len; ++i) {
         while (q > 0 && pattern[q] != text[i])
             q = shift[q - 1];
         if (pattern[q] == text[i])
-            q++;
+            ++q;
         if (q == pattern_len) {
             free(shift);
             return &text[i-pattern_len+1];
@@ -392,11 +392,11 @@ static inline int *compute_prefix_function(const char *pattern, int m)
     if (shift == NULL) return NULL;
     shift[0] = 0;
     int k = 0, q;
-    for (q = 1; q<m; q++) {
+    for (q = 1; q<m; ++q) {
         while (k > 0 && pattern[k] != pattern[q])
             k = shift[k - 1];
         if (pattern[k] == pattern[q])
-            k++;
+            ++k;
         shift[q] = k;
     }
     return shift;
@@ -406,7 +406,7 @@ mln_string_t *mln_string_slice(mln_string_t *s, const char *sep_array/*ended by 
 {
     const char *ps;
     mln_u8_t ascii[256] = {0};
-    for (ps = sep_array; *ps != 0; ps++) {
+    for (ps = sep_array; *ps != 0; ++ps) {
         ascii[(mln_u8_t)(*ps)] = 1;
     }
     return mln_string_slice_recursive((char *)(s->data), s->len, ascii, 1);
@@ -415,7 +415,7 @@ mln_string_t *mln_string_slice(mln_string_t *s, const char *sep_array/*ended by 
 static mln_string_t *mln_string_slice_recursive(char *s, mln_u64_t len, mln_u8ptr_t ascii, int cnt)
 {
     char *jmp_ascii, *end = s + len;
-    for (jmp_ascii = s; jmp_ascii < end; jmp_ascii++) {
+    for (jmp_ascii = s; jmp_ascii < end; ++jmp_ascii) {
         if (!ascii[(mln_u8_t)(*jmp_ascii)]) break;
         *jmp_ascii = 0;
     }
@@ -427,9 +427,9 @@ static mln_string_t *mln_string_slice_recursive(char *s, mln_u64_t len, mln_u8pt
         ret[cnt-1].is_referred = 0;
         return ret;
     }
-    cnt++;
+    ++cnt;
     char *jmp_valid;
-    for (jmp_valid = jmp_ascii; jmp_valid < end; jmp_valid++) {
+    for (jmp_valid = jmp_ascii; jmp_valid < end; ++jmp_valid) {
         if (ascii[(mln_u8_t)(*jmp_valid)]) break;
     }
     mln_string_t *array = mln_string_slice_recursive(jmp_valid, len-(jmp_valid-s), ascii, cnt);

@@ -154,7 +154,7 @@ static inline void mln_rsa_pub_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8p
     *out++ = 0x2;
     gettimeofday(&tv, NULL);
     val = tv.tv_sec*1000000+tv.tv_usec;
-    for (j = keylen - inlen - 3; j > 0; j--) {
+    for (j = keylen - inlen - 3; j > 0; --j) {
 lp:
         val = *out = rand_r(&val);
         if (val == 0) {
@@ -162,7 +162,7 @@ lp:
             val = tv.tv_sec*1000000+tv.tv_usec;
             goto lp;
         }
-        out++;
+        ++out;
     }
     *out++ = 0;
     memcpy(out, in, inlen);
@@ -174,7 +174,7 @@ static inline void mln_rsa_pri_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8p
 
     *out++ = 0;
     *out++ = 0x1;
-    for (j = keylen - inlen - 3; j > 0 ; j--) {
+    for (j = keylen - inlen - 3; j > 0 ; --j) {
         *out++ = 0xff;
     }
     *out++ = 0;
@@ -186,7 +186,7 @@ static inline mln_u8ptr_t mln_rsa_antiPaddingPublic(mln_u8ptr_t in, mln_size_t l
     if (in == NULL || len == 0 || *in != 0) return NULL;
     mln_u8ptr_t p = in + 2, end = in + len;
     if (*(in+1) != 0x2) return NULL;
-    for (; *p != 0 && p < end; p++)
+    for (; *p != 0 && p < end; ++p)
         ;
     if (p >= end || p+1 >= end) return NULL;
     if (*p++ != 0) return NULL;
@@ -198,11 +198,11 @@ static inline mln_u8ptr_t mln_rsa_antiPaddingPrivate(mln_u8ptr_t in, mln_size_t 
     if (in == NULL || len == 0 || *in != 0) return NULL;
     mln_u8ptr_t p = in + 2, end = in + len;
     if (*(in+1) == 0) {
-        for (; *p == 0 && p < end; p++)
+        for (; *p == 0 && p < end; ++p)
             ;
         if (p >= end) return NULL;
     } else if (*(in+1) == 1) {
-        for (; *p == 0xff && p < end; p++)
+        for (; *p == 0xff && p < end; ++p)
             ;
         if (p >= end || p+1 >= end) return NULL;
         if (*p++ != 0) return NULL;
@@ -687,7 +687,7 @@ err:
     mln_string_nSet(&tmp, codeBuf, codeLen);
     p = EMSAPKCS1V15_HASH;
     end = EMSAPKCS1V15_HASH + sizeof(EMSAPKCS1V15_HASH)/sizeof(struct mln_EMSAPKCS1V15_HASH_s);
-    for (; p < end; p++) {
+    for (; p < end; ++p) {
         mln_string_nSet(&t, p->digestAlgorithm, p->len);
         if (!mln_string_strcmp(&tmp, &t)) break;
     }

@@ -21,7 +21,7 @@ mln_u32_t mln_prime_calc(mln_u32_t n)
     int s;
     while (1) {
         s = prim<=4 ? 1 : (prim - 1)>>2;
-        for(; s>=0; s--) {
+        for(; s>=0; --s) {
             a = rand_scope(n, prim);
             if (witness(a, prim)) {
                 break;
@@ -51,7 +51,7 @@ static inline void seperate(mln_u32_t num, mln_u32_t *pwr, mln_u32_t *odd)
     *pwr = 0;
     while (!(num % 2)) {
         num >>= 1;
-        (*pwr)++;
+        ++(*pwr);
     }
     *odd = num;
 }
@@ -60,7 +60,7 @@ static inline mln_u64_t modular_expoinentiation(mln_u32_t base, mln_u32_t pwr, m
 {
     int i;
     mln_u64_t d = 1;
-    for (i = sizeof(pwr)*8-1; i>=0; i--) {
+    for (i = sizeof(pwr)*8-1; i>=0; --i) {
         d *= d;
         d %= n;
         if ((1<<i) & pwr) {
@@ -77,7 +77,7 @@ static inline mln_u32_t witness(mln_u32_t base, mln_u32_t prim)
     seperate(prim - 1, &pwr, &odd);
     mln_u64_t new_x = 0, x = modular_expoinentiation(base, odd, prim);
     mln_u32_t i;
-    for (i = 0; i<pwr; i++) {
+    for (i = 0; i<pwr; ++i) {
         new_x = (x * x) % prim;
         if (new_x == 1 && x != 1 && x != prim-1) {
             return 1;

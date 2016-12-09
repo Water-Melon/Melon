@@ -174,10 +174,10 @@ sum=`ls -l ipc_handlers|wc -l`
 cnt=2
 if [ $sum -ge $cnt ] ; then
 	echo "    int i;" >> src/mln_ipc.c
-	echo "    for (i = 0; i < sizeof(ipc_master_handlers)/sizeof(mln_ipc_handler_t); i++) {" >> src/mln_ipc.c
+	echo "    for (i = 0; i < sizeof(ipc_master_handlers)/sizeof(mln_ipc_handler_t); ++i) {" >> src/mln_ipc.c
 	echo "        mln_set_master_ipc_handler(&ipc_master_handlers[i]);" >> src/mln_ipc.c
 	echo "    }" >>src/mln_ipc.c
-	echo "    for (i = 0; i < sizeof(ipc_worker_handlers)/sizeof(mln_ipc_handler_t); i++) {" >> src/mln_ipc.c
+	echo "    for (i = 0; i < sizeof(ipc_worker_handlers)/sizeof(mln_ipc_handler_t); ++i) {" >> src/mln_ipc.c
 	echo "        mln_set_worker_ipc_handler(&ipc_worker_handlers[i]);" >> src/mln_ipc.c
 	echo "    }" >>src/mln_ipc.c
 fi
@@ -251,7 +251,7 @@ done
 echo "void *mln_get_module_entrance(char *alias)" >> src/mln_thread_module.c
 echo "{" >> src/mln_thread_module.c
 echo "    mln_thread_module_t *tm = NULL;" >> src/mln_thread_module.c
-printf "    for (tm = module_array; tm < module_array + %d; tm++) {\n" $nr_func >> src/mln_thread_module.c
+printf "    for (tm = module_array; tm < module_array + %d; ++tm) {\n" $nr_func >> src/mln_thread_module.c
 echo "        if (!strcmp(alias, tm->alias)) return tm->thread_main;" >> src/mln_thread_module.c
 echo "    }" >> src/mln_thread_module.c
 echo "    return NULL;" >> src/mln_thread_module.c

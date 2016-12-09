@@ -84,8 +84,8 @@ mln_thread_pool_member_join(mln_thread_pool_t *tp, mln_u32_t child)
     if ((tpm = mln_thread_pool_member_new(tp, child)) == NULL) {
         return NULL;
     }
-    tp->counter++;
-    tp->idle++;
+    ++(tp->counter);
+    ++(tp->idle);
     mln_child_chain_add(&(tp->childHead), &(tp->childTail), tpm);
     return tpm;
 }
@@ -104,8 +104,8 @@ static void mln_thread_pool_member_exit(void *arg)
         pthread_mutex_lock(&(tpool->mutex));
     }
     mln_child_chain_del(&(tpool->childHead), &(tpool->childTail), tpm);
-    tpool->counter--;
-    if (tpm->idle) tpool->idle--;
+    --(tpool->counter);
+    if (tpm->idle) --(tpool->idle);
     pthread_mutex_unlock(&(tpool->mutex));
     mln_thread_pool_member_free(tpm);
     if (forked && child) {
@@ -266,7 +266,7 @@ int mln_thread_pool_addResource(void *data)
         tpool->resChainTail->next = tpr;
         tpool->resChainTail = tpr;
     }
-    tpool->nRes++;
+    ++(tpool->nRes);
 
     if (tpool->idle <= 1 && tpool->counter < tpool->max+1) {
         int rc;
@@ -306,13 +306,13 @@ again:
     if ((tpr = tpool->resChainHead) == NULL) return NULL;
     tpool->resChainHead = tpool->resChainHead->next;
     if (tpool->resChainHead == NULL) tpool->resChainTail = NULL;
-    tpool->nRes--;
+    --(tpool->nRes);
     mThreadPoolSelf->data = tpr->data;
     free(tpr);
     if (mThreadPoolSelf->data == NULL) goto again;
 
     mThreadPoolSelf->idle = 0;
-    tpool->idle--;
+    --(tpool->idle);
     return mThreadPoolSelf->data;
 }
 
@@ -374,7 +374,7 @@ static void *child_thread_launcher(void *arg)
 again:
         if (tpm->idle <= 0) {
             tpm->idle = 1;
-            tpool->idle++;
+            ++(tpool->idle);
         }
         if (tpool->quit) break;
 

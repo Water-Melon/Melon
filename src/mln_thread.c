@@ -209,7 +209,7 @@ int mln_load_thread(mln_event_t *ev)
     mln_conf_get_cmds(cf, thread_domain, v);
 
     mln_u32_t i;
-    for (i = 0; i < nr_cmds; i++) {
+    for (i = 0; i < nr_cmds; ++i) {
         mln_loada_thread(ev, v[i]);
     }
     free(v);
@@ -242,7 +242,7 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
     thattr.argv = (char **)calloc(nr_args+2, sizeof(char *));
     if (thattr.argv == NULL) return;
     thattr.argc = nr_args+1;
-    for (i = 1; i <= nr_args; i++) {
+    for (i = 1; i <= nr_args; ++i) {
         ci = cc->search(cc, i);
         if (ci->type != CONF_STR) {
             mln_log(error, "Invalid argument type in domain '%s'.\n", thread_domain);

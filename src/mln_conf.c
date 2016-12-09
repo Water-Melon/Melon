@@ -195,7 +195,7 @@ mln_conf_lex_slash_handler(mln_lex_t *lex, void *data)
                 mln_lex_stepBack(lex, c);
                 break;
             }
-            if (c == '\n') lex->line++;
+            if (c == '\n') ++(lex->line);
             if (c == '*') {
                 if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
                 c = mln_lex_getAChar(lex);
@@ -204,7 +204,7 @@ mln_conf_lex_slash_handler(mln_lex_t *lex, void *data)
                     mln_lex_stepBack(lex, c);
                     break;
                 }
-                if (c == '\n') lex->line++;
+                if (c == '\n') ++(lex->line);
                 if (c == '/') {
                     if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
                     break;
@@ -487,7 +487,7 @@ mln_conf_cmd_destroy(void *data)
     if (cc->arg_tbl != NULL) {
         mln_u32_t i;
         mln_conf_item_t *ci;
-        for (i = 0; i<cc->n_args; i++) {
+        for (i = 0; i<cc->n_args; ++i) {
             ci = &(cc->arg_tbl[i]);
             if (ci->type == CONF_NONE) continue;
             if (ci->type == CONF_STR) {
@@ -879,7 +879,7 @@ static int mln_conf_dump_domain_scan(void *rn_data, void *udata)
     printf("\t\tCOMMAND [%s]:\n", (char *)(cc->cmd_name->data));
     mln_s32_t i;
     mln_conf_item_t *ci;
-    for (i = 0; i < cc->n_args; i++) {
+    for (i = 0; i < cc->n_args; ++i) {
         ci = &(cc->arg_tbl[i]);
         printf("\t\t\t");
         switch (ci->type) {

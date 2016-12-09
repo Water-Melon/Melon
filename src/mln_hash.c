@@ -59,10 +59,10 @@ mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg)
 {
     mln_hash_entry_t *he;
     mln_hash_mgr_t *mgr, *mgr_end = h->tbl + h->len;
-    for (mgr = h->tbl; mgr < mgr_end; mgr++) {
+    for (mgr = h->tbl; mgr < mgr_end; ++mgr) {
         while ((he = mgr->head) != NULL) {
             mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
-            h->nr_nodes--;
+            --(h->nr_nodes);
             mln_free_hash_entry(h, he, flg);
         }
     }
@@ -99,7 +99,7 @@ int mln_hash_replace(mln_hash_t *h, void *key, void *val)
     he = mln_new_hash_entry(*k, *v);
     if (he == NULL) return -1;
     mln_hash_entry_chain_add(&(mgr->head), &(mgr->tail), he);
-    h->nr_nodes++;
+    ++(h->nr_nodes);
     *k = *v = NULL;
     return 0;
 }
@@ -117,7 +117,7 @@ int mln_hash_insert(mln_hash_t *h, void *key, void *val)
     mln_hash_entry_t *he = mln_new_hash_entry(key, val);
     if (he == NULL) return -1;
     mln_hash_entry_chain_add(&(mgr->head), &(mgr->tail), he);
-    h->nr_nodes++;
+    ++(h->nr_nodes);
     return 0;
 }
 
@@ -163,7 +163,7 @@ mln_move_hash_entry(mln_hash_t *h, mln_hash_mgr_t *old_tbl, mln_u32_t old_len)
     mln_hash_entry_t *he;
     mln_u32_t index;
 
-    for (; old_tbl < old_end; old_tbl++) {
+    for (; old_tbl < old_end; ++old_tbl) {
         while ((he = old_tbl->head) != NULL) {
             mln_hash_entry_chain_del(&(old_tbl->head), &(old_tbl->tail), he);
             index = h->hash(h, he->key);
@@ -234,7 +234,7 @@ void mln_hash_remove(mln_hash_t *h, void *key, mln_hash_flag_t flg)
     }
     if (he == NULL) return;
     mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
-    h->nr_nodes--;
+    --(h->nr_nodes);
     mln_free_hash_entry(h, he, flg);
 }
 
@@ -280,7 +280,7 @@ int mln_hash_scan_all(mln_hash_t *h, hash_scan_handler handler, void *udata)
     mgr = h->tbl;
     end = h->tbl + h->len;
     mln_hash_entry_t *he;
-    for (; mgr < end; mgr++) {
+    for (; mgr < end; ++mgr) {
         for (he = mgr->head; he != NULL; he = he->next) {
             if (handler != NULL && handler(he->key, he->val, udata) < 0)
                 return -1;
@@ -306,7 +306,7 @@ void mln_hash_reset(mln_hash_t *h, mln_hash_flag_t flg)
     mgr = h->tbl;
     end = h->tbl + h->len;
     mln_hash_entry_t *he;
-    for (; mgr < end; mgr++) {
+    for (; mgr < end; ++mgr) {
         while ((he = mgr->head) != NULL) {
             mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
             mln_free_hash_entry(h, he, flg);

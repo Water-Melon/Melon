@@ -9,7 +9,7 @@ int hello_main(int argc, char **argv)
 {
   mln_thread_setCleanup(hello_cleanup, NULL);
   int i;
-  for (i = 0; i < 1; i++)  {
+  for (i = 0; i < 1; ++i)  {
     int fd = atoi(argv[argc-1]);
     mln_thread_msg_t msg;
     memset(&msg, 0, sizeof(msg));

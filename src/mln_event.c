@@ -1110,7 +1110,7 @@ void mln_event_dispatch(mln_event_t *event)
         } else if (nfds == 0) {
             continue;
         }
-        for (n = 0; n < nfds; n++) {
+        for (n = 0; n < nfds; ++n) {
             mod_event = 0;
             oneshot = 0;
             other_oneshot = 0;
@@ -1202,7 +1202,7 @@ void mln_event_dispatch(mln_event_t *event)
         } else if (nfds == 0) {
             continue;
         }
-        for (n = 0; n < nfds; n++) {
+        for (n = 0; n < nfds; ++n) {
             ev = &events[n];
             ed = (mln_event_desc_t *)(ev->udata);
             if (ev->filter == EVFILT_READ) {
@@ -1306,7 +1306,7 @@ void mln_event_dispatch(mln_event_t *event)
                     ed->flag &= (~M_EV_RECV);
                     ed->data.fd.rd_oneshot = 0;
                 }
-                nfds--;
+                --nfds;
                 move = 1;
             }
             if (FD_ISSET(fd, wr_set)) {
@@ -1315,7 +1315,7 @@ void mln_event_dispatch(mln_event_t *event)
                     ed->flag &= (~M_EV_SEND);
                     ed->data.fd.wr_oneshot = 0;
                 }
-                nfds--;
+                --nfds;
                 move = 1;
             }
             if (FD_ISSET(fd, err_set)) {
@@ -1324,7 +1324,7 @@ void mln_event_dispatch(mln_event_t *event)
                     ed->flag &= (~M_EV_ERROR);
                     ed->data.fd.err_oneshot = 0;
                 }
-                nfds--;
+                --nfds;
                 move = 1;
             }
             if (move) {

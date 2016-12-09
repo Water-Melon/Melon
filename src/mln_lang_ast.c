@@ -760,7 +760,7 @@ mln_lang_slash_handler(mln_lex_t *lex, void *data)
                 mln_lex_stepBack(lex, c);
                 break;
             }
-            if (c == '\n') lex->line++;
+            if (c == '\n') ++(lex->line);
             if (c == '*') {
                 if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
                 c = mln_lex_getAChar(lex);
@@ -769,7 +769,7 @@ mln_lang_slash_handler(mln_lex_t *lex, void *data)
                     mln_lex_stepBack(lex, c);
                     break;
                 }
-                if (c == '\n') lex->line++;
+                if (c == '\n') ++(lex->line);
                 if (c == '/') {
                     if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
                     break;

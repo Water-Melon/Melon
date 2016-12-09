@@ -61,7 +61,7 @@ static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key)
     mln_u64_t index = 0;
     mln_u8ptr_t p, end = k->data + k->len;
 
-    for (p = k->data; p < end; p++) {
+    for (p = k->data; p < end; ++p) {
         index += (*p * 3);
     }
 
@@ -323,21 +323,21 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
     mln_string_t *p = array;
     mln_s8ptr_t pos, buf;
     mln_uauto_t size = 0;
-    for (; p->data != NULL; p++) {
+    for (; p->data != NULL; ++p) {
         if ((pos = strchr((char *)(p->data), ';')) == NULL) {
             size += (p->len + 1);
         } else {
             size += (pos - (char *)(p->data) + 1);
         }
     }
-    size--;
+    --size;
     buf = (mln_s8ptr_t)mln_alloc_m(pool, size);
     if (buf == NULL) {
         mln_string_slice_free(array);
         mln_string_pool_free(tmp);
         return NULL;
     }
-    for (size = 0, p = array; p->data != NULL; p++) {
+    for (size = 0, p = array; p->data != NULL; ++p) {
         if ((pos = strchr((char *)(p->data), ';')) == NULL) {
             memcpy(buf+size, p->data, p->len);
             size += p->len;
@@ -454,7 +454,7 @@ static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *po
 
     gettimeofday(&tv, NULL);
     srand(tv.tv_sec*1000000+tv.tv_usec);
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < 4; ++i) {
         tmp = (mln_u32_t)rand();
         buf[i*4] = (tmp >> 24) & 0xff;
         buf[i*4+1] = (tmp >> 16) & 0xff;
@@ -732,7 +732,7 @@ int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode)
             *p++ = ((mln_websocket_get_status(ws) >> 8) & 0xff) ^ tmpkey[i++%4];
             *p++ = (mln_websocket_get_status(ws) & 0xff) ^ tmpkey[i++%4];
         }
-        for (j = 0; i < clen; i++, j++) {
+        for (j = 0; i < clen; ++i, ++j) {
             *p++ = pc[j] ^ tmpkey[i%4];
         }
     } else {
@@ -758,13 +758,13 @@ int mln_websocket_parse(mln_websocket_t *ws, mln_chain_t **in)
     for (i = 0; c != NULL; c = c->next) {
         if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) continue;
         p = c->buf->left_pos;
-        for (end = c->buf->end; p < end; p++) {
+        for (end = c->buf->end; p < end; ++p) {
              if (i == 0) {
                  b1 = *p;
-                 i++;
+                 ++i;
              } else {
                  b2 = *p++;
-                 i++;
+                 ++i;
                  break;
              }
         }
@@ -779,7 +779,7 @@ int mln_websocket_parse(mln_websocket_t *ws, mln_chain_t **in)
         len = 0;
         i = 0;
 again127:
-        for (; i < tmp; i++) {
+        for (; i < tmp; ++i) {
             len |= ((*p++) << ((7 - i)<<3));
         }
         if (tmp < 8) {
@@ -799,7 +799,7 @@ again127:
         len = 0;
         i = 0;
 again126:
-        for (; i < tmp; i++) {
+        for (; i < tmp; ++i) {
             len |= ((*p++) << ((1 - i)<<3));
         }
         if (tmp < 2) {
@@ -820,7 +820,7 @@ again126:
         if (tmp > 4) tmp = 4;
         i = 0;
 againm:
-        for (; i < tmp; i++) {
+        for (; i < tmp; ++i) {
             maskingKey |= ((*p++) << ((3 - i) << 3));
         }
         if (tmp < 4) {
@@ -844,7 +844,7 @@ againm:
             if (tmp > 2) tmp = 2;
             i = 0;
 against:
-            for (; i < tmp; i++) {
+            for (; i < tmp; ++i) {
                 status |= ((*p++) << ((1 - i)<<3));
             }
             if (tmp < 2) {
@@ -924,7 +924,7 @@ againc:
             mln_websocket_set_status(ws, status);
         }
         if (content != NULL) {
-            for (tmp = 0; tmp < len; tmp++) {
+            for (tmp = 0; tmp < len; ++tmp) {
                 content[tmp] ^= tmpkey[i++%4];
             }
         }

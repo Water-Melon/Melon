@@ -68,7 +68,7 @@ again:
             count = 0;
             while (len > 0) {
                 c = mln_get_char(flag, regexp+(reglen-len), len);
-                if (c == M_REGEXP_LPAR) count++;
+                if (c == M_REGEXP_LPAR) ++count;
                 if (c == M_REGEXP_RPAR && --count == 0) break;
                 len -= mln_get_length(regexp+(reglen-len), len);
             }
@@ -86,7 +86,7 @@ again:
             count = 0;
             while (len > 0) {
                 c = mln_get_char(flag, regexp+(reglen-len), len);
-                if (c == M_REGEXP_LSQUAR) count++;
+                if (c == M_REGEXP_LSQUAR) ++count;
                 if (c == M_REGEXP_RSQUAR && --count == 0) break;
                 len -= mln_get_length(regexp+(reglen-len), len);
             }
@@ -125,12 +125,12 @@ again:
                 while (len > steplen) {
                     c = mln_get_char(flag, regexp+steplen+(reglen-len), reglen-steplen-(reglen-len));
                     if (c == ',') {
-                        part++;
+                        ++part;
                         len -= mln_get_length(regexp+steplen+(reglen-len), reglen-steplen-(reglen-len));
                         continue;
                     }
                     if (c == M_REGEXP_LBRACE) {
-                        count++;
+                        ++count;
                         len -= mln_get_length(regexp+steplen+(reglen-len), reglen-steplen-(reglen-len));
                         continue;
                     }
@@ -177,33 +177,33 @@ again:
         }
         if (c_0 == M_REGEXP_NUM && textlen > 0) {
             if (!isdigit(*text)) return -1;
-            text++;
-            textlen--;
+            ++text;
+            --textlen;
             regexp += len_0;
             reglen -= len_0;
             goto again;
         }
         if (c_0 == M_REGEXP_NOT_NUM && textlen > 0) {
             if (isdigit(*text)) return -1;
-            text++;
-            textlen--;
+            ++text;
+            --textlen;
             regexp += len_0;
             reglen -= len_0;
             goto again;
         }
         if (c_0 == M_REGEXP_ALPHA && textlen > 0) {
             if (!isalpha(*text)) return -1;
-            text++;
-            textlen--;
+            ++text;
+            --textlen;
             regexp += len_0;
             reglen -= len_0;
             goto again;
         }
         if (c_0 == M_REGEXP_DOT && textlen > 0) {
             regexp += len_0;
-            text++;
+            ++text;
             reglen -= len_0;
-            textlen--;
+            --textlen;
             goto again;
         }
     }
@@ -229,9 +229,9 @@ again:
     if (textlen > 0 && c_0 == (unsigned char)(text[0])) {
         if (flag & M_REGEXP_SPECIAL_MASK) return textlen;
         regexp += len_0;
-        text++;
+        ++text;
         reglen -= len_0;
-        textlen--;
+        --textlen;
         goto again;
     }
 
@@ -258,14 +258,14 @@ again:
         while (left > 0) {
             c = mln_get_char(flag, rexp+(rlen-left), left);
             left -= mln_get_length(rexp+(rlen-left), left);
-            if (c == M_REGEXP_LSQUAR) count++;
+            if (c == M_REGEXP_LSQUAR) ++count;
             if (c == M_REGEXP_RSQUAR && --count == 0) break;
         }
     } else if (c == M_REGEXP_LPAR) {
         while (left > 0) {
             c = mln_get_char(flag, rexp+(rlen-left), left);
             left -= mln_get_length(rexp+(rlen-left), left);
-            if (c == M_REGEXP_LPAR) count++;
+            if (c == M_REGEXP_LPAR) ++count;
             if (c == M_REGEXP_RPAR && --count == 0) break;
         }
     } else {
@@ -304,7 +304,7 @@ again:
         while (left > 0) {
             c = mln_get_char(flag, rexp+(rlen-left), left);
             left -= mln_get_length(rexp+(rlen-left), left);
-            if (c == M_REGEXP_LBRACE) count++;
+            if (c == M_REGEXP_LBRACE) ++count;
             if (c == M_REGEXP_RBRACE && --count == 0) break;
         }
         c = mln_get_char(flag, rexp+(rlen-left), left);
@@ -368,7 +368,7 @@ again:
             len = mln_get_length(*rexp, *rlen);
             (*rexp) += len;
             (*rlen) -= len;
-            if (c == M_REGEXP_LSQUAR) count++;
+            if (c == M_REGEXP_LSQUAR) ++count;
             if (c == M_REGEXP_RSQUAR && --count == 0) break;
         }
     } else if (c == M_REGEXP_LPAR) {
@@ -377,7 +377,7 @@ again:
             len = mln_get_length(*rexp, *rlen);
             (*rexp) += len;
             (*rlen) -= len;
-            if (c == M_REGEXP_LPAR) count++;
+            if (c == M_REGEXP_LPAR) ++count;
             if (c == M_REGEXP_RPAR && --count == 0) break;
         }
     } else {
@@ -412,7 +412,7 @@ again:
             len = mln_get_length(*rexp, *rlen);
             (*rexp) += len;
             (*rlen) -= len;
-            if (c == M_REGEXP_LPAR) count++;
+            if (c == M_REGEXP_LPAR) ++count;
             if (c == M_REGEXP_RPAR && --count == 0) break;
         }
         if (*rlen <= 0) return;
@@ -490,7 +490,7 @@ again:
             while (tmp_len > 1) {
                 tmp_c = mln_get_char(M_REGEXP_MASK_SQUARE, regexp+(reglen-tmp_len), tmp_len);
                 tmp_len -= mln_get_length(regexp+(reglen-tmp_len), tmp_len);
-                if (tmp_c == c) count++;
+                if (tmp_c == c) ++count;
                 if (tmp_c == end_c && --count == 0) {
                     steplen = reglen - tmp_len;
                     break;
@@ -522,8 +522,8 @@ again:
  
     if (reverse) {
         if (*textlen <= 0) return -1;
-        (*textlen)--;
-        (*text)++;
+        --(*textlen);
+        ++(*text);
         return *textlen;
     }
     if (*textlen <= 0) return *textlen;
@@ -536,7 +536,7 @@ mln_match_get_limit(char *regexp, int reglen, int *min, int *max)
     int val;
     char *p, *end = regexp + reglen;
 
-    for (val = 0, p = regexp; p < end && *p != ','; p++) {
+    for (val = 0, p = regexp; p < end && *p != ','; ++p) {
         val += (val * 10 + (*p - '0'));
     }
     *min = *max = val;
@@ -544,7 +544,7 @@ mln_match_get_limit(char *regexp, int reglen, int *min, int *max)
     if (p >= end) return;
 
     *max = -1;
-    for (val = 0, p++; p < end; p++) {
+    for (val = 0, ++p; p < end; ++p) {
         val += (val * 10 + (*p - '0'));
     }
     if (val == 0) return;
@@ -580,8 +580,8 @@ again:
            (mln_match_here(M_REGEXP_STAR, mregexp, text, mreglen, textlen) >= 0 || \
             mln_match_here(M_REGEXP_STAR, mregexp, &dot, mreglen, 1) >= 0))
     {
-        text++;
-        textlen--;
+        ++text;
+        --textlen;
     }
 
     if (reglen > 0) {
@@ -619,8 +619,8 @@ again:
             mln_match_here(M_REGEXP_PLUS, mregexp, &dot, mreglen, 1) >= 0))
     {
         found = 1;
-        text++;
-        textlen--;
+        ++text;
+        --textlen;
     }
     if (found) {
         if (textlen > 0)
@@ -666,7 +666,7 @@ again:
             if (reglen <= 0 || found < min) return ret;
             return mln_match_here(0, regexp, text, reglen, textlen);
         } else {
-            found++;
+            ++found;
             text += (textlen - ret);
             textlen = ret;
             if (textlen > 0 && (max < 0 || found < max)) goto again;
@@ -679,9 +679,9 @@ again:
            (mln_match_here(M_REGEXP_LBRACE, mregexp, text, mreglen, textlen) >= 0 || \
             mln_match_here(M_REGEXP_LBRACE, mregexp, &dot, mreglen, 1) >= 0))
     {
-        found++;
-        text++;
-        textlen--;
+        ++found;
+        ++text;
+        --textlen;
         if (max > 0 && found >= max) break;
     }
     if (found >= min) {

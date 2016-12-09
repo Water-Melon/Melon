@@ -54,7 +54,7 @@ void mln_fheap_insert(mln_fheap_t *fh, mln_fheap_node_t *fn)
         if (!fh->cmp(fn->key, fh->min->key))
             fh->min = fn;
     }
-    fh->num++;
+    ++(fh->num);
 }
 
 mln_fheap_node_t *mln_fheap_minimum(mln_fheap_t *fh)
@@ -79,7 +79,7 @@ mln_fheap_node_t *mln_fheap_extract_min(mln_fheap_t *fh)
         fh->min = right;
         mln_fheap_consolidate(fh);
     }
-    fh->num--;
+    --(fh->num);
     return z;
 }
 
@@ -91,7 +91,7 @@ mln_fheap_consolidate(mln_fheap_t *fh)
     mln_fheap_node_t *x, *y, *w, *tmp;
     mln_size_t d, mark = 0;
     for (w = fh->root_list; w != NULL && !(w == fh->root_list && mark);) {
-        if (w == fh->root_list) mark++;
+        if (w == fh->root_list) ++mark;
         x = w;
         w = w->right;
         d = x->degree;
@@ -105,14 +105,14 @@ mln_fheap_consolidate(mln_fheap_t *fh)
             if (y == w) w = w->right;
             mln_fheap_link(fh, y, x);
             array[d] = NULL;
-            d++;
+            ++d;
         }
         array[d] = x;
     }
     fh->min = NULL;
     mln_size_t i;
     mln_fheap_node_t *root_list = NULL;
-    for (i = 0; i<FH_LGN; i++) {
+    for (i = 0; i<FH_LGN; ++i) {
         if (array[i] == NULL) continue;
         mln_fheap_del_child(&(fh->root_list), array[i]);
         mln_fheap_add_child(&root_list, array[i]);
@@ -133,7 +133,7 @@ mln_fheap_link(mln_fheap_t *fh, mln_fheap_node_t *y, mln_fheap_node_t *x)
     mln_fheap_del_child(&(fh->root_list), y);
     mln_fheap_add_child(&(x->child), y);
     y->parent = x;
-    x->degree++;
+    ++(x->degree);
     y->mark = FHEAP_FALSE;
 }
 
@@ -155,7 +155,7 @@ static inline void
 mln_fheap_cut(mln_fheap_t *fh, mln_fheap_node_t *x, mln_fheap_node_t *y)
 {
     mln_fheap_del_child(&(y->child), x);
-    y->degree--;
+    --(y->degree);
     mln_fheap_add_child(&(fh->root_list), x);
     x->parent = NULL;
     x->mark = FHEAP_FALSE;

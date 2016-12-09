@@ -368,14 +368,14 @@ int mln_boot_params(int argc, char *argv[])
     char *p;
     mln_boot_t *b;
     mln_boot_t *bend = boot_params + sizeof(boot_params)/sizeof(mln_boot_t);
-    for (i = 1; i < argc; i++) {
+    for (i = 1; i < argc; ++i) {
         p = argv[i];
-        for (b = boot_params; b < bend; b++) {
+        for (b = boot_params; b < bend; ++b) {
              if (!b->cnt && \
                  (!strcmp(p, b->boot_str) || \
                  !strcmp(p, b->alias)))
              {
-                 b->cnt++;
+                 ++(b->cnt);
                  ret = b->handler(b->boot_str, b->alias);
                  if (ret < 0) {
                      return ret;
@@ -477,7 +477,7 @@ void mln_UTCTime(time_t tm, struct UTCTime_s *uc)
     while ((mln_is_leap(1970+uc->year)? (cnt+366): (cnt+365)) <= days) {
         if (mln_is_leap(1970+uc->year)) cnt += 366;
         else cnt += 365;
-        uc->year++;
+        ++(uc->year);
     }
     uc->year += 1970;
     int is_leap_year = mln_is_leap(uc->year);
@@ -485,9 +485,9 @@ void mln_UTCTime(time_t tm, struct UTCTime_s *uc)
     cnt = 0;
     while (cnt + mon_days[is_leap_year][uc->month] <= subdays) {
         cnt += mon_days[is_leap_year][uc->month];
-        uc->month++;
+        ++(uc->month);
     }
-    uc->month++;
+    ++(uc->month);
     uc->day = subdays - cnt + 1;
     uc->hour = subsec / 3600;
     uc->minute = (subsec % 3600) / 60;
@@ -506,7 +506,7 @@ int mln_s2Time(time_t *tm, mln_string_t *s, int type)
             p = s->data;
             end = s->data + s->len - 1;
             if (s->len != 13 || (*end != 'Z' && *end != 'z')) return -1;
-            for (; p < end; p++) if (!isdigit(*p)) return -1;
+            for (; p < end; ++p) if (!isdigit(*p)) return -1;
             p = s->data;
             year = ((*p++) - '0') * 10;
             year += ((*p++) - '0');
@@ -517,7 +517,7 @@ int mln_s2Time(time_t *tm, mln_string_t *s, int type)
             p = s->data;
             end = s->data + s->len - 1;
             if (s->len != 15 || (*end != 'Z' && *end != 'z')) return -1;
-            for (; p < end; p++) if (!isdigit(*p)) return -1;
+            for (; p < end; ++p) if (!isdigit(*p)) return -1;
             p = s->data;
             year = ((*p++) - '0') * 1000;
             year += (((*p++) - '0') * 100);
@@ -547,13 +547,13 @@ int mln_s2Time(time_t *tm, mln_string_t *s, int type)
         return -1;
     }
 
-    for (tmp = 1970; tmp < year; tmp++) {
+    for (tmp = 1970; tmp < year; ++tmp) {
         day += (mln_is_leap(tmp)? 366: 365);
     }
-    for (month--, tmp = 0; tmp < month; tmp++) {
+    for (--month, tmp = 0; tmp < month; ++tmp) {
         day += (mon_days[mln_is_leap(year)][tmp]);
     }
-    day--;
+    --day;
     *tm = day * 86400;
     if (hour || minute || second) {
         *tm += (hour * 3600 + minute * 60 + second);

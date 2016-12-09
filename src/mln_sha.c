@@ -146,7 +146,7 @@ static inline void mln_sha1_calc_block(mln_sha1_t *s)
         group[j] |= ((s->buf[i++] & 0xff) << 16);
         group[j] |= ((s->buf[i++] & 0xff) << 8);
         group[j] |= ((s->buf[i++] & 0xff));
-        j++;
+        ++j;
     }
 
     __M_SHA1_FF1(a, b, c, d, e, group[0], k[0]);
@@ -297,7 +297,7 @@ void mln_sha1_toString(mln_sha1_t *s, mln_s8ptr_t buf, mln_u32_t len)
     mln_u8_t bytes[20] = {0};
 
     mln_sha1_toBytes(s, bytes, sizeof(bytes));
-    for (i = 0; i < sizeof(bytes); i++) {
+    for (i = 0; i < sizeof(bytes); ++i) {
         if (n >= len) break;
         n += snprintf(buf + n, len - n, "%02x", bytes[i]);
     }
@@ -454,7 +454,7 @@ static inline void mln_sha256_calc_block(mln_sha256_t *s)
     mln_u32_t j, t1, t2;
     mln_u32_t group[64] = {0};
 
-    for (j = 0; j < __M_SHA_BUFLEN; j++) {
+    for (j = 0; j < __M_SHA_BUFLEN; ++j) {
         group[j >> 2] |= (s->buf[j] << ((3 - j%4)<<3));
     }
 
@@ -467,7 +467,7 @@ static inline void mln_sha256_calc_block(mln_sha256_t *s)
     h6 = s->H6;
     h7 = s->H7;
 
-    for (j = 0; j < 64; j++) {
+    for (j = 0; j < 64; ++j) {
         if (j >= 16) {
             group[j] = mln_sha256_safe_add(\
                            mln_sha256_safe_add(\
@@ -586,7 +586,7 @@ void mln_sha256_toString(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len)
     mln_u8_t bytes[32] = {0};
 
     mln_sha256_toBytes(s, bytes, sizeof(bytes));
-    for (i = 0; i < sizeof(bytes); i++) {
+    for (i = 0; i < sizeof(bytes); ++i) {
         if (n >= len) break;
         n += snprintf(buf + n, len - n, "%02x", bytes[i]);
     }

@@ -231,7 +231,7 @@ int do_fork(void)
         return -1;
     }
     mln_conf_get_cmds(cf, "exec_proc", v);
-    for (cc = v; *cc != NULL; cc++) {
+    for (cc = v; *cc != NULL; ++cc) {
         n_args = mln_conf_get_argNum(*cc);
         if (n_args == 0) {
             mln_log(error, "Demand arguments in 'exec_proc'.\n");
@@ -242,7 +242,7 @@ int do_fork(void)
             mln_log(error, "No memory.\n");
             continue;
         }
-        for (i = 0; i < n_args; i++) {
+        for (i = 0; i < n_args; ++i) {
             arg_ci = (*cc)->search(*cc, i+1);
             if (arg_ci->type != CONF_STR) {
                 mln_log(error, "Demand string arguments in 'exec_proc'.\n");
@@ -305,7 +305,7 @@ do_fork_worker_process(mln_sauto_t n_worker_proc)
 {
     mln_sauto_t i;
     int ret;
-    for (i = 0; i < n_worker_proc; i++) {
+    for (i = 0; i < n_worker_proc; ++i) {
         mln_log(none, "Start up worker process No.%l\n", i+1);
         if ((ret = mln_fork_restart(NULL)) < 0) {
             continue;

@@ -145,7 +145,7 @@ mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *n)
     rbtree_insert_fixup(t, n);
     if (t->min == &(t->nil)) t->min = n;
     else if (t->cmp(n->data, t->min->data) < 0) t->min = n;
-    t->nr_node++;
+    ++(t->nr_node);
 }
 
 /*insert fixup*/
@@ -240,7 +240,7 @@ mln_rbtree_delete(mln_rbtree_t *t, mln_rbtree_node_t *n)
     }
     if (y_original_color == M_RB_BLACK) rbtree_delete_fixup(t, x);
     n->parent = n->left = n->right = &(t->nil);
-    t->nr_node--;
+    --(t->nr_node);
 }
 
 /*rbtree_delete_fixup*/

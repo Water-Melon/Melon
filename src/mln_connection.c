@@ -274,7 +274,7 @@ mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc)
                 if (buf_left_size) {
                     vector[proc_vec].iov_base = b->left_pos;
                     vector[proc_vec].iov_len = buf_left_size;
-                    proc_vec++;
+                    ++proc_vec;
                 }
                 if (b->last_in_chain) break;
             }
@@ -325,7 +325,7 @@ non:
         if (buf_left_size) {
             vector[proc_vec].iov_base = b->left_pos;
             vector[proc_vec].iov_len = buf_left_size;
-            proc_vec++;
+            ++proc_vec;
         }
         if (b->last_in_chain) break;
     }

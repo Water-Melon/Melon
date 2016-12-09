@@ -118,11 +118,11 @@ void mln_des_init(mln_des_t *d, mln_u64_t key)
 
     d->key = key;
 
-    for (i = 55, scan = key_permutation; scan < end; scan++, i--) {
+    for (i = 55, scan = key_permutation; scan < end; ++scan, --i) {
         _56key |= (((key >> (63 - (*scan))) & 0x1) << i);
     }
 
-    for (j = 0; j < 16; j++) {
+    for (j = 0; j < 16; ++j) {
         _h28key = (_56key >> 28) & 0xfffffff;
         _l28key = _56key & 0xfffffff;
         _h28key = __M_DES_ROL28(_h28key, move_times[j]);
@@ -130,7 +130,7 @@ void mln_des_init(mln_des_t *d, mln_u64_t key)
         _56key = ((_h28key << 28) | _l28key) & 0xffffffffffffffllu;
         end = compression_permutation + sizeof(compression_permutation);
         d->subKeys[j] = 0;
-        for (i = 47, scan = compression_permutation; scan < end; scan++, i--) {
+        for (i = 47, scan = compression_permutation; scan < end; ++scan, --i) {
             d->subKeys[j] |= (((_56key >> (55 - (*scan))) & 0x1) << i);
         }
         d->subKeys[j] &= 0xffffffffffffllu;
@@ -175,7 +175,7 @@ mln_u64_t mln_des(mln_des_t *d, mln_u64_t msg, mln_u32_t is_encrypt)
     left = (msg >> 32) & 0xffffffff;
     right = msg & 0xffffffff;
     if (is_encrypt) {
-        for (i = 0; i < 16; i++) {
+        for (i = 0; i < 16; ++i) {
             tmp = right;
             mln_des_extension_permute(&right);
             right ^= d->subKeys[i];
@@ -185,7 +185,7 @@ mln_u64_t mln_des(mln_des_t *d, mln_u64_t msg, mln_u32_t is_encrypt)
             left = tmp;
         }
     } else {
-        for (i = 15; i >= 0; i--) {
+        for (i = 15; i >= 0; --i) {
             tmp = right;
             mln_des_extension_permute(&right);
             right ^= d->subKeys[i];
@@ -207,7 +207,7 @@ static inline void mln_des_begin_permute(mln_u64_t *msg)
     mln_s32_t i;
     mln_u8_t *scan, *end = begin_permutation + sizeof(begin_permutation);
 
-    for (i = 63, scan = begin_permutation; scan < end; scan++, i--) {
+    for (i = 63, scan = begin_permutation; scan < end; ++scan, --i) {
         ret |= (((dup >> (63 - (*scan))) & 0x1) << i);
     }
 
@@ -220,7 +220,7 @@ static inline void mln_des_extension_permute(mln_u64_t *right)
     mln_s32_t i;
     mln_u8_t *scan, *end = extension_permutation + sizeof(extension_permutation);
 
-    for (i = 47, scan = extension_permutation; scan < end; scan++, i--) {
+    for (i = 47, scan = extension_permutation; scan < end; ++scan, --i) {
         ret |= (((dup >> (31 - (*scan))) & 0x1) << i);
     }
 
@@ -232,7 +232,7 @@ static inline void mln_des_s_permute(mln_u64_t *right)
     mln_u64_t dup = *right, ret = 0, _64tmp;
     mln_u32_t i = 0, index, _32tmp;
 
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 8; ++i) {
         _64tmp = (dup >> (i*6)) & 0x3f;
         _32tmp = (_64tmp & 0x1) | (((_64tmp >> 5) & 0x1) << 1);
         index = ((_64tmp >> 1) & 0xf) + (_32tmp << 4);
@@ -248,7 +248,7 @@ static inline void mln_des_p_permute(mln_u64_t *right)
     mln_s32_t i;
     mln_u8_t *scan, *end = p_permutation + sizeof(p_permutation);
 
-    for (i = 31, scan = p_permutation; scan < end; scan++, i--) {
+    for (i = 31, scan = p_permutation; scan < end; ++scan, --i) {
         ret |= (((dup >> (31 - (*scan))) & 0x1) << i);
     }
     *right = ret & 0xffffffff;
@@ -260,7 +260,7 @@ static inline void mln_des_final_permute(mln_u64_t *msg)
     mln_u32_t i = 0;
     mln_u8_t *scan, *end = final_permutation + sizeof(final_permutation);
 
-    for (scan = final_permutation; scan < end; scan++, i++) {
+    for (scan = final_permutation; scan < end; ++scan, ++i) {
         ret |= (((dup >> (*scan)) & 0x1) << i);
     }
 
@@ -278,17 +278,17 @@ void mln_des_buf(mln_des_t *d, \
 
     while (inlen) {
         input = 0;
-        for (i = 0; i < sizeof(mln_u64_t) && inlen > 0; i++, inlen--, in++) {
+        for (i = 0; i < sizeof(mln_u64_t) && inlen > 0; ++i, --inlen, ++in) {
             input |= ((((mln_u64_t)(*in)) & 0xff) << ((sizeof(mln_u64_t)-1-i) << 3));
         }
         if (i < sizeof(mln_u64_t)) {
-            for (; i < sizeof(mln_u64_t); i++) {
+            for (; i < sizeof(mln_u64_t); ++i) {
                 input |= ((((mln_u64_t)fill) & 0xff) << ((sizeof(mln_u64_t)-1-i) << 3));
             }
         }
         output = mln_des(d, input, is_encrypt);
 
-        for (i = 0; i < sizeof(output); i++, outlen--, out++) {
+        for (i = 0; i < sizeof(output); ++i, --outlen, ++out) {
             if (outlen == 0) return;
 
             *out = (output >> ((sizeof(mln_u64_t)-1-i) << 3)) & 0xff;
@@ -351,17 +351,17 @@ void mln_3des_buf(mln_3des_t *tdes, \
 
     while (inlen) {
         input = 0;
-        for (i = 0; i < sizeof(mln_u64_t) && inlen > 0; i++, inlen--, in++) {
+        for (i = 0; i < sizeof(mln_u64_t) && inlen > 0; ++i, --inlen, ++in) {
             input |= ((((mln_u64_t)(*in)) & 0xff) << ((sizeof(mln_u64_t)-1-i) << 3));
         }
         if (i < sizeof(mln_u64_t)) {
-            for (; i < sizeof(mln_u64_t); i++) {
+            for (; i < sizeof(mln_u64_t); ++i) {
                 input |= ((((mln_u64_t)fill) & 0xff) << ((sizeof(mln_u64_t)-1-i) << 3));
             }
         }
         output = mln_3des(tdes, input, is_encrypt);
 
-        for (i = 0; i < sizeof(output); i++, outlen--, out++) {
+        for (i = 0; i < sizeof(output); ++i, --outlen, ++out) {
             if (outlen == 0) return;
 
             *out = (output >> ((sizeof(mln_u64_t)-1-i) << 3)) & 0xff;

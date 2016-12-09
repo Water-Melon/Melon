@@ -229,7 +229,7 @@ err:
             mln_stack_destroy(lex->stack);
             goto err;
         }
-        for (scan = attr->keywords; scan->data != NULL; scan++) {
+        for (scan = attr->keywords; scan->data != NULL; ++scan) {
             if ((newkw = mln_lex_keyword_new(scan, scan - attr->keywords)) == NULL) {
                  mln_rbtree_destroy(lex->keywords);
                  mln_stack_destroy(lex->stack);

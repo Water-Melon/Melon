@@ -362,7 +362,7 @@ SCOPE void PREFIX_NAME##_pg_data_free(void *pg_data)\
     if (tbl == NULL) return ;\
     if (tbl->tbl != NULL) {\
         mln_sauto_t i;\
-        for (i = 0; i < tbl->nr_state; i++) {\
+        for (i = 0; i < tbl->nr_state; ++i) {\
             if (tbl->tbl[i] != NULL)\
                 free(tbl->tbl[i]);\
         }\
@@ -527,7 +527,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     int *new_val;\
     PREFIX_NAME##_type_t *tp = attr->type_array;\
     PREFIX_NAME##_type_t *tpend = attr->type_array + attr->nr_type;\
-    for (; tp < tpend; tp++) {\
+    for (; tp < tpend; ++tp) {\
         attr->type_val = tp->type;\
         attr->terminal_type_val = tp->type;\
         if (mln_hash_search(attr->map_tbl, tp->type_str) != NULL)\
@@ -576,7 +576,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
         mln_log(error, "No memory.\n");\
         goto err2;\
     }\
-    for (; prod < prodend; prod++) {\
+    for (; prod < prodend; ++prod) {\
         mln_string_nSet(&tmp, prod->production, strlen(prod->production));\
         lattr.pool = pool;\
         lattr.keywords = NULL;\
@@ -615,7 +615,7 @@ SCOPE void PREFIX_NAME##_preprocess_attr_free(struct PREFIX_NAME##_preprocess_at
         mln_rbtree_destroy(attr->token_tree);\
     if (attr->rule_tbl != NULL) {\
         mln_u32_t i;\
-        for (i = 0; i < attr->nr_prod; i++) {\
+        for (i = 0; i < attr->nr_prod; ++i) {\
             if ((attr->rule_tbl)[i].rights != NULL) \
                 free((attr->rule_tbl)[i].rights);\
         }\
@@ -982,8 +982,8 @@ SCOPE int PREFIX_NAME##_err_process(struct mln_sys_parse_attr *spattr, int opr)\
     mln_factor_t *f;\
     mln_uauto_t pos, nr_element = mln_queue_element(spattr->p->cur_queue);\
     if (!nr_element) return -1;\
-    for (pos = nr_element-1; pos >= 0; pos--) {\
-        for (ctype = 0; ctype < max; ctype++) {\
+    for (pos = nr_element-1; pos >= 0; --pos) {\
+        for (ctype = 0; ctype < max; ++ctype) {\
             f = mln_queue_search(spattr->p->cur_queue, pos);\
             if (f == NULL) {\
                 mln_log(error, "Queue messed up.\n");\
@@ -1115,7 +1115,7 @@ SCOPE int PREFIX_NAME##_err_dup_scan(void *q_node, void *udata)\
 {\
     struct mln_err_queue_s *eq = (struct mln_err_queue_s *)udata;\
     if (eq->opr == M_P_ERR_DEL && eq->index == eq->pos) {\
-        eq->index++;\
+        ++(eq->index);\
         return 0;\
     }\
     mln_factor_t *f = PREFIX_NAME##_factor_copy((mln_factor_t *)q_node, eq->pool);\
@@ -1131,7 +1131,7 @@ SCOPE int PREFIX_NAME##_err_dup_scan(void *q_node, void *udata)\
         PREFIX_NAME##_factor_destroy((void *)f);\
         return -1;\
     }\
-    eq->index++;\
+    ++(eq->index);\
     return 0;\
 }\
 \
@@ -1157,7 +1157,7 @@ SCOPE int PREFIX_NAME##_reduce_launcher(mln_stack_t *st, \
 \
     mln_u32_t i, line = 0;\
     mln_factor_t *right;\
-    for (i = 0; i < sh->nr_args; i++) {\
+    for (i = 0; i < sh->nr_args; ++i) {\
         right = (mln_factor_t *)mln_stack_pop(st);\
         if (right == NULL) {\
             mln_log(error, "Fatal error. State shift table messed up.\n");\
@@ -1176,7 +1176,7 @@ SCOPE int PREFIX_NAME##_reduce_launcher(mln_stack_t *st, \
     if (type == M_P_OLD_STACK && pp->func != NULL) {\
         ret = pp->func(left, rights, udata);\
     }\
-    for (i = 0; i < sh->nr_args; i++) {\
+    for (i = 0; i < sh->nr_args; ++i) {\
         PREFIX_NAME##_factor_destroy((void *)rights[i]);\
     }\
     free(rights);\

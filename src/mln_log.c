@@ -204,7 +204,7 @@ mln_log_get_log(mln_log_t *log, int is_init)
     log->fd = fd;
     memcpy(log->log_path, path_str, path_len);
     log->log_path[path_len] = 0;
-    for (p = &(path_str[path_len - 1]); p >= path_str && *p != '/'; p--)
+    for (p = &(path_str[path_len - 1]); p >= path_str && *p != '/'; --p)
         ;
     memcpy(log->dir_path, path_str, p - path_str);
     log->dir_path[p - path_str] = 0;
@@ -391,13 +391,13 @@ _mln_sys_log_process(mln_log_t *log, \
     char *p = msg;
     while (*msg != 0) {
         if (*msg != '%') {
-            cnt++;
-            msg++;
+            ++cnt;
+            ++msg;
             continue;
         }
         mln_log_write(log, (void *)p, cnt);
         cnt = 0;
-        msg++;
+        ++msg;
         p = msg + 1;
         switch (*msg) {
             case 's':
@@ -479,7 +479,7 @@ _mln_sys_log_process(mln_log_t *log, \
                 mln_log_write(log, (void *)"\n", 1);
                 return;
         }
-        msg++;
+        ++msg;
     }
     if (cnt)
         mln_log_write(log, (void *)p, cnt);

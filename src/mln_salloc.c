@@ -179,7 +179,7 @@ mln_Allocator_init(mln_salloc_t **sa)
             MLN_UNLOCK(&mMiscLock);
             goto err3;
         }
-        mRef++;
+        ++mRef;
         sa_q_chain_add(&mAHead, &mATail, *sa);
         MLN_UNLOCK(&mMiscLock);
         return 0;
@@ -280,7 +280,7 @@ mln_sa_atfork_child(void)
         if (sa == tAllocator) {
             continue;
         }
-        for (i = 0; i < M_INDEX_LEN; i++) {
+        for (i = 0; i < M_INDEX_LEN; ++i) {
             dbi = &(mAllocator->index_tbl[i]);
             sbi = &(sa->index_tbl[i]);
             while ((blk = sbi->free_head) != NULL) {
@@ -359,7 +359,7 @@ mln_index_table_init(mln_blk_index_t *tbl)
     gettimeofday(&now, NULL);
     for (i = 0; i < M_INDEX_LEN; i += M_GRAIN_SIZE) {
         blk_size = 0;
-        for (j = 0; j < i/M_GRAIN_SIZE + M_INDEX_OFF; j++)
+        for (j = 0; j < i/M_GRAIN_SIZE + M_INDEX_OFF; ++j)
             blk_size |= (((mln_size_t)1) << j);
         MLN_SA_INDEX_ASSIGN(i, blk_size, now.tv_sec);
         if (i != 0) {
@@ -382,14 +382,14 @@ mln_calc_divisor(mln_size_t size, mln_size_t start)
 #if defined(i386) || defined(__x86_64)
     register mln_size_t off = 0;
     __asm__("bsr %1, %0":"=r"(off):"m"(size));
-    off++;
+    ++off;
 #else
     mln_size_t off = sizeof(mln_size_t)*8-1;
     while (off != 0 ) {
         if (((mln_size_t)1<<off) & size) break;
-        off--;
+        --off;
     }
-    off++;
+    ++off;
 #endif
     return sizeof(mln_size_t)*8 - off + start - 1;
 }
@@ -405,7 +405,7 @@ mln_get_index_entry(mln_blk_index_t *tbl, mln_size_t size)
 #else
     mln_size_t off = 0;
     int i;
-    for (i = (sizeof(mln_size_t)<<3) - 1; i >= 0; i--) {
+    for (i = (sizeof(mln_size_t)<<3) - 1; i >= 0; --i) {
         if (size & (((mln_size_t)1) << i)) {
             off = i;
             break;
@@ -585,15 +585,15 @@ mln_calc_slice(mln_chunk_t *chunk, mln_size_t size, int is_large, int is_heap)
         index = mln_get_index_entry(mAllocator->index_tbl, tmp_size);
         while (index->blk_size > tmp_size) {
             if (index == mAllocator->index_tbl) break;
-            index--;
+            --index;
         }
         if (index->blk_size > tmp_size) break;
 
         max = 0;
         save = NULL;
-        for (; index >= mAllocator->index_tbl; index--) {
+        for (; index >= mAllocator->index_tbl; --index) {
             if (index->alloc_cnt) {
-                index->alloc_cnt--;
+                --(index->alloc_cnt);
                 if (now.tv_sec > index->idle_start_sec)
                     tmp = index->alloc_cnt/(now.tv_sec - index->idle_start_sec);
                 else if (now.tv_sec == index->idle_start_sec)
@@ -757,7 +757,7 @@ static inline mln_blk_t *mln_search_index(int index)
     mln_blk_t *blk = NULL;
     mln_blk_index_t *bi = NULL;
     MLN_LOCK(&(tAllocator->index_lock));
-    for (index++; index < M_INDEX_LEN; index++) {
+    for (++index; index < M_INDEX_LEN; ++index) {
         if (tAllocator->index_tbl[index].free_head != NULL)
             break;
     }
@@ -782,7 +782,7 @@ mln_search_index_main(int index)
     mln_blk_t *blk = NULL;
     mln_blk_index_t *bi = NULL, *tbi = NULL;
     MLN_LOCK(&(mAllocator->index_lock));
-    for (index++; index < M_INDEX_LEN; index++) {
+    for (++index; index < M_INDEX_LEN; ++index) {
         if (mAllocator->index_tbl[index].free_head != NULL)
             break;
     }
@@ -994,15 +994,15 @@ static void dump_salloc(mln_salloc_t *sa)
     MLN_LOCK(&(sa->stat_lock));
     cur += sa->current_size;
     mln_log(none, "INDEX:\n");
-    for (i = 0; i < M_INDEX_LEN; i++) {
+    for (i = 0; i < M_INDEX_LEN; ++i) {
         free_cnt = used_cnt = 0;
         blk = (sa->index_tbl)[i].free_head;
         for (; blk != NULL; blk = blk->index_next) {
-            free_cnt++;
+            ++free_cnt;
         }
         blk = (sa->index_tbl)[i].used_head;
         for (; blk != NULL; blk = blk->index_next) {
-            used_cnt++;
+            ++used_cnt;
         }
         mln_log(none, "blk_size:%U nr_free:%U nr_used:%U\n", \
                 sa->index_tbl[i].blk_size, free_cnt, used_cnt);
@@ -1022,8 +1022,8 @@ static void dump_salloc(mln_salloc_t *sa)
     for (chunk = mHeapBase; chunk != NULL; chunk = chunk->next) {
         check_size += chunk->chunk_size;
         for (blk = chunk->blk_head; blk != NULL; blk = blk->chunk_next) {
-            if (blk->in_used) sum_used++;
-            else sum_free++;
+            if (blk->in_used) ++sum_used;
+            else ++sum_free;
         }
     }
     MLN_UNLOCK(&mHeapLock);
@@ -1031,8 +1031,8 @@ static void dump_salloc(mln_salloc_t *sa)
     for (chunk = mMmapHead; chunk != NULL; chunk = chunk->next) {
         check_size += chunk->chunk_size;
         for (blk = chunk->blk_head; blk != NULL; blk = blk->chunk_next) {
-            if (blk->in_used) sum_used++;
-            else sum_free++;
+            if (blk->in_used) ++sum_used;
+            else ++sum_free;
         }
     }
     MLN_UNLOCK(&mMmapLock);
@@ -1056,7 +1056,7 @@ static void mln_salloc_reduce_thread(mln_salloc_t *sa)
     mln_blk_t *blk = NULL;
     mln_blk_index_t *bi, *mbi;
     MLN_LOCK(&(mAllocator->stat_lock));
-    for (index = M_INDEX_LEN-1; index >= 0; index--) {
+    for (index = M_INDEX_LEN-1; index >= 0; --index) {
         bi = &(sa->index_tbl[index]);
         mbi = &(mAllocator->index_tbl[index]);
         while ((blk = bi->free_head) != NULL) {
@@ -1190,7 +1190,7 @@ static void mln_move(void *arg)
     MLN_LOCK(&mMmapLock);
     MLN_LOCK(&mHeapLock);
 
-    for (i = 0; i < M_INDEX_LEN; i++) {
+    for (i = 0; i < M_INDEX_LEN; ++i) {
         dbi = &(mAllocator->index_tbl[i]);
         sbi = &(sa->index_tbl[i]);
         while ((blk = sbi->free_head) != NULL) {

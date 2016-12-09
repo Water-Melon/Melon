@@ -85,7 +85,7 @@ int mln_stack_push(mln_stack_t *st, void *data)
     mln_stack_node_t *sn = mln_stack_node_init(data);
     if (sn == NULL) return -1;
     mln_stack_chain_add(&(st->bottom), &(st->top), sn);
-    st->nr_node++;
+    ++(st->nr_node);
     return 0;
 }
 
@@ -97,7 +97,7 @@ void *mln_stack_pop(mln_stack_t *st)
     mln_stack_node_t *sn = st->top;
     if (sn == NULL) return NULL;
     mln_stack_chain_del(&(st->bottom), &(st->top), sn);
-    st->nr_node--;
+    --(st->nr_node);
     void *ptr = sn->data;
     mln_stack_node_destroy(NULL, sn);
     return ptr;

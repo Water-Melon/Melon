@@ -215,7 +215,7 @@ static inline void mln_lex_stepBack(mln_lex_t *lex, char c)
         mln_log(error, "Lexer crashed.\n");
         abort();
     }
-    lex->cur->pos--;
+    --(lex->cur->pos);
 }
 static inline int mln_lex_putAChar(mln_lex_t *lex, char c)
 {
@@ -684,7 +684,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
     {\
         mln_s32_t i;\
         mln_s32_t end = sizeof(PREFIX_NAME##_handlers)/sizeof(mln_spechar_t);\
-        for (i = 0; i<end; i++) {\
+        for (i = 0; i<end; ++i) {\
             if (c == PREFIX_NAME##_handlers[i].sc) {\
                 return (PREFIX_NAME##_struct_t *)PREFIX_NAME##_handlers[i].handler(lex, PREFIX_NAME##_handlers[i].data);\
             }\
@@ -706,7 +706,7 @@ lp:\
             case '\n':\
                  {\
                      while (c == '\n') {\
-                         lex->line++;\
+                         ++(lex->line);\
                          c = mln_lex_getAChar(lex);\
                          if (c == MLN_ERR) return NULL;\
                      };\
@@ -756,7 +756,7 @@ lp:\
                                     mln_lex_setError(lex, MLN_LEX_EINVHEX);\
                                     return NULL;\
                                 }\
-                                for (chk += 2; chk < lex->result_pos; chk++) {\
+                                for (chk += 2; chk < lex->result_pos; ++chk) {\
                                     if (!mln_lex_isHex((char)(*chk))) {\
                                         mln_lex_setError(lex, MLN_LEX_EINVHEX);\
                                         return NULL;\
@@ -766,11 +766,11 @@ lp:\
                                 if (sret == NULL || !lex->ignore) return sret;\
                                 goto beg;\
                             } else {\
-                                for (chk++; chk < lex->result_pos; chk++) {\
+                                for (++chk; chk < lex->result_pos; ++chk) {\
                                     if (!mln_lex_isOct((char)(*chk))) {\
                                         mln_s32_t dot_cnt = 0;\
-                                        for (; chk < lex->result_pos; chk++) {\
-                                            if (*chk == (mln_u8_t)'.') dot_cnt++;\
+                                        for (; chk < lex->result_pos; ++chk) {\
+                                            if (*chk == (mln_u8_t)'.') ++dot_cnt;\
                                             if (!isdigit((char)(*chk)) && *chk != (mln_u8_t)'.') {\
                                                 mln_lex_setError(lex, MLN_LEX_EINVOCT);\
                                                 return NULL;\
@@ -793,10 +793,10 @@ lp:\
                                 goto beg;\
                             }\
                         } else {\
-                            for (; chk < lex->result_pos; chk++) {\
+                            for (; chk < lex->result_pos; ++chk) {\
                                 if (isdigit((char)(*chk))) continue;\
                                 if (*chk == (mln_u8_t)'.') {\
-                                    for (chk++; chk < lex->result_pos; chk++) {\
+                                    for (++chk; chk < lex->result_pos; ++chk) {\
                                         if (!isdigit((char)(*chk))) {\
                                             mln_lex_setError(lex, MLN_LEX_EINVREAL);\
                                             return NULL;\
@@ -972,7 +972,7 @@ again:\
             }\
             if (lex->result_pos > lex->result_buf) {\
                 if (lex->result_pos != NULL && *(lex->result_pos-1) == (mln_u8_t)'\\') {\
-                    lex->result_pos--;\
+                    --(lex->result_pos);\
                     goto again;\
                 }\
                 mln_lex_getResult(lex, &str);\
@@ -999,13 +999,13 @@ goon:\
         int ret;\
         mln_lex_preprocessData_t *lpd = (mln_lex_preprocessData_t *)data;\
         mln_lex_cleanResult(lex);\
-        lpd->if_level++;\
+        ++(lpd->if_level);\
         if (lex->ignore) {\
             return PREFIX_NAME##_token(lex);\
         }\
         if ((ret = mln_lex_conditionTest(lex)) < 0) return NULL;\
         if (ret) {\
-            lpd->if_matched++;\
+            ++(lpd->if_matched);\
             lex->ignore = 0;\
         } else {\
             lex->ignore = 1;\
@@ -1023,9 +1023,9 @@ goon:\
         mln_lex_cleanResult(lex);\
         if (lpd->if_level <= lpd->if_matched) {\
             lex->ignore = 1;\
-            lpd->if_matched--;\
+            --(lpd->if_matched);\
         } else if (lpd->if_matched+1 == lpd->if_level) {\
-            lpd->if_matched++;\
+            ++(lpd->if_matched);\
             lex->ignore = 0;\
         }\
         return PREFIX_NAME##_token(lex);\
@@ -1038,7 +1038,7 @@ goon:\
             return NULL;\
         }\
         if (lpd->if_matched == lpd->if_level--) {\
-            lpd->if_matched--;\
+            --(lpd->if_matched);\
         }\
         lex->ignore = !(lpd->if_matched == lpd->if_level);\
         mln_lex_cleanResult(lex);\
@@ -1119,7 +1119,7 @@ goon:\
         phend = PREFIX_NAME##_preprocess_handlers + \
                   sizeof(PREFIX_NAME##_preprocess_handlers) / \
                     sizeof(mln_preprocess_handler_t);\
-        for (ph = PREFIX_NAME##_preprocess_handlers; ph < phend; ph++) {\
+        for (ph = PREFIX_NAME##_preprocess_handlers; ph < phend; ++ph) {\
             if (!mln_string_strcmp(&(ph->command), &tmp)) {\
                 mln_lex_cleanResult(lex);\
                 return (PREFIX_NAME##_struct_t *)ph->handler(lex, data);\

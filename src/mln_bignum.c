@@ -103,8 +103,8 @@ int mln_bignum_assign(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t len)
     mln_u32_t tag;
     if (sval[0] == '-') {
         tag = M_BIGNUM_NEGATIVE;
-        sval++;
-        len--;
+        ++sval;
+        --len;
     } else {
         tag = M_BIGNUM_POSITIVE;
     }
@@ -130,7 +130,7 @@ mln_bignum_assign_hex(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32
     memset(bn, 0, sizeof(mln_bignum_t));
     mln_bignum_positive(bn);
 
-    for (i = 0; p >= sval; p--, i++) {
+    for (i = 0; p >= sval; --p, ++i) {
         if (i % 2) {
             if (isdigit(*p)) {
                 b |= (((*p - '0') << 4) & 0xf0);
@@ -156,16 +156,16 @@ mln_bignum_assign_hex(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32
         if (i % 2 || p == sval) {
             tmp[l] |= ((mln_u64_t)b << (j << 3));
             if (j % 4 == 3) {
-                l++;
+                ++l;
                 j = 0;
             } else {
-                j++;
+                ++j;
             }
         }
     }
 
     bn->tag = tag;
-    for (i = M_BIGNUM_SIZE-1; i >= 0; i--) {
+    for (i = M_BIGNUM_SIZE-1; i >= 0; --i) {
         if (tmp[i] != 0) break;
     }
     bn->length = i+1;
@@ -184,7 +184,7 @@ mln_bignum_assign_oct(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32
     memset(bn, 0, sizeof(mln_bignum_t));
     mln_bignum_positive(bn);
 
-    for (i = 0; p >= sval; p--, i++) {
+    for (i = 0; p >= sval; --p, ++i) {
         if (i%3 == 0) {
             b = 0;
             if (*p < '0' || *p > '7') return -1;
@@ -200,16 +200,16 @@ mln_bignum_assign_oct(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32
         if (i%3 == 2 || p == sval) {
             tmp[l] |= ((mln_u64_t)b << (j << 3));
             if (j % 4 == 3) {
-                l++;
+                ++l;
                 j = 0;
             } else {
-                j++;
+                ++j;
             }
         }
     }
 
     bn->tag = tag;
-    for (i = M_BIGNUM_SIZE-1; i >= 0; i--) {
+    for (i = M_BIGNUM_SIZE-1; i >= 0; --i) {
         if (tmp[i] != 0) break;
     }
     bn->length = i + 1;
@@ -226,7 +226,7 @@ mln_bignum_assign_dec(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32
     memset(bn, 0, sizeof(mln_bignum_t));
     mln_bignum_positive(bn);
 
-    for (cnt = 0; p >= sval; p--, cnt++) {
+    for (cnt = 0; p >= sval; --p, ++cnt) {
         if (!isdigit(*p)) return -1;
         memset(&tmp, 0, sizeof(tmp));
         mln_bignum_positive(&tmp);
@@ -245,7 +245,7 @@ mln_bignum_dec_recursive(mln_u32_t rec_times, mln_u32_t loop_times, mln_bignum_t
         mln_bignum_t one = {M_BIGNUM_POSITIVE, 1, {0}};
         one.data[0] = 1;
         memset(tmp, 0, sizeof(mln_bignum_t));
-        for (; loop_times > 0; loop_times--) {
+        for (; loop_times > 0; --loop_times) {
             __mln_bignum_add(tmp, &one);
         }
     } else {
@@ -253,7 +253,7 @@ mln_bignum_dec_recursive(mln_u32_t rec_times, mln_u32_t loop_times, mln_bignum_t
         memset(&val, 0, sizeof(val));
         mln_bignum_positive(&val);
         mln_bignum_dec_recursive(rec_times-1, 10, &val);
-        for (; loop_times > 0; loop_times--) {
+        for (; loop_times > 0; --loop_times) {
             __mln_bignum_add(tmp, &val);
         }
     }
@@ -292,7 +292,7 @@ static inline void __mln_bignum_add(mln_bignum_t *dest, mln_bignum_t *src)
         end = max + dest->length;
     }
 
-    for (; max < end; max++, min++, dest_data++) {
+    for (; max < end; ++max, ++min, ++dest_data) {
         *dest_data = *max + *min + carry;
         carry = 0;
         if (*dest_data >= M_BIGNUM_UMAX) {
@@ -365,7 +365,7 @@ static inline void __mln_bignum_sub_core(mln_bignum_t *dest, mln_bignum_t *src)
     mln_u32_t borrow = 0;
     mln_u64_t *dest_data = dest->data, *src_data = src->data;
     mln_u64_t *end = dest->data + dest->length;
-    for (; dest_data < end; dest_data++, src_data++) {
+    for (; dest_data < end; ++dest_data, ++src_data) {
         if (*src_data + borrow > *dest_data) {
             *dest_data = (*dest_data+M_BIGNUM_UMAX)-(*src_data+borrow);
             borrow = 1;
@@ -377,7 +377,7 @@ static inline void __mln_bignum_sub_core(mln_bignum_t *dest, mln_bignum_t *src)
 
     assert(borrow == 0);
     dest_data = dest->data;
-    for (end--; end >= dest_data; end--) {
+    for (--end; end >= dest_data; --end) {
         if (*end != 0) break;
     }
     dest->length = (end < dest_data)? 0: end - dest_data + 1;
@@ -406,18 +406,18 @@ static inline void __mln_bignum_mul(mln_bignum_t *dest, mln_bignum_t *src)
     mln_u64_t *data = res.data, tmp, *dest_data = dest->data, *src_data;
     mln_u64_t *dend, *send, *last = res.data + M_BIGNUM_SIZE;
 
-    for (dend = dest->data+dest->length; dest_data<dend; dest_data++) {
+    for (dend = dest->data+dest->length; dest_data<dend; ++dest_data) {
         src_data = src->data, send = src->data+src->length;
         data = res.data + (dest_data - dest->data);
         if (data >= last) continue;
-        for (; src_data<send && data < last; src_data++, data++) {
+        for (; src_data<send && data < last; ++src_data, ++data) {
             tmp = (*dest_data) * (*src_data) + *data;
             *data = tmp % M_BIGNUM_UMAX;
             if (data+1 < last) *(data+1) += (tmp >> M_BIGNUM_SHIFT);
         }
     }
     res.length = (data - res.data);
-    if (data < last && *data != 0) res.length++;
+    if (data < last && *data != 0) ++(res.length);
     res.tag = tag;
     *dest = res;
 }
@@ -446,12 +446,12 @@ static inline int __mln_bignum_nmul(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int
 
     mln_u64_t c = 0;
     n -= m;
-    for (; m > 0; m--, a++, r++) {
+    for (; m > 0; --m, ++a, ++r) {
         *r = *a * b + c;
         c = *r >> M_BIGNUM_SHIFT;
         *r %= M_BIGNUM_UMAX;
     }
-    for (; n > 0; n--, r++) {
+    for (; n > 0; --n, ++r) {
         *r = c % M_BIGNUM_UMAX;
         c >>= M_BIGNUM_SHIFT;
     }
@@ -462,7 +462,7 @@ static inline int __mln_bignum_nmul(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int
 static inline int __mln_bignum_nsbb(mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, int n)
 {
     int c = 0;
-    for (; n > 0; n--, a++, b++, r++) {
+    for (; n > 0; --n, ++a, ++b, ++r) {
         if (*a < *b + c) {
             *r = *a + M_BIGNUM_UMAX - *b - c;
             c = 1;
@@ -477,7 +477,7 @@ static inline int __mln_bignum_nsbb(mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, in
 static inline int __mln_bignum_nadc(mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, int n)
 {
     int c = 0;
-    for (; n > 0; n--, a++, b++, r++) {
+    for (; n > 0; --n, ++a, ++b, ++r) {
         *r = *a + *b + c;
         if (*r >= M_BIGNUM_UMAX) {
             *r -= M_BIGNUM_UMAX;
@@ -496,7 +496,7 @@ static inline int __mln_bignum_ndiv(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int
     if (b == 1) {
         memcpy(r, a, n*sizeof(mln_u64_t));
         mln_u64_t *data = r + n - 1;
-        for (; data >= r && *data==0; data--)
+        for (; data >= r && *data==0; --data)
             ;
         return data < r? 0: data - r + 1;
     }
@@ -509,10 +509,10 @@ static inline int __mln_bignum_ndiv(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int
         tmp += *dest_data;
         *data = tmp / b;
         if (!len && *data) len = data - r + 1;
-        data--;
+        --data;
         tmp %= b;
         tmp <<= M_BIGNUM_SHIFT;
-        dest_data--;
+        --dest_data;
     }
     return len;
 }
@@ -565,7 +565,7 @@ static inline int __mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bi
     v_n = ps[slen-1];
 
     /*D2 classical algorithm*/
-    for (j = dlen - slen; j >= 0; j--) {
+    for (j = dlen - slen; j >= 0; --j) {
         /*D3 classical algorithm*/
         t = (pd[j+slen]<<M_BIGNUM_SHIFT) + pd[j+slen-1];
         q = t / v_n;
@@ -573,7 +573,7 @@ static inline int __mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bi
 
         t = pd[j+slen-2];
         while (q == M_BIGNUM_UMAX || q*ps[slen-2] > (r<<M_BIGNUM_SHIFT)+t) {
-            q--;
+            --q;
             r += v_n;
             if (r >= M_BIGNUM_UMAX) break;
         }
@@ -581,7 +581,7 @@ static inline int __mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bi
         /*D4-7 classical algorithm*/
         __mln_bignum_nmul(ps, q, tmp, slen+1, slen+1);
         if (__mln_bignum_nsbb(pd+j, tmp, pd+j, slen+1)) {
-            q--;
+            --q;
             __mln_bignum_nadc(pd+j, ps, pd+j, slen+1);
         }
         if (pr != NULL) *pr-- = q;
@@ -613,7 +613,7 @@ static inline int __mln_bignum_pwr(mln_bignum_t *dest, mln_bignum_t *exponent, m
     mln_bignum_t x;
     mln_s32_t i;
 
-    for (i = (exponent->length<<5)-1; i >= 0; i--) {
+    for (i = (exponent->length<<5)-1; i >= 0; --i) {
         if (__mln_bignum_testBit(exponent, i)) break; 
     }
     if (i < 0) {
@@ -627,7 +627,7 @@ static inline int __mln_bignum_pwr(mln_bignum_t *dest, mln_bignum_t *exponent, m
     x = *dest;
 
     if (mod != NULL) {
-        for (--i; i>= 0; i--) {
+        for (--i; i>= 0; --i) {
             __mln_bignum_mul(dest, dest);
             if (dest->length >= mod->length) {
                 if (__mln_bignum_div(dest, mod, NULL) < 0) {
@@ -644,7 +644,7 @@ static inline int __mln_bignum_pwr(mln_bignum_t *dest, mln_bignum_t *exponent, m
             }
         }
     } else {
-        for (--i; i>= 0; i--) {
+        for (--i; i>= 0; --i) {
             __mln_bignum_mul(dest, dest);
             if (__mln_bignum_testBit(exponent, i)) {
                 __mln_bignum_mul(dest, &x);
@@ -664,7 +664,7 @@ static inline int __mln_bignum_absCompare(mln_bignum_t *bn1, mln_bignum_t *bn2)
     if (bn1->length == 0) return 0;
 
     mln_u64_t *data1 = bn1->data + bn1->length - 1, *data2 = bn2->data + bn2->length - 1, *end = bn1->data;
-    for (; data1 >= end; data1--, data2--) {
+    for (; data1 >= end; --data1, --data2) {
         if (*data1 > *data2) return 1;
         else if (*data1 < *data2) return -1;
     }
@@ -697,7 +697,7 @@ static inline int __mln_bignum_compare(mln_bignum_t *bn1, mln_bignum_t *bn2)
     }
 
     mln_u64_t *data1 = bn1->data+bn1->length-1, *data2 = bn2->data+bn2->length-1, *end = bn1->data;
-    for (; data1 >= end; data1--, data2--) {
+    for (; data1 >= end; --data1, --data2) {
         if (*data1 > *data2) return 1;
         else if (*data1 < *data2) return -1;
     }
@@ -739,22 +739,22 @@ static inline void __mln_bignum_leftShift(mln_bignum_t *bn, mln_u32_t n)
 
     if (off) {
         mln_u64_t tmp = 0;
-        last = d < bn->data + M_BIGNUM_SIZE-1? (len++, d+1): &tmp;
-        for (; s >= end; s--, d--) {
+        last = d < bn->data + M_BIGNUM_SIZE-1? (++len, d+1): &tmp;
+        for (; s >= end; --s, --d) {
             cur = *d = *s;
             (*last) |= ((cur >> (32 - off)) & 0xffffffff);
             *d = ((*d) << off) & 0xffffffff;
             last = d;
         }
-        for (; d >= end; d--) *d = 0;
+        for (; d >= end; --d) *d = 0;
     } else {
-        for (; s >= end; s--, d--) {
+        for (; s >= end; --s, --d) {
             *d = *s;
         }
-        for (; d >= end; d--) *d = 0;
+        for (; d >= end; --d) *d = 0;
     }
 
-    for (d = bn->data+len, end = bn->data; d >= end; d--) {
+    for (d = bn->data+len, end = bn->data; d >= end; --d) {
         if (*d) break;
     }
     bn->length = d < end? 0: d-end+1;
@@ -783,21 +783,21 @@ static inline void __mln_bignum_rightShift(mln_bignum_t *bn, mln_u32_t n)
     if (off) {
         mln_u64_t tmp = 0;
         last = &tmp;
-        for (; s < end; s++, d++) {
+        for (; s < end; ++s, ++d) {
             cur = *d = *s;
             (*last) |= ((cur << (32 - off)) & 0xffffffff);
             *d = ((*d) >> off) & 0xffffffff;
             last = d;
         }
-        for (s = d; d < end; d++) *d = 0;
+        for (s = d; d < end; ++d) *d = 0;
     } else {
-        for (; s < end; s++, d++) {
+        for (; s < end; ++s, ++d) {
             *d = *s;
         }
-        for (s = d; d < end; d++) *d = 0;
+        for (s = d; d < end; ++d) *d = 0;
     }
 
-    for (d = bn->data; s>=d; s--) {
+    for (d = bn->data; s>=d; --s) {
         if (*s) break;
     }
     bn->length = s < d? 0: s-d+1;
@@ -823,7 +823,7 @@ static inline void __mln_bignum_mul_word(mln_bignum_t *dest, mln_s64_t src)
     src &= 0xffffffff;
 
     carry = 0;
-    for (dend = dest->data+dest->length; dest_data<dend; dest_data++) {
+    for (dend = dest->data+dest->length; dest_data<dend; ++dest_data) {
         (*dest_data) = (*dest_data) * src + carry;
         carry = *dest_data >> M_BIGNUM_SHIFT;
         *dest_data %= M_BIGNUM_UMAX;
@@ -833,7 +833,7 @@ static inline void __mln_bignum_mul_word(mln_bignum_t *dest, mln_s64_t src)
         *dest_data += carry;
         carry = *dest_data >> M_BIGNUM_SHIFT;
         *dest_data %= M_BIGNUM_UMAX;
-        dest->length++;
+        ++(dest->length);
     }
     dest->tag = tag;
 }
@@ -866,7 +866,7 @@ static inline int __mln_bignum_div_word(mln_bignum_t *dest, mln_s64_t src, mln_b
     if (*dest_data < src) {
         tmp = *dest_data << M_BIGNUM_SHIFT;
         *dest_data-- = 0;
-        if (quotient != NULL) quotient->length--;
+        if (quotient != NULL) --(quotient->length);
     }
     if (quotient != NULL) data = quotient->data + quotient->length - 1;
 
@@ -890,7 +890,7 @@ void mln_bignum_dump(mln_bignum_t *bn)
     fprintf(stderr, "Length: %u\n", bn->length);
     mln_u32_t i;
     fprintf(stderr, "Data:\n");
-    for (i = 0; i < M_BIGNUM_SIZE; i++) {
+    for (i = 0; i < M_BIGNUM_SIZE; ++i) {
 #ifdef i386
         fprintf(stderr, "\t%llx\n", bn->data[i]);
 #else
@@ -918,7 +918,7 @@ mln_bignum_seperate(mln_u32_t *pwr, mln_bignum_t *odd)
         if (mod.length) break;
 
         *odd = tmp;
-        (*pwr)++;
+        ++(*pwr);
     }
 }
 
@@ -937,7 +937,7 @@ mln_bignum_witness(mln_bignum_t *base, mln_bignum_t *prim)
     x = *base;
     __mln_bignum_pwr(&x, &odd, prim);
 
-    for (i = 0; i < pwr; i++) {
+    for (i = 0; i < pwr; ++i) {
         new_x = x;
         num.data[0] = 2;
         assert(__mln_bignum_pwr(&new_x, &num, prim) >= 0);
@@ -971,7 +971,7 @@ mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
     mln_u32_t val = tv.tv_sec*1000000+tv.tv_usec, times = bitwidth / 32, off;
     mln_s32_t i;
 
-    for (i = 0; i < times; i++) {
+    for (i = 0; i < times; ++i) {
         val = (mln_u32_t)rand_r(&val);
         data[i] = ((mln_u64_t)val & 0xffffffff);
     }
@@ -1026,7 +1026,7 @@ int mln_bignum_prime(mln_bignum_t *res, mln_u32_t bitwidth)
         mln_bignum_random_prime(&prime, bitwidth);
         if (__mln_bignum_absCompare(&prime, &one) <= 0) continue;
         times = bitwidth<=512? 4: bitwidth >> 9;
-        for (; times > 0; times--) {
+        for (; times > 0; --times) {
             mln_bignum_random_scope(&tmp, bitwidth, &prime);
             if (mln_bignum_witness(&tmp, &prime)) break;
         }
@@ -1119,7 +1119,7 @@ int mln_bignum_i2osp(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
     while (max--) {
         *buf++ = 0;
     }
-    for (; p >= end; p--) {
+    for (; p >= end; --p) {
         *buf++ = (*p >> 24) & 0xff;
         *buf++ = (*p >> 16) & 0xff;
         *buf++ = (*p >> 8) & 0xff;
@@ -1160,7 +1160,7 @@ int mln_bignum_i2osp(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
     while (max--) {
         *buf++ = 0;
     }
-    for (; p < end; p++) {
+    for (; p < end; ++p) {
         *buf++ = *p & 0xff;
         *buf++ = (*p >> 8) & 0xff;
         *buf++ = (*p >> 16) & 0xff;
@@ -1199,21 +1199,21 @@ int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
     int pos = 3, length = n->length << 2;
     p = n->data + n->length - 1;
     if (!(((*p) >> 24) & 0xff)) {
-        pos--, length--;
+        --pos, --length;
         if (!(((*p) >> 16) & 0xff)) {
-            pos--, length--;
+            --pos, --length;
             if (!(((*p) >> 8) & 0xff)) {
-                pos--, length--;
+                --pos, --length;
             }
         }
     }
 
-    if (((*p) >> (pos << 3)) & 0x80) *buf++ = 0, length++;
+    if (((*p) >> (pos << 3)) & 0x80) *buf++ = 0, ++length;
 
-    for (end = n->data; len > 0 && p >= end; len--) {
+    for (end = n->data; len > 0 && p >= end; --len) {
         *buf++ = ((*p) >> (pos << 3)) & 0xff;
         if (--pos < 0) {
-            p--;
+            --p;
             pos = 3;
         }
     }
@@ -1224,7 +1224,7 @@ int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
 int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
 {
     if (buf == NULL || len == 0) return 0;
-    if (*buf == 0) len--, buf++;
+    if (*buf == 0) --len, ++buf;
     if (len > (M_BIGNUM_SIZE<<2)) return -1;
     *n = (mln_bignum_t)mln_bignum_zero();
 
@@ -1236,7 +1236,7 @@ int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
         if (i >= 24) {
             i = 0;
             *data &= 0xffffffff;
-            data++;
+            ++data;
             continue;
         }
         i += 8;
@@ -1254,10 +1254,10 @@ int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
     mln_u64_t *end = n->data + n->length;
     if (p[0] & 0x80) {
         *buf++ = 0;
-        len--;
+        --len;
         if (len <= 0) return buf-save;
     }
-    for (; p < end; p++) {
+    for (; p < end; ++p) {
         *buf++ = (*p & 0xff);
         if (--len <= 0) return buf-save;
         *buf++ = ((*p >> 8) & 0xff);
@@ -1274,13 +1274,13 @@ int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
 int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
 {
     if (buf == NULL || len == 0) return 0;
-    if (*buf == 0) len--, buf++;
+    if (*buf == 0) --len, ++buf;
     if (len > (M_BIGNUM_SIZE<<2)) return -1;
     *n = (mln_bignum_t)mln_bignum_zero();
 
     mln_u64_t *p = n->data;
     mln_size_t i;
-    for (i = 0; len; len--) {
+    for (i = 0; len; --len) {
         (*p) |= ((*buf++) << i);
         if (i >= 24) {
             (*p++) &= 0xffffffff;
