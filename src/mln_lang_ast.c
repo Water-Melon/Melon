@@ -106,8 +106,11 @@ static inline mln_lang_class_t *
 mln_lang_class_new(mln_alloc_t *pool, \
                    mln_string_t *name, \
                    mln_string_t *parent, \
-                   mln_lang_stm_t *stm);
+                   mln_lang_classstm_t *stm);
 static void mln_lang_class_free(void *data);
+static inline mln_lang_classstm_t *
+mln_lang_classstm_new(mln_alloc_t *pool, void *data, mln_lang_classstm_type_t type, mln_lang_classstm_t *next);
+static void mln_lang_classstm_free(void *data);
 static inline mln_lang_block_t *
 mln_lang_block_new(mln_alloc_t *pool, void *data, mln_lang_block_type_t type);
 static void mln_lang_block_free(void *data);
@@ -137,7 +140,7 @@ mln_lang_if_new(mln_alloc_t *pool, \
                 mln_lang_block_t *falsestm);
 static void mln_lang_if_free(void *data);
 static inline mln_lang_exp_t *
-mln_lang_exp_new(mln_alloc_t *pool, mln_lang_assign_t *assign, mln_lang_assign_t *next);
+mln_lang_exp_new(mln_alloc_t *pool, mln_lang_assign_t *assign, mln_lang_exp_t *next);
 static void mln_lang_exp_free(void *data);
 static inline mln_lang_assign_t *
 mln_lang_assign_new(mln_alloc_t *pool, \
@@ -265,6 +268,8 @@ static int mln_lang_semantic_stmBlock(mln_factor_t *left, mln_factor_t **right, 
 static int mln_lang_semantic_stmfunc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_stmclass(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_extend(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_classstmVar(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_classstmFunc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_blockstmexp(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_blockstmstm(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_labelstm(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -272,6 +277,7 @@ static int mln_lang_semantic_whilestm(mln_factor_t *left, mln_factor_t **right, 
 static int mln_lang_semantic_forstm(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_ifstm(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_switchstm(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_funcdef(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_switchstm__(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_switchprefix(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_elsestm(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -373,14 +379,18 @@ mln_string(NULL)
 static mln_production_t prod_tbl[] = {
 {"start: stm LANG_TK_EOF", mln_lang_semantic_start},
 {"stm: blockstm stm", mln_lang_semantic_stmBlock},
-{"stm: LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR LANG_TK_LBRACE stm LANG_TK_RBRACE stm", mln_lang_semantic_stmfunc},
-{"stm: LANG_TK_CLASS LANG_TK_ID extend LANG_TK_LBRACE stm LANG_TK_RBRACE stm", mln_lang_semantic_stmclass},
+{"stm: funcdef stm", mln_lang_semantic_stmfunc},
+{"stm: LANG_TK_CLASS LANG_TK_ID extend LANG_TK_LBRACE classstm LANG_TK_RBRACE stm", mln_lang_semantic_stmclass},
 {"stm: LANG_TK_ID LANG_TK_COLON stm", mln_lang_semantic_labelstm},
 {"stm: LANG_TK_WHILE LANG_TK_LPAR exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_whilestm},
 {"stm: LANG_TK_FOR LANG_TK_LPAR exp LANG_TK_SEMIC exp LANG_TK_SEMIC exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_forstm},
 {"stm: LANG_TK_IF LANG_TK_LPAR exp LANG_TK_RPAR blockstm else_exp stm", mln_lang_semantic_ifstm},
 {"stm: LANG_TK_SWITCH LANG_TK_LPAR exp LANG_TK_RPAR LANG_TK_LBRACE switchstm LANG_TK_RBRACE stm", mln_lang_semantic_switchstm},
 {"stm: ", NULL},
+{"classstm: LANG_TK_ID LANG_TK_SEMIC classstm", mln_lang_semantic_classstmVar},
+{"classstm: funcdef classstm", mln_lang_semantic_classstmFunc},
+{"classstm: ", NULL},
+{"funcdef: LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR LANG_TK_LBRACE stm LANG_TK_RBRACE", mln_lang_semantic_funcdef},
 {"switchstm: switchprefix LANG_TK_COLON blockstm switchstm", mln_lang_semantic_switchstm__},
 {"switchstm: ", NULL},
 {"switchprefix: LANG_TK_DEFAULT", NULL},
@@ -397,7 +407,7 @@ static mln_production_t prod_tbl[] = {
 {"else_exp: ", NULL},
 {"exp: assign_exp explist", mln_lang_semantic_exp},
 {"exp: ", NULL},
-{"explist: LANG_TK_COMMA assign_exp", mln_lang_semantic_explist},
+{"explist: LANG_TK_COMMA exp", mln_lang_semantic_explist},
 {"explist: ", NULL},
 {"assign_exp: logicLow_exp __assign_exp", mln_lang_semantic_assignexp},
 {"__assign_exp: LANG_TK_EQUAL assign_exp", mln_lang_semantic_assignexpeq},
@@ -917,7 +927,7 @@ static inline mln_lang_class_t *
 mln_lang_class_new(mln_alloc_t *pool, \
                    mln_string_t *name, \
                    mln_string_t *parent, \
-                   mln_lang_stm_t *stm)
+                   mln_lang_classstm_t *stm)
 {
     mln_lang_class_t *lc;
     if ((lc = (mln_lang_class_t *)mln_alloc_m(pool, sizeof(mln_lang_class_t))) == NULL) {
@@ -935,8 +945,47 @@ static void mln_lang_class_free(void *data)
     mln_lang_class_t *lc = (mln_lang_class_t *)data;
     if (lc->name != NULL) mln_string_pool_free(lc->name);
     if (lc->parent != NULL) mln_string_pool_free(lc->parent);
-    if (lc->stm != NULL) mln_lang_stm_free(lc->stm);
+    if (lc->stm != NULL) mln_lang_classstm_free(lc->stm);
     mln_alloc_free(lc);
+}
+
+
+static inline mln_lang_classstm_t *
+mln_lang_classstm_new(mln_alloc_t *pool, void *data, mln_lang_classstm_type_t type, mln_lang_classstm_t *next)
+{
+    mln_lang_classstm_t *lc;
+    if ((lc = (mln_lang_classstm_t *)mln_alloc_m(pool, sizeof(mln_lang_classstm_t))) == NULL) {
+        return NULL;
+    }
+    lc->type = type;
+    switch (type) {
+        case M_CLASSSTM_VAR:
+            lc->data.var = (mln_string_t *)data;
+            break;
+        default:
+            lc->data.func = (mln_lang_funcdef_t *)data;
+            break;
+    }
+    lc->next = next;
+    return lc;
+}
+
+static void mln_lang_classstm_free(void *data)
+{
+    mln_lang_classstm_t *lc, *next = (mln_lang_classstm_t *)data;
+    while (next != NULL) {
+        lc = next;
+        switch (lc->type) {
+            case M_CLASSSTM_VAR:
+                if (lc->data.var != NULL) mln_string_pool_free(lc->data.var);
+                break;
+            default:
+                if (lc->data.func != NULL) mln_lang_funcdef_free(lc->data.func);
+                break;
+        }
+        next = lc->next;
+        mln_alloc_free(lc);
+    }
 }
 
 
@@ -1120,7 +1169,7 @@ static void mln_lang_if_free(void *data)
 
 
 static inline mln_lang_exp_t *
-mln_lang_exp_new(mln_alloc_t *pool, mln_lang_assign_t *assign, mln_lang_assign_t *next)
+mln_lang_exp_new(mln_alloc_t *pool, mln_lang_assign_t *assign, mln_lang_exp_t *next)
 {
     mln_lang_exp_t *le;
     if ((le = (mln_lang_exp_t *)mln_alloc_m(pool, sizeof(mln_lang_exp_t))) == NULL) {
@@ -1133,11 +1182,13 @@ mln_lang_exp_new(mln_alloc_t *pool, mln_lang_assign_t *assign, mln_lang_assign_t
 
 static void mln_lang_exp_free(void *data)
 {
-    if (data == NULL) return;
-    mln_lang_exp_t *le = (mln_lang_exp_t *)data;
-    if (le->assign != NULL) mln_lang_assign_free(le->assign);
-    if (le->next != NULL) mln_lang_assign_free(le->next);
-    mln_alloc_free(le);
+    mln_lang_exp_t *le, *next = (mln_lang_exp_t *)data;
+    while (next != NULL) {
+        le = next;
+        if (le->assign != NULL) mln_lang_assign_free(le->assign);
+        next = le->next;
+        mln_alloc_free(le);
+    }
 }
 
 
@@ -1888,21 +1939,11 @@ static int mln_lang_semantic_stmfunc(mln_factor_t *left, mln_factor_t **right, v
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_stm_t *stm;
-    mln_lang_funcdef_t *func;
-    mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
-    mln_string_t *name = mln_string_pool_dup(pool, ls->text);
-    if (name == NULL) return -1;
-    if ((func = mln_lang_funcdef_new(pool, name, (mln_lang_exp_t *)(right[2]->data), (mln_lang_stm_t *)(right[5]->data))) == NULL) {
-        mln_string_pool_free(name);
+    if ((stm = mln_lang_stm_new(pool, right[0]->data, M_STM_FUNC, (mln_lang_stm_t *)(right[1]->data))) == NULL) {
         return -1;
     }
-    if ((stm = mln_lang_stm_new(pool, func, M_STM_FUNC, (mln_lang_stm_t *)(right[7]->data))) == NULL) {
-        mln_lang_funcdef_free(func);
-        return -1;
-    }
-    right[2]->data = NULL;
-    right[5]->data = NULL;
-    right[7]->data = NULL;
+    right[0]->data = NULL;
+    right[1]->data = NULL;
     left->data = stm;
     left->nonterm_free_handler = mln_lang_stm_free;
     return 0;
@@ -1916,7 +1957,11 @@ static int mln_lang_semantic_stmclass(mln_factor_t *left, mln_factor_t **right, 
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
     mln_string_t *name = mln_string_pool_dup(pool, ls->text);
     if (name == NULL) return -1;
-    if ((clas = mln_lang_class_new(pool, name, (mln_string_t *)(right[2]->data), (mln_lang_stm_t *)(right[4]->data))) == NULL) {
+    if ((clas = mln_lang_class_new(pool, \
+                                   name, \
+                                   (mln_string_t *)(right[2]->data), \
+                                   (mln_lang_classstm_t *)(right[4]->data))) == NULL)
+    {
         mln_string_pool_free(name);
         return -1;
     }
@@ -1940,6 +1985,41 @@ static int mln_lang_semantic_extend(mln_factor_t *left, mln_factor_t **right, vo
     if (parent == NULL) return -1;
     left->data = parent;
     left->nonterm_free_handler = (nonterm_free)mln_string_pool_free;
+    return 0;
+}
+
+static int mln_lang_semantic_classstmVar(mln_factor_t *left, mln_factor_t **right, void *data)
+{
+    mln_alloc_t *pool = (mln_alloc_t *)data;
+    mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
+    mln_string_t *var = mln_string_pool_dup(pool, ls->text);
+    if (var == NULL) return -1;
+    mln_lang_classstm_t *lc = mln_lang_classstm_new(pool, \
+                                                    var, \
+                                                    M_CLASSSTM_VAR, \
+                                                    (mln_lang_classstm_t *)(right[2]->data));
+    if (lc == NULL) {
+        mln_string_pool_free(var);
+        return -1;
+    }
+    left->data = lc;
+    left->nonterm_free_handler = mln_lang_classstm_free;
+    right[2]->data = NULL;
+    return 0;
+}
+
+static int mln_lang_semantic_classstmFunc(mln_factor_t *left, mln_factor_t **right, void *data)
+{
+    mln_alloc_t *pool = (mln_alloc_t *)data;
+    mln_lang_classstm_t *lc = mln_lang_classstm_new(pool, \
+                                                    right[0]->data, \
+                                                    M_CLASSSTM_FUNC, \
+                                                    (mln_lang_classstm_t *)(right[1]->data));
+    if (lc == NULL) return -1;
+    left->data = lc;
+    left->nonterm_free_handler = mln_lang_classstm_free;
+    right[0]->data = NULL;
+    right[1]->data = NULL;
     return 0;
 }
 
@@ -2069,6 +2149,27 @@ static int mln_lang_semantic_switchstm(mln_factor_t *left, mln_factor_t **right,
     return 0;
 }
 
+static int mln_lang_semantic_funcdef(mln_factor_t *left, mln_factor_t **right, void *data)
+{
+    mln_alloc_t *pool = (mln_alloc_t *)data;
+    mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
+    mln_string_t *name = mln_string_pool_dup(pool, ls->text);
+    if (name == NULL) return -1;
+    mln_lang_funcdef_t *lf = mln_lang_funcdef_new(pool, \
+                                                  name, \
+                                                  (mln_lang_exp_t *)(right[2]->data), \
+                                                  (mln_lang_stm_t *)(right[5]->data));
+    if (lf == NULL) {
+        mln_string_pool_free(name);
+        return -1;
+    }
+    left->data = lf;
+    left->nonterm_free_handler = mln_lang_funcdef_free;
+    right[2]->data = NULL;
+    right[5]->data = NULL;
+    return 0;
+}
+
 static int mln_lang_semantic_switchstm__(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
@@ -2153,7 +2254,7 @@ static int mln_lang_semantic_exp(mln_factor_t *left, mln_factor_t **right, void 
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_exp_t *exp = mln_lang_exp_new(pool, \
                                            (mln_lang_assign_t *)(right[0]->data), \
-                                           (mln_lang_assign_t *)(right[1]->data));
+                                           (mln_lang_exp_t *)(right[1]->data));
     if (exp == NULL) return -1;
     left->data = exp;
     left->nonterm_free_handler = mln_lang_exp_free;
