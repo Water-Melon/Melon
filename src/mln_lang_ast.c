@@ -460,7 +460,7 @@ static mln_production_t prod_tbl[] = {
 {"spec_exp: LANG_TK_AST spec_exp", mln_lang_semantic_speclocate},
 {"spec_exp: LANG_TK_INC spec_exp", mln_lang_semantic_specinc},
 {"spec_exp: LANG_TK_DECR spec_exp", mln_lang_semantic_specdec},
-{"spec_exp: LANG_TK_NEW LANG_TK_ID", mln_lang_semantic_specnew},
+{"spec_exp: LANG_TK_NEW LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR", mln_lang_semantic_specnew},
 {"spec_exp: LANG_TK_FREE spec_exp", mln_lang_semantic_specfree},
 {"spec_exp: LANG_TK_LPAR assign_exp LANG_TK_RPAR", mln_lang_semantic_specparenth},
 {"spec_exp: factor", mln_lang_semantic_specfactor},
@@ -1696,9 +1696,6 @@ mln_lang_spec_new(mln_alloc_t *pool, \
         case M_SPEC_FREE:
             ls->data.spec = (mln_lang_spec_t *)data;
             break;
-        case M_SPEC_NEW:
-            ls->data.name = (mln_string_t *)data;
-            break;
         case M_SPEC_PARENTH:
             ls->data.assign = (mln_lang_assign_t *)data;
             break;
@@ -1706,6 +1703,7 @@ mln_lang_spec_new(mln_alloc_t *pool, \
             ls->data.factor = (mln_lang_factor_t *)data;
             break;
         case M_SPEC_FUNC:
+        case M_SPEC_NEW:
             ls->data.func = (mln_lang_funccall_t *)data;
             break;
         default:
@@ -1734,10 +1732,6 @@ static void mln_lang_spec_free(void *data)
             case M_SPEC_FREE:
                 right = ls->data.spec;
                 break;
-            case M_SPEC_NEW:
-                if (ls->data.name != NULL) mln_string_pool_free(ls->data.name);
-                right = NULL;
-                break;
             case M_SPEC_PARENTH:
                 if (ls->data.assign != NULL) mln_lang_assign_free(ls->data.assign);
                 right = NULL;
@@ -1747,6 +1741,7 @@ static void mln_lang_spec_free(void *data)
                 right = NULL;
                 break;
             case M_SPEC_FUNC:
+            case M_SPEC_NEW:
                 if (ls->data.func != NULL) mln_lang_funccall_free(ls->data.func);
                 right = NULL;
                 break;
@@ -2896,16 +2891,22 @@ static int mln_lang_semantic_specfree(mln_factor_t *left, mln_factor_t **right, 
 static int mln_lang_semantic_specnew(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
-    mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
-    mln_string_t *id = mln_string_pool_dup(pool, ls->text);
-    if (id == NULL) return -1;
     mln_lang_spec_t *spec;
-    if ((spec = mln_lang_spec_new(pool, M_SPEC_NEW, id)) == NULL) {
-        mln_string_pool_free(id);
+    mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
+    mln_string_t *name = mln_string_pool_dup(pool, ls->text);
+    if (name == NULL) return -1;
+    mln_lang_funccall_t *func = mln_lang_funccall_new(pool, name, (mln_lang_exp_t *)(right[3]->data));
+    if (func == NULL) {
+        mln_string_pool_free(name);
+        return -1;
+    }
+    if ((spec = mln_lang_spec_new(pool, M_SPEC_NEW, func)) == NULL) {
+        mln_lang_funccall_free(func);
         return -1;
     }
     left->data = spec;
     left->nonterm_free_handler = mln_lang_spec_free;
+    right[3]->data = NULL;
     return 0;
 }
 

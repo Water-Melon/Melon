@@ -425,20 +425,22 @@ void mln_thread_quit(void)
     mThreadPoolSelf->locked = 0;
 }
 
-mln_size_t mln_thread_ResourceNum(void)
+void mln_thread_ResourceInfo(struct mln_thread_pool_info *info)
 {
+    if (info == NULL) return;
     if (mThreadPoolSelf == NULL) {
         mln_log(error, "Fatal error, thread messed up.\n");
         abort();
     }
-    mln_size_t n;
     mln_thread_pool_t *tpool = mThreadPoolSelf->pool;
     mThreadPoolSelf->locked = 1;
     pthread_mutex_lock(&(tpool->mutex));
-    n = tpool->nRes;
+    info->maxNum = tpool->max;
+    info->idleNum = tpool->idle;
+    info->curNum = tpool->counter;
+    info->resNum = tpool->nRes;
     pthread_mutex_unlock(&(tpool->mutex));
     mThreadPoolSelf->locked = 0;
-    return n;
 }
 
 MLN_CHAIN_FUNC_DEFINE(mln_child, \

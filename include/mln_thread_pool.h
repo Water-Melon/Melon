@@ -64,8 +64,15 @@ struct mln_thread_pool_attr {
     mln_u32_t                          concurrency;
 };
 
+struct mln_thread_pool_info {
+    mln_u32_t                          maxNum;
+    mln_u32_t                          idleNum;
+    mln_u32_t                          curNum;
+    mln_size_t                         resNum;
+};
+
 extern int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr) __NONNULL1(1);
 extern int mln_thread_pool_addResource(void *data) __NONNULL1(1);
 extern void mln_thread_quit(void);
-extern mln_size_t mln_thread_ResourceNum(void);
+extern void mln_thread_ResourceInfo(struct mln_thread_pool_info *info);
 #endif

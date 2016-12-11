@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A software platform for simplifying development on UNIX
-Melon Version 1.5.10
+Melon Version 1.5.11
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -58,8 +58,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.5.10.
-  b) Change directory to the melon-1.5.10/.
+  a) Download and decompress melon-1.5.11.
+  b) Change directory to the melon-1.5.11/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -72,7 +72,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.5.10/include/mln_types.h.
+Their definitions can be found in melon-1.5.11/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -2445,8 +2445,19 @@ Their definitions can be found in melon-1.5.10/include/mln_types.h.
       c) void mln_thread_quit(void);
          This function can make thread pool quit.
 
-      d) extern mln_size_t mln_thread_ResourceNum(void);
-         Return the number of unhandled resources.
+      d) void mln_thread_ResourceInfo(struct mln_thread_pool_info *info);
+         Get the information of thread pool.
+         The prototype of 'struct mln_thread_pool_info' is
+             struct mln_thread_pool_info {
+                 mln_u32_t         maxNum;
+                 mln_u32_t         idleNum;
+                 mln_u32_t         curNum;
+                 mln_size_t        resNum;
+             };
+         'maxNum' -- The allowed maximum number of child thread.
+         'idleNum' -- The number of idle child thread.
+         'curNum' -- The number of existed child thread.
+         'resNum' -- The number of unhandled resource.
 
   34) AST
       This component aims to operate an AST, and it also includes the operations of state-shift table.

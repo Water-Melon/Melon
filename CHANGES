@@ -1,3 +1,7 @@
+Changes with melon 1.5.11                                         11 Dec 2016
+    *) Updated production in AST component.
+    *) Modified interface to get information from thread pool.
+
 Changes with melon 1.5.10                                         08 Dec 2016
     *) Fixed bugs of parser generator.
     *) Added an interface for thread pool.
