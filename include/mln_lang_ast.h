@@ -39,6 +39,7 @@ typedef struct mln_lang_suffix_s           mln_lang_suffix_t;
 typedef struct mln_lang_suffix_tmp_s       mln_lang_suffix_tmp_t;
 typedef struct mln_lang_locate_s           mln_lang_locate_t;
 typedef struct mln_lang_locate_tmp_s       mln_lang_locate_tmp_t;
+typedef struct mln_lang_property_s         mln_lang_property_t;
 typedef struct mln_lang_spec_s             mln_lang_spec_t;
 typedef struct mln_lang_factor_s           mln_lang_factor_t;
 typedef struct mln_lang_elemlist_s         mln_lang_elemlist_t;
@@ -345,7 +346,7 @@ struct mln_lang_locate_s {
     mln_lang_locate_op_t             op;
     union {
         mln_lang_assign_t       *assign;
-        mln_string_t            *id;
+        mln_lang_property_t     *property;
     } right;
 };
 
@@ -353,8 +354,22 @@ struct mln_lang_locate_tmp_s {
     mln_lang_locate_op_t             op;
     union {
         mln_lang_assign_t       *assign;
-        mln_string_t            *id;
+        mln_lang_property_t     *property;
     } locate;
+};
+
+typedef enum mln_lang_property_type_e {
+    M_PROPERTY_NOARGS = 0,
+    M_PROPERTY_ARGS
+} mln_lang_property_type_t;
+
+struct mln_lang_property_s {
+    mln_u64_t                        line;
+    mln_lang_property_type_t         type;
+    union {
+        mln_string_t            *id;
+        mln_lang_funccall_t     *func;
+    } data;
 };
 
 typedef enum mln_lang_spec_op_e {
