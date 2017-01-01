@@ -10,8 +10,8 @@
 
 typedef struct mln_lang_stm_s              mln_lang_stm_t;
 typedef struct mln_lang_funcdef_s          mln_lang_funcdef_t;
-typedef struct mln_lang_class_s            mln_lang_class_t;
-typedef struct mln_lang_classstm_s         mln_lang_classstm_t;
+typedef struct mln_lang_set_s              mln_lang_set_t;
+typedef struct mln_lang_setstm_s           mln_lang_setstm_t;
 typedef struct mln_lang_block_s            mln_lang_block_t;
 typedef struct mln_lang_while_s            mln_lang_while_t;
 typedef struct mln_lang_switch_s           mln_lang_switch_t;
@@ -62,7 +62,7 @@ struct mln_lang_stm_s {
     union {
         mln_lang_block_t        *block;
         mln_lang_funcdef_t      *func;
-        mln_lang_class_t        *classdef;
+        mln_lang_set_t          *setdef;
         mln_lang_switch_t       *sw;
         mln_lang_while_t        *w;
         mln_lang_for_t          *f;
@@ -79,26 +79,26 @@ struct mln_lang_funcdef_s {
     mln_lang_stm_t                  *stm;
 };
 
-struct mln_lang_class_s {
+struct mln_lang_set_s {
     mln_u64_t                        line;
     mln_string_t                    *name;
     mln_string_t                    *parent;
-    mln_lang_classstm_t             *stm;
+    mln_lang_setstm_t               *stm;
 };
 
 typedef enum {
     M_CLASSSTM_VAR = 0,
     M_CLASSSTM_FUNC
-} mln_lang_classstm_type_t;
+} mln_lang_setstm_type_t;
 
-struct mln_lang_classstm_s {
+struct mln_lang_setstm_s {
     mln_u64_t                        line;
-    mln_lang_classstm_type_t         type;
+    mln_lang_setstm_type_t           type;
     union {
         mln_string_t            *var;
         mln_lang_funcdef_t      *func;
     } data;
-    mln_lang_classstm_t             *next;
+    mln_lang_setstm_t               *next;
 };
 
 typedef enum {

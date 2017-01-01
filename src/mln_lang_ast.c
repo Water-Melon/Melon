@@ -8,7 +8,7 @@
 MLN_DECLARE_PARSER_GENERATOR(static, \
                              mln_lang, \
                              LANG, \
-                             LANG_TK_CLASS, \
+                             LANG_TK_SET, \
                              LANG_TK_IF, \
                              LANG_TK_ELSE, \
                              LANG_TK_WHILE, \
@@ -17,8 +17,6 @@ MLN_DECLARE_PARSER_GENERATOR(static, \
                              LANG_TK_BREAK, \
                              LANG_TK_RETURN, \
                              LANG_TK_GOTO, \
-                             LANG_TK_NEW, \
-                             LANG_TK_FREE, \
                              LANG_TK_NIL, \
                              LANG_TK_TRUE, \
                              LANG_TK_FALSE, \
@@ -50,7 +48,7 @@ MLN_DECLARE_PARSER_GENERATOR(static, \
 MLN_DEFINE_PARSER_GENERATOR(static, \
                             mln_lang, \
                             LANG, \
-                            {LANG_TK_CLASS, "LANG_TK_CLASS"}, \
+                            {LANG_TK_SET, "LANG_TK_SET"}, \
                             {LANG_TK_IF, "LANG_TK_IF"}, \
                             {LANG_TK_ELSE, "LANG_TK_ELSE"}, \
                             {LANG_TK_WHILE, "LANG_TK_WHILE"}, \
@@ -59,8 +57,6 @@ MLN_DEFINE_PARSER_GENERATOR(static, \
                             {LANG_TK_BREAK, "LANG_TK_BREAK"}, \
                             {LANG_TK_RETURN, "LANG_TK_RETURN"}, \
                             {LANG_TK_GOTO, "LANG_TK_GOTO"}, \
-                            {LANG_TK_NEW, "LANG_TK_NEW"}, \
-                            {LANG_TK_FREE, "LANG_TK_FREE"}, \
                             {LANG_TK_NIL, "LANG_TK_NIL"}, \
                             {LANG_TK_TRUE, "LANG_TK_TRUE"}, \
                             {LANG_TK_FALSE, "LANG_TK_FALSE"}, \
@@ -104,20 +100,20 @@ mln_lang_funcdef_new(mln_alloc_t *pool, \
                      mln_lang_stm_t *stm, \
                      mln_u64_t line);
 static void mln_lang_funcdef_free(void *data);
-static inline mln_lang_class_t *
-mln_lang_class_new(mln_alloc_t *pool, \
+static inline mln_lang_set_t *
+mln_lang_set_new(mln_alloc_t *pool, \
                    mln_string_t *name, \
                    mln_string_t *parent, \
-                   mln_lang_classstm_t *stm, \
+                   mln_lang_setstm_t *stm, \
                    mln_u64_t line);
-static void mln_lang_class_free(void *data);
-static inline mln_lang_classstm_t *
-mln_lang_classstm_new(mln_alloc_t *pool, \
+static void mln_lang_set_free(void *data);
+static inline mln_lang_setstm_t *
+mln_lang_setstm_new(mln_alloc_t *pool, \
                       void *data, \
-                      mln_lang_classstm_type_t type, \
-                      mln_lang_classstm_t *next, \
+                      mln_lang_setstm_type_t type, \
+                      mln_lang_setstm_t *next, \
                       mln_u64_t line);
-static void mln_lang_classstm_free(void *data);
+static void mln_lang_setstm_free(void *data);
 static inline mln_lang_block_t *
 mln_lang_block_new(mln_alloc_t *pool, void *data, mln_lang_block_type_t type, mln_u64_t line);
 static void mln_lang_block_free(void *data);
@@ -290,10 +286,10 @@ static void mln_lang_elemlist_free(void *data);
 static int mln_lang_semantic_start(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_stmBlock(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_stmfunc(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_stmclass(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_extend(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_classstmVar(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_classstmFunc(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_setstmVar(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_setstmFunc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_blockstmexp(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_blockstmstm(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_labelstm(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -381,7 +377,7 @@ static int mln_lang_semantic_elemval(mln_factor_t *left, mln_factor_t **right, v
 static int mln_lang_semantic_elemnext(mln_factor_t *left, mln_factor_t **right, void *data);
 
 static mln_string_t keywords[] = {
-mln_string("class"),
+mln_string("set"),
 mln_string("if"),
 mln_string("else"),
 mln_string("while"),
@@ -390,8 +386,6 @@ mln_string("continue"),
 mln_string("break"),
 mln_string("return"),
 mln_string("goto"),
-mln_string("new"),
-mln_string("free"),
 mln_string("nil"),
 mln_string("true"),
 mln_string("false"),
@@ -405,16 +399,16 @@ static mln_production_t prod_tbl[] = {
 {"start: stm LANG_TK_EOF", mln_lang_semantic_start},
 {"stm: blockstm stm", mln_lang_semantic_stmBlock},
 {"stm: funcdef stm", mln_lang_semantic_stmfunc},
-{"stm: LANG_TK_CLASS LANG_TK_ID extend LANG_TK_LBRACE classstm LANG_TK_RBRACE stm", mln_lang_semantic_stmclass},
+{"stm: LANG_TK_SET LANG_TK_ID extend LANG_TK_LBRACE setstm LANG_TK_RBRACE stm", mln_lang_semantic_stmset},
 {"stm: LANG_TK_ID LANG_TK_COLON stm", mln_lang_semantic_labelstm},
 {"stm: LANG_TK_WHILE LANG_TK_LPAR exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_whilestm},
 {"stm: LANG_TK_FOR LANG_TK_LPAR exp LANG_TK_SEMIC exp LANG_TK_SEMIC exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_forstm},
 {"stm: LANG_TK_IF LANG_TK_LPAR exp LANG_TK_RPAR blockstm else_exp stm", mln_lang_semantic_ifstm},
 {"stm: LANG_TK_SWITCH LANG_TK_LPAR exp LANG_TK_RPAR LANG_TK_LBRACE switchstm LANG_TK_RBRACE stm", mln_lang_semantic_switchstm},
 {"stm: ", NULL},
-{"classstm: LANG_TK_ID LANG_TK_SEMIC classstm", mln_lang_semantic_classstmVar},
-{"classstm: funcdef classstm", mln_lang_semantic_classstmFunc},
-{"classstm: ", NULL},
+{"setstm: LANG_TK_ID LANG_TK_SEMIC setstm", mln_lang_semantic_setstmVar},
+{"setstm: funcdef setstm", mln_lang_semantic_setstmFunc},
+{"setstm: ", NULL},
 {"funcdef: LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR LANG_TK_LBRACE stm LANG_TK_RBRACE", mln_lang_semantic_funcdef},
 {"switchstm: switchprefix LANG_TK_COLON blockstm switchstm", mln_lang_semantic_switchstm__},
 {"switchstm: ", NULL},
@@ -497,8 +491,8 @@ static mln_production_t prod_tbl[] = {
 {"spec_exp: LANG_TK_AST spec_exp", mln_lang_semantic_speclocate},
 {"spec_exp: LANG_TK_INC spec_exp", mln_lang_semantic_specinc},
 {"spec_exp: LANG_TK_DECR spec_exp", mln_lang_semantic_specdec},
-{"spec_exp: LANG_TK_NEW LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR", mln_lang_semantic_specnew},
-{"spec_exp: LANG_TK_FREE spec_exp", mln_lang_semantic_specfree},
+{"spec_exp: LANG_TK_DOLL LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR", mln_lang_semantic_specnew},
+{"spec_exp: LANG_TK_NUMS spec_exp", mln_lang_semantic_specfree},
 {"spec_exp: LANG_TK_LPAR assign_exp LANG_TK_RPAR", mln_lang_semantic_specparenth},
 {"spec_exp: factor", mln_lang_semantic_specfactor},
 {"spec_exp: LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR", mln_lang_semantic_specfunc},
@@ -864,7 +858,7 @@ mln_lang_stm_new(mln_alloc_t *pool, \
             ls->data.func = (mln_lang_funcdef_t *)data;
             break;
         case M_STM_CLASS:
-            ls->data.classdef = (mln_lang_class_t *)data;
+            ls->data.setdef = (mln_lang_set_t *)data;
             break;
         case M_STM_LABEL:
             ls->data.pos = (mln_string_t *)data;
@@ -901,7 +895,7 @@ static void mln_lang_stm_free(void *data)
                 if (stm->data.func != NULL) mln_lang_funcdef_free(stm->data.func);
                 break;
             case M_STM_CLASS:
-                if (stm->data.classdef != NULL) mln_lang_class_free(stm->data.classdef);
+                if (stm->data.setdef != NULL) mln_lang_set_free(stm->data.setdef);
                 break;
             case M_STM_LABEL:
                 if (stm->data.pos != NULL) mln_string_pool_free(stm->data.pos);
@@ -954,15 +948,15 @@ static void mln_lang_funcdef_free(void *data)
 }
 
 
-static inline mln_lang_class_t *
-mln_lang_class_new(mln_alloc_t *pool, \
+static inline mln_lang_set_t *
+mln_lang_set_new(mln_alloc_t *pool, \
                    mln_string_t *name, \
                    mln_string_t *parent, \
-                   mln_lang_classstm_t *stm, \
+                   mln_lang_setstm_t *stm, \
                    mln_u64_t line)
 {
-    mln_lang_class_t *lc;
-    if ((lc = (mln_lang_class_t *)mln_alloc_m(pool, sizeof(mln_lang_class_t))) == NULL) {
+    mln_lang_set_t *lc;
+    if ((lc = (mln_lang_set_t *)mln_alloc_m(pool, sizeof(mln_lang_set_t))) == NULL) {
         return NULL;
     }
     lc->line = line;
@@ -972,26 +966,26 @@ mln_lang_class_new(mln_alloc_t *pool, \
     return lc;
 }
 
-static void mln_lang_class_free(void *data)
+static void mln_lang_set_free(void *data)
 {
     if (data == NULL) return;
-    mln_lang_class_t *lc = (mln_lang_class_t *)data;
+    mln_lang_set_t *lc = (mln_lang_set_t *)data;
     if (lc->name != NULL) mln_string_pool_free(lc->name);
     if (lc->parent != NULL) mln_string_pool_free(lc->parent);
-    if (lc->stm != NULL) mln_lang_classstm_free(lc->stm);
+    if (lc->stm != NULL) mln_lang_setstm_free(lc->stm);
     mln_alloc_free(lc);
 }
 
 
-static inline mln_lang_classstm_t *
-mln_lang_classstm_new(mln_alloc_t *pool, \
+static inline mln_lang_setstm_t *
+mln_lang_setstm_new(mln_alloc_t *pool, \
                       void *data, \
-                      mln_lang_classstm_type_t type, \
-                      mln_lang_classstm_t *next, \
+                      mln_lang_setstm_type_t type, \
+                      mln_lang_setstm_t *next, \
                       mln_u64_t line)
 {
-    mln_lang_classstm_t *lc;
-    if ((lc = (mln_lang_classstm_t *)mln_alloc_m(pool, sizeof(mln_lang_classstm_t))) == NULL) {
+    mln_lang_setstm_t *lc;
+    if ((lc = (mln_lang_setstm_t *)mln_alloc_m(pool, sizeof(mln_lang_setstm_t))) == NULL) {
         return NULL;
     }
     lc->line = line;
@@ -1008,9 +1002,9 @@ mln_lang_classstm_new(mln_alloc_t *pool, \
     return lc;
 }
 
-static void mln_lang_classstm_free(void *data)
+static void mln_lang_setstm_free(void *data)
 {
-    mln_lang_classstm_t *lc, *next = (mln_lang_classstm_t *)data;
+    mln_lang_setstm_t *lc, *next = (mln_lang_setstm_t *)data;
     while (next != NULL) {
         lc = next;
         switch (lc->type) {
@@ -2056,25 +2050,25 @@ static int mln_lang_semantic_stmfunc(mln_factor_t *left, mln_factor_t **right, v
     return 0;
 }
 
-static int mln_lang_semantic_stmclass(mln_factor_t *left, mln_factor_t **right, void *data)
+static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_stm_t *stm;
-    mln_lang_class_t *clas;
+    mln_lang_set_t *clas;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
     mln_string_t *name = mln_string_pool_dup(pool, ls->text);
     if (name == NULL) return -1;
-    if ((clas = mln_lang_class_new(pool, \
+    if ((clas = mln_lang_set_new(pool, \
                                    name, \
                                    (mln_string_t *)(right[2]->data), \
-                                   (mln_lang_classstm_t *)(right[4]->data), \
+                                   (mln_lang_setstm_t *)(right[4]->data), \
                                    left->line)) == NULL)
     {
         mln_string_pool_free(name);
         return -1;
     }
     if ((stm =  mln_lang_stm_new(pool, clas, M_STM_CLASS, (mln_lang_stm_t *)(right[6]->data), left->line)) == NULL) {
-        mln_lang_class_free(clas);
+        mln_lang_set_free(clas);
         return -1;
     }
     right[2]->data = NULL;
@@ -2096,38 +2090,38 @@ static int mln_lang_semantic_extend(mln_factor_t *left, mln_factor_t **right, vo
     return 0;
 }
 
-static int mln_lang_semantic_classstmVar(mln_factor_t *left, mln_factor_t **right, void *data)
+static int mln_lang_semantic_setstmVar(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
     mln_string_t *var = mln_string_pool_dup(pool, ls->text);
     if (var == NULL) return -1;
-    mln_lang_classstm_t *lc = mln_lang_classstm_new(pool, \
+    mln_lang_setstm_t *lc = mln_lang_setstm_new(pool, \
                                                     var, \
                                                     M_CLASSSTM_VAR, \
-                                                    (mln_lang_classstm_t *)(right[2]->data), \
+                                                    (mln_lang_setstm_t *)(right[2]->data), \
                                                     left->line);
     if (lc == NULL) {
         mln_string_pool_free(var);
         return -1;
     }
     left->data = lc;
-    left->nonterm_free_handler = mln_lang_classstm_free;
+    left->nonterm_free_handler = mln_lang_setstm_free;
     right[2]->data = NULL;
     return 0;
 }
 
-static int mln_lang_semantic_classstmFunc(mln_factor_t *left, mln_factor_t **right, void *data)
+static int mln_lang_semantic_setstmFunc(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
-    mln_lang_classstm_t *lc = mln_lang_classstm_new(pool, \
+    mln_lang_setstm_t *lc = mln_lang_setstm_new(pool, \
                                                     right[0]->data, \
                                                     M_CLASSSTM_FUNC, \
-                                                    (mln_lang_classstm_t *)(right[1]->data), \
+                                                    (mln_lang_setstm_t *)(right[1]->data), \
                                                     left->line);
     if (lc == NULL) return -1;
     left->data = lc;
-    left->nonterm_free_handler = mln_lang_classstm_free;
+    left->nonterm_free_handler = mln_lang_setstm_free;
     right[0]->data = NULL;
     right[1]->data = NULL;
     return 0;
