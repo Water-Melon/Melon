@@ -48,7 +48,7 @@ typedef struct mln_lang_funccall_s         mln_lang_funccall_t;
 typedef enum {
     M_STM_BLOCK = 0,
     M_STM_FUNC,
-    M_STM_CLASS,
+    M_STM_SET,
     M_STM_LABEL,
     M_STM_SWITCH,
     M_STM_WHILE,
@@ -87,8 +87,8 @@ struct mln_lang_set_s {
 };
 
 typedef enum {
-    M_CLASSSTM_VAR = 0,
-    M_CLASSSTM_FUNC
+    M_SETSTM_VAR = 0,
+    M_SETSTM_FUNC
 } mln_lang_setstm_type_t;
 
 struct mln_lang_setstm_s {

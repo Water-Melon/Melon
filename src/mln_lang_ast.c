@@ -857,7 +857,7 @@ mln_lang_stm_new(mln_alloc_t *pool, \
         case M_STM_FUNC:
             ls->data.func = (mln_lang_funcdef_t *)data;
             break;
-        case M_STM_CLASS:
+        case M_STM_SET:
             ls->data.setdef = (mln_lang_set_t *)data;
             break;
         case M_STM_LABEL:
@@ -894,7 +894,7 @@ static void mln_lang_stm_free(void *data)
             case M_STM_FUNC:
                 if (stm->data.func != NULL) mln_lang_funcdef_free(stm->data.func);
                 break;
-            case M_STM_CLASS:
+            case M_STM_SET:
                 if (stm->data.setdef != NULL) mln_lang_set_free(stm->data.setdef);
                 break;
             case M_STM_LABEL:
@@ -991,7 +991,7 @@ mln_lang_setstm_new(mln_alloc_t *pool, \
     lc->line = line;
     lc->type = type;
     switch (type) {
-        case M_CLASSSTM_VAR:
+        case M_SETSTM_VAR:
             lc->data.var = (mln_string_t *)data;
             break;
         default:
@@ -1008,7 +1008,7 @@ static void mln_lang_setstm_free(void *data)
     while (next != NULL) {
         lc = next;
         switch (lc->type) {
-            case M_CLASSSTM_VAR:
+            case M_SETSTM_VAR:
                 if (lc->data.var != NULL) mln_string_pool_free(lc->data.var);
                 break;
             default:
@@ -2067,7 +2067,7 @@ static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, vo
         mln_string_pool_free(name);
         return -1;
     }
-    if ((stm =  mln_lang_stm_new(pool, clas, M_STM_CLASS, (mln_lang_stm_t *)(right[6]->data), left->line)) == NULL) {
+    if ((stm =  mln_lang_stm_new(pool, clas, M_STM_SET, (mln_lang_stm_t *)(right[6]->data), left->line)) == NULL) {
         mln_lang_set_free(clas);
         return -1;
     }
@@ -2098,7 +2098,7 @@ static int mln_lang_semantic_setstmVar(mln_factor_t *left, mln_factor_t **right,
     if (var == NULL) return -1;
     mln_lang_setstm_t *lc = mln_lang_setstm_new(pool, \
                                                     var, \
-                                                    M_CLASSSTM_VAR, \
+                                                    M_SETSTM_VAR, \
                                                     (mln_lang_setstm_t *)(right[2]->data), \
                                                     left->line);
     if (lc == NULL) {
@@ -2116,7 +2116,7 @@ static int mln_lang_semantic_setstmFunc(mln_factor_t *left, mln_factor_t **right
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_setstm_t *lc = mln_lang_setstm_new(pool, \
                                                     right[0]->data, \
-                                                    M_CLASSSTM_FUNC, \
+                                                    M_SETSTM_FUNC, \
                                                     (mln_lang_setstm_t *)(right[1]->data), \
                                                     left->line);
     if (lc == NULL) return -1;
