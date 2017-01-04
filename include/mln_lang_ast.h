@@ -82,7 +82,6 @@ struct mln_lang_funcdef_s {
 struct mln_lang_set_s {
     mln_u64_t                        line;
     mln_string_t                    *name;
-    mln_string_t                    *parent;
     mln_lang_setstm_t               *stm;
 };
 
@@ -396,6 +395,7 @@ struct mln_lang_spec_s {
         mln_lang_factor_t       *factor;
         mln_lang_spec_t         *spec;
         mln_lang_funccall_t     *func;
+        mln_string_t            *setName;
     } data;
 };
 

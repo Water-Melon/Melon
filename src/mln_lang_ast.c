@@ -102,10 +102,9 @@ mln_lang_funcdef_new(mln_alloc_t *pool, \
 static void mln_lang_funcdef_free(void *data);
 static inline mln_lang_set_t *
 mln_lang_set_new(mln_alloc_t *pool, \
-                   mln_string_t *name, \
-                   mln_string_t *parent, \
-                   mln_lang_setstm_t *stm, \
-                   mln_u64_t line);
+                 mln_string_t *name, \
+                 mln_lang_setstm_t *stm, \
+                 mln_u64_t line);
 static void mln_lang_set_free(void *data);
 static inline mln_lang_setstm_t *
 mln_lang_setstm_new(mln_alloc_t *pool, \
@@ -287,7 +286,6 @@ static int mln_lang_semantic_start(mln_factor_t *left, mln_factor_t **right, voi
 static int mln_lang_semantic_stmBlock(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_stmfunc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_extend(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_setstmVar(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_setstmFunc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_blockstmexp(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -399,7 +397,7 @@ static mln_production_t prod_tbl[] = {
 {"start: stm LANG_TK_EOF", mln_lang_semantic_start},
 {"stm: blockstm stm", mln_lang_semantic_stmBlock},
 {"stm: funcdef stm", mln_lang_semantic_stmfunc},
-{"stm: LANG_TK_SET LANG_TK_ID extend LANG_TK_LBRACE setstm LANG_TK_RBRACE stm", mln_lang_semantic_stmset},
+{"stm: LANG_TK_SET LANG_TK_ID LANG_TK_LBRACE setstm LANG_TK_RBRACE stm", mln_lang_semantic_stmset},
 {"stm: LANG_TK_ID LANG_TK_COLON stm", mln_lang_semantic_labelstm},
 {"stm: LANG_TK_WHILE LANG_TK_LPAR exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_whilestm},
 {"stm: LANG_TK_FOR LANG_TK_LPAR exp LANG_TK_SEMIC exp LANG_TK_SEMIC exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_forstm},
@@ -414,8 +412,6 @@ static mln_production_t prod_tbl[] = {
 {"switchstm: ", NULL},
 {"switchprefix: LANG_TK_DEFAULT", NULL},
 {"switchprefix: LANG_TK_CASE factor", mln_lang_semantic_switchprefix},
-{"extend: LANG_TK_COLON LANG_TK_ID", mln_lang_semantic_extend},
-{"extend: ", NULL},
 {"blockstm: exp LANG_TK_SEMIC", mln_lang_semantic_blockstmexp},
 {"blockstm: LANG_TK_LBRACE stm LANG_TK_RBRACE", mln_lang_semantic_blockstmstm},
 {"blockstm: LANG_TK_CONTINUE LANG_TK_SEMIC", mln_lang_semantic_continue},
@@ -491,7 +487,7 @@ static mln_production_t prod_tbl[] = {
 {"spec_exp: LANG_TK_AST spec_exp", mln_lang_semantic_speclocate},
 {"spec_exp: LANG_TK_INC spec_exp", mln_lang_semantic_specinc},
 {"spec_exp: LANG_TK_DECR spec_exp", mln_lang_semantic_specdec},
-{"spec_exp: LANG_TK_DOLL LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR", mln_lang_semantic_specnew},
+{"spec_exp: LANG_TK_DOLL LANG_TK_ID", mln_lang_semantic_specnew},
 {"spec_exp: LANG_TK_NUMS spec_exp", mln_lang_semantic_specfree},
 {"spec_exp: LANG_TK_LPAR assign_exp LANG_TK_RPAR", mln_lang_semantic_specparenth},
 {"spec_exp: factor", mln_lang_semantic_specfactor},
@@ -950,10 +946,9 @@ static void mln_lang_funcdef_free(void *data)
 
 static inline mln_lang_set_t *
 mln_lang_set_new(mln_alloc_t *pool, \
-                   mln_string_t *name, \
-                   mln_string_t *parent, \
-                   mln_lang_setstm_t *stm, \
-                   mln_u64_t line)
+                 mln_string_t *name, \
+                 mln_lang_setstm_t *stm, \
+                 mln_u64_t line)
 {
     mln_lang_set_t *lc;
     if ((lc = (mln_lang_set_t *)mln_alloc_m(pool, sizeof(mln_lang_set_t))) == NULL) {
@@ -961,7 +956,6 @@ mln_lang_set_new(mln_alloc_t *pool, \
     }
     lc->line = line;
     lc->name = name;
-    lc->parent = parent;
     lc->stm = stm;
     return lc;
 }
@@ -971,7 +965,6 @@ static void mln_lang_set_free(void *data)
     if (data == NULL) return;
     mln_lang_set_t *lc = (mln_lang_set_t *)data;
     if (lc->name != NULL) mln_string_pool_free(lc->name);
-    if (lc->parent != NULL) mln_string_pool_free(lc->parent);
     if (lc->stm != NULL) mln_lang_setstm_free(lc->stm);
     mln_alloc_free(lc);
 }
@@ -1844,6 +1837,9 @@ mln_lang_spec_new(mln_alloc_t *pool, \
         case M_SPEC_FREE:
             ls->data.spec = (mln_lang_spec_t *)data;
             break;
+        case M_SPEC_NEW:
+            ls->data.setName = (mln_string_t *)data;
+            break;
         case M_SPEC_PARENTH:
             ls->data.assign = (mln_lang_assign_t *)data;
             break;
@@ -1851,7 +1847,6 @@ mln_lang_spec_new(mln_alloc_t *pool, \
             ls->data.factor = (mln_lang_factor_t *)data;
             break;
         case M_SPEC_FUNC:
-        case M_SPEC_NEW:
             ls->data.func = (mln_lang_funccall_t *)data;
             break;
         default:
@@ -1880,6 +1875,10 @@ static void mln_lang_spec_free(void *data)
             case M_SPEC_FREE:
                 right = ls->data.spec;
                 break;
+            case M_SPEC_NEW:
+                if (ls->data.setName != NULL) mln_string_pool_free(ls->data.setName);
+                right = NULL;
+                break;
             case M_SPEC_PARENTH:
                 if (ls->data.assign != NULL) mln_lang_assign_free(ls->data.assign);
                 right = NULL;
@@ -1889,7 +1888,6 @@ static void mln_lang_spec_free(void *data)
                 right = NULL;
                 break;
             case M_SPEC_FUNC:
-            case M_SPEC_NEW:
                 if (ls->data.func != NULL) mln_lang_funccall_free(ls->data.func);
                 right = NULL;
                 break;
@@ -2059,34 +2057,21 @@ static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, vo
     mln_string_t *name = mln_string_pool_dup(pool, ls->text);
     if (name == NULL) return -1;
     if ((clas = mln_lang_set_new(pool, \
-                                   name, \
-                                   (mln_string_t *)(right[2]->data), \
-                                   (mln_lang_setstm_t *)(right[4]->data), \
-                                   left->line)) == NULL)
+                                 name, \
+                                 (mln_lang_setstm_t *)(right[3]->data), \
+                                 left->line)) == NULL)
     {
         mln_string_pool_free(name);
         return -1;
     }
-    if ((stm =  mln_lang_stm_new(pool, clas, M_STM_SET, (mln_lang_stm_t *)(right[6]->data), left->line)) == NULL) {
+    if ((stm =  mln_lang_stm_new(pool, clas, M_STM_SET, (mln_lang_stm_t *)(right[5]->data), left->line)) == NULL) {
         mln_lang_set_free(clas);
         return -1;
     }
-    right[2]->data = NULL;
-    right[4]->data = NULL;
-    right[6]->data = NULL;
+    right[3]->data = NULL;
+    right[5]->data = NULL;
     left->data = stm;
     left->nonterm_free_handler = mln_lang_stm_free;
-    return 0;
-}
-
-static int mln_lang_semantic_extend(mln_factor_t *left, mln_factor_t **right, void *data)
-{
-    mln_alloc_t *pool = (mln_alloc_t *)data;
-    mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
-    mln_string_t *parent = mln_string_pool_dup(pool, ls->text);
-    if (parent == NULL) return -1;
-    left->data = parent;
-    left->nonterm_free_handler = (nonterm_free)mln_string_pool_free;
     return 0;
 }
 
@@ -3141,18 +3126,12 @@ static int mln_lang_semantic_specnew(mln_factor_t *left, mln_factor_t **right, v
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
     mln_string_t *name = mln_string_pool_dup(pool, ls->text);
     if (name == NULL) return -1;
-    mln_lang_funccall_t *func;
-    if ((func = mln_lang_funccall_new(pool, name, (mln_lang_exp_t *)(right[3]->data), left->line)) == NULL) {
+    if ((spec = mln_lang_spec_new(pool, M_SPEC_NEW, name, left->line)) == NULL) {
         mln_string_pool_free(name);
-        return -1;
-    }
-    if ((spec = mln_lang_spec_new(pool, M_SPEC_NEW, func, left->line)) == NULL) {
-        mln_lang_funccall_free(func);
         return -1;
     }
     left->data = spec;
     left->nonterm_free_handler = mln_lang_spec_free;
-    right[3]->data = NULL;
     return 0;
 }
 
