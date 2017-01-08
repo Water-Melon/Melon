@@ -372,12 +372,10 @@ struct mln_lang_property_s {
 };
 
 typedef enum mln_lang_spec_op_e {
-    M_SPEC_NONE = 0,
-    M_SPEC_NEGATIVE,
+    M_SPEC_NEGATIVE = 0,
     M_SPEC_REVERSE,
     M_SPEC_NOT,
     M_SPEC_REFER,
-    M_SPEC_LOCATE,
     M_SPEC_INC,
     M_SPEC_DEC,
     M_SPEC_NEW,
