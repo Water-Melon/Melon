@@ -278,8 +278,8 @@ mln_lang_factor_new(mln_alloc_t *pool, mln_lang_factor_type_t type, void *data, 
 static void mln_lang_factor_free(void *data);
 static inline mln_lang_elemlist_t *
 mln_lang_elemlist_new(mln_alloc_t *pool, \
-                      mln_lang_factor_t *key, \
-                      mln_lang_exp_t *val, \
+                      mln_lang_assign_t *key, \
+                      mln_lang_assign_t *val, \
                       mln_lang_elemlist_t *next, \
                       mln_u64_t line);
 static void mln_lang_elemlist_free(void *data);
@@ -503,11 +503,11 @@ static mln_production_t prod_tbl[] = {
 {"factor: LANG_TK_REAL", mln_lang_semantic_factorreal},
 {"factor: LANG_TK_STRING", mln_lang_semantic_factorstring},
 {"factor: LANG_TK_LSQUAR elemlist LANG_TK_RSQUAR", mln_lang_semantic_factorarray},
-{"elemlist: factor elemval elemnext", mln_lang_semantic_elemlist},
+{"elemlist: assign_exp elemval elemnext", mln_lang_semantic_elemlist},
 {"elemlist: ", NULL},
-{"elemval: LANG_TK_COLON exp", mln_lang_semantic_elemval},
+{"elemval: LANG_TK_COLON assign_exp", mln_lang_semantic_elemval},
 {"elemval: ", NULL},
-{"elemnext: LANG_TK_SEMIC elemlist", mln_lang_semantic_elemnext},
+{"elemnext: LANG_TK_COMMA elemlist", mln_lang_semantic_elemnext},
 {"elemnext: ", NULL}
 };
 
@@ -1974,8 +1974,8 @@ static void mln_lang_factor_free(void *data)
 
 static inline mln_lang_elemlist_t *
 mln_lang_elemlist_new(mln_alloc_t *pool, \
-                      mln_lang_factor_t *key, \
-                      mln_lang_exp_t *val, \
+                      mln_lang_assign_t *key, \
+                      mln_lang_assign_t *val, \
                       mln_lang_elemlist_t *next, \
                       mln_u64_t line)
 {
@@ -1995,8 +1995,8 @@ static void mln_lang_elemlist_free(void *data)
     mln_lang_elemlist_t *le, *next = (mln_lang_elemlist_t *)data;
     while (next != NULL) {
         le = next;
-        if (le->key != NULL) mln_lang_factor_free(le->key);
-        if (le->val != NULL) mln_lang_exp_free(le->val);
+        if (le->key != NULL) mln_lang_assign_free(le->key);
+        if (le->val != NULL) mln_lang_assign_free(le->val);
         next = le->next;
         mln_alloc_free(le);
     }
@@ -3298,9 +3298,16 @@ static int mln_lang_semantic_elemlist(mln_factor_t *left, mln_factor_t **right, 
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_elemlist_t *le;
+    mln_lang_assign_t *val = (mln_lang_assign_t *)(right[1]->data);
+    mln_lang_assign_t *key = NULL;
+    if (val == NULL) {
+        val = (mln_lang_assign_t *)(right[0]->data);
+    } else {
+        key = (mln_lang_assign_t *)(right[0]->data);
+    }
     if ((le = mln_lang_elemlist_new(pool, \
-                                    (mln_lang_factor_t *)(right[0]->data), \
-                                    (mln_lang_exp_t *)(right[1]->data), \
+                                    key, \
+                                    val, \
                                     (mln_lang_elemlist_t *)(right[2]->data), \
                                     left->line)) == NULL)
     {

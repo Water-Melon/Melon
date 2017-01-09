@@ -428,8 +428,8 @@ struct mln_lang_factor_s {
 
 struct mln_lang_elemlist_s {
     mln_u64_t                        line;
-    mln_lang_factor_t               *key;
-    mln_lang_exp_t                  *val;
+    mln_lang_assign_t               *key;
+    mln_lang_assign_t               *val;
     mln_lang_elemlist_t             *next;
 };
 
