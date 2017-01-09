@@ -52,8 +52,7 @@ typedef enum {
     M_STM_LABEL,
     M_STM_SWITCH,
     M_STM_WHILE,
-    M_STM_FOR,
-    M_STM_IF
+    M_STM_FOR
 } mln_lang_stm_type_t;
 
 struct mln_lang_stm_s {
@@ -66,7 +65,6 @@ struct mln_lang_stm_s {
         mln_lang_switch_t       *sw;
         mln_lang_while_t        *w;
         mln_lang_for_t          *f;
-        mln_lang_if_t           *i;
         mln_string_t            *pos;
     } data;
     struct mln_lang_stm_s           *next;
@@ -106,7 +104,8 @@ typedef enum {
     M_BLOCK_CONTINUE,
     M_BLOCK_BREAK,
     M_BLOCK_RETURN,
-    M_BLOCK_GOTO
+    M_BLOCK_GOTO,
+    M_BLOCK_IF
 } mln_lang_block_type_t;
 
 struct mln_lang_block_s {
@@ -116,6 +115,7 @@ struct mln_lang_block_s {
         mln_lang_exp_t          *exp;
         mln_lang_stm_t          *stm;
         mln_string_t            *pos;
+        mln_lang_if_t           *i;
     } data;
 };
 

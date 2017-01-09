@@ -23,6 +23,7 @@ MLN_DECLARE_PARSER_GENERATOR(static, \
                              LANG_TK_SWITCH, \
                              LANG_TK_CASE, \
                              LANG_TK_DEFAULT, \
+                             LANG_TK_FI, \
                              LANG_TK_STRING, \
                              LANG_TK_PLUSEQ, \
                              LANG_TK_SUBEQ, \
@@ -63,6 +64,7 @@ MLN_DEFINE_PARSER_GENERATOR(static, \
                             {LANG_TK_SWITCH, "LANG_TK_SWITCH"}, \
                             {LANG_TK_CASE, "LANG_TK_CASE"}, \
                             {LANG_TK_DEFAULT, "LANG_TK_DEFAULT"}, \
+                            {LANG_TK_FI, "LANG_TK_FI"}, \
                             {LANG_TK_STRING, "LANG_TK_STRING"}, \
                             {LANG_TK_PLUSEQ, "LANG_TK_PLUSEQ"}, \
                             {LANG_TK_SUBEQ, "LANG_TK_SUBEQ"}, \
@@ -389,7 +391,8 @@ mln_string("false"),
 mln_string("switch"),
 mln_string("case"),
 mln_string("default"),
-mln_string(NULL)
+mln_string("fi"),
+mln_string(NULL),
 };
 
 static mln_production_t prod_tbl[] = {
@@ -400,7 +403,6 @@ static mln_production_t prod_tbl[] = {
 {"stm: LANG_TK_ID LANG_TK_COLON stm", mln_lang_semantic_labelstm},
 {"stm: LANG_TK_WHILE LANG_TK_LPAR exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_whilestm},
 {"stm: LANG_TK_FOR LANG_TK_LPAR exp LANG_TK_SEMIC exp LANG_TK_SEMIC exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_forstm},
-{"stm: LANG_TK_IF LANG_TK_LPAR exp LANG_TK_RPAR blockstm else_exp stm", mln_lang_semantic_ifstm},
 {"stm: LANG_TK_SWITCH LANG_TK_LPAR exp LANG_TK_RPAR LANG_TK_LBRACE switchstm LANG_TK_RBRACE stm", mln_lang_semantic_switchstm},
 {"stm: ", NULL},
 {"setstm: LANG_TK_ID LANG_TK_SEMIC setstm", mln_lang_semantic_setstmVar},
@@ -417,8 +419,9 @@ static mln_production_t prod_tbl[] = {
 {"blockstm: LANG_TK_BREAK LANG_TK_SEMIC", mln_lang_semantic_break},
 {"blockstm: LANG_TK_RETURN exp LANG_TK_SEMIC", mln_lang_semantic_return},
 {"blockstm: LANG_TK_GOTO LANG_TK_ID LANG_TK_SEMIC", mln_lang_semantic_goto},
+{"blockstm: LANG_TK_IF LANG_TK_LPAR exp LANG_TK_RPAR blockstm else_exp", mln_lang_semantic_ifstm},
 {"else_exp: LANG_TK_ELSE blockstm", mln_lang_semantic_elsestm},
-{"else_exp: ", NULL},
+{"else_exp: LANG_TK_FI", NULL},
 {"exp: assign_exp explist", mln_lang_semantic_exp},
 {"exp: ", NULL},
 {"explist: LANG_TK_COMMA exp", mln_lang_semantic_explist},
@@ -863,11 +866,8 @@ mln_lang_stm_new(mln_alloc_t *pool, \
         case M_STM_WHILE:
             ls->data.w = (mln_lang_while_t *)data;
             break;
-        case M_STM_FOR:
-            ls->data.f = (mln_lang_for_t *)data;
-            break;
         default:
-            ls->data.i = (mln_lang_if_t *)data;
+            ls->data.f = (mln_lang_for_t *)data;
             break;
     }
     ls->next = next;
@@ -900,11 +900,8 @@ static void mln_lang_stm_free(void *data)
             case M_STM_WHILE:
                 if (stm->data.w != NULL) mln_lang_while_free(stm->data.w);
                 break;
-            case M_STM_FOR:
-                if (stm->data.f != NULL) mln_lang_for_free(stm->data.f);
-                break;
             default:
-                if (stm->data.i != NULL) mln_lang_if_free(stm->data.i);
+                if (stm->data.f != NULL) mln_lang_for_free(stm->data.f);
                 break;
         }
         next = stm->next;
@@ -1032,6 +1029,9 @@ mln_lang_block_new(mln_alloc_t *pool, void *data, mln_lang_block_type_t type, ml
         case M_BLOCK_GOTO:
             lb->data.pos = (mln_string_t *)data;
             break;
+        case M_BLOCK_IF:
+            lb->data.i = (mln_lang_if_t *)data;
+            break;
         default:
             lb->data.pos = NULL;
             break;
@@ -1054,6 +1054,9 @@ static void mln_lang_block_free(void *data)
             break;
         case M_BLOCK_GOTO:
             if (lb->data.pos != NULL) mln_string_pool_free(lb->data.pos);
+            break;
+        case M_BLOCK_IF:
+            if (lb->data.i != NULL) mln_lang_if_free(lb->data.i);
             break;
         default:
             break;
@@ -2197,17 +2200,16 @@ static int mln_lang_semantic_ifstm(mln_factor_t *left, mln_factor_t **right, voi
                                        (mln_lang_block_t *)(right[5]->data), \
                                        left->line);
     if (i == NULL) return -1;
-    mln_lang_stm_t *stm = mln_lang_stm_new(pool, i, M_STM_IF, (mln_lang_stm_t *)(right[6]->data), left->line);
-    if (stm == NULL) {
+    mln_lang_block_t *lb = mln_lang_block_new(pool, i, M_BLOCK_IF, left->line);
+    if (lb == NULL) {
         mln_lang_if_free(i);
         return -1;
     }
-    left->data = stm;
-    left->nonterm_free_handler = mln_lang_stm_free;
+    left->data = lb;
+    left->nonterm_free_handler = mln_lang_block_free;
     right[2]->data = NULL;
     right[4]->data = NULL;
     right[5]->data = NULL;
-    right[6]->data = NULL;
     return 0;
 }
 
