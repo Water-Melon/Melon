@@ -264,7 +264,10 @@ mln_lang_locate_tmp_new(mln_alloc_t *pool, \
                         mln_lang_funcsuffix_t *funcsuffix);
 static void mln_lang_locate_tmp_free(void *data);
 static inline mln_lang_funcsuffix_t *
-mln_lang_funcsuffix_new(mln_alloc_t *pool, mln_lang_exp_t *exp, mln_lang_funcsuffix_t *next);
+mln_lang_funcsuffix_new(mln_alloc_t *pool, \
+                        mln_lang_exp_t *exp, \
+                        mln_lang_funcsuffix_t *next, \
+                        mln_u64_t line);
 static void mln_lang_funcsuffix_free(void *data);
 static inline mln_lang_spec_t *
 mln_lang_spec_new(mln_alloc_t *pool, \
@@ -1790,12 +1793,16 @@ static void mln_lang_locate_tmp_free(void *data)
 }
 
 static inline mln_lang_funcsuffix_t *
-mln_lang_funcsuffix_new(mln_alloc_t *pool, mln_lang_exp_t *exp, mln_lang_funcsuffix_t *next)
+mln_lang_funcsuffix_new(mln_alloc_t *pool, \
+                        mln_lang_exp_t *exp, \
+                        mln_lang_funcsuffix_t *next, \
+                        mln_u64_t line)
 {
     mln_lang_funcsuffix_t *lf;
     if ((lf = (mln_lang_funcsuffix_t *)mln_alloc_m(pool, sizeof(mln_lang_funcsuffix_t))) == NULL) {
         return NULL;
     }
+    lf->line = line;
     lf->exp = exp;
     lf->next = next;
     return lf;
@@ -3000,7 +3007,8 @@ static int mln_lang_semantic_funcsuffix(mln_factor_t *left, mln_factor_t **right
     mln_lang_funcsuffix_t *lf;
     if ((lf = mln_lang_funcsuffix_new(pool, \
                                       (mln_lang_exp_t *)(right[1]->data), \
-                                      (mln_lang_funcsuffix_t *)(right[3]->data))) == NULL)
+                                      (mln_lang_funcsuffix_t *)(right[3]->data), \
+                                      left->line)) == NULL)
     {
         return -1;
     }
