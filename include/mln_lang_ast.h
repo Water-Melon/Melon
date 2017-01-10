@@ -347,6 +347,7 @@ struct mln_lang_locate_s {
         mln_lang_assign_t       *assign;
         mln_lang_property_t     *property;
     } right;
+    mln_lang_exp_t                  *nextCall;
 };
 
 struct mln_lang_locate_tmp_s {
@@ -355,6 +356,7 @@ struct mln_lang_locate_tmp_s {
         mln_lang_assign_t       *assign;
         mln_lang_property_t     *property;
     } locate;
+    mln_lang_exp_t                  *nextCall;
 };
 
 typedef enum mln_lang_property_type_e {
@@ -389,12 +391,13 @@ struct mln_lang_spec_s {
     mln_u64_t                        line;
     mln_lang_spec_op_t               op;
     union {
-        mln_lang_assign_t       *assign;
+        mln_lang_exp_t          *exp;
         mln_lang_factor_t       *factor;
         mln_lang_spec_t         *spec;
         mln_lang_funccall_t     *func;
         mln_string_t            *setName;
     } data;
+    mln_lang_exp_t                  *nextCall;
 };
 
 struct mln_lang_funccall_s {

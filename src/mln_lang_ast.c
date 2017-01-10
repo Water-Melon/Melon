@@ -254,12 +254,14 @@ mln_lang_locate_new(mln_alloc_t *pool, \
                     mln_lang_spec_t *left, \
                     mln_lang_locate_op_t op, \
                     void *right, \
+                    mln_lang_exp_t *nextCall, \
                     mln_u64_t line);
 static void mln_lang_locate_free(void *data);
 static inline mln_lang_locate_tmp_t *
 mln_lang_locate_tmp_new(mln_alloc_t *pool, \
                         mln_lang_locate_op_t op, \
-                        void *data);
+                        void *data, \
+                        mln_lang_exp_t *nextCall);
 static void mln_lang_locate_tmp_free(void *data);
 static inline mln_lang_property_t *
 mln_lang_property_new(mln_alloc_t *pool, mln_lang_property_type_t type, void *data, mln_u64_t line);
@@ -268,6 +270,7 @@ static inline mln_lang_spec_t *
 mln_lang_spec_new(mln_alloc_t *pool, \
                   mln_lang_spec_op_t op, \
                   void *data, \
+                  mln_lang_exp_t *nextCall, \
                   mln_u64_t line);
 static void mln_lang_spec_free(void *data);
 static inline mln_lang_funccall_t *
@@ -477,10 +480,10 @@ static mln_production_t prod_tbl[] = {
 {"__suffix_exp: LANG_TK_DECR", mln_lang_semantic_suffixdec},
 {"__suffix_exp: ", NULL},
 {"locate_exp: spec_exp __locate_exp", mln_lang_semantic_locateexp},
-{"__locate_exp: LANG_TK_LSQUAR assign_exp LANG_TK_RSQUAR", mln_lang_semantic_locateindex},
+{"__locate_exp: LANG_TK_LSQUAR assign_exp LANG_TK_RSQUAR funcsuffix", mln_lang_semantic_locateindex},
 {"__locate_exp: LANG_TK_PERIOD LANG_TK_ID funcsuffix", mln_lang_semantic_locateproperty},
 {"__locate_exp: ", NULL},
-{"funcsuffix: LANG_TK_LPAR exp LANG_TK_RPAR", mln_lang_semantic_propertyfunc},
+{"funcsuffix: LANG_TK_LPAR exp LANG_TK_RPAR funcsuffix", mln_lang_semantic_propertyfunc},
 {"funcsuffix: ", NULL},
 {"spec_exp: LANG_TK_SUB spec_exp", mln_lang_semantic_specnegative},
 {"spec_exp: LANG_TK_DASH spec_exp", mln_lang_semantic_specreverse},
@@ -490,9 +493,9 @@ static mln_production_t prod_tbl[] = {
 {"spec_exp: LANG_TK_DECR spec_exp", mln_lang_semantic_specdec},
 {"spec_exp: LANG_TK_DOLL LANG_TK_ID", mln_lang_semantic_specnew},
 {"spec_exp: LANG_TK_NUMS spec_exp", mln_lang_semantic_specfree},
-{"spec_exp: LANG_TK_LPAR assign_exp LANG_TK_RPAR", mln_lang_semantic_specparenth},
+{"spec_exp: LANG_TK_LPAR exp LANG_TK_RPAR funcsuffix", mln_lang_semantic_specparenth},
 {"spec_exp: factor", mln_lang_semantic_specfactor},
-{"spec_exp: LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR", mln_lang_semantic_specfunc},
+{"spec_exp: LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR funcsuffix", mln_lang_semantic_specfunc},
 {"factor: LANG_TK_TRUE", mln_lang_semantic_factortrue},
 {"factor: LANG_TK_FALSE", mln_lang_semantic_factorfalse},
 {"factor: LANG_TK_NIL", mln_lang_semantic_factornil},
@@ -1695,6 +1698,7 @@ mln_lang_locate_new(mln_alloc_t *pool, \
                     mln_lang_spec_t *left, \
                     mln_lang_locate_op_t op, \
                     void *right, \
+                    mln_lang_exp_t *nextCall, \
                     mln_u64_t line)
 {
     mln_lang_locate_t *ll;
@@ -1715,6 +1719,7 @@ mln_lang_locate_new(mln_alloc_t *pool, \
             ll->right.assign = NULL;
             break;
     }
+    ll->nextCall = nextCall;
     return ll;
 }
 
@@ -1734,6 +1739,7 @@ static void mln_lang_locate_free(void *data)
         default:
             break;
     }
+    if (ll->nextCall != NULL) mln_lang_exp_free(ll->nextCall);
     mln_alloc_free(ll);
 }
 
@@ -1741,7 +1747,8 @@ static void mln_lang_locate_free(void *data)
 static inline mln_lang_locate_tmp_t *
 mln_lang_locate_tmp_new(mln_alloc_t *pool, \
                         mln_lang_locate_op_t op, \
-                        void *data)
+                        void *data, \
+                        mln_lang_exp_t *nextCall)
 {
     mln_lang_locate_tmp_t *llt;
     if ((llt = (mln_lang_locate_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_locate_tmp_t))) == NULL) {
@@ -1759,6 +1766,7 @@ mln_lang_locate_tmp_new(mln_alloc_t *pool, \
             llt->locate.assign = NULL;
             break;
     }
+    llt->nextCall = nextCall;
     return llt;
 }
 
@@ -1777,6 +1785,7 @@ static void mln_lang_locate_tmp_free(void *data)
         default:
             break;
     }
+    if (llt->nextCall != NULL) mln_lang_exp_free(llt->nextCall);
     mln_alloc_free(llt);
 }
 
@@ -1819,6 +1828,7 @@ static inline mln_lang_spec_t *
 mln_lang_spec_new(mln_alloc_t *pool, \
                   mln_lang_spec_op_t op, \
                   void *data, \
+                  mln_lang_exp_t *nextCall, \
                   mln_u64_t line)
 {
     mln_lang_spec_t *ls;
@@ -1841,7 +1851,7 @@ mln_lang_spec_new(mln_alloc_t *pool, \
             ls->data.setName = (mln_string_t *)data;
             break;
         case M_SPEC_PARENTH:
-            ls->data.assign = (mln_lang_assign_t *)data;
+            ls->data.exp = (mln_lang_exp_t *)data;
             break;
         case M_SPEC_FACTOR:
             ls->data.factor = (mln_lang_factor_t *)data;
@@ -1850,6 +1860,7 @@ mln_lang_spec_new(mln_alloc_t *pool, \
             ls->data.func = (mln_lang_funccall_t *)data;
             break;
     }
+    ls->nextCall = nextCall;
     return ls;
 }
 
@@ -1876,7 +1887,7 @@ static void mln_lang_spec_free(void *data)
                 right = NULL;
                 break;
             case M_SPEC_PARENTH:
-                if (ls->data.assign != NULL) mln_lang_assign_free(ls->data.assign);
+                if (ls->data.exp != NULL) mln_lang_exp_free(ls->data.exp);
                 right = NULL;
                 break;
             case M_SPEC_FACTOR:
@@ -1888,6 +1899,7 @@ static void mln_lang_spec_free(void *data)
                 right = NULL;
                 break;
         }
+        if (ls->nextCall != NULL) mln_lang_exp_free(ls->nextCall);
         mln_alloc_free(ls);
     }
 }
@@ -2922,25 +2934,29 @@ static int mln_lang_semantic_locateexp(mln_factor_t *left, mln_factor_t **right,
                                           (mln_lang_spec_t *)(right[0]->data), \
                                           op, \
                                           tmp->locate.assign, \
+                                          tmp->nextCall, \
                                           left->line)) == NULL)
             {
                 return -1;
             }
             tmp->locate.assign = NULL;
+            tmp->nextCall = NULL;
             break;
         case M_LOCATE_PROPERTY:
             if ((ll = mln_lang_locate_new(pool, \
                                           (mln_lang_spec_t *)(right[0]->data), \
                                           op, \
                                           tmp->locate.property, \
+                                          tmp->nextCall, \
                                           left->line)) == NULL)
             {
                 return -1;
             }
             tmp->locate.property = NULL;
+            tmp->nextCall = NULL;
             break;
         default:
-            if ((ll = mln_lang_locate_new(pool, (mln_lang_spec_t *)(right[0]->data), op, NULL, left->line)) == NULL)
+            if ((ll = mln_lang_locate_new(pool, (mln_lang_spec_t *)(right[0]->data), op, NULL, NULL, left->line)) == NULL)
             {
                 return -1;
             }
@@ -2956,12 +2972,17 @@ static int mln_lang_semantic_locateindex(mln_factor_t *left, mln_factor_t **righ
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_locate_tmp_t *tmp;
-    if ((tmp = mln_lang_locate_tmp_new(pool, M_LOCATE_INDEX, right[1]->data)) == NULL) {
+    if ((tmp = mln_lang_locate_tmp_new(pool, \
+                                       M_LOCATE_INDEX, \
+                                       right[1]->data, \
+                                       (mln_lang_exp_t *)(right[3]->data))) == NULL)
+    {
         return -1;
     }
     left->data = tmp;
     left->nonterm_free_handler = mln_lang_locate_tmp_free;
     right[1]->data = NULL;
+    right[3]->data = NULL;
     return 0;
 }
 
@@ -2990,12 +3011,17 @@ static int mln_lang_semantic_locateproperty(mln_factor_t *left, mln_factor_t **r
         }
         right[2]->data = NULL;
     }
-    if ((tmp = mln_lang_locate_tmp_new(pool, M_LOCATE_PROPERTY, property)) == NULL) {
+    if ((tmp = mln_lang_locate_tmp_new(pool, \
+                                       M_LOCATE_PROPERTY, \
+                                       property, \
+                                       (mln_lang_exp_t *)(right[2]->data))) == NULL)
+    {
         mln_lang_property_free(property);
         return -1;
     }
     left->data = tmp;
     left->nonterm_free_handler = mln_lang_locate_tmp_free;
+    right[2]->data = NULL;
     return 0;
 }
 
@@ -3011,7 +3037,7 @@ static int mln_lang_semantic_specnegative(mln_factor_t *left, mln_factor_t **rig
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_NEGATIVE, right[1]->data, left->line)) == NULL) {
+    if ((ls = mln_lang_spec_new(pool, M_SPEC_NEGATIVE, right[1]->data, NULL, left->line)) == NULL) {
         return -1;
     }
     left->data = ls;
@@ -3024,7 +3050,7 @@ static int mln_lang_semantic_specreverse(mln_factor_t *left, mln_factor_t **righ
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_REVERSE, right[1]->data, left->line)) == NULL) {
+    if ((ls = mln_lang_spec_new(pool, M_SPEC_REVERSE, right[1]->data, NULL, left->line)) == NULL) {
         return -1;
     }
     left->data = ls;
@@ -3037,7 +3063,7 @@ static int mln_lang_semantic_specnot(mln_factor_t *left, mln_factor_t **right, v
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_NOT, right[1]->data, left->line)) == NULL) {
+    if ((ls = mln_lang_spec_new(pool, M_SPEC_NOT, right[1]->data, NULL, left->line)) == NULL) {
         return -1;
     }
     left->data = ls;
@@ -3050,7 +3076,7 @@ static int mln_lang_semantic_specrefer(mln_factor_t *left, mln_factor_t **right,
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_REFER, right[1]->data, left->line)) == NULL) {
+    if ((ls = mln_lang_spec_new(pool, M_SPEC_REFER, right[1]->data, NULL, left->line)) == NULL) {
         return -1;
     }
     left->data = ls;
@@ -3063,7 +3089,7 @@ static int mln_lang_semantic_specinc(mln_factor_t *left, mln_factor_t **right, v
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_INC, right[1]->data, left->line)) == NULL) {
+    if ((ls = mln_lang_spec_new(pool, M_SPEC_INC, right[1]->data, NULL, left->line)) == NULL) {
         return -1;
     }
     left->data = ls;
@@ -3076,7 +3102,7 @@ static int mln_lang_semantic_specdec(mln_factor_t *left, mln_factor_t **right, v
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_DEC, right[1]->data, left->line)) == NULL) {
+    if ((ls = mln_lang_spec_new(pool, M_SPEC_DEC, right[1]->data, NULL, left->line)) == NULL) {
         return -1;
     }
     left->data = ls;
@@ -3089,7 +3115,7 @@ static int mln_lang_semantic_specfree(mln_factor_t *left, mln_factor_t **right, 
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_FREE, right[1]->data, left->line)) == NULL) {
+    if ((ls = mln_lang_spec_new(pool, M_SPEC_FREE, right[1]->data, NULL, left->line)) == NULL) {
         return -1;
     }
     left->data = ls;
@@ -3105,7 +3131,7 @@ static int mln_lang_semantic_specnew(mln_factor_t *left, mln_factor_t **right, v
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
     mln_string_t *name = mln_string_pool_dup(pool, ls->text);
     if (name == NULL) return -1;
-    if ((spec = mln_lang_spec_new(pool, M_SPEC_NEW, name, left->line)) == NULL) {
+    if ((spec = mln_lang_spec_new(pool, M_SPEC_NEW, name, NULL, left->line)) == NULL) {
         mln_string_pool_free(name);
         return -1;
     }
@@ -3118,12 +3144,18 @@ static int mln_lang_semantic_specparenth(mln_factor_t *left, mln_factor_t **righ
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_PARENTH, right[1]->data, left->line)) == NULL) {
+    if ((ls = mln_lang_spec_new(pool, \
+                                M_SPEC_PARENTH, \
+                                right[1]->data, \
+                                (mln_lang_exp_t *)(right[3]->data), \
+                                left->line)) == NULL)
+    {
         return -1;
     }
     left->data = ls;
     left->nonterm_free_handler = mln_lang_spec_free;
     right[1]->data = NULL;
+    right[3]->data = NULL;
     return 0;
 }
 
@@ -3131,7 +3163,7 @@ static int mln_lang_semantic_specfactor(mln_factor_t *left, mln_factor_t **right
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_FACTOR, right[0]->data, left->line)) == NULL) {
+    if ((ls = mln_lang_spec_new(pool, M_SPEC_FACTOR, right[0]->data, NULL, left->line)) == NULL) {
         return -1;
     }
     left->data = ls;
@@ -3154,13 +3186,19 @@ static int mln_lang_semantic_specfunc(mln_factor_t *left, mln_factor_t **right, 
         mln_string_pool_free(name);
         return -1;
     }
-    if ((spec = mln_lang_spec_new(pool, M_SPEC_FUNC, func, left->line)) == NULL) {
+    if ((spec = mln_lang_spec_new(pool, \
+                                  M_SPEC_FUNC, \
+                                  func, \
+                                  (mln_lang_exp_t *)(right[4]->data), \
+                                   left->line)) == NULL)
+    {
         mln_lang_funccall_free(func);
         return -1;
     }
     left->data = spec;
     left->nonterm_free_handler = mln_lang_spec_free;
     right[2]->data = NULL;
+    right[4]->data = NULL;
     return 0;
 }
 
