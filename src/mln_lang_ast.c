@@ -483,7 +483,7 @@ static mln_production_t prod_tbl[] = {
 {"__suffix_exp: LANG_TK_DECR", mln_lang_semantic_suffixdec},
 {"__suffix_exp: ", NULL},
 {"locate_exp: spec_exp __locate_exp", mln_lang_semantic_locateexp},
-{"__locate_exp: LANG_TK_LSQUAR assign_exp LANG_TK_RSQUAR funcsuffix", mln_lang_semantic_locateindex},
+{"__locate_exp: LANG_TK_LSQUAR exp LANG_TK_RSQUAR funcsuffix", mln_lang_semantic_locateindex},
 {"__locate_exp: LANG_TK_PERIOD LANG_TK_ID funcsuffix", mln_lang_semantic_locateproperty},
 {"__locate_exp: ", NULL},
 {"funcsuffix: LANG_TK_LPAR exp LANG_TK_RPAR funcsuffix", mln_lang_semantic_funcsuffix},
@@ -1713,13 +1713,13 @@ mln_lang_locate_new(mln_alloc_t *pool, \
     ll->op = op;
     switch (op) {
         case M_LOCATE_INDEX:
-            ll->right.assign = (mln_lang_assign_t *)right;
+            ll->right.exp = (mln_lang_exp_t *)right;
             break;
         case M_LOCATE_PROPERTY:
             ll->right.id = (mln_string_t *)right;
             break;
         default:
-            ll->right.assign = NULL;
+            ll->right.exp = NULL;
             break;
     }
     ll->funcsuffix = funcsuffix;
@@ -1734,7 +1734,7 @@ static void mln_lang_locate_free(void *data)
     if (ll->left != NULL) mln_lang_spec_free(ll->left);
     switch (op) {
         case M_LOCATE_INDEX:
-            if (ll->right.assign != NULL) mln_lang_assign_free(ll->right.assign);
+            if (ll->right.exp != NULL) mln_lang_exp_free(ll->right.exp);
             break;
         case M_LOCATE_PROPERTY:
             if (ll->right.id != NULL) mln_string_pool_free(ll->right.id);
@@ -1760,13 +1760,13 @@ mln_lang_locate_tmp_new(mln_alloc_t *pool, \
     llt->op = op;
     switch (op) {
         case M_LOCATE_INDEX:
-            llt->locate.assign = (mln_lang_assign_t *)data;
+            llt->locate.exp = (mln_lang_exp_t *)data;
             break;
         case M_LOCATE_PROPERTY:
             llt->locate.id = (mln_string_t *)data;
             break;
         default:
-            llt->locate.assign = NULL;
+            llt->locate.exp = NULL;
             break;
     }
     llt->funcsuffix = funcsuffix;
@@ -1780,7 +1780,7 @@ static void mln_lang_locate_tmp_free(void *data)
     mln_lang_locate_op_t op = llt->op;
     switch (op) {
         case M_LOCATE_INDEX:
-            if (llt->locate.assign != NULL) mln_lang_assign_free(llt->locate.assign);
+            if (llt->locate.exp != NULL) mln_lang_assign_free(llt->locate.exp);
             break;
         case M_LOCATE_PROPERTY:
             if (llt->locate.id != NULL) mln_string_pool_free(llt->locate.id);
@@ -2927,13 +2927,13 @@ static int mln_lang_semantic_locateexp(mln_factor_t *left, mln_factor_t **right,
             if ((ll = mln_lang_locate_new(pool, \
                                           (mln_lang_spec_t *)(right[0]->data), \
                                           op, \
-                                          tmp->locate.assign, \
+                                          tmp->locate.exp, \
                                           tmp->funcsuffix, \
                                           left->line)) == NULL)
             {
                 return -1;
             }
-            tmp->locate.assign = NULL;
+            tmp->locate.exp = NULL;
             tmp->funcsuffix = NULL;
             break;
         case M_LOCATE_PROPERTY:

@@ -344,7 +344,7 @@ struct mln_lang_locate_s {
     mln_lang_spec_t                 *left;
     mln_lang_locate_op_t             op;
     union {
-        mln_lang_assign_t       *assign;
+        mln_lang_exp_t          *exp;
         mln_string_t            *id;
     } right;
     mln_lang_funcsuffix_t           *funcsuffix;
@@ -353,7 +353,7 @@ struct mln_lang_locate_s {
 struct mln_lang_locate_tmp_s {
     mln_lang_locate_op_t             op;
     union {
-        mln_lang_assign_t       *assign;
+        mln_lang_exp_t          *exp;
         mln_string_t            *id;
     } locate;
     mln_lang_funcsuffix_t           *funcsuffix;
