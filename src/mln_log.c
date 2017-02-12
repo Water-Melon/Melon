@@ -474,6 +474,32 @@ _mln_sys_log_process(mln_log_t *log, \
                 mln_log_write(log, (void *)line_str, n);
                 break;
             }
+            case 'i':
+            {
+                memset(line_str, 0, sizeof(line_str));
+#ifdef i386
+                long long num = va_arg(arg, long long);
+                int n = snprintf(line_str, sizeof(line_str)-1, "%lld", num);
+#else
+                long num = va_arg(arg, long);
+                int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
+#endif
+                mln_log_write(log, (void *)line_str, n);
+                break;
+            }
+            case 'I':
+            {
+                memset(line_str, 0, sizeof(line_str));
+#ifdef i386
+                unsigned long long num = va_arg(arg, unsigned long long);
+                int n = snprintf(line_str, sizeof(line_str)-1, "%llu", num);
+#else
+                unsigned long num = va_arg(arg, unsigned long);
+                int n = snprintf(line_str, sizeof(line_str)-1, "%lu", num);
+#endif
+                mln_log_write(log, (void *)line_str, n);
+                break;
+            }
             default:
                 mln_log_write(log, (void *)log_err_fmt, sizeof(log_err_fmt)-1);
                 mln_log_write(log, (void *)"\n", 1);

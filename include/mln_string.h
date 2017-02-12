@@ -57,6 +57,8 @@ mln_string_pool_free(mln_string_t *str);
  * tool functions
  */
 extern int
+mln_string_strcmpSeq(mln_string_t *s1, mln_string_t *s2) __NONNULL2(1,2);
+extern int
 mln_string_strcmp(mln_string_t *s1, mln_string_t *s2) __NONNULL2(1,2);
 extern int
 mln_string_constStrcmp(mln_string_t *s1, char *s2) __NONNULL1(1);
@@ -110,5 +112,7 @@ extern mln_string_t *
 mln_string_slice(mln_string_t *s, const char *sep_array/*ended by \0*/) __NONNULL2(1,2);
 extern void
 mln_string_slice_free(mln_string_t *array) __NONNULL1(1);
+extern mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2) __NONNULL2(1,2);
+extern mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2) __NONNULL2(1,2);
 #endif
 

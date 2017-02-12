@@ -825,6 +825,7 @@ mln_event_set_fd_append(mln_event_t *event, \
         mask |= 0x4;
     }
     struct epoll_event ev;
+    memset(&ev, 0, sizeof(ev));
     switch (mask) {
         case 1:
             CASE_MACRO(EPOLLIN);
@@ -973,8 +974,7 @@ mln_event_set_fd_clr(mln_event_t *event, int fd)
                            event->ev_fd_tree->root, \
                            &tmp);
     if (mln_rbtree_null(rn, event->ev_fd_tree)) {
-        mln_log(error, "rbtree crash!\n");
-        abort();
+        return;
     }
     ed = (mln_event_desc_t *)(rn->data);
     if (ed->data.fd.timeout_node != NULL) {
@@ -1001,6 +1001,7 @@ mln_event_set_fd_clr(mln_event_t *event, int fd)
                          ed);
 #if defined(MLN_EPOLL)
     struct epoll_event ev;
+    memset(&ev, 0, sizeof(ev));
     ev.data.ptr = ed;
     epoll_ctl(event->epollfd, EPOLL_CTL_DEL, fd, &ev);
 #elif defined(MLN_KQUEUE)
@@ -1154,6 +1155,7 @@ void mln_event_dispatch(mln_event_t *event)
                 {
                     other_oneshot = 1;
                 }
+                memset(&mod_ev, 0, sizeof(mod_ev));
                 if (other_oneshot) {
                     mod_ev.events = mod_event|EPOLLONESHOT;\
                     mod_ev.data.ptr = ed;\

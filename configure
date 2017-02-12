@@ -258,18 +258,53 @@ echo "    return NULL;" >> src/mln_thread_module.c
 echo "}" >> src/mln_thread_module.c
 
 
+#build melang.c&h file
+#  header file
+cnt=0
+for file in `ls melang`
+do
+        test -d melang/$file && let cnt+=1 > /dev/null
+done
+echo "/*" > include/mln_melang.h
+echo " * Copyright (C) Niklaus F.Schen." >> include/mln_melang.h
+echo " */" >> include/mln_melang.h
+echo "#ifndef __MLN_MELANG_H" >> include/mln_melang.h
+echo "#define __MLN_MELANG_H" >> include/mln_melang.h
+echo "#include \"mln_lang.h\"" >> include/mln_melang.h
+echo "#define M_N_INSTALLER $cnt" >> include/mln_melang.h
+echo "typedef int (*melang_installer)(mln_lang_ctx_t *);" >> include/mln_melang.h
+echo "extern melang_installer mln_melang_installers[];" >> include/mln_melang.h
+echo "#endif" >> include/mln_melang.h
+#  source file
+echo "/*" > src/mln_melang.c
+echo " * Copyright (C) Niklaus F.Schen." >> src/mln_melang.c
+echo " */" >> src/mln_melang.c
+echo "#include \"mln_melang.h\"" >> src/mln_melang.c
+for file in `ls melang`
+do
+        test -d melang/$file && echo '#include "'$file'/mln_lang_'$file'.h"' >> src/mln_melang.c
+done
+echo "melang_installer mln_melang_installers[$cnt] = {" >> src/mln_melang.c
+for file in `ls melang`
+do
+        test -d melang/$file && echo 'mln_lang_'$file',' >> src/mln_melang.c
+done
+echo "};" >> src/mln_melang.c
+
+
 #  build makefile content
 echo "# " > Makefile
 echo "# Copyright (C) Niklaus F.Schen." >> Makefile
 echo "# " >> Makefile
 echo -e "CC\t\t= cc" >> Makefile
-echo -e "FLAGS\t\t= -Iinclude -c -Wall -ggdb -Werror -O3" >> Makefile
+echo -e "FLAGS\t\t= -Iinclude -Imelang -c -Wall -ggdb -Werror -O3" >> Makefile
 echo -e "MELON\t\t= $target_name" >> Makefile
 echo -e "OBJS\t\t= \\" >> Makefile
 cnt=2
 sum=`ls -l src/|wc -l`
-for fname in `ls src`
+for path in `find . -name "*.c"`
 do
+        fname=`basename $path`
 	test $fname = "mln_salloc.c"
 	if [ $? -eq 0 ]; then
 		continue
@@ -292,8 +327,6 @@ echo -e "SA_LIB\t\t= lib/libsalloc.a" >> Makefile
 echo -e ".PHONY :\tcompile modules install clean" >> Makefile
 
 echo "compile: MKDIR \$(OBJS) \$(SA_LIB_OBJS) \$(SA_LIB) \$(MELON)" >> Makefile
-echo "modules:" >> Makefile
-echo -e "\tsh config_modules.sh" >> Makefile
 echo "clean:" >> Makefile
 echo -e "\trm -fr \$(MELON) objs lib Makefile" >> Makefile
 echo "MKDIR :" >> Makefile
@@ -336,11 +369,11 @@ echo -e "\tcp -fr lib $install_path" >> Makefile
 echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
 
 
-for fname in `ls src`
+for fname in `find . -name "*.c"`
 do
-	objname=`echo $fname | cut -d '.' -f 1`".o"
+	objname=`basename $fname | cut -d '.' -f 1`".o"
 	echo -n "objs/$objname :" >> Makefile
-	for header in `cpp -MM -MG src/$fname`
+	for header in `cpp -MM -MG $fname`
 	do
 		suffix=`echo $header | cut -d '.' -f 2`
 		if [ $suffix = 'c' ]; then
@@ -351,10 +384,11 @@ do
 		if [ $suffix != 'h' ]; then
 			continue
 		fi
-		echo -n "include/$header " >> Makefile
+		test -e include/$header && echo -n "include/$header " >> Makefile
+		test -e melang/$header && echo -n "melang/$header " >> Makefile
 	done
 	echo "" >> Makefile
-	test $fname = "mln_event.c"
+	test $fname = "./src/mln_event.c"
 	if [ $? -eq 0 ]; then
 	#test event system call
 		echo "#include<stdio.h>
@@ -363,7 +397,7 @@ do
 		cc -o ev_test ev_test.c 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "event module		[EPOLL]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_EPOLL" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_EPOLL" >> Makefile
 			rm -f ev_test ev_test.c
 			continue
 		fi
@@ -375,17 +409,17 @@ do
 		cc -o ev_test ev_test.c 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "event module		[KQUEUE]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_KQUEUE" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_KQUEUE" >> Makefile
 			rm -f ev_test ev_test.c
 			continue
 		fi
 		rm -f ev_test ev_test.c
 		echo "event module		[SELECT]"
-		echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_SELECT" >> Makefile
+		echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SELECT" >> Makefile
 		continue
 	fi
 
-        test $fname = "mln_connection.c"
+        test $fname = "./src/mln_connection.c"
         if [ $? -eq 0 ]; then
 		sendfile=0
         #test sendfile
@@ -406,23 +440,23 @@ do
 		if [ "$?" == "0" ]; then
 			echo "writev			[exist]"
 			if [ $sendfile -eq "1" ]; then
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_SENDFILE -DMLN_WRITEV" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE -DMLN_WRITEV" >> Makefile
 			else
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_WRITEV" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_WRITEV" >> Makefile
 			fi
 		else
 			echo "writev			[not exist]"
 			if [ $sendfile -eq "1" ]; then
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_SENDFILE" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE" >> Makefile
 			else
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 			fi
 		fi
 		rm -f writev_test writev_test.c
 		continue
         fi
 
-        test $fname = "mln_thread_pool.c"
+        test $fname = "./src/mln_thread_pool.c"
 	if [ $? -eq 0 ]; then
 		unix98=0
 	#test __USE_UNIX98
@@ -431,15 +465,15 @@ do
 		cc -o unix98_test unix98_test.c -pthread 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "__USE_UNIX98		[support]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname -DMLN_USE_UNIX98" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_USE_UNIX98" >> Makefile
 		else
 			echo "__USE_UNIX98		[not support]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 		fi
 		rm -fr unix98_test unix98_test.c
 		continue
 	fi
-	echo -e "\t\$(CC) \$(FLAGS) -o \$@ src/$fname" >> Makefile
+	echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 done
 echo "Configure done!"
 

@@ -124,7 +124,7 @@ static void mln_lang_switch_free(void *data);
 static inline mln_lang_switchstm_t *
 mln_lang_switchstm_new(mln_alloc_t *pool, \
                        mln_lang_factor_t *factor, \
-                       mln_lang_block_t *blockstm, \
+                       mln_lang_stm_t *stm, \
                        mln_lang_switchstm_t *next, \
                        mln_u64_t line);
 static void mln_lang_switchstm_free(void *data);
@@ -323,7 +323,6 @@ static int mln_lang_semantic_assignexpmuleq(mln_factor_t *left, mln_factor_t **r
 static int mln_lang_semantic_assignexpdiveq(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_assignexporeq(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_assignexpandeq(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_assignexpantieq(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_assignexpxoreq(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_assignexpmodeq(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_logicLowexp(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -364,7 +363,6 @@ static int mln_lang_semantic_specnot(mln_factor_t *left, mln_factor_t **right, v
 static int mln_lang_semantic_specrefer(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specinc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specdec(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_specfree(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specnew(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specparenth(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specfactor(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -415,7 +413,7 @@ static mln_production_t prod_tbl[] = {
 {"setstm: funcdef setstm", mln_lang_semantic_setstmFunc},
 {"setstm: ", NULL},
 {"funcdef: LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR LANG_TK_LBRACE stm LANG_TK_RBRACE", mln_lang_semantic_funcdef},
-{"switchstm: switchprefix LANG_TK_COLON blockstm switchstm", mln_lang_semantic_switchstm__},
+{"switchstm: switchprefix LANG_TK_COLON stm switchstm", mln_lang_semantic_switchstm__},
 {"switchstm: ", NULL},
 {"switchprefix: LANG_TK_DEFAULT", NULL},
 {"switchprefix: LANG_TK_CASE factor", mln_lang_semantic_switchprefix},
@@ -442,7 +440,6 @@ static mln_production_t prod_tbl[] = {
 {"__assign_exp: LANG_TK_DIVEQ assign_exp", mln_lang_semantic_assignexpdiveq},
 {"__assign_exp: LANG_TK_OREQ assign_exp", mln_lang_semantic_assignexporeq},
 {"__assign_exp: LANG_TK_ANDEQ assign_exp", mln_lang_semantic_assignexpandeq},
-{"__assign_exp: LANG_TK_ANTIEQ assign_exp", mln_lang_semantic_assignexpantieq},
 {"__assign_exp: LANG_TK_XOREQ assign_exp", mln_lang_semantic_assignexpxoreq},
 {"__assign_exp: LANG_TK_MODEQ assign_exp", mln_lang_semantic_assignexpmodeq},
 {"__assign_exp: ", NULL},
@@ -495,7 +492,6 @@ static mln_production_t prod_tbl[] = {
 {"spec_exp: LANG_TK_INC spec_exp", mln_lang_semantic_specinc},
 {"spec_exp: LANG_TK_DECR spec_exp", mln_lang_semantic_specdec},
 {"spec_exp: LANG_TK_DOLL LANG_TK_ID", mln_lang_semantic_specnew},
-{"spec_exp: LANG_TK_NUMS spec_exp", mln_lang_semantic_specfree},
 {"spec_exp: LANG_TK_LPAR exp LANG_TK_RPAR funcsuffix", mln_lang_semantic_specparenth},
 {"spec_exp: factor", mln_lang_semantic_specfactor},
 {"spec_exp: LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR funcsuffix", mln_lang_semantic_specfunc},
@@ -1097,7 +1093,7 @@ static void mln_lang_switch_free(void *data)
 static inline mln_lang_switchstm_t *
 mln_lang_switchstm_new(mln_alloc_t *pool, \
                        mln_lang_factor_t *factor, \
-                       mln_lang_block_t *blockstm, \
+                       mln_lang_stm_t *stm, \
                        mln_lang_switchstm_t *next, \
                        mln_u64_t line)
 {
@@ -1107,7 +1103,7 @@ mln_lang_switchstm_new(mln_alloc_t *pool, \
     }
     ls->line = line;
     ls->factor = factor;
-    ls->blockstm = blockstm;
+    ls->stm = stm;
     ls->next = next;
     return ls;
 }
@@ -1118,7 +1114,7 @@ static void mln_lang_switchstm_free(void *data)
     while (next != NULL) {
         ls = next;
         if (ls->factor != NULL) mln_lang_factor_free(ls->factor);
-        if (ls->blockstm != NULL) mln_lang_block_free(ls->blockstm);
+        if (ls->stm != NULL) mln_lang_stm_free(ls->stm);
         next = ls->next;
         mln_alloc_free(ls);
     }
@@ -1838,7 +1834,6 @@ mln_lang_spec_new(mln_alloc_t *pool, \
         case M_SPEC_REFER:
         case M_SPEC_INC:
         case M_SPEC_DEC:
-        case M_SPEC_FREE:
             ls->data.spec = (mln_lang_spec_t *)data;
             break;
         case M_SPEC_NEW:
@@ -1873,7 +1868,6 @@ static void mln_lang_spec_free(void *data)
             case M_SPEC_REFER:
             case M_SPEC_INC:
             case M_SPEC_DEC:
-            case M_SPEC_FREE:
                 right = ls->data.spec;
                 break;
             case M_SPEC_NEW:
@@ -2267,7 +2261,7 @@ static int mln_lang_semantic_switchstm__(mln_factor_t *left, mln_factor_t **righ
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_switchstm_t *ls = mln_lang_switchstm_new(pool, \
                                                       (mln_lang_factor_t *)(right[0]->data), \
-                                                      (mln_lang_block_t *)(right[2]->data), \
+                                                      (mln_lang_stm_t *)(right[2]->data), \
                                                       (mln_lang_switchstm_t *)(right[3]->data), \
                                                       left->line);
     if (ls == NULL) return -1;
@@ -2477,17 +2471,6 @@ static int mln_lang_semantic_assignexpandeq(mln_factor_t *left, mln_factor_t **r
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_ANDEQ, (mln_lang_assign_t *)(right[1]->data));
-    if (tmp == NULL) return -1;
-    left->data = tmp;
-    left->nonterm_free_handler = mln_lang_assign_tmp_free;
-    right[1]->data = NULL;
-    return 0;
-}
-
-static int mln_lang_semantic_assignexpantieq(mln_factor_t *left, mln_factor_t **right, void *data)
-{
-    mln_alloc_t *pool = (mln_alloc_t *)data;
-    mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_ANTIEQ, (mln_lang_assign_t *)(right[1]->data));
     if (tmp == NULL) return -1;
     left->data = tmp;
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
@@ -3097,19 +3080,6 @@ static int mln_lang_semantic_specdec(mln_factor_t *left, mln_factor_t **right, v
     return 0;
 }
 
-static int mln_lang_semantic_specfree(mln_factor_t *left, mln_factor_t **right, void *data)
-{
-    mln_alloc_t *pool = (mln_alloc_t *)data;
-    mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_FREE, right[1]->data, NULL, left->line)) == NULL) {
-        return -1;
-    }
-    left->data = ls;
-    left->nonterm_free_handler = mln_lang_spec_free;
-    right[1]->data = NULL;
-    return 0;
-}
-
 static int mln_lang_semantic_specnew(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
@@ -3309,7 +3279,7 @@ static int mln_lang_semantic_factorarray(mln_factor_t *left, mln_factor_t **righ
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_factor_t *lf;
-    if ((lf = mln_lang_factor_new(pool, M_FACTOR_REAL, right[1]->data, left->line)) == NULL) {
+    if ((lf = mln_lang_factor_new(pool, M_FACTOR_ARRAY, right[1]->data, left->line)) == NULL) {
         return -1;
     }
     left->data = lf;

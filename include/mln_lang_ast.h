@@ -128,7 +128,7 @@ struct mln_lang_switch_s {
 struct mln_lang_switchstm_s {
     mln_u64_t                        line;
     mln_lang_factor_t               *factor;
-    mln_lang_block_t                *blockstm;
+    mln_lang_stm_t                  *stm;
     mln_lang_switchstm_t            *next;
 };
 
@@ -170,7 +170,6 @@ typedef enum mln_lang_assign_op_e {
     M_ASSIGN_DIVEQ,
     M_ASSIGN_OREQ,
     M_ASSIGN_ANDEQ,
-    M_ASSIGN_ANTIEQ,
     M_ASSIGN_XOREQ,
     M_ASSIGN_MODEQ
 } mln_lang_assign_op_t;
@@ -373,7 +372,6 @@ typedef enum mln_lang_spec_op_e {
     M_SPEC_INC,
     M_SPEC_DEC,
     M_SPEC_NEW,
-    M_SPEC_FREE,
     M_SPEC_PARENTH,
     M_SPEC_FACTOR,
     M_SPEC_FUNC

@@ -1,3 +1,13 @@
+Changes with melon 1.6.0                                          12 Feb 2017
+    *) Added Lang component to execute script AST.
+    *) Added Lang components of all data types.
+    *) Updated string component.
+    *) Updated log component.
+    *) Updated event component.
+    *) Updated shell script 'configure'.
+    *) Dropped useless directory.
+    *) Added new directory for function development of melang.
+
 Changes with melon 1.5.12                                         23 Dec 2016
     *) Updated AST component.
 

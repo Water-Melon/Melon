@@ -169,6 +169,22 @@ void mln_string_pool_free(mln_string_t *str)
     mln_alloc_free(str);
 }
 
+int mln_string_strcmpSeq(mln_string_t *s1, mln_string_t *s2)
+{
+    int ret;
+    if (s1->len > s2->len) {
+        if (s2->len == 0) return 1;
+        ret = memcmp(s1->data, s2->data, s2->len);
+        return ret? ret: 1;
+    } else if (s1->len < s2->len) {
+        if (s1->len == 0) return 1;
+        ret = memcmp(s1->data, s2->data, s1->len);
+        return ret? ret: -1;
+    }
+    if (s1->len == 0) return 0;
+    return memcmp(s1->data, s2->data, s1->len);
+}
+
 int mln_string_strcmp(mln_string_t *s1, mln_string_t *s2)
 {
     if (s1 == s2 || s1->data == s2->data) return 0;
@@ -443,5 +459,51 @@ static mln_string_t *mln_string_slice_recursive(char *s, mln_u64_t len, mln_u8pt
 void mln_string_slice_free(mln_string_t *array)
 {
     free(array);
+}
+
+mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2)
+{
+    mln_string_t *ret = (mln_string_t *)malloc(sizeof(mln_string_t));
+    if (ret == NULL) return NULL;
+    mln_u64_t len = s1->len + s2->len;
+    if (len == 0) {
+        ret->data = NULL;
+        ret->len = 0;
+        ret->is_referred = 0;
+        return ret;
+    }
+    if ((ret->data = (mln_u8ptr_t)malloc(len + 1)) == NULL) {
+        free(ret);
+        return NULL;
+    }
+    if (s1->len > 0) memcpy(ret->data, s1->data, s1->len);
+    if (s2->len > 0) memcpy(ret->data+s1->len, s2->data, s2->len);
+    ret->data[len] = 0;
+    ret->len = len;
+    ret->is_referred = 0;
+    return ret;
+}
+
+mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2)
+{
+    mln_string_t *ret = (mln_string_t *)mln_alloc_m(pool, sizeof(mln_string_t));
+    if (ret == NULL) return NULL;
+    mln_u64_t len = s1->len + s2->len;
+    if (len == 0) {
+        ret->data = NULL;
+        ret->len = 0;
+        ret->is_referred = 0;
+        return ret;
+    }
+    if ((ret->data = (mln_u8ptr_t)mln_alloc_m(pool, len + 1)) == NULL) {
+        mln_alloc_free(ret);
+        return NULL;
+    }
+    if (s1->len > 0) memcpy(ret->data, s1->data, s1->len);
+    if (s2->len > 0) memcpy(ret->data+s1->len, s2->data, s2->len);
+    ret->data[len] = 0;
+    ret->len = len;
+    ret->is_referred = 0;
+    return ret;
 }
 
