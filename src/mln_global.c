@@ -10,7 +10,3 @@
 #define __MLN_DEFINE
 #include "mln_global.h"
 
-void mln_global_init(void)
-{
-}
-

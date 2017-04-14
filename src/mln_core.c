@@ -2,7 +2,6 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,28 +9,23 @@
 #include <errno.h>
 #include "mln_types.h"
 #include "mln_global.h"
-#include "mln_resource.h"
 #include "mln_tools.h"
 #include "mln_log.h"
 #include "mln_string.h"
 #include "mln_conf.h"
 #include "mln_fork.h"
-#include "mln_process.h"
 #include "mln_thread.h"
+#include "mln_core.h"
 
+static int mln_getFrameworkStatus(void);
 static void mln_get_root(void);
 static void mln_master_routine(void);
-static void mln_worker_routine(void);
+static void mln_worker_routine(struct mln_core_attr *attr);
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data);
 static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data);
 
-int main(int argc, char *argv[])
+int mln_core_init(struct mln_core_attr *attr)
 {
-    mln_global_init();
-    mln_get_root();
-    if (mln_boot_params(argc, argv) < 0)
-         return -1;
-
     /*Init configurations*/
     printf("Init configurations\n");
     if (mln_conf_load() < 0) {
@@ -41,39 +35,46 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /*Modify system limitations*/
-    printf("Modify system limitations\n");
-    if (mln_sys_limit_modify() < 0) {
-        return -1;
-    }
-
     /*Init Melon resources*/
-    printf("Init Melon resources\n");
-    if (mln_init_all_resource() < 0) {
+    printf("Init Melon Global Vars\n");
+    if (attr->global_init != NULL && attr->global_init() < 0)
         return -1;
-    }
 
-    /*daemon*/
-    if (mln_daemon() < 0) {
-        fprintf(stderr, "Melon boot up failed.\n");
-        return -1;
-    }
+    if (mln_getFrameworkStatus()) {
+        mln_get_root();
+        if (mln_boot_params(attr->argc, attr->argv) < 0)
+            return -1;
 
-    /*fork*/
-    if (mln_pre_fork() < 0) {
-        return -1;
-    }
-    int is_master = do_fork();
-    if (is_master < 0) {
-        return -1;
-    }
+        /*Modify system limitations*/
+        printf("Modify system limitations\n");
+        if (mln_sys_limit_modify() < 0) {
+            return -1;
+        }
 
-    if (is_master) {
-        mln_master_routine();
-        goto chl;
-    } else {
+        /*daemon*/
+        if (mln_daemon() < 0) {
+            fprintf(stderr, "Melon boot up failed.\n");
+            return -1;
+        }
+
+        /*fork*/
+        if (mln_pre_fork() < 0) {
+            return -1;
+        }
+        int is_master = do_fork();
+        if (is_master < 0) {
+            return -1;
+        }
+
+        if (is_master) {
+            mln_master_routine();
+            goto chl;
+        } else {
 chl:
-        mln_worker_routine();
+            mln_worker_routine(attr);
+        }
+    } else {
+        if (mln_log_init(1) < 0) return -1;
     }
     return 0;
 }
@@ -91,7 +92,7 @@ static void mln_master_routine(void)
     mln_event_destroy(ev);
 }
 
-static void mln_worker_routine(void)
+static void mln_worker_routine(struct mln_core_attr *attr)
 {
     mln_event_t *ev = mln_event_init(1);
     if (ev == NULL) exit(1);
@@ -125,7 +126,8 @@ static void mln_worker_routine(void)
             exit(1);
         mln_event_dispatch(ev);
     } else {
-        mln_worker_process(ev);
+        if (attr->worker_process != NULL) attr->worker_process(ev);
+        mln_event_dispatch(ev);
     }
 }
 
@@ -160,5 +162,30 @@ static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *da
     char msg[] = "conf_reload";
 
     return mln_ipc_master_send_prepare(ev, M_IPC_CONF_RELOAD, msg, sizeof(msg)-1, f);
+}
+
+static int mln_getFrameworkStatus(void)
+{
+    char framework[] = "framework";
+    mln_conf_t *cf = mln_get_conf();
+    if (cf == NULL) {
+        mln_log(error, "Configuration crashed.\n");
+        abort();
+    }
+    mln_conf_domain_t *cd = cf->search(cf, "main");
+    if (cd == NULL) {
+        mln_log(error, "Domain 'main' NOT existed.\n");
+        abort();
+    }
+    mln_conf_cmd_t *cc = cd->search(cd, framework);
+    if (cc != NULL) {
+        mln_conf_item_t *ci = cc->search(cc, 1);
+        if (ci == NULL || ci->type != CONF_BOOL) {
+            mln_log(error, "Invalid item of command '%s'.\n", framework);
+            exit(1);
+        }
+        if (ci->val.b) return 1;
+    }
+    return 0;
 }
 

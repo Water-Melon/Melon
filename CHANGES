@@ -1,3 +1,10 @@
+Changes with melon 1.6.1                                          14 Apr 2017
+    *) Dropped malloc/free library -- salloc.
+    *) Fixed a bug in melang.
+    *) Dropped some source files.
+    *) Added a new component -- core.
+    *) Made framework to be a library.
+
 Changes with melon 1.6.0                                          12 Feb 2017
     *) Added Lang component to execute script AST.
     *) Added Lang components of all data types.

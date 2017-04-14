@@ -15,8 +15,7 @@
 #define EXTERN
 #endif
 
+EXTERN void *GlobalUnusedVar;
 
-/*functions*/
-extern void mln_global_init(void);
 #endif
 

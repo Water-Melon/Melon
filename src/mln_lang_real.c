@@ -214,7 +214,8 @@ mln_lang_real_diveq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
     }
     mln_lang_var_t *var;
     double r = mln_lang_var_toReal(op2->data.var);
-    if (abs(r) <= 1e-15) {
+    double tmp = r < 0? -r: r;
+    if (tmp <= 1e-15) {
         mln_lang_errmsg(ctx, "Division by zero.");
         return -1;
     }
@@ -557,7 +558,8 @@ mln_lang_real_div(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     double tmp = mln_lang_var_toReal(op2->data.var);
-    if (abs(tmp) <= 1e-15) {
+    double tmpr = tmp < 0? -tmp: tmp;
+    if (tmpr <= 1e-15) {
         mln_lang_errmsg(ctx, "Division by zero.");
         return -1;
     }

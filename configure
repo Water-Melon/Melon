@@ -7,9 +7,6 @@
 
 #installation path
 install_path=`echo "/usr/local/melon"`
-malloc_type="default"
-jemalloc_path="nil"
-target_name="melon"
 
 #get all parameters
 for param in $@
@@ -18,40 +15,21 @@ do
 		echo -e "\nMelon platform."
 		echo "Copyright (C) Niklaus F.Schen."
 		echo "Options:"
-		echo -e "\t--target=Binary_File_Name"
 		echo -e "\t--prefix=INSTALL_PATH"
-		echo -e "\t--with-salloc			Salloc is an implementation of malloc()."
-		echo -e "\t--with-jemalloc			Use jemalloc."
-		echo -e "\t--with-jemalloc_lib_path	Indicate the path of jemalloc libaray."
 		exit 0
 	fi
 	param_prefix=`echo $param|cut -d '=' -f 1`
 	param_suffix=`echo $param|cut -d '=' -f 2`
 	if [ $param_prefix == "--prefix" ]; then
 		install_path=$param_suffix
-	elif [ $param_prefix == "--target" ]; then
-		target_name=$param_suffix
-	elif [ $param_prefix == "--with-salloc" ]; then
-		malloc_type="salloc"
-	elif [ $param_prefix == "--with-jemalloc" ]; then
-		malloc_type="jemalloc"
-        elif [ $param_prefix == "--with-jemalloc_lib_path" ]; then
-		jemalloc_path=$param_suffix
 	else
 		echo "Error: Invalid option \"$param\"."
 		exit 1
 	fi
 done
 
-#output malloc information
-echo -e "malloc library: \t[$malloc_type]"
-if [ $jemalloc_path != "nil" ]; then
-	echo -e "jemalloc library path: \t[$jemalloc_path]"
-fi
-
 #output installation path
 echo -e "Installation Path \t[$install_path]"
-echo -e "Binary File Name \t[$target_name]"
 #build path.c & h
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
 echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
@@ -291,28 +269,35 @@ do
 done
 echo "};" >> src/mln_melang.c
 
+# build sub include directory for melang
+mkdir .tmpSubIncs 2> /dev/null
+for tmpdir in `ls melang/`
+do
+	if [ $tmpdir = "." -o $tmpdir = ".." ]; then
+		continue
+	fi
+	mkdir .tmpSubIncs/$tmpdir 2> /dev/null
+	cp -f melang/$tmpdir/*.h .tmpSubIncs/$tmpdir/ 2> /dev/null
+done
 
 #  build makefile content
 echo "# " > Makefile
 echo "# Copyright (C) Niklaus F.Schen." >> Makefile
 echo "# " >> Makefile
 echo -e "CC\t\t= cc" >> Makefile
-echo -e "FLAGS\t\t= -Iinclude -Imelang -c -Wall -ggdb -Werror -O3" >> Makefile
-echo -e "MELON\t\t= $target_name" >> Makefile
+echo -e "FLAGS\t\t= -Iinclude -Imelang -c -Wall -ggdb -Werror -O3 -fPIC" >> Makefile
+echo -e "MELONSO\t\t= libmelon.so" >> Makefile
+echo -e "MELONA\t\t= libmelon.a" >> Makefile
 echo -e "OBJS\t\t= \\" >> Makefile
+hasDot=`ls -l src/|grep "\.\."`
 cnt=2
+if [ -z $hasDot ]; then
+  cnt=0
+fi
 sum=`ls -l src/|wc -l`
 for path in `find . -name "*.c"`
 do
         fname=`basename $path`
-	test $fname = "mln_salloc.c"
-	if [ $? -eq 0 ]; then
-		continue
-	fi
-        test $fname = "mln_sa_rbtree.c"
-	if [ $? -eq 0 ]; then
-		continue
-	fi
 	objname=`echo $fname | cut -d '.' -f 1`".o"
 	echo -n "		objs/"$objname >> Makefile
 	if [ $cnt -lt $sum ]; then
@@ -321,51 +306,29 @@ do
 	let cnt+=1 > /dev/null
 done
 echo "" >> Makefile
-echo -e "SA_LIB_OBJS\t= objs/mln_salloc.o objs/mln_log.o objs/mln_sa_rbtree.o objs/mln_defs.o objs/mln_path.o" >> Makefile
-echo -e "SA_LIB\t\t= lib/libsalloc.a" >> Makefile
 
 echo -e ".PHONY :\tcompile modules install clean" >> Makefile
 
-echo "compile: MKDIR \$(OBJS) \$(SA_LIB_OBJS) \$(SA_LIB) \$(MELON)" >> Makefile
+echo "compile: MKDIR \$(OBJS) \$(MELONSO) \$(MELONA)" >> Makefile
 echo "clean:" >> Makefile
-echo -e "\trm -fr \$(MELON) objs lib Makefile" >> Makefile
+echo -e "\trm -fr objs lib .tmpSubIncs Makefile" >> Makefile
 echo "MKDIR :" >> Makefile
 echo -e "\ttest -d objs || mkdir objs" >> Makefile
 echo -e "\ttest -d lib || mkdir lib" >> Makefile
 
-echo "\$(SA_LIB) : \$(SA_LIB_OBJS)" >> Makefile
-echo -e "\tar -r \$(SA_LIB) \$(SA_LIB_OBJS)" >> Makefile
-echo "\$(MELON) : \$(OBJS) \$(SA_LIB)" >> Makefile
+echo "\$(MELONA) : \$(OBJS)" >> Makefile
+echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile
+echo "\$(MELONSO) : \$(OBJS)" >> Makefile
 if [ $is_linux -eq 1 ]; then
-	if [ $malloc_type == "salloc" ]; then
-		echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -lsalloc -ldl" >> Makefile
-	elif [ $malloc_type == "jemalloc" ]; then
-		if [ $jemalloc_path == "nil" ]; then
-			echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -ljemalloc -ldl" >> Makefile
-		else
-			echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -L$jemalloc_path -ljemalloc -ldl" >> Makefile
-		fi
-	else
-		echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -ldl" >> Makefile
-	fi
+	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
 else
-	if [ $malloc_type == "salloc" ]; then
-		echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -lsalloc -lc" >> Makefile
-	elif [ $malloc_type == "jemalloc" ]; then
-		if [ $jemalloc_path == "nil" ]; then
-			echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -ljemalloc -lc" >> Makefile
-		else
-			echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -L$jemalloc_path -ljemalloc -lc" >> Makefile
-		fi
-	else
-		echo -e "\t\$(CC) -o \$(MELON) \$(OBJS) -ggdb -Wall -pthread -Llib/ -lc" >> Makefile
-	fi
+	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
 fi
 echo "install:" >> Makefile
 echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
-echo -e "\ttest -d '$install_path/sbin' || mkdir -p '$install_path/sbin'" >> Makefile
-echo -e "\tcp -fr \$(MELON) $install_path/sbin" >> Makefile
 echo -e "\tcp -fr lib $install_path" >> Makefile
+echo -e "\tcp -fr include $install_path" >> Makefile
+echo -e "\tcp -fr .tmpSubIncs/* $install_path/include" >> Makefile
 echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
 
 
@@ -373,7 +336,7 @@ for fname in `find . -name "*.c"`
 do
 	objname=`basename $fname | cut -d '.' -f 1`".o"
 	echo -n "objs/$objname :" >> Makefile
-	for header in `cpp -MM -MG $fname`
+	for header in `cpp -MM -MG $fname 2> /dev/null`
 	do
 		suffix=`echo $header | cut -d '.' -f 2`
 		if [ $suffix = 'c' ]; then
@@ -428,9 +391,9 @@ do
 		cc -o sendfile_test sendfile_test.c 2>/dev/null
 		if [ "$?" == "0" ]; then
 			sendfile=1
-			echo "sendfile		[exist]"
+			echo "sendfile		[support]"
 		else
-			echo "sendfile		[not exist]"
+			echo "sendfile		[NOT support]"
 		fi
 		rm -f sendfile_test sendfile_test.c
 	#test writev
@@ -438,14 +401,14 @@ do
 		echo "int main(void){writev(0,NULL,0);return 0;}" >> writev_test.c
 		cc -o writev_test writev_test.c 2>/dev/null
 		if [ "$?" == "0" ]; then
-			echo "writev			[exist]"
+			echo "writev			[support]"
 			if [ $sendfile -eq "1" ]; then
 				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE -DMLN_WRITEV" >> Makefile
 			else
 				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_WRITEV" >> Makefile
 			fi
 		else
-			echo "writev			[not exist]"
+			echo "writev			[NOT support]"
 			if [ $sendfile -eq "1" ]; then
 				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE" >> Makefile
 			else
@@ -462,7 +425,7 @@ do
 	#test __USE_UNIX98
 		echo -e "#ifndef __USE_UNIX98\n#define __USE_UNIX98\n#endif\n#include <pthread.h>\n" > unix98_test.c
 		echo "int main(void){pthread_setconcurrency(0);return 0;}" >> unix98_test.c
-		cc -o unix98_test unix98_test.c -pthread 2>/dev/null
+		cc -o unix98_test unix98_test.c -lpthread 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "__USE_UNIX98		[support]"
 			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_USE_UNIX98" >> Makefile

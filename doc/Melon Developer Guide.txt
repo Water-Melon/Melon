@@ -4,19 +4,18 @@
  */
  
 Melon Developer Guide
-A software platform for simplifying development on UNIX
-Melon Version 1.6.0
+A C framework library for simplifying development on UNIX
+Melon Version 1.6.1
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
-Melon is a software platform for simplifying development on UNIX.
-Why is a platform? Because we want to run our programs on it and wish it can maintain them automatically (of course,
-you can refuse this maintenance by setting configuration).
+Melon is a C framework library for simplifying development on UNIX.
+Why is a library? Because it includes many implementations about data structures, algorithms, architectures and
+many other useful components that you can choose that only use these APIs or whole framework (especially
+architectures) based on your demand.
 Melon has two architectures -- multithread and multiprocess.
 For multithread, Melon provides a developing method which is the same as process development to build its thread
 modules.
-In addition, Melon provides many interfaces about data structures and algorithms to develop the processing logic
-that we need.
 
 As shown in Figure 1,this is the multiprocess architecture.
                       --------------
@@ -58,21 +57,19 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.0.
-  b) Change directory to the melon-1.6.0/.
+  a) Download and decompress melon-1.6.1.
+  b) Change directory to the melon-1.6.1/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
-         make modules (This is an optional step. If you want compile
-                       your modules, you need to execute it.)
-         make install
+         sudo make install
      --prefix indicate the installation path.
      --help   show help message.
      More parameters see '--help'.
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.0/include/mln_types.h.
+Their definitions can be found in melon-1.6.1/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -2532,7 +2529,37 @@ Their definitions can be found in melon-1.6.0/include/mln_types.h.
          Send the data to the script-side(isC must be 1) via the message communication item which is
          located by 'name'.
 
-5. Process Module Development
+5. Framework Usage
+   It is very easy to use this framework. Before we use it, we have to initialize it.
+   1) include header file.
+       #include "mln_core.h"
+   2) initilize argument of init-function.
+       struct mln_core_attr attr;
+       attr.argc = ...;
+       ...
+      The prototype of 'struct mln_core_attr' is,
+       struct mln_core_attr {
+           int                       argc;
+           char                    **argv;
+           mln_core_init_t           global_init;
+           mln_core_worker_process_t worker_process;
+       };
+      'argc' normally equals to the first argument of 'main'.
+      'argv' normally equals to the second argument of 'main'.
+      'global_init' is a function to initialize some global variables. Its prototype is,
+          typedef int (*mln_core_init_t)(void);
+      'worker_process' is a function to process something in worker process. Its prototype is,
+          typedef void (*mln_core_worker_process_t)(mln_event_t *);
+        ‘mln_event_t' is the type of event object which is initialized by 'mln_event_init()'.
+   3) call init-function.
+      if (mln_core_init(&attr) < 0) {
+          ...
+      }
+   That's all what we need to do.
+   If you only want to use APIs, you can switch the status of configuration item 'framework' in configuration file
+   to be 'off'. Then the framework only initialize some basic components and return immediately.
+
+6. Process Module Development
    In Melon, there are two methods to develop process module.
    Let us discuss the first method.
    I. Actually, it is not much different between application program development and this one. We can write a normal
@@ -2628,7 +2655,7 @@ Their definitions can be found in melon-1.6.0/include/mln_types.h.
           The functionality is the same as 'mln_ipc_master_send_prepare', but is provided for worker process.
           This function do not have argument 'f_child' cause worker process do not need it to locate master process.
 
-6. Thread Module Development
+7. Thread Module Development
    In Melon, there is only one model between multiprocess and multithread.
    We can trigger one of them via the configuration item 'thread_mode'. This command has only one parameter, it's
    a boolean value. If its value is 'on', multithread model will be triggered. Otherwise, multiprocess will be
@@ -2731,7 +2758,7 @@ Their definitions can be found in melon-1.6.0/include/mln_types.h.
    c) void mln_thread_setCleanup(void (*tcleanup)(void *), void *data);
       Set a cleanup function that will be called after the thread exited.
 
-7. Script language
+8. Script language
    A. Data type
       This is a implicit-type script language.
       This are some data types:

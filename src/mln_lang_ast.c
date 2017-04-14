@@ -1380,7 +1380,7 @@ mln_lang_logicHigh_tmp_new(mln_alloc_t *pool, \
 
 static void mln_lang_logicHigh_tmp_free(void *data)
 {
-    if (data == NULL);
+    if (data == NULL) return;
     mln_lang_logicHigh_tmp_t *llt = (mln_lang_logicHigh_tmp_t *)data;
     if (llt->logicHigh != NULL) mln_lang_logicHigh_free(llt->logicHigh);
     mln_alloc_free(llt);
