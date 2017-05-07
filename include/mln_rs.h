@@ -28,7 +28,7 @@ typedef struct {
 #define mln_rs_result_getNum(_presult) \
   ((_presult) == NULL? 0: (_presult)->num)
 
-#define mln_rs_result_getLenth(_presult) \
+#define mln_rs_result_getLength(_presult) \
   ((_presult)->len / (_presult)->num)
 
 #define mln_rs_result_getIndexData(_presult,index) \
