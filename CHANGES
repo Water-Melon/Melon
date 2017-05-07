@@ -1,3 +1,9 @@
+Changes with melon 1.6.2                                          07 May 2017
+    *) Added FEC component.
+    *) Added Reed-Solomon Code component.
+    *) Added Matrix component.
+    *) Updated some macros.
+
 Changes with melon 1.6.1                                          14 Apr 2017
     *) Dropped malloc/free library -- salloc.
     *) Fixed a bug in melang.

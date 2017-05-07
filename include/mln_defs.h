@@ -111,5 +111,22 @@ extern int spin_trylock(void *lock);
         node->prev_ptr = node->next_ptr = NULL;\
     }
 
+#define mln_bigendian_encode(num,buf,Blen); \
+{\
+    size_t i;\
+    for (i = 0; i < Blen; ++i) {\
+        *(buf)++ = ((num) >> ((Blen-i-1) << 3)) & 0xff;\
+    }\
+}
+
+#define mln_bigendian_decode(num,buf,Blen); \
+{\
+    size_t i;\
+    num = 0;\
+    for (i = 0; i < Blen; ++i, ++buf) {\
+        num |= ((((mln_u64_t)(*(buf))) & 0xff) << (((Blen)-i-1) << 3));\
+    }\
+}
+
 #endif
 

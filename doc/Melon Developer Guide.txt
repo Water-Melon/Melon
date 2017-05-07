@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.1
+Melon Version 1.6.2
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.1.
-  b) Change directory to the melon-1.6.1/.
+  a) Download and decompress melon-1.6.2.
+  b) Change directory to the melon-1.6.2/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.1/include/mln_types.h.
+Their definitions can be found in melon-1.6.2/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -2528,6 +2528,88 @@ Their definitions can be found in melon-1.6.1/include/mln_types.h.
       h) int mln_lang_msg_sendMsg(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC);
          Send the data to the script-side(isC must be 1) via the message communication item which is
          located by 'name'.
+
+  36) FEC
+      This component is used to recover RTP packet. Generation and recovery operations are described in
+      RFC 5109.
+      a) mln_fec_t *mln_fec_new(void);
+         Create fec instance.
+
+      b) void mln_fec_free(mln_fec_t *fec);
+         Destroy fec instance.
+
+      c) mln_fec_result_t *mln_fec_encode(mln_fec_t *fec,
+                                          uint8_t *packets[],
+                                          uint16_t packLen[],
+                                          size_t n,
+                                          uint16_t groupSize);
+         Encode RTP packets and generate some fec packets.
+         'packets' is a vector of RTP packet.
+         'packLen' is a vector of RTP packet length.
+         'n' is the number of RTP packets.
+         'groupSize' indicates how many RTP packets can be a group to generate an FEC packet.
+
+      d) void mln_fec_result_free(mln_fec_result_t *fr);
+         Destroy fec result instance that 'mln_fec_encode()' or 'mln_fec_decode()' returned.
+
+      e) mln_fec_result_t *mln_fec_decode(mln_fec_t *fec,
+                                          uint8_t *packets[],
+                                          uint16_t *packLen,
+                                          size_t n);
+         Recovery RTP packet.
+         If there is only one RTP packet lost, it can be recovered through this function.
+
+      f) mln_fec_setPT(fec,_pt);
+         Set PT field in RTP header.
+
+      g) mln_fec_getResult(_result,index,_len);
+         Get fec result data.
+
+      h) mln_fec_getResultNum(_result);
+         Get number of data that stored in fec result. 
+
+  37) Matrix
+      a) mln_matrix_t *mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u32_t isRef);
+         Create matrix instance.
+         'data' is an array.
+         'isRef' indicates whether the 'data' should be freed or not while trying to free it.
+
+      b) void mln_matrix_free(mln_matrix_t *matrix);
+         Free matrix instance.
+
+      c) mln_matrix_t *mln_matrix_mul(mln_matrix_t *m1, mln_matrix_t *m2);
+         Matrix multiplication.
+
+      d) mln_matrix_t *mln_matrix_inverse(mln_matrix_t *matrix);
+         Matrix inversion.
+
+  38) Reed-Solomon Code
+      a) mln_rs_result_t *mln_rs_encode(uint8_t **dataVector, size_t len, size_t n, size_t k);
+         Encode pieces of data in vector 'dataVector' and return 'k' pieces of data that can
+         be used to recover lost data that associated with 'dataVector'.
+         'len' indicates the length of every element in 'dataVector'.
+         'n' indicates how many elements placed in 'dataVector'.
+         'k' indicates how many pieces of recovery data would be generated.
+
+      b) void mln_rs_result_free(mln_rs_result_t *result);
+         Free rs result that returned by 'mln_rs_encode()' or 'mln_rs_decode()'.
+
+      c) mln_rs_result_t *mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, uint8_t **rsVector, size_t k);
+         Recover lost data.
+         'dataVector' is a vector stored some or all original data.
+         'len' indicates the length of every element in 'dataVector'.
+         'n' indicates how many elements placed in 'dataVector'.
+         'rsVector' contains some pieces of recovery data associated with 'dataVector'.
+         'k' indicates how many elements stored in 'rsVector'.
+
+      d) mln_rs_result_getNum(_presult);
+         Return how many pieces of data stored in '_presult' (mln_rs_result_t).
+
+      e) mln_rs_result_getLength(_presult);
+         Return the length of every piece of data that stored in '_presult' (mln_rs_result_t).
+
+      f) mln_rs_result_getIndexData(_presult,index);
+         Returned one piece of data that is indicated by 'index' stored in '_presult'.
 
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
