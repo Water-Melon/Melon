@@ -2584,9 +2584,10 @@ Their definitions can be found in melon-1.6.2/include/mln_types.h.
          Matrix inversion.
 
   38) Reed-Solomon Code
-      a) mln_rs_result_t *mln_rs_encode(uint8_t **dataVector, size_t len, size_t n, size_t k);
+      a) mln_rs_result_t *mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k);
          Encode pieces of data in vector 'dataVector' and return 'k' pieces of data that can
-         be used to recover lost data that associated with 'dataVector'.
+         be used to recover lost data that associated with 'dataVector'. And the type of
+         'dataVector' is 'uint8_t *' not 'uint8_t **'.
          'len' indicates the length of every element in 'dataVector'.
          'n' indicates how many elements placed in 'dataVector'.
          'k' indicates how many pieces of recovery data would be generated.
@@ -2594,21 +2595,19 @@ Their definitions can be found in melon-1.6.2/include/mln_types.h.
       b) void mln_rs_result_free(mln_rs_result_t *result);
          Free rs result that returned by 'mln_rs_encode()' or 'mln_rs_decode()'.
 
-      c) mln_rs_result_t *mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, uint8_t **rsVector, size_t k);
+      c) mln_rs_result_t *mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, size_t k);
          Recover lost data.
          'dataVector' is a vector stored some or all original data.
          'len' indicates the length of every element in 'dataVector'.
-         'n' indicates how many elements placed in 'dataVector'.
-         'rsVector' contains some pieces of recovery data associated with 'dataVector'.
-         'k' indicates how many elements stored in 'rsVector'.
+         'n' indicates the number of original data elements.
+         'k' indicates the number of check elements generated from 'mln_rs_encode()'.
+         If someone lost, the corresponing element in 'dataVector' should be NULL, but
+         the number of 'dataVector''s element must be 'n+k'.
 
       d) mln_rs_result_getNum(_presult);
          Return how many pieces of data stored in '_presult' (mln_rs_result_t).
 
-      e) mln_rs_result_getLength(_presult);
-         Return the length of every piece of data that stored in '_presult' (mln_rs_result_t).
-
-      f) mln_rs_result_getIndexData(_presult,index);
+      e) mln_rs_result_getIndexData(_presult,index);
          Returned one piece of data that is indicated by 'index' stored in '_presult'.
 
 5. Framework Usage

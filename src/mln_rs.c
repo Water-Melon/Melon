@@ -4,7 +4,6 @@
  * Reed-Solomon Code.
  */
 #include "mln_rs.h"
-#include "mln_md5.h"
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -283,51 +282,36 @@ mln_rs_matrix_coMatrix(mln_size_t row, mln_size_t additionRow)
 }
 
 static mln_rs_matrix_t *
-mln_rs_matrix_coInverseMatrix(uint8_t **dataVector, \
-                              size_t len, \
-                              size_t n, \
-                              uint8_t **rsVector, \
-                              size_t k, \
-                              size_t sum)
+mln_rs_matrix_coInverseMatrix(uint8_t **dataVector, size_t len, size_t n, size_t k)
 {
-    mln_md5_t md5;
-    mln_u8_t m[16];
-    mln_size_t i, j, cnt;
+    mln_size_t i, j, row = 0;
     mln_rs_matrix_t *matrix, *inverse;
-    mln_u8ptr_t p, q, *end, data, r;
+    mln_u8ptr_t p, *pend, data;
 
-    if ((data = (mln_u8ptr_t)malloc(sum*len)) == NULL) {
+    if ((data = (mln_u8ptr_t)malloc(n*len)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
 
-    r = data;
-    for (end = dataVector+n; dataVector < end; ++dataVector) {
-        mln_md5_init(&md5);
-        mln_md5_calc(&md5, *dataVector, len, 1);
-        mln_md5_toBytes(&md5, m, 16);
-        p = *rsVector + 8;
-        q = p + ((mln_size_t)sum << 4);
-        for (cnt = 0; p < q; p += 16, ++cnt) {
-            if (!memcmp(p, m, 16)) break;
+    p = data;
+    pend = dataVector + n;
+    for (i = 0; dataVector < pend; ++dataVector, ++i) {
+        if (*dataVector == NULL) continue;
+        for (j = 0; j < n; ++j) {
+            *p++ = (i==j)? 1: 0;
         }
-        if (p >= q) {
-            free(data);
-            errno = EINVAL;
-            return NULL;
+        ++row;
+    }
+    pend = dataVector + n + k;
+    for (i = 1; row < n && dataVector < pend; ++dataVector, ++i) {
+        if (*dataVector == NULL) continue;
+        for (j = 1; j <= n; ++j) {
+            *p++ = (mln_u8_t)mln_rs_calcPower(j, i-1);
         }
-        for (i = 0; i < sum; ++i) {
-            *r++ = (i==cnt)? 1: 0;
-        }
+        ++row;
     }
 
-    j = sum - n;
-    for (end = rsVector+k, i = 0; i < j && rsVector < end; ++i, ++rsVector) {
-        memcpy(r, *rsVector+8+((mln_size_t)sum<<4), sum);
-        r += sum;
-    }
-
-    if ((matrix = mln_rs_matrix_new(sum, sum, data, 0)) == NULL) {
+    if ((matrix = mln_rs_matrix_new(n, n, data, 0)) == NULL) {
         free(data);
         errno = ENOMEM;
         return NULL;
@@ -343,33 +327,26 @@ mln_rs_matrix_coInverseMatrix(uint8_t **dataVector, \
 }
 
 static mln_rs_matrix_t *
-mln_rs_matrix_dataMatrix(uint8_t **dataVector, \
-                         size_t len, \
-                         size_t n, \
-                         uint8_t **rsVector, \
-                         size_t k, \
-                         size_t sum)
+mln_rs_matrix_dataMatrix(uint8_t **dataVector, size_t len, size_t n, size_t k)
 {
-    mln_size_t i, j;
-    mln_u8ptr_t data, p, *end;
+    mln_size_t row = 0;
+    mln_u8ptr_t data, p, *pend;
     mln_rs_matrix_t *matrix;
 
-    if ((data = (mln_u8ptr_t)malloc(sum*len)) == NULL) {
+    if ((data = (mln_u8ptr_t)malloc(n*len)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
     p = data;
-    end = dataVector + n;
-    for (; dataVector < end; ++dataVector, p+=len) {
+    pend = dataVector + n + k;
+    for (; row < n && dataVector < pend; ++dataVector) {
+        if (*dataVector == NULL) continue;
         memcpy(p, *dataVector, len);
+        p += len;
+        ++row;
     }
 
-    for (j = sum-n, i = 0; i < j; ++i, p+=len, ++rsVector) {
-        /*ref to comment for mln_rs_encode*/
-        memcpy(p, (*rsVector)+8+((mln_size_t)sum<<4)+sum, len);
-    }
-
-    if ((matrix = mln_rs_matrix_new(sum, len, data, 0)) == NULL) {
+    if ((matrix = mln_rs_matrix_new(n, len, data, 0)) == NULL) {
         free(data);
         errno = EINVAL;
         return NULL;
@@ -420,38 +397,20 @@ void mln_rs_result_free(mln_rs_result_t *result)
 
 /*
  * Reed-Solomon operations
- * network sequence (bigendian).
- * [num(4-byte)|data length(4-byte)|
- *  every piece of data's md5(16-byte)|
- *  check bytes for this data(identical to value of num)|
- *  data(d-byte)]
  */
 mln_rs_result_t *
-mln_rs_encode(uint8_t **dataVector, size_t len, size_t n, size_t k)
+mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k)
 {
-    uint8_t **end;
-    mln_size_t i;
-    mln_u8ptr_t p, data, *scan;
+    mln_u8ptr_t data;
     mln_rs_result_t *result;
     mln_rs_matrix_t *matrix, *coMatrix, *resMatrix;
-    mln_md5_t md5;
 
     if (dataVector == NULL || !len || !n || !k || mln_rs_calcPower(n, k-1) > 255) {
         errno = EINVAL;
         return NULL;
     }
 
-    if ((data = (mln_u8ptr_t)malloc(len*n)) == NULL) {
-        errno = ENOMEM;
-        return NULL;
-    }
-    scan = dataVector;
-    for (p = data, end = dataVector+n; scan < end; ++scan) {
-        memcpy(p, *scan, len);
-        p += len;
-    }
-    if ((matrix = mln_rs_matrix_new(n, len, data, 0)) == NULL) {
-        free(data);
+    if ((matrix = mln_rs_matrix_new(n, len, dataVector, 1)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
@@ -462,39 +421,20 @@ mln_rs_encode(uint8_t **dataVector, size_t len, size_t n, size_t k)
     }
     resMatrix = mln_rs_matrix_mul(coMatrix, matrix);
     mln_rs_matrix_free(matrix);
-    if (resMatrix == NULL) {
-        mln_rs_matrix_free(coMatrix);
-        errno = ENOMEM;
-        return NULL;
-    }
-
-    if ((data = (mln_u8ptr_t)malloc((8+n+((mln_size_t)n<<4)+len)*k)) == NULL) {
-        mln_rs_matrix_free(resMatrix);
-        mln_rs_matrix_free(coMatrix);
-        errno = ENOMEM;
-        return NULL;
-    }
-    p = data;
-    for (i = 0; i < k; ++i) {
-        mln_bigendian_encode(n, p, 4);
-        mln_bigendian_encode(len, p, 4);
-
-
-        for (scan = dataVector, end = dataVector+n; scan < end; ++scan) {
-            mln_md5_init(&md5);
-            mln_md5_calc(&md5, *scan, len, 1);
-            mln_md5_toBytes(&md5, p, 16);
-            p += 16;
-        }
-
-        memcpy(p, coMatrix->data+((n+i)*n), n);
-        p += n;
-        memcpy(p, resMatrix->data+((n+i)*len), len);
-        p += len;
-    }
     mln_rs_matrix_free(coMatrix);
+    if (resMatrix == NULL) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    if ((data = (mln_u8ptr_t)malloc(k*len)) == NULL) {
+        mln_rs_matrix_free(resMatrix);
+        errno = ENOMEM;
+        return NULL;
+    }
+    memcpy(data, resMatrix->data+n*len, k*len);
     mln_rs_matrix_free(resMatrix);
-    if ((result = mln_rs_result_new(data, k, (8+n+((mln_size_t)n<<4)+len)*k)) == NULL) {
+    if ((result = mln_rs_result_new(data, k, k*len)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
@@ -502,20 +442,24 @@ mln_rs_encode(uint8_t **dataVector, size_t len, size_t n, size_t k)
 }
 
 mln_rs_result_t *
-mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, uint8_t **rsVector, size_t k)
+mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, size_t k)
 {
-    mln_size_t num, l, sum = n + k;
-    mln_u8ptr_t *end, data, p;
+    mln_u8ptr_t data, p, *pp, *pend;
     mln_rs_result_t *result;
     mln_rs_matrix_t *coMatrix, *dataMatrix, *resultMatrix;
-    if (rsVector == NULL || !k) {
-origin:
+    if (!n && !k) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (!k) {
         if ((data = (mln_u8ptr_t)malloc(len*n)) == NULL) {
             errno = ENOMEM;
             return NULL;
         }
-        for (p = data, end = dataVector+n; dataVector < end; ++dataVector, p+=len) {
-             memcpy(p, *dataVector, len);
+        p = data;
+        for (pp = dataVector, pend = dataVector+n; pp < pend; ++pp) {
+            memcpy(p, *pp, len);
+            p += len;
         }
         if ((result = mln_rs_result_new(data, n, len*n)) == NULL) {
             free(data);
@@ -525,21 +469,12 @@ origin:
         return result;
     }
 
-    p = *rsVector;
-    mln_bigendian_decode(num, p, 4);
-    mln_bigendian_decode(l, p, 4);
-    if (num > sum || l != len) {
-        errno = EINVAL;
+    if ((coMatrix = mln_rs_matrix_coInverseMatrix(dataVector, len, n, k)) == NULL) {
         return NULL;
     }
-    if (n == num) goto origin;
-
-    if ((coMatrix = mln_rs_matrix_coInverseMatrix(dataVector, len, n, rsVector, k, num)) == NULL) {
-        return NULL;
-    }
-    if ((dataMatrix = mln_rs_matrix_dataMatrix(dataVector, len, n, rsVector, k, num)) == NULL) {
+    if ((dataMatrix = mln_rs_matrix_dataMatrix(dataVector, len, n, k)) == NULL) {
         int err = errno;
-        mln_rs_matrix_free(dataMatrix);
+        mln_rs_matrix_free(coMatrix);
         errno = err;
         return NULL;
     }
