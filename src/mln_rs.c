@@ -140,14 +140,14 @@ mln_rs_matrix_mul(mln_rs_matrix_t *m1, mln_rs_matrix_t *m2)
         errno = EINVAL;
         return NULL;
     }
-    mln_u8_t dst, src;
+    mln_u8_t dst, src, tmp;
     mln_u8ptr_t data;
     mln_size_t i, j, k;
     mln_rs_matrix_t *ret;
     mln_size_t m1row = m1->row, m1col = m1->col, m2col = m2->col;
-    register mln_u8ptr_t p, m1data = m1->data, m2data = m2->data;
+    mln_u8ptr_t m1data = m1->data, m2data = m2->data;
 
-    if ((data = (mln_u8ptr_t)malloc(m1row*m2col)) == NULL) {
+    if ((data = (mln_u8ptr_t)calloc(m1row, m2col)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
@@ -158,13 +158,13 @@ mln_rs_matrix_mul(mln_rs_matrix_t *m1, mln_rs_matrix_t *m2)
     }
 
     for (i = 0; i < m1row; ++i) {
-        for (j = 0; j < m2col; ++j) {
-            p = &data[i*m2col+j];
-            for (*p = 0, k = 0; k < m1col; ++k) {
-                dst = m1data[i*m1col+k];
+        for (k = 0; k < m1col; ++k) {
+            tmp = m1data[i*m1col+k];
+            for (j = 0; j < m2col; ++j) {
+                dst = tmp;
                 src = m2data[k*m2col+j];
                 M_RS_GF_MUL(dst, src);
-                M_RS_GF_ADDSUB(*p, dst);
+                M_RS_GF_ADDSUB(data[i*m2col+j], dst);
             }
         }
     }
@@ -401,7 +401,6 @@ void mln_rs_result_free(mln_rs_result_t *result)
 mln_rs_result_t *
 mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k)
 {
-    mln_u8ptr_t data;
     mln_rs_result_t *result;
     mln_rs_matrix_t *matrix, *coMatrix, *resMatrix;
 
@@ -427,17 +426,13 @@ mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k)
         return NULL;
     }
 
-    if ((data = (mln_u8ptr_t)malloc(k*len)) == NULL) {
+    if ((result = mln_rs_result_new(resMatrix->data, n+k, (n+k)*len)) == NULL) {
         mln_rs_matrix_free(resMatrix);
         errno = ENOMEM;
         return NULL;
     }
-    memcpy(data, resMatrix->data+n*len, k*len);
+    resMatrix->isRef = 1;
     mln_rs_matrix_free(resMatrix);
-    if ((result = mln_rs_result_new(data, k, k*len)) == NULL) {
-        errno = ENOMEM;
-        return NULL;
-    }
     return result;
 }
 

@@ -2585,9 +2585,8 @@ Their definitions can be found in melon-1.6.2/include/mln_types.h.
 
   38) Reed-Solomon Code
       a) mln_rs_result_t *mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k);
-         Encode pieces of data in vector 'dataVector' and return 'k' pieces of data that can
-         be used to recover lost data that associated with 'dataVector'. And the type of
-         'dataVector' is 'uint8_t *' not 'uint8_t **'.
+         Encode pieces of data in vector 'dataVector' and return 'n+k' pieces of data.
+         And the type of 'dataVector' is 'uint8_t *' not 'uint8_t **'.
          'len' indicates the length of every element in 'dataVector'.
          'n' indicates how many elements placed in 'dataVector'.
          'k' indicates how many pieces of recovery data would be generated.

@@ -35,13 +35,13 @@ mln_matrix_t *mln_matrix_mul(mln_matrix_t *m1, mln_matrix_t *m2)
         errno = EINVAL;
         return NULL;
     }
-    double *data;
+    double *data, tmp;
     mln_size_t i, j, k;
     mln_matrix_t *ret;
     mln_size_t m1row = m1->row, m1col = m1->col, m2col = m2->col;
-    double *p, *m1data = m1->data, *m2data = m2->data;
+    double *m1data = m1->data, *m2data = m2->data;
 
-    if ((data = (double *)malloc(m1row*m2col*sizeof(double))) == NULL) {
+    if ((data = (double *)calloc(m1row, m2col*sizeof(double))) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
@@ -52,10 +52,10 @@ mln_matrix_t *mln_matrix_mul(mln_matrix_t *m1, mln_matrix_t *m2)
     }
 
     for (i = 0; i < m1row; ++i) {
-        for (j = 0; j < m2col; ++j) {
-            p = &data[i*m2col+j];
-            for (*p = 0, k = 0; k < m1col; ++k) {
-                (*p) += (m1data[i*m1col+k] * m2data[k*m2col+j]);
+        for (k = 0; k < m1col; ++k) {
+            tmp = m1data[i*m1col+k];
+            for (j = 0; j < m2col; ++j) {
+                data[i*m2col+j] += (tmp * m2data[k*m2col+j]);
             }
         }
     }
