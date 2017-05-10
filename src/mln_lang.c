@@ -1133,7 +1133,9 @@ static int mln_lang_set_member_scan(void *rn_data, void *udata)
     mln_rbtree_node_t *rn;
 
     rn = mln_rbtree_search(tree, tree->root, lv);
-    ASSERT(mln_rbtree_null(rn, tree));
+    if (!mln_rbtree_null(rn, tree)) {
+        ASSERT(0);/*do nothing*/
+    }
 
     if ((var = __mln_lang_var_dup(ls->pool, lv)) == NULL) {
         return -1;
@@ -1363,7 +1365,7 @@ mln_s64_t mln_lang_var_toInt(mln_lang_var_t *var)
             if (buf == NULL) break;
             memcpy(buf, s->data, s->len);
             buf[s->len] = 0;
-#if defined(i386)
+#if defined(i386) || defined(MLN_ARM32)
             sscanf((char *)buf, "%lld", &i);
 #else
             sscanf((char *)buf, "%ld", &i);
@@ -1436,7 +1438,7 @@ mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var)
             n = snprintf(buf, sizeof(buf)-1, "Array");
             break;
         case M_LANG_VAL_TYPE_INT:
-#if defined(i386)
+#if defined(i386) || defined(MLN_ARM32)
             n = snprintf(buf, sizeof(buf)-1, "%lld", val->data.i);
 #else
             n = snprintf(buf, sizeof(buf)-1, "%ld", val->data.i);

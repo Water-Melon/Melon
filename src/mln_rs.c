@@ -358,7 +358,7 @@ void mln_rs_matrix_dump(mln_rs_matrix_t *matrix)
 {
     if (matrix == NULL) return;
     mln_size_t i, sum = matrix->row * matrix->col;
-#ifdef i386
+#if defined(i386) || defined(MLN_ARM32)
     printf("Matrix row:%u col:%u\n ", matrix->row, matrix->col);
 #else
     printf("Matrix row:%lu col:%lu\n ", matrix->row, matrix->col);

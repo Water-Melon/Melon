@@ -7,6 +7,8 @@
 
 #installation path
 install_path=`echo "/usr/local/melon"`
+cc="cc"
+enable_arm32=""
 
 #get all parameters
 for param in $@
@@ -16,15 +18,20 @@ do
 		echo "Copyright (C) Niklaus F.Schen."
 		echo "Options:"
 		echo -e "\t--prefix=INSTALL_PATH"
+		echo -e "\t--cc=C compiler"
+		echo -e "\t--enable_arm32"
 		exit 0
 	fi
 	param_prefix=`echo $param|cut -d '=' -f 1`
 	param_suffix=`echo $param|cut -d '=' -f 2`
 	if [ $param_prefix == "--prefix" ]; then
 		install_path=$param_suffix
-	else
-		echo "Error: Invalid option \"$param\"."
-		exit 1
+	fi
+	if [ $param_prefix == "--cc" ]; then
+		cc=$param_suffix
+	fi
+	if [ $param_prefix == "--enable_arm32" ]; then
+		enable_arm32="-DMLN_ARM32"
 	fi
 done
 
@@ -284,7 +291,7 @@ done
 echo "# " > Makefile
 echo "# Copyright (C) Niklaus F.Schen." >> Makefile
 echo "# " >> Makefile
-echo -e "CC\t\t= cc" >> Makefile
+echo -e "CC\t\t= $cc" >> Makefile
 echo -e "FLAGS\t\t= -Iinclude -Imelang -c -Wall -ggdb -Werror -O3 -fPIC" >> Makefile
 echo -e "MELONSO\t\t= libmelon.so" >> Makefile
 echo -e "MELONA\t\t= libmelon.a" >> Makefile
@@ -360,7 +367,7 @@ do
 		cc -o ev_test ev_test.c 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "event module		[EPOLL]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_EPOLL" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_EPOLL $enable_arm32" >> Makefile
 			rm -f ev_test ev_test.c
 			continue
 		fi
@@ -372,13 +379,13 @@ do
 		cc -o ev_test ev_test.c 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "event module		[KQUEUE]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_KQUEUE" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_KQUEUE $enable_arm32" >> Makefile
 			rm -f ev_test ev_test.c
 			continue
 		fi
 		rm -f ev_test ev_test.c
 		echo "event module		[SELECT]"
-		echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SELECT" >> Makefile
+		echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SELECT $enable_arm32" >> Makefile
 		continue
 	fi
 
@@ -403,16 +410,16 @@ do
 		if [ "$?" == "0" ]; then
 			echo "writev			[support]"
 			if [ $sendfile -eq "1" ]; then
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE -DMLN_WRITEV" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE -DMLN_WRITEV $enable_arm32" >> Makefile
 			else
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_WRITEV" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_WRITEV $enable_arm32" >> Makefile
 			fi
 		else
 			echo "writev			[NOT support]"
 			if [ $sendfile -eq "1" ]; then
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE $enable_arm32" >> Makefile
 			else
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
 			fi
 		fi
 		rm -f writev_test writev_test.c
@@ -428,15 +435,15 @@ do
 		cc -o unix98_test unix98_test.c -lpthread 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "__USE_UNIX98		[support]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_USE_UNIX98" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_USE_UNIX98 $enable_arm32" >> Makefile
 		else
 			echo "__USE_UNIX98		[not support]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
 		fi
 		rm -fr unix98_test unix98_test.c
 		continue
 	fi
-	echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
+	echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
 done
 echo "Configure done!"
 

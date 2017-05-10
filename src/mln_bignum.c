@@ -891,7 +891,7 @@ void mln_bignum_dump(mln_bignum_t *bn)
     mln_u32_t i;
     fprintf(stderr, "Data:\n");
     for (i = 0; i < M_BIGNUM_SIZE; ++i) {
-#ifdef i386
+#if defined(i386) || defined(MLN_ARM32)
         fprintf(stderr, "\t%llx\n", bn->data[i]);
 #else
         fprintf(stderr, "\t%lx\n", bn->data[i]);

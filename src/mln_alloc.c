@@ -176,7 +176,7 @@ mln_alloc_calc_divisor(mln_size_t size, mln_size_t start)
     __asm__("bsr %1, %0":"=r"(off):"m"(size));
     ++off;
 #else
-    mln_size_t off = sizeof(mln_size_t)<<3 - 1;
+    mln_size_t off = (sizeof(mln_size_t)<<3) - 1;
     while (off != 0) {
         if (((mln_size_t)1<<off) & size) break;
         --off;
@@ -216,7 +216,7 @@ void *mln_alloc_c(mln_alloc_t *pool, mln_size_t size)
 {
     mln_u8ptr_t ptr = mln_alloc_m(pool, size);
     if (ptr == NULL) return NULL;
-    memset(ptr, size, 0);
+    memset(ptr, 0, size);
     return ptr;
 }
 

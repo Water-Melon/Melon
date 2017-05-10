@@ -8,7 +8,7 @@
 
 #include "mln_types.h"
 
-#if defined(i386)
+#if defined(i386) || defined(MLN_ARM32)
 #define FH_LGN 33
 #else
 #define FH_LGN 65

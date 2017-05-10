@@ -992,22 +992,23 @@ static int mln_http_hash_cmp(mln_hash_t *h, void *key1, void *key2)
  */
 void mln_http_dump(mln_http_t *http)
 {
+    int rc = 1;
     printf("HTTP Dump:\n");
     if (http == NULL) return;
 
     if (http->uri != NULL) {
         printf("\tURI:[");fflush(stdout);
-        write(STDOUT_FILENO, http->uri->data, http->uri->len);
+        rc = write(STDOUT_FILENO, http->uri->data, http->uri->len);
         printf("]\n");
     }
     if (http->args != NULL) {
         printf("\tARGS:[");fflush(stdout);
-        write(STDOUT_FILENO, http->args->data, http->args->len);
+        rc = write(STDOUT_FILENO, http->args->data, http->args->len);
         printf("]\n");
     }
     if (http->response_msg != NULL) {
         printf("\tRESPONSE_MSG:[");fflush(stdout);
-        write(STDOUT_FILENO, http->response_msg->data, http->response_msg->len);
+        rc = write(STDOUT_FILENO, http->response_msg->data, http->response_msg->len);
         printf("]\n");
     }
     printf("\tstatus_code:%u\n", http->status);
@@ -1015,6 +1016,7 @@ void mln_http_dump(mln_http_t *http)
     printf("\tversion_code:%u\n", http->version);
     printf("\ttype_code:%u\n", http->type);
     printf("\tfields:\n");
+    if (rc <= 0) rc = 1;/*do nothing*/
     mln_hash_scan_all(http->header_fields, mln_http_dump_scan, NULL);
 }
 

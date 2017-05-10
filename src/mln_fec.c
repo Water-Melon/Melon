@@ -361,7 +361,7 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
     mln_u32_t ssrc = 0;
     mln_string_t tmp, *t, *res;
     mln_u8ptr_t *p, *pend;
-    mln_u16_t *pl, *plend, seqNo, isLong = 0;
+    mln_u16_t *pl, seqNo, isLong = 0;
     mln_u16_t snBase = 0;
     mln_u8_t bitString[10] = {0};
 
@@ -369,7 +369,6 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
     p = packets;
     pend = packets + n;
     pl = packLen;
-    plend = packLen + n;
     mln_string_nSet(&tmp, bitString, sizeof(bitString));
     if ((res = mln_string_dup(&tmp)) == NULL) {
         errno = ENOMEM;

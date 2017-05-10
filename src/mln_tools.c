@@ -334,15 +334,17 @@ err:
     mln_alloc_destroy(pool);
 
     /*set log files' uid & gid*/
+    int rc = 1;
     char *path = mln_log_getDirPath();
     if (!access(path, F_OK))
-        chown(path, uid, gid);
+        rc = chown(path, uid, gid);
     path = mln_log_getLogPath();
     if (!access(path, F_OK))
-        chown(path, uid, gid);
+        rc = chown(path, uid, gid);
     path = mln_log_getPidPath();
     if (!access(path, F_OK))
-        chown(path, uid, gid);
+        rc = chown(path, uid, gid);
+    if (rc < 0) rc = 1;/*do nothing*/
 
     /*set uid, gid, euid and egid*/
     if (setgid(gid) < 0) {

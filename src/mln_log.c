@@ -101,7 +101,8 @@ int mln_log_init(int in_daemon)
     char pid_str[64] = {0};
     snprintf(pid_str, sizeof(pid_str)-1, "%lu", (unsigned long)getpid());
     mln_file_lock(fd);
-    write(fd, pid_str, strlen(pid_str));
+    int rc = write(fd, pid_str, strlen(pid_str));
+    if (rc <= 0) rc = 1;/*do nothing*/
     mln_file_unlock(fd);
     close(fd);
 
@@ -324,8 +325,10 @@ void _mln_sys_log(enum log_level level, \
 static ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
 {
     ssize_t ret = write(log->fd, buf, size);
-    if (!log->in_daemon)
-        write(STDERR_FILENO, buf, size);
+    if (!log->in_daemon) {
+        int rc = write(STDERR_FILENO, buf, size);
+        if (rc < 0) rc = 1;/*do nothing*/
+    }
     return ret;
 }
 
@@ -477,7 +480,7 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'i':
             {
                 memset(line_str, 0, sizeof(line_str));
-#ifdef i386
+#if defined(i386) || defined(MLN_ARM32)
                 long long num = va_arg(arg, long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%lld", num);
 #else
@@ -490,7 +493,7 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'I':
             {
                 memset(line_str, 0, sizeof(line_str));
-#ifdef i386
+#if defined(i386) || defined(MLN_ARM32)
                 unsigned long long num = va_arg(arg, unsigned long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%llu", num);
 #else

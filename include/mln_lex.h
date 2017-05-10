@@ -701,7 +701,7 @@ beg:\
         if ((c = mln_lex_getAChar(lex)) == MLN_ERR) return NULL;\
 lp:\
         switch (c) {\
-            case MLN_EOF:\
+            case (char)MLN_EOF:\
                  return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_EOF);\
             case '\n':\
                  {\

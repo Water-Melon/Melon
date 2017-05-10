@@ -3224,7 +3224,7 @@ static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right,
     memcpy(num, ls->text->data, ls->text->len);
     num[ls->text->len] = 0;
     mln_s64_t i;
-#ifdef i386
+#if defined(i386) || defined(MLN_ARM32)
     sscanf(num, "%lld", &i);
 #else
     sscanf(num, "%ld", &i);

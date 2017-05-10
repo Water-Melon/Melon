@@ -9,12 +9,14 @@
 
 #define CONF_ERR(lex,TK,MSG); \
 {\
+    int rc = 1;\
     mln_string_t *path = mln_lex_getCurFilename(lex);\
     fprintf(stderr, "Configuration error. ");\
     if (path != NULL) {\
-        write(STDERR_FILENO, path->data, path->len);\
-        write(STDERR_FILENO, ":", 1);\
+        rc = write(STDERR_FILENO, path->data, path->len);\
+        rc = write(STDERR_FILENO, ":", 1);\
     }\
+    if (rc <= 0) rc = 1;/*do nothing*/\
     fprintf(stderr, "%d: \"%s\" %s.\n", (TK)->line, (char *)((TK)->text->data), MSG);\
 }
 
