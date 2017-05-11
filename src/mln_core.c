@@ -74,7 +74,31 @@ chl:
             mln_worker_routine(attr);
         }
     } else {
-        if (mln_log_init(1) < 0) return -1;
+        mln_conf_t *cf;
+        mln_conf_domain_t *cd;
+        mln_conf_cmd_t *cc;
+        mln_conf_item_t *ci;
+        if ((cf = mln_get_conf()) == NULL) {
+            fprintf(stderr, "configuration messed up.\n");
+            return -1;
+        }
+        if ((cd = cf->search(cf, "main")) == NULL) {
+            fprintf(stderr, "No such domain named 'main'.\n");
+            return -1;
+        }
+        if ((cc = cd->search(cd, "daemon")) == NULL) {
+            fprintf(stderr, "No such command named 'daemon'.\n");
+            return -1;
+        }
+        if (mln_conf_get_argNum(cc) != 1) {
+            fprintf(stderr, "Invalid command 'daemon'.\n");
+            return -1;
+        }
+        if ((ci = cc->search(cc, 1)) == NULL || ci->type != CONF_BOOL) {
+            fprintf(stderr, "Invalid command 'daemon'.\n");
+            return -1;
+        }
+        if (mln_log_init(ci->val.b) < 0) return -1;
     }
     return 0;
 }
