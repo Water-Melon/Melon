@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.2
+Melon Version 1.6.3
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.2.
-  b) Change directory to the melon-1.6.2/.
+  a) Download and decompress melon-1.6.3.
+  b) Change directory to the melon-1.6.3/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.2/include/mln_types.h.
+Their definitions can be found in melon-1.6.3/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3130,6 +3130,36 @@ Their definitions can be found in melon-1.6.2/include/mln_types.h.
           g. BOOLEAN
           h. FUNCTION
       If it succeed, 'true' will be returned. Otherwise, 'false' will be returned.
+
+      <6> mln_strcmpSeq(s1, s2);
+      Its functionality is the same as 'strcmp()' in C.
+      This function will check every byte strictly.
+      Both of arguments must be 'string'.
+
+      <7> mln_strcmp(s1, s2);
+      Its functionality is the same as 'strcmp()' in C.
+      Both of arguments must be 'string'.
+
+      <8> mln_strncmp(s1, s2, n);
+      Its functionality is the same as 'strncmp()' in C.
+      First two arguments must be 'string', and the last one must be 'int'.
+
+      <9> mln_strstr(s, pattern);
+      Its functionality is the same as 'strstr()' in C.
+      All of arguments are type 'string'.
+
+      <10> mln_kmp(s, pattern);
+      The same as 'mln_strstr()', but implemented in KMP algorithm.
+
+      <11> mln_split(s, offset);
+      Return a splited string which starts from 'offset' in 's'.
+      'offset' can be negative number.
+
+      <12> mln_slice(s, seps);
+      Up to 'seps', 's' will be sliced into several pieces those are placed in an array as the
+      return value.
+      All of arguments must be 'string' type.
+      'seps' is a set of characters used to find the positions to slice.
 
    G. Function development
       Following these steps below:

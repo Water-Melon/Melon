@@ -49,13 +49,9 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_scope, \
                       static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
-                       mln_lang_var_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
 MLN_CHAIN_FUNC_DEFINE(mln_lang_var, \
                       mln_lang_var_t, \
-                      static inline void, \
+                      void, \
                       prev, \
                       next);
 static inline int __mln_lang_run(mln_lang_t *lang);
@@ -731,6 +727,72 @@ mln_lang_retExp_t *mln_lang_retExp_createTmpFalse(mln_alloc_t *pool, mln_string_
     return retExp;
 }
 
+mln_lang_retExp_t *mln_lang_retExp_createTmpInt(mln_alloc_t *pool, mln_s64_t off, mln_string_t *name)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_retExp_t *retExp;
+    if ((val = __mln_lang_val_new(pool, M_LANG_VAL_TYPE_INT, &off)) == NULL) {
+        return NULL;
+    }
+    if ((var = __mln_lang_var_new(pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        __mln_lang_val_free(val);
+        return NULL;
+    }
+    if ((retExp = __mln_lang_retExp_new(pool, M_LANG_RETEXP_VAR, var)) == NULL) {
+        __mln_lang_var_free(var);
+        return NULL;
+    }
+    return retExp;
+}
+
+mln_lang_retExp_t *mln_lang_retExp_createTmpString(mln_alloc_t *pool, mln_string_t *s, mln_string_t *name)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_retExp_t *retExp;
+    mln_string_t *dup;
+    if ((dup = mln_string_pool_dup(pool, s)) == NULL) {
+        return NULL;
+    }
+    if ((val = __mln_lang_val_new(pool, M_LANG_VAL_TYPE_STRING, dup)) == NULL) {
+        mln_string_pool_free(dup);
+        return NULL;
+    }
+    if ((var = __mln_lang_var_new(pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        __mln_lang_val_free(val);
+        return NULL;
+    }
+    if ((retExp = __mln_lang_retExp_new(pool, M_LANG_RETEXP_VAR, var)) == NULL) {
+        __mln_lang_var_free(var);
+        return NULL;
+    }
+    return retExp;
+}
+
+mln_lang_retExp_t *mln_lang_retExp_createTmpArray(mln_alloc_t *pool, mln_string_t *name)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_retExp_t *retExp;
+    mln_lang_array_t *array;
+    if ((array = mln_lang_array_new(pool)) == NULL) {
+        return NULL;
+    }
+    if ((val = __mln_lang_val_new(pool, M_LANG_VAL_TYPE_ARRAY, array)) == NULL) {
+        mln_lang_array_free(array);
+        return NULL;
+    }
+    if ((var = __mln_lang_var_new(pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        __mln_lang_val_free(val);
+        return NULL;
+    }
+    if ((retExp = __mln_lang_retExp_new(pool, M_LANG_RETEXP_VAR, var)) == NULL) {
+        __mln_lang_var_free(var);
+        return NULL;
+    }
+    return retExp;
+}
 
 static inline mln_lang_stack_node_t *
 mln_lang_stack_node_new(mln_alloc_t *pool, mln_lang_stack_node_type_t type, void *data)
@@ -1791,7 +1853,7 @@ __mln_lang_val_new(mln_alloc_t *pool, mln_s32_t type, void *data)
         case M_LANG_VAL_TYPE_NIL:
             break;
         case M_LANG_VAL_TYPE_INT:
-            val->data.i = *(int *)data;
+            val->data.i = *(mln_s64_t *)data;
             break;
         case M_LANG_VAL_TYPE_BOOL:
             val->data.b = *(mln_u8ptr_t)data;
@@ -2106,7 +2168,7 @@ static inline void mln_lang_array_elem_free(void *data)
     if (data == NULL) return;
     mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)data;
     if (elem->key != NULL) __mln_lang_var_free(elem->key);
-    if (elem->value != NULL) __mln_lang_val_free(elem->value);
+    if (elem->value != NULL) __mln_lang_var_free(elem->value);
     mln_alloc_free(elem);
 }
 
