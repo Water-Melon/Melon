@@ -84,7 +84,7 @@ static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
             mln_log(none, "%s\n", val->data.b?"True":"False");
             break;
         case M_LANG_VAL_TYPE_REAL:
-            mln_log(none, "%lf\n", val->data.f);
+            mln_log(none, "%f\n", val->data.f);
             break;
         case M_LANG_VAL_TYPE_STRING:
             mln_log(none, "%S\n", val->data.s);

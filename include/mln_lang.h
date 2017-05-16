@@ -345,6 +345,8 @@ extern mln_lang_retExp_t *mln_lang_retExp_createTmpNil(mln_alloc_t *pool, mln_st
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpTrue(mln_alloc_t *pool, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpFalse(mln_alloc_t *pool, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpInt(mln_alloc_t *pool, mln_s64_t off, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpReal(mln_alloc_t *pool, double f, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpBool(mln_alloc_t *pool, mln_u8_t b, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpString(mln_alloc_t *pool, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpArray(mln_alloc_t *pool, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_symbolNode_t *mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
@@ -388,6 +390,12 @@ extern int mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(
 extern void mln_lang_msg_free(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_msg_setHandler(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler) __NONNULL2(1,2);
 extern int mln_lang_msg_sendMsg(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC) __NONNULL3(1,2,3);
+extern mln_lang_set_detail_t *
+mln_lang_set_detail_new(mln_alloc_t *pool, mln_string_t *name) __NONNULL2(1,2);
+extern void mln_lang_set_detail_free(mln_lang_set_detail_t *c);
+extern void mln_lang_set_detail_freeSelf(mln_lang_set_detail_t *c);
+extern int
+mln_lang_set_member_add(mln_alloc_t *pool, mln_rbtree_t *members, mln_lang_var_t *var) __NONNULL3(1,2,3);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
                        mln_lang_var_t, \
                        extern void, \

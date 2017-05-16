@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.3
+Melon Version 1.6.4
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.3.
-  b) Change directory to the melon-1.6.3/.
+  a) Download and decompress melon-1.6.4.
+  b) Change directory to the melon-1.6.4/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.3/include/mln_types.h.
+Their definitions can be found in melon-1.6.4/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3160,6 +3160,49 @@ Their definitions can be found in melon-1.6.3/include/mln_types.h.
       return value.
       All of arguments must be 'string' type.
       'seps' is a set of characters used to find the positions to slice.
+
+      <13> mln_strlen(s);
+      Return the length of string 's'.
+
+      <14> mln_b2s(bin);
+      Memory copy 'bin' into a string.
+      Return value is string type.
+
+      <15> mln_s2b(s, type);
+      Convert string 's' to be type 'type'.
+      'type' is a string which can be "int", "real" and "bool".
+      
+      <16> MFile
+      MFile is the name that a Set to operate file, its melang prototype can be given as,
+          set MFile {
+              fd;
+              errno;
+              open(path, op, prio);
+              lseek(offset, whence);
+              read(nbytes);
+              write(data);
+              close();
+              errmsg();
+              size();
+          };
+      'open' -- 'op' is string type that indicates the operation including Read, Write, Append.
+                e.g.   'rwa', 'r', 'w', 'a', 'ra', 'rw'.
+                'prio' is an integer that indicates the file access authority, e.g. 0777.
+                If open failed, 'false' will be returned, and can get error message via calling
+                'errmsg()'.
+      'lseek' -- 'offset' is an integer and 'whence' is a string.
+                The value of whence includes, 'begin', 'current', 'end'.
+                If failed, 'false' will be returned, and can get error message via calling
+                'errmsg()'.
+      'read' -- 'nbytes' is an integer indicating how many bytes want to read.
+                A string will be returned if succeed. Otherwise, 'false' will be returned, and
+                error message can be got via calling 'errmsg()'.
+      'write' -- 'data' is string that want to be written.
+                 'false' will be returned if failed. Otherwise, the number of bytes that written
+                 successfully.
+      'close' -- close file descriptor.
+      'errmsg' -- Get and return error string.
+      'size' -- Get the file size in bytes.
 
    G. Function development
       Following these steps below:

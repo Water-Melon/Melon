@@ -1,3 +1,10 @@
+Changes with melon 1.6.4                                          16 May 2017
+    *) Updated Lang component.
+    *) Added Set of file of melang.
+    *) Updated interfaces of string of melang.
+    *) Fixed a bug in interface print of melang.
+    *) Updated a macro in defs component.
+
 Changes with melon 1.6.3                                          13 May 2017
     *) Updated Lang component.
     *) Fixed some bugs about Lang component.

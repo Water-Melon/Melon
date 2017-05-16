@@ -3224,11 +3224,27 @@ static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right,
     memcpy(num, ls->text->data, ls->text->len);
     num[ls->text->len] = 0;
     mln_s64_t i;
+    if (ls->text->len > 1 && num[0] == '0') {
+        if (num[1] == 'x' || num[1] == 'X') {
 #if defined(i386) || defined(MLN_ARM32)
-    sscanf(num, "%lld", &i);
+            sscanf(num, "%llx", &i);
 #else
-    sscanf(num, "%ld", &i);
+            sscanf(num, "%lx", &i);
 #endif
+        } else {
+#if defined(i386) || defined(MLN_ARM32)
+            sscanf(num, "%llo", &i);
+#else
+            sscanf(num, "%lo", &i);
+#endif
+        }
+    } else {
+#if defined(i386) || defined(MLN_ARM32)
+        sscanf(num, "%lld", &i);
+#else
+        sscanf(num, "%ld", &i);
+#endif
+    }
     mln_lang_factor_t *lf;
     if ((lf = mln_lang_factor_new(pool, M_FACTOR_INT, &i, left->line)) == NULL) {
         return -1;

@@ -115,7 +115,7 @@ extern int spin_trylock(void *lock);
 {\
     size_t i;\
     for (i = 0; i < Blen; ++i) {\
-        *(buf)++ = ((num) >> ((Blen-i-1) << 3)) & 0xff;\
+        *(buf)++ = ((mln_u64_t)(num) >> ((Blen-i-1) << 3)) & 0xff;\
     }\
 }
 
