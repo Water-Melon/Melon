@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.4
+Melon Version 1.6.5
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.4.
-  b) Change directory to the melon-1.6.4/.
+  a) Download and decompress melon-1.6.5.
+  b) Change directory to the melon-1.6.5/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.4/include/mln_types.h.
+Their definitions can be found in melon-1.6.5/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3203,6 +3203,12 @@ Their definitions can be found in melon-1.6.4/include/mln_types.h.
       'close' -- close file descriptor.
       'errmsg' -- Get and return error string.
       'size' -- Get the file size in bytes.
+
+      <17> mln_aes(data, key, bits, op);
+      'data' -- a string and its length % 16 must equal to 0.
+      'key' -- the string type key used to encrypt/decrypt 'data'.
+      'bits' -- the bits of 'key'. Key's bit-length must equal or greater than 'bits'.
+      'op' -- indicates the operation 'encode' and 'decode' to encrypt and decrypt. It's a string.
 
    G. Function development
       Following these steps below:
