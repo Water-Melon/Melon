@@ -1,3 +1,11 @@
+Changes with melon 1.6.6                                          18 May 2017
+    *) Added script function about Base64.
+    *) Added script functions about DES, 3DES.
+    *) Added script function about MD5.
+    *) Added script functions about SHA1, SHA256.
+    *) Added script function about RC4.
+    *) Added script function about Prime Generator.
+
 Changes with melon 1.6.5                                          17 May 2017
     *) Added script function about AES.
 

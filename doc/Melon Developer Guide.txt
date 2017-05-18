@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.5
+Melon Version 1.6.6
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.5.
-  b) Change directory to the melon-1.6.5/.
+  a) Download and decompress melon-1.6.6.
+  b) Change directory to the melon-1.6.6/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.5/include/mln_types.h.
+Their definitions can be found in melon-1.6.6/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3209,6 +3209,50 @@ Their definitions can be found in melon-1.6.5/include/mln_types.h.
       'key' -- the string type key used to encrypt/decrypt 'data'.
       'bits' -- the bits of 'key'. Key's bit-length must equal or greater than 'bits'.
       'op' -- indicates the operation 'encode' and 'decode' to encrypt and decrypt. It's a string.
+
+      <18> mln_base64(data, op);
+      Encode and decode 'data' to be base64 code or the original data.
+      'data' -- must be string type.
+      'op' -- a string indicating 'encode' or 'decode'.
+      Result will be given as return value.
+
+      <19> mln_des(data, key, op);
+      Encrypt or decrypt 'data' in DES.
+      'data' -- must be string type, and its length % 8 must be 0.
+      'key' -- an integer value.
+      'op' -- a string value indicating 'encode' or 'decode'.
+      Result will be given as return value.
+
+      <20> mln_3des(data, key1, key2, op);
+      Encrypt or decrypt 'data' in 3DES.
+      'data' -- must be string type, and its length % 8 must be 0.
+      'key1', 'key2' -- an integer value.
+      'op' -- a string value indicating 'encode' or 'decode'.
+      Result will be given as return value.
+
+      <21> mln_prime(base);
+      Generate a prime integer greater than 'base'.
+      'base' -- must be integer type.
+      The return value is an prime number.
+
+      <22> mln_rc4(data, key);
+      Encode and decode 'data' in RC4.
+      'data' -- must be string type.
+      'key' -- must be string type.
+      Result will be returned by function.
+
+      <23> mln_md5(data);
+      Calculate and return MD5 value.
+      'data' must be string type.
+
+      <24> mln_sha1(data);
+      Calculate and return SHA1 value.
+      'data' must be string type.
+
+      <25> mln_sha256(data);
+      Calculate and return SHA256 value.
+      'data' must be string type.
+
 
    G. Function development
       Following these steps below:

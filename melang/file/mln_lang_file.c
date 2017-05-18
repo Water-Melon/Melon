@@ -233,6 +233,10 @@ static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Lack of member 'fd'.");
         return NULL;
     }
+    if (mln_lang_var_getValType(var) != M_LANG_VAL_TYPE_INT) {
+        mln_lang_errmsg(ctx, "Invalid type of 'fd'.");
+        return NULL;
+    }
     val = var->val;
 
     /*arg1*/
@@ -449,6 +453,10 @@ static mln_lang_retExp_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Lack of member 'fd'.");
         return NULL;
     }
+    if (mln_lang_var_getValType(var) != M_LANG_VAL_TYPE_INT) {
+        mln_lang_errmsg(ctx, "Invalid type of 'fd'.");
+        return NULL;
+    }
     val = var->val;
 
     /*arg1*/
@@ -585,6 +593,10 @@ static mln_lang_retExp_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Lack of member 'fd'.");
         return NULL;
     }
+    if (mln_lang_var_getValType(var) != M_LANG_VAL_TYPE_INT) {
+        mln_lang_errmsg(ctx, "Invalid type of 'fd'.");
+        return NULL;
+    }
     val = var->val;
 
     /*arg1*/
@@ -705,6 +717,10 @@ static mln_lang_retExp_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Lack of member 'fd'.");
         return NULL;
     }
+    if (mln_lang_var_getValType(var) != M_LANG_VAL_TYPE_INT) {
+        mln_lang_errmsg(ctx, "Invalid type of 'fd'.");
+        return NULL;
+    }
     val = var->val;
 
     /*arg1*/
@@ -795,6 +811,10 @@ static mln_lang_retExp_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
         mln_lang_errmsg(ctx, "Lack of member 'fd'.");
+        return NULL;
+    }
+    if (mln_lang_var_getValType(var) != M_LANG_VAL_TYPE_INT) {
+        mln_lang_errmsg(ctx, "Invalid type of 'fd'.");
         return NULL;
     }
     val = var->val;
@@ -972,6 +992,10 @@ static mln_lang_retExp_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
         mln_lang_errmsg(ctx, "Lack of member 'fd'.");
+        return NULL;
+    }
+    if (mln_lang_var_getValType(var) != M_LANG_VAL_TYPE_INT) {
+        mln_lang_errmsg(ctx, "Invalid type of 'fd'.");
         return NULL;
     }
     val = var->val;
