@@ -396,6 +396,8 @@ extern void mln_lang_set_detail_free(mln_lang_set_detail_t *c);
 extern void mln_lang_set_detail_freeSelf(mln_lang_set_detail_t *c);
 extern int
 mln_lang_set_member_add(mln_alloc_t *pool, mln_rbtree_t *members, mln_lang_var_t *var) __NONNULL3(1,2,3);
+extern mln_lang_array_t *mln_lang_array_new(mln_alloc_t *pool) __NONNULL1(1);
+extern void mln_lang_array_free(mln_lang_array_t *array);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
                        mln_lang_var_t, \
                        extern void, \

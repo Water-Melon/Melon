@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.6
+Melon Version 1.6.7
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.6.
-  b) Change directory to the melon-1.6.6/.
+  a) Download and decompress melon-1.6.7.
+  b) Change directory to the melon-1.6.7/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.6/include/mln_types.h.
+Their definitions can be found in melon-1.6.7/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3243,15 +3243,23 @@ Their definitions can be found in melon-1.6.6/include/mln_types.h.
 
       <23> mln_md5(data);
       Calculate and return MD5 value.
-      'data' must be string type.
+      'data' can be string type or set 'MFile'.
 
       <24> mln_sha1(data);
       Calculate and return SHA1 value.
-      'data' must be string type.
+      'data' can be string type or set 'MFile'.
 
       <25> mln_sha256(data);
       Calculate and return SHA256 value.
-      'data' must be string type.
+      'data' can be string type or set 'MFile'.
+
+      <26> mln_json_encode(array);
+      Encode 'array' to be a string. If succeed, result will be returned. Otherwise, 'false'
+      will be returned.
+
+      <27> mln_json_decode(s);
+      Decode string 's' to be an array. If succeed, result will be returned. Otherwise,
+      'false' will be returned.
 
 
    G. Function development

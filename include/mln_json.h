@@ -81,10 +81,10 @@ struct mln_json_s {
 #define M_JSON_SET_TYPE_NULL(json)             (json)->type = M_JSON_NULL
 
 #define M_JSON_SET_DATA_STRING(json,str)       (json)->data.m_j_string = (str)
-#define M_JSON_SET_DATA_NUMBER(json,num)       (json)->m_j_number = (num)
-#define M_JSON_SET_DATA_TRUE(json)             (json)->m_j_true = 1
-#define M_JSON_SET_DATA_FALSE(json)            (json)->m_j_false = 1
-#define M_JSON_SET_DATA_NULL(json)             (json)->m_j_null = NULL
+#define M_JSON_SET_DATA_NUMBER(json,num)       (json)->data.m_j_number = (num)
+#define M_JSON_SET_DATA_TRUE(json)             (json)->data.m_j_true = 1
+#define M_JSON_SET_DATA_FALSE(json)            (json)->data.m_j_false = 1
+#define M_JSON_SET_DATA_NULL(json)             (json)->data.m_j_null = NULL
 
 extern mln_json_t *mln_json_new(void);
 extern mln_json_t *mln_json_parse(mln_string_t *jstr);

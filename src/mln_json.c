@@ -1049,6 +1049,7 @@ int mln_json_add_element(mln_json_t *j, mln_json_t *value)
         rbattr.data_free = mln_json_free;
         j->data.m_j_array = mln_rbtree_init(&rbattr);
         if (j->data.m_j_array == NULL) return -1;
+        M_JSON_SET_TYPE_ARRAY(j);
     }
 
     if (!M_JSON_IS_ARRAY(j)) return -1;

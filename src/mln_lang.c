@@ -148,8 +148,8 @@ static inline void mln_lang_val_freeData(mln_lang_val_t *val);
 static inline mln_lang_val_t *
 mln_lang_val_dup(mln_alloc_t *pool, mln_lang_val_t *val);
 static int mln_lang_val_cmp(const void *data1, const void *data2);
-static inline mln_lang_array_t *mln_lang_array_new(mln_alloc_t *pool);
-static inline void mln_lang_array_free(mln_lang_array_t *array);
+static inline mln_lang_array_t *__mln_lang_array_new(mln_alloc_t *pool);
+static inline void __mln_lang_array_free(mln_lang_array_t *array);
 static inline mln_lang_array_t *
 mln_lang_array_dup(mln_alloc_t *pool, mln_lang_array_t *array);
 static int mln_lang_array_scan_dup(void *rn_data, void *udata);
@@ -808,11 +808,11 @@ mln_lang_retExp_t *mln_lang_retExp_createTmpArray(mln_alloc_t *pool, mln_string_
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
     mln_lang_array_t *array;
-    if ((array = mln_lang_array_new(pool)) == NULL) {
+    if ((array = __mln_lang_array_new(pool)) == NULL) {
         return NULL;
     }
     if ((val = __mln_lang_val_new(pool, M_LANG_VAL_TYPE_ARRAY, array)) == NULL) {
-        mln_lang_array_free(array);
+        __mln_lang_array_free(array);
         return NULL;
     }
     if ((var = __mln_lang_var_new(pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
@@ -1945,7 +1945,7 @@ static inline void mln_lang_val_freeData(mln_lang_val_t *val)
             break;
         case M_LANG_VAL_TYPE_ARRAY:
             if (val->data.array != NULL) {
-                mln_lang_array_free(val->data.array);
+                __mln_lang_array_free(val->data.array);
                 val->data.array = NULL;
             }
             break;
@@ -2015,7 +2015,7 @@ mln_lang_val_dup(mln_alloc_t *pool, mln_lang_val_t *val)
                 __mln_lang_func_detail_free((mln_lang_func_detail_t *)data);
                 break;
             case M_LANG_VAL_TYPE_ARRAY:
-                mln_lang_array_free((mln_lang_array_t *)data);
+                __mln_lang_array_free((mln_lang_array_t *)data);
                 break;
             default:
                 break;
@@ -2094,7 +2094,12 @@ static int mln_lang_val_cmp(const void *data1, const void *data2)
 }
 
 
-static inline mln_lang_array_t *mln_lang_array_new(mln_alloc_t *pool)
+mln_lang_array_t *mln_lang_array_new(mln_alloc_t *pool)
+{
+    return __mln_lang_array_new(pool);
+}
+
+static inline mln_lang_array_t *__mln_lang_array_new(mln_alloc_t *pool)
 {
     mln_lang_array_t *la;
     struct mln_rbtree_attr rbattr;
@@ -2118,7 +2123,12 @@ static inline mln_lang_array_t *mln_lang_array_new(mln_alloc_t *pool)
     return la;
 }
 
-static inline void mln_lang_array_free(mln_lang_array_t *array)
+void mln_lang_array_free(mln_lang_array_t *array)
+{
+    __mln_lang_array_free(array);
+}
+
+static inline void __mln_lang_array_free(mln_lang_array_t *array)
 {
     if (array == NULL) return;
     if (array->elems_key != NULL) mln_rbtree_destroy(array->elems_key);
@@ -2131,12 +2141,12 @@ mln_lang_array_dup(mln_alloc_t *pool, mln_lang_array_t *array)
 {
     mln_lang_array_t *ret;
     struct mln_lang_scan_s ls;
-    if ((ret = mln_lang_array_new(pool)) == NULL) return NULL;
+    if ((ret = __mln_lang_array_new(pool)) == NULL) return NULL;
     ls.pool = pool;
     ls.tree = ret->elems_index;
     ls.tree2 = ret->elems_key;
     if (mln_rbtree_scan_all(array->elems_index, array->elems_index->root, mln_lang_array_scan_dup, &ls) < 0) {
-        mln_lang_array_free(ret);
+        __mln_lang_array_free(ret);
         return NULL;
     }
     ret->index = array->index;
@@ -5090,13 +5100,13 @@ mln_lang_stack_handler_factor_array(mln_lang_ctx_t *ctx, mln_lang_factor_t *fact
     mln_lang_retExp_t *retExp;
     mln_lang_array_t *array;
 
-    if ((array = mln_lang_array_new(ctx->pool)) == NULL) {
+    if ((array = __mln_lang_array_new(ctx->pool)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
     if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_ARRAY, array)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
-        mln_lang_array_free(array);
+        __mln_lang_array_free(array);
         return -1;
     }
     if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
