@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.7
+Melon Version 1.6.8
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.7.
-  b) Change directory to the melon-1.6.7/.
+  a) Download and decompress melon-1.6.8.
+  b) Change directory to the melon-1.6.8/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.7/include/mln_types.h.
+Their definitions can be found in melon-1.6.8/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3260,6 +3260,25 @@ Their definitions can be found in melon-1.6.7/include/mln_types.h.
       <27> mln_json_decode(s);
       Decode string 's' to be an array. If succeed, result will be returned. Otherwise,
       'false' will be returned.
+
+      <28> mln_matrix_mul(array1, array2);
+      Example:
+          array1 = ['row': 3, 'col': 2, 'data':[1,0,0,1,1,1]];
+          array2 = ['row': 2, 'col': 2, 'data':[1,2,3,4]];
+          res_array = mln_matrix_mul(array1, array2);
+          nr_row = res_array['row'];
+          nr_col = res_array['col'];
+          data_array = res_array['data'];
+      If failed, 'false' will be returned.
+
+      <29> mln_matrix_inv(array);
+      Inverse. Example:
+          array = ['row': 2, 'col': 2, 'data':[1,0,1,1]];
+          res_array = mln_matrix_inv(array);
+          nr_row = res_array['row'];
+          nr_col = res_array['col'];
+          data_array = res_array['data'];
+      If failed, 'false' will be returned.
 
 
    G. Function development

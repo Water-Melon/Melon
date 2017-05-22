@@ -111,7 +111,7 @@ mln_matrix_t *mln_matrix_inverse(mln_matrix_t *matrix)
                 data[k + j] = tmp;
             }
         }
-        if (fabs(origin[i + m]) < 1e-6) {//is zero
+        if (fabs(origin[i + m]) < 1e-6) {/*is zero*/
             mln_matrix_free(ret);
             errno = EINVAL;
             return NULL;
