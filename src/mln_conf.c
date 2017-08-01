@@ -88,9 +88,9 @@ mln_conf_item_init(mln_conf_t *cf, mln_conf_lex_struct_t *cls, mln_conf_item_t *
 static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current) __NONNULL2(1,2);
 static mln_conf_item_t *
 mln_conf_search_item(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
-static int mln_conf_get_cmds_scan(void *rn_data, void *udata);
-static int mln_conf_dump_conf_scan(void *rn_data, void *udata);
-static int mln_conf_dump_domain_scan(void *rn_data, void *udata);
+static int mln_conf_get_cmds_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_conf_dump_conf_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_conf_dump_domain_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 /*for hook*/
 static mln_conf_hook_t *mln_conf_hook_init(void);
 static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
@@ -840,13 +840,13 @@ void mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **v)
     struct conf_cmds_scan_s ccs;
     ccs.cc = v;
     ccs.pos = 0;
-    if (mln_rbtree_scan_all(cd->cmd, cd->cmd->root, mln_conf_get_cmds_scan, (void *)&ccs) < 0) {
+    if (mln_rbtree_scan_all(cd->cmd, mln_conf_get_cmds_scan, (void *)&ccs) < 0) {
         mln_log(error, "Shouldn't be here.\n");
         abort();
     }
 }
 
-static int mln_conf_get_cmds_scan(void *rn_data, void *udata)
+static int mln_conf_get_cmds_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     struct conf_cmds_scan_s *ccs = (struct conf_cmds_scan_s *)udata;
     ccs->cc[(ccs->pos)++] = (mln_conf_cmd_t *)rn_data;
@@ -864,18 +864,18 @@ mln_u32_t mln_conf_get_argNum(mln_conf_cmd_t *cc)
 void mln_conf_dump(void)
 {
     printf("CONFIGURATIONS:\n");
-    mln_rbtree_scan_all(gConf->domain, gConf->domain->root, mln_conf_dump_conf_scan, NULL);
+    mln_rbtree_scan_all(gConf->domain, mln_conf_dump_conf_scan, NULL);
 }
 
-static int mln_conf_dump_conf_scan(void *rn_data, void *udata)
+static int mln_conf_dump_conf_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_conf_domain_t *cd = (mln_conf_domain_t *)rn_data;
     printf("\tDOMAIN [%s]:\n", (char *)(cd->domain_name->data));
-    mln_rbtree_scan_all(cd->cmd, cd->cmd->root, mln_conf_dump_domain_scan, NULL);
+    mln_rbtree_scan_all(cd->cmd, mln_conf_dump_domain_scan, NULL);
     return 0;
 }
 
-static int mln_conf_dump_domain_scan(void *rn_data, void *udata)
+static int mln_conf_dump_domain_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_conf_cmd_t *cc = (mln_conf_cmd_t *)rn_data;
     printf("\t\tCOMMAND [%s]:\n", (char *)(cc->cmd_name->data));

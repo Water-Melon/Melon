@@ -8,6 +8,16 @@
 #include<string.h>
 #include"mln_rbtree.h"
 
+MLN_CHAIN_FUNC_DECLARE(mln_rbtree, \
+                       mln_rbtree_node_t, \
+                       static inline void, \
+                       __NONNULL3(1,2,3));
+MLN_CHAIN_FUNC_DEFINE(mln_rbtree, \
+                      mln_rbtree_node_t, \
+                      static inline void, \
+                      prev, \
+                      next);
+
 /*static declarations*/
 static inline void
 left_rotate(mln_rbtree_t *t, mln_rbtree_node_t *n) __NONNULL2(1,2);
@@ -36,9 +46,12 @@ mln_rbtree_init(struct mln_rbtree_attr *attr)
     t->nil.color = M_RB_BLACK;
     t->root = &(t->nil);
     t->min = &(t->nil);
+    t->head = t->tail = NULL;
+    t->iter = NULL;
     t->cmp = attr->cmp;
     t->data_free = attr->data_free;
     t->nr_node = 0;
+    t->del = 0;
     return t;
 }
 
@@ -48,9 +61,8 @@ mln_rbtree_destroy(mln_rbtree_t *t)
 {
     if (t == NULL) return;
     mln_rbtree_node_t *fr;
-    while (t->root != &(t->nil)) {
-        fr = t->root;
-        mln_rbtree_delete(t, fr);
+    while ((fr = t->head) != NULL) {
+        mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
         mln_rbtree_free_node(t, fr);
     }
     free(t);
@@ -77,6 +89,7 @@ mln_rbtree_new_node(mln_rbtree_t *t, void *data)
     n = (mln_rbtree_node_t *)malloc(sizeof(mln_rbtree_node_t));
     if (n == NULL) return NULL;
     n->data = data;
+    n->prev = n->next = NULL;
     n->parent = &(t->nil);
     n->left = &(t->nil);
     n->right = &(t->nil);
@@ -146,6 +159,7 @@ mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *n)
     if (t->min == &(t->nil)) t->min = n;
     else if (t->cmp(n->data, t->min->data) < 0) t->min = n;
     ++(t->nr_node);
+    mln_rbtree_chain_add(&(t->head), &(t->tail), n);
 }
 
 /*insert fixup*/
@@ -241,6 +255,11 @@ mln_rbtree_delete(mln_rbtree_t *t, mln_rbtree_node_t *n)
     if (y_original_color == M_RB_BLACK) rbtree_delete_fixup(t, x);
     n->parent = n->left = n->right = &(t->nil);
     --(t->nr_node);
+    if (t->iter != NULL && t->iter == n) {
+        t->iter = n->next;
+        t->del = 1;
+    }
+    mln_rbtree_chain_del(&(t->head), &(t->tail), n);
 }
 
 /*rbtree_delete_fixup*/
@@ -320,15 +339,18 @@ mln_rbtree_min(mln_rbtree_t *t)
 }
 
 /*scan_all*/
-int mln_rbtree_scan_all(mln_rbtree_t *t, mln_rbtree_node_t *root, rbtree_act act, void *udata)
+int mln_rbtree_scan_all(mln_rbtree_t *t, rbtree_act act, void *udata)
 {
-    if (root == &(t->nil)) return 0;
-    if (mln_rbtree_scan_all(t, root->left, act, udata) < 0)
-        return -1;
-    if (mln_rbtree_scan_all(t, root->right, act, udata) < 0)
-        return -1;
-    if (act(root->data, udata) < 0)
-        return -1;
+    for (t->iter = t->head; t->iter != NULL; ) {
+        if (act(t->iter, t->iter->data, udata) < 0)
+            return -1;
+        if (t->del) {
+            t->del = 0;
+            continue;
+        } else {
+            t->iter = t->iter->next;
+        }
+    }
     return 0;
 }
 

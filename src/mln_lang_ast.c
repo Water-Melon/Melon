@@ -8,7 +8,6 @@
 MLN_DECLARE_PARSER_GENERATOR(static, \
                              mln_lang, \
                              LANG, \
-                             LANG_TK_SET, \
                              LANG_TK_IF, \
                              LANG_TK_ELSE, \
                              LANG_TK_WHILE, \
@@ -49,7 +48,6 @@ MLN_DECLARE_PARSER_GENERATOR(static, \
 MLN_DEFINE_PARSER_GENERATOR(static, \
                             mln_lang, \
                             LANG, \
-                            {LANG_TK_SET, "LANG_TK_SET"}, \
                             {LANG_TK_IF, "LANG_TK_IF"}, \
                             {LANG_TK_ELSE, "LANG_TK_ELSE"}, \
                             {LANG_TK_WHILE, "LANG_TK_WHILE"}, \
@@ -380,7 +378,6 @@ static int mln_lang_semantic_elemval(mln_factor_t *left, mln_factor_t **right, v
 static int mln_lang_semantic_elemnext(mln_factor_t *left, mln_factor_t **right, void *data);
 
 static mln_string_t keywords[] = {
-mln_string("set"),
 mln_string("if"),
 mln_string("else"),
 mln_string("while"),
@@ -403,7 +400,7 @@ static mln_production_t prod_tbl[] = {
 {"start: stm LANG_TK_EOF", mln_lang_semantic_start},
 {"stm: blockstm stm", mln_lang_semantic_stmBlock},
 {"stm: funcdef stm", mln_lang_semantic_stmfunc},
-{"stm: LANG_TK_SET LANG_TK_ID LANG_TK_LBRACE setstm LANG_TK_RBRACE stm", mln_lang_semantic_stmset},
+{"stm: LANG_TK_ID LANG_TK_LBRACE setstm LANG_TK_RBRACE stm", mln_lang_semantic_stmset},
 {"stm: LANG_TK_ID LANG_TK_COLON stm", mln_lang_semantic_labelstm},
 {"stm: LANG_TK_WHILE LANG_TK_LPAR exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_whilestm},
 {"stm: LANG_TK_FOR LANG_TK_LPAR exp LANG_TK_SEMIC exp LANG_TK_SEMIC exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_forstm},
@@ -2046,23 +2043,23 @@ static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, vo
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_stm_t *stm;
     mln_lang_set_t *clas;
-    mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
+    mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
     mln_string_t *name = mln_string_pool_dup(pool, ls->text);
     if (name == NULL) return -1;
     if ((clas = mln_lang_set_new(pool, \
                                  name, \
-                                 (mln_lang_setstm_t *)(right[3]->data), \
+                                 (mln_lang_setstm_t *)(right[2]->data), \
                                  left->line)) == NULL)
     {
         mln_string_pool_free(name);
         return -1;
     }
-    if ((stm =  mln_lang_stm_new(pool, clas, M_STM_SET, (mln_lang_stm_t *)(right[5]->data), left->line)) == NULL) {
+    if ((stm =  mln_lang_stm_new(pool, clas, M_STM_SET, (mln_lang_stm_t *)(right[4]->data), left->line)) == NULL) {
         mln_lang_set_free(clas);
         return -1;
     }
-    right[3]->data = NULL;
-    right[5]->data = NULL;
+    right[2]->data = NULL;
+    right[4]->data = NULL;
     left->data = stm;
     left->nonterm_free_handler = mln_lang_stm_free;
     return 0;

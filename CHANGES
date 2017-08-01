@@ -1,3 +1,10 @@
+Changes with melon 1.6.9                                          01 Aug 2017
+    *) Added reflection for melang script.
+    *) Updated Red-Black Tree interfaces.
+    *) Fixed a bug of keyword 'return' in melang script.
+    *) Dropped keyword 'set' from melang script.
+    *) Added garbage collector.
+
 Changes with melon 1.6.8                                          22 May 2017
     *) Added script functions about matrix.
 

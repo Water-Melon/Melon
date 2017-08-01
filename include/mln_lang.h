@@ -12,10 +12,11 @@
 #include "mln_event.h"
 #include "mln_lang_ast.h"
 #include "mln_defs.h"
+#include "mln_gc.h"
 
 #define M_LANG_MAX_OPENFILE      67
-#define M_LANG_DEFAULT_STEP      64
-#define M_LANG_HEARTBEAT_US      500000
+#define M_LANG_DEFAULT_STEP      8
+#define M_LANG_HEARTBEAT_US      50000
 
 #define M_LANG_VAL_TYPE_NIL      0
 #define M_LANG_VAL_TYPE_INT      1
@@ -182,6 +183,7 @@ typedef enum {
 struct mln_lang_scope_s {
     mln_lang_scope_type_t            type;
     mln_string_t                    *name;
+    mln_gc_t                        *gc;
     mln_rbtree_t                    *symbols;
     mln_lang_ctx_t                  *ctx;
     mln_lang_stack_node_t           *cur_stack;
@@ -248,9 +250,27 @@ struct mln_lang_func_detail_s {
     } data;
 };
 
+typedef enum {
+    M_GC_OBJ = 0,
+    M_GC_ARRAY
+} mln_lang_gcType_t;
+
+typedef struct {
+    mln_gc_t                        *gc;
+    mln_lang_gcType_t                type;
+    union {
+        mln_lang_object_t       *obj;
+        mln_lang_array_t        *array;
+    } data;
+    void                            *gcData;
+} mln_lang_gc_item_t;
+
 struct mln_lang_object_s {
     mln_lang_set_detail_t           *inSet;
     mln_rbtree_t                    *members;
+    mln_u64_t                        ref;
+    mln_lang_gc_item_t              *gcItem;
+    mln_lang_ctx_t                  *ctx;
 };
 
 struct mln_lang_val_s {
@@ -280,6 +300,9 @@ struct mln_lang_array_s {
     mln_rbtree_t                    *elems_index;
     mln_rbtree_t                    *elems_key;
     mln_u64_t                        index;
+    mln_u64_t                        ref;
+    mln_lang_gc_item_t              *gcItem;
+    mln_lang_ctx_t                  *ctx;
 };
 
 struct mln_lang_array_elem_s {
@@ -348,7 +371,7 @@ extern mln_lang_retExp_t *mln_lang_retExp_createTmpInt(mln_alloc_t *pool, mln_s6
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpReal(mln_alloc_t *pool, double f, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpBool(mln_alloc_t *pool, mln_u8_t b, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpString(mln_alloc_t *pool, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
-extern mln_lang_retExp_t *mln_lang_retExp_createTmpArray(mln_alloc_t *pool, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpArray(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_symbolNode_t *mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
 extern int mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data) __NONNULL2(1,3);
 extern mln_lang_var_t *mln_lang_var_new(mln_alloc_t *pool, \
@@ -366,10 +389,10 @@ extern void mln_lang_var_setString(mln_lang_var_t *var, mln_string_t *s) __NONNU
 extern mln_s64_t mln_lang_var_toInt(mln_lang_var_t *var) __NONNULL1(1);
 extern double mln_lang_var_toReal(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var) __NONNULL2(1,2);
-extern mln_lang_var_t *mln_lang_var_dup(mln_alloc_t *pool, mln_lang_var_t *var) __NONNULL2(1,2);
+extern mln_lang_var_t *mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var) __NONNULL2(1,2);
 extern mln_lang_var_t *mln_lang_var_convert(mln_alloc_t *pool, mln_lang_var_t *var) __NONNULL2(1,2);
 extern void mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val) __NONNULL2(1,2);
-extern int mln_lang_var_setValue(mln_alloc_t *pool, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
+extern int mln_lang_var_setValue(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
 extern mln_s32_t mln_lang_var_getValType(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_lang_func_detail_t *
 mln_lang_func_detail_new(mln_alloc_t *pool, \
@@ -396,7 +419,7 @@ extern void mln_lang_set_detail_free(mln_lang_set_detail_t *c);
 extern void mln_lang_set_detail_freeSelf(mln_lang_set_detail_t *c);
 extern int
 mln_lang_set_member_add(mln_alloc_t *pool, mln_rbtree_t *members, mln_lang_var_t *var) __NONNULL3(1,2,3);
-extern mln_lang_array_t *mln_lang_array_new(mln_alloc_t *pool) __NONNULL1(1);
+extern mln_lang_array_t *mln_lang_array_new(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern void mln_lang_array_free(mln_lang_array_t *array);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
                        mln_lang_var_t, \

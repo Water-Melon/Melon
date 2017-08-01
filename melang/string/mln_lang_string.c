@@ -649,7 +649,7 @@ static mln_lang_retExp_t *mln_slice_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    if ((retExp = mln_lang_retExp_createTmpArray(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpArray(ctx, NULL)) == NULL) {
         mln_string_slice_free(ret);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
@@ -670,7 +670,7 @@ static mln_lang_retExp_t *mln_slice_process(mln_lang_ctx_t *ctx)
         val.data.s = scan;
         val.type = M_LANG_VAL_TYPE_STRING;
         val.ref = 1;
-        if (mln_lang_var_setValue(ctx->pool, array_val, &var) < 0) {
+        if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
             mln_lang_retExp_free(retExp);
             mln_string_slice_free(ret);
             mln_lang_errmsg(ctx, "No memory.");

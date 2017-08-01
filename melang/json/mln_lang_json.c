@@ -29,7 +29,7 @@ static inline mln_json_t *mln_lang_json_encode_generate_bool(mln_u8_t b);
 static inline mln_json_t *mln_lang_json_encode_generate_int(mln_s64_t i);
 static inline mln_json_t *mln_lang_json_encode_generate_real(double f);
 static inline mln_json_t *mln_lang_json_encode_generate_string(mln_string_t *s);
-static int mln_lang_json_encode_obj_scan(void *rn_data, void *udata);
+static int mln_lang_json_encode_obj_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static mln_lang_retExp_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx);
 static inline int
 mln_lang_json_decode_obj(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_hash_t *obj);
@@ -45,7 +45,7 @@ static inline int
 mln_lang_json_decode_false(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *key);
 static inline int
 mln_lang_json_decode_null(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *key);
-static int mln_lang_json_decode_array_scan(void *rn_data, void *udata);
+static int mln_lang_json_decode_array_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int mln_lang_json_decode_obj_scan(void *key, void *val, void *data);
 
 
@@ -114,8 +114,7 @@ static mln_lang_retExp_t *mln_lang_json_encode_process(mln_lang_ctx_t *ctx)
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_ARRAY) {
-        mln_lang_errmsg(ctx, "Invalid type of argument.");
-        return NULL;
+        goto fout;
     }
     val = sym->data.var->val;
     if ((array = val->data.array) == NULL) {
@@ -124,6 +123,7 @@ static mln_lang_retExp_t *mln_lang_json_encode_process(mln_lang_ctx_t *ctx)
     }
 
     if ((json = mln_lang_json_encode_generate(array)) == NULL) {
+fout:
         if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
@@ -244,7 +244,6 @@ mln_lang_json_encode_generate_obj(mln_lang_array_t *array)
         return NULL;
     }
     if (mln_rbtree_scan_all(array->elems_key, \
-                            array->elems_key->root, \
                             mln_lang_json_encode_obj_scan, \
                             json) < 0)
     {
@@ -254,7 +253,7 @@ mln_lang_json_encode_generate_obj(mln_lang_array_t *array)
     return json;
 }
 
-static int mln_lang_json_encode_obj_scan(void *rn_data, void *udata)
+static int mln_lang_json_encode_obj_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_s32_t type;
     mln_string_t *k, *dup;
@@ -452,7 +451,7 @@ static mln_lang_retExp_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
     }
-    if ((retExp = mln_lang_retExp_createTmpArray(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpArray(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -526,9 +525,10 @@ static int mln_lang_json_decode_obj_scan(void *key, void *val, void *data)
         mln_lang_array_t *tmpa;
         mln_lang_var_t *array_val, var;
         mln_lang_val_t val;
-        if ((tmpa = mln_lang_array_new(ljs->ctx->pool)) == NULL) {
+        if ((tmpa = mln_lang_array_new(ljs->ctx)) == NULL) {
             return -1;
         }
+        ++(tmpa->ref);
         if ((rc = mln_lang_json_decode_obj(ljs->ctx, tmpa, jo->val->data.m_j_obj)) < 0) {
             mln_lang_array_free(tmpa);
             return rc;
@@ -545,18 +545,18 @@ static int mln_lang_json_decode_obj_scan(void *key, void *val, void *data)
         val.data.array = tmpa;
         val.type = M_LANG_VAL_TYPE_ARRAY;
         val.ref = 1;
-        if (mln_lang_var_setValue(ljs->ctx->pool, array_val, &var) < 0) {
+        if (mln_lang_var_setValue(ljs->ctx, array_val, &var) < 0) {
             mln_lang_array_free(tmpa);
             return -1;
         }
-        mln_lang_array_free(tmpa);
     } else if (M_JSON_IS_ARRAY(jo->val)) {
         mln_lang_array_t *tmpa;
         mln_lang_var_t *array_val, var;
         mln_lang_val_t val;
-        if ((tmpa = mln_lang_array_new(ljs->ctx->pool)) == NULL) {
+        if ((tmpa = mln_lang_array_new(ljs->ctx)) == NULL) {
             return -1;
         }
+        ++(tmpa->ref);
         if ((rc = mln_lang_json_decode_array(ljs->ctx, tmpa, jo->val->data.m_j_array)) < 0) {
             mln_lang_array_free(tmpa);
             return rc;
@@ -573,11 +573,10 @@ static int mln_lang_json_decode_obj_scan(void *key, void *val, void *data)
         val.data.array = tmpa;
         val.type = M_LANG_VAL_TYPE_ARRAY;
         val.ref = 1;
-        if (mln_lang_var_setValue(ljs->ctx->pool, array_val, &var) < 0) {
+        if (mln_lang_var_setValue(ljs->ctx, array_val, &var) < 0) {
             mln_lang_array_free(tmpa);
             return -1;
         }
-        mln_lang_array_free(tmpa);
     } else if (M_JSON_IS_STRING(jo->val)) {
         rc = mln_lang_json_decode_string(ljs->ctx, ljs->array, jo->val->data.m_j_string, &kvar);
     } else if (M_JSON_IS_NUMBER(jo->val)) {
@@ -601,13 +600,13 @@ mln_lang_json_decode_array(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_rbt
     struct mln_lang_json_scan_s ljs;
     ljs.ctx = ctx;
     ljs.array = array;
-    if (mln_rbtree_scan_all(a, a->root, mln_lang_json_decode_array_scan, &ljs) < 0) {
+    if (mln_rbtree_scan_all(a, mln_lang_json_decode_array_scan, &ljs) < 0) {
         return -1;
     }
     return 0;
 }
 
-static int mln_lang_json_decode_array_scan(void *rn_data, void *udata)
+static int mln_lang_json_decode_array_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     int rc = 0;
     mln_json_t *json = (mln_json_t *)rn_data;
@@ -628,9 +627,10 @@ static int mln_lang_json_decode_array_scan(void *rn_data, void *udata)
         mln_lang_array_t *tmpa;
         mln_lang_var_t *array_val, var;
         mln_lang_val_t val;
-        if ((tmpa = mln_lang_array_new(ljs->ctx->pool)) == NULL) {
+        if ((tmpa = mln_lang_array_new(ljs->ctx)) == NULL) {
             return -1;
         }
+        ++(tmpa->ref);
         if ((rc = mln_lang_json_decode_obj(ljs->ctx, tmpa, json->data.m_j_obj)) < 0) {
             mln_lang_array_free(tmpa);
             return rc;
@@ -647,18 +647,18 @@ static int mln_lang_json_decode_array_scan(void *rn_data, void *udata)
         val.data.array = tmpa;
         val.type = M_LANG_VAL_TYPE_ARRAY;
         val.ref = 1;
-        if (mln_lang_var_setValue(ljs->ctx->pool, array_val, &var) < 0) {
+        if (mln_lang_var_setValue(ljs->ctx, array_val, &var) < 0) {
             mln_lang_array_free(tmpa);
             return -1;
         }
-        mln_lang_array_free(tmpa);
     } else if (M_JSON_IS_ARRAY(json)) {
         mln_lang_array_t *tmpa;
         mln_lang_var_t *array_val, var;
         mln_lang_val_t val;
-        if ((tmpa = mln_lang_array_new(ljs->ctx->pool)) == NULL) {
+        if ((tmpa = mln_lang_array_new(ljs->ctx)) == NULL) {
             return -1;
         }
+        ++(tmpa->ref);
         if ((rc = mln_lang_json_decode_array(ljs->ctx, tmpa, json->data.m_j_array)) < 0) {
             mln_lang_array_free(tmpa);
             return rc;
@@ -675,11 +675,10 @@ static int mln_lang_json_decode_array_scan(void *rn_data, void *udata)
         val.data.array = tmpa;
         val.type = M_LANG_VAL_TYPE_ARRAY;
         val.ref = 1;
-        if (mln_lang_var_setValue(ljs->ctx->pool, array_val, &var) < 0) {
+        if (mln_lang_var_setValue(ljs->ctx, array_val, &var) < 0) {
             mln_lang_array_free(tmpa);
             return -1;
         }
-        mln_lang_array_free(tmpa);
     } else if (M_JSON_IS_STRING(json)) {
         rc = mln_lang_json_decode_string(ljs->ctx, ljs->array, json->data.m_j_string, &kvar);
     } else if (M_JSON_IS_NUMBER(json)) {
@@ -712,7 +711,7 @@ mln_lang_json_decode_string(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_st
     val.data.s = s;
     val.type = M_LANG_VAL_TYPE_STRING;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx->pool, array_val, &var) < 0) {
+    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
         return -1;
     }
     return 0;
@@ -734,7 +733,7 @@ mln_lang_json_decode_number(mln_lang_ctx_t *ctx, mln_lang_array_t *array, double
     val.data.f = num;
     val.type = M_LANG_VAL_TYPE_REAL;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx->pool, array_val, &var) < 0) {
+    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
         return -1;
     }
     return 0;
@@ -756,7 +755,7 @@ mln_lang_json_decode_true(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang
     val.data.b = 1;
     val.type = M_LANG_VAL_TYPE_BOOL;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx->pool, array_val, &var) < 0) {
+    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
         return -1;
     }
     return 0;
@@ -778,7 +777,7 @@ mln_lang_json_decode_false(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lan
     val.data.b = 0;
     val.type = M_LANG_VAL_TYPE_BOOL;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx->pool, array_val, &var) < 0) {
+    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
         return -1;
     }
     return 0;

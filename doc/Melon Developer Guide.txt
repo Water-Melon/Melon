@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.8
+Melon Version 1.6.9
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.8.
-  b) Change directory to the melon-1.6.8/.
+  a) Download and decompress melon-1.6.9.
+  b) Change directory to the melon-1.6.9/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.8/include/mln_types.h.
+Their definitions can be found in melon-1.6.9/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -372,14 +372,13 @@ Their definitions can be found in melon-1.6.8/include/mln_types.h.
        If function returns !0, the 'ptr' is pointing to the address of ptree's 'nil'.
        Otherwise, the data that is pointed by 'ptr' is valid.
 
-    k) int mln_rbtree_scan_all(mln_rbtree_t *t, mln_rbtree_node_t *root, rbtree_act act, void *udata);
+    k) int mln_rbtree_scan_all(mln_rbtree_t *t, rbtree_act act, void *udata);
        This function is used to scan all rbtree nodes and process them by the callback function 'act'.
        t -- is a rbtree pointer.
-       root -- is the start node that is given by the caller. This node must be existent in 't'.
        act -- is a callback function which is defined by the caller. Its prototype is
-           typedef int (*rbtree_act)(void *rn_data, void *udata);
-       The first argument is the data of rbtree node. And the second one is an user data that is passed by the fourth
-       argument of mln_rbtree_scan_all().
+           typedef int (*rbtree_act)(mln_rbtree_node_t *node, void *rn_data, void *udata);
+       The first argument is the rbtree node. Second one is the data of rbtree node. And the last one is an user
+       data passed by the third argument of mln_rbtree_scan_all().
 
   5) Path
     a) char *mln_path(void);
@@ -2609,6 +2608,102 @@ Their definitions can be found in melon-1.6.8/include/mln_types.h.
       e) mln_rs_result_getIndexData(_presult,index);
          Returned one piece of data that is indicated by 'index' stored in '_presult'.
 
+  39) Garbage Collector
+      This gc is made for melang script. It is a mark-sweep collector for solving Circular Reference
+      problem.
+      a) mln_gc_t *mln_gc_new(struct mln_gc_attr *attr);
+         Create a new gc object. Definition of argument 'attr' is given below:
+         struct mln_gc_attr {
+             mln_alloc_t          *pool;
+             gcItemGetter          itemGetter;
+             gcItemSetter          itemSetter;
+             gcItemFreer           itemFreer;
+             gcMemberSetter        memberSetter;
+             gcMoveHandler         moveHandler;
+             gcRootSetter          rootSetter;
+             gcCleanSearcher       cleanSearcher;
+             gcFreeHandler         freeHandler;
+         };
+         pool is a memory pool. The prototypes of rest function pointers are shown below:
+
+         <I>    typedef void *(*gcItemGetter)   (void *data);
+                This function will be called in many interfaces for getting the a gc-data that
+                is created by 'mln_gc_add()'. Argument is a user data that should be managed by
+                garbage collector.
+
+         <II>   typedef void  (*gcItemSetter)   (void *data, void *item);
+                This function is used to set 'item' into 'data'.
+                'item' is a gc-data. 'data' is an user data.
+
+         <III>  typedef void  (*gcItemFreer)    (void *data);
+                Free user data 'data'.
+
+         <IV>   typedef void  (*gcMemberSetter) (mln_gc_t *gc, void *data);
+                Gather every related data from 'data' and add in 'gc' to participate the calculation
+                of garbage collection.
+
+         <V>    typedef void  (*gcMoveHandler)  (mln_gc_t *destGC, void *data);
+                Change something about garbage collector in user data 'data' to be related with
+                'destGC'.
+
+         <VI>   typedef void  (*gcRootSetter)   (mln_gc_t *gc, void *data);
+                Gather every related data from 'data' and add in 'gc' to participate the calculation
+                of root collection in garbage collection.
+                'data' may not be the same as 'data' in other callback functions. It is identical to
+                the second argument of 'mln_gc_collect()'.
+
+         <VII>  typedef void  (*gcCleanSearcher)(mln_gc_t *gc, void *data);
+                Gather every related data from 'data' and add in 'gc' to participate 'sweep'.
+                'data' is an user data that is the same type as in 'gcMemberSetter'.
+
+         <VIII> typedef void  (*gcFreeHandler)  (void *data);
+                Clean all about garbage collector (gc-data) from user data 'data'.
+
+      b) void mln_gc_free(mln_gc_t *gc);
+         Free a 'gc'.
+         In this function, callback function 'freeHandler' will be called to clean gc-data from
+         every user data left in 'gc'.
+
+      c) int mln_gc_add(mln_gc_t *gc, void *data);
+         Add user data 'data' in 'gc'. This function is only add the user data that should be
+         managed in 'gc'.
+         In this function, callback function 'itemSetter' will be called to set a new gc-data
+         into user data 'data.
+
+      d) void mln_gc_suspect(mln_gc_t *gc, void *data);
+         Mark user data 'data' as a suspected memory block.
+         In this function, callback function 'itemGetter' will be called to get gc-data from
+         'data'.
+
+      e) void mln_gc_merge(mln_gc_t *dest, mln_gc_t *src);
+         Merge 'src' into 'dest'. In this function, callback function 'moveHandler' will be
+         called to modifiy something about new collector in user data.
+
+      f) void mln_gc_addForCollect(mln_gc_t *gc, void *data);
+         This function is used to add 'data' into 'gc' while collecting garbages (in
+         'mln_gc_collect()'). You should call this function in callback function
+         'memberSetter'.
+         'data' is an user data that you want to add in 'gc'.
+
+      g) int mln_gc_addForClean(mln_gc_t *gc, void *data);
+         This function is used to add 'data' into 'gc' while collecting garbages (in
+         'mln_gc_collect()'). You should call this function in callback function
+         'cleanSearcher'.
+         'data' is an user data that you want to add in 'gc'.
+
+      h) void mln_gc_collect(mln_gc_t *gc, void *rootData);
+         This function is used to collect garbage.
+         'rootData' indicates a data that will be used in callback function 'rootSetter' to gather
+         root memory blocks those are reachable and can be tracked.
+         In this function, callback functions -- 'gcItemFreer', 'gcMemberSetter', 'gcRootSetter',
+         'gcCleanSearcher' will be called.
+
+      i) void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *procGC);
+         Remove 'data' from 'gc'.
+         'data' is an user data.
+         If your scenario is multi-level collection, you may need to create more than one collector.
+         So 'procGC' stand for the current collector.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.
@@ -2856,7 +2951,7 @@ Their definitions can be found in melon-1.6.8/include/mln_types.h.
       <IV>  nil
       <V>   [1, 2, 'aaa', 2.3, true, "score":60, 10:'hello']
       <VI>
-            set human {
+            human {
                 name;
                 gender;
                 age;
@@ -3005,7 +3100,7 @@ Their definitions can be found in melon-1.6.8/include/mln_types.h.
           e.g.
              foo4 ()
              {
-                 set test {
+                 test {
                      a;
                      b () {this.a = 10;}
                  }
@@ -3015,7 +3110,7 @@ Their definitions can be found in melon-1.6.8/include/mln_types.h.
              a.b();
 
           e.g.
-             set test {
+             test {
                  a;
                  b() {}
                  c() {return this.b;}
@@ -3045,7 +3140,7 @@ Their definitions can be found in melon-1.6.8/include/mln_types.h.
 
       <III> In set
           e.g.
-             set test
+             test
              {
                  var1;
                  var2;
@@ -3060,30 +3155,54 @@ Their definitions can be found in melon-1.6.8/include/mln_types.h.
              }
              a = 1;
              foo(a);
+      <V>   Reflection
+          e.g.
+             foo ()
+             {
+                 return 'hello';
+             }
+             a = 'foo';
+             b = 'a';
+             b();
 
    D. Set
-      e.g.
-         set human {
-             name;
-             age;
-             gender;
-             score;
-             init (name, age, gender, score)
-             {
-                 this.name = name;
-                 this.age = age;
-                 this.gender = gender;
-                 this.score = score;
+      <I>   Definition
+          e.g.
+             human {
+                 name;
+                 age;
+                 gender;
+                 score;
+                 init (name, age, gender, score)
+                 {
+                     this.name = name;
+                     this.age = age;
+                     this.gender = gender;
+                     this.score = score;
+                 }
+                 getScore ()
+                 {
+                     return this.score;
+                 }
+                 setScore (score)
+                 {
+                     this.score = score;
+                 }
              }
-             getScore ()
-             {
-                 return this.score;
-             }
-             setScore (score)
-             {
-                 this.score = score;
-             }
-         }
+      <II>  Reflection
+          e.g.
+             alias = 'human';
+             inst1 = $alias;
+             kid = 'alias';
+             inst2 = $kid;
+
+             func_alias1 = 'getScore';
+             inst1.func_alias1();
+             func_alias2 = 'func_alias1';
+             inst1.func_alias2();
+
+             inst2.name = 'getScore';
+             inst2.name();
 
    E. Operator
       Listed by priority from low to high.

@@ -77,7 +77,7 @@ mln_lang_bool_assign(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
 {
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     mln_lang_var_t *var;
-    if (mln_lang_var_setValue(ctx->pool, op1->data.var, op2->data.var) < 0) {
+    if (mln_lang_var_setValue(ctx, op1->data.var, op2->data.var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }

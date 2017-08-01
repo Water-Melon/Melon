@@ -30,25 +30,25 @@ struct mln_pg_info {
  * declarations
  */
 static int
-mln_pg_calc_first_rbtree_scan(void *rn_data, void *udata);
+mln_pg_calc_first_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int
-mln_pg_calc_follow_rbtree_scan(void *rn_data, void *udata);
+mln_pg_calc_follow_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int
-mln_pg_closure_rbtree_scan(void *rn_data, void *udata);
+mln_pg_closure_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static mln_pg_item_t *
 mln_pg_rule_duplicate(mln_pg_state_t *s, mln_pg_rule_t *r, mln_u32_t pos);
 static int
-mln_pg_output_token_scan(void *rn_data, void *udata);
+mln_pg_output_token_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int
-mln_pg_output_token_set_scan(void *rn_data, void *udata);
+mln_pg_output_token_set_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int
 mln_pg_calc_info_cmp(const void *data1, const void *data2);
 static int
-mln_pg_goto_la_scan(void *rn_data, void *udata);
+mln_pg_goto_la_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int
-mln_pg_goto_scan(void *rn_data, void *udata);
+mln_pg_goto_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int
-mln_pg_output_state_scan(void *rn_data, void *udata);
+mln_pg_output_state_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static inline int
 mln_pg_state_duplicate(mln_pg_state_t **q_head, \
                        mln_pg_state_t **q_tail, \
@@ -360,7 +360,6 @@ int mln_pg_calc_first(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
                 info.tk = pr->left;
                 info.nr_rule = nr_rule;
                 if (mln_rbtree_scan_all(tk->first_set, \
-                                        tk->first_set->root, \
                                         mln_pg_calc_first_rbtree_scan, \
                                         &info) < 0)
                 {
@@ -375,7 +374,7 @@ int mln_pg_calc_first(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
 }
 
 static int
-mln_pg_calc_first_rbtree_scan(void *rn_data, void *udata)
+mln_pg_calc_first_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     struct mln_pg_info *pgi = (struct mln_pg_info *)udata;
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
@@ -426,7 +425,6 @@ int mln_pg_calc_follow(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
                     info.tk = tk;
                     info.nr_rule = nr_rule;
                     if (mln_rbtree_scan_all(pr->left->follow_set, \
-                                            pr->left->follow_set->root, \
                                             mln_pg_calc_follow_rbtree_scan, \
                                             &info) < 0)
                     {
@@ -440,7 +438,6 @@ int mln_pg_calc_follow(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
                         info.tk = tk;
                         info.nr_rule = nr_rule;
                         if (mln_rbtree_scan_all(behind->first_set, \
-                                                behind->first_set->root, \
                                                 mln_pg_calc_follow_rbtree_scan, \
                                                 &info) < 0)
                         {
@@ -456,7 +453,6 @@ int mln_pg_calc_follow(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
                         info.tk = tk;
                         info.nr_rule = nr_rule;
                         if (mln_rbtree_scan_all(behind->first_set, \
-                                                behind->first_set->root, \
                                                 mln_pg_calc_follow_rbtree_scan, \
                                                 &info) < 0)
                         {
@@ -472,7 +468,7 @@ int mln_pg_calc_follow(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
 }
 
 static int
-mln_pg_calc_follow_rbtree_scan(void *rn_data, void *udata)
+mln_pg_calc_follow_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
     struct mln_pg_info *pgi = (struct mln_pg_info *)udata;
@@ -533,7 +529,6 @@ int mln_pg_closure(mln_pg_state_t *s, mln_pg_rule_t *r, mln_u32_t nr_rule)
                     info.s = s;
                     info.item = new_it;
                     if (mln_rbtree_scan_all(next_tk->first_set, \
-                                            next_tk->first_set->root, \
                                             mln_pg_closure_rbtree_scan, \
                                             &info) < 0)
                     {
@@ -547,7 +542,6 @@ int mln_pg_closure(mln_pg_state_t *s, mln_pg_rule_t *r, mln_u32_t nr_rule)
                 info.s = s;
                 info.item = new_it;
                 if (mln_rbtree_scan_all(item->lookahead_set, \
-                                        item->lookahead_set->root, \
                                         mln_pg_closure_rbtree_scan, \
                                         &info) < 0)
                 {
@@ -573,7 +567,7 @@ mln_pg_rule_duplicate(mln_pg_state_t *s, mln_pg_rule_t *r, mln_u32_t pos)
 }
 
 static int
-mln_pg_closure_rbtree_scan(void *rn_data, void *udata)
+mln_pg_closure_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     struct mln_pg_state *info = (struct mln_pg_state *)udata;
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
@@ -694,7 +688,6 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
                 new_it->rule = it->rule;
                 new_it->pos = it->pos + 1;
                 if (mln_rbtree_scan_all(it->lookahead_set, \
-                                        it->lookahead_set->root, \
                                         mln_pg_goto_scan, \
                                         new_it) < 0)
                 {
@@ -742,7 +735,7 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
 }
 
 static int
-mln_pg_goto_scan(void *rn_data, void *udata)
+mln_pg_goto_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_pg_item_t *it = (mln_pg_item_t *)udata;
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
@@ -771,7 +764,6 @@ mln_pg_state_duplicate(mln_pg_state_t **q_head, \
                 info.change = &change;
                 info.item = dit;
                 if (mln_rbtree_scan_all(sit->lookahead_set, \
-                                        sit->lookahead_set->root, \
                                         mln_pg_goto_la_scan, \
                                         &info) < 0)
                 {
@@ -790,7 +782,7 @@ mln_pg_state_duplicate(mln_pg_state_t **q_head, \
 }
 
 static int
-mln_pg_goto_la_scan(void *rn_data, void *udata)
+mln_pg_goto_la_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     struct mln_pg_state *info = (struct mln_pg_state *)udata;
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
@@ -830,11 +822,11 @@ void mln_pg_output_token(mln_rbtree_t *tree, mln_pg_rule_t *r, mln_u32_t nr_rule
     }
     printf("\n");
     printf("TOKEN:\n");
-    mln_rbtree_scan_all(tree, tree->root, mln_pg_output_token_scan, NULL);
+    mln_rbtree_scan_all(tree, mln_pg_output_token_scan, NULL);
 }
 
 static int
-mln_pg_output_token_scan(void *rn_data, void *udata)
+mln_pg_output_token_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
     printf("[%s]:", (char *)(tk->token->data));
@@ -842,17 +834,17 @@ mln_pg_output_token_scan(void *rn_data, void *udata)
            tk->is_nonterminal?"Nonterminal":"Terminal", \
            tk->is_nullable?"Nullable":"Unnullable");
     printf("First set:\n");
-    mln_rbtree_scan_all(tk->first_set, tk->first_set->root, mln_pg_output_token_set_scan, NULL);
+    mln_rbtree_scan_all(tk->first_set, mln_pg_output_token_set_scan, NULL);
     printf("\n");
     printf("Follow set:\n");
-    mln_rbtree_scan_all(tk->follow_set, tk->follow_set->root, mln_pg_output_token_set_scan, NULL);
+    mln_rbtree_scan_all(tk->follow_set, mln_pg_output_token_set_scan, NULL);
     printf("\n");
     printf("\n");
     return 0;
 }
 
 static int
-mln_pg_output_token_set_scan(void *rn_data, void *udata)
+mln_pg_output_token_set_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
     printf("[%s] ", (char *)(tk->token->data));
@@ -878,7 +870,7 @@ void mln_pg_output_state(mln_pg_state_t *s)
             }
             printf("\t\tread:[%s] goto_id:%ld", it->read==NULL?"(null)":(char *)(it->read->token->data), it->goto_id);
             printf("\tLookahead:");
-            mln_rbtree_scan_all(it->lookahead_set, it->lookahead_set->root, mln_pg_output_state_scan, NULL);
+            mln_rbtree_scan_all(it->lookahead_set, mln_pg_output_state_scan, NULL);
             printf("\n");
         }
         printf("\n");
@@ -886,7 +878,7 @@ void mln_pg_output_state(mln_pg_state_t *s)
 }
 
 static int
-mln_pg_output_state_scan(void *rn_data, void *udata)
+mln_pg_output_state_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     printf(" %s", (char *)(((mln_pg_token_t *)rn_data)->token->data));
     return 0;

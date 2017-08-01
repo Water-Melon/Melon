@@ -5,6 +5,7 @@
 #include "matrix/mln_lang_matrix.h"
 #include "mln_matrix.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 
 #ifdef __DEBUG__
@@ -360,14 +361,14 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
 {
     double *p, *pend;
     mln_lang_array_t *array, *darray;
-    mln_lang_retExp_t *retExp, *tmp;
+    mln_lang_retExp_t *retExp;
     mln_lang_var_t *array_val, var;
     mln_lang_val_t val;
     mln_string_t r = mln_string("row");
     mln_string_t c = mln_string("col");
     mln_string_t d = mln_string("data");
 
-    if ((retExp = mln_lang_retExp_createTmpArray(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpArray(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -393,7 +394,7 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.data.i = m->row;
     val.type = M_LANG_VAL_TYPE_INT;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx->pool, array_val, &var) < 0) {
+    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
         mln_lang_retExp_free(retExp);
         return NULL;
     }
@@ -418,20 +419,20 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.data.i = m->col;
     val.type = M_LANG_VAL_TYPE_INT;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx->pool, array_val, &var) < 0) {
+    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
         mln_lang_retExp_free(retExp);
         return NULL;
     }
 
-    if ((tmp = mln_lang_retExp_createTmpArray(ctx->pool, NULL)) == NULL) {
+    if ((darray = mln_lang_array_new(ctx)) == NULL) {
         mln_lang_retExp_free(retExp);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    darray = tmp->data.var->val->data.array;
+
     for (p = m->data, pend = m->data+m->row*m->col; p < pend; ++p) {
         if ((array_val = mln_lang_array_getAndNew(ctx, darray, NULL)) == NULL) {
-            mln_lang_retExp_free(tmp);
+            mln_lang_array_free(darray);
             mln_lang_retExp_free(retExp);
             return NULL;
         }
@@ -443,8 +444,8 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
         val.data.f = *p;
         val.type = M_LANG_VAL_TYPE_REAL;
         val.ref = 1;
-        if (mln_lang_var_setValue(ctx->pool, array_val, &var) < 0) {
-            mln_lang_retExp_free(tmp);
+        if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
+            mln_lang_array_free(darray);
             mln_lang_retExp_free(retExp);
             return NULL;
         }
@@ -459,7 +460,7 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.type = M_LANG_VAL_TYPE_STRING;
     val.ref = 1;
     if ((array_val = mln_lang_array_getAndNew(ctx, array, &var)) == NULL) {
-        mln_lang_retExp_free(tmp);
+        mln_lang_array_free(darray);
         mln_lang_retExp_free(retExp);
         return NULL;
     }
@@ -471,12 +472,11 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.data.array = darray;
     val.type = M_LANG_VAL_TYPE_ARRAY;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx->pool, array_val, &var) < 0) {
-        mln_lang_retExp_free(tmp);
+    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
+        mln_lang_array_free(darray);
         mln_lang_retExp_free(retExp);
         return NULL;
     }
-    mln_lang_retExp_free(tmp);
     return retExp;
 }
 
