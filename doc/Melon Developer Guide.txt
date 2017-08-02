@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.9
+Melon Version 1.6.10
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.9.
-  b) Change directory to the melon-1.6.9/.
+  a) Download and decompress melon-1.6.10.
+  b) Change directory to the melon-1.6.10/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.9/include/mln_types.h.
+Their definitions can be found in melon-1.6.10/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3203,6 +3203,11 @@ Their definitions can be found in melon-1.6.9/include/mln_types.h.
 
              inst2.name = 'getScore';
              inst2.name();
+      <III> Instantiation
+          e.g.
+             John = $human;
+      <IV>  add property dynamically in object
+          John.parent = ['Jenny', 'Bobby']; //parent not be defined in set.
 
    E. Operator
       Listed by priority from low to high.
@@ -3398,6 +3403,9 @@ Their definitions can be found in melon-1.6.9/include/mln_types.h.
           nr_col = res_array['col'];
           data_array = res_array['data'];
       If failed, 'false' will be returned.
+
+      <30> mln_size(array);
+      Return array's length.
 
 
    G. Function development

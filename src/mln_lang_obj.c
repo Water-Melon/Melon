@@ -158,8 +158,27 @@ mln_lang_obj_property(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_ret
         ASSERT(mln_lang_var_getValType(op2->data.var) == M_LANG_VAL_TYPE_STRING);
         mln_lang_var_t *var = mln_lang_set_member_search(obj->members, mln_lang_var_getVal(op2->data.var)->data.s);
         if (var == NULL) {
-            mln_lang_errmsg(ctx, "No such property in object.");
-            return -1;
+            mln_lang_var_t tmpvar;
+            mln_lang_val_t tmpval;
+            mln_rbtree_node_t *rn;
+            tmpvar.type = M_LANG_VAR_NORMAL;
+            tmpvar.name = mln_lang_var_getVal(op2->data.var)->data.s;
+            tmpvar.val = &tmpval;
+            tmpvar.inSet = obj->inSet;
+            tmpvar.prev = tmpvar.next = NULL;
+            tmpval.data.s = NULL;
+            tmpval.type = M_LANG_VAL_TYPE_NIL;
+            tmpval.ref = 1;
+            if ((var = mln_lang_var_dup(ctx, &tmpvar)) == NULL) {
+                mln_lang_errmsg(ctx, "No memory.");
+                return -1;
+            }
+            if ((rn = mln_rbtree_new_node(obj->members, var)) == NULL) {
+                mln_lang_var_free(var);
+                mln_lang_errmsg(ctx, "No memory.");
+                return -1;
+            }
+            mln_rbtree_insert(obj->members, rn);
         }
         if ((rv = mln_lang_var_convert(ctx->pool, var)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");

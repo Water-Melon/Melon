@@ -684,9 +684,9 @@ mln_lang_int_lesseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
     mln_lang_val_t *val;
     mln_u8_t b;
     if (type == M_LANG_VAL_TYPE_REAL) {
-        b = mln_lang_var_toReal(op1->data.var) < mln_lang_var_toReal(op2->data.var);
+        b = mln_lang_var_toReal(op1->data.var) <= mln_lang_var_toReal(op2->data.var);
     } else {
-        b = mln_lang_var_toInt(op1->data.var) < mln_lang_var_toInt(op2->data.var);
+        b = mln_lang_var_toInt(op1->data.var) <= mln_lang_var_toInt(op2->data.var);
     }
     if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -721,9 +721,9 @@ mln_lang_int_grea(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
     mln_lang_val_t *val;
     mln_u8_t b;
     if (type == M_LANG_VAL_TYPE_REAL) {
-        b = mln_lang_var_toReal(op1->data.var) < mln_lang_var_toReal(op2->data.var);
+        b = mln_lang_var_toReal(op1->data.var) > mln_lang_var_toReal(op2->data.var);
     } else {
-        b = mln_lang_var_toInt(op1->data.var) < mln_lang_var_toInt(op2->data.var);
+        b = mln_lang_var_toInt(op1->data.var) > mln_lang_var_toInt(op2->data.var);
     }
     if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -758,9 +758,9 @@ mln_lang_int_greale(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
     mln_lang_val_t *val;
     mln_u8_t b;
     if (type == M_LANG_VAL_TYPE_REAL) {
-        b = mln_lang_var_toReal(op1->data.var) < mln_lang_var_toReal(op2->data.var);
+        b = mln_lang_var_toReal(op1->data.var) >= mln_lang_var_toReal(op2->data.var);
     } else {
-        b = mln_lang_var_toInt(op1->data.var) < mln_lang_var_toInt(op2->data.var);
+        b = mln_lang_var_toInt(op1->data.var) >= mln_lang_var_toInt(op2->data.var);
     }
     if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
