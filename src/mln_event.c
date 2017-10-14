@@ -1098,6 +1098,8 @@ void mln_event_dispatch(mln_event_t *event)
         BREAK_OUT();
         mln_event_deal_fd_timeout(event, &ret);
         BREAK_OUT();
+        mln_event_deal_timer(event, &ret);
+        BREAK_OUT();
         if (ret < 0)
             nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, M_EV_TIMEOUT_MS);
         else
@@ -1188,6 +1190,8 @@ void mln_event_dispatch(mln_event_t *event)
         BREAK_OUT();
         mln_event_deal_fd_timeout(event, &ret);
         BREAK_OUT();
+        mln_event_deal_timer(event, &ret);
+        BREAK_OUT();
         if (ret < 0) {
             ts.tv_sec = 0;
             ts.tv_nsec = M_EV_TIMEOUT_NS;
@@ -1266,6 +1270,8 @@ void mln_event_dispatch(mln_event_t *event)
         mln_event_deal_active_fd(event);
         BREAK_OUT();
         mln_event_deal_fd_timeout(event, &ret);
+        BREAK_OUT();
+        mln_event_deal_timer(event, &ret);
         BREAK_OUT();
         event->select_fd = 1;
         FD_ZERO(rd_set);
