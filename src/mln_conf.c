@@ -269,7 +269,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
         if (clst->type == CONF_TK_DEC || clst->type == CONF_TK_REAL) {
             if (!sub_mark) break;
             mln_u64_t len = clst->text->len + 2;
-            mln_u8ptr_t s = (mln_u8ptr_t)malloc(len);
+            mln_u8ptr_t s = (mln_u8ptr_t)mln_alloc_m(lex->pool, len);
             if (s == NULL) {
                 mln_lex_setError(lex, MLN_LEX_ENMEM);
                 mln_conf_lex_free(clst);
@@ -278,7 +278,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
             s[0] = '-';
             memcpy(s+1, clst->text->data, clst->text->len);
             s[len-1] = 0;
-            free(clst->text->data);
+            mln_alloc_free(clst->text->data);
             clst->text->data = s;
             break;
         } else {
