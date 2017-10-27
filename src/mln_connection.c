@@ -279,7 +279,11 @@ mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc)
                 if (b->last_in_chain) break;
             }
 
-            if (!proc_vec) return 0;
+            if (!proc_vec) {
+                if (tc->snd_head != NULL) mln_chain_pool_release_all(tc->snd_head);
+                tc->snd_head = tc->snd_tail = NULL;
+                return 0;
+            }
 
 non:
             n = writev(tc->sockfd, vector, proc_vec);
@@ -330,7 +334,11 @@ non:
         if (b->last_in_chain) break;
     }
 
-    if (!proc_vec) return 0;
+    if (!proc_vec) {
+        if (tc->snd_head != NULL) mln_chain_pool_release_all(tc->snd_head);
+        tc->snd_head = tc->snd_tail = NULL;
+        return 0;
+    }
 
 blk:
     n = writev(tc->sockfd, vector, proc_vec);
