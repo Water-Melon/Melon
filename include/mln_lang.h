@@ -49,6 +49,7 @@ typedef void (*mln_lang_stack_handler)(mln_lang_ctx_t *);
 typedef int (*mln_lang_op)(mln_lang_ctx_t *, mln_lang_retExp_t **, mln_lang_retExp_t *, mln_lang_retExp_t *);
 typedef mln_lang_retExp_t *(*mln_lang_internal) (mln_lang_ctx_t *);
 typedef int (*mln_msg_c_handler)(mln_lang_ctx_t *, const mln_lang_val_t *);
+typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 
 struct mln_lang_s {
     mln_event_t                     *ev;
@@ -80,6 +81,7 @@ struct mln_lang_ctx_s {
     mln_string_t                    *filename;
     mln_rbtree_t                    *msg_map;
     mln_lang_retExp_t               *retExp;
+    mln_lang_return_handler          return_handler;
     struct mln_lang_ctx_s           *prev;
     struct mln_lang_ctx_s           *next;
 };
@@ -358,7 +360,11 @@ extern mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev) __NONNULL2(1
 extern void mln_lang_free(mln_lang_t *lang);
 extern int mln_lang_run(mln_lang_t *lang) __NONNULL1(1);
 extern mln_lang_ctx_t *
-mln_lang_new_job(mln_lang_t *lang, mln_u32_t type, mln_string_t *data, void *udata) __NONNULL2(1,3);
+mln_lang_new_job(mln_lang_t *lang, \
+                 mln_u32_t type, \
+                 mln_string_t *data, \
+                 void *udata, \
+                 mln_lang_return_handler handler) __NONNULL2(1,3);
 extern void mln_lang_funccall_val_addObject(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val) __NONNULL2(1,2);
 #define mln_lang_retExp_getVar(retexp) ((retexp)->data.var)
 extern mln_lang_retExp_t *

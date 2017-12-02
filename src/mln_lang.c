@@ -389,6 +389,9 @@ static inline int __mln_lang_run(mln_lang_t *lang)
                 mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), lang->ctx_cur);
             else
                 mln_lang_ctx_chain_del(&(lang->blocked_head), &(lang->blocked_tail), lang->ctx_cur);
+            if (lang->ctx_cur != NULL && lang->ctx_cur->return_handler != NULL) {
+                lang->ctx_cur->return_handler(lang->ctx_cur);
+            }
             mln_lang_ctx_free(lang->ctx_cur);
             lang->ctx_cur = NULL;
         } else {
@@ -455,6 +458,9 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
     ASSERT(!ctx->ref);
     mln_lang_stack_node_t *node;
     if ((node = (mln_lang_stack_node_t *)mln_stack_top(ctx->run_stack)) == NULL) {
+        if (ctx != NULL && ctx->return_handler != NULL) {
+            ctx->return_handler(ctx);
+        }
         mln_lang_remove_job(ctx);
         return;
     }
@@ -514,6 +520,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
     ctx->retExp = NULL;
+    ctx->return_handler = NULL;
     ctx->prev = ctx->next = NULL;
 
     mln_lang_stack_node_t *node = mln_lang_stack_node_new(ctx->pool, M_LSNT_STM, ctx->stm);
@@ -528,7 +535,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     }
 
     mln_lang_scope_t *outer_scope;
-    if ((outer_scope = mln_lang_scope_new(ctx, NULL, M_LANG_SCOPE_TYPE_FUNC, node)) == NULL) {
+    if ((outer_scope = mln_lang_scope_new(ctx, NULL, M_LANG_SCOPE_TYPE_FUNC, NULL)) == NULL) {
         mln_lang_ctx_free(ctx);
         return NULL;
     }
@@ -612,10 +619,16 @@ mln_lang_ctx_getClass(mln_lang_ctx_t *ctx)
     return ((mln_lang_symbolNode_t *)(rn->data))->data.set;
 }
 
-mln_lang_ctx_t *mln_lang_new_job(mln_lang_t *lang, mln_u32_t type, mln_string_t *data, void *udata)
+mln_lang_ctx_t *
+mln_lang_new_job(mln_lang_t *lang, \
+                 mln_u32_t type, \
+                 mln_string_t *data, \
+                 void *udata, \
+                 mln_lang_return_handler handler)
 {
     mln_lang_ctx_t *ctx = mln_lang_ctx_new(lang, udata, type==M_INPUT_T_FILE? data: NULL, type, data);
     if (ctx == NULL) return NULL;
+    ctx->return_handler = handler;
     mln_lang_ctx_chain_add(&(lang->run_head), &(lang->run_tail), ctx);
     if (__mln_lang_run(lang) < 0) {
         mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), ctx);
