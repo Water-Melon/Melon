@@ -2500,13 +2500,20 @@ Their definitions can be found in melon-1.6.10/include/mln_types.h.
       b) void mln_lang_free(mln_lang_t *lang);
          Destroy the 'lang' object.
 
-      c) mln_lang_ctx_t *mln_lang_new_job(mln_lang_t *lang, mln_u32_t type, mln_string_t *data, void *udata);
+      c) mln_lang_ctx_t *mln_lang_new_job(mln_lang_t *lang,
+                                          mln_u32_t type,
+                                          mln_string_t *data,
+                                          void *udata,
+                                          mln_lang_return_handler handler);
          Add a new task.
          'lang' -- lang object which is created by 'mln_lang_new'.
          'type' -- indicates the type of 'data', its values:
              I.  M_INPUT_T_BUF   -- 'data' is a string data including the script code.
              II. M_INPUT_T_FILE  -- 'data' is a string data including the path of script file.
          'udata' -- user data.
+         'handler' -- a hook for fetching return value of the script file. Its prototype is,
+             void (*mln_lang_return_handler)(mln_lang_ctx_t *);
+             'mln_lang_ctx_t' is the context of script language.
          After calling this function, you can call 'mln_event_dispatch' immediatly, then the task will run
          automatically.
 
