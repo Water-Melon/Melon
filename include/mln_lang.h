@@ -359,6 +359,8 @@ extern void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg) __NONNULL2(1,2);
 extern mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev) __NONNULL2(1,2);
 extern void mln_lang_free(mln_lang_t *lang);
 extern int mln_lang_run(mln_lang_t *lang) __NONNULL1(1);
+extern int
+mln_lang_ctx_addGlobalVar(mln_lang_ctx_t *ctx, mln_string_t *name, void *val, mln_u32_t type) __NONNULL2(1,2);
 extern mln_lang_ctx_t *
 mln_lang_new_job(mln_lang_t *lang, \
                  mln_u32_t type, \

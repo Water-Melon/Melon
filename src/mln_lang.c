@@ -619,6 +619,27 @@ mln_lang_ctx_getClass(mln_lang_ctx_t *ctx)
     return ((mln_lang_symbolNode_t *)(rn->data))->data.set;
 }
 
+int mln_lang_ctx_addGlobalVar(mln_lang_ctx_t *ctx, mln_string_t *name, void *val, mln_u32_t type)
+{
+    mln_lang_val_t *v;
+    mln_lang_var_t *var;
+    if ((v = __mln_lang_val_new(ctx->pool, type, val)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, v, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_val_free(v);
+        return -1;
+    }
+    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_var_free(var);
+        return -1;
+    }
+    return 0;
+}
+
 mln_lang_ctx_t *
 mln_lang_new_job(mln_lang_t *lang, \
                  mln_u32_t type, \
