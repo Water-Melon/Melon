@@ -367,6 +367,7 @@ mln_lang_new_job(mln_lang_t *lang, \
                  mln_string_t *data, \
                  void *udata, \
                  mln_lang_return_handler handler) __NONNULL2(1,3);
+extern void mln_lang_remove_job(mln_lang_ctx_t *ctx);
 extern void mln_lang_funccall_val_addObject(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val) __NONNULL2(1,2);
 #define mln_lang_retExp_getVar(retexp) ((retexp)->data.var)
 extern mln_lang_retExp_t *

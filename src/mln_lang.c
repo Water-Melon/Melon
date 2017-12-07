@@ -70,7 +70,6 @@ static inline void
 mln_lang_ctx_getRetExpFromNode(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node);
 static inline mln_lang_set_detail_t *
 mln_lang_ctx_getClass(mln_lang_ctx_t *ctx);
-static void mln_lang_remove_job(mln_lang_ctx_t *ctx);
 static inline mln_lang_retExp_t *
 __mln_lang_retExp_new(mln_alloc_t *pool, mln_lang_retExp_type_t type, void *data);
 static inline void __mln_lang_retExp_free(mln_lang_retExp_t *retExp);
@@ -659,7 +658,7 @@ mln_lang_new_job(mln_lang_t *lang, \
     return ctx;
 }
 
-static void mln_lang_remove_job(mln_lang_ctx_t *ctx)
+void mln_lang_remove_job(mln_lang_ctx_t *ctx)
 {
     if (ctx == NULL) return;
     mln_lang_t *lang = ctx->lang;
