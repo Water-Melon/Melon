@@ -5959,6 +5959,16 @@ int mln_lang_msg_sendMsg(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t
         lm->script_val = val;
         ++(val->ref);
         lm->script_read = 0;
+        if (lm->script_wait && \
+            mln_event_set_fd(ctx->lang->ev, \
+                             lm->script_fd, \
+                             M_EV_SEND|M_EV_ONESHOT, \
+                             M_EV_UNLIMITED, \
+                             lm, \
+                             mln_lang_msg_scriptRecver) < 0)
+        {
+            return -1;
+        }
     } else {
         if (!lm->c_read) return -1;
         if (mln_event_set_fd(ctx->lang->ev, \
@@ -6245,17 +6255,6 @@ static mln_lang_retExp_t *mln_lang_msg_func_recv_process(mln_lang_ctx_t *ctx)
         }
         if ((retExp = __mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
-            return NULL;
-        }
-        if (mln_event_set_fd(ctx->lang->ev, \
-                             lm->script_fd, \
-                             M_EV_SEND|M_EV_ONESHOT, \
-                             M_EV_UNLIMITED, \
-                             lm, \
-                             mln_lang_msg_scriptRecver) < 0)
-        {
-            __mln_lang_errmsg(ctx, "No memory.");
-            __mln_lang_retExp_free(retExp);
             return NULL;
         }
     } else {
