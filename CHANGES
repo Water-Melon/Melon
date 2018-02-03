@@ -1,3 +1,7 @@
+Changes with melon 1.6.11                                         03 Feb 2018
+    *) Update License
+    *) Add some basic functions for script language
+
 Changes with melon 1.6.10                                         03 Aug 2017
     *) Added function to getting array length for melang script.
     *) Fixed some bugs for melang script.

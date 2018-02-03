@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.10
+Melon Version 1.6.11
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.10.
-  b) Change directory to the melon-1.6.10/.
+  a) Download and decompress melon-1.6.11.
+  b) Change directory to the melon-1.6.11/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.10/include/mln_types.h.
+Their definitions can be found in melon-1.6.11/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3413,6 +3413,30 @@ Their definitions can be found in melon-1.6.10/include/mln_types.h.
 
       <30> mln_size(array);
       Return array's length.
+
+      <31> mln_isInt(var);
+      Return a boolean value indicating whether var is an integer.
+
+      <32> mln_isReal(var);
+      Return a boolean value indicating whether var is a Real-number.
+
+      <33> mln_isStr(var);
+      Return a boolean value indicating whether var is a String.
+
+      <34> mln_isNil(var);
+      Return a boolean value indicating whether var is Nil.
+
+      <35> mln_isBool(var);
+      Return a boolean value indicating whether var is Boolean.
+
+      <36> mln_isObj(var);
+      Return a boolean value indicating whether var is an Object.
+
+      <37> mln_isFunc(var);
+      Return a boolean value indicating whether var is an Function.
+
+      <38> mln_isArray(var);
+      Return a boolean value indicating whether var is an Array.
 
 
    G. Function development
