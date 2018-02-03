@@ -68,7 +68,7 @@ extern void mln_gc_free(mln_gc_t *gc);
 extern int mln_gc_add(mln_gc_t *gc, void *data) __NONNULL2(1,2);
 extern void mln_gc_suspect(mln_gc_t *gc, void *data) __NONNULL2(1,2);
 extern void mln_gc_merge(mln_gc_t *dest, mln_gc_t *src) __NONNULL2(1,2);
-extern void mln_gc_addForCollect(mln_gc_t *gc, void *data) __NONNULL2(1,2);
+extern void mln_gc_addForCollect(mln_gc_t *gc, void *data) __NONNULL1(1);
 extern int mln_gc_addForClean(mln_gc_t *gc, void *data) __NONNULL2(1,2);
 extern void mln_gc_collect(mln_gc_t *gc, void *rootData) __NONNULL1(1);
 extern void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *procGC)__NONNULL2(1,2);

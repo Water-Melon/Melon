@@ -103,7 +103,7 @@ mln_lang_array_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
         return handler(ctx, ret, op1, op2);
     }
     if (type == mln_lang_var_getValType(op1->data.var) && \
-        mln_lang_var_getVal(op1->data.var)->data.array == mln_lang_var_getVal(op1->data.var)->data.array)
+        mln_lang_var_getVal(op1->data.var)->data.array == mln_lang_var_getVal(op2->data.var)->data.array)
     {
         if ((*ret = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
@@ -136,7 +136,7 @@ mln_lang_array_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_r
         return handler(ctx, ret, op1, op2);
     }
     if (type != mln_lang_var_getValType(op1->data.var) || \
-        mln_lang_var_getVal(op1->data.var)->data.array != mln_lang_var_getVal(op1->data.var)->data.array)
+        mln_lang_var_getVal(op1->data.var)->data.array != mln_lang_var_getVal(op2->data.var)->data.array)
     {
         if ((*ret = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");

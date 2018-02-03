@@ -67,7 +67,7 @@ mln_conf_destroy_lex(mln_conf_t *cf);
 static mln_conf_domain_t *
 mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name) __NONNULL2(1,2);
 static void
-mln_conf_domain_destroy(void *data) __NONNULL1(1);
+mln_conf_domain_destroy(void *data);
 static int
 mln_conf_domain_cmp(const void *data1, const void *data2);
 static mln_conf_domain_t *

@@ -81,7 +81,7 @@ mln_fheap_delete(mln_fheap_t *fh, mln_fheap_node_t *node) __NONNULL2(1,2);
 extern mln_fheap_node_t *
 mln_fheap_node_init(mln_fheap_t *fh, void *key) __NONNULL2(1,2);
 extern void
-mln_fheap_node_destroy(mln_fheap_t *fh, mln_fheap_node_t *fn) __NONNULL2(1,2);
+mln_fheap_node_destroy(mln_fheap_t *fh, mln_fheap_node_t *fn) __NONNULL1(1);
 
 #endif
 
