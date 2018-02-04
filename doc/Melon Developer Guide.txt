@@ -771,7 +771,7 @@ Their definitions can be found in melon-1.6.11/include/mln_types.h.
         I, II, III, IV, V (or VI), VII can be used in the same one event combined with '|'.
         The fourth is a millisecond timer. If we don't want to set a timer, we can set this value to be M_EV_UNLIMITED.
         If we need to modify the event type of a file descriptor, and we don't want to modify its timer, we can set
-        this value to be M_EV_UNMODIFIED.		
+        this value to be M_EV_UNMODIFIED.                
         The fifth is a user data that will be passed to a function which is given by the last argument.
         The last one is a function pointer, its prototype is
             typedef void (*ev_fd_handler) (mln_event_t *, int, void *);
@@ -920,7 +920,7 @@ Their definitions can be found in melon-1.6.11/include/mln_types.h.
 
      There are 12 interfaces for this data structure.
      a) mln_queue_empty(q)
-	 It is used to test whether the queue is empty.
+         It is used to test whether the queue is empty.
 
      b) mln_queue_full(q)
         It is used to test whether the queue is full.
@@ -1023,7 +1023,7 @@ Their definitions can be found in melon-1.6.11/include/mln_types.h.
             e  -> v
             v  -> ID
             v  -> * e
-	    With these productions, we can write
+            With these productions, we can write
             **a = ***c
         in a file and it will pass the parsing.
 
@@ -3437,6 +3437,29 @@ Their definitions can be found in melon-1.6.11/include/mln_types.h.
 
       <38> mln_isArray(var);
       Return a boolean value indicating whether var is an Array.
+
+      <39> mln_int(var);
+      Convert 'var' to be an integer as the return value.
+
+      <40> mln_bool(var);
+      Convert 'var' to be a boolean as the return value.
+
+      <41> mln_real(var);
+      Convert 'var' to be a real number as the return value.
+
+      <42> mln_str(var);
+      Convert 'var' to be a string as the return value.
+
+      <43> mln_obj(var);
+      Convert 'var' to be an object as the return value.
+      This function only can work on type array of 'var'.
+      It will convert an associative array to be an object.
+      Key in array will be the name of property in object.
+
+      <44> mln_array(var);
+      Convert 'var' to be an array as the return value.
+      But for type object, it is not return an array like "[obj]". It will return an associative array whose
+      keys and values are the property names and values in the object.
 
 
    G. Function development
