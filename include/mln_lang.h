@@ -439,5 +439,6 @@ MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
                        extern void, \
                        __NONNULL3(1,2,3));
 extern void mln_lang_stack_node_free(void *data);
+extern int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
 
 #endif

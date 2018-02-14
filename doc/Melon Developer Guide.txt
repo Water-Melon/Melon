@@ -3461,6 +3461,15 @@ Their definitions can be found in melon-1.6.11/include/mln_types.h.
       But for type object, it is not return an array like "[obj]". It will return an associative array whose
       keys and values are the property names and values in the object.
 
+      <45> mln_dump(var);
+      Dump all details of 'var' to console and log.
+
+      <46> mln_has(owner, thing);
+      Test whether the 'owner' has 'thing'.
+      This function is going to be used on array and object.
+      To array 'thing' can be any type that melang supports.
+      To object 'thing' must be a string.
+
 
    G. Function development
       Following these steps below:

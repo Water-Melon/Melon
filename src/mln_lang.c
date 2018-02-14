@@ -258,11 +258,13 @@ static int mln_lang_msg_func_new(mln_lang_ctx_t *ctx);
 static int mln_lang_msg_func_free(mln_lang_ctx_t *ctx);
 static int mln_lang_msg_func_recv(mln_lang_ctx_t *ctx);
 static int mln_lang_msg_func_send(mln_lang_ctx_t *ctx);
+static int mln_lang_msg_func_dump(mln_lang_ctx_t *ctx);
 static int mln_lang_msg_installer(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_lang_msg_func_new_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_lang_msg_func_free_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_lang_msg_func_recv_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_lang_msg_func_send_process(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_lang_msg_func_dump_process(mln_lang_ctx_t *ctx);
 static inline int
 mln_lang_gc_item_new(mln_alloc_t *pool, mln_gc_t *gc, mln_lang_gcType_t type, void *data);
 static void mln_lang_gc_item_free(mln_lang_gc_item_t *gcItem);
@@ -2645,6 +2647,52 @@ mln_lang_array_getAndNew_nil(mln_lang_ctx_t *ctx, mln_lang_array_t *array)
     mln_rbtree_insert(array->elems_index, rn);
     ++(array->index);
     return elem->value;
+}
+
+int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key)
+{
+    mln_lang_val_t *val;
+    mln_rbtree_t *tree;
+    mln_rbtree_node_t *rn;
+    mln_lang_var_t *nil, *k;
+    mln_lang_array_elem_t *elem;
+    mln_lang_ctx_t *ctx = array->ctx;
+    if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        return 0;
+    }
+    if ((nil = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        __mln_lang_val_free(val);
+        return 0;
+    }
+    if (mln_lang_var_getValType(key) == M_LANG_VAL_TYPE_INT) {
+        if ((elem = mln_lang_array_elem_new(ctx->pool, NULL, nil, key->val->data.i)) == NULL) {
+            __mln_lang_var_free(nil);
+            return 0;
+        }
+        tree = array->elems_index;
+        rn = mln_rbtree_search(tree, tree->root, elem);
+        mln_lang_array_elem_free(elem);
+        if (mln_rbtree_null(rn, tree)) {
+            return 0;
+        }
+        return 1;
+    }
+    if ((k = mln_lang_var_dupWithVal(ctx, key)) == NULL) {
+        __mln_lang_var_free(nil);
+        return 0;
+    }
+    if ((elem = mln_lang_array_elem_new(ctx->pool, k, nil, array->index)) == NULL) {
+        __mln_lang_var_free(k);
+        __mln_lang_var_free(nil);
+        return 0;
+    }
+    tree = array->elems_key;
+    rn = mln_rbtree_search(tree, tree->root, elem);
+    mln_lang_array_elem_free(elem);
+    if (mln_rbtree_null(rn, tree)) {
+        return 0;
+    }
+    return 1;
 }
 
 
@@ -6428,12 +6476,73 @@ static mln_lang_retExp_t *mln_lang_msg_func_send_process(mln_lang_ctx_t *ctx)
     return retExp;
 }
 
+static int mln_lang_msg_func_dump(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t funcname = mln_string("mln_dump");
+    mln_string_t v1 = mln_string("var");
+    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msg_func_dump_process, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = __mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_val_free(val);
+        __mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    func->nargs = 1;
+    if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = __mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_val_free(val);
+        return -1;
+    }
+    if (__mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_var_free(var);
+        return -1;
+    }
+    return 0;
+}
+
+static mln_lang_retExp_t *mln_lang_msg_func_dump_process(mln_lang_ctx_t *ctx)
+{
+    mln_lang_retExp_t *retExp;
+    mln_string_t v1 = mln_string("var");
+    mln_lang_symbolNode_t *sym;
+    if ((sym = __mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        __mln_lang_errmsg(ctx, "Argument missing.");
+        return NULL;
+    }
+    (void)mln_lang_dump_symbol(NULL, sym, NULL);
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return retExp;
+}
+
 static int mln_lang_msg_installer(mln_lang_ctx_t *ctx)
 {
     if (mln_lang_msg_func_new(ctx) < 0) return -1;
     if (mln_lang_msg_func_free(ctx) < 0) return -1;
     if (mln_lang_msg_func_recv(ctx) < 0) return -1;
     if (mln_lang_msg_func_send(ctx) < 0) return -1;
+    if (mln_lang_msg_func_dump(ctx) < 0) return -1;
     return 0;
 }
 
