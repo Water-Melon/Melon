@@ -3470,6 +3470,14 @@ Their definitions can be found in melon-1.6.11/include/mln_types.h.
       To array 'thing' can be any type that melang supports.
       To object 'thing' must be a string.
 
+      <47> mln_keys(array);
+      This function will return an array contains all keys in 'array'.
+
+      <48> mln_merge(array1, array2);
+      Merge two array into one array.
+      If keys in 'array1' are existent in 'array2', the values associated with those keys in 'array2' will be
+      in result array.
+
 
    G. Function development
       Following these steps below:
