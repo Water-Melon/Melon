@@ -5036,11 +5036,6 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
         }
     }
 
-    if (prototype->nargs != funccall->nargs) {
-        __mln_lang_errmsg(ctx, "Invalid arguments.");
-        return -1;
-    }
-
     if ((scope = mln_lang_scope_new(ctx, \
                                     NULL, \
                                     M_LANG_SCOPE_TYPE_FUNC, \
@@ -5063,11 +5058,23 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
     }
     for (scan = prototype->args_head, var = funccall->args_head; \
          scan != NULL; \
-         scan = scan->next, var = var->next)
+         scan = scan->next)
     {
-        if ((newvar = mln_lang_var_transform(ctx, var, scan)) == NULL) {
-            __mln_lang_errmsg(ctx, "No memory.");
-            return -1;
+        if (var == NULL) {
+            mln_lang_retExp_t *tmp;
+            if ((tmp = __mln_lang_retExp_createTmpNil(ctx->pool, scan->name)) == NULL) {
+                __mln_lang_errmsg(ctx, "No memory.");
+                return -1;
+            }
+            newvar = tmp->data.var;
+            tmp->data.var = NULL;
+            mln_lang_retExp_free(tmp);
+        } else {
+            if ((newvar = mln_lang_var_transform(ctx, var, scan)) == NULL) {
+                __mln_lang_errmsg(ctx, "No memory.");
+                return -1;
+            }
+            var = var->next;
         }
         if (__mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, newvar) < 0) {
             __mln_lang_var_free(newvar);
