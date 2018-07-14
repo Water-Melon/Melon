@@ -6655,13 +6655,6 @@ static mln_lang_retExp_t *mln_lang_func_watch_process(mln_lang_ctx_t *ctx)
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     val1 = sym->data.var->val;
-    if (val1->type == M_LANG_VAL_TYPE_OBJECT || \
-        val1->type == M_LANG_VAL_TYPE_FUNC || \
-        val1->type == M_LANG_VAL_TYPE_ARRAY)
-    {
-        __mln_lang_errmsg(ctx, "Cannot watch string, array or object.");
-        return NULL;
-    }
 
     if ((sym = __mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
