@@ -18,7 +18,6 @@
 #include "mln_core.h"
 
 static int mln_getFrameworkStatus(void);
-static void mln_get_root(void);
 static void mln_master_routine(void);
 static void mln_worker_routine(struct mln_core_attr *attr);
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data);
@@ -41,7 +40,6 @@ int mln_core_init(struct mln_core_attr *attr)
         return -1;
 
     if (mln_getFrameworkStatus()) {
-        mln_get_root();
         if (mln_boot_params(attr->argc, attr->argv) < 0)
             return -1;
 
@@ -152,20 +150,6 @@ static void mln_worker_routine(struct mln_core_attr *attr)
     } else {
         if (attr->worker_process != NULL) attr->worker_process(ev);
         mln_event_dispatch(ev);
-    }
-}
-
-static void mln_get_root(void)
-{
-    if (getuid() == 0) return;
-    uid_t euid = geteuid();
-    if (euid != 0) {
-        fprintf(stderr, "Not running as 'root'.\n");
-        exit(1);
-    }
-    if (setuid(euid) < 0) {
-        fprintf(stderr, "Set uid failed. %s\n", strerror(errno));
-        exit(1);
     }
 }
 

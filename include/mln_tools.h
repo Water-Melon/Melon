@@ -6,13 +6,8 @@
 #ifndef __MLN_TOOLS_H
 #define __MLN_TOOLS_H
 
+#include "mln_string.h"
 #include "mln_types.h"
-#include "mln_lex.h"
-
-MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(extern, \
-                                 mln_passwd_lex, \
-                                 PWD, \
-                                 PWD_TK_MELON, PWD_TK_COMMENT);
 
 typedef int (*boot_param)(const char *, const char *);
 

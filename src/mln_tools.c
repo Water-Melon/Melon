@@ -11,13 +11,10 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <pwd.h>
 #include "mln_tools.h"
 #include "mln_global.h"
 #include "mln_log.h"
-
-MLN_DEFINE_TOKEN(mln_passwd_lex, PWD, \
-                 {PWD_TK_MELON, "PWD_TK_MELON"}, \
-                 {PWD_TK_COMMENT, "PWD_TK_COMMENT"});
 
 static int
 mln_boot_help(const char *boot_str, const char *alias);
@@ -45,27 +42,8 @@ char mln_core_file_cmd[] = "core_file_size";
 char mln_nofile_cmd[] = "max_nofile";
 char mln_limit_unlimited[] = "unlimited";
 
-static mln_passwd_lex_struct_t *
-mln_passwd_lex_nums_handler(mln_lex_t *lex, void *data)
-{
-    char c;
-    while ( 1 ) {
-        c = mln_lex_getAChar(lex);
-        if (c == MLN_ERR) return NULL;
-        if (c == MLN_EOF) break;
-        if (c == '\n') break;
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
-    }
-    return mln_passwd_lex_new(lex, PWD_TK_COMMENT);
-}
-
 int mln_sys_limit_modify(void)
 {
-    if (getuid()) {
-        fprintf(stderr, "Modify system limitation failed. Permission deny.\n");
-        return -1;
-    }
-
     if (mln_sys_core_modify() < 0) {
         return -1;
     }
@@ -218,9 +196,11 @@ out:
 
 static int mln_set_id(void)
 {
-    char filename[] = "/etc/passwd";
-    mln_string_t keywords[] = {mln_string("root"), mln_string(NULL)};
-    struct mln_lex_attr lattr;
+    char name[256] = {0};
+    int len;
+    uid_t uid, euid;
+    gid_t gid, egid;
+    struct passwd *pwd;
 
     /*get user name*/
     mln_conf_t *cf = mln_get_conf();
@@ -234,7 +214,12 @@ static int mln_set_id(void)
         abort();
     }
     mln_conf_cmd_t *cc = cd->search(cd, "user");
-    if (cc != NULL) {
+    if (cc == NULL) {
+        uid = getuid();
+        euid = geteuid();
+        gid = getgid();
+        egid = getegid();
+    } else {
         mln_conf_item_t *ci = cc->search(cc, 1);
         if (ci == NULL) {
             mln_log(error, "Command 'user' need a parameter.\n");
@@ -244,94 +229,23 @@ static int mln_set_id(void)
             mln_log(error, "Parameter type of command 'user' error.\n");
             return -1;
         }
-        keywords[0] = *(ci->val.s);
-    }
-
-    /*init lexer*/
-    mln_alloc_t *pool;
-    mln_string_t tmp;
-    mln_lex_hooks_t hooks;
-    mln_lex_t *lex;
-
-    mln_string_nSet(&tmp, filename, sizeof(filename)-1);
-
-    if ((pool = mln_alloc_init()) == NULL) {
-        mln_log(error, "No memory.\n");
-        return -1;
-    }
-
-    memset(&hooks, 0, sizeof(hooks));
-    hooks.nums_handler = (lex_hook)mln_passwd_lex_nums_handler;
-    lattr.pool = pool;
-    lattr.keywords = keywords;
-    lattr.hooks = &hooks;
-    lattr.preprocess = 0;
-    lattr.type = M_INPUT_T_FILE;
-    lattr.data = &tmp;
-    mln_lex_initWithHooks(mln_passwd_lex, lex, &lattr);
-    if (lex == NULL)  {
-        mln_log(error, "No memory.\n");
-        mln_alloc_destroy(pool);
-        return -1;
-    }
-
-    /*jump off useless informations*/
-    mln_passwd_lex_struct_t *plst;
-    while ((plst = mln_passwd_lex_token(lex)) != NULL) {
-        if (plst->type == PWD_TK_MELON)
-            break;
-        if (plst->type == PWD_TK_EOF)
-            break;
-        mln_passwd_lex_free(plst);
-    }
-    if (plst == NULL || plst->type == PWD_TK_EOF) {
-        if (plst == NULL) mln_log(error, "%s\n", mln_lex_strerror(lex));
-        else mln_log(error, "User 'melon' not existed.\n");
-        mln_passwd_lex_free(plst);
-        mln_lex_destroy(lex);
-        mln_alloc_destroy(pool);
-        return -1;
-    }
-    mln_passwd_lex_free(plst);
-
-    /*jump off useless columns*/
-    mln_s32_t colon_cnt = 0;
-    while ((plst = mln_passwd_lex_token(lex)) != NULL) {
-        if (plst->type == PWD_TK_COLON) {
-            if (++colon_cnt == 2) break;
+        len = ci->val.s->len;
+        if (len > 255) len = 255;
+        memcpy(name, ci->val.s->data, len);
+        if ((pwd = getpwnam(name)) == NULL) {
+            mln_log(error, "getpwnam failed. %s\n", strerror(errno));
+            return -1;
         }
-        mln_passwd_lex_free(plst);
+        if (pwd->pw_uid != getuid()) {
+            euid = uid = pwd->pw_uid;
+            egid = gid = pwd->pw_gid;
+        } else {
+            uid = getuid();
+            euid = geteuid();
+            gid = getgid();
+            egid = getegid();
+        }
     }
-    if (plst == NULL) {
-        mln_log(error, "%s\n", mln_lex_strerror(lex));
-        mln_lex_destroy(lex);
-        mln_alloc_destroy(pool);
-        return -1;
-    }
-    mln_passwd_lex_free(plst);
-
-    /*get uid and gid*/
-    plst = mln_passwd_lex_token(lex);
-    if (plst == NULL || plst->type != PWD_TK_DEC) {
-err:
-        if (plst == NULL) mln_log(error, "%s\n", mln_lex_strerror(lex));
-        else mln_log(error, "Invalid ID.\n");
-        mln_passwd_lex_free(plst);
-        mln_lex_destroy(lex);
-        mln_alloc_destroy(pool);
-        return -1;
-    }
-    int uid = atoi((char *)(plst->text->data));
-    mln_passwd_lex_free(plst);
-    plst = mln_passwd_lex_token(lex);
-    if (plst == NULL || plst->type != PWD_TK_COLON) goto err;
-    mln_passwd_lex_free(plst);
-    plst = mln_passwd_lex_token(lex);
-    if (plst == NULL || plst->type != PWD_TK_DEC) goto err;
-    int gid = atoi((char *)(plst->text->data));
-    mln_passwd_lex_free(plst);
-    mln_lex_destroy(lex);
-    mln_alloc_destroy(pool);
 
     /*set log files' uid & gid*/
     int rc = 1;
