@@ -287,6 +287,8 @@ struct mln_lang_val_s {
     } data;
     mln_s32_t                        type;
     mln_u32_t                        ref;
+    mln_lang_val_t                  *udata;
+    mln_lang_func_detail_t          *func;
 };
 
 struct mln_lang_funccall_val_s {

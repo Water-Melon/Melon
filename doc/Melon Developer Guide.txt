@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.11
+Melon Version 1.6.12
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -57,8 +57,8 @@ And the multithread architecture shown in Figure 2.
 
 2.Installation
 We can install Melon following these steps:
-  a) Download and decompress melon-1.6.11.
-  b) Change directory to the melon-1.6.11/.
+  a) git clone https://github.com/Water-Melon/Melon.git
+  b) Change directory to the Melon/.
   c) Execute shell command
          ./configure [--prefix=/...|...|--help]
          make
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.11/include/mln_types.h.
+Their definitions can be found in melon-1.6.12/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3216,7 +3216,31 @@ Their definitions can be found in melon-1.6.11/include/mln_types.h.
       <IV>  add property dynamically in object
           John.parent = ['Jenny', 'Bobby']; //parent not be defined in set.
 
-   E. Operator
+   E. Reactive Programming
+      e.g. normal usage
+          foo (newval, userData)
+          {
+              mln_dump(newval);
+              mln_dump(userData);
+          }
+          name = 'Susan';
+          gender = 'female';
+          mln_watch(name, foo, gender);
+          name = 'Tom';//Then foo will be called after 'name' assigned.
+
+      e.g. reference
+          foo (&newval, &userData)
+          {
+              userData = 'male'; //newval => name ('Tom'), userData => gender ('female')
+          }
+          name = 'Susan';
+          gender = 'female';
+          mln_watch(name, foo, gender);
+          name = 'Tom';//Then foo will be called after 'name' assigned.
+          mln_dump(gender);
+
+
+   F. Operator
       Listed by priority from low to high.
       <1> ,
       <2> =  +=  -=  >>=  <<=  *=  /=  |=  &=  ^=  %=
@@ -3234,7 +3258,7 @@ Their definitions can be found in melon-1.6.11/include/mln_types.h.
       They are not supported by all data types.
       If encountered unsupported operatior, error message would be logged.
 
-   F. Internal Function
+   G. Internal Function
       <1> mln_print(var);
       Output var's value. But it cannot output the details of object, function and array.
       <2> mln_msgNew(name);
@@ -3478,8 +3502,20 @@ Their definitions can be found in melon-1.6.11/include/mln_types.h.
       If keys in 'array1' are existent in 'array2', the values associated with those keys in 'array2' will be
       in result array.
 
+      <49> mln_watch(var, func, userData);
+      This function is provided for supporting Reactive Programming.
+      It means that 'var' is being watched by 'func'. If 'var' changed, 'func' will be executed.
+      You can find some examples in Section <8. Script language>
+      The prototype of 'func' is,
+          func (newval, userData);
+      Both of func's arguments can be either reference or not. And the second argument 'userData' is identical
+      with the third argument in 'mln_watch'.
 
-   G. Function development
+      <50> mln_unwatch(var);
+      Remove watcher from 'var'.
+
+
+   H. Function development
       Following these steps below:
       1. mkdir 'funcname', such as mkdir print
       2. touch two files, mln_lang_funcname.c and mln_lang_funcname.h, like:
