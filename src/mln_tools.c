@@ -198,8 +198,8 @@ static int mln_set_id(void)
 {
     char name[256] = {0};
     int len;
-    uid_t uid, euid;
-    gid_t gid, egid;
+    uid_t uid;
+    gid_t gid;
     struct passwd *pwd;
 
     /*get user name*/
@@ -216,9 +216,7 @@ static int mln_set_id(void)
     mln_conf_cmd_t *cc = cd->search(cd, "user");
     if (cc == NULL) {
         uid = getuid();
-        euid = geteuid();
         gid = getgid();
-        egid = getegid();
     } else {
         mln_conf_item_t *ci = cc->search(cc, 1);
         if (ci == NULL) {
@@ -237,13 +235,11 @@ static int mln_set_id(void)
             return -1;
         }
         if (pwd->pw_uid != getuid()) {
-            euid = uid = pwd->pw_uid;
-            egid = gid = pwd->pw_gid;
+            uid = pwd->pw_uid;
+            gid = pwd->pw_gid;
         } else {
             uid = getuid();
-            euid = geteuid();
             gid = getgid();
-            egid = getegid();
         }
     }
 
@@ -260,7 +256,7 @@ static int mln_set_id(void)
         rc = chown(path, uid, gid);
     if (rc < 0) rc = 1;/*do nothing*/
 
-    /*set uid, gid, euid and egid*/
+    /*set uid, gid*/
     if (setgid(gid) < 0) {
         mln_log(error, "Set GID failed. %s\n", strerror(errno));
         return -1;
