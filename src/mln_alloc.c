@@ -200,7 +200,7 @@ mln_alloc_get_mgr_by_size(mln_alloc_mgr_t *tbl, mln_size_t size)
     mln_size_t off = 0;
     int i;
     for (i = (sizeof(mln_size_t)<<3) - 1; i >= 0; --i) {
-        if (size & (((mln_size_t)1) << 1)) {
+        if (size & (((mln_size_t)1) << i)) {
             off = i;
             break;
         }

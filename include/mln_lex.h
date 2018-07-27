@@ -17,8 +17,8 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#define MLN_EOF (-1)
-#define MLN_ERR (-2)
+#define MLN_EOF (char)(-1)
+#define MLN_ERR (char)(-2)
 #define MLN_LEX_ERRMSG_LEN 1024
 #define MLN_DEFAULT_BUFLEN 4095
 #define MLN_EOF_TEXT "##EOF##"
