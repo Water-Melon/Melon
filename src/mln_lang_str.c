@@ -33,6 +33,8 @@ static int
 mln_lang_str_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
 static int
 mln_lang_str_not(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+static int
+mln_lang_str_index(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
 
 mln_lang_method_t mln_lang_str_oprs = {
     mln_lang_str_assign,
@@ -64,7 +66,7 @@ mln_lang_method_t mln_lang_str_oprs = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    mln_lang_str_index,
     NULL,
     NULL,
     NULL,
@@ -335,6 +337,30 @@ mln_lang_str_not(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
+    }
+    return 0;
+}
+
+static int
+mln_lang_str_index(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+{
+    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
+    mln_s64_t offset;
+    mln_string_t c;
+    mln_string_t *s = mln_lang_var_getVal(op1->data.var)->data.s;
+    if (mln_lang_var_getValType(op2->data.var) != M_LANG_VAL_TYPE_INT) {
+        mln_lang_errmsg(ctx, "Offset of string must be an integer.");
+        return -1;
+    }
+    offset = mln_lang_var_getVal(op2->data.var)->data.i;
+    if (offset >= s->len) {
+        mln_lang_errmsg(ctx, "Invalid offset of string.");
+        return -1;
+    }
+    mln_string_nSet(&c, &(s->data[offset]), 1);
+    if ((*ret = mln_lang_retExp_createTmpString(ctx->pool, &c, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
     }
     return 0;
 }
