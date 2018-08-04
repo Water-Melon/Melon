@@ -353,7 +353,7 @@ mln_lang_str_index(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
         return -1;
     }
     offset = mln_lang_var_getVal(op2->data.var)->data.i;
-    if (offset >= s->len) {
+    if (offset < 0 || offset >= s->len) {
         mln_lang_errmsg(ctx, "Invalid offset of string.");
         return -1;
     }
