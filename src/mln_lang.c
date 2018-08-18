@@ -2153,6 +2153,7 @@ __mln_lang_val_new(mln_alloc_t *pool, mln_s32_t type, void *data)
     val->ref = 0;
     val->udata = NULL;
     val->func = NULL;
+    val->notModify = 0;
     return val;
 }
 
@@ -3944,6 +3945,11 @@ static void mln_lang_stack_handler_assign(mln_lang_ctx_t *ctx)
             }
         }
         if (handler != NULL) {
+            if (mln_lang_val_issetNotModify(node->retExp->data.var->val)) {
+                __mln_lang_errmsg(ctx, "Operand cannot be changed.");
+                mln_lang_remove_job(ctx);
+                return;
+            }
             if (handler(ctx, &res, node->retExp, ctx->retExp) < 0) {
                 mln_lang_remove_job(ctx);
                 return;
@@ -4740,6 +4746,11 @@ static void mln_lang_stack_handler_suffix(mln_lang_ctx_t *ctx)
                 break;
         }
         if (handler != NULL) {
+            if (mln_lang_val_issetNotModify(ctx->retExp->data.var->val)) {
+                __mln_lang_errmsg(ctx, "Operand cannot be changed.");
+                mln_lang_remove_job(ctx);
+                return;
+            }
             if (handler(ctx, &res, ctx->retExp, NULL) < 0) {
                 mln_lang_remove_job(ctx);
                 return;
@@ -5279,6 +5290,11 @@ again:
             }
             if (handler != NULL) {
                 retExp = NULL;
+                if ((spec->op == M_SPEC_INC || spec->op == M_SPEC_DEC) && mln_lang_val_issetNotModify(ctx->retExp->data.var->val)) {
+                    __mln_lang_errmsg(ctx, "Operand cannot be changed.");
+                    mln_lang_remove_job(ctx);
+                    return;
+                }
                 if (handler(ctx, &retExp, ctx->retExp, NULL) < 0) {
                     mln_lang_remove_job(ctx);
                     return;
@@ -5959,7 +5975,11 @@ static void mln_lang_dump_var(mln_lang_var_t *var, int cnt)
     if (var->inSet != NULL) {
         mln_log(none, "  In Set '%S'  setRef: %l", var->inSet->name, var->inSet->ref);
     }
-    mln_log(none, "  valueRef: %u, udata <0x%X>, func <0x%X>\n", var->val->ref, var->val->udata, var->val->func);
+    mln_log(none, "  valueRef: %u, udata <0x%X>, func <0x%X>, notModify: %s\n", \
+            var->val->ref, \
+            var->val->udata, \
+            var->val->func, \
+            var->val->notModify? "true": "false");
     mln_s32_t type = __mln_lang_var_getValType(var);
     switch (type) {
         case M_LANG_VAL_TYPE_NIL:

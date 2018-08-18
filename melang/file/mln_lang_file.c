@@ -308,6 +308,7 @@ static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     if (val->data.i < 0) {
         retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL);
     } else {
+        mln_lang_val_setNotModify(val);
         retExp = mln_lang_retExp_createTmpTrue(ctx->pool, NULL);
     }
     if (retExp == NULL) {

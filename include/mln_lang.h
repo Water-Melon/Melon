@@ -289,6 +289,7 @@ struct mln_lang_val_s {
     mln_u32_t                        ref;
     mln_lang_val_t                  *udata;
     mln_lang_func_detail_t          *func;
+    mln_u32_t                        notModify:1;
 };
 
 struct mln_lang_funccall_val_s {
@@ -396,6 +397,9 @@ extern void mln_lang_var_free(void *data);
 #define mln_lang_var_setType(var,t) ((var)->type = (t))
 #define mln_lang_var_getType(var,t) ((var)->type)
 #define mln_lang_var_getVal(var) ((var)->val)
+#define mln_lang_val_setNotModify(val) ((val)->notModify = 1)
+#define mln_lang_val_issetNotModify(val) ((val)->notModify)
+#define mln_lang_val_resetNotModify(val) ((val)->notModify = 0)
 extern void mln_lang_var_setInt(mln_lang_var_t *var, mln_s64_t i) __NONNULL1(1);
 extern void mln_lang_var_setReal(mln_lang_var_t *var, double r) __NONNULL1(1);
 extern void mln_lang_var_setString(mln_lang_var_t *var, mln_string_t *s) __NONNULL2(1,2);
