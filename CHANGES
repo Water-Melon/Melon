@@ -1,3 +1,6 @@
+Changes with melon 1.7.0                                          20 Aug 2018
+    *) Supported TCP network for melang
+
 Changes with melon 1.6.12                                         14 Jul 2018
     *) Fixed some bugs in melang
     *) Supported Reactive Programming in melang

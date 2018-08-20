@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.6.12
+Melon Version 1.7.0
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.6.12/include/mln_types.h.
+Their definitions can be found in melon-1.7.0/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3513,6 +3513,86 @@ Their definitions can be found in melon-1.6.12/include/mln_types.h.
 
       <50> mln_unwatch(var);
       Remove watcher from 'var'.
+
+      <51> mln_tcpConnect(ip, port, msgName, timeout);
+      Build a tcp connection to ip:port. Now Melang just supports IPv4.
+      msgName -- is the name that is created by mln_msgNew().
+      timeout -- receiving timeout, if is not given or null given, connection will never be timeout.
+      No matter succeed or not, an event will be given via mln_msgRecv(msgName).
+
+      <52> mln_tcpListen(ip, port, msgName, timeout);
+      Arguments like mln_tcpConnect().
+
+      <53> mln_tcpSend(fd, data);
+      Send data via fd connection.
+      fd is caught from tcp event that mln_tcpConnect() or mln_tcpListen() triggered.
+      data must be a string.
+
+      <54> mln_tcpRecv(fd);
+      Receive data from fd connection.
+      fd is caught from tcp event that mln_tcpConnect() or mln_tcpListen() triggered.
+      Data will be returned as return value.
+
+      <55> mln_tcpClose(fd);
+      Close an fd connection.
+
+      <56> mln_tcpShutdown(fd, type);
+      Shutdown an fd connection.
+      There are two directions -- send and recv. Which means, type has two values -- 'send' and 'recv'.
+      If two directions are all closed, fd connection will be closed like calling mln_tcpClose().
+
+      TCP Network Example:
+        Server:
+            mln_msgNew('test');
+            mln_tcpListen('0.0.0.0', 1234, 'test');
+            while (true) {
+                msg = mln_msgRecv('test');
+                n = mln_size(msg);
+                for (i = 0; i < n; i++) {
+                    if ((msg[i])['type'] == 'tcp_connect') {
+                        mln_print("Connected");
+                    } else if ((msg[i])['type'] == 'tcp_recv') {
+                        m = mln_tcpRecv(((msg[i])['data'])['fd']);
+                        mln_print("Received: "+m);
+                        mln_tcpSend(((msg[i])['data'])['fd'], "HTTP/1.1 200 OK\n\n");
+                        mln_print("Sent");
+                        mln_tcpClose(((msg[i])['data'])['fd']);
+                    } else if ((msg[i])['type'] == 'tcp_close') {
+                        mln_print("Closed");
+                        mln_tcpClose(((msg[i])['data'])['fd']);
+                    } else if ((msg[i])['type'] == 'tcp_accept') {
+                        mln_print("Accept: "+((msg[i])['data'])['ip']+':'+((msg[i])['data'])['port']);
+                    } else {
+                        mln_print((msg[i])['type']);
+                    }
+                }
+            }
+
+        Client:
+            mln_msgNew('test');
+            mln_tcpConnect('127.0.0.1', 1234, 'test');
+            while (true) {
+                msg = mln_msgRecv('test');
+                n = mln_size(msg);
+                for (i = 0; i < n; i++) {
+                    if ((msg[i])['type'] == 'tcp_connect') {
+                        mln_print("Connected");
+                    } else if ((msg[i])['type'] == 'tcp_recv') {
+                        m = mln_tcpRecv(((msg[i])['data'])['fd']);
+                        mln_print("Received: "+m);
+                        mln_tcpSend(((msg[i])['data'])['fd'], "HTTP/1.1 200 OK\n\n");
+                        mln_print("Sent");
+                        mln_tcpClose(((msg[i])['data'])['fd']);
+                    } else if ((msg[i])['type'] == 'tcp_close') {
+                        mln_print("Closed");
+                        mln_tcpClose(((msg[i])['data'])['fd']);
+                    } else if ((msg[i])['type'] == 'tcp_accept') {
+                        mln_print("Accept: "+((msg[i])['data'])['ip']+':'+((msg[i])['data'])['port']);
+                    } else {
+                        mln_print((msg[i])['type']);
+                    }
+                }
+            }
 
 
    H. Function development
