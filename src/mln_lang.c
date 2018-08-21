@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include "mln_lex.h"
 #include "mln_log.h"
 #include "mln_lang_int.h"
@@ -311,6 +312,7 @@ static void mln_lang_tcp_timeout_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_tcp_accept_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_tcp_recv_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_lang_tcp_t *from);
+static int mln_lang_tcp_getinfo(const struct sockaddr *addr, char *ip, mln_u16_t *port);
 
 
 mln_lang_method_t *mln_lang_methods[] = {
@@ -7271,8 +7273,8 @@ static int mln_lang_tcp_connect(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_tcpConnect");
-    mln_string_t v1 = mln_string("ip");
-    mln_string_t v2 = mln_string("port");
+    mln_string_t v1 = mln_string("host");
+    mln_string_t v2 = mln_string("service");
     mln_string_t v3 = mln_string("msgName");
     mln_string_t v4 = mln_string("timeout");
     if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_tcp_connect_process, NULL)) == NULL) {
@@ -7352,18 +7354,18 @@ static int mln_lang_tcp_connect(mln_lang_ctx_t *ctx)
 static mln_lang_retExp_t *mln_lang_tcp_connect_process(mln_lang_ctx_t *ctx)
 {
     int fd;
-    mln_u16_t port;
     mln_s32_t timeout;
-    char ip[128] = {0};
+    mln_u16_t port = 0;
+    char host[128] = {0}, service[32] = {0}, ip[128] = {0};
     mln_lang_val_t *val;
     mln_lang_tcp_t *tcp;
-    struct sockaddr_in addr;
     mln_string_t *msgName;
     mln_rbtree_node_t *rn;
+    struct addrinfo addr, *res = NULL;
     mln_lang_retExp_t *retExp;
     mln_lang_symbolNode_t *sym;
-    mln_string_t v1 = mln_string("ip");
-    mln_string_t v2 = mln_string("port");
+    mln_string_t v1 = mln_string("host");
+    mln_string_t v2 = mln_string("service");
     mln_string_t v3 = mln_string("msgName");
     mln_string_t v4 = mln_string("timeout");
 
@@ -7378,11 +7380,11 @@ static mln_lang_retExp_t *mln_lang_tcp_connect_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     val = sym->data.var->val;
-    if (val->data.s->len > sizeof(ip)-1) {
-        __mln_lang_errmsg(ctx, "IP too long.");
+    if (val->data.s->len > sizeof(host)-1) {
+        __mln_lang_errmsg(ctx, "Invalid host.");
         return NULL;
     }
-    memcpy(ip, val->data.s->data, val->data.s->len);
+    memcpy(host, val->data.s->data, val->data.s->len);
 
     if ((sym = __mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
@@ -7390,16 +7392,16 @@ static mln_lang_retExp_t *mln_lang_tcp_connect_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         __mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
     val = sym->data.var->val;
-    if (val->data.i > 65535) {
-        __mln_lang_errmsg(ctx, "Invalid port.");
+    if (val->data.s->len > sizeof(service)-1) {
+        __mln_lang_errmsg(ctx, "Invalid service.");
         return NULL;
     }
-    port = val->data.i;
+    memcpy(service, val->data.s->data, val->data.s->len);
 
     if ((sym = __mln_lang_symbolNode_search(ctx, &v3, 1)) == NULL) {
         ASSERT(0);
@@ -7430,7 +7432,29 @@ static mln_lang_retExp_t *mln_lang_tcp_connect_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    memset(&addr, 0, sizeof(addr));
+    addr.ai_flags = AI_PASSIVE;
+    addr.ai_family = AF_UNSPEC;
+    addr.ai_socktype = SOCK_STREAM;
+    addr.ai_protocol = IPPROTO_IP;
+    if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return retExp;
+    }
+    if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
+        freeaddrinfo(res);
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return retExp;
+    }
+
+    if (mln_lang_tcp_getinfo(res->ai_addr, ip, &port) < 0) {
+        freeaddrinfo(res);
         if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             return NULL;
@@ -7439,11 +7463,13 @@ static mln_lang_retExp_t *mln_lang_tcp_connect_process(mln_lang_ctx_t *ctx)
     }
     if ((tcp = mln_lang_tcp_new(ctx, fd, ip, port, msgName, timeout)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
+        freeaddrinfo(res);
         close(fd);
         return NULL;
     }
     if ((rn = mln_rbtree_new_node(ctx->tcp_set, tcp)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
+        freeaddrinfo(res);
         mln_lang_tcp_free(tcp);
         return NULL;
     }
@@ -7457,16 +7483,14 @@ static mln_lang_retExp_t *mln_lang_tcp_connect_process(mln_lang_ctx_t *ctx)
                          mln_lang_tcp_connect_handler) < 0)
     {
         __mln_lang_errmsg(ctx, "No memory.");
+        freeaddrinfo(res);
         mln_rbtree_delete(ctx->tcp_set, rn);
         mln_rbtree_free_node(ctx->tcp_set, rn);
         return NULL;
     }
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(ip);
-    addr.sin_port = htons(port);
-    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0 && errno != EINPROGRESS) {
+    if (connect(fd, res->ai_addr, res->ai_addrlen) < 0 && errno != EINPROGRESS) {
+        freeaddrinfo(res);
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_rbtree_delete(ctx->tcp_set, rn);
         mln_rbtree_free_node(ctx->tcp_set, rn);
@@ -7476,6 +7500,7 @@ static mln_lang_retExp_t *mln_lang_tcp_connect_process(mln_lang_ctx_t *ctx)
         }
         return retExp;
     }
+    freeaddrinfo(res);
 
     if ((retExp = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
@@ -7485,6 +7510,26 @@ static mln_lang_retExp_t *mln_lang_tcp_connect_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     return retExp;
+}
+
+static int mln_lang_tcp_getinfo(const struct sockaddr *addr, char *ip, mln_u16_t *port)
+{
+    char *numeric_addr = NULL;
+    char addr_buf[128] = {0};
+
+    if (AF_INET == addr->sa_family) {
+        numeric_addr = (char *)(&((struct sockaddr_in*)addr)->sin_addr);
+        *port = ntohs(((struct sockaddr_in *)addr)->sin_port);
+    } else if (AF_INET6 == addr->sa_family) {
+        numeric_addr = (char *)(&((struct sockaddr_in6*)addr)->sin6_addr);
+        *port = ntohs(((struct sockaddr_in6 *)addr)->sin6_port);
+    } else {
+        return -1;
+    }
+    if (inet_ntop(addr->sa_family, numeric_addr, addr_buf, sizeof(addr_buf)) == NULL)
+        return -1;
+    memcpy(ip, addr_buf, sizeof(addr_buf));
+    return 0;
 }
 
 static void mln_lang_tcp_connect_handler(mln_event_t *ev, int fd, void *data)
@@ -7754,8 +7799,8 @@ static int mln_lang_tcp_listen(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_tcpListen");
-    mln_string_t v1 = mln_string("ip");
-    mln_string_t v2 = mln_string("port");
+    mln_string_t v1 = mln_string("host");
+    mln_string_t v2 = mln_string("service");
     mln_string_t v3 = mln_string("msgName");
     mln_string_t v4 = mln_string("timeout");
     if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_tcp_listen_process, NULL)) == NULL) {
@@ -7835,20 +7880,20 @@ static int mln_lang_tcp_listen(mln_lang_ctx_t *ctx)
 static mln_lang_retExp_t *mln_lang_tcp_listen_process(mln_lang_ctx_t *ctx)
 {
     int fd, opt = 1;
-    mln_u16_t port;
+    mln_u16_t port = 0;
     mln_s32_t timeout;
-    char ip[128] = {0};
     mln_lang_val_t *val;
     mln_lang_tcp_t *tcp;
-    struct sockaddr_in addr;
+    struct addrinfo addr, *res = NULL;
     mln_string_t *msgName;
     mln_rbtree_node_t *rn;
     mln_lang_retExp_t *retExp;
     mln_lang_symbolNode_t *sym;
-    mln_string_t v1 = mln_string("ip");
-    mln_string_t v2 = mln_string("port");
+    mln_string_t v1 = mln_string("host");
+    mln_string_t v2 = mln_string("service");
     mln_string_t v3 = mln_string("msgName");
     mln_string_t v4 = mln_string("timeout");
+    char ip[128] = {0}, host[128] = {0}, service[64] = {0};
 
     if ((sym = __mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -7861,11 +7906,11 @@ static mln_lang_retExp_t *mln_lang_tcp_listen_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     val = sym->data.var->val;
-    if (val->data.s->len > sizeof(ip)-1) {
-        __mln_lang_errmsg(ctx, "IP too long.");
+    if (val->data.s->len > sizeof(host)-1) {
+        __mln_lang_errmsg(ctx, "Invalid host.");
         return NULL;
     }
-    memcpy(ip, val->data.s->data, val->data.s->len);
+    memcpy(host, val->data.s->data, val->data.s->len);
 
     if ((sym = __mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
@@ -7873,16 +7918,16 @@ static mln_lang_retExp_t *mln_lang_tcp_listen_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         __mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
     val = sym->data.var->val;
-    if (val->data.i > 65535) {
-        __mln_lang_errmsg(ctx, "Invalid port.");
+    if (val->data.s->len > sizeof(service)-1) {
+        __mln_lang_errmsg(ctx, "Invalid service.");
         return NULL;
     }
-    port = val->data.i;
+    memcpy(service, val->data.s->data, val->data.s->len);
 
     if ((sym = __mln_lang_symbolNode_search(ctx, &v3, 1)) == NULL) {
         ASSERT(0);
@@ -7913,7 +7958,28 @@ static mln_lang_retExp_t *mln_lang_tcp_listen_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    addr.ai_flags = AI_PASSIVE;
+    addr.ai_family = AF_UNSPEC;
+    addr.ai_socktype = SOCK_STREAM;
+    addr.ai_protocol = IPPROTO_IP;
+    if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return retExp;
+    }
+
+    if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
+        freeaddrinfo(res);
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return retExp;
+    }
+    if (mln_lang_tcp_getinfo(res->ai_addr, ip, &port) < 0) {
+        freeaddrinfo(res);
         if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             return NULL;
@@ -7922,17 +7988,20 @@ static mln_lang_retExp_t *mln_lang_tcp_listen_process(mln_lang_ctx_t *ctx)
     }
     if ((tcp = mln_lang_tcp_new(ctx, fd, ip, port, msgName, timeout)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
+        freeaddrinfo(res);
         close(fd);
         return NULL;
     }
     if ((rn = mln_rbtree_new_node(ctx->tcp_set, tcp)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
+        freeaddrinfo(res);
         mln_lang_tcp_free(tcp);
         return NULL;
     }
     mln_rbtree_insert(ctx->tcp_set, rn);
 
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        freeaddrinfo(res);
         mln_rbtree_delete(ctx->tcp_set, rn);
         mln_rbtree_free_node(ctx->tcp_set, rn);
         if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
@@ -7941,11 +8010,8 @@ static mln_lang_retExp_t *mln_lang_tcp_listen_process(mln_lang_ctx_t *ctx)
         }
         return retExp;
     }
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(ip);
-    addr.sin_port = htons(port);
-    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    if (bind(fd, res->ai_addr, res->ai_addrlen) < 0) {
+        freeaddrinfo(res);
         mln_rbtree_delete(ctx->tcp_set, rn);
         mln_rbtree_free_node(ctx->tcp_set, rn);
         if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
@@ -7954,6 +8020,7 @@ static mln_lang_retExp_t *mln_lang_tcp_listen_process(mln_lang_ctx_t *ctx)
         }
         return retExp;
     }
+    freeaddrinfo(res);
     if (listen(fd, 32767) < 0) {
         mln_rbtree_delete(ctx->tcp_set, rn);
         mln_rbtree_free_node(ctx->tcp_set, rn);
@@ -7997,10 +8064,10 @@ static void mln_lang_tcp_timeout_handler(mln_event_t *ev, int fd, void *data)
 
 static void mln_lang_tcp_accept_handler(mln_event_t *ev, int fd, void *data)
 {
-    char *ip;
+    char ip[128];
     int connfd;
     mln_u16_t port;
-    struct sockaddr_in addr;
+    struct sockaddr addr;
     socklen_t len;
     mln_lang_tcp_t *tcp, *tmp;
     mln_rbtree_node_t *rn;
@@ -8010,8 +8077,9 @@ static void mln_lang_tcp_accept_handler(mln_event_t *ev, int fd, void *data)
     tcp = (mln_lang_tcp_t *)data;
     while (1) {
         memset(&addr, 0, sizeof(addr));
+        memset(ip, 0, sizeof(ip));
         len = sizeof(addr);
-        if ((connfd = accept(fd, (struct sockaddr *)&addr, &len)) < 0) {
+        if ((connfd = accept(fd, &addr, &len)) < 0) {
             if (errno == EINTR || errno == ECONNABORTED) continue;
             if (errno == EAGAIN || errno == EMFILE || errno == ENFILE) break;
             tcp->readyClosed = 1;
@@ -8019,8 +8087,10 @@ static void mln_lang_tcp_accept_handler(mln_event_t *ev, int fd, void *data)
             mln_lang_tcp_setMsg(&errtype, tcp, NULL);
             break;
         }
-        ip = inet_ntoa(addr.sin_addr);
-        port = ntohs(addr.sin_port);
+        if (mln_lang_tcp_getinfo(&addr, ip, &port) < 0) {
+            close(connfd);
+            break;
+        }
         if ((tmp = mln_lang_tcp_new(tcp->ctx, connfd, ip, port, tcp->msgName, tcp->timeout)) == NULL) {
             close(connfd);
             break;

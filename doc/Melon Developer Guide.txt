@@ -3514,13 +3514,14 @@ Their definitions can be found in melon-1.7.0/include/mln_types.h.
       <50> mln_unwatch(var);
       Remove watcher from 'var'.
 
-      <51> mln_tcpConnect(ip, port, msgName, timeout);
-      Build a tcp connection to ip:port. Now Melang just supports IPv4.
+      <51> mln_tcpConnect(host, service, msgName, timeout);
+      Build a tcp connection to host:service.
+      host and service must be string.
       msgName -- is the name that is created by mln_msgNew().
       timeout -- receiving timeout, if is not given or null given, connection will never be timeout.
       No matter succeed or not, an event will be given via mln_msgRecv(msgName).
 
-      <52> mln_tcpListen(ip, port, msgName, timeout);
+      <52> mln_tcpListen(host, service, msgName, timeout);
       Arguments like mln_tcpConnect().
 
       <53> mln_tcpSend(fd, data);
@@ -3570,7 +3571,7 @@ Their definitions can be found in melon-1.7.0/include/mln_types.h.
 
         Client:
             mln_msgNew('test');
-            mln_tcpConnect('127.0.0.1', 1234, 'test');
+            mln_tcpConnect('localhost', 1234, 'test');
             while (true) {
                 msg = mln_msgRecv('test');
                 n = mln_size(msg);
