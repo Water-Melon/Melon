@@ -1323,14 +1323,9 @@ mln_lang_symbolNode_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name)
     sym.symbol = name;
     mln_lang_scope_t *scope = ctx->scope_tail;
     if (scope == NULL) return NULL;
-again:
     rn = mln_rbtree_search(scope->symbols, scope->symbols->root, &sym);
     if (!mln_rbtree_null(rn, scope->symbols)) {
         return (mln_lang_symbolNode_t *)(rn->data);
-    }
-    if (scope != ctx->scope_head) {
-        scope = ctx->scope_head;
-        goto again;
     }
     return NULL;
 }
