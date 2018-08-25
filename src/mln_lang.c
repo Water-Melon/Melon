@@ -313,6 +313,8 @@ static void mln_lang_tcp_accept_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_tcp_recv_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_lang_tcp_t *from);
 static int mln_lang_tcp_getinfo(const struct sockaddr *addr, char *ip, mln_u16_t *port);
+static inline int __mln_lang_tcp_msgExisted(mln_lang_array_t *arr, mln_string_t *type, mln_lang_tcp_t *target);
+static int mln_lang_tcp_msgExisted_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 
 
 mln_lang_method_t *mln_lang_methods[] = {
@@ -7558,6 +7560,11 @@ static void mln_lang_tcp_connect_handler(mln_event_t *ev, int fd, void *data)
     }
 }
 
+struct mln_lang_tcp_msg_udata {
+    mln_string_t   *type;
+    mln_lang_tcp_t *target;
+};
+
 static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_lang_tcp_t *from)
 {
     mln_lang_ctx_t *ctx = target->ctx;
@@ -7586,7 +7593,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
     val.data.s = &stype;
     val.type = M_LANG_VAL_TYPE_STRING;
     val.ref = 1;
-    if ((arr_val = mln_lang_array_getAndNew(ctx, inarr, &var)) == NULL) {
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, inarr, &var)) == NULL) {
         mln_log(error, "No memory.\n");
         exit(1);
     }
@@ -7598,7 +7605,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
 
     /*data*/
     val.data.s = &sdata;
-    if ((arr_val = mln_lang_array_getAndNew(ctx, inarr, &var)) == NULL) {
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, inarr, &var)) == NULL) {
         mln_log(error, "No memory.\n");
         exit(1);
     }
@@ -7615,7 +7622,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
     /*data -- ip*/
     val.data.s = &sip;
     val.type = M_LANG_VAL_TYPE_STRING;
-    if ((arr_val = mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
         mln_log(error, "No memory.\n");
         exit(1);
     }
@@ -7626,7 +7633,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
     }
     /*data -- port*/
     val.data.s = &sport;
-    if ((arr_val = mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
         mln_log(error, "No memory.\n");
         exit(1);
     }
@@ -7639,7 +7646,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
     /*data -- fd*/
     val.data.s = &sfd;
     val.type = M_LANG_VAL_TYPE_STRING;
-    if ((arr_val = mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
         mln_log(error, "No memory.\n");
         exit(1);
     }
@@ -7654,7 +7661,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
     if (from != NULL) {
         val.data.s = &sfrom;
         val.type = M_LANG_VAL_TYPE_STRING;
-        if ((arr_val = mln_lang_array_getAndNew(ctx, inarr, &var)) == NULL) {
+        if ((arr_val = __mln_lang_array_getAndNew(ctx, inarr, &var)) == NULL) {
             mln_log(error, "No memory.\n");
             exit(1);
         }
@@ -7671,7 +7678,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
         /*from -- ip*/
         val.data.s = &sip;
         val.type = M_LANG_VAL_TYPE_STRING;
-        if ((arr_val = mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
+        if ((arr_val = __mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
             mln_log(error, "No memory.\n");
             exit(1);
         }
@@ -7682,7 +7689,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
         }
         /*from -- port*/
         val.data.s = &sport;
-        if ((arr_val = mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
+        if ((arr_val = __mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
             mln_log(error, "No memory.\n");
             exit(1);
         }
@@ -7695,7 +7702,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
         /*from -- fd*/
         val.data.s = &sfd;
         val.type = M_LANG_VAL_TYPE_STRING;
-        if ((arr_val = mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
+        if ((arr_val = __mln_lang_array_getAndNew(ctx, tmparr, &var)) == NULL) {
             mln_log(error, "No memory.\n");
             exit(1);
         }
@@ -7716,7 +7723,15 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
     }
     lm = (mln_lang_msg_t *)(rn->data);
     if (!lm->script_read && lm->script_val != NULL && lm->script_val->type == M_LANG_VAL_TYPE_ARRAY) {
-        if ((arr_val = mln_lang_array_getAndNew(ctx, lm->script_val->data.array, NULL)) == NULL) {
+        /*check existence*/
+        struct mln_lang_tcp_msg_udata tmu;
+        tmu.type = type;
+        tmu.target = target;
+        if (mln_rbtree_scan_all(lm->script_val->data.array->elems_index, mln_lang_tcp_msgExisted_scan, &tmu) < 0) {
+            __mln_lang_array_free(inarr);
+            return;
+        }
+        if ((arr_val = __mln_lang_array_getAndNew(ctx, lm->script_val->data.array, NULL)) == NULL) {
             mln_log(error, "No memory.\n");
             exit(1);
         }
@@ -7732,7 +7747,7 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
             mln_log(error, "No memory.\n");
             exit(1);
         }
-        if ((arr_val = mln_lang_array_getAndNew(ctx, tmparr, NULL)) == NULL) {
+        if ((arr_val = __mln_lang_array_getAndNew(ctx, tmparr, NULL)) == NULL) {
             mln_log(error, "No memory.\n");
             exit(1);
         }
@@ -7751,6 +7766,77 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
             exit(1);
         }
     }
+}
+
+static int mln_lang_tcp_msgExisted_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
+{
+    struct mln_lang_tcp_msg_udata *tmu = (struct mln_lang_tcp_msg_udata *)udata;
+    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
+    if (elem->value->val->type != M_LANG_VAL_TYPE_ARRAY) {
+        return 0;
+    }
+    return __mln_lang_tcp_msgExisted(elem->value->val->data.array, tmu->type, tmu->target);
+}
+
+static inline int __mln_lang_tcp_msgExisted(mln_lang_array_t *arr, mln_string_t *type, mln_lang_tcp_t *target)
+{
+    mln_lang_ctx_t *ctx = target->ctx;
+    mln_lang_val_t val;
+    mln_lang_var_t var, *arr_val;
+    mln_string_t stype = mln_string("type");
+    mln_string_t sdata = mln_string("data");
+    mln_string_t sip = mln_string("ip");
+    mln_string_t sport = mln_string("port");
+    mln_string_t sfd = mln_string("fd");
+
+    var.type = M_LANG_VAR_NORMAL;
+    var.name = NULL;
+    var.val = &val;
+    var.inSet = NULL;
+    var.prev = var.next = NULL;
+    val.data.s = &stype;
+    val.type = M_LANG_VAL_TYPE_STRING;
+    val.ref = 1;
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, arr, &var)) == NULL) {
+        return 0;
+    }
+    if (arr_val->val->type != M_LANG_VAL_TYPE_STRING || mln_string_strcmp(type, arr_val->val->data.s)) {
+        return 0;
+    }
+
+    val.data.s = &sdata;
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, arr, &var)) == NULL) {
+        return 0;
+    }
+    if (arr_val->val->type != M_LANG_VAL_TYPE_ARRAY) {
+        return 0;
+    }
+    arr = arr_val->val->data.array;
+
+    val.data.s = &sip;
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, arr, &var)) == NULL) {
+        return 0;
+    }
+    if (arr_val->val->type != M_LANG_VAL_TYPE_STRING || mln_string_strcmp(target->ip, arr_val->val->data.s)) {
+        return 0;
+    }
+
+    val.data.s = &sport;
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, arr, &var)) == NULL) {
+        return 0;
+    }
+    if (arr_val->val->type != M_LANG_VAL_TYPE_INT || target->port != arr_val->val->data.i) {
+        return 0;
+    }
+
+    val.data.s = &sfd;
+    if ((arr_val = __mln_lang_array_getAndNew(ctx, arr, &var)) == NULL) {
+        return 0;
+    }
+    if (arr_val->val->type != M_LANG_VAL_TYPE_INT || mln_tcp_conn_get_fd(&(target->connection)) != arr_val->val->data.i) {
+        return 0;
+    }
+    return -1;
 }
 
 static void mln_lang_tcp_recv_handler(mln_event_t *ev, int fd, void *data)
@@ -8390,55 +8476,48 @@ static mln_lang_retExp_t *mln_lang_tcp_recv_process(mln_lang_ctx_t *ctx)
             return NULL;
         }
     } else {
+        mln_size_t len = 0;
         tcp = (mln_lang_tcp_t *)(rn->data);
-        if (!tcp->recv || tcp->readyClosed) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
-                __mln_lang_errmsg(ctx, "No memory.");
-                return NULL;
-            }
-        } else {
-            if (mln_tcp_conn_recv_empty(&(tcp->connection))) {
-                if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+        mln_chain_t *c = mln_tcp_conn_get_head(&(tcp->connection), M_C_RECV);
+        for (; c != NULL; c = c->next) {
+            len += mln_buf_size(c->buf);
+        }
+        if (!len) {
+            mln_chain_pool_release_all(mln_tcp_conn_remove(&(tcp->connection), M_C_RECV));
+            if (!tcp->recv || tcp->readyClosed) {
+                if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     return NULL;
                 }
             } else {
-                mln_chain_t *c = mln_tcp_conn_get_head(&(tcp->connection), M_C_RECV);
-                mln_size_t len = 0;
-                for (; c != NULL; c = c->next) {
-                    len += mln_buf_size(c->buf);
-                }
-                if (!len) {
-                    mln_chain_pool_release_all(mln_tcp_conn_remove(&(tcp->connection), M_C_RECV));
-                    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
-                        __mln_lang_errmsg(ctx, "No memory.");
-                        return NULL;
-                    }
-                } else {
-                    mln_u8ptr_t buf, p;
-                    mln_size_t l;
-                    mln_string_t tmp;
-                    if ((buf = (mln_u8ptr_t)mln_alloc_m(ctx->pool, len)) == NULL) {
-                        __mln_lang_errmsg(ctx, "No memory.");
-                        return NULL;
-                    }
-                    p = buf;
-                    for (c = mln_tcp_conn_get_head(&(tcp->connection), M_C_RECV); c != NULL; c = c->next) {
-                        l = mln_buf_size(c->buf);
-                        if (!l) continue;
-                        memcpy(p, c->buf->pos, l);
-                        p += l;
-                    }
-                    mln_string_nSet(&tmp, buf, len);
-                    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &tmp, NULL)) == NULL) {
-                        __mln_lang_errmsg(ctx, "No memory.");
-                        mln_alloc_free(buf);
-                        return NULL;
-                    }
-                    mln_alloc_free(buf);
-                    mln_chain_pool_release_all(mln_tcp_conn_remove(&(tcp->connection), M_C_RECV));
+                if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+                    __mln_lang_errmsg(ctx, "No memory.");
+                    return NULL;
                 }
             }
+        } else {
+            mln_u8ptr_t buf, p;
+            mln_size_t l;
+            mln_string_t tmp;
+            if ((buf = (mln_u8ptr_t)mln_alloc_m(ctx->pool, len)) == NULL) {
+                __mln_lang_errmsg(ctx, "No memory.");
+                return NULL;
+            }
+            p = buf;
+            for (c = mln_tcp_conn_get_head(&(tcp->connection), M_C_RECV); c != NULL; c = c->next) {
+                l = mln_buf_size(c->buf);
+                if (!l) continue;
+                memcpy(p, c->buf->pos, l);
+                p += l;
+            }
+            mln_string_nSet(&tmp, buf, len);
+            if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &tmp, NULL)) == NULL) {
+                __mln_lang_errmsg(ctx, "No memory.");
+                mln_alloc_free(buf);
+                return NULL;
+            }
+            mln_alloc_free(buf);
+            mln_chain_pool_release_all(mln_tcp_conn_remove(&(tcp->connection), M_C_RECV));
         }
     }
     return retExp;

@@ -3533,6 +3533,9 @@ Their definitions can be found in melon-1.7.0/include/mln_types.h.
       Receive data from fd connection.
       fd is caught from tcp event that mln_tcpConnect() or mln_tcpListen() triggered.
       Data will be returned as return value.
+      There is a case that nil will be returned.
+      If recv-event of socket is triggered continuously, this function may get nothing at the second
+      'tcp_recv' noticing. Because the first 'tcp_recv' will take all data from the connection.
 
       <55> mln_tcpClose(fd);
       Close an fd connection.
