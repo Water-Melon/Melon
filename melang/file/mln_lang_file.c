@@ -473,6 +473,16 @@ static mln_lang_retExp_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "'offset' demand integer.");
         return NULL;
     }
+    if (val1->data.i < 0) {
+        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+            return NULL;
+        }
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return retExp;
+    }
 
     /*arg2*/
     if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
@@ -599,6 +609,16 @@ static mln_lang_retExp_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     val = var->val;
+    if (val->data.i < 0) {
+        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+            return NULL;
+        }
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return retExp;
+    }
 
     /*arg1*/
     if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
@@ -723,6 +743,16 @@ static mln_lang_retExp_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     val = var->val;
+    if (val->data.i < 0) {
+        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+            return NULL;
+        }
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return retExp;
+    }
 
     /*arg1*/
     if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
@@ -819,6 +849,16 @@ static mln_lang_retExp_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     val = var->val;
+    if (val->data.i < 0) {
+        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+            return NULL;
+        }
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return retExp;
+    }
     close(val->data.i);
     val->data.i = -1;
     if (mln_lang_file_setErrno(ctx, errno) < 0) {
@@ -1000,6 +1040,16 @@ static mln_lang_retExp_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     val = var->val;
+    if (val->data.i < 0) {
+        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+            return NULL;
+        }
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return retExp;
+    }
 
     memset(&st, 0, sizeof(st));
     t = fstat(val->data.i, &st);
