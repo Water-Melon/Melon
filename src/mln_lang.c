@@ -439,8 +439,7 @@ static inline int __mln_lang_run(mln_lang_t *lang)
                 mln_u64_t now = tv.tv_sec*1000000 + tv.tv_usec;
                 if (now < lang->lastTime + M_LANG_HEARTBEAT_US) goto ok;
                 lang->lastTime = now;
-                if (lang->ctx_cur->step) {
-                    --(lang->ctx_cur->step);
+                if (--(lang->ctx_cur->step) > 0) {
                     goto ok;
                 }
                 mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), lang->ctx_cur);
