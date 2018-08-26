@@ -310,6 +310,7 @@ static mln_lang_retExp_t *mln_lang_tcp_listen_process(mln_lang_ctx_t *ctx);
 static void mln_lang_tcp_connect_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_tcp_timeout_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_tcp_accept_handler(mln_event_t *ev, int fd, void *data);
+static void mln_lang_tcp_accept_timer_handler(mln_event_t *ev, void *data);
 static void mln_lang_tcp_recv_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_lang_tcp_t *from);
 static int mln_lang_tcp_getinfo(const struct sockaddr *addr, char *ip, mln_u16_t *port);
@@ -8112,7 +8113,7 @@ static mln_lang_retExp_t *mln_lang_tcp_listen_process(mln_lang_ctx_t *ctx)
     }
     if (mln_event_set_fd(ctx->lang->ev, \
                          fd, \
-                         M_EV_RECV|M_EV_NONBLOCK, \
+                         M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, \
                          M_EV_UNLIMITED, \
                          tcp, 
                          mln_lang_tcp_accept_handler) < 0)
@@ -8145,7 +8146,7 @@ static void mln_lang_tcp_timeout_handler(mln_event_t *ev, int fd, void *data)
 static void mln_lang_tcp_accept_handler(mln_event_t *ev, int fd, void *data)
 {
     char ip[128];
-    int connfd;
+    int connfd, again = 0;
     mln_u16_t port;
     struct sockaddr addr;
     socklen_t len;
@@ -8161,11 +8162,15 @@ static void mln_lang_tcp_accept_handler(mln_event_t *ev, int fd, void *data)
         len = sizeof(addr);
         if ((connfd = accept(fd, &addr, &len)) < 0) {
             if (errno == EINTR || errno == ECONNABORTED) continue;
-            if (errno == EAGAIN || errno == EMFILE || errno == ENFILE) break;
+            if (errno == EAGAIN) {
+                again = 1;
+                break;
+            }
+            if (errno == EMFILE || errno == ENFILE) break;
             tcp->readyClosed = 1;
             mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
             mln_lang_tcp_setMsg(&errtype, tcp, NULL);
-            break;
+            return;
         }
         if (mln_lang_tcp_getinfo(&addr, ip, &port) < 0) {
             close(connfd);
@@ -8196,6 +8201,20 @@ static void mln_lang_tcp_accept_handler(mln_event_t *ev, int fd, void *data)
         }
         mln_lang_tcp_setMsg(&succtype, tmp, tcp);
     }
+    if (again) {
+        mln_event_set_fd(ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_lang_tcp_accept_handler);
+    } else {
+        if (mln_event_set_timer(ev, 100, data, mln_lang_tcp_accept_timer_handler) < 0) {
+            mln_event_set_fd(ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_lang_tcp_accept_handler);
+        }
+    }
+}
+
+static void mln_lang_tcp_accept_timer_handler(mln_event_t *ev, void *data)
+{
+    mln_lang_tcp_t *tcp = (mln_lang_tcp_t *)data;
+    int fd = mln_tcp_conn_get_fd(&(tcp->connection));
+    mln_event_set_fd(ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_lang_tcp_accept_handler);
 }
 
 static int mln_lang_tcp_send(mln_lang_ctx_t *ctx)
