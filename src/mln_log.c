@@ -78,43 +78,6 @@ static void mln_file_unlock(int fd)
 int mln_log_init(int in_daemon)
 {
     mln_log_t *log = &gLog;
-    char *ab_path, path[M_LOG_PATH_LEN];
-
-    ab_path = mln_path();
-
-    memset(path, 0, M_LOG_PATH_LEN);
-    snprintf(path, M_LOG_PATH_LEN-1, "%s/logs", ab_path);
-    if (mkdir(path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) < 0) {
-        if (errno != EEXIST) {
-            fprintf(stderr, "mkdir '%s' failed. %s\n", path, strerror(errno));
-            return -1;
-        }
-    }
-
-    memset(log->pid_path, 0, M_LOG_PATH_LEN);
-    snprintf(log->pid_path, M_LOG_PATH_LEN-1, "%s/logs/melon.pid", ab_path);
-    int fd = open(log->pid_path, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    if (fd < 0) {
-        fprintf(stderr, "%s(): open pid file failed. %s\n", __FUNCTION__, strerror(errno));
-        return -1;
-    }
-    char pid_str[64] = {0};
-    snprintf(pid_str, sizeof(pid_str)-1, "%lu", (unsigned long)getpid());
-    mln_file_lock(fd);
-    int rc = write(fd, pid_str, strlen(pid_str));
-    if (rc <= 0) rc = 1;/*do nothing*/
-    mln_file_unlock(fd);
-    close(fd);
-
-    memset(path, 0, M_LOG_PATH_LEN);
-    snprintf(path, M_LOG_PATH_LEN-1, "%s/logs/melon.log", ab_path);
-    fd = open(path, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    if (fd < 0) {
-        fprintf(stderr, "%s(): open log file failed. %s\n", __FUNCTION__, strerror(errno));
-        return -1;
-    }
-    close(fd);
-
     log->in_daemon = in_daemon;
     log->level = none;
     int ret = 0;
@@ -178,12 +141,21 @@ mln_log_get_log(mln_log_t *log, int is_init)
             return -1;
         }
         if ((ci->val.s->data)[0] != '/') {
-            path_len = snprintf(buf, sizeof(buf)-1, "%s/%s", \
-                                mln_path(), (char *)(ci->val.s->data));
+            path_len = snprintf(buf, sizeof(buf)-1, "%s/%s", mln_path(), (char *)(ci->val.s->data));
             path_str = buf;
         } else {
             path_len = ci->val.s->len > M_LOG_PATH_LEN-1? M_LOG_PATH_LEN-1: ci->val.s->len;
             path_str = (char *)(ci->val.s->data);
+        }
+    }
+    for (p = &(path_str[path_len - 1]); p >= path_str && *p != '/'; --p)
+        ;
+    memcpy(log->dir_path, path_str, p - path_str);
+    log->dir_path[p - path_str] = 0;
+    if (mkdir(log->dir_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) < 0) {
+        if (errno != EEXIST) {
+            fprintf(stderr, "mkdir '%s' failed. %s\n", log->dir_path, strerror(errno));
+            return -1;
         }
     }
 
@@ -192,7 +164,6 @@ mln_log_get_log(mln_log_t *log, int is_init)
         fprintf(stderr, "%s(): open '%s' failed. %s\n", __FUNCTION__, path_str, strerror(errno));
         return -1;
     }
-
     if (!is_init && \
         log->fd > 0 && \
         log->fd != STDIN_FILENO && \
@@ -201,15 +172,26 @@ mln_log_get_log(mln_log_t *log, int is_init)
     {
         close(log->fd);
     }
-
     log->fd = fd;
     memcpy(log->log_path, path_str, path_len);
     log->log_path[path_len] = 0;
-    for (p = &(path_str[path_len - 1]); p >= path_str && *p != '/'; --p)
-        ;
-    memcpy(log->dir_path, path_str, p - path_str);
-    log->dir_path[p - path_str] = 0;
 
+    if (is_init) {
+        memset(log->pid_path, 0, M_LOG_PATH_LEN);
+        snprintf(log->pid_path, M_LOG_PATH_LEN-1, "%s/melon.pid", log->dir_path);
+        fd = open(log->pid_path, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+        if (fd < 0) {
+            fprintf(stderr, "%s(): open pid file failed. %s\n", __FUNCTION__, strerror(errno));
+            return -1;
+        }
+        char pid_str[64] = {0};
+        snprintf(pid_str, sizeof(pid_str)-1, "%lu", (unsigned long)getpid());
+        mln_file_lock(fd);
+        int rc = write(fd, pid_str, strlen(pid_str));
+        if (rc <= 0) rc = 1;/*do nothing*/
+        mln_file_unlock(fd);
+        close(fd);
+    }
     return 0;
 }
 

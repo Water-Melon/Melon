@@ -325,8 +325,7 @@ mln_boot_reload(const char *boot_str, const char *alias)
     char buf[1024] = {0};
     int fd, n, pid;
 
-    snprintf(buf, sizeof(buf)-1, "%s/logs/melon.pid", mln_path());
-    fd = open(buf, O_RDONLY);
+    fd = open(mln_log_getPidPath(), O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "'melon.pid' not existent.\n");
         exit(1);
