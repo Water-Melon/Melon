@@ -3599,12 +3599,24 @@ Their definitions can be found in melon-1.7.0/include/mln_types.h.
             }
 
       <57> mln_hex2bin(hex);
-      Translate 'hex' to be the binary value that it indicated.
+      Translate 'hex' to be a binary value indicated by 'hex'.
       Such as mln_hex2bin('48') = 'H'.
 
       <58> mln_bin2hex(bin);
-      Translate 'bin' to be the hex string value that it indicated.
+      Translate 'bin' to be a hex string value indicated by 'bin'.
       Such as mln_bin2hex('H') = '48'.
+
+      <59> mln_bin2int(bin);
+      Translate 'bin' to be an integer indicated by 'bin'.
+
+      <60> mln_int2bin(i);
+      Translate 'i' to be a binary value indicated by 'i'.
+
+      <61> mln_bin2real(bin);
+      Translate 'bin' to be a real-value indicated by 'bin'.
+
+      <62> mln_real2bin(r);
+      Translate 'r' to be a binary value indicated by 'r'.
 
    H. Function development
       Following these steps below:

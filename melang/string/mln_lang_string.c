@@ -13,6 +13,10 @@
 #define ASSERT(x);
 #endif
 
+static int mln_lang_string_real2bin_handler(mln_lang_ctx_t *ctx);
+static int mln_lang_string_int2bin_handler(mln_lang_ctx_t *ctx);
+static int mln_lang_string_bin2real_handler(mln_lang_ctx_t *ctx);
+static int mln_lang_string_bin2int_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_bin2hex_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_hex2bin_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_b2s_handler(mln_lang_ctx_t *ctx);
@@ -32,6 +36,10 @@ static mln_lang_retExp_t *mln_b2s_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_s2b_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_hex2bin_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_bin2hex_process(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_bin2int_process(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_bin2real_process(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_int2bin_process(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_real2bin_process(mln_lang_ctx_t *ctx);
 
 int mln_lang_string(mln_lang_ctx_t *ctx)
 {
@@ -126,6 +134,18 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
         return -1;
     }
     if (mln_lang_string_bin2hex_handler(ctx) < 0) {
+        return -1;
+    }
+    if (mln_lang_string_bin2int_handler(ctx) < 0) {
+        return -1;
+    }
+    if (mln_lang_string_int2bin_handler(ctx) < 0) {
+        return -1;
+    }
+    if (mln_lang_string_bin2real_handler(ctx) < 0) {
+        return -1;
+    }
+    if (mln_lang_string_real2bin_handler(ctx) < 0) {
         return -1;
     }
     return 0;
@@ -1167,6 +1187,324 @@ static mln_lang_retExp_t *mln_bin2hex_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     free(buf);
+    return retExp;
+}
+
+static int mln_lang_string_bin2int_handler(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t v1 = mln_string("bin");
+    mln_string_t funcname = mln_string("mln_bin2int");
+
+    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_bin2int_process, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+
+    return 0;
+}
+
+static mln_lang_retExp_t *mln_bin2int_process(mln_lang_ctx_t *ctx)
+{
+    mln_s32_t t;
+    mln_lang_val_t *val1;
+    mln_lang_retExp_t *retExp;
+    mln_string_t v1 = mln_string("bin");
+    mln_lang_symbolNode_t *sym;
+    mln_u8ptr_t p, end;
+    mln_s64_t i = 0, j;
+
+    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    t = mln_lang_var_getValType(sym->data.var);
+    val1 = sym->data.var->val;
+    if (t != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+
+    for (j = 0, p = val1->data.s->data, end = val1->data.s->data + val1->data.s->len - 1; \
+         end >= p && j < sizeof(i); \
+         --end, ++j)
+    {
+        i |= ((mln_s64_t)(*end) << (j * 8));
+    }
+
+    if ((retExp = mln_lang_retExp_createTmpInt(ctx->pool, i, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return retExp;
+}
+
+static int mln_lang_string_int2bin_handler(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t v1 = mln_string("i");
+    mln_string_t funcname = mln_string("mln_int2bin");
+
+    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_int2bin_process, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+
+    return 0;
+}
+
+static mln_lang_retExp_t *mln_int2bin_process(mln_lang_ctx_t *ctx)
+{
+    mln_s32_t t;
+    mln_lang_val_t *val1;
+    mln_lang_retExp_t *retExp;
+    mln_string_t v1 = mln_string("i"), tmp;
+    mln_lang_symbolNode_t *sym;
+    mln_u8ptr_t buf[sizeof(mln_s64_t)];
+
+    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    t = mln_lang_var_getValType(sym->data.var);
+    val1 = sym->data.var->val;
+    if (t != M_LANG_VAL_TYPE_INT) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+
+    memcpy(buf, &(val1->data.i), sizeof(mln_s64_t));
+    mln_string_nSet(&tmp, buf, sizeof(mln_s64_t));
+    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &tmp, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return retExp;
+}
+
+static int mln_lang_string_bin2real_handler(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t v1 = mln_string("bin");
+    mln_string_t funcname = mln_string("mln_bin2real");
+
+    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_bin2real_process, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+
+    return 0;
+}
+
+static mln_lang_retExp_t *mln_bin2real_process(mln_lang_ctx_t *ctx)
+{
+    mln_s32_t t, i;
+    mln_lang_val_t *val1;
+    mln_lang_retExp_t *retExp;
+    mln_string_t v1 = mln_string("bin");
+    mln_lang_symbolNode_t *sym;
+    mln_u8ptr_t p, end;
+    mln_u8_t buf[sizeof(double)];
+    double f;
+
+    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    t = mln_lang_var_getValType(sym->data.var);
+    val1 = sym->data.var->val;
+    if (t != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+
+    for (i = 0, p = val1->data.s->data, end = val1->data.s->data + val1->data.s->len - 1; \
+         end >= p && i < sizeof(f); \
+         --end, ++i)
+    {
+        buf[sizeof(double)-i-1] = *end;
+    }
+    memcpy(&f, buf, sizeof(f));
+
+    if ((retExp = mln_lang_retExp_createTmpReal(ctx->pool, f, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return retExp;
+}
+
+static int mln_lang_string_real2bin_handler(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t v1 = mln_string("r");
+    mln_string_t funcname = mln_string("mln_real2bin");
+
+    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_real2bin_process, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+
+    return 0;
+}
+
+static mln_lang_retExp_t *mln_real2bin_process(mln_lang_ctx_t *ctx)
+{
+    mln_s32_t t;
+    mln_lang_val_t *val1;
+    mln_lang_retExp_t *retExp;
+    mln_string_t v1 = mln_string("r"), tmp;
+    mln_lang_symbolNode_t *sym;
+    mln_u8ptr_t buf[sizeof(double)];
+
+    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    t = mln_lang_var_getValType(sym->data.var);
+    val1 = sym->data.var->val;
+    if (t != M_LANG_VAL_TYPE_REAL) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+
+    memcpy(buf, &(val1->data.f), sizeof(double));
+    mln_string_nSet(&tmp, buf, sizeof(double));
+    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &tmp, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
     return retExp;
 }
 
