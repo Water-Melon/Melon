@@ -245,7 +245,6 @@ static inline int mln_lex_putAChar(mln_lex_t *lex, char c)
 static inline char mln_lex_getAChar(mln_lex_t *lex)
 {
     int n;
-    char c;
     mln_lex_input_t *in;
 lp:
     if (lex->cur == NULL && (lex->cur = mln_stack_pop(lex->stack)) == NULL) {
@@ -284,12 +283,7 @@ again:
             in->buf_len = n;
         }
     }
-    c = (char)(*(in->pos)++);
-    if (c <= 0) {
-        lex->error = MLN_LEX_EINVCHAR;
-        return MLN_ERR;
-    }
-    return c;
+    return (char)(*(in->pos)++);
 }
 
 static inline int mln_lex_isLetter(char c)
