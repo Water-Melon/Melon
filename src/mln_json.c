@@ -9,8 +9,7 @@
 #include "mln_json.h"
 
 static inline mln_json_obj_t *mln_json_obj_new(void);
-static inline int mln_json_trans_hex(char *jstr, int len, char *c);
-static inline int mln_json_get_char(char **s, int *len);
+static inline int mln_json_get_char(mln_u8ptr_t *s, int *len);
 static mln_u64_t mln_json_hash_calc(mln_hash_t *h, void *key);
 static int mln_json_hash_cmp(mln_hash_t *h, void *key1, void *key2);
 static void mln_json_obj_free(void *data);
@@ -24,6 +23,8 @@ static int
 mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index);
 static int
 mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
+static mln_u8ptr_t
+mln_json_parse_string_fetch(mln_u8ptr_t jstr, int *len);
 static int
 mln_json_parse_digit(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
 static inline int
@@ -283,48 +284,26 @@ again:
 static int
 mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
-    char *p, hex;
-    int c = 0, plen, count = 0;
+    mln_u8_t *p;
+    int plen, count = 0;
     mln_string_t *str;
-    mln_s8ptr_t buf;
+    mln_u8ptr_t buf;
 
     ++jstr;
     --len;
     if (len <= 0) return -1;
 
-    for (p = jstr, plen = len; plen > 0; ) {
-        c = mln_json_get_char(&p, &plen);
-        if (c < 0) return -1;
-        if (c == M_JSON_STRQUOT) break;
-        ++count;
+    for (p = (mln_u8ptr_t)jstr, plen = len; plen > 0; ++p, ++count, --plen) {
+        if (*p == (mln_u8_t)'\"' && (p == (mln_u8ptr_t)jstr || *(p-1) != (mln_u8_t)'\\')) {
+            break;
+        }
     }
-    if (plen <= 0 && c != M_JSON_STRQUOT) return -1;
+    if (plen <= 0) return -1;
 
-    buf = (mln_s8ptr_t)malloc(count + 1);
+    buf = mln_json_parse_string_fetch((mln_u8ptr_t)jstr, &count);
     if (buf == NULL) return -1;
 
-    for (count = 0, p = jstr, plen = len; plen > 0; ++count) {
-        c = mln_json_get_char(&p, &plen);
-        if (c == M_JSON_STRQUOT) break;
-        if (c == M_JSON_HEX) {
-            if (mln_json_trans_hex(p, plen, &hex) < 0) {
-                free(buf);
-                return -1;
-            }
-            p += 2; plen -= 2;
-            buf[count++] = hex;
-            if (mln_json_trans_hex(p, plen, &hex) < 0) {
-                free(buf);
-                return -1;
-            }
-            p += 2; plen -= 2;
-            buf[count] = hex;
-            continue;
-        }
-        buf[count] = c;
-    }
-    buf[count] = 0;
-    str = mln_string_nConstDup(buf, count);
+    str = mln_string_nConstDup((char *)buf, count);
     free(buf);
     if (str == NULL) return -1;
 
@@ -332,7 +311,92 @@ mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     j->type = M_JSON_STRING;
     j->data.m_j_string = str;
 
-    return plen;
+    return --plen; /* jump off " */
+}
+
+static mln_u8ptr_t mln_json_parse_string_fetch(mln_u8ptr_t jstr, int *len)
+{
+    int l = *len, c, count = 0;
+    mln_u8ptr_t p = jstr, buf, q;
+    if ((buf = (mln_u8ptr_t)malloc(l)) == NULL) {
+        return NULL;
+    }
+    q = buf;
+    while (l > 0) {
+        c = mln_json_get_char(&p, &l);
+        if (c < 0) {
+            free(buf);
+            return NULL;
+        } else if (c == 0) {
+            /*never be here*/
+        } else if (c == M_JSON_HEX) {
+            /* not support unicode now */
+            free(buf);
+            return NULL;
+        } else {
+            *q++ = (mln_u8_t)c;
+            ++count;
+        }
+    }
+    *len = count;
+    return buf;
+}
+
+static inline int mln_json_get_char(mln_u8ptr_t *s, int *len)
+{
+    if (*len <= 0) return 0;
+
+    if ((*s)[0] == (mln_u8_t)'\\' && *len > 1) {
+        switch ((*s)[1]) {
+            case (mln_u8_t)'\"':
+                (*s) += 2;
+                (*len) -= 2;
+                return '\"';
+            case (mln_u8_t)'\\':
+                (*s) += 2;
+                (*len) -= 2;
+                return '\\';
+            case (mln_u8_t)'/':
+                (*s) += 2;
+                (*len) -= 2;
+                return '/';
+            case (mln_u8_t)'b':
+                (*s) += 2;
+                (*len) -= 2;
+                return '\b';
+            case (mln_u8_t)'f':
+                (*s) += 2;
+                (*len) -= 2;
+                return '\f';
+            case (mln_u8_t)'n':
+                (*s) += 2;
+                (*len) -= 2;
+                return '\n';
+            case (mln_u8_t)'r':
+                (*s) += 2;
+                (*len) -= 2;
+                return '\r';
+            case (mln_u8_t)'t':
+                (*s) += 2;
+                (*len) -= 2;
+                return '\t';
+            case (mln_u8_t)'u':
+                (*s) += 2;
+                (*len) -= 2;
+                return M_JSON_HEX;
+            default:
+                return -1;
+        }
+    }
+
+    switch ((*s)[0]) {
+        case (mln_u8_t)'\\':
+            return -1;
+        default:
+            break;
+    }
+    (*len) -= 1;
+    return *((*s)++);
 }
 
 static int
@@ -699,101 +763,6 @@ mln_json_get_length_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *da
 static inline mln_json_obj_t *mln_json_obj_new(void)
 {
     return (mln_json_obj_t *)calloc(1, sizeof(mln_json_obj_t));
-}
-
-static inline int mln_json_trans_hex(char *jstr, int len, char *c)
-{
-    unsigned char hex = 0;
-    if (len < 2) return -1;
-
-    if (isdigit(jstr[0])) {
-        hex |= ((jstr[0] - '0') << 4);
-    } else if (jstr[0] >= 'a' && jstr[0] <= 'f') {
-        hex |= ((jstr[0] - 'a' + 0xa) << 4);
-    } else if (jstr[0] >= 'A' && jstr[0] <= 'F') {
-        hex |= ((jstr[0] - 'A' + 0xa) << 4);
-    } else {
-        return -1;
-    }
-
-    if (isdigit(jstr[1])) {
-        hex |= (jstr[1] - '0');
-    } else if (jstr[1] >= 'a' && jstr[1] <= 'f') {
-        hex |= (jstr[0] - 'a' + 0xa);
-    } else if (jstr[1] >= 'A' && jstr[1] <= 'F') {
-        hex |= (jstr[0] - 'A' + 0xa);
-    } else {
-        return -1;
-    }
-
-    *c = (char)hex;
-
-    return 0;
-}
-
-static inline int mln_json_get_char(char **s, int *len)
-{
-    char *save;
-    if (*len <= 0) return 0;
-
-    if ((*s)[0] == '\\' && *len > 1) {
-        switch ((*s)[1]) {
-            case '\"':
-                (*s) += 2;
-                (*len) -= 2;
-                return '\"';
-            case '\\':
-                (*s) += 2;
-                (*len) -= 2;
-                return '\\';
-            case '/':
-                (*s) += 2;
-                (*len) -= 2;
-                return '/';
-            case 'b':
-                (*s) += 2;
-                (*len) -= 2;
-                return '\b';
-            case 'f':
-                (*s) += 2;
-                (*len) -= 2;
-                return '\f';
-            case 'n':
-                (*s) += 2;
-                (*len) -= 2;
-                return '\n';
-            case 'r':
-                (*s) += 2;
-                (*len) -= 2;
-                return '\r';
-            case 't':
-                (*s) += 2;
-                (*len) -= 2;
-                return '\t';
-            case 'u':
-                (*s) += 2;
-                (*len) -= 2;
-                return M_JSON_HEX;
-            default:
-                return -1;
-        }
-    }
-
-    switch ((*s)[0]) {
-        case '\"':
-            (*s) += 1;
-            (*len) -= 1;
-            return M_JSON_STRQUOT;
-        case '\\':
-            return -1;
-        default:
-            break;
-    }
-
-    save = *s;
-    (*s) += 1;
-    (*len) -= 1;
-    return *save;
 }
 
 static mln_u64_t mln_json_hash_calc(mln_hash_t *h, void *key)
