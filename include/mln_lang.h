@@ -140,7 +140,6 @@ typedef enum {
     M_LSNT_SPEC,
     M_LSNT_FACTOR,
     M_LSNT_ELEMLIST,
-    M_LSNT_FUNCSUFFIX,
     M_LSNT_FUNCCALL
 } mln_lang_stack_node_type_t;
 
@@ -171,10 +170,10 @@ struct mln_lang_stack_node_s {
         mln_lang_spec_t         *spec;
         mln_lang_factor_t       *factor;
         mln_lang_elemlist_t     *elemlist;
-        mln_lang_funcsuffix_t   *funcsuffix;
         mln_lang_funccall_t     *funccall;
     } data;
     mln_lang_retExp_t               *retExp;
+    mln_lang_retExp_t               *retExp2;/* only used to store object temporarily in locate production */
     void                            *pos;
     mln_u32_t                        step;
     mln_u32_t                        call:1;

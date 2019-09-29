@@ -376,7 +376,7 @@ SCOPE PREFIX_NAME##_struct_t *PREFIX_NAME##_new(mln_lex_t *lex, enum PREFIX_NAME
 SCOPE void PREFIX_NAME##_free(PREFIX_NAME##_struct_t *ptr);                                   \
 SCOPE PREFIX_NAME##_struct_t *PREFIX_NAME##_token(mln_lex_t *lex);\
 SCOPE void *PREFIX_NAME##_lex_dup(mln_alloc_t *pool, void *ptr);\
-SCOPE PREFIX_NAME##_struct_t *PREFIX_NAME##_at_handler(mln_lex_t *lex, void *data);
+SCOPE PREFIX_NAME##_struct_t *PREFIX_NAME##_nums_handler(mln_lex_t *lex, void *data);
 
 
 #define MLN_DEFINE_TOKEN(PREFIX_NAME,TK_PREFIX,...); \
@@ -1091,7 +1091,7 @@ goon:\
         {mln_string("endif"), (lex_hook)PREFIX_NAME##_lex_preprocess_endif},\
         {mln_string("undef"), (lex_hook)PREFIX_NAME##_lex_preprocess_undef}\
     };\
-    PREFIX_NAME##_struct_t *PREFIX_NAME##_at_handler(mln_lex_t *lex, void *data)\
+    PREFIX_NAME##_struct_t *PREFIX_NAME##_nums_handler(mln_lex_t *lex, void *data)\
     {\
         mln_preprocess_handler_t *ph, *phend;\
         mln_string_t tmp;\
@@ -1145,12 +1145,12 @@ goon:\
             if ((attr_ptr)->hooks == NULL) {\
                 mln_lex_hooks_t __hooks;\
                 memset(&__hooks, 0, sizeof(__hooks));\
-                __hooks.at_handler = (lex_hook)PREFIX_NAME##_at_handler;\
-                __hooks.at_data = lpd;\
+                __hooks.nums_handler = (lex_hook)PREFIX_NAME##_nums_handler;\
+                __hooks.nums_data = lpd;\
                 (attr_ptr)->hooks = &__hooks;\
             } else {\
-                (attr_ptr)->hooks->at_handler = (lex_hook)PREFIX_NAME##_at_handler;\
-                (attr_ptr)->hooks->at_data = lpd;\
+                (attr_ptr)->hooks->nums_handler = (lex_hook)PREFIX_NAME##_nums_handler;\
+                (attr_ptr)->hooks->nums_data = lpd;\
             }\
             (lex_ptr) = mln_lex_init((attr_ptr));\
             if ((lex_ptr) != NULL && (attr_ptr)->hooks != NULL) PREFIX_NAME##_set_hooks((lex_ptr));\
