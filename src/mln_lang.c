@@ -3224,6 +3224,19 @@ static inline int mln_lang_metReturn(mln_lang_ctx_t *ctx)
             return -1;
         }
         mln_lang_ctx_setRetExp(ctx, retExp);
+    } else {
+        mln_lang_var_t *var;
+        mln_lang_retExp_t *retExp;
+        if ((var = __mln_lang_var_dup(ctx, ctx->retExp->data.var)) == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+        if ((retExp = __mln_lang_retExp_new(ctx->pool, M_LANG_RETEXP_VAR, var)) == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            __mln_lang_var_free(var);
+            return -1;
+        }
+        mln_lang_ctx_setRetExp(ctx, retExp);
     }
     return 0;
 }

@@ -26,7 +26,6 @@ static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *da
 int mln_core_init(struct mln_core_attr *attr)
 {
     /*Init configurations*/
-    printf("Init configurations\n");
     if (mln_conf_load() < 0) {
         return -1;
     }
@@ -35,7 +34,6 @@ int mln_core_init(struct mln_core_attr *attr)
     }
 
     /*Init Melon resources*/
-    printf("Init Melon Global Vars\n");
     if (attr->global_init != NULL && attr->global_init() < 0)
         return -1;
 
@@ -44,7 +42,6 @@ int mln_core_init(struct mln_core_attr *attr)
             return -1;
 
         /*Modify system limitations*/
-        printf("Modify system limitations\n");
         if (mln_sys_limit_modify() < 0) {
             return -1;
         }
