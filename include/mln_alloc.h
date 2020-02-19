@@ -7,40 +7,55 @@
 #define __MLN_ALLOC_H
 
 #include "mln_types.h"
-#include "mln_rbtree.h"
 
 #define M_ALLOC_BEGIN_OFF      ((mln_size_t)4)
 #define M_ALLOC_MGR_GRAIN_SIZE 2
 #define M_ALLOC_MGR_LEN        18*M_ALLOC_MGR_GRAIN_SIZE-(M_ALLOC_MGR_GRAIN_SIZE-1)
 
-typedef struct mln_alloc_s     mln_alloc_t;
-typedef struct mln_alloc_mgr_s mln_alloc_mgr_t;
+typedef struct mln_alloc_s       mln_alloc_t;
+typedef struct mln_alloc_mgr_s   mln_alloc_mgr_t;
+typedef struct mln_alloc_chunk_s mln_alloc_chunk_t;
 
+/*
+ * Notice:
+ * In Darwin, if set mln_alloc_blk_t's prev and next at the beginning of the structure,
+ * program will encounter segmentation fault.
+ * It seems that we can not set bit variables those summary not enough aligned bytes
+ * at the end of structure.
+ * But in Linux, no such kind of problem.
+ */
 typedef struct mln_alloc_blk_s {
-    struct mln_alloc_blk_s *prev;
-    struct mln_alloc_blk_s *next;
-    void                   *data;
-    mln_alloc_mgr_t        *mgr;
-    mln_alloc_t            *pool;
-    mln_size_t              blk_size;
-    mln_size_t              is_large:1;
-    mln_size_t              in_used:1;
+    void                     *data;
+    mln_alloc_chunk_t        *chunk;
+    mln_alloc_t              *pool;
+    mln_size_t                blk_size;
+    mln_size_t                is_large:1;
+    mln_size_t                in_used:1;
+    struct mln_alloc_blk_s   *prev;
+    struct mln_alloc_blk_s   *next;
 } mln_alloc_blk_t __cacheline_aligned;
 
+struct mln_alloc_chunk_s {
+    struct mln_alloc_chunk_s *prev;
+    struct mln_alloc_chunk_s *next;
+    mln_size_t                refer;
+    mln_alloc_mgr_t          *mgr;
+};
+
 struct mln_alloc_mgr_s {
-    mln_size_t              blk_size;
-    mln_alloc_blk_t        *free_head;
-    mln_alloc_blk_t        *free_tail;
-    mln_alloc_blk_t        *used_head;
-    mln_alloc_blk_t        *used_tail;
+    mln_size_t                blk_size;
+    mln_alloc_blk_t          *free_head;
+    mln_alloc_blk_t          *free_tail;
+    mln_alloc_blk_t          *used_head;
+    mln_alloc_blk_t          *used_tail;
+    mln_alloc_chunk_t        *chunk_head;
+    mln_alloc_chunk_t        *chunk_tail;
 };
 
 struct mln_alloc_s {
-    mln_alloc_mgr_t         mgr_tbl[M_ALLOC_MGR_LEN];
-    mln_alloc_blk_t        *large_used_head;
-    mln_alloc_blk_t        *large_used_tail;
-    mln_size_t              cur_size;
-    mln_size_t              threshold;
+    mln_alloc_mgr_t           mgr_tbl[M_ALLOC_MGR_LEN];
+    mln_alloc_chunk_t        *large_used_head;
+    mln_alloc_chunk_t        *large_used_tail;
 };
 
 

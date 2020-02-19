@@ -1,9 +1,7 @@
-
+#!/bin/bash
 #
 # Copyright (C) Niklaus F.Schen.
 #
-
-#!/bin/sh
 
 #installation path
 install_path=`echo "/usr/local/melon"`
