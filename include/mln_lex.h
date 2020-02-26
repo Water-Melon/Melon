@@ -980,7 +980,7 @@ goon:\
             return NULL;\
         }\
         mln_string_pool_free(k);\
-        if ((rn = mln_rbtree_new_node(lex->macros, lm)) == NULL) {\
+        if ((rn = mln_rbtree_node_new(lex->macros, lm)) == NULL) {\
             mln_lex_setError(lex, MLN_LEX_ENMEM);\
             return NULL;\
         }\
@@ -1078,7 +1078,7 @@ goon:\
         rn = mln_rbtree_search(lex->macros, lex->macros->root, &tmp);\
         if (!mln_rbtree_null(rn, lex->macros)) {\
             mln_rbtree_delete(lex->macros, rn);\
-            mln_rbtree_free_node(lex->macros, rn);\
+            mln_rbtree_node_free(lex->macros, rn);\
         }\
         mln_lex_cleanResult(lex);\
         return PREFIX_NAME##_token(lex);\

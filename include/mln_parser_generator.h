@@ -409,7 +409,7 @@ PREFIX_NAME##_pg_create_token(struct PREFIX_NAME##_preprocess_attr *attr, PREFIX
         } else {\
             tk->is_nonterminal = 1;\
         }\
-        rn = mln_rbtree_new_node(attr->token_tree, tk);\
+        rn = mln_rbtree_node_new(attr->token_tree, tk);\
         if (rn == NULL) {\
             mln_log(error, "No memory.\n");\
             mln_pg_token_free(tk);\

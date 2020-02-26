@@ -329,14 +329,14 @@ Their definitions can be found in melon-1.8.0/include/mln_types.h.
     data_free -- is a function pointer to free data in a tree node. This pointer can be NULL. Its prototype is
         typedef void (*rbtree_free_data)(void *);
 
-    a) mln_rbtree_node_t *mln_rbtree_new_node(mln_rbtree_t *t, void *data);
+    a) mln_rbtree_node_t *mln_rbtree_node_new(mln_rbtree_t *t, void *data);
        It creates a new RB-tree node.
        The first argument is the pointer points to a RB-tree which is the one that the new node is going to be
        inserted.
        The second one is a user data pointer.
        If memory is not enough, NULL will be returned.
 
-    b) void mln_rbtree_free_node(mln_rbtree_t *t, mln_rbtree_node_t *n);
+    b) void mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n);
        This function destroys RB-tree node and frees its resources.
        If RB-tree's 'data_free' is not NULL, the user data in the node will be freed by calling function data_free().
 
@@ -2500,7 +2500,7 @@ Their definitions can be found in melon-1.8.0/include/mln_types.h.
       b) void mln_lang_free(mln_lang_t *lang);
          Destroy the 'lang' object.
 
-      c) mln_lang_ctx_t *mln_lang_new_job(mln_lang_t *lang,
+      c) mln_lang_ctx_t *mln_lang_job_new(mln_lang_t *lang,
                                           mln_u32_t type,
                                           mln_string_t *data,
                                           void *udata,

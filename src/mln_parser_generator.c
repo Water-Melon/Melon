@@ -313,7 +313,7 @@ int mln_pg_calc_nullable(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
                 if (!tk->is_nonterminal) {
                     rn = mln_rbtree_search(tk->first_set, tk->first_set->root, tk);
                     if (mln_rbtree_null(rn, tk->first_set)) {
-                        rn = mln_rbtree_new_node(tk->first_set, tk);
+                        rn = mln_rbtree_node_new(tk->first_set, tk);
                         if (rn == NULL) {
                             mln_log(error, "No memory.\n");
                             return -1;
@@ -381,7 +381,7 @@ mln_pg_calc_first_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udat
     mln_rbtree_t *dest = pgi->tk->first_set;
     mln_rbtree_node_t *rn = mln_rbtree_search(dest, dest->root, tk);
     if (!mln_rbtree_null(rn, dest)) return 0;
-    rn = mln_rbtree_new_node(dest, tk);
+    rn = mln_rbtree_node_new(dest, tk);
     if (rn == NULL) {
         mln_log(error, "No memory.\n");
         return -1;
@@ -476,7 +476,7 @@ mln_pg_calc_follow_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *uda
     mln_rbtree_t *dest = pgi->tk->follow_set;
     rn = mln_rbtree_search(dest, dest->root, tk);
     if (!mln_rbtree_null(rn, dest)) return 0;
-    if ((rn = mln_rbtree_new_node(dest, tk)) == NULL) {
+    if ((rn = mln_rbtree_node_new(dest, tk)) == NULL) {
         mln_log(error, "No memory.\n");
         return -1;
     }
@@ -575,7 +575,7 @@ mln_pg_closure_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
     mln_rbtree_node_t *rn;
     rn = mln_rbtree_search(new_it->lookahead_set, new_it->lookahead_set->root, tk);
     if (!mln_rbtree_null(rn, new_it->lookahead_set)) return 0;
-    rn = mln_rbtree_new_node(new_it->lookahead_set, tk);
+    rn = mln_rbtree_node_new(new_it->lookahead_set, tk);
     if (rn == NULL) {
         mln_log(error, "No memory.\n");
         return -1;
@@ -636,7 +636,7 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
     new_it->rule = &pci->rule[0];
     mln_item_chain_add(&(s->head), &(s->tail), new_it);
     ++(s->nr_item);
-    if ((rn = mln_rbtree_new_node(tree, s)) == NULL) {
+    if ((rn = mln_rbtree_node_new(tree, s)) == NULL) {
         mln_log(error, "No memory.\n");
         mln_pg_state_free(s);
         return -1;
@@ -712,7 +712,7 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
                 new_s = tmp_s;
             } else {
                 new_s->id = (pci->id_counter)++;
-                if ((rn = mln_rbtree_new_node(tree, new_s)) == NULL) {
+                if ((rn = mln_rbtree_node_new(tree, new_s)) == NULL) {
                     mln_log(error, "No memory.\n");
                     mln_pg_state_free(new_s);
                     return -1;
@@ -739,7 +739,7 @@ mln_pg_goto_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_pg_item_t *it = (mln_pg_item_t *)udata;
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;
-    mln_rbtree_node_t *rn = mln_rbtree_new_node(it->lookahead_set, tk);
+    mln_rbtree_node_t *rn = mln_rbtree_node_new(it->lookahead_set, tk);
     if (rn == NULL) {
         mln_log(error, "No memory.\n");
         return -1;
@@ -792,7 +792,7 @@ mln_pg_goto_la_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
                            tk);
     if (!mln_rbtree_null(rn, info->item->lookahead_set))
         return 0;
-    rn = mln_rbtree_new_node(info->item->lookahead_set, tk);
+    rn = mln_rbtree_node_new(info->item->lookahead_set, tk);
     if (rn == NULL) {
         mln_log(error, "No memory.\n");
         return -1;

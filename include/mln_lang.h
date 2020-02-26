@@ -379,12 +379,12 @@ extern int mln_lang_run(mln_lang_t *lang) __NONNULL1(1);
 extern int
 mln_lang_ctx_addGlobalVar(mln_lang_ctx_t *ctx, mln_string_t *name, void *val, mln_u32_t type) __NONNULL2(1,2);
 extern mln_lang_ctx_t *
-mln_lang_new_job(mln_lang_t *lang, \
+mln_lang_job_new(mln_lang_t *lang, \
                  mln_u32_t type, \
                  mln_string_t *data, \
                  void *udata, \
                  mln_lang_return_handler handler) __NONNULL2(1,3);
-extern void mln_lang_remove_job(mln_lang_ctx_t *ctx);
+extern void mln_lang_job_free(mln_lang_ctx_t *ctx);
 extern void mln_lang_funccall_val_addObject(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val) __NONNULL2(1,2);
 #define mln_lang_retExp_getVar(retexp) ((retexp)->data.var)
 extern mln_lang_retExp_t *

@@ -173,7 +173,7 @@ mln_lang_obj_property(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_ret
                 mln_lang_errmsg(ctx, "No memory.");
                 return -1;
             }
-            if ((rn = mln_rbtree_new_node(obj->members, var)) == NULL) {
+            if ((rn = mln_rbtree_node_new(obj->members, var)) == NULL) {
                 mln_lang_var_free(var);
                 mln_lang_errmsg(ctx, "No memory.");
                 return -1;

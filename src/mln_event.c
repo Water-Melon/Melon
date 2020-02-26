@@ -421,7 +421,7 @@ mln_event_set_signal_set(mln_event_t *event, \
         escp->signo = signo;
         escp->sig_head = NULL;
         escp->sig_tail = NULL;
-        rn = mln_rbtree_new_node(event->ev_signal_tree, escp);
+        rn = mln_rbtree_node_new(event->ev_signal_tree, escp);
         if (rn == NULL) {
             mln_log(error, "No memory.\n");
             free(escp);
@@ -448,7 +448,7 @@ mln_event_set_signal_set(mln_event_t *event, \
         }
         esrp->signo = signo;
         esrp->refer_cnt = 0;
-        rn = mln_rbtree_new_node(ev_signal_refer_tree, esrp);
+        rn = mln_rbtree_node_new(ev_signal_refer_tree, esrp);
         if (rn == NULL) {
             mln_log(error, "No memory.\n");
             free(esrp);
@@ -533,7 +533,7 @@ mln_event_set_signal_unset(mln_event_t *event, \
     mln_event_desc_free(ed);
     if (escp->sig_head == NULL) {
         mln_rbtree_delete(event->ev_signal_tree, rn);
-        mln_rbtree_free_node(event->ev_signal_tree, rn);
+        mln_rbtree_node_free(event->ev_signal_tree, rn);
     }
     mln_event_sig_decrease_refer(signo);
     return 0;
@@ -721,7 +721,7 @@ mln_event_set_fd_normal(mln_event_t *event, \
         ed->act_next = NULL;
         ed->act_prev = NULL;
         mln_rbtree_node_t *rn;
-        rn = mln_rbtree_new_node(event->ev_fd_tree, ed);
+        rn = mln_rbtree_node_new(event->ev_fd_tree, ed);
         if (rn == NULL) {
             mln_log(error, "No memory.\n");
             free(ed);
@@ -988,7 +988,7 @@ mln_event_set_fd_clr(mln_event_t *event, int fd)
         return;
     }
     mln_rbtree_delete(event->ev_fd_tree, rn);
-    mln_rbtree_free_node(event->ev_fd_tree, rn);
+    mln_rbtree_node_free(event->ev_fd_tree, rn);
     if (ed->data.fd.in_active) {
         ev_fd_active_chain_del(&(event->ev_fd_active_head), \
                                &(event->ev_fd_active_tail), \
@@ -1477,7 +1477,7 @@ mln_event_sig_decrease_refer(int signo)
     }
     if ((--(ptr->refer_cnt)) == 0) {
         mln_rbtree_delete(ev_signal_refer_tree, rn);
-        mln_rbtree_free_node(ev_signal_refer_tree, rn);
+        mln_rbtree_node_free(ev_signal_refer_tree, rn);
     }
 }
 

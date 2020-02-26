@@ -199,7 +199,7 @@ err:
         mln_alloc_free(lex);
         return NULL;
     }
-    if ((rn = mln_rbtree_new_node(lex->macros, lm)) == NULL) {
+    if ((rn = mln_rbtree_node_new(lex->macros, lm)) == NULL) {
         mln_lex_macro_free(lm);
         goto err;
     }
@@ -207,7 +207,7 @@ err:
     if ((lm = mln_lex_macro_new(lex->pool, &k2, NULL)) == NULL) {
         goto err;
     }
-    if ((rn = mln_rbtree_new_node(lex->macros, lm)) == NULL) {
+    if ((rn = mln_rbtree_node_new(lex->macros, lm)) == NULL) {
         mln_lex_macro_free(lm);
         goto err;
     }
@@ -235,7 +235,7 @@ err:
                  mln_stack_destroy(lex->stack);
                  goto err;
             }
-            if ((rn = mln_rbtree_new_node(lex->keywords, newkw)) == NULL) {
+            if ((rn = mln_rbtree_node_new(lex->keywords, newkw)) == NULL) {
                 mln_lex_keyword_free(newkw);
                 mln_rbtree_destroy(lex->keywords);
                 mln_stack_destroy(lex->stack);

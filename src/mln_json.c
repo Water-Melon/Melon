@@ -258,7 +258,7 @@ again:
         return -1;
     }
 
-    rn = mln_rbtree_new_node(val->data.m_j_array, j);
+    rn = mln_rbtree_node_new(val->data.m_j_array, j);
     if (rn == NULL) {
         mln_json_free(j);
         return -1;
@@ -1021,7 +1021,7 @@ int mln_json_add_element(mln_json_t *j, mln_json_t *value)
     if (!M_JSON_IS_ARRAY(j)) return -1;
 
     M_JSON_SET_INDEX(value, j->data.m_j_array->nr_node);
-    rn = mln_rbtree_new_node(j->data.m_j_array, value);
+    rn = mln_rbtree_node_new(j->data.m_j_array, value);
     if (rn == NULL) {
         if (is_new) {
             M_JSON_SET_TYPE_NONE(j);
@@ -1049,7 +1049,7 @@ int mln_json_update_element(mln_json_t *j, mln_json_t *value, mln_uauto_t index)
     rn = mln_rbtree_search(t, t->root, &tmp);
     if (mln_rbtree_null(rn, t)) {
         M_JSON_SET_INDEX(value, index);
-        rn = mln_rbtree_new_node(t, value);
+        rn = mln_rbtree_node_new(t, value);
         if (rn == NULL) return -1;
         mln_rbtree_insert(t, rn);
     }
@@ -1129,7 +1129,7 @@ mln_json_t *mln_json_remove_element(mln_json_t *j, mln_uauto_t index)
     mln_rbtree_delete(t, rn);
     val = (mln_json_t *)(rn->data);
     rn->data = NULL;
-    mln_rbtree_free_node(t, rn);
+    mln_rbtree_node_free(t, rn);
 
     return val;
 }

@@ -13,9 +13,9 @@ MLN_CHAIN_FUNC_DECLARE(mln_hash_entry, \
                        static inline void, \
                        __NONNULL3(1,2,3));
 static inline mln_hash_entry_t *
-mln_new_hash_entry(void *key, void *val) __NONNULL2(1,2);
+mln_hash_entry_new(void *key, void *val) __NONNULL2(1,2);
 static inline void
-mln_free_hash_entry(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg) __NONNULL1(1);
+mln_hash_entry_free(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg) __NONNULL1(1);
 static inline void
 mln_hash_reduce(mln_hash_t *h) __NONNULL1(1);
 static inline void
@@ -63,7 +63,7 @@ mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg)
         while ((he = mgr->head) != NULL) {
             mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
             --(h->nr_nodes);
-            mln_free_hash_entry(h, he, flg);
+            mln_hash_entry_free(h, he, flg);
         }
     }
     free(h->tbl);
@@ -96,7 +96,7 @@ int mln_hash_replace(mln_hash_t *h, void *key, void *val)
     if (h->expandable && h->nr_nodes <= (h->threshold >> 3)) {
         mln_hash_reduce(h);
     }
-    he = mln_new_hash_entry(*k, *v);
+    he = mln_hash_entry_new(*k, *v);
     if (he == NULL) return -1;
     mln_hash_entry_chain_add(&(mgr->head), &(mgr->tail), he);
     ++(h->nr_nodes);
@@ -114,7 +114,7 @@ int mln_hash_insert(mln_hash_t *h, void *key, void *val)
     }
     mln_u32_t index = h->hash(h, key);
     mln_hash_mgr_t *mgr = &(h->tbl[index]);
-    mln_hash_entry_t *he = mln_new_hash_entry(key, val);
+    mln_hash_entry_t *he = mln_hash_entry_new(key, val);
     if (he == NULL) return -1;
     mln_hash_entry_chain_add(&(mgr->head), &(mgr->tail), he);
     ++(h->nr_nodes);
@@ -235,11 +235,11 @@ void mln_hash_remove(mln_hash_t *h, void *key, mln_hash_flag_t flg)
     if (he == NULL) return;
     mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
     --(h->nr_nodes);
-    mln_free_hash_entry(h, he, flg);
+    mln_hash_entry_free(h, he, flg);
 }
 
 static inline mln_hash_entry_t *
-mln_new_hash_entry(void *key, void *val)
+mln_hash_entry_new(void *key, void *val)
 {
     mln_hash_entry_t *he;
     he = (mln_hash_entry_t *)malloc(sizeof(mln_hash_entry_t));
@@ -251,7 +251,7 @@ mln_new_hash_entry(void *key, void *val)
 }
 
 static inline void
-mln_free_hash_entry(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg)
+mln_hash_entry_free(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg)
 {
     if (he == NULL) return;
     switch (flg) {
@@ -309,7 +309,7 @@ void mln_hash_reset(mln_hash_t *h, mln_hash_flag_t flg)
     for (; mgr < end; ++mgr) {
         while ((he = mgr->head) != NULL) {
             mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
-            mln_free_hash_entry(h, he, flg);
+            mln_hash_entry_free(h, he, flg);
         }
     }
 

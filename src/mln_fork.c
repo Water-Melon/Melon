@@ -415,7 +415,7 @@ void mln_set_master_ipc_handler(mln_ipc_handler_t *ih)
         mln_log(error, "IPC type '%d' already existed.\n", ih->type);
         abort();
     }
-    rn = mln_rbtree_new_node(master_ipc_tree, ih);
+    rn = mln_rbtree_node_new(master_ipc_tree, ih);
     if (rn == NULL) {
         mln_log(error, "No memory.\n");
         abort();
@@ -432,7 +432,7 @@ void mln_set_worker_ipc_handler(mln_ipc_handler_t *ih)
         mln_log(error, "IPC type '%d' already existed.\n", ih->type);
         abort();
     }
-    rn = mln_rbtree_new_node(worker_ipc_tree, ih);
+    rn = mln_rbtree_node_new(worker_ipc_tree, ih);
     if (rn == NULL) {
         mln_log(error, "No memory.\n");
         abort();

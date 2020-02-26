@@ -108,7 +108,7 @@ mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
         f->refer_cnt = 0;
         reg_file_chain_add(&(fs->reg_free_head), &(fs->reg_free_tail), f);
         f->fset = fs;
-        if ((rn = mln_rbtree_new_node(fs->reg_file_tree, f)) == NULL) {
+        if ((rn = mln_rbtree_node_new(fs->reg_file_tree, f)) == NULL) {
             close(f->fd);
             mln_string_pool_free(f->file_path);
             mln_alloc_free(f);
@@ -152,7 +152,7 @@ void mln_file_close(void *pfile)
         f = fs->reg_free_head;
         reg_file_chain_del(&(fs->reg_free_head), &(fs->reg_free_tail), f);
         mln_rbtree_delete(fs->reg_file_tree, f->node);
-        mln_rbtree_free_node(fs->reg_file_tree, f->node);
+        mln_rbtree_node_free(fs->reg_file_tree, f->node);
     }
 }
 

@@ -63,7 +63,7 @@ mln_rbtree_destroy(mln_rbtree_t *t)
     mln_rbtree_node_t *fr;
     while ((fr = t->head) != NULL) {
         mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
-        mln_rbtree_free_node(t, fr);
+        mln_rbtree_node_free(t, fr);
     }
     free(t);
 }
@@ -83,7 +83,7 @@ mln_rbtree_successor(mln_rbtree_t *t, mln_rbtree_node_t *n)
 
 /*rbtree new node*/
 mln_rbtree_node_t *
-mln_rbtree_new_node(mln_rbtree_t *t, void *data)
+mln_rbtree_node_new(mln_rbtree_t *t, void *data)
 {
     mln_rbtree_node_t *n;
     n = (mln_rbtree_node_t *)malloc(sizeof(mln_rbtree_node_t));
@@ -98,7 +98,7 @@ mln_rbtree_new_node(mln_rbtree_t *t, void *data)
 
 /*rbtree free node*/
 void
-mln_rbtree_free_node(mln_rbtree_t *t, mln_rbtree_node_t *n)
+mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n)
 {
     if (n->data != NULL && t->data_free != NULL)
         t->data_free(n->data);

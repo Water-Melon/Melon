@@ -364,7 +364,7 @@ static inline mln_conf_t *mln_conf_init(void)
         mln_conf_destroy(cf);
         return NULL;
     }
-    if ((rn = mln_rbtree_new_node(cf->domain, cd)) == NULL) {
+    if ((rn = mln_rbtree_node_new(cf->domain, cd)) == NULL) {
         fprintf(stderr, "No memory.\n");
         mln_conf_domain_destroy((void *)cd);
         mln_conf_destroy(cf);
@@ -691,7 +691,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
                 fprintf(stderr, "No memory.\n");
                 return -1;
             }
-            if ((rn = mln_rbtree_new_node(cf->domain, cd)) == NULL) {
+            if ((rn = mln_rbtree_node_new(cf->domain, cd)) == NULL) {
                 fprintf(stderr, "No memory.\n");
                 mln_conf_domain_destroy(cd);
                 return -1;
@@ -709,7 +709,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
             mln_conf_lex_free(next);
             return -1;
         }
-        if ((rn = mln_rbtree_new_node(current->cmd, cmd)) == NULL) {
+        if ((rn = mln_rbtree_node_new(current->cmd, cmd)) == NULL) {
             fprintf(stderr, "No memory.\n");
             mln_conf_cmd_destroy(cmd);
             mln_conf_lex_free(next);

@@ -296,7 +296,7 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
     }
     memset(t->argv[t->argc-1], 0, THREAD_SOCKFD_LEN);
     snprintf(t->argv[t->argc-1], THREAD_SOCKFD_LEN-1, "%d", t->peerfd);
-    if ((rn = mln_rbtree_new_node(thread_tree, t)) == NULL) {
+    if ((rn = mln_rbtree_node_new(thread_tree, t)) == NULL) {
         mln_log(error, "No memory.\n");
         return -1;
     }
@@ -310,7 +310,7 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
     {
         mln_log(error, "mln_event_set_fd failed.\n");
         mln_rbtree_delete(thread_tree, rn);
-        mln_rbtree_free_node(thread_tree, rn);
+        mln_rbtree_node_free(thread_tree, rn);
         t->node = NULL;
         return -1;
     }
@@ -324,7 +324,7 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
                          NULL, \
                          NULL);
         mln_rbtree_delete(thread_tree, rn);
-        mln_rbtree_free_node(thread_tree, rn);
+        mln_rbtree_node_free(thread_tree, rn);
         t->node = NULL;
         return -1;
     }
@@ -555,7 +555,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
     mln_chain_t *c;
 
     mln_rbtree_delete(thread_tree, t->node);
-    mln_rbtree_free_node(thread_tree, t->node);
+    mln_rbtree_node_free(thread_tree, t->node);
     t->node = NULL;
     mln_event_set_fd(ev, \
                      mln_tcp_conn_get_fd(&(t->conn)), \
