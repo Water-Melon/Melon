@@ -458,17 +458,27 @@ do
 		rm -fr unix98_test unix98_test.c
 		continue
 	fi
-	echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
 
 	test $fname = "./melang/mysql/mln_lang_mysql.c"
 	if [ $? -eq 0 ]; then
 		if [ $mysql -eq 1 ]; then
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_MYSQL $enable_arm32" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_MYSQL $mysql_lib $enable_arm32" >> Makefile
 		else
 			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
 		fi
 		continue
 	fi
+	test $fname = "./src/mln_melang.c"
+	if [ $? -eq 0 ]; then
+		if [ $mysql -eq 1 ]; then
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $mysql_lib $enable_arm32" >> Makefile
+		else
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
+		fi
+		continue
+	fi
+
+	echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
 done
 echo "Configure done!"
 
