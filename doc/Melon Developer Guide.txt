@@ -2535,6 +2535,12 @@ Their definitions can be found in melon-1.8.0/include/mln_types.h.
          Send the data to the script-side(isC must be 1) via the message communication item which is
          located by 'name'.
 
+      i) int mln_lang_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler);
+         Register a kind of resource which should be freed once ctx freed.
+         'name' is the resource name.
+         'data' resource manager structure.
+         'free_handler' is the resource's free handler.
+
   36) FEC
       This component is used to recover RTP packet. Generation and recovery operations are described in
       RFC 5109.

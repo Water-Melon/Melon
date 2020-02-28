@@ -7,6 +7,7 @@
 install_path=`echo "/usr/local/melon"`
 cc="cc"
 enable_arm32=""
+mysql_lib=""
 
 #get all parameters
 for param in $@
@@ -324,10 +325,26 @@ echo -e "\ttest -d lib || mkdir lib" >> Makefile
 echo "\$(MELONA) : \$(OBJS)" >> Makefile
 echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile
 echo "\$(MELONSO) : \$(OBJS)" >> Makefile
-if [ $is_linux -eq 1 ]; then
-	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
+
+#test MySQL Asynchronous----------#
+echo -e "#include <stdio.h>\n#include <mysql.h>" > mysql_test.c
+echo "int main(void){MYSQL *mysql_local = mysql_init(NULL);mysql_real_connect_nonblocking(mysql_local, NULL, NULL, NULL, NULL, 3306, NULL, 0);return 0;}" >> mysql_test.c
+cc -o mysql_test mysql_test.c -I/usr/include/mysql/ -L/usr/lib64/mysql/ -lmysqlclient 2>/dev/null
+if [ "$?" == "0" ]; then
+	mysql=1
+	mysql_lib="-I /usr/include/mysql -L /usr/lib64/mysql -lmysqlclient"
+	echo "MySQL Asynchronous	[support]"
 else
-	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
+	mysql=0
+	echo "MySQL Asynchronous	[not support]"
+fi
+rm -fr mysql_test mysql_test.c
+#test MySQL Asynchronous end------#
+
+if [ $is_linux -eq 1 ]; then
+	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl $mysql_lib -shared -fPIC" >> Makefile
+else
+	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc $mysql_lib -shared -fPIC" >> Makefile
 fi
 echo "install:" >> Makefile
 echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
@@ -442,6 +459,16 @@ do
 		continue
 	fi
 	echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
+
+	test $fname = "./melang/mysql/mln_lang_mysql.c"
+	if [ $? -eq 0 ]; then
+		if [ $mysql -eq 1 ]; then
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_MYSQL $enable_arm32" >> Makefile
+		else
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
+		fi
+		continue
+	fi
 done
 echo "Configure done!"
 

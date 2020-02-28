@@ -46,12 +46,14 @@ typedef struct mln_lang_array_elem_s    mln_lang_array_elem_t;
 typedef struct mln_lang_methods_s       mln_lang_method_t;
 typedef struct mln_lang_retExp_s        mln_lang_retExp_t;
 typedef struct mln_lang_tcp_s           mln_lang_tcp_t;
+typedef struct mln_lang_resource_s      mln_lang_resource_t;
 
 typedef void (*mln_lang_stack_handler)(mln_lang_ctx_t *);
 typedef int (*mln_lang_op)(mln_lang_ctx_t *, mln_lang_retExp_t **, mln_lang_retExp_t *, mln_lang_retExp_t *);
 typedef mln_lang_retExp_t *(*mln_lang_internal) (mln_lang_ctx_t *);
 typedef int (*mln_msg_c_handler)(mln_lang_ctx_t *, const mln_lang_val_t *);
 typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
+typedef void (*mln_lang_resource_free)(void *data);
 
 struct mln_lang_s {
     mln_event_t                     *ev;
@@ -83,10 +85,17 @@ struct mln_lang_ctx_s {
     mln_string_t                    *filename;
     mln_rbtree_t                    *msg_map;
     mln_rbtree_t                    *tcp_set;
+    mln_rbtree_t                    *resource_set;
     mln_lang_retExp_t               *retExp;
     mln_lang_return_handler          return_handler;
     struct mln_lang_ctx_s           *prev;
     struct mln_lang_ctx_s           *next;
+};
+
+struct mln_lang_resource_s {
+    mln_string_t                    *name;
+    void                            *data;
+    mln_lang_resource_free           free_handler;
 };
 
 struct mln_lang_msg_s {
@@ -460,5 +469,6 @@ MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
                        __NONNULL3(1,2,3));
 extern void mln_lang_stack_node_free(void *data);
 extern int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
+extern int mln_lang_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler) __NONNULL2(1,2);
 
 #endif

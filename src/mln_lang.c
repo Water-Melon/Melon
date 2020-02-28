@@ -313,6 +313,8 @@ static void mln_lang_tcp_setMsg(mln_string_t *type, mln_lang_tcp_t *target, mln_
 static int mln_lang_tcp_getinfo(const struct sockaddr *addr, char *ip, mln_u16_t *port);
 static inline int __mln_lang_tcp_msgExisted(mln_lang_array_t *arr, mln_string_t *type, mln_lang_tcp_t *target);
 static int mln_lang_tcp_msgExisted_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static void mln_lang_resource_free_handler(mln_lang_resource_t *lr);
+static int mln_lang_resource_cmp(const mln_lang_resource_t *lr1, const mln_lang_resource_t *lr2);
 
 
 mln_lang_method_t *mln_lang_methods[] = {
@@ -563,6 +565,19 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         mln_alloc_free(ctx);
         return NULL;
     }
+    rbattr.cmp = (rbtree_cmp)mln_lang_resource_cmp;
+    rbattr.data_free = (rbtree_free_data)mln_lang_resource_free_handler;
+    if ((ctx->resource_set = mln_rbtree_init(&rbattr)) == NULL) {
+        mln_rbtree_destroy(ctx->tcp_set);
+        mln_rbtree_destroy(ctx->msg_map);
+        mln_stack_destroy(ctx->run_stack);
+        mln_lang_ast_free(ctx->stm);
+        mln_fileset_destroy(ctx->fset);
+        mln_alloc_destroy(ctx->pool);
+        mln_alloc_free(ctx);
+        return NULL;
+    }
+
     ctx->retExp = NULL;
     ctx->return_handler = NULL;
     ctx->prev = ctx->next = NULL;
@@ -612,6 +627,7 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     mln_lang_scope_t *scope;
     if (ctx->retExp != NULL) __mln_lang_retExp_free(ctx->retExp);
     if (ctx->filename != NULL) mln_string_pool_free(ctx->filename);
+    if (ctx->resource_set != NULL) mln_rbtree_destroy(ctx->resource_set);
     if (ctx->tcp_set != NULL) mln_rbtree_destroy(ctx->tcp_set);
     if (ctx->msg_map != NULL) mln_rbtree_destroy(ctx->msg_map);
     if (ctx->run_stack != NULL) mln_stack_destroy(ctx->run_stack);
@@ -8761,5 +8777,39 @@ static mln_lang_retExp_t *mln_lang_tcp_shutdown_process(mln_lang_ctx_t *ctx)
         }
     }
     return retExp;
+}
+
+int mln_lang_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler)
+{
+    mln_rbtree_node_t *rn;
+    mln_string_t tmp;
+    mln_lang_resource_t *lr = (mln_lang_resource_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_resource_t));
+    if (lr == NULL) return -1;
+    mln_string_set(&tmp, name);
+    if ((lr->name = mln_string_pool_dup(ctx->pool, &tmp)) == NULL) {
+        mln_alloc_free(lr);
+        return -1;
+    }
+    lr->data = data;
+    lr->free_handler = free_handler;
+    if ((rn = mln_rbtree_node_new(ctx->resource_set, lr)) == NULL) {
+        mln_lang_resource_free_handler(lr);
+        return -1;
+    }
+    mln_rbtree_insert(ctx->resource_set, rn);
+    return 0;
+}
+
+static void mln_lang_resource_free_handler(mln_lang_resource_t *lr)
+{
+    if (lr == NULL) return;
+    if (lr->free_handler != NULL) lr->free_handler(lr->data);
+    mln_string_pool_free(lr->name);
+    mln_alloc_free(lr);
+}
+
+static int mln_lang_resource_cmp(const mln_lang_resource_t *lr1, const mln_lang_resource_t *lr2)
+{
+    return mln_string_strcmp(lr1->name, lr2->name);
 }
 
