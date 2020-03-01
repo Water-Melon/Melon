@@ -6,10 +6,10 @@
 #define __MLN_LANG_MYSQL_H
 
 #include "mln_lang.h"
+#ifdef MLN_MYSQL
 #include <mysql.h>
 #include <mysqld_error.h>
 
-#ifdef MLN_MYSQL
 
 typedef struct mln_lang_mysql_s {
     mln_lang_ctx_t          *ctx;
