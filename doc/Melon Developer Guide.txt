@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.8.0
+Melon Version 1.9.0
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.8.0/include/mln_types.h.
+Their definitions can be found in melon-1.9.0/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3633,6 +3633,32 @@ Their definitions can be found in melon-1.8.0/include/mln_types.h.
 
       <62> mln_real2bin(r);
       Translate 'r' to be a binary value indicated by 'r'.
+
+      <63> MMysql
+      MMysql is the set operating MySQL database. Its melang prototype is:
+          set MMysql {
+              fd;
+              connect(host, port, dbname, username, password);
+              close();
+              autocommit(mode);
+              commit();
+              rollback();
+              error();
+              errno();
+              execute(sql);
+          };
+      'connect' -- 'port' is an integer, the rest of them are string.
+                   If succeed, true will be returned, otherwise false returned.
+      'close' -- close mysql connection. Only one return value 'nil'.
+      'autocommit' -- control autocommit mode. 'mode' is an boolean.
+      'commmit' -- commits the current transaction.
+      'rollback' -- rolls back the current transaction.
+      'error' -- return error message.
+      'errno' -- return error number.
+      'execute' -- execute sql.
+                   Reading operation returns an array whose every element is also an array
+                   to store every record in query results.
+                   Writing operation returns a boolean value.
 
    H. Function development
       Following these steps below:

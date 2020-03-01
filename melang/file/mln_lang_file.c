@@ -210,6 +210,7 @@ static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     mln_string_t v2 = mln_string("op");
     mln_string_t v3 = mln_string("prio");
     mln_string_t v = mln_string("fd");
+    mln_string_t typename = mln_string("MFile");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_s8ptr_t path;
@@ -227,6 +228,10 @@ static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     val = sym->data.var->val;
     if (type != M_LANG_VAL_TYPE_OBJECT) {
         mln_lang_errmsg(ctx, "'this' not object.");
+        return NULL;
+    }
+    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -432,6 +437,7 @@ static mln_lang_retExp_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("offset");
     mln_string_t v2 = mln_string("whence");
     mln_string_t v = mln_string("fd");
+    mln_string_t typename = mln_string("MFile");
     mln_string_t *tmp;
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
@@ -448,6 +454,10 @@ static mln_lang_retExp_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
     val = sym->data.var->val;
     if (t != M_LANG_VAL_TYPE_OBJECT) {
         mln_lang_errmsg(ctx, "'this' not object.");
+        return NULL;
+    }
+    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -581,6 +591,7 @@ static mln_lang_retExp_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
     mln_string_t _this = mln_string("this");
     mln_string_t v1 = mln_string("nbytes");
     mln_string_t v = mln_string("fd");
+    mln_string_t typename = mln_string("MFile");
     mln_string_t tmp;
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
@@ -598,6 +609,10 @@ static mln_lang_retExp_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
     val = sym->data.var->val;
     if (t != M_LANG_VAL_TYPE_OBJECT) {
         mln_lang_errmsg(ctx, "'this' not object.");
+        return NULL;
+    }
+    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -717,6 +732,7 @@ static mln_lang_retExp_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
     mln_string_t _this = mln_string("this");
     mln_string_t v1 = mln_string("buf");
     mln_string_t v = mln_string("fd");
+    mln_string_t typename = mln_string("MFile");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
@@ -732,6 +748,10 @@ static mln_lang_retExp_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
     val = sym->data.var->val;
     if (t != M_LANG_VAL_TYPE_OBJECT) {
         mln_lang_errmsg(ctx, "'this' not object.");
+        return NULL;
+    }
+    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -823,6 +843,7 @@ static mln_lang_retExp_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd");
+    mln_string_t typename = mln_string("MFile");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
@@ -838,6 +859,10 @@ static mln_lang_retExp_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
     val = sym->data.var->val;
     if (type != M_LANG_VAL_TYPE_OBJECT) {
         mln_lang_errmsg(ctx, "'this' not object.");
+        return NULL;
+    }
+    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -908,6 +933,7 @@ static mln_lang_retExp_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("errno");
+    mln_string_t typename = mln_string("MFile");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
@@ -925,6 +951,10 @@ static mln_lang_retExp_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx)
     val = sym->data.var->val;
     if (t != M_LANG_VAL_TYPE_OBJECT) {
         mln_lang_errmsg(ctx, "'this' not object.");
+        return NULL;
+    }
+    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -1013,6 +1043,7 @@ static mln_lang_retExp_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd");
+    mln_string_t typename = mln_string("MFile");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
@@ -1029,6 +1060,10 @@ static mln_lang_retExp_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
     val = sym->data.var->val;
     if (t != M_LANG_VAL_TYPE_OBJECT) {
         mln_lang_errmsg(ctx, "'this' not object.");
+        return NULL;
+    }
+    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {

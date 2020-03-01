@@ -67,7 +67,6 @@ static inline mln_lang_ctx_t *
 mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t type, mln_string_t *content);
 static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx);
 static inline void mln_lang_ctx_resetRetExp(mln_lang_ctx_t *ctx);
-static inline void mln_lang_ctx_setRetExp(mln_lang_ctx_t *ctx, mln_lang_retExp_t *retExp);
 static inline void
 mln_lang_ctx_getRetExpFromNode(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node);
 static inline mln_lang_set_detail_t *
@@ -648,7 +647,7 @@ static inline void mln_lang_ctx_resetRetExp(mln_lang_ctx_t *ctx)
     ctx->retExp = NULL;
 }
 
-static inline void mln_lang_ctx_setRetExp(mln_lang_ctx_t *ctx, mln_lang_retExp_t *retExp)
+void mln_lang_ctx_setRetExp(mln_lang_ctx_t *ctx, mln_lang_retExp_t *retExp)
 {
     mln_lang_ctx_resetRetExp(ctx);
     ctx->retExp = retExp;
