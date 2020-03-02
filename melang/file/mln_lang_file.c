@@ -84,7 +84,7 @@ int mln_lang_file(mln_lang_ctx_t *ctx)
 
 static int mln_lang_file_addFD(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
-    int fd = -1;
+    mln_s64_t fd = -1;
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_string_t varname = mln_string("fd");

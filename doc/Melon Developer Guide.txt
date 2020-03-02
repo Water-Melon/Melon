@@ -3663,6 +3663,12 @@ Their definitions can be found in melon-1.9.0/include/mln_types.h.
       <64> mln_type(var);
       Return the type of variable. If 'var' is an object, the return value is its set name.
 
+      <65> mln_setProperty(obj, prop, val);
+      Set object "obj's" property "prop's" value to be 'val'.
+
+      <66> mln_getProperty(obj, prop);
+      Get object "obj's" property "prop's" value.
+
    H. Function development
       Following these steps below:
       1. mkdir 'funcname', such as mkdir print

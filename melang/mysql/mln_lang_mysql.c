@@ -116,7 +116,7 @@ static void mln_lang_mysql_timeout_free(mln_lang_mysql_timeout_t *lmt)
 
 static int mln_lang_mysql_add_fd(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
-    int fd = 0;
+    mln_s64_t fd = 0;
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_string_t varname = mln_string("fd");
