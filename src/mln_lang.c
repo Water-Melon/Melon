@@ -5479,7 +5479,7 @@ static inline int mln_lang_stack_handler_spec_new(mln_lang_ctx_t *ctx, mln_strin
         if (sym == NULL) {
 err:
             len = name->len>(sizeof(tmp)-1)? name->len: sizeof(tmp)-1;
-            memcpy(tmp, name, len);
+            memcpy(tmp, name->data, len);
             snprintf(msg, sizeof(msg)-1, "Invalid Set name '%s'.", tmp);
             __mln_lang_errmsg(ctx, msg);
             return -1;

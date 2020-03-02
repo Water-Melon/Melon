@@ -3660,6 +3660,9 @@ Their definitions can be found in melon-1.9.0/include/mln_types.h.
                    to store every record in query results.
                    Writing operation returns a boolean value.
 
+      <64> mln_type(var);
+      Return the type of variable. If 'var' is an object, the return value is its set name.
+
    H. Function development
       Following these steps below:
       1. mkdir 'funcname', such as mkdir print

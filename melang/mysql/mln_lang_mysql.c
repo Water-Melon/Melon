@@ -265,7 +265,7 @@ static mln_lang_retExp_t *mln_lang_mysql_connect_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "'this' not object.");
         return NULL;
     }
-    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+    if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
         mln_lang_errmsg(ctx, "Invalid set type, MMysql object required.");
         return NULL;
     }
@@ -452,7 +452,7 @@ static mln_lang_retExp_t *mln_lang_mysql_close_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "'this' not object.");
         return NULL;
     }
-    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+    if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
         mln_lang_errmsg(ctx, "Invalid set type, MMysql object required.");
         return NULL;
     }
@@ -528,7 +528,7 @@ static mln_lang_retExp_t *mln_lang_mysql_commit_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "'this' not object.");
         return NULL;
     }
-    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+    if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
         mln_lang_errmsg(ctx, "Invalid set type, MMysql object required.");
         return NULL;
     }
@@ -609,7 +609,7 @@ static mln_lang_retExp_t *mln_lang_mysql_rollback_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "'this' not object.");
         return NULL;
     }
-    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+    if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
         mln_lang_errmsg(ctx, "Invalid set type, MMysql object required.");
         return NULL;
     }
@@ -691,7 +691,7 @@ static mln_lang_retExp_t *mln_lang_mysql_error_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "'this' not object.");
         return NULL;
     }
-    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+    if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
         mln_lang_errmsg(ctx, "Invalid set type, MMysql object required.");
         return NULL;
     }
@@ -775,7 +775,7 @@ static mln_lang_retExp_t *mln_lang_mysql_errno_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "'this' not object.");
         return NULL;
     }
-    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+    if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
         mln_lang_errmsg(ctx, "Invalid set type, MMysql object required.");
         return NULL;
     }
@@ -1076,7 +1076,7 @@ static mln_lang_retExp_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "'this' not object.");
         return NULL;
     }
-    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+    if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
         mln_lang_errmsg(ctx, "Invalid set type, MMysql object required.");
         return NULL;
     }
@@ -1210,7 +1210,7 @@ static mln_lang_retExp_t *mln_lang_mysql_autocommit_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "'this' not object.");
         return NULL;
     }
-    if (val->data.obj->inSet == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
+    if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
         mln_lang_errmsg(ctx, "Invalid set type, MMysql object required.");
         return NULL;
     }
