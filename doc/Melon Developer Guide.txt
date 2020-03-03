@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.9.0
+Melon Version 1.9.1
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.9.0/include/mln_types.h.
+Their definitions can be found in melon-1.9.1/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3668,6 +3668,15 @@ Their definitions can be found in melon-1.9.0/include/mln_types.h.
 
       <66> mln_getProperty(obj, prop);
       Get object "obj's" property "prop's" value.
+
+      <67> mln_eval(val, data, in_string);
+      This function will spawn another script task to execute mission indicated by 'val'.
+      'val' can be a script path or script code. It depends on 'in_string'.
+      'in_string' is a boolean value. If true, 'val' is script code, otherwise, 'val' is file path.
+      If 'in_string' is not given or it is not true, that means 'in_string' is false.
+      'data' is an injection data for new task. Its type must be one of below:
+          int, real, bool, nil, string
+      In new task, if we want to fetch this data, we can use variable EVAL_DATA to access it.
 
    H. Function development
       Following these steps below:
