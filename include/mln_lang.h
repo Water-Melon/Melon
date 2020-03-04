@@ -45,7 +45,6 @@ typedef struct mln_lang_array_s         mln_lang_array_t;
 typedef struct mln_lang_array_elem_s    mln_lang_array_elem_t;
 typedef struct mln_lang_methods_s       mln_lang_method_t;
 typedef struct mln_lang_retExp_s        mln_lang_retExp_t;
-typedef struct mln_lang_tcp_s           mln_lang_tcp_t;
 typedef struct mln_lang_resource_s      mln_lang_resource_t;
 
 typedef void (*mln_lang_stack_handler)(mln_lang_ctx_t *);
@@ -84,7 +83,6 @@ struct mln_lang_ctx_s {
     mln_s64_t                        step;
     mln_string_t                    *filename;
     mln_rbtree_t                    *msg_map;
-    mln_rbtree_t                    *tcp_set;
     mln_rbtree_t                    *resource_set;
     mln_lang_retExp_t               *retExp;
     mln_lang_return_handler          return_handler;
@@ -367,18 +365,6 @@ struct mln_lang_methods_s {
 };
 
 extern mln_lang_method_t *mln_lang_methods[];
-
-struct mln_lang_tcp_s {
-    mln_lang_ctx_t                  *ctx;
-    mln_tcp_conn_t                   connection;
-    mln_string_t                    *msgName;
-    mln_string_t                    *ip;
-    mln_u16_t                        port;
-    mln_u16_t                        send:1;
-    mln_u16_t                        recv:1;
-    mln_u16_t                        readyClosed:1;
-    mln_s32_t                        timeout;
-};
 
 
 extern void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg) __NONNULL2(1,2);

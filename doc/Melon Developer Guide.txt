@@ -3529,112 +3529,27 @@ Their definitions can be found in melon-1.9.1/include/mln_types.h.
       <50> mln_unwatch(var);
       Remove watcher from 'var'.
 
-      <51> mln_tcpConnect(host, service, msgName, timeout);
-      Build a tcp connection to host:service.
-      host and service must be string.
-      msgName -- is the name that is created by mln_msgNew().
-      timeout -- receiving timeout, if is not given or null given, connection will never be timeout.
-      No matter succeed or not, an event will be given via mln_msgRecv(msgName).
-
-      <52> mln_tcpListen(host, service, msgName, timeout);
-      Arguments like mln_tcpConnect().
-
-      <53> mln_tcpSend(fd, data);
-      Send data via fd connection.
-      fd is caught from tcp event that mln_tcpConnect() or mln_tcpListen() triggered.
-      data must be a string.
-
-      <54> mln_tcpRecv(fd);
-      Receive data from fd connection.
-      fd is caught from tcp event that mln_tcpConnect() or mln_tcpListen() triggered.
-      Data will be returned as return value.
-      There is a case that nil will be returned.
-      If recv-event of socket is triggered continuously, this function may get nothing at the second
-      'tcp_recv' noticing. Because the first 'tcp_recv' will take all data from the connection.
-
-      <55> mln_tcpClose(fd);
-      Close an fd connection.
-
-      <56> mln_tcpShutdown(fd, type);
-      Shutdown an fd connection.
-      There are two directions -- send and recv. Which means, type has two values -- 'send' and 'recv'.
-      If two directions are all closed, fd connection will be closed like calling mln_tcpClose().
-
-      TCP Network Example:
-        Server:
-            @mln_msgNew('test');
-            @mln_tcpListen('0.0.0.0', '1234', 'test');
-            while (true) {
-                msg = @mln_msgRecv('test');
-                n = @mln_size(msg);
-                for (i = 0; i < n; i++) {
-                    if (msg[i]['type'] == 'tcp_connect') {
-                        @mln_print("Connected");
-                    } else if (msg[i]['type'] == 'tcp_recv') {
-                        m = @mln_tcpRecv(msg[i]['data']['fd']);
-                        @mln_print("Received: "+m);
-                        @mln_tcpSend(msg[i]['data']['fd'], "HTTP/1.1 200 OK\n\n");
-                        @mln_print("Sent");
-                        @mln_tcpClose(msg[i]['data']['fd']);
-                    } else if (msg[i]['type'] == 'tcp_close') {
-                        @mln_print("Closed");
-                        @mln_tcpClose(msg[i]['data']['fd']);
-                    } else if ((msg[i])['type'] == 'tcp_accept') {
-                        @mln_print("Accept:"+msg[i]['data']['ip']+':'+msg[i]['data']['port']);
-                    } else {
-                        @mln_print(msg[i]['type']);
-                    }
-                }
-            }
-
-
-        Client:
-            @mln_msgNew('test');
-            @mln_tcpConnect('127.0.0.1', '1234', 'test');
-            while (true) {
-                msg = @mln_msgRecv('test');
-                n = @mln_size(msg);
-                for (i = 0; i < n; i++) {
-                    if (msg[i]['type'] == 'tcp_connect') {
-                        @mln_print("Connected");
-                    } else if (msg[i]['type'] == 'tcp_recv') {
-                        m = @mln_tcpRecv(msg[i]['data']['fd']);
-                        @mln_print("Received: "+m);
-                        @mln_tcpSend(msg[i]['data']['fd'], "HTTP/1.1 200 OK\n\n");
-                        @mln_print("Sent");
-                        @mln_tcpClose(msg[i]['data']['fd']);
-                    } else if (msg[i]['type'] == 'tcp_close') {
-                        @mln_print("Closed");
-                        @mln_tcpClose(msg[i]['data']['fd']);
-                    } else if ((msg[i])['type'] == 'tcp_accept') {
-                        @mln_print("Accept:"+msg[i]['data']['ip']+':'+msg[i]['data']['port']);
-                    } else {
-                        @mln_print(msg[i]['type']);
-                    }
-                }
-            }
-
-      <57> mln_hex2bin(hex);
+      <51> mln_hex2bin(hex);
       Translate 'hex' to be a binary value indicated by 'hex'.
       Such as mln_hex2bin('48') = 'H'.
 
-      <58> mln_bin2hex(bin);
+      <52> mln_bin2hex(bin);
       Translate 'bin' to be a hex string value indicated by 'bin'.
       Such as mln_bin2hex('H') = '48'.
 
-      <59> mln_bin2int(bin);
+      <53> mln_bin2int(bin);
       Translate 'bin' to be an integer indicated by 'bin'.
 
-      <60> mln_int2bin(i);
+      <54> mln_int2bin(i);
       Translate 'i' to be a binary value indicated by 'i'.
 
-      <61> mln_bin2real(bin);
+      <55> mln_bin2real(bin);
       Translate 'bin' to be a real-value indicated by 'bin'.
 
-      <62> mln_real2bin(r);
+      <56> mln_real2bin(r);
       Translate 'r' to be a binary value indicated by 'r'.
 
-      <63> MMysql
+      <57> MMysql
       MMysql is the set operating MySQL database. Its melang prototype is:
           set MMysql {
               fd;
@@ -3660,16 +3575,16 @@ Their definitions can be found in melon-1.9.1/include/mln_types.h.
                    to store every record in query results.
                    Writing operation returns a boolean value.
 
-      <64> mln_type(var);
+      <58> mln_type(var);
       Return the type of variable. If 'var' is an object, the return value is its set name.
 
-      <65> mln_setProperty(obj, prop, val);
+      <59> mln_setProperty(&obj, prop, &val);
       Set object "obj's" property "prop's" value to be 'val'.
 
-      <66> mln_getProperty(obj, prop);
+      <60> mln_getProperty(&obj, prop);
       Get object "obj's" property "prop's" value.
 
-      <67> mln_eval(val, data, in_string);
+      <61> mln_eval(val, data, in_string);
       This function will spawn another script task to execute mission indicated by 'val'.
       'val' can be a script path or script code. It depends on 'in_string'.
       'in_string' is a boolean value. If true, 'val' is script code, otherwise, 'val' is file path.

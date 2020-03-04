@@ -1,5 +1,6 @@
 Changes with melon 1.9.1                                          03 Mar 2020
     *) Added eval function in melang
+    *) Dropped melang's tcp functions
 
 Changes with melon 1.9.0                                          01 Mar 2020
     *) Added MySQL module in script language

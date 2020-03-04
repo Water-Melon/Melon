@@ -89,6 +89,7 @@ void mln_alloc_destroy(mln_alloc_t *pool)
 
 void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
 {
+    return malloc(size);//@@@@@@@@@@@@@@@@@@@@@@
     mln_alloc_blk_t *blk;
     mln_alloc_mgr_t *am;
     mln_alloc_chunk_t *ch;
@@ -204,6 +205,7 @@ void *mln_alloc_c(mln_alloc_t *pool, mln_size_t size)
 
 void *mln_alloc_re(mln_alloc_t *pool, void *ptr, mln_size_t size)
 {
+    return realloc(ptr, size);//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     if (size == 0) {
         mln_alloc_free(ptr);
         return NULL;
@@ -227,6 +229,7 @@ void mln_alloc_free(void *ptr)
     if (ptr == NULL) {
         return;
     }
+    free(ptr);return;//@@@@@@@@@@@@@@@@@@@@@@@@
 
     mln_alloc_t *pool;
     mln_alloc_chunk_t *ch;
