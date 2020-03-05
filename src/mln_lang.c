@@ -333,6 +333,7 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
     int fds[2];
     mln_lang_t *lang;
     struct timeval tv;
+    struct mln_rbtree_attr rbattr;
     if ((lang = (mln_lang_t *)mln_alloc_m(pool, sizeof(mln_lang_t))) == NULL) {
         return NULL;
     }
@@ -350,7 +351,14 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
     lang->fd_signal = fds[1];
     gettimeofday(&tv, NULL);
     lang->lastTime = tv.tv_sec*1000000 + tv.tv_usec;
+    rbattr.cmp = (rbtree_cmp)mln_lang_resource_cmp;
+    rbattr.data_free = (rbtree_free_data)mln_lang_resource_free_handler;
+    if ((lang->resource_set = mln_rbtree_init(&rbattr)) == NULL) {
+        mln_lang_free(lang);
+        return NULL;
+    }
     if ((lang->shift_table = mln_lang_parserGenerate()) == NULL) {
+        mln_rbtree_destroy(lang->resource_set);
         mln_lang_free(lang);
         return NULL;
     }
@@ -376,6 +384,7 @@ void mln_lang_free(mln_lang_t *lang)
     mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     if (lang->fd_notInUsed >= 0) close(lang->fd_notInUsed);
     if (lang->fd_signal >= 0) close(lang->fd_signal);
+    if (lang->resource_set != NULL) mln_rbtree_destroy(lang->resource_set);
     if (lang->shift_table != NULL) mln_lang_parserDestroy(lang->shift_table);
     mln_alloc_free(lang);
 }

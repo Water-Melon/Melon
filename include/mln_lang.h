@@ -67,6 +67,7 @@ struct mln_lang_s {
     int                              fd_notInUsed;
     int                              fd_signal;
     mln_u64_t                        lastTime;
+    mln_rbtree_t                    *resource_set;
     void                            *shift_table;
 };
 
