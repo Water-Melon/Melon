@@ -2541,17 +2541,23 @@ Their definitions can be found in melon-1.9.1/include/mln_types.h.
          'data' resource manager structure.
          'free_handler' is the resource's free handler.
 
-      j) void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx);
+      j) void *mln_lang_ctx_resource_fetch(mln_lang_ctx_t *ctx, const char *name);
+         Fetch script task's resource data.
+
+      k) void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx);
          Suspend the script task indicated by 'ctx'.
 
-      k) void mln_lang_ctx_continue(mln_lang_ctx_t *ctx);
+      l) void mln_lang_ctx_continue(mln_lang_ctx_t *ctx);
          Continue to run the script task indicated by 'ctx';
 
-      l) int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, mln_lang_resource_free free_handler);
+      m) int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, mln_lang_resource_free free_handler);
          Register a global resource that can be accessed by all script tasks those are in the same thread.
 
-      m) void mln_lang_resource_cancel(mln_lang_t *lang, const char *name);
+      n) void mln_lang_resource_cancel(mln_lang_t *lang, const char *name);
          Cancel a global resource.
+
+      o) void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name);
+         Fetch global resource data;
 
   36) FEC
       This component is used to recover RTP packet. Generation and recovery operations are described in

@@ -141,18 +141,13 @@ static int mln_lang_mysql_add_fd(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set
 static void mln_lang_mysql_connect_test(mln_event_t *ev, int fd, void *data)
 {
     enum net_async_status status;
-    mln_rbtree_node_t *rn;
-    mln_lang_resource_t tmp;
     mln_lang_mysql_timeout_t *lmt;
-    mln_string_t name = mln_string("mysql");
     mln_lang_mysql_t *mysql = (mln_lang_mysql_t *)data;
     mln_lang_ctx_t *ctx = mysql->ctx;
     mln_lang_retExp_t *retExp;
 
-    tmp.name = &name;
-    rn = mln_rbtree_search(ctx->resource_set, ctx->resource_set->root, &tmp);
-    ASSERT(!mln_rbtree_null(rn, ctx->resource_set));
-    lmt = (mln_lang_mysql_timeout_t *)(((mln_lang_resource_t *)(rn->data))->data);
+    lmt = (mln_lang_mysql_timeout_t *)mln_lang_ctx_resource_fetch(ctx, "mysql");
+    ASSERT(lmt != NULL);
 
     status = mysql_real_connect_nonblocking(mysql->mysql, \
                                             (char *)(mysql->host->data), \
@@ -236,10 +231,7 @@ static mln_lang_retExp_t *mln_lang_mysql_connect_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
     mln_lang_mysql_t *mysql;
-    mln_rbtree_node_t *rn;
-    mln_lang_resource_t tmp;
     mln_lang_mysql_timeout_t *lmt;
-    mln_string_t name = mln_string("mysql");
 
     if ((sym = mln_lang_symbolNode_search(ctx, &_this, 1)) == NULL) {
         ASSERT(0);
@@ -341,10 +333,8 @@ static mln_lang_retExp_t *mln_lang_mysql_connect_process(mln_lang_ctx_t *ctx)
         mln_lang_mysql_free(mysql);
         return NULL;
     }
-    tmp.name = &name;
-    rn = mln_rbtree_search(ctx->resource_set, ctx->resource_set->root, &tmp);
-    ASSERT(!mln_rbtree_null(rn, ctx->resource_set));
-    lmt = (mln_lang_mysql_timeout_t *)(((mln_lang_resource_t *)(rn->data))->data);
+    lmt = (mln_lang_mysql_timeout_t *)mln_lang_ctx_resource_fetch(ctx, "mysql");
+    ASSERT(lmt != NULL);
     if (mln_event_set_fd(ctx->lang->ev, mysql->fd_signal, M_EV_SEND|M_EV_ONESHOT|M_EV_NONBLOCK, M_EV_UNLIMITED, mysql, mln_lang_mysql_connect_test) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_mysql_free(mysql);
@@ -822,17 +812,12 @@ static int mln_lang_mysql_add_errno(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *
 static void mln_lang_mysql_free_test(mln_event_t *ev, int fd, void *data)
 {
     enum net_async_status status = NET_ASYNC_COMPLETE;
-    mln_rbtree_node_t *rn;
-    mln_lang_resource_t tmp;
     mln_lang_mysql_timeout_t *lmt;
-    mln_string_t name = mln_string("mysql");
     mln_lang_mysql_t *mysql = (mln_lang_mysql_t *)data;
     mln_lang_ctx_t *ctx = mysql->ctx;
 
-    tmp.name = &name;
-    rn = mln_rbtree_search(ctx->resource_set, ctx->resource_set->root, &tmp);
-    ASSERT(!mln_rbtree_null(rn, ctx->resource_set));
-    lmt = (mln_lang_mysql_timeout_t *)(((mln_lang_resource_t *)(rn->data))->data);
+    lmt = (mln_lang_mysql_timeout_t *)mln_lang_ctx_resource_fetch(ctx, "mysql");
+    ASSERT(lmt != NULL);
 
     if (mysql->result != NULL) {
         status = mysql_free_result_nonblocking(mysql->result);
@@ -945,17 +930,12 @@ static void mln_lang_mysql_fetch_test(mln_event_t *ev, int fd, void *data)
 static void mln_lang_mysql_result_test(mln_event_t *ev, int fd, void *data)
 {
     enum net_async_status status;
-    mln_rbtree_node_t *rn;
-    mln_lang_resource_t tmp;
     mln_lang_mysql_timeout_t *lmt;
-    mln_string_t name = mln_string("mysql");
     mln_lang_mysql_t *mysql = (mln_lang_mysql_t *)data;
     mln_lang_ctx_t *ctx = mysql->ctx;
 
-    tmp.name = &name;
-    rn = mln_rbtree_search(ctx->resource_set, ctx->resource_set->root, &tmp);
-    ASSERT(!mln_rbtree_null(rn, ctx->resource_set));
-    lmt = (mln_lang_mysql_timeout_t *)(((mln_lang_resource_t *)(rn->data))->data);
+    lmt = (mln_lang_mysql_timeout_t *)mln_lang_ctx_resource_fetch(ctx, "mysql");
+    ASSERT(lmt != NULL);
 
     status = mysql_store_result_nonblocking(mysql->mysql, &(mysql->result));
     if (status == NET_ASYNC_NOT_READY) {
@@ -985,17 +965,12 @@ static void mln_lang_mysql_result_test(mln_event_t *ev, int fd, void *data)
 static void mln_lang_mysql_query_test(mln_event_t *ev, int fd, void *data)
 {
     enum net_async_status status;
-    mln_rbtree_node_t *rn;
-    mln_lang_resource_t tmp;
     mln_lang_mysql_timeout_t *lmt;
-    mln_string_t name = mln_string("mysql");
     mln_lang_mysql_t *mysql = (mln_lang_mysql_t *)data;
     mln_lang_ctx_t *ctx = mysql->ctx;
 
-    tmp.name = &name;
-    rn = mln_rbtree_search(ctx->resource_set, ctx->resource_set->root, &tmp);
-    ASSERT(!mln_rbtree_null(rn, ctx->resource_set));
-    lmt = (mln_lang_mysql_timeout_t *)(((mln_lang_resource_t *)(rn->data))->data);
+    lmt = (mln_lang_mysql_timeout_t *)mln_lang_ctx_resource_fetch(ctx, "mysql");
+    ASSERT(lmt != NULL);
 
     status = mysql_real_query_nonblocking(mysql->mysql, (char *)(mysql->sql->data), mysql->sql->len);
     if (status == NET_ASYNC_ERROR) {
@@ -1021,10 +996,7 @@ static mln_lang_retExp_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
     mln_lang_mysql_t *mysql;
-    mln_rbtree_node_t *rn;
-    mln_lang_resource_t tmp;
     mln_lang_mysql_timeout_t *lmt;
-    mln_string_t name = mln_string("mysql");
 
     if ((sym = mln_lang_symbolNode_search(ctx, &_this, 1)) == NULL) {
         ASSERT(0);
@@ -1082,10 +1054,8 @@ static mln_lang_retExp_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    tmp.name = &name;
-    rn = mln_rbtree_search(ctx->resource_set, ctx->resource_set->root, &tmp);
-    ASSERT(!mln_rbtree_null(rn, ctx->resource_set));
-    lmt = (mln_lang_mysql_timeout_t *)(((mln_lang_resource_t *)(rn->data))->data);
+    lmt = (mln_lang_mysql_timeout_t *)mln_lang_ctx_resource_fetch(ctx, "mysql");
+    ASSERT(lmt != NULL);
     if (mln_event_set_fd(ctx->lang->ev, mysql->fd_signal, M_EV_SEND|M_EV_ONESHOT|M_EV_NONBLOCK, M_EV_UNLIMITED, mysql, mln_lang_mysql_query_test) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;

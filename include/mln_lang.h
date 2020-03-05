@@ -457,10 +457,12 @@ MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
 extern void mln_lang_stack_node_free(void *data);
 extern int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
 extern int mln_lang_ctx_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler) __NONNULL2(1,2);
+extern void *mln_lang_ctx_resource_fetch(mln_lang_ctx_t *ctx, const char *name) __NONNULL2(1,2);
 extern void mln_lang_ctx_setRetExp(mln_lang_ctx_t *ctx, mln_lang_retExp_t *retExp) __NONNULL1(1);
 extern void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern void mln_lang_ctx_continue(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, mln_lang_resource_free free_handler) __NONNULL2(1,2);
 extern void mln_lang_resource_cancel(mln_lang_t *lang, const char *name) __NONNULL2(1,2);
+extern void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name) __NONNULL2(1,2);
 
 #endif
