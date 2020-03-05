@@ -285,8 +285,9 @@ static void mln_lang_gc_item_cleanSearcher(mln_gc_t *gc, mln_lang_gc_item_t *gcI
 static int mln_lang_gc_item_cleanSearcher_objScanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int mln_lang_gc_item_cleanSearcher_arrayScanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static void mln_lang_gc_item_freeHandler(mln_lang_gc_item_t *gcItem);
-static void mln_lang_resource_free_handler(mln_lang_resource_t *lr);
+static void mln_lang_ctx_resource_free_handler(mln_lang_resource_t *lr);
 static int mln_lang_resource_cmp(const mln_lang_resource_t *lr1, const mln_lang_resource_t *lr2);
+static void mln_lang_resource_free_handler(mln_lang_resource_t *lr);
 
 
 mln_lang_method_t *mln_lang_methods[] = {
@@ -536,7 +537,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
     rbattr.cmp = (rbtree_cmp)mln_lang_resource_cmp;
-    rbattr.data_free = (rbtree_free_data)mln_lang_resource_free_handler;
+    rbattr.data_free = (rbtree_free_data)mln_lang_ctx_resource_free_handler;
     if ((ctx->resource_set = mln_rbtree_init(&rbattr)) == NULL) {
         mln_rbtree_destroy(ctx->msg_map);
         mln_stack_destroy(ctx->run_stack);
@@ -607,6 +608,24 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     mln_fileset_destroy(ctx->fset);
     mln_alloc_destroy(ctx->pool);
     mln_alloc_free(ctx);
+}
+
+void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx)
+{
+    ++(ctx->ref);
+    mln_lang_ctx_chain_del(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
+    mln_lang_ctx_chain_add(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
+}
+
+void mln_lang_ctx_continue(mln_lang_ctx_t *ctx)
+{
+    --(ctx->ref);
+    mln_lang_ctx_chain_del(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
+    if (ctx->step > 0)
+        mln_lang_ctx_chain_add(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
+    else
+        mln_lang_ctx_chain_add(&(ctx->lang->blocked_head), &(ctx->lang->blocked_tail), ctx);
+    __mln_lang_run(ctx->lang);
 }
 
 static inline void mln_lang_ctx_resetRetExp(mln_lang_ctx_t *ctx)
@@ -6224,13 +6243,7 @@ static void mln_lang_msg_scriptRecver(mln_event_t *ev, int fd, void *data)
     }
     mln_lang_ctx_setRetExp(ctx, retExp);
     lm->script_read = 1;
-    --(ctx->ref);
-    mln_lang_ctx_chain_del(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
-    if (ctx->step > 0)
-        mln_lang_ctx_chain_add(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
-    else
-        mln_lang_ctx_chain_add(&(ctx->lang->blocked_head), &(ctx->lang->blocked_tail), ctx);
-    __mln_lang_run(ctx->lang);
+    mln_lang_ctx_continue(ctx);
 }
 
 static void mln_lang_msg_cRecver(mln_event_t *ev, int fd, void *data)
@@ -6461,9 +6474,7 @@ static mln_lang_retExp_t *mln_lang_msg_func_recv_process(mln_lang_ctx_t *ctx)
     if (lm->script_read) {
         if (!lm->script_wait) {
             lm->script_wait = 1;
-            ++(ctx->ref);
-            mln_lang_ctx_chain_del(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
-            mln_lang_ctx_chain_add(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
+            mln_lang_ctx_suspend(ctx);
         }
         if ((retExp = __mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
@@ -7154,7 +7165,7 @@ static void mln_lang_gc_item_freeHandler(mln_lang_gc_item_t *gcItem)
 }
 
 
-int mln_lang_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler)
+int mln_lang_ctx_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler)
 {
     mln_rbtree_node_t *rn;
     mln_string_t tmp;
@@ -7168,14 +7179,14 @@ int mln_lang_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_
     lr->data = data;
     lr->free_handler = free_handler;
     if ((rn = mln_rbtree_node_new(ctx->resource_set, lr)) == NULL) {
-        mln_lang_resource_free_handler(lr);
+        mln_lang_ctx_resource_free_handler(lr);
         return -1;
     }
     mln_rbtree_insert(ctx->resource_set, rn);
     return 0;
 }
 
-static void mln_lang_resource_free_handler(mln_lang_resource_t *lr)
+static void mln_lang_ctx_resource_free_handler(mln_lang_resource_t *lr)
 {
     if (lr == NULL) return;
     if (lr->free_handler != NULL) lr->free_handler(lr->data);
@@ -7186,5 +7197,48 @@ static void mln_lang_resource_free_handler(mln_lang_resource_t *lr)
 static int mln_lang_resource_cmp(const mln_lang_resource_t *lr1, const mln_lang_resource_t *lr2)
 {
     return mln_string_strcmp(lr1->name, lr2->name);
+}
+
+int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, mln_lang_resource_free free_handler)
+{
+    mln_rbtree_node_t *rn;
+    mln_string_t tmp;
+    mln_lang_resource_t *lr = (mln_lang_resource_t *)malloc(sizeof(mln_lang_resource_t));
+    if (lr == NULL) return -1;
+    mln_string_set(&tmp, name);
+    if ((lr->name = mln_string_dup(&tmp)) == NULL) {
+        free(lr);
+        return -1;
+    }
+    lr->data = data;
+    lr->free_handler = free_handler;
+    if ((rn = mln_rbtree_node_new(lang->resource_set, lr)) == NULL) {
+        mln_lang_resource_free_handler(lr);
+        return -1;
+    }
+    mln_rbtree_insert(lang->resource_set, rn);
+    return 0;
+}
+
+static void mln_lang_resource_free_handler(mln_lang_resource_t *lr)
+{
+    if (lr == NULL) return;
+    if (lr->free_handler != NULL) lr->free_handler(lr->data);
+    mln_string_free(lr->name);
+    free(lr);
+}
+
+void mln_lang_resource_cancel(mln_lang_t *lang, const char *name)
+{
+    mln_rbtree_node_t *rn;
+    mln_lang_resource_t lr;
+    mln_string_t s;
+
+    mln_string_set(&s, name);
+    lr.name = &s;
+    rn = mln_rbtree_search(lang->resource_set, lang->resource_set->root, &lr);
+    if (mln_rbtree_null(rn, lang->resource_set)) return;
+    mln_rbtree_delete(lang->resource_set, rn);
+    mln_rbtree_node_free(lang->resource_set, rn);
 }
 
