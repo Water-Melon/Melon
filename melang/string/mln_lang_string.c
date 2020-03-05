@@ -295,7 +295,7 @@ static mln_lang_retExp_t *mln_strncmp_process(mln_lang_ctx_t *ctx)
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
-        mln_lang_errmsg(ctx, "Invalid type of argument 2.");
+        mln_lang_errmsg(ctx, "Invalid type of argument 3.");
         return NULL;
     }
     val3 = sym->data.var->val;
