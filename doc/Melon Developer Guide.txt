@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.9.1
+Melon Version 1.9.2
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.9.1/include/mln_types.h.
+Their definitions can be found in melon-1.9.2/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3610,6 +3610,45 @@ Their definitions can be found in melon-1.9.1/include/mln_types.h.
       'data' is an injection data for new task. Its type must be one of below:
           int, real, bool, nil, string
       In new task, if we want to fetch this data, we can use variable EVAL_DATA to access it.
+
+      <62> mln_tcpConnect(host, service);
+      Connect to a server that indicated by 'host' and 'service'.
+      'host' and 'service' must be string.
+      If succeed 'true' will be returned, otherwise 'false' returned.
+
+      <63> mln_tcpListen(host, service);
+      Set up a TCP listen socket.
+      'host' and 'service' must be string.
+      If succeed socket file descriptor will be returned, otherwise 'false' returned.
+
+      <64> mln_tcpAccept(listenfd, timeout);
+      Accept a TCP connection.
+      'listenfd' is created by 'mln_tcpListen'.
+      'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
+      If succeed a new socket file descriptor will be returned, otherwise 'false' returned.
+      If 'timeout' was given and accept timed out, 'nil' would be returned.
+
+      <65> mln_tcpSend(sockfd, data);
+      Send 'data' via 'sockfd'.
+      If succeed 'true' will be returned, otherwise 'false' returned.
+
+      <66> mln_tcpRecv(sockfd, timeout);
+      Receive data from 'sockfd'.
+      'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
+      If succeed received data will be returned. If connection closed by peer, 'true' will be returned.
+      Otherwise 'false' returned.
+      If 'timeout' was given and accept timed out, 'nil' would be returned.
+      Notice: If one script task call 'mln_tcpRecv' to wait for data, but another script task call
+      'mln_tcpShutdown' to shutdown 'send' direction, this function will return 'true', because system call
+      'recv' will return 0.
+
+      <67> mln_tcpClose(sockfd);
+      Close the TCP connection indicated by 'sockfd'.
+
+      <68> mln_tcpShutdown(sockfd, mode);
+      Shutdown TCP connection.
+      'mode' has two values: 'send' and 'recv'.
+
 
    H. Function development
       Following these steps below:
