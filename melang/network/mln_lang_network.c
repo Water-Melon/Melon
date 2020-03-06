@@ -1062,8 +1062,6 @@ static mln_lang_retExp_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *
             mln_lang_network_tcp_resource_remove(ctx->lang, fd);
         } else {
             if (tcp->sending) {
-                mln_lang_ctx_tcp_t *lct = mln_lang_ctx_resource_fetch(tcp->ctx, "tcp");
-                ASSERT(lct != NULL);
                 if (tcp->recving) {
                     tcp->sending = 0;
                     tcp->send_closed = 1;
@@ -1071,10 +1069,9 @@ static mln_lang_retExp_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *
                     if (tcp->timeout != M_EV_UNLIMITED)
                         mln_event_set_fd_timeout_handler(tcp->lang->ev, fd, tcp, mln_lang_network_tcp_timeout_handler);
                 } else {
-                    mln_lang_tcp_chain_del(&(lct->head), &(lct->tail), tcp);
                     mln_event_set_fd(tcp->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
                     mln_lang_ctx_continue(tcp->ctx);
-                    tcp->ctx = NULL;
+                    mln_lang_ctx_tcp_resource_remove(tcp);
                 }
             } else {
                 tcp->send_closed = 1;
@@ -1086,17 +1083,14 @@ static mln_lang_retExp_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *
             mln_lang_network_tcp_resource_remove(ctx->lang, fd);
         } else {
             if (tcp->recving) {
-                mln_lang_ctx_tcp_t *lct = mln_lang_ctx_resource_fetch(tcp->ctx, "tcp");
-                ASSERT(lct != NULL);
                 if (tcp->sending) {
                     tcp->recving = 0;
                     tcp->recv_closed = 1;
                     mln_event_set_fd(tcp->lang->ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, tcp, mln_lang_network_tcp_send_handler);
                 } else {
-                    mln_lang_tcp_chain_del(&(lct->head), &(lct->tail), tcp);
                     mln_event_set_fd(tcp->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
                     mln_lang_ctx_continue(tcp->ctx);
-                    tcp->ctx = NULL;
+                    mln_lang_ctx_tcp_resource_remove(tcp);
                 }
             } else {
                 tcp->recv_closed = 1;
@@ -1370,6 +1364,7 @@ static void mln_lang_tcp_free(mln_lang_tcp_t *lt)
             mln_lang_tcp_chain_del(&(lct->head), &(lct->tail), lt);
             mln_lang_ctx_continue(lt->ctx);
             lt->ctx = NULL;
+            lt->sending = lt->recving = 0;
         }
     }
     mln_event_set_fd(lt->lang->ev, mln_tcp_conn_get_fd(&(lt->conn)), M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);

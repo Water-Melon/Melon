@@ -8,8 +8,6 @@
 #include "mln_lang.h"
 #include "mln_connection.h"
 
-#define __DEBUG__
-
 typedef struct mln_lang_tcp_s {
     mln_lang_t            *lang;
     mln_lang_ctx_t        *ctx;
