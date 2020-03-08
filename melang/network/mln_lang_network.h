@@ -29,6 +29,30 @@ typedef struct mln_lang_ctx_tcp_s {
     mln_lang_tcp_t        *tail;
 } mln_lang_ctx_tcp_t;
 
+typedef struct mln_lang_udp_s {
+    mln_lang_t            *lang;
+    mln_lang_ctx_t        *ctx;
+    struct sockaddr        addr;
+    socklen_t              len;
+    int                    fd;
+    mln_s32_t              timeout;
+    mln_string_t          *data;
+    mln_u64_t              bufsize;
+    mln_u64_t              sending:1;
+    mln_u64_t              recving:1;
+    mln_u64_t              padding:62;
+    mln_lang_var_t        *ip;
+    mln_lang_var_t        *port;
+    struct mln_lang_udp_s *prev;
+    struct mln_lang_udp_s *next;
+} mln_lang_udp_t;
+
+typedef struct mln_lang_ctx_udp_s {
+    mln_lang_ctx_t        *ctx;
+    mln_lang_udp_t        *head;
+    mln_lang_udp_t        *tail;
+} mln_lang_ctx_udp_t;
+
 extern int mln_lang_network(mln_lang_ctx_t *ctx);
 
 #endif

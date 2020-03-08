@@ -14,6 +14,8 @@
 #endif
 
 static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx);
+static void mln_lang_print_array(mln_lang_array_t *arr);
+static int mln_lang_print_array_elem(mln_rbtree_node_t *node, void *rn_data, void *udata);
 
 int mln_lang_print(mln_lang_ctx_t *ctx)
 {
@@ -96,10 +98,11 @@ static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
             mln_log(none, "FUNCTION\n");
             break;
         case M_LANG_VAL_TYPE_ARRAY:
-            mln_log(none, "ARRAY\n");
+            mln_lang_print_array(val->data.array);
+            mln_log(none, "\n");
             break;
         default:
-            mln_log(none, "type error\n");
+            mln_log(none, "<type error>\n");
             break;
     }
 
@@ -108,5 +111,51 @@ static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     return retExp;
+}
+
+static void mln_lang_print_array(mln_lang_array_t *arr)
+{
+    mln_log(none, "[");
+    mln_rbtree_scan_all(arr->elems_index, mln_lang_print_array_elem, NULL);
+    mln_log(none, "]");
+}
+
+static int mln_lang_print_array_elem(mln_rbtree_node_t *node, void *rn_data, void *udata)
+{
+    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
+    mln_lang_var_t *var = elem->value;
+    mln_lang_val_t *val = var->val;
+    mln_s32_t type = mln_lang_var_getValType(var);
+    switch (type) {
+        case M_LANG_VAL_TYPE_NIL:
+            mln_log(none, "NIL, ");
+            break;
+        case M_LANG_VAL_TYPE_INT:
+            mln_log(none, "%i, ", val->data.i);
+            break;
+        case M_LANG_VAL_TYPE_BOOL:
+            mln_log(none, "%s, ", val->data.b?"True":"False");
+            break;
+        case M_LANG_VAL_TYPE_REAL:
+            mln_log(none, "%f, ", val->data.f);
+            break;
+        case M_LANG_VAL_TYPE_STRING:
+            mln_log(none, "%S, ", val->data.s);
+            break;
+        case M_LANG_VAL_TYPE_OBJECT:
+            mln_log(none, "OBJECT, ");
+            break;
+        case M_LANG_VAL_TYPE_FUNC:
+            mln_log(none, "FUNCTION, ");
+            break;
+        case M_LANG_VAL_TYPE_ARRAY:
+            mln_lang_print_array(val->data.array);
+            mln_log(none, ", ");
+            break;
+        default:
+            mln_log(none, "<type error>, ");
+            break;
+    }
+    return 0;
 }
 

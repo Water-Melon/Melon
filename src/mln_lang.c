@@ -2862,7 +2862,7 @@ static void __mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg)
     }
     if (ctx->filename == NULL) filename = &nilname;
     filename = ctx->filename;
-    mln_log(error, "%S:%I: %s\n", filename, line, msg);
+    mln_log(none, "%S:%I: %s\n", filename, line, msg);
 }
 
 /*

@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 1.9.2
+Melon Version 2.0.0
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -69,7 +69,7 @@ We can install Melon following these steps:
 
 3.Types
 There are some basic custom types, such as mln_u8_t, etc.
-Their definitions can be found in melon-1.9.2/include/mln_types.h.
+Their definitions can be found in melon/include/mln_types.h.
 
 4.Interfaces
   1) String
@@ -3648,6 +3648,29 @@ Their definitions can be found in melon-1.9.2/include/mln_types.h.
       <68> mln_tcpShutdown(sockfd, mode);
       Shutdown TCP connection.
       'mode' has two values: 'send' and 'recv'.
+
+      <69> mln_udpCreate(host, service);
+      Create an UDP socket.
+      'host' and 'service' are optional arguments. They must be string.
+      If they are given, UDP socket will be bound with the address that is indicated by them.
+      If succeed, a socket file descriptor will be returned, otherwise 'false' returned.
+
+      <70> mln_udpClose(fd);
+      Close an UDP socket.
+
+      <71> mln_udpSend(fd, data, host, service);
+      Send 'data' via the UDP socket indicated by 'fd'.
+      'host' and 'service' must be given to set destination address. They must be string.
+      If succeed, 'true' will be returned, otherwise 'false' returned.
+
+      <72> mln_udpRecv(fd, bufsize, &ip, &port, timeout);
+      Receive remote peer's data via the UDP socket indicated by 'fd'.
+      The last three arguments are optional.
+      'timeout' is an zero or positive integer. If omit, that would be means wait until data arrived.
+      'ip' and 'port' are not input arguments, which means, function will not use their values.
+      But if they are given, function will set their value to be remote peer's ip and port.
+      Return value: If succeed, data will be returned, otherwise 'false' returned. If timed out,
+      'nil' will be returned.
 
 
    H. Function development
