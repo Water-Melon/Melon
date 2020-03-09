@@ -1988,7 +1988,7 @@ static mln_lang_retExp_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
 static void mln_lang_network_udp_send_handler(mln_event_t *ev, int fd, void *data)
 {
     mln_lang_udp_t *udp = (mln_lang_udp_t *)data;
-    int rc = sendto(fd, udp->data->data, udp->data->len, MSG_DONTWAIT|MSG_NOSIGNAL, &(udp->addr), udp->len);
+    int rc = sendto(fd, udp->data->data, udp->data->len, MSG_DONTWAIT, &(udp->addr), udp->len);
     int err = errno;
     mln_string_free(udp->data);
     udp->data = NULL;

@@ -92,6 +92,7 @@ extern int spin_trylock(void *lock);
     \
     ret_attr prefix##_chain_del(type **head, type **tail, type *node) \
     {\
+        if (head == NULL && tail == NULL && node == NULL) return;\
         if (*head == node) {\
             if (*tail == node) {\
                 *head = *tail = NULL;\

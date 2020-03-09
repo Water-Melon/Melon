@@ -21,7 +21,7 @@ char mln_alloc_check_bits[] = {
 MLN_CHAIN_FUNC_DECLARE(mln_chunk_blk, \
                        mln_alloc_blk_t, \
                        static inline void, \
-                       __NONNULL3(1,2,3));
+                       );
 MLN_CHAIN_FUNC_DECLARE(mln_blk, \
                        mln_alloc_blk_t, \
                        static inline void, \
@@ -42,6 +42,7 @@ mln_alloc_t *mln_alloc_init(void)
     if (pool == NULL) return pool;
     mln_alloc_mgr_table_init(pool->mgr_tbl);
     pool->large_used_head = pool->large_used_tail = NULL;
+    mln_chunk_blk_chain_del(NULL, NULL, NULL);/* get rid of warning in Darwin */
     return pool;
 }
 
