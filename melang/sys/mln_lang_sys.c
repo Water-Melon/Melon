@@ -2293,7 +2293,7 @@ static mln_lang_retExp_t *mln_lang_sys_eval_process(mln_lang_ctx_t *ctx)
             }
             break;
         default:
-            mln_lang_errmsg(ctx, "Invalid type of argument2");
+            mln_lang_errmsg(ctx, "Invalid type of argument 2");
             ASSERT(0);
             return NULL;
     }

@@ -1,3 +1,6 @@
+Changes with melon 2.0.1                                          11 Mar 2020
+    *) Added message queue in melang
+
 Changes with melon 2.0.0                                          08 Mar 2020
     *) Added UDP module in melang
     *) Updated print function for array in melang

@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 2.0.0
+Melon Version 2.0.1
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -3671,6 +3671,13 @@ Their definitions can be found in melon/include/mln_types.h.
       But if they are given, function will set their value to be remote peer's ip and port.
       Return value: If succeed, data will be returned, otherwise 'false' returned. If timed out,
       'nil' will be returned.
+
+      <73> mln_msgQueue(qname, msg);
+      This function is used to set or get message.
+      If 'msg' is omit or 'nil', it is used to get message from queue 'qname'.
+      Otherwise set 'msg' in queue 'qname'.
+      'msg' only support integer, boolean, real and string.
+      If no message to get, this function will wait until got a message.
 
 
    H. Function development
