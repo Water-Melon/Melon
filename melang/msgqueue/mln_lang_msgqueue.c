@@ -981,9 +981,8 @@ static void mln_lang_mq_wait_free(mln_lang_mq_wait_t *lmw)
 
 static int mln_lang_mq_wait_cmp(const mln_lang_mq_wait_t *lmw1, const mln_lang_mq_wait_t *lmw2)
 {
-    if (lmw1->timestamp > lmw2->timestamp) return 1;
-    if (lmw1->timestamp == lmw2->timestamp) return 0;
-    return -1;
+    if (lmw1->timestamp < lmw2->timestamp) return 0;
+    return 1;
 }
 
 static void mln_lang_mq_wait_copy(mln_lang_mq_wait_t *lmw1, mln_lang_mq_wait_t *lmw2)
