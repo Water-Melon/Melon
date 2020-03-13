@@ -3672,13 +3672,23 @@ Their definitions can be found in melon/include/mln_types.h.
       Return value: If succeed, data will be returned, otherwise 'false' returned. If timed out,
       'nil' will be returned.
 
-      <73> mln_msgQueue(qname, msg, timeout);
-      This function is used to set or get message.
-      If 'msg' is omit or 'nil', it is used to get message from queue 'qname'.
-      Otherwise set 'msg' in queue 'qname'.
-      'timeout' is only used in getting message. It is an optional argument.
-      It must be a positive integer.
-      'msg' only support integer, boolean, real and string.
+      <73> mln_msgTopicSubscribe(qname);
+      Subscribe topic 'qname' in current script task.
+
+      <74> mln_msgTopicUnsubscribe(qname);
+      Unsubscribe topic 'qname' in current script task.
+
+      <75> mln_msgQueueSend(qname, msg, asTopic);
+      Send 'msg' to message queue 'qname'.
+      'msg' must be an integer, boolean, real number or string.
+      'asTopic' is optional. If omitted, it just send a normal queue message.
+      Normal message will be received by any one of receivers.
+      Topic message will be received by all of receivers who subscribed topic 'qname'.
+      Return value always be 'nil'.
+
+      <76> mln_msgQueueRecv(qname, timeout);
+      Receive a normal or topic message from queue 'qname'.
+      'timeout' is optional. It must be a positive integer.
       If no message arrived and function timed out, 'nil' would be returned.
       Otherwise message returned.
 

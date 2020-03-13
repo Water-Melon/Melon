@@ -1,5 +1,5 @@
 Changes with melon 2.0.1                                          11 Mar 2020
-    *) Added message queue in melang
+    *) Added message queue and topic in melang
     *) Fixed melang and fib-heap bugs
 
 Changes with melon 2.0.0                                          08 Mar 2020

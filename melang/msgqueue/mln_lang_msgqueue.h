@@ -8,8 +8,6 @@
 #include "mln_fheap.h"
 #include "mln_lang.h"
 
-#define __DEBUG__
-
 typedef struct mln_lang_mq_s mln_lang_mq_t;
 
 typedef struct mln_lang_mq_msg_s {
@@ -46,7 +44,15 @@ struct mln_lang_mq_s {
 
 typedef struct mln_lang_ctx_mq_s {
     mln_lang_mq_wait_t            *mq_wait;
+    mln_rbtree_t                  *topics;
 } mln_lang_ctx_mq_t;
+
+typedef struct mln_lang_ctx_mq_topic_s {
+    mln_string_t                  *topic_name;
+    mln_lang_ctx_t                *ctx;
+    mln_lang_mq_msg_t             *msg_head;
+    mln_lang_mq_msg_t             *msg_tail;
+} mln_lang_ctx_mq_topic_t;
 
 extern int mln_lang_msgqueue(mln_lang_ctx_t *ctx);
 

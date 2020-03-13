@@ -16,11 +16,20 @@
 
 static int mln_lang_msgqueue_resource_register(mln_lang_ctx_t *ctx);
 static void mln_lang_msgqueue_resource_cancel(mln_lang_ctx_t *ctx);
-static int mln_lang_msgqueue_msgqueue(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_msgqueue_msgqueue_process(mln_lang_ctx_t *ctx);
+static int mln_lang_msgqueue_mq_send(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_lang_msgqueue_mq_send_process(mln_lang_ctx_t *ctx);
+static int mln_lang_mq_msg_broadcast_ctx(mln_lang_ctx_t *ctx, mln_string_t *qname, int type, void *data);
+static int mln_lang_msgqueue_mq_recv(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_lang_msgqueue_mq_recv_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_lang_mq_msg_get(mln_lang_ctx_t *ctx, mln_string_t *qname, mln_s64_t timeout);
+static int mln_lang_mq_msg_subscribe_get(mln_lang_ctx_t *ctx, mln_string_t *qname, mln_lang_retExp_t **retExp);
 static void mln_lang_msgqueue_timeout_handler(mln_event_t *ev, void *data);
 static mln_lang_retExp_t *mln_lang_mq_msg_set(mln_lang_ctx_t *ctx, mln_string_t *qname, int type, void *data);
+static mln_lang_retExp_t *mln_lang_mq_msg_broadcast(mln_lang_ctx_t *ctx, mln_string_t *qname, int type, void *data);
+static int mln_lang_msgqueue_topic_subscribe(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_lang_msgqueue_topic_subscribe_process(mln_lang_ctx_t *ctx);
+static int mln_lang_msgqueue_topic_unsubscribe(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_lang_msgqueue_topic_unsubscribe_process(mln_lang_ctx_t *ctx);
 /*components*/
 MLN_CHAIN_FUNC_DECLARE(mln_lang_mq_msg, mln_lang_mq_msg_t, static inline void, __NONNULL3(1,2,3));
 MLN_CHAIN_FUNC_DECLARE(mln_lang_mq_wait, mln_lang_mq_wait_t, static inline void, __NONNULL3(1,2,3));
@@ -38,6 +47,9 @@ static void mln_lang_ctx_mq_free(mln_lang_ctx_mq_t *lcm);
 static mln_lang_mq_t *mln_lang_mq_fetch(mln_lang_t *lang, mln_string_t *qname);
 static void mln_lang_ctx_mq_join(mln_lang_ctx_t *ctx, mln_lang_mq_wait_t *wait);
 static void mln_lang_ctx_mq_remove(mln_lang_ctx_t *ctx);
+static mln_lang_ctx_mq_topic_t *mln_lang_ctx_mq_topic_new(mln_lang_ctx_t *ctx, mln_string_t *name);
+static void mln_lang_ctx_mq_topic_free(mln_lang_ctx_mq_topic_t *lcmt);
+static int mln_lang_ctx_mq_topic_cmp(const mln_lang_ctx_mq_topic_t *lcmt1, const mln_lang_ctx_mq_topic_t *lcmt2);
 
 mln_lang_mq_wait_t mq_wait_min = {
     NULL, NULL, NULL, 0, 0, 0, NULL, NULL
@@ -48,7 +60,19 @@ int mln_lang_msgqueue(mln_lang_ctx_t *ctx)
     if (mln_lang_msgqueue_resource_register(ctx) < 0) {
         return -1;
     }
-    if (mln_lang_msgqueue_msgqueue(ctx) < 0) {
+    if (mln_lang_msgqueue_mq_send(ctx) < 0) {
+        mln_lang_msgqueue_resource_cancel(ctx);
+        return -1;
+    }
+    if (mln_lang_msgqueue_mq_recv(ctx) < 0) {
+        mln_lang_msgqueue_resource_cancel(ctx);
+        return -1;
+    }
+    if (mln_lang_msgqueue_topic_subscribe(ctx) < 0) {
+        mln_lang_msgqueue_resource_cancel(ctx);
+        return -1;
+    }
+    if (mln_lang_msgqueue_topic_unsubscribe(ctx) < 0) {
         mln_lang_msgqueue_resource_cancel(ctx);
         return -1;
     }
@@ -122,15 +146,15 @@ static void mln_lang_msgqueue_resource_cancel(mln_lang_ctx_t *ctx)
     }
 }
 
-static int mln_lang_msgqueue_msgqueue(mln_lang_ctx_t *ctx)
+static int mln_lang_msgqueue_mq_send(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t v1 = mln_string("qname"), v2 = mln_string("msg"), v3 = mln_string("timeout");
-    mln_string_t funcname = mln_string("mln_msgQueue");
+    mln_string_t v1 = mln_string("qname"), v2 = mln_string("msg"), v3 = mln_string("asTopic");
+    mln_string_t funcname = mln_string("mln_msgQueueSend");
 
-    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msgqueue_msgqueue_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msgqueue_mq_send_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -193,18 +217,17 @@ static int mln_lang_msgqueue_msgqueue(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_msgqueue_msgqueue_process(mln_lang_ctx_t *ctx)
+static mln_lang_retExp_t *mln_lang_msgqueue_mq_send_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_retExp_t *retExp = NULL;
     mln_string_t v1 = mln_string("qname");
     mln_string_t v2 = mln_string("msg");
-    mln_string_t v3 = mln_string("timeout");
+    mln_string_t v3 = mln_string("asTopic");
     mln_string_t *qname;
     mln_lang_symbolNode_t *sym;
     mln_lang_val_t *val;
     mln_s32_t type, type2;
     mln_u8ptr_t data;
-    mln_s64_t timeout;
+    mln_u8_t broadcast;
     /*arg1*/
     if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -229,9 +252,6 @@ static mln_lang_retExp_t *mln_lang_msgqueue_msgqueue_process(mln_lang_ctx_t *ctx
     val = mln_lang_var_getVal(sym->data.var);
     type = mln_lang_var_getValType(sym->data.var);
     switch (type) {
-        case M_LANG_VAL_TYPE_NIL:
-            data = NULL;
-            break;
         case M_LANG_VAL_TYPE_INT:
             data = (mln_u8ptr_t)&(val->data.i);
             break;
@@ -262,20 +282,170 @@ static mln_lang_retExp_t *mln_lang_msgqueue_msgqueue_process(mln_lang_ctx_t *ctx
     val = mln_lang_var_getVal(sym->data.var);
     type2 = mln_lang_var_getValType(sym->data.var);
     if (type2 == M_LANG_VAL_TYPE_NIL) {
+        broadcast = 0;
+    } else if (type2 == M_LANG_VAL_TYPE_BOOL) {
+        broadcast = val->data.b;
+    } else {
+        mln_lang_errmsg(ctx, "Invalid type of argument 3.");
+        return NULL;
+    }
+
+    if (broadcast) {
+        return mln_lang_mq_msg_broadcast(ctx, qname, type, data);
+    }
+    return mln_lang_mq_msg_set(ctx, qname, type, data);
+}
+
+static int mln_lang_msgqueue_mq_recv(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t v1 = mln_string("qname"), v2 = mln_string("timeout");
+    mln_string_t funcname = mln_string("mln_msgQueueRecv");
+
+    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msgqueue_mq_recv_process, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &v2, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+
+    return 0;
+}
+
+static mln_lang_retExp_t *mln_lang_msgqueue_mq_recv_process(mln_lang_ctx_t *ctx)
+{
+    mln_string_t v1 = mln_string("qname");
+    mln_string_t v2 = mln_string("timeout");
+    mln_string_t *qname;
+    mln_lang_symbolNode_t *sym;
+    mln_lang_val_t *val;
+    mln_s32_t type;
+    mln_s64_t timeout;
+    mln_lang_retExp_t *retExp;
+    int rc;
+
+    /*arg1*/
+    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 1 missing.");
+        return NULL;
+    }
+    if (sym->type != M_LANG_SYMBOL_VAR || mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+    qname = mln_lang_var_getVal(sym->data.var)->data.s;
+    /*arg2*/
+    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 3 missing.");
+        return NULL;
+    }
+    if (sym->type != M_LANG_SYMBOL_VAR) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 3.");
+        return NULL;
+    }
+    val = mln_lang_var_getVal(sym->data.var);
+    type = mln_lang_var_getValType(sym->data.var);
+    if (type == M_LANG_VAL_TYPE_NIL) {
         timeout = -1;
-    } else if (type2 == M_LANG_VAL_TYPE_INT && val->data.i > 0) {
+    } else if (type == M_LANG_VAL_TYPE_INT && val->data.i > 0) {
         timeout = val->data.i;
     } else {
         mln_lang_errmsg(ctx, "Invalid type of argument 3.");
         return NULL;
     }
 
-    if (data == NULL) {
-        retExp = mln_lang_mq_msg_get(ctx, qname, timeout);
-    } else {
-        retExp = mln_lang_mq_msg_set(ctx, qname, type, data);
+    rc = mln_lang_mq_msg_subscribe_get(ctx, qname, &retExp);
+    if (!rc) return retExp;
+    else if (rc < 0) return NULL;
+    return mln_lang_mq_msg_get(ctx, qname, timeout);
+}
+
+static int mln_lang_mq_msg_subscribe_get(mln_lang_ctx_t *ctx, mln_string_t *qname, mln_lang_retExp_t **retExp)
+{
+    mln_lang_ctx_mq_topic_t tmp, *topic;
+    mln_rbtree_node_t *rn;
+    mln_lang_mq_msg_t *msg;
+    mln_lang_ctx_mq_t *lcm;
+
+    lcm  = mln_lang_ctx_resource_fetch(ctx, "mq");
+    ASSERT(lcm != NULL);
+    tmp.topic_name = qname;
+    rn = mln_rbtree_search(lcm->topics, lcm->topics->root, &tmp);
+    if (mln_rbtree_null(rn, lcm->topics)) return 1;
+
+    topic = (mln_lang_ctx_mq_topic_t *)(rn->data);
+    if ((msg = topic->msg_head) == NULL) return 1;
+
+    switch (msg->type) {
+        case M_LANG_VAL_TYPE_INT:
+            *retExp = mln_lang_retExp_createTmpInt(ctx->pool, msg->data.i, NULL);
+            break;
+        case M_LANG_VAL_TYPE_BOOL:
+            *retExp = mln_lang_retExp_createTmpBool(ctx->pool, msg->data.b, NULL);
+            break;
+        case M_LANG_VAL_TYPE_REAL:
+            *retExp = mln_lang_retExp_createTmpReal(ctx->pool, msg->data.f, NULL);
+            break;
+        case M_LANG_VAL_TYPE_STRING:
+            *retExp = mln_lang_retExp_createTmpString(ctx->pool, msg->data.s, NULL);
+            break;
+        default:
+            mln_lang_errmsg(ctx, "Invalid type.");
+            ASSERT(0);
+            abort();
     }
-    return retExp;
+    if (retExp == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    mln_lang_mq_msg_chain_del(&(topic->msg_head), &(topic->msg_tail), msg);
+    mln_lang_mq_msg_free(msg);
+
+    return 0;
 }
 
 static mln_lang_retExp_t *mln_lang_mq_msg_get(mln_lang_ctx_t *ctx, mln_string_t *qname, mln_s64_t timeout)
@@ -400,6 +570,90 @@ static void mln_lang_msgqueue_timeout_handler(mln_event_t *ev, void *data)
     }
 }
 
+static mln_lang_retExp_t *mln_lang_mq_msg_broadcast(mln_lang_ctx_t *ctx, mln_string_t *qname, int type, void *data)
+{
+    mln_lang_ctx_t *c;
+    mln_lang_retExp_t *retExp;
+
+    for (c = ctx->lang->run_head; c != NULL; c = c->next) {
+        if (mln_lang_mq_msg_broadcast_ctx(c, qname, type, data) < 0) {
+            return NULL;
+        }
+    }
+    for (c = ctx->lang->blocked_head; c != NULL; c = c->next) {
+        if (mln_lang_mq_msg_broadcast_ctx(c, qname, type, data) < 0) {
+            return NULL;
+        }
+    }
+    for (c = ctx->lang->wait_head; c != NULL; c = c->next) {
+        if (mln_lang_mq_msg_broadcast_ctx(c, qname, type, data) < 0) {
+            return NULL;
+        }
+    }
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return retExp;
+}
+
+static int mln_lang_mq_msg_broadcast_ctx(mln_lang_ctx_t *ctx, mln_string_t *qname, int type, void *data)
+{
+    mln_lang_ctx_mq_topic_t tmp, *topic;
+    mln_rbtree_node_t *rn;
+    mln_lang_mq_msg_t *msg;
+    mln_lang_ctx_mq_t *lcm;
+
+    lcm  = mln_lang_ctx_resource_fetch(ctx, "mq");
+    ASSERT(lcm != NULL);
+    tmp.topic_name = qname;
+    rn = mln_rbtree_search(lcm->topics, lcm->topics->root, &tmp);
+    if (mln_rbtree_null(rn, lcm->topics)) return 0;
+
+    topic = (mln_lang_ctx_mq_topic_t *)(rn->data);
+    if ((msg = mln_lang_mq_msg_new(ctx->lang, type, data)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    mln_lang_mq_msg_chain_add(&(topic->msg_head), &(topic->msg_tail), msg);
+
+    if (lcm->mq_wait != NULL) {
+        mln_lang_retExp_t *retExp;
+        mln_lang_mq_wait_t *wait = lcm->mq_wait;
+        mln_lang_mq_t *mq = wait->mq;
+        switch (msg->type) {
+            case M_LANG_VAL_TYPE_INT:
+                retExp = mln_lang_retExp_createTmpInt(ctx->pool, msg->data.i, NULL);
+                break;
+            case M_LANG_VAL_TYPE_BOOL:
+                retExp = mln_lang_retExp_createTmpBool(ctx->pool, msg->data.b, NULL);
+                break;
+            case M_LANG_VAL_TYPE_REAL:
+                retExp = mln_lang_retExp_createTmpReal(ctx->pool, msg->data.f, NULL);
+                break;
+            case M_LANG_VAL_TYPE_STRING:
+                retExp = mln_lang_retExp_createTmpString(ctx->pool, msg->data.s, NULL);
+                break;
+            default:
+                mln_lang_errmsg(ctx, "Invalid type.");
+                ASSERT(0);
+                abort();
+        }
+        if (retExp == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+        mln_lang_ctx_setRetExp(ctx, retExp);
+        mln_lang_mq_msg_chain_del(&(topic->msg_head), &(topic->msg_tail), msg);
+        mln_lang_mq_msg_free(msg);
+        mln_lang_ctx_mq_remove(ctx);
+        mln_lang_ctx_continue(ctx);
+        mln_lang_mq_wait_chain_del(&(mq->wait_head), &(mq->wait_tail), wait);
+        mln_lang_mq_wait_free(wait);
+    }
+    return 0;
+}
+
 static mln_lang_retExp_t *mln_lang_mq_msg_set(mln_lang_ctx_t *ctx, mln_string_t *qname, int type, void *data)
 {
     mln_lang_t *lang = ctx->lang;
@@ -468,6 +722,180 @@ static mln_lang_retExp_t *mln_lang_mq_msg_set(mln_lang_ctx_t *ctx, mln_string_t 
             mln_lang_mq_wait_free(wait);
         }
     }
+    return retExp;
+}
+
+static int mln_lang_msgqueue_topic_subscribe(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t v1 = mln_string("qname");
+    mln_string_t funcname = mln_string("mln_msgTopicSubscribe");
+
+    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msgqueue_topic_subscribe_process, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+
+    return 0;
+}
+
+static mln_lang_retExp_t *mln_lang_msgqueue_topic_subscribe_process(mln_lang_ctx_t *ctx)
+{
+    mln_lang_ctx_mq_t *lcm;
+    mln_lang_retExp_t *retExp = NULL;
+    mln_string_t v1 = mln_string("qname");
+    mln_string_t *qname;
+    mln_lang_symbolNode_t *sym;
+    mln_rbtree_node_t *rn;
+    mln_lang_ctx_mq_topic_t tmp, *topic;
+
+    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 1 missing.");
+        return NULL;
+    }
+    if (sym->type != M_LANG_SYMBOL_VAR || mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+    qname = mln_lang_var_getVal(sym->data.var)->data.s;
+
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    lcm  = mln_lang_ctx_resource_fetch(ctx, "mq");
+    ASSERT(lcm != NULL);
+    tmp.topic_name = qname;
+    rn = mln_rbtree_search(lcm->topics, lcm->topics->root, &tmp);
+    if (mln_rbtree_null(rn, lcm->topics)) {
+        if ((topic = mln_lang_ctx_mq_topic_new(ctx, qname)) == NULL) {
+            mln_lang_retExp_free(retExp);
+            mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        if ((rn = mln_rbtree_node_new(lcm->topics, topic)) == NULL) {
+            mln_lang_ctx_mq_topic_free(topic);
+            mln_lang_retExp_free(retExp);
+            mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        mln_rbtree_insert(lcm->topics, rn);
+    }
+
+    return retExp;
+}
+
+static int mln_lang_msgqueue_topic_unsubscribe(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t v1 = mln_string("qname");
+    mln_string_t funcname = mln_string("mln_msgTopicUnsubscribe");
+
+    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msgqueue_topic_unsubscribe_process, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+
+    return 0;
+}
+
+static mln_lang_retExp_t *mln_lang_msgqueue_topic_unsubscribe_process(mln_lang_ctx_t *ctx)
+{
+    mln_lang_ctx_mq_t *lcm;
+    mln_lang_retExp_t *retExp = NULL;
+    mln_string_t v1 = mln_string("qname");
+    mln_string_t *qname;
+    mln_lang_symbolNode_t *sym;
+    mln_rbtree_node_t *rn;
+    mln_lang_ctx_mq_topic_t tmp;
+
+    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 1 missing.");
+        return NULL;
+    }
+    if (sym->type != M_LANG_SYMBOL_VAR || mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+    qname = mln_lang_var_getVal(sym->data.var)->data.s;
+
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    lcm  = mln_lang_ctx_resource_fetch(ctx, "mq");
+    ASSERT(lcm != NULL);
+    tmp.topic_name = qname;
+    rn = mln_rbtree_search(lcm->topics, lcm->topics->root, &tmp);
+    if (!mln_rbtree_null(rn, lcm->topics)) {
+        mln_rbtree_delete(lcm->topics, rn);
+        mln_rbtree_node_free(lcm->topics, rn);
+    }
+
     return retExp;
 }
 
@@ -603,16 +1031,24 @@ static void mln_lang_mq_free(mln_lang_mq_t *lm)
 static mln_lang_ctx_mq_t *mln_lang_ctx_mq_new(mln_lang_ctx_t *ctx)
 {
     mln_lang_ctx_mq_t *lcm;
+    struct mln_rbtree_attr rbattr;
     if ((lcm = (mln_lang_ctx_mq_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_ctx_mq_t))) == NULL) {
         return NULL;
     }
     lcm->mq_wait = NULL;
+    rbattr.cmp = (rbtree_cmp)mln_lang_ctx_mq_topic_cmp;
+    rbattr.data_free = (rbtree_free_data)mln_lang_ctx_mq_topic_free;
+    if ((lcm->topics = mln_rbtree_init(&rbattr)) == NULL) {
+        mln_alloc_free(lcm);
+        return NULL;
+    }
     return lcm;
 }
 
 static void mln_lang_ctx_mq_free(mln_lang_ctx_mq_t *lcm)
 {
     if (lcm == NULL) return;
+    if (lcm->topics != NULL) mln_rbtree_destroy(lcm->topics);
     if (lcm->mq_wait != NULL) {
         lcm->mq_wait->ctx = NULL;
         mln_lang_mq_wait_chain_del(&(lcm->mq_wait->mq->wait_head), &(lcm->mq_wait->mq->wait_tail), lcm->mq_wait);
@@ -647,6 +1083,37 @@ static mln_lang_mq_t *mln_lang_mq_fetch(mln_lang_t *lang, mln_string_t *qname)
     return (mln_lang_mq_t *)(rn->data);
 }
 
+static mln_lang_ctx_mq_topic_t *mln_lang_ctx_mq_topic_new(mln_lang_ctx_t *ctx, mln_string_t *name)
+{
+    mln_lang_ctx_mq_topic_t *lcmt;
+    if ((lcmt = (mln_lang_ctx_mq_topic_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_ctx_mq_topic_t))) == NULL) {
+        return NULL;
+    }
+    if ((lcmt->topic_name = mln_string_pool_dup(ctx->pool, name)) == NULL) {
+        mln_alloc_free(lcmt);
+        return NULL;
+    }
+    lcmt->ctx = ctx;
+    lcmt->msg_head = lcmt->msg_tail = NULL;
+    return lcmt;
+}
+
+static void mln_lang_ctx_mq_topic_free(mln_lang_ctx_mq_topic_t *lcmt)
+{
+    mln_lang_mq_msg_t *msg;
+    if (lcmt == NULL) return;
+    if (lcmt->topic_name != NULL) mln_string_pool_free(lcmt->topic_name);
+    while ((msg = lcmt->msg_head) != NULL) {
+        mln_lang_mq_msg_chain_del(&(lcmt->msg_head), &(lcmt->msg_tail), msg);
+        mln_lang_mq_msg_free(msg);
+    }
+    mln_alloc_free(lcmt);
+}
+
+static int mln_lang_ctx_mq_topic_cmp(const mln_lang_ctx_mq_topic_t *lcmt1, const mln_lang_ctx_mq_topic_t *lcmt2)
+{
+    return mln_string_strcmp(lcmt1->topic_name, lcmt2->topic_name);
+}
 
 MLN_CHAIN_FUNC_DEFINE(mln_lang_mq_msg, mln_lang_mq_msg_t, static inline void, prev, next);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_mq_wait, mln_lang_mq_wait_t, static inline void, prev, next);
