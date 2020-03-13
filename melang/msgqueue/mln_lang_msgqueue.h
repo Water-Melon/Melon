@@ -5,7 +5,10 @@
 #ifndef __MLN_LANG_MSGQUEUE_H
 #define __MLN_LANG_MSGQUEUE_H
 
+#include "mln_fheap.h"
 #include "mln_lang.h"
+
+#define __DEBUG__
 
 typedef struct mln_lang_mq_s mln_lang_mq_t;
 
@@ -25,6 +28,10 @@ typedef struct mln_lang_mq_msg_s {
 typedef struct mln_lang_mq_wait_s {
     mln_lang_ctx_t                *ctx;
     mln_lang_mq_t                 *mq;
+    mln_fheap_node_t              *fnode;
+    mln_u64_t                      timestamp;
+    mln_u64_t                      in_heap:1;
+    mln_u64_t                      padding:63;
     struct mln_lang_mq_wait_s     *prev;
     struct mln_lang_mq_wait_s     *next;
 } mln_lang_mq_wait_t;

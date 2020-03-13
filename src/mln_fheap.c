@@ -51,7 +51,7 @@ void mln_fheap_insert(mln_fheap_t *fh, mln_fheap_node_t *fn)
     if (fh->min == NULL) {
         fh->min = fn;
     } else {
-        if (!fh->cmp(fn->key, fh->min->key))
+        if (fh->cmp(fn->key, fh->min->key) < 0)
             fh->min = fn;
     }
     ++(fh->num);
@@ -97,7 +97,7 @@ mln_fheap_consolidate(mln_fheap_t *fh)
         d = x->degree;
         while (array[d] != NULL) {
             y = array[d];
-            if (!fh->cmp(y->key, x->key)) {
+            if (fh->cmp(x->key, y->key) > 0) {
                 tmp = x;
                 x = y;
                 y = tmp;
@@ -120,7 +120,7 @@ mln_fheap_consolidate(mln_fheap_t *fh)
         if (fh->min == NULL) {
             fh->min = array[i];
         } else {
-            if (!fh->cmp(array[i]->key, fh->min->key))
+            if (fh->cmp(array[i]->key, fh->min->key) < 0)
                 fh->min = array[i];
         }
     }
@@ -139,14 +139,14 @@ mln_fheap_link(mln_fheap_t *fh, mln_fheap_node_t *y, mln_fheap_node_t *x)
 
 int mln_fheap_decrease_key(mln_fheap_t *fh, mln_fheap_node_t *node, void *key)
 {
-    if (!fh->cmp(node->key, key)) return -1;
+    if (fh->cmp(node->key, key) < 0) return -1;
     fh->copy(node->key, key);
     mln_fheap_node_t *y = node->parent;
-    if (y != NULL && !fh->cmp(node->key, y->key)) {
+    if (y != NULL && fh->cmp(node->key, y->key) < 0) {
         mln_fheap_cut(fh, node, y);
         mln_fheap_cascading_cut(fh, y);
     }
-    if (node != fh->min && !fh->cmp(node->key, fh->min->key))
+    if (node != fh->min && fh->cmp(node->key, fh->min->key) < 0)
         fh->min = node;
     return 0;
 }

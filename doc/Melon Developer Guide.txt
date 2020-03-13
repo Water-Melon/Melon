@@ -3672,12 +3672,15 @@ Their definitions can be found in melon/include/mln_types.h.
       Return value: If succeed, data will be returned, otherwise 'false' returned. If timed out,
       'nil' will be returned.
 
-      <73> mln_msgQueue(qname, msg);
+      <73> mln_msgQueue(qname, msg, timeout);
       This function is used to set or get message.
       If 'msg' is omit or 'nil', it is used to get message from queue 'qname'.
       Otherwise set 'msg' in queue 'qname'.
+      'timeout' is only used in getting message. It is an optional argument.
+      It must be a positive integer.
       'msg' only support integer, boolean, real and string.
-      If no message to get, this function will wait until got a message.
+      If no message arrived and function timed out, 'nil' would be returned.
+      Otherwise message returned.
 
 
    H. Function development

@@ -358,6 +358,8 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
         mln_lang_free(lang);
         return NULL;
     }
+    lang->wait = 0;
+    lang->quit = 0;
     if ((lang->shift_table = mln_lang_parserGenerate()) == NULL) {
         mln_rbtree_destroy(lang->resource_set);
         mln_lang_free(lang);
@@ -369,6 +371,10 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
 void mln_lang_free(mln_lang_t *lang)
 {
     if (lang == NULL) return;
+    if (lang->wait) {
+        lang->quit = 1;
+        return;
+    }
     mln_lang_ctx_t *ctx;
     while ((ctx = lang->run_head) != NULL) {
         mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), ctx);
