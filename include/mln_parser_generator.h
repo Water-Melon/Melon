@@ -976,7 +976,8 @@ SCOPE int PREFIX_NAME##_err_process(struct mln_sys_parse_attr *spattr, int opr)\
 {\
     int ctype, max = spattr->tbl->type_val+1;\
     mln_factor_t *f;\
-    mln_uauto_t pos, nr_element = mln_queue_element(spattr->p->cur_queue);\
+    mln_sauto_t pos;\
+    mln_uauto_t nr_element = mln_queue_element(spattr->p->cur_queue);\
     if (!nr_element) return -1;\
     for (pos = nr_element-1; pos >= 0; --pos) {\
         for (ctype = 0; ctype < max; ++ctype) {\

@@ -2269,7 +2269,7 @@ static mln_lang_retExp_t *mln_lang_sys_eval_process(mln_lang_ctx_t *ctx)
     }
     /*create job ctx*/
     if ((newctx = mln_lang_job_new(ctx->lang, job_type, val1->data.s, NULL, NULL)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_errmsg(ctx, "Eval failed..");
         return NULL;
     }
     switch (type) {
