@@ -16,7 +16,7 @@
 #include "mln_connection.h"
 
 #define M_LANG_MAX_OPENFILE      67
-#define M_LANG_DEFAULT_STEP      1
+#define M_LANG_DEFAULT_STEP      8
 #define M_LANG_HEARTBEAT_US      50000
 
 #define M_LANG_VAL_TYPE_NIL      0
@@ -66,7 +66,6 @@ struct mln_lang_s {
     mln_lang_ctx_t                  *ctx_cur;
     int                              fd_notInUsed;
     int                              fd_signal;
-    mln_u64_t                        lastTime;
     mln_rbtree_t                    *resource_set;
     mln_u64_t                        wait:63;
     mln_u64_t                        quit:1;

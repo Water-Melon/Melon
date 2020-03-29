@@ -351,7 +351,6 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
     lang->fd_notInUsed = fds[0];
     lang->fd_signal = fds[1];
     gettimeofday(&tv, NULL);
-    lang->lastTime = tv.tv_sec*1000000 + tv.tv_usec;
     rbattr.cmp = (rbtree_cmp)mln_lang_resource_cmp;
     rbattr.data_free = (rbtree_free_data)mln_lang_resource_free_handler;
     if ((lang->resource_set = mln_rbtree_init(&rbattr)) == NULL) {
@@ -422,10 +421,6 @@ static inline int __mln_lang_run(mln_lang_t *lang)
             if (lang->ctx_cur->ref || lang->ctx_cur->step <= 0) {
                 lang->ctx_cur = NULL;
             } else {
-                gettimeofday(&tv, NULL);
-                mln_u64_t now = tv.tv_sec*1000000 + tv.tv_usec;
-                if (now < lang->lastTime + M_LANG_HEARTBEAT_US) goto ok;
-                lang->lastTime = now;
                 if (--(lang->ctx_cur->step) > 0) {
                     goto ok;
                 }
@@ -436,7 +431,6 @@ static inline int __mln_lang_run(mln_lang_t *lang)
         }
     }
     gettimeofday(&tv, NULL);
-    lang->lastTime = tv.tv_sec*1000000 + tv.tv_usec;
     if (lang->run_head == NULL && lang->blocked_head != NULL) {
         mln_lang_ctx_t *scan = lang->blocked_head;
         for (; scan != NULL; scan = scan->next) {
