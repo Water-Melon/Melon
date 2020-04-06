@@ -1,3 +1,10 @@
+
+/*
+ * Copyright (C) Niklaus F.Schen.
+ */
+#ifndef __MLN_CLASS_H
+#define __MLN_CLASS_H
+
 #include <stdlib.h>
 
 #define class(type, constructor, destructor, properties, ...); \
@@ -20,6 +27,8 @@
         type##_destroy(ptr);\
         free(ptr);\
     }
+
+#endif
 
 /*
  * Example
