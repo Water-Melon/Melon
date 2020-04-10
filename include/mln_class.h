@@ -12,7 +12,7 @@
     __VA_ARGS__ \
     struct type properties;\
     int type##_init(type *this) constructor \
-    void type##_destroy(type *this) destructor \
+    int type##_destroy(type *this) destructor \
     type *new##type() {\
         type *ptr = (type *)malloc(sizeof(*ptr));\
         if (ptr == NULL) return NULL;\
@@ -24,8 +24,7 @@
     }\
     void del##type(type *ptr) {\
         if (ptr == NULL) return;\
-        type##_destroy(ptr);\
-        free(ptr);\
+        if (!type##_destroy(ptr)) free(ptr);\
     }
 
 #endif
@@ -45,6 +44,7 @@
  *     return 0;
  * },{
  *     printf("destructor\n");
+ *     return 0;
  * },{
  *     int a;
  *     method method;
