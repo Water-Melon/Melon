@@ -203,8 +203,8 @@ static int mln_lang_file_addOpen(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set
 
 static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
 {
-    mln_s32_t type, op;
-    mln_lang_val_t *val1, *val2, *val3, *val;
+    mln_s32_t type, op, prio;
+    mln_lang_val_t *val1, *val2, *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v1 = mln_string("path");
     mln_string_t v2 = mln_string("op");
@@ -280,8 +280,11 @@ static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     type = mln_lang_var_getValType(sym->data.var);
-    val3 = sym->data.var->val;
-    if (type != M_LANG_VAL_TYPE_INT) {
+    if (type == M_LANG_VAL_TYPE_NIL) {
+        prio = 0644;
+    } else if (type == M_LANG_VAL_TYPE_INT) {
+        prio = sym->data.var->val->data.i;
+    } else {
         mln_lang_errmsg(ctx, "'prio' demand integer.");
         return NULL;
     }
@@ -303,7 +306,7 @@ static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     memset(&mode, 0, sizeof(mode));
-    mln_lang_file_open_getPrio(val3->data.i, &mode);
+    mln_lang_file_open_getPrio(prio, &mode);
     val->data.i = open(path, op, mode);
     if (mln_lang_file_setErrno(ctx, errno) < 0) {
         free(path);

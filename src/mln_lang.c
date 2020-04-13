@@ -218,6 +218,8 @@ static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx);
 static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
                                                mln_lang_stack_node_t *node, \
                                                mln_lang_funccall_val_t *funccall);
+static inline int mln_lang_funcall_run_add_args(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *arg);
+static inline mln_lang_array_t *mln_lang_funccall_run_build_args(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_spec(mln_lang_ctx_t *ctx);
 static inline int mln_lang_stack_handler_spec_new(mln_lang_ctx_t *ctx, mln_string_t *name);
 static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx);
@@ -5146,6 +5148,7 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
     mln_string_t _this = mln_string("this");
     mln_s32_t type;
     mln_string_t *funcname = funccall->name;
+    mln_lang_array_t *args_array;
 
     if (prototype == NULL) {
         mln_lang_symbolNode_t *sym;
@@ -5224,6 +5227,10 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
             return -1;
         }
     }
+    if ((args_array = mln_lang_funccall_run_build_args(ctx)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
     for (scan = prototype->args_head, var = funccall->args_head; \
          scan != NULL; \
          scan = scan->next)
@@ -5246,6 +5253,16 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
         }
         if (__mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, newvar) < 0) {
             __mln_lang_var_free(newvar);
+            return -1;
+        }
+        if (mln_lang_funcall_run_add_args(ctx, args_array, newvar) < 0) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+    }
+    for (; var != NULL; var = var->next) {
+        if (mln_lang_funcall_run_add_args(ctx, args_array, var) < 0) {
+            __mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
     }
@@ -5274,6 +5291,43 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
         }
     }
     return 0;
+}
+
+static inline int mln_lang_funcall_run_add_args(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *arg)
+{
+    mln_lang_var_t *var;
+    if ((var = __mln_lang_array_getAndNew(ctx, array, NULL)) == NULL) {
+        return -1;
+    }
+    if (__mln_lang_var_setValue(ctx, var, arg) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+static inline mln_lang_array_t *mln_lang_funccall_run_build_args(mln_lang_ctx_t *ctx)
+{
+    mln_string_t name = mln_string("args");
+    mln_lang_array_t *array;
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+
+    if ((array = __mln_lang_array_new(ctx)) == NULL) {
+        return NULL;
+    }
+    if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_ARRAY, array)) == NULL) {
+        __mln_lang_array_free(array);
+        return NULL;
+    }
+    if ((var = __mln_lang_var_new(ctx->pool, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        __mln_lang_val_free(val);
+        return NULL;
+    }
+    if (__mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        __mln_lang_var_free(var);
+        return NULL;
+    }
+    return array;
 }
 
 static void mln_lang_stack_handler_spec(mln_lang_ctx_t *ctx)

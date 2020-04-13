@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 2.0.1
+Melon Version 2.0.2
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -3205,6 +3205,14 @@ Their definitions can be found in melon/include/mln_types.h.
              b = 'a';
              b();
 
+      <VI> Variable arguments
+          e.g.
+            @foo ()
+            {
+                @mln_print(args);
+            }
+            foo('hello', 1, ['world', 2]); //output [hello, 1, [world, 2, ], ]
+
    D. Set
       <I>   Definition
           e.g.
@@ -3375,7 +3383,8 @@ Their definitions can be found in melon/include/mln_types.h.
           };
       'open' -- 'op' is string type that indicates the operation including Read, Write, Append.
                 e.g.   'rwa', 'r', 'w', 'a', 'ra', 'rw'.
-                'prio' is an integer that indicates the file access authority, e.g. 0777.
+                'prio' is an integer that indicates the file access authority, e.g. 0777. This
+                is an optional argument.
                 If open failed, 'false' will be returned, and can get error message via calling
                 'errmsg()'.
       'lseek' -- 'offset' is an integer and 'whence' is a string.
