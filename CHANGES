@@ -1,5 +1,6 @@
 Changes with melon 2.0.2                                          13 Apr 2020
     *) Optimized file function in melang
+    *) Added functions for operating directoies in melang
     *) Supported variable arguments in melang
     *) Updated License
 

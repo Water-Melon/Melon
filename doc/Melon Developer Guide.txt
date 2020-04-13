@@ -3401,64 +3401,77 @@ Their definitions can be found in melon/include/mln_types.h.
       'errmsg' -- Get and return error string.
       'size' -- Get the file size in bytes.
 
-      <17> mln_aes(data, key, bits, op);
+      <17> mln_mkdir(path, mode);
+      Setup a directory with mode 'mode'. 'mode' is an integer, such as, 0755.
+      It's a optional argument.
+      If succeed, 'true' will be returned. Otherwise, 'false' returned.
+
+      <18> mln_remove(path);
+      Remove a file or diectory, no matter whether sub-file or sub-directory exists.
+      If succeed, 'true' will be returned. Otherwise, 'false' returned.
+
+      <19> mln_exist(path);
+      Test whether 'path' exists or not, no matter 'path' is a file or directory.
+      If succeed, 'true' will be returned. Otherwise, 'false' returned.
+
+      <20> mln_aes(data, key, bits, op);
       'data' -- a string and its length % 16 must equal to 0.
       'key' -- the string type key used to encrypt/decrypt 'data'.
       'bits' -- the bits of 'key'. Key's bit-length must equal or greater than 'bits'.
       'op' -- indicates the operation 'encode' and 'decode' to encrypt and decrypt. It's a string.
 
-      <18> mln_base64(data, op);
+      <21> mln_base64(data, op);
       Encode and decode 'data' to be base64 code or the original data.
       'data' -- must be string type.
       'op' -- a string indicating 'encode' or 'decode'.
       Result will be given as return value.
 
-      <19> mln_des(data, key, op);
+      <22> mln_des(data, key, op);
       Encrypt or decrypt 'data' in DES.
       'data' -- must be string type, and its length % 8 must be 0.
       'key' -- an integer value.
       'op' -- a string value indicating 'encode' or 'decode'.
       Result will be given as return value.
 
-      <20> mln_3des(data, key1, key2, op);
+      <23> mln_3des(data, key1, key2, op);
       Encrypt or decrypt 'data' in 3DES.
       'data' -- must be string type, and its length % 8 must be 0.
       'key1', 'key2' -- an integer value.
       'op' -- a string value indicating 'encode' or 'decode'.
       Result will be given as return value.
 
-      <21> mln_prime(base);
+      <24> mln_prime(base);
       Generate a prime integer greater than 'base'.
       'base' -- must be integer type.
       The return value is an prime number.
 
-      <22> mln_rc4(data, key);
+      <25> mln_rc4(data, key);
       Encode and decode 'data' in RC4.
       'data' -- must be string type.
       'key' -- must be string type.
       Result will be returned by function.
 
-      <23> mln_md5(data);
+      <26> mln_md5(data);
       Calculate and return MD5 value.
       'data' can be string type or set 'MFile'.
 
-      <24> mln_sha1(data);
+      <27> mln_sha1(data);
       Calculate and return SHA1 value.
       'data' can be string type or set 'MFile'.
 
-      <25> mln_sha256(data);
+      <28> mln_sha256(data);
       Calculate and return SHA256 value.
       'data' can be string type or set 'MFile'.
 
-      <26> mln_json_encode(array);
+      <29> mln_json_encode(array);
       Encode 'array' to be a string. If succeed, result will be returned. Otherwise, 'false'
       will be returned.
 
-      <27> mln_json_decode(s);
+      <30> mln_json_decode(s);
       Decode string 's' to be an array. If succeed, result will be returned. Otherwise,
       'false' will be returned.
 
-      <28> mln_matrix_mul(array1, array2);
+      <31> mln_matrix_mul(array1, array2);
       Example:
           array1 = ['row': 3, 'col': 2, 'data':[1,0,0,1,1,1]];
           array2 = ['row': 2, 'col': 2, 'data':[1,2,3,4]];
@@ -3468,7 +3481,7 @@ Their definitions can be found in melon/include/mln_types.h.
           data_array = res_array['data'];
       If failed, 'false' will be returned.
 
-      <29> mln_matrix_inv(array);
+      <32> mln_matrix_inv(array);
       Inverse. Example:
           array = ['row': 2, 'col': 2, 'data':[1,0,1,1]];
           res_array = mln_matrix_inv(array);
@@ -3477,74 +3490,74 @@ Their definitions can be found in melon/include/mln_types.h.
           data_array = res_array['data'];
       If failed, 'false' will be returned.
 
-      <30> mln_size(array);
+      <33> mln_size(array);
       Return array's length.
 
-      <31> mln_isInt(var);
+      <34> mln_isInt(var);
       Return a boolean value indicating whether var is an integer.
 
-      <32> mln_isReal(var);
+      <35> mln_isReal(var);
       Return a boolean value indicating whether var is a Real-number.
 
-      <33> mln_isStr(var);
+      <36> mln_isStr(var);
       Return a boolean value indicating whether var is a String.
 
-      <34> mln_isNil(var);
+      <37> mln_isNil(var);
       Return a boolean value indicating whether var is Nil.
 
-      <35> mln_isBool(var);
+      <38> mln_isBool(var);
       Return a boolean value indicating whether var is Boolean.
 
-      <36> mln_isObj(var);
+      <39> mln_isObj(var);
       Return a boolean value indicating whether var is an Object.
 
-      <37> mln_isFunc(var);
+      <40> mln_isFunc(var);
       Return a boolean value indicating whether var is an Function.
 
-      <38> mln_isArray(var);
+      <41> mln_isArray(var);
       Return a boolean value indicating whether var is an Array.
 
-      <39> mln_int(var);
+      <42> mln_int(var);
       Convert 'var' to be an integer as the return value.
 
-      <40> mln_bool(var);
+      <43> mln_bool(var);
       Convert 'var' to be a boolean as the return value.
 
-      <41> mln_real(var);
+      <44> mln_real(var);
       Convert 'var' to be a real number as the return value.
 
-      <42> mln_str(var);
+      <45> mln_str(var);
       Convert 'var' to be a string as the return value.
 
-      <43> mln_obj(var);
+      <46> mln_obj(var);
       Convert 'var' to be an object as the return value.
       This function only can work on type array of 'var'.
       It will convert an associative array to be an object.
       Key in array will be the name of property in object.
 
-      <44> mln_array(var);
+      <47> mln_array(var);
       Convert 'var' to be an array as the return value.
       But for type object, it is not return an array like "[obj]". It will return an associative array whose
       keys and values are the property names and values in the object.
 
-      <45> mln_dump(var);
+      <48> mln_dump(var);
       Dump all details of 'var' to console and log.
 
-      <46> mln_has(owner, thing);
+      <49> mln_has(owner, thing);
       Test whether the 'owner' has 'thing'.
       This function is going to be used on array and object.
       To array 'thing' can be any type that melang supports.
       To object 'thing' must be a string.
 
-      <47> mln_keys(array);
+      <50> mln_keys(array);
       This function will return an array contains all keys in 'array'.
 
-      <48> mln_merge(array1, array2);
+      <51> mln_merge(array1, array2);
       Merge two array into one array.
       If keys in 'array1' are existent in 'array2', the values associated with those keys in 'array2' will be
       in result array.
 
-      <49> mln_watch(var, func, userData);
+      <52> mln_watch(var, func, userData);
       This function is provided for supporting Reactive Programming.
       It means that 'var' is being watched by 'func'. If 'var' changed, 'func' will be executed.
       You can find some examples in Section <8. Script language>
@@ -3553,30 +3566,30 @@ Their definitions can be found in melon/include/mln_types.h.
       Both of func's arguments can be either reference or not. And the second argument 'userData' is identical
       with the third argument in 'mln_watch'.
 
-      <50> mln_unwatch(var);
+      <53> mln_unwatch(var);
       Remove watcher from 'var'.
 
-      <51> mln_hex2bin(hex);
+      <54> mln_hex2bin(hex);
       Translate 'hex' to be a binary value indicated by 'hex'.
       Such as mln_hex2bin('48') = 'H'.
 
-      <52> mln_bin2hex(bin);
+      <55> mln_bin2hex(bin);
       Translate 'bin' to be a hex string value indicated by 'bin'.
       Such as mln_bin2hex('H') = '48'.
 
-      <53> mln_bin2int(bin);
+      <56> mln_bin2int(bin);
       Translate 'bin' to be an integer indicated by 'bin'.
 
-      <54> mln_int2bin(i);
+      <57> mln_int2bin(i);
       Translate 'i' to be a binary value indicated by 'i'.
 
-      <55> mln_bin2real(bin);
+      <58> mln_bin2real(bin);
       Translate 'bin' to be a real-value indicated by 'bin'.
 
-      <56> mln_real2bin(r);
+      <59> mln_real2bin(r);
       Translate 'r' to be a binary value indicated by 'r'.
 
-      <57> MMysql
+      <60> MMysql
       MMysql is the set operating MySQL database. Its melang prototype is:
           set MMysql {
               fd;
@@ -3602,16 +3615,16 @@ Their definitions can be found in melon/include/mln_types.h.
                    to store every record in query results.
                    Writing operation returns a boolean value.
 
-      <58> mln_type(var);
+      <61> mln_type(var);
       Return the type of variable. If 'var' is an object, the return value is its set name.
 
-      <59> mln_setProperty(&obj, prop, &val);
+      <62> mln_setProperty(&obj, prop, &val);
       Set object "obj's" property "prop's" value to be 'val'.
 
-      <60> mln_getProperty(&obj, prop);
+      <63> mln_getProperty(&obj, prop);
       Get object "obj's" property "prop's" value.
 
-      <61> mln_eval(val, data, in_string);
+      <64> mln_eval(val, data, in_string);
       This function will spawn another script task to execute mission indicated by 'val'.
       'val' can be a script path or script code. It depends on 'in_string'.
       'in_string' is a boolean value. If true, 'val' is script code, otherwise, 'val' is file path.
@@ -3620,28 +3633,28 @@ Their definitions can be found in melon/include/mln_types.h.
           int, real, bool, nil, string
       In new task, if we want to fetch this data, we can use variable EVAL_DATA to access it.
 
-      <62> mln_tcpConnect(host, service);
+      <65> mln_tcpConnect(host, service);
       Connect to a server that indicated by 'host' and 'service'.
       'host' and 'service' must be string.
       If succeed 'true' will be returned, otherwise 'false' returned.
 
-      <63> mln_tcpListen(host, service);
+      <66> mln_tcpListen(host, service);
       Set up a TCP listen socket.
       'host' and 'service' must be string.
       If succeed socket file descriptor will be returned, otherwise 'false' returned.
 
-      <64> mln_tcpAccept(listenfd, timeout);
+      <67> mln_tcpAccept(listenfd, timeout);
       Accept a TCP connection.
       'listenfd' is created by 'mln_tcpListen'.
       'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
       If succeed a new socket file descriptor will be returned, otherwise 'false' returned.
       If 'timeout' was given and accept timed out, 'nil' would be returned.
 
-      <65> mln_tcpSend(sockfd, data);
+      <68> mln_tcpSend(sockfd, data);
       Send 'data' via 'sockfd'.
       If succeed 'true' will be returned, otherwise 'false' returned.
 
-      <66> mln_tcpRecv(sockfd, timeout);
+      <69> mln_tcpRecv(sockfd, timeout);
       Receive data from 'sockfd'.
       'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
       If succeed received data will be returned. If connection closed by peer, 'true' will be returned.
@@ -3651,28 +3664,28 @@ Their definitions can be found in melon/include/mln_types.h.
       'mln_tcpShutdown' to shutdown 'send' direction, this function will return 'true', because system call
       'recv' will return 0.
 
-      <67> mln_tcpClose(sockfd);
+      <70> mln_tcpClose(sockfd);
       Close the TCP connection indicated by 'sockfd'.
 
-      <68> mln_tcpShutdown(sockfd, mode);
+      <71> mln_tcpShutdown(sockfd, mode);
       Shutdown TCP connection.
       'mode' has two values: 'send' and 'recv'.
 
-      <69> mln_udpCreate(host, service);
+      <72> mln_udpCreate(host, service);
       Create an UDP socket.
       'host' and 'service' are optional arguments. They must be string.
       If they are given, UDP socket will be bound with the address that is indicated by them.
       If succeed, a socket file descriptor will be returned, otherwise 'false' returned.
 
-      <70> mln_udpClose(fd);
+      <73> mln_udpClose(fd);
       Close an UDP socket.
 
-      <71> mln_udpSend(fd, data, host, service);
+      <74> mln_udpSend(fd, data, host, service);
       Send 'data' via the UDP socket indicated by 'fd'.
       'host' and 'service' must be given to set destination address. They must be string.
       If succeed, 'true' will be returned, otherwise 'false' returned.
 
-      <72> mln_udpRecv(fd, bufsize, &ip, &port, timeout);
+      <75> mln_udpRecv(fd, bufsize, &ip, &port, timeout);
       Receive remote peer's data via the UDP socket indicated by 'fd'.
       The last three arguments are optional.
       'timeout' is an zero or positive integer. If omit, that would be means wait until data arrived.
@@ -3681,13 +3694,13 @@ Their definitions can be found in melon/include/mln_types.h.
       Return value: If succeed, data will be returned, otherwise 'false' returned. If timed out,
       'nil' will be returned.
 
-      <73> mln_msgTopicSubscribe(qname);
+      <76> mln_msgTopicSubscribe(qname);
       Subscribe topic 'qname' in current script task.
 
-      <74> mln_msgTopicUnsubscribe(qname);
+      <77> mln_msgTopicUnsubscribe(qname);
       Unsubscribe topic 'qname' in current script task.
 
-      <75> mln_msgQueueSend(qname, msg, asTopic);
+      <78> mln_msgQueueSend(qname, msg, asTopic);
       Send 'msg' to message queue 'qname'.
       'msg' must be an integer, boolean, real number or string.
       'asTopic' is optional. If omitted, it just send a normal queue message.
@@ -3695,7 +3708,7 @@ Their definitions can be found in melon/include/mln_types.h.
       Topic message will be received by all of receivers who subscribed topic 'qname'.
       Return value always be 'nil'.
 
-      <76> mln_msgQueueRecv(qname, timeout);
+      <79> mln_msgQueueRecv(qname, timeout);
       Receive a normal or topic message from queue 'qname'.
       'timeout' is optional. It must be a positive integer.
       If no message arrived and function timed out, 'nil' would be returned.
