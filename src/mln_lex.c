@@ -73,11 +73,50 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
         li->pos = li->buf = li->data->data;
         li->buf_len = data->len;
     } else if (type == M_INPUT_T_FILE) {
+        int n;
         char path[1024] = {0};
+        char *melang_path = NULL;
         mln_u32_t len = data->len >= 1024? 1023: data->len;
         memcpy(path, data->data, len);
         path[len] = 0;
-        if ((li->fd = open(path, O_RDONLY)) < 0) {
+        if (path[0] == '/') {
+            li->fd = open(path, O_RDONLY);
+        } else {
+            if (!access(path, F_OK)) {
+                li->fd = open(path, O_RDONLY);
+            } else if ((melang_path = getenv("MELANG_PATH")) != NULL) {
+                char *end = strchr(melang_path, ';');
+                char tmp_path[1024];
+                int found = 0;
+                while (end != NULL) {
+                    *end = 0;
+                    n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
+                    tmp_path[n] = 0;
+                    if (!access(tmp_path, F_OK)) {
+                        li->fd = open(tmp_path, O_RDONLY);
+                        found = 1;
+                        break;
+                    }
+                    melang_path = end + 1;
+                    end = strchr(melang_path, ';');
+                }
+                if (!found) {
+                    if (*melang_path) {
+                        n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
+                        tmp_path[n] = 0;
+                        li->fd = open(tmp_path, O_RDONLY);
+                    } else {
+                        li->fd = -1;
+                    }
+                }
+            } else {
+                char tmp_path[1024];
+                n = snprintf(tmp_path, sizeof(tmp_path)-1, "/usr/lib/melang/%s", path);
+                tmp_path[n] = 0;
+                li->fd = open(tmp_path, O_RDONLY);
+            }
+        }
+        if (li->fd < 0) {
             mln_alloc_free(li->data);
             mln_alloc_free(li);
             *err = MLN_LEX_EREAD;

@@ -875,19 +875,6 @@ lp:\
             mln_lex_setError(lex, MLN_LEX_EFPATH);\
             return NULL;\
         }\
-        if (path.data[0] != '/') {\
-            char p[1024] = {0};\
-            mln_u32_t n;\
-            n = snprintf(p, sizeof(p)-1, "%s/conf/", mln_path());\
-            if (n >= sizeof(p)-1) {\
-                mln_lex_setError(lex, MLN_LEX_EFPATH);\
-                return NULL;\
-            }\
-            memcpy(p+n, path.data, path.len+n>=sizeof(p)-1? sizeof(p)-1-n: path.len);\
-            n += (path.len+n>=sizeof(p)-1? sizeof(p)-1-n: path.len);\
-            p[n] = 0;\
-            mln_string_nSet(&path, p, n);\
-        }\
         if (mln_lex_checkFileLoop(lex, &path) < 0) {\
             return NULL;\
         }\
