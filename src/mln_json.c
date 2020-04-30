@@ -9,7 +9,8 @@
 #include "mln_json.h"
 
 static inline mln_json_obj_t *mln_json_obj_new(void);
-static inline int mln_json_get_char(mln_u8ptr_t *s, int *len);
+static void mln_json_encode_utf8(unsigned int u, mln_u8ptr_t *b, int *count);
+static inline int mln_json_get_char(mln_u8ptr_t *s, int *len, unsigned int *hex);
 static mln_u64_t mln_json_hash_calc(mln_hash_t *h, void *key);
 static int mln_json_hash_cmp(mln_hash_t *h, void *key1, void *key2);
 static void mln_json_obj_free(void *data);
@@ -317,22 +318,19 @@ mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 static mln_u8ptr_t mln_json_parse_string_fetch(mln_u8ptr_t jstr, int *len)
 {
     int l = *len, c, count = 0;
+    unsigned int hex = 0;
     mln_u8ptr_t p = jstr, buf, q;
     if ((buf = (mln_u8ptr_t)malloc(l)) == NULL) {
         return NULL;
     }
     q = buf;
     while (l > 0) {
-        c = mln_json_get_char(&p, &l);
+        c = mln_json_get_char(&p, &l, &hex);
         if (c < 0) {
             free(buf);
             return NULL;
         } else if (c == 0) {
-            /*never be here*/
-        } else if (c == M_JSON_HEX) {
-            /* not support unicode now */
-            free(buf);
-            return NULL;
+            mln_json_encode_utf8(hex, &q, &count);
         } else {
             *q++ = (mln_u8_t)c;
             ++count;
@@ -342,7 +340,40 @@ static mln_u8ptr_t mln_json_parse_string_fetch(mln_u8ptr_t jstr, int *len)
     return buf;
 }
 
-static inline int mln_json_get_char(mln_u8ptr_t *s, int *len)
+static void mln_json_encode_utf8(unsigned int u, mln_u8ptr_t *b, int *count)
+{
+    mln_u8ptr_t buf = *b;
+    if (u <= 0x7f) {
+        *buf++ = u & 0xFF;
+        ++(*count);
+    } else if (u <= 0x7FF) {
+        *buf++ = 0xC0 | ((u >> 6) & 0xFF);
+        *buf++ = 0x80 | ((u) & 0x3F);
+        (*count) += 2;
+    } else if (u <= 0xFFFF) {
+        *buf++ = 0xE0 | ((u >> 12) & 0xFF);
+        *buf++ = 0x80 | ((u >> 6) & 0x3F);
+        *buf++ = 0x80 | ((u) & 0x3F);
+        (*count) += 3;
+    } else {
+        *buf++ = 0xF0 | ((u >> 18) & 0xFF);
+        *buf++ = 0x80 | ((u >> 12) & 0x3F);
+        *buf++ = 0x80 | ((u >> 6) & 0x3F);
+        *buf++ = 0x80 | (u & 0x3F);
+        (*count) += 4;
+    }
+    *b = buf;
+}
+
+static inline int mln_json_char2int(char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return c;
+}
+
+static inline int mln_json_get_char(mln_u8ptr_t *s, int *len, unsigned int *hex)
 {
     if (*len <= 0) return 0;
 
@@ -380,11 +411,22 @@ static inline int mln_json_get_char(mln_u8ptr_t *s, int *len)
                 (*s) += 2;
                 (*len) -= 2;
                 return '\t';
-            case (mln_u8_t)'u':
+            case (mln_u8_t)'u': {
                 (*s) += 2;
                 (*len) -= 2;
-                return M_JSON_HEX;
-            default:
+                if (*len < 4) return -1;
+                unsigned int h = 0;
+                h = mln_json_char2int(*(*s)++);
+                h <<= 4;
+                h |= mln_json_char2int(*(*s)++);
+                h <<= 4;
+                h |= mln_json_char2int(*(*s)++);
+                h <<= 4;
+                h |= mln_json_char2int(*(*s)++);
+                (*len) -= 4;
+                *hex = h;
+                return 0;
+            } default:
                 return -1;
         }
     }

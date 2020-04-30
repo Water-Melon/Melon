@@ -17,8 +17,6 @@
 #define M_JSON_V_TRUE           1
 #define M_JSON_V_NULL           NULL
 
-#define M_JSON_HEX              0xffff
-
 typedef struct mln_json_s mln_json_t;
 
 enum json_type {
