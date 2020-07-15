@@ -404,7 +404,6 @@ int mln_lang_run(mln_lang_t *lang)
 
 static inline int __mln_lang_run(mln_lang_t *lang)
 {
-    struct timeval tv;
     if (lang->ctx_cur != NULL) {
         mln_lang_stack_node_t *node;
         if ((node = (mln_lang_stack_node_t *)mln_stack_top(lang->ctx_cur->run_stack)) == NULL) {
@@ -432,7 +431,6 @@ static inline int __mln_lang_run(mln_lang_t *lang)
             }
         }
     }
-    gettimeofday(&tv, NULL);
     if (lang->run_head == NULL && lang->blocked_head != NULL) {
         mln_lang_ctx_t *scan = lang->blocked_head;
         for (; scan != NULL; scan = scan->next) {
@@ -475,15 +473,23 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
 {
     mln_lang_ctx_t *ctx = (mln_lang_ctx_t *)data;
     ASSERT(!ctx->ref);
+    int n;
     mln_lang_stack_node_t *node;
-    if ((node = (mln_lang_stack_node_t *)mln_stack_top(ctx->run_stack)) == NULL) {
-        if (ctx != NULL && ctx->return_handler != NULL) {
-            ctx->return_handler(ctx);
+    mln_lang_t *lang = ctx->lang;
+
+    for (n = 0; n < 1024; ++n) {
+        if ((node = (mln_lang_stack_node_t *)mln_stack_top(ctx->run_stack)) == NULL) {
+            if (ctx != NULL && ctx->return_handler != NULL) {
+                ctx->return_handler(ctx);
+            }
+            mln_lang_job_free(ctx);
+            return;
         }
-        mln_lang_job_free(ctx);
-        return;
+        mln_lang_stack_map[node->type](ctx);
+        if (lang->ctx_cur != ctx || ctx->ref || ctx->step <= 0) {
+            break;
+        }
     }
-    mln_lang_stack_map[node->type](ctx);
 }
 
 
