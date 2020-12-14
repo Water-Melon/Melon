@@ -16,7 +16,7 @@
 #include "mln_connection.h"
 
 #define M_LANG_MAX_OPENFILE      67
-#define M_LANG_DEFAULT_STEP      8
+#define M_LANG_DEFAULT_STEP      1024
 #define M_LANG_HEARTBEAT_US      50000
 
 #define M_LANG_VAL_TYPE_NIL      0

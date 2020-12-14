@@ -477,7 +477,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
     mln_lang_stack_node_t *node;
     mln_lang_t *lang = ctx->lang;
 
-    for (n = 0; n < 1024; ++n) {
+    for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
         if ((node = (mln_lang_stack_node_t *)mln_stack_top(ctx->run_stack)) == NULL) {
             if (ctx != NULL && ctx->return_handler != NULL) {
                 ctx->return_handler(ctx);
