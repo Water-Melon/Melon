@@ -2500,7 +2500,10 @@ Their definitions can be found in melon/include/mln_types.h.
       b) void mln_lang_free(mln_lang_t *lang);
          Destroy the 'lang' object.
 
-      c) mln_lang_ctx_t *mln_lang_job_new(mln_lang_t *lang,
+      c) mln_lang_setCache(lang);
+         If this function called, 'lang' will try to cache AST structures until no script context refer to it.
+
+      d) mln_lang_ctx_t *mln_lang_job_new(mln_lang_t *lang,
                                           mln_u32_t type,
                                           mln_string_t *data,
                                           void *udata,
@@ -2517,46 +2520,46 @@ Their definitions can be found in melon/include/mln_types.h.
          After calling this function, you can call 'mln_event_dispatch' immediatly, then the task will run
          automatically.
 
-      d) int mln_lang_run(mln_lang_t *lang);
+      e) int mln_lang_run(mln_lang_t *lang);
          This is a trigger function.
          After calling this function, you can call 'mln_event_dispatch' immediatly, then the task will run
          automatically.
 
-      e) int mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *name);
+      f) int mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *name);
          Register a message communication item via argument 'name'.
 
-      f) void mln_lang_msg_free(mln_lang_ctx_t *ctx, mln_string_t *name);
+      g) void mln_lang_msg_free(mln_lang_ctx_t *ctx, mln_string_t *name);
          Unregister a message communication item via the argument.
 
-      g) void mln_lang_msg_setHandler(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler);
+      h) void mln_lang_msg_setHandler(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler);
          Set receiving handler for C-side code.
 
-      h) int mln_lang_msg_sendMsg(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC);
+      i) int mln_lang_msg_sendMsg(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC);
          Send the data to the script-side(isC must be 1) via the message communication item which is
          located by 'name'.
 
-      i) int mln_lang_ctx_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler);
+      j) int mln_lang_ctx_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler);
          Register a kind of resource which should be freed once ctx freed.
          'name' is the resource name.
          'data' resource manager structure.
          'free_handler' is the resource's free handler.
 
-      j) void *mln_lang_ctx_resource_fetch(mln_lang_ctx_t *ctx, const char *name);
+      k) void *mln_lang_ctx_resource_fetch(mln_lang_ctx_t *ctx, const char *name);
          Fetch script task's resource data.
 
-      k) void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx);
+      l) void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx);
          Suspend the script task indicated by 'ctx'.
 
-      l) void mln_lang_ctx_continue(mln_lang_ctx_t *ctx);
+      m) void mln_lang_ctx_continue(mln_lang_ctx_t *ctx);
          Continue to run the script task indicated by 'ctx';
 
-      m) int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, mln_lang_resource_free free_handler);
+      n) int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, mln_lang_resource_free free_handler);
          Register a global resource that can be accessed by all script tasks those are in the same thread.
 
-      n) void mln_lang_resource_cancel(mln_lang_t *lang, const char *name);
+      o) void mln_lang_resource_cancel(mln_lang_t *lang, const char *name);
          Cancel a global resource.
 
-      o) void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name);
+      p) void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name);
          Fetch global resource data;
 
   36) FEC

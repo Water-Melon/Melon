@@ -46,6 +46,7 @@ typedef struct mln_lang_array_elem_s    mln_lang_array_elem_t;
 typedef struct mln_lang_methods_s       mln_lang_method_t;
 typedef struct mln_lang_retExp_s        mln_lang_retExp_t;
 typedef struct mln_lang_resource_s      mln_lang_resource_t;
+typedef struct mln_lang_ast_cache_s     mln_lang_ast_cache_t;
 
 typedef void (*mln_lang_stack_handler)(mln_lang_ctx_t *);
 typedef int (*mln_lang_op)(mln_lang_ctx_t *, mln_lang_retExp_t **, mln_lang_retExp_t *, mln_lang_retExp_t *);
@@ -53,6 +54,14 @@ typedef mln_lang_retExp_t *(*mln_lang_internal) (mln_lang_ctx_t *);
 typedef int (*mln_msg_c_handler)(mln_lang_ctx_t *, const mln_lang_val_t *);
 typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 typedef void (*mln_lang_resource_free)(void *data);
+
+struct mln_lang_ast_cache_s {
+    mln_lang_stm_t                  *stm;
+    mln_string_t                    *code;
+    mln_u64_t                        ref;
+    struct mln_lang_ast_cache_s     *prev;
+    struct mln_lang_ast_cache_s     *next;
+};
 
 struct mln_lang_s {
     mln_event_t                     *ev;
@@ -67,9 +76,12 @@ struct mln_lang_s {
     int                              fd_notInUsed;
     int                              fd_signal;
     mln_rbtree_t                    *resource_set;
-    mln_u64_t                        wait:63;
+    mln_u64_t                        wait:62;
     mln_u64_t                        quit:1;
+    mln_u64_t                        cache:1;
     void                            *shift_table;
+    mln_lang_ast_cache_t            *cache_head;
+    mln_lang_ast_cache_t            *cache_tail;
 };
 
 struct mln_lang_ctx_s {
@@ -88,6 +100,7 @@ struct mln_lang_ctx_s {
     mln_rbtree_t                    *resource_set;
     mln_lang_retExp_t               *retExp;
     mln_lang_return_handler          return_handler;
+    mln_lang_ast_cache_t            *cache;
     struct mln_lang_ctx_s           *prev;
     struct mln_lang_ctx_s           *next;
 };
@@ -369,6 +382,7 @@ struct mln_lang_methods_s {
 extern mln_lang_method_t *mln_lang_methods[];
 
 
+#define mln_lang_setCache(lang) ((lang)->cache = 1)
 extern void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg) __NONNULL2(1,2);
 extern mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev) __NONNULL2(1,2);
 extern void mln_lang_free(mln_lang_t *lang);

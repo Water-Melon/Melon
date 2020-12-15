@@ -3,9 +3,11 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_lang.h"
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "mln_lex.h"
@@ -38,6 +40,15 @@ struct mln_lang_gc_scan_s {
     mln_gc_t         *gc;
 };
 
+MLN_CHAIN_FUNC_DECLARE(mln_lang_ast_cache, \
+                       mln_lang_ast_cache_t, \
+                       static inline void, \
+                       __NONNULL3(1,2,3));
+MLN_CHAIN_FUNC_DEFINE(mln_lang_ast_cache, \
+                      mln_lang_ast_cache_t, \
+                      static inline void, \
+                      prev, \
+                      next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_ctx, \
                        mln_lang_ctx_t, \
                        static inline void, \
@@ -63,6 +74,10 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_var, \
                       next);
 static inline int __mln_lang_run(mln_lang_t *lang);
 static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data);
+static inline mln_lang_ast_cache_t *
+mln_lang_ast_cache_new(mln_lang_t *lang, mln_lang_stm_t *stm, mln_string_t *code);
+static inline void
+mln_lang_ast_cache_free(mln_lang_ast_cache_t *cache);
 static inline mln_lang_ctx_t *
 mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t type, mln_string_t *content);
 static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx);
@@ -361,11 +376,14 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
     }
     lang->wait = 0;
     lang->quit = 0;
+    lang->cache = 0;
     if ((lang->shift_table = mln_lang_parserGenerate()) == NULL) {
         mln_rbtree_destroy(lang->resource_set);
         mln_lang_free(lang);
         return NULL;
     }
+    lang->cache_head = NULL;
+    lang->cache_tail = NULL;
     return lang;
 }
 
@@ -377,6 +395,7 @@ void mln_lang_free(mln_lang_t *lang)
         return;
     }
     mln_lang_ctx_t *ctx;
+    mln_lang_ast_cache_t *cache;
     while ((ctx = lang->run_head) != NULL) {
         mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), ctx);
         mln_lang_ctx_free(ctx);
@@ -394,6 +413,10 @@ void mln_lang_free(mln_lang_t *lang)
     if (lang->fd_signal >= 0) close(lang->fd_signal);
     if (lang->resource_set != NULL) mln_rbtree_destroy(lang->resource_set);
     if (lang->shift_table != NULL) mln_lang_parserDestroy(lang->shift_table);
+    while ((cache = lang->cache_head) != NULL) {
+        mln_lang_ast_cache_chain_del(&(lang->cache_head), &(lang->cache_tail), cache);
+        mln_lang_ast_cache_free(cache);
+    }
     mln_alloc_free(lang);
 }
 
@@ -493,6 +516,96 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
 }
 
 
+static inline mln_lang_ast_cache_t *
+mln_lang_ast_cache_new(mln_lang_t *lang, mln_lang_stm_t *stm, mln_string_t *code)
+{
+    mln_lang_ast_cache_t *cache;
+    if ((cache = mln_alloc_m(lang->pool, sizeof(mln_lang_ast_cache_t))) == NULL) {
+        return NULL;
+    }
+    cache->stm = stm;
+    cache->code = mln_string_pool_dup(lang->pool, code);
+    if (cache->code == NULL) {
+        mln_alloc_free(cache);
+        return NULL;
+    }
+    cache->ref = 0;
+    cache->prev = cache->next = NULL;
+    return cache;
+}
+
+static inline void
+mln_lang_ast_cache_free(mln_lang_ast_cache_t *cache)
+{
+    if (cache == NULL) return;
+    if (cache->stm != NULL)
+        mln_lang_ast_free(cache->stm);
+    if (cache->code != NULL)
+        mln_string_pool_free(cache->code);
+    mln_alloc_free(cache);
+}
+
+static inline mln_lang_ast_cache_t *
+mln_lang_ast_cache_search(mln_lang_t *lang, mln_u32_t type, mln_string_t *content)
+{
+    mln_lang_ast_cache_t *cache;
+    mln_string_t data;
+    mln_u8ptr_t buf = NULL;
+    mln_lang_stm_t *stm;
+
+    if (type == M_INPUT_T_FILE) {
+        int fd;
+        size_t len = content->len >= 1024? 1023: content->len;
+        char path[1024];
+        struct stat st;
+        memcpy(path, content->data, len);
+        path[len] = 0;
+        fd = open(path, O_RDONLY);
+        if (fstat(fd, &st) < 0) {
+            close(fd);
+            return NULL;
+        }
+        buf = (mln_u8ptr_t)malloc(st.st_size);
+        if (buf == NULL) {
+            close(fd);
+            return NULL;
+        }
+        if (read(fd, buf, st.st_size) != st.st_size) {
+            free(buf);
+            close(fd);
+            return NULL;
+        }
+        close(fd);
+        data.data = buf;
+        data.len = st.st_size;
+    } else {
+        data = *content;
+    }
+
+    for (cache = lang->cache_head; cache != NULL; cache = cache->next) {
+        if (cache->code->len == data.len && !memcmp(cache->code->data, data.data, data.len)) {
+            if (buf != NULL) free(buf);
+            return cache;
+        }
+    }
+
+    stm = (mln_lang_stm_t *)mln_lang_ast_generate(lang->pool, lang->shift_table, content, type);
+    if (stm == NULL) {
+        if (buf != NULL) free(buf);
+        return NULL;
+    }
+
+    cache = mln_lang_ast_cache_new(lang, stm, &data);
+    if (buf != NULL) free(buf);
+    if (cache == NULL) {
+        mln_lang_ast_free(stm);
+        return NULL;
+    }
+    mln_lang_ast_cache_chain_add(&(lang->cache_head), &(lang->cache_tail), cache);
+    return cache;
+}
+
+
 static inline mln_lang_ctx_t *
 mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t type, mln_string_t *content)
 {
@@ -515,7 +628,18 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
     ctx->data = data;
-    if ((ctx->stm = (mln_lang_stm_t *)mln_lang_ast_generate(ctx->pool, lang->shift_table, content, type)) == NULL) {
+    if (lang->cache) {
+        ctx->cache = mln_lang_ast_cache_search(lang, type, content);
+        if (ctx->cache == NULL) {
+            ctx->stm = NULL;
+        } else {
+            ctx->stm = ctx->cache->stm;
+            ++(ctx->cache->ref);
+        }
+    } else {
+        ctx->stm = (mln_lang_stm_t *)mln_lang_ast_generate(ctx->pool, lang->shift_table, content, type);
+    }
+    if (ctx->stm == NULL) {
         mln_fileset_destroy(ctx->fset);
         mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
@@ -524,7 +648,14 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     stattr.free_handler = mln_lang_stack_node_free;
     stattr.copy_handler = NULL;
     if ((ctx->run_stack = mln_stack_init(&stattr)) == NULL) {
-        mln_lang_ast_free(ctx->stm);
+        if (ctx->cache != NULL) {
+            if (!(--(ctx->cache->ref))) {
+                mln_lang_ast_cache_chain_del(&(ctx->lang->cache_head), &(ctx->lang->cache_tail), ctx->cache);
+                mln_lang_ast_cache_free(ctx->cache);
+            }
+        } else {
+            mln_lang_ast_free(ctx->stm);
+        }
         mln_fileset_destroy(ctx->fset);
         mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
@@ -538,7 +669,14 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     rbattr.data_free = __mln_lang_msg_free;
     if ((ctx->msg_map = mln_rbtree_init(&rbattr)) == NULL) {
         mln_stack_destroy(ctx->run_stack);
-        mln_lang_ast_free(ctx->stm);
+        if (ctx->cache != NULL) {
+            if (!(--(ctx->cache->ref))) {
+                mln_lang_ast_cache_chain_del(&(ctx->lang->cache_head), &(ctx->lang->cache_tail), ctx->cache);
+                mln_lang_ast_cache_free(ctx->cache);
+            }
+        } else {
+            mln_lang_ast_free(ctx->stm);
+        }
         mln_fileset_destroy(ctx->fset);
         mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
@@ -549,7 +687,14 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     if ((ctx->resource_set = mln_rbtree_init(&rbattr)) == NULL) {
         mln_rbtree_destroy(ctx->msg_map);
         mln_stack_destroy(ctx->run_stack);
-        mln_lang_ast_free(ctx->stm);
+        if (ctx->cache != NULL) {
+            if (!(--(ctx->cache->ref))) {
+                mln_lang_ast_cache_chain_del(&(ctx->lang->cache_head), &(ctx->lang->cache_tail), ctx->cache);
+                mln_lang_ast_cache_free(ctx->cache);
+            }
+        } else {
+            mln_lang_ast_free(ctx->stm);
+        }
         mln_fileset_destroy(ctx->fset);
         mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
@@ -612,7 +757,16 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
         mln_lang_scope_chain_del(&(ctx->scope_head), &(ctx->scope_tail), scope);
         mln_lang_scope_free(scope);
     }
-    if (ctx->stm != NULL) mln_lang_ast_free(ctx->stm);
+    if (ctx->stm != NULL) {
+        if (ctx->cache) {
+            if (!(--(ctx->cache->ref))) {
+                mln_lang_ast_cache_chain_del(&(ctx->lang->cache_head), &(ctx->lang->cache_tail), ctx->cache);
+                mln_lang_ast_cache_free(ctx->cache);
+            }
+        } else {
+            mln_lang_ast_free(ctx->stm);
+        }
+    }
     mln_fileset_destroy(ctx->fset);
     mln_alloc_destroy(ctx->pool);
     mln_alloc_free(ctx);
