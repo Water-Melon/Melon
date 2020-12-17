@@ -1477,16 +1477,9 @@ __mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
 static inline mln_lang_symbolNode_t *
 mln_lang_symbolNode_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name)
 {
-    mln_lang_symbolNode_t sym;
-    mln_rbtree_node_t *rn;
-    sym.symbol = name;
-    mln_lang_scope_t *scope = ctx->scope_tail;
-    if (scope == NULL) return NULL;
-    rn = mln_rbtree_search(scope->symbols, scope->symbols->root, &sym);
-    if (!mln_rbtree_null(rn, scope->symbols)) {
-        return (mln_lang_symbolNode_t *)(rn->data);
-    }
-    return NULL;
+    if (name->len >= 2 && name->data[0] == '_' && name->data[1] == '_')
+        return __mln_lang_symbolNode_search(ctx, name, 0);
+    return __mln_lang_symbolNode_search(ctx, name, 1);
 }
 
 
