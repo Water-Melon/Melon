@@ -361,6 +361,13 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
     lang->blocked_head = lang->blocked_tail = NULL;
     lang->wait_head = lang->wait_tail = NULL;
     lang->ctx_cur = NULL;
+    lang->resource_set = NULL;
+    lang->cache_head = NULL;
+    lang->cache_tail = NULL;
+    lang->shift_table = NULL;
+    lang->wait = 0;
+    lang->quit = 0;
+    lang->cache = 0;
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
         mln_alloc_free(lang);
         return NULL;
@@ -374,16 +381,10 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
         mln_lang_free(lang);
         return NULL;
     }
-    lang->wait = 0;
-    lang->quit = 0;
-    lang->cache = 0;
     if ((lang->shift_table = mln_lang_parserGenerate()) == NULL) {
-        mln_rbtree_destroy(lang->resource_set);
         mln_lang_free(lang);
         return NULL;
     }
-    lang->cache_head = NULL;
-    lang->cache_tail = NULL;
     return lang;
 }
 
