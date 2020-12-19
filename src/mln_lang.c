@@ -1478,8 +1478,12 @@ __mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
 static inline mln_lang_symbolNode_t *
 mln_lang_symbolNode_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name)
 {
-    if (name->len >= 2 && name->data[0] == '_' && name->data[1] == '_')
-        return __mln_lang_symbolNode_search(ctx, name, 0);
+    mln_string_t n = *name;
+    if (name->len > 1 && name->data[0] == '_') {
+        n.data += 1;
+        n.len -= 1;
+        return __mln_lang_symbolNode_search(ctx, &n, 0);
+    }
     return __mln_lang_symbolNode_search(ctx, name, 1);
 }
 
@@ -5670,23 +5674,32 @@ static inline int mln_lang_stack_handler_spec_new(mln_lang_ctx_t *ctx, mln_strin
     char msg[1024] = {0};
     mln_size_t len;
 
-    while (1) {
-        sym = __mln_lang_symbolNode_search(ctx, name, 0);
-        if (sym == NULL) {
+again:
+    sym = __mln_lang_symbolNode_search(ctx, name, 0);
+    if (sym == NULL) {
+        sym = mln_lang_symbolNode_idSearch(ctx, name);
+        if (sym == NULL) goto err;
+        if (sym->type != M_LANG_SYMBOL_VAR) goto err;
+        if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) goto err;
+        if ((name = sym->data.var->val->data.s) == NULL) goto err;
+        goto again;
 err:
-            len = name->len>(sizeof(tmp)-1)? name->len: sizeof(tmp)-1;
-            memcpy(tmp, name->data, len);
-            snprintf(msg, sizeof(msg)-1, "Invalid Set name '%s'.", tmp);
-            __mln_lang_errmsg(ctx, msg);
-            return -1;
-        } else {
-            if (sym->type == M_LANG_SYMBOL_SET) break;
-            if (sym->type != M_LANG_SYMBOL_VAR) goto err;
-            if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) goto err;
-            if ((name = sym->data.var->val->data.s) == NULL) goto err;
-        }
+        len = name->len>(sizeof(tmp)-1)? sizeof(tmp)-1: name->len;
+        memcpy(tmp, name->data, len);
+        snprintf(msg, sizeof(msg)-1, "Invalid Set name '%s'.", tmp);
+        __mln_lang_errmsg(ctx, msg);
+        return -1;
+    } else {
+        if (sym->type == M_LANG_SYMBOL_SET) goto goon;
+        sym = mln_lang_symbolNode_idSearch(ctx, name);
+        if (sym == NULL) goto err;
+        if (sym->type != M_LANG_SYMBOL_VAR) goto err;
+        if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) goto err;
+        if ((name = sym->data.var->val->data.s) == NULL) goto err;
+        goto again;
     }
 
+goon:
     if ((obj = mln_lang_object_new(ctx, sym->data.set)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
