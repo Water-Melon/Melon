@@ -1912,7 +1912,7 @@ mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var)
     int n = 0;
     switch (val->type) {
         case M_LANG_VAL_TYPE_NIL:
-            n = snprintf(buf, sizeof(buf)-1, "NIL");
+            n = snprintf(buf, sizeof(buf)-1, "nil");
             break;
         case M_LANG_VAL_TYPE_OBJECT:
             n = snprintf(buf, sizeof(buf)-1, "Object");

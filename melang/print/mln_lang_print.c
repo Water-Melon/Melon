@@ -77,7 +77,7 @@ static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
     val = sym->data.var->val;
     switch (type) {
         case M_LANG_VAL_TYPE_NIL:
-            mln_log(none, "NIL\n");
+            mln_log(none, "nil\n");
             break;
         case M_LANG_VAL_TYPE_INT:
             mln_log(none, "%i\n", val->data.i);
@@ -128,7 +128,7 @@ static int mln_lang_print_array_elem(mln_rbtree_node_t *node, void *rn_data, voi
     mln_s32_t type = mln_lang_var_getValType(var);
     switch (type) {
         case M_LANG_VAL_TYPE_NIL:
-            mln_log(none, "NIL, ");
+            mln_log(none, "nil, ");
             break;
         case M_LANG_VAL_TYPE_INT:
             mln_log(none, "%i, ", val->data.i);
