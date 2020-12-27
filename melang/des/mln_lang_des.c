@@ -147,7 +147,7 @@ static mln_lang_retExp_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument 1.");
         return NULL;
     }
-    if (tmp->len % 16) {
+    if (tmp->len % 8) {
         mln_lang_errmsg(ctx, "Invalid argument 1.");
         return NULL;
     }
@@ -345,7 +345,7 @@ static mln_lang_retExp_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument 1.");
         return NULL;
     }
-    if (tmp->len % 16) {
+    if (tmp->len % 8) {
         mln_lang_errmsg(ctx, "Invalid argument 1.");
         return NULL;
     }
