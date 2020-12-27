@@ -3385,7 +3385,7 @@ Their definitions can be found in melon/include/mln_types.h.
               size();
           };
       'open' -- 'op' is string type that indicates the operation including Read, Write, Append.
-                e.g.   'rwa', 'r', 'w', 'a', 'ra', 'rw'.
+                e.g.   'rwa', 'r', 'w', 'a', 'ra', 'rw', 'rw+'.
                 'prio' is an integer that indicates the file access authority, e.g. 0777. This
                 is an optional argument.
                 If open failed, 'false' will be returned, and can get error message via calling

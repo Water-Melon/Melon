@@ -343,7 +343,7 @@ static inline void mln_lang_file_open_getPrio(mln_s64_t prio, mode_t *mode)
 
 static int mln_lang_file_open_getOp(mln_string_t *op)
 {
-    int flags = 0, r = 0, w = 0, a = 0;
+    int flags = 0, r = 0, w = 0, a = 0, notrunc = 0;
     mln_u8ptr_t p, pend;
     for (p = op->data, pend = op->data+op->len; p < pend; ++p) {
         if (*p == (mln_u8_t)'r') {
@@ -352,6 +352,8 @@ static int mln_lang_file_open_getOp(mln_string_t *op)
             w = 1;
         } else if (*p == (mln_u8_t)'a') {
             a = 1;
+        } else if (*p == (mln_u8_t)'+') {
+            notrunc = 1;
         } else {
             return -1;
         }
@@ -370,6 +372,9 @@ static int mln_lang_file_open_getOp(mln_string_t *op)
     if (a) {
         flags &= (~(int)O_TRUNC);
         flags |= O_APPEND;
+    } else if (notrunc) {
+        flags &= (~(int)O_TRUNC);
+        flags &= (~(int)O_APPEND);
     }
     return flags;
 }
