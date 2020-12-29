@@ -83,7 +83,7 @@ static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
             mln_log(none, "%i\n", val->data.i);
             break;
         case M_LANG_VAL_TYPE_BOOL:
-            mln_log(none, "%s\n", val->data.b?"True":"False");
+            mln_log(none, "%s\n", val->data.b?"true":"false");
             break;
         case M_LANG_VAL_TYPE_REAL:
             mln_log(none, "%f\n", val->data.f);
@@ -134,7 +134,7 @@ static int mln_lang_print_array_elem(mln_rbtree_node_t *node, void *rn_data, voi
             mln_log(none, "%i, ", val->data.i);
             break;
         case M_LANG_VAL_TYPE_BOOL:
-            mln_log(none, "%s, ", val->data.b?"True":"False");
+            mln_log(none, "%s, ", val->data.b?"true":"false");
             break;
         case M_LANG_VAL_TYPE_REAL:
             mln_log(none, "%f, ", val->data.f);

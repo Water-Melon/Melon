@@ -565,14 +565,14 @@ static mln_lang_retExp_t *mln_lang_sys_str_process(mln_lang_ctx_t *ctx)
                 break;
             case M_LANG_VAL_TYPE_BOOL:
                 if (mln_lang_condition_isTrue(sym->data.var)) {
-                    n = snprintf(buf, sizeof(buf)-1, "True");
+                    n = snprintf(buf, sizeof(buf)-1, "true");
                     mln_string_nSet(&s, buf, n);
                     if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &s, NULL)) == NULL) {
                         mln_lang_errmsg(ctx, "No memory.");
                         return NULL;
                     }
                 } else {
-                    n = snprintf(buf, sizeof(buf)-1, "False");
+                    n = snprintf(buf, sizeof(buf)-1, "false");
                     mln_string_nSet(&s, buf, n);
                     if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &s, NULL)) == NULL) {
                         mln_lang_errmsg(ctx, "No memory.");

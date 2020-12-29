@@ -1931,7 +1931,7 @@ mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var)
 #endif
             break;
         case M_LANG_VAL_TYPE_BOOL:
-            n = snprintf(buf, sizeof(buf)-1, "%s", val->data.b?"True":"False");
+            n = snprintf(buf, sizeof(buf)-1, "%s", val->data.b?"true":"false");
             break;
         case M_LANG_VAL_TYPE_REAL:
             n = snprintf(buf, sizeof(buf)-1, "%lf", val->data.f);
@@ -6227,7 +6227,7 @@ static void mln_lang_dump_var(mln_lang_var_t *var, int cnt)
             break;
         case M_LANG_VAL_TYPE_BOOL:
             blank();
-            mln_log(none, "<BOOL> %s\n", var->val->data.b?"True":"False");
+            mln_log(none, "<BOOL> %s\n", var->val->data.b?"true":"false");
             break;
         case M_LANG_VAL_TYPE_REAL:
             blank();
