@@ -380,11 +380,11 @@ static mln_lang_retExp_t *mln_lang_msgqueue_mq_recv_process(mln_lang_ctx_t *ctx)
     /*arg2*/
     if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
-        mln_lang_errmsg(ctx, "Argument 3 missing.");
+        mln_lang_errmsg(ctx, "Argument 2 missing.");
         return NULL;
     }
     if (sym->type != M_LANG_SYMBOL_VAR) {
-        mln_lang_errmsg(ctx, "Invalid type of argument 3.");
+        mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
     val = mln_lang_var_getVal(sym->data.var);
@@ -394,7 +394,7 @@ static mln_lang_retExp_t *mln_lang_msgqueue_mq_recv_process(mln_lang_ctx_t *ctx)
     } else if (type == M_LANG_VAL_TYPE_INT && val->data.i > 0) {
         timeout = val->data.i;
     } else {
-        mln_lang_errmsg(ctx, "Invalid type of argument 3.");
+        mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
 
