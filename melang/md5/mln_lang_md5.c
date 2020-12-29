@@ -58,7 +58,7 @@ int mln_lang_md5(mln_lang_ctx_t *ctx)
 
 static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
 {
-    mln_u8_t res[16];
+    mln_s8_t res[33];
     mln_md5_t md5;
     mln_s32_t type;
     mln_lang_val_t *val;
@@ -83,7 +83,7 @@ static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
         }
         mln_md5_init(&md5);
         mln_md5_calc(&md5, val->data.s->data, val->data.s->len, 1);
-        mln_md5_toBytes(&md5, res, sizeof(res));
+        mln_md5_toString(&md5, res, sizeof(res));
     } else if (type == M_LANG_VAL_TYPE_OBJECT && \
                !mln_string_constStrcmp(val->data.obj->inSet->name, "MFile"))
     {
@@ -114,7 +114,7 @@ static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
             return retExp;
         }
         mln_md5_calc(&md5, NULL, 0, 1);
-        mln_md5_toBytes(&md5, res, sizeof(res));
+        mln_md5_toString(&md5, res, sizeof(res));
     } else {
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
