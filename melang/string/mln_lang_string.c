@@ -153,6 +153,7 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
 
 static mln_lang_retExp_t *mln_strcmpSeq_process(mln_lang_ctx_t *ctx)
 {
+    int ret;
     mln_lang_val_t *val1, *val2;
     mln_lang_retExp_t *retExp;
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2");
@@ -183,18 +184,16 @@ static mln_lang_retExp_t *mln_strcmpSeq_process(mln_lang_ctx_t *ctx)
 
     if (val1->data.s == NULL) {
         if (val2->data.s == NULL) {
-            retExp = mln_lang_retExp_createTmpTrue(ctx->pool, NULL);
+            retExp = mln_lang_retExp_createTmpInt(ctx->pool, 0, NULL);
         } else {
-            retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL);
+            retExp = mln_lang_retExp_createTmpInt(ctx->pool, -1, NULL);
         }
     } else {
         if (val2->data.s == NULL) {
-            retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL);
+            retExp = mln_lang_retExp_createTmpInt(ctx->pool, 1, NULL);
         } else {
-            if (!mln_string_strcmpSeq(val1->data.s, val2->data.s))
-                retExp = mln_lang_retExp_createTmpTrue(ctx->pool, NULL);
-            else
-                retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL);
+            ret = mln_string_strcmpSeq(val1->data.s, val2->data.s);
+            retExp = mln_lang_retExp_createTmpInt(ctx->pool, ret, NULL);
         }
     }
     if (retExp == NULL) {
@@ -574,6 +573,7 @@ static mln_lang_retExp_t *mln_split_process(mln_lang_ctx_t *ctx)
     mln_string_t v3 = mln_string("len"), ret;
     mln_lang_symbolNode_t *sym;
     mln_u8ptr_t p;
+    mln_s64_t len;
 
     if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -605,21 +605,29 @@ static mln_lang_retExp_t *mln_split_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_getValType(sym->data.var) == M_LANG_VAL_TYPE_NIL) {
+        len = -1;
+    } else if (mln_lang_var_getValType(sym->data.var) == M_LANG_VAL_TYPE_INT) {
+        val3 = sym->data.var->val;
+        len = val3->data.i;
+        if (len < 0) {
+            mln_lang_errmsg(ctx, "Invalid type of argument 3.");
+            return NULL;
+        }
+    } else {
         mln_lang_errmsg(ctx, "Invalid type of argument 3.");
         return NULL;
     }
-    val3 = sym->data.var->val;
 
     if (val2->data.i < 0) {
         mln_s64_t off = -(val2->data.i);
         p = val1->data.s->data + (val1->data.s->len - (mln_u64_t)off);
-        if (val3->data.i >= 0 && val3->data.i < off) off = val3->data.i;
+        if (len >= 0 && len < off) off = len;
         mln_string_nSet(&ret, p, (mln_u64_t)off);
     } else {
         p = val1->data.s->data + val2->data.i;
-        if (val3->data.i >= 0 && val3->data.i < val1->data.s->len-val2->data.i) {
-            mln_string_nSet(&ret, p, val3->data.i);
+        if (len >= 0 && len < val1->data.s->len-val2->data.i) {
+            mln_string_nSet(&ret, p, len);
         } else {
             mln_string_nSet(&ret, p, val1->data.s->len - val2->data.i);
         }

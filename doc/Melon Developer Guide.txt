@@ -3305,6 +3305,7 @@ Their definitions can be found in melon/include/mln_types.h.
    G. Internal Function
       <1> mln_print(var);
       Output var's value. But it cannot output the details of object, function and array.
+
       <2> mln_msgNew(name);
       Register a message communication item via argument 'name'.
       If it failed, 'false' will be returned. Otherwise, 'true' will be returned.
@@ -3334,6 +3335,10 @@ Their definitions can be found in melon/include/mln_types.h.
       Its functionality is the same as 'strcmp()' in C.
       This function will check every byte strictly.
       Both of arguments must be 'string'.
+      There are three return values:
+          1 - s1 > s2
+         -1 - s1 < s2
+          0 - s1 = s2
 
       <7> mln_strcmp(s1, s2);
       Its functionality is the same as 'strcmp()' in C.
@@ -3350,9 +3355,10 @@ Their definitions can be found in melon/include/mln_types.h.
       <10> mln_kmp(s, pattern);
       The same as 'mln_strstr()', but implemented in KMP algorithm.
 
-      <11> mln_split(s, offset);
+      <11> mln_split(s, offset, len);
       Return a splited string which starts from 'offset' in 's'.
       'offset' can be negative number.
+      'len' is optional, it should be greater than or equal to 0.
 
       <12> mln_slice(s, seps);
       Up to 'seps', 's' will be sliced into several pieces those are placed in an array as the
