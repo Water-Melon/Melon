@@ -1324,7 +1324,7 @@ static mln_lang_retExp_t *mln_int2bin_process(mln_lang_ctx_t *ctx)
     mln_lang_retExp_t *retExp;
     mln_string_t v1 = mln_string("i"), tmp;
     mln_lang_symbolNode_t *sym;
-    mln_u8ptr_t buf[sizeof(mln_s64_t)];
+    mln_u8_t buf[sizeof(mln_s64_t)];
 
     if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1339,8 +1339,10 @@ static mln_lang_retExp_t *mln_int2bin_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    memcpy(buf, &(val1->data.i), sizeof(mln_s64_t));
-    mln_string_nSet(&tmp, buf, sizeof(mln_s64_t));
+    for (t = 0; t < sizeof(buf); ++t) {
+        buf[sizeof(buf)-1-t] = (val1->data.i >> (t << 3)) & 0xff;
+    }
+    mln_string_nSet(&tmp, buf, sizeof(buf));
     if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &tmp, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
