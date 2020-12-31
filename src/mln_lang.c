@@ -6252,8 +6252,12 @@ static void mln_lang_dump_var(mln_lang_var_t *var, int cnt)
 static void mln_lang_dump_object(mln_lang_object_t *obj, int cnt)
 {
     blank();
-    mln_log(none, "<OBJECT> In Set '%S'  setRef: %I objRef: %I\n", \
-            obj->inSet->name, obj->inSet->ref, obj->ref);
+    if (obj->inSet != NULL) {
+        mln_log(none, "<OBJECT> In Set '%S'  setRef: %I objRef: %I\n", \
+                obj->inSet->name, obj->inSet->ref, obj->ref);
+    } else {
+        mln_log(none, "<OBJECT> In Set '<anonymous>'  setRef: <unknown> objRef: %I\n", obj->ref);
+    }
     mln_rbtree_scan_all(obj->members, mln_lang_dump_var_scan, &cnt);
 }
 
