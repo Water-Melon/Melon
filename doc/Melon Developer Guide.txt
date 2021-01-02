@@ -3732,6 +3732,12 @@ Their definitions can be found in melon/include/mln_types.h.
       'text' is the input text.
       If completely matched, 'true' will be returned, otherwise 'false'.
 
+      <81> mln_regMatch(exp, text);
+      'exp' is the regular expression.
+      'text' is the input text.
+      Return value is an array stored every matched pieces of 'text'.
+      If not matched, 'false' returned.
+
 
    H. Function development
       Following these steps below:
