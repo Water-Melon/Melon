@@ -3727,6 +3727,11 @@ Their definitions can be found in melon/include/mln_types.h.
       If no message arrived and function timed out, 'nil' would be returned.
       Otherwise message returned.
 
+      <80> mln_regEqual(exp, text);
+      'exp' is the regular expression.
+      'text' is the input text.
+      If completely matched, 'true' will be returned, otherwise 'false'.
+
 
    H. Function development
       Following these steps below:

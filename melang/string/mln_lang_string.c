@@ -40,6 +40,7 @@ static mln_lang_retExp_t *mln_bin2int_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_bin2real_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_int2bin_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_real2bin_process(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_reg_equal_process(mln_lang_ctx_t *ctx);
 
 int mln_lang_string(mln_lang_ctx_t *ctx)
 {
@@ -53,14 +54,16 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
         "mln_strcmp",
         "mln_strstr",
         "mln_kmp",
-        "mln_slice"
+        "mln_slice",
+        "mln_regEqual"
     };
     mln_lang_internal handlers[] = {
         mln_strcmpSeq_process,
         mln_strcmp_process,
         mln_strstr_process,
         mln_kmp_process,
-        mln_slice_process
+        mln_slice_process,
+        mln_reg_equal_process
     };
     mln_size_t n = sizeof(funcs)/sizeof(mln_u8ptr_t), i;
 
@@ -633,6 +636,49 @@ static mln_lang_retExp_t *mln_split_process(mln_lang_ctx_t *ctx)
         }
     }
     if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &ret, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return retExp;
+}
+
+static mln_lang_retExp_t *mln_reg_equal_process(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val1, *val2;
+    mln_lang_retExp_t *retExp;
+    mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2");
+    mln_lang_symbolNode_t *sym;
+
+    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+    val1 = sym->data.var->val;
+
+    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 2.");
+        return NULL;
+    }
+    val2 = sym->data.var->val;
+
+    if (mln_reg_equal(val1->data.s, val2->data.s)) {
+        retExp = mln_lang_retExp_createTmpTrue(ctx->pool, NULL);
+    } else {
+        retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL);
+    }
+    if (retExp == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
