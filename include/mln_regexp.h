@@ -33,9 +33,15 @@
 #define M_REGEXP_SUB          173
 #define M_REGEXP_OR           174
 
+typedef struct mln_reg_match_s {
+    mln_string_t            data;
+    struct mln_reg_match_s *prev;
+    struct mln_reg_match_s *next;
+} mln_reg_match_t;
 
-extern int mln_reg_match(mln_string_t *exp, mln_string_t *text);
+extern int mln_reg_match(mln_string_t *exp, mln_string_t *text, mln_reg_match_t **head, mln_reg_match_t **tail);
 extern int mln_reg_equal(mln_string_t *exp, mln_string_t *text);
+extern void mln_reg_match_result_free(mln_reg_match_t *results);
 
 #endif
 

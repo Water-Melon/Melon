@@ -10,24 +10,38 @@
 #include <ctype.h>
 #include "mln_regexp.h"
 
+MLN_CHAIN_FUNC_DECLARE(mln_reg_match, \
+                       mln_reg_match_t, \
+                       static inline void, \
+                       __NONNULL3(1,2,3));
+MLN_CHAIN_FUNC_DEFINE(mln_reg_match, \
+                      mln_reg_match_t, \
+                      static inline void, \
+                      prev, next);
+
 static int mln_match_star(char *mregexp, int mreglen, \
                           char *regexp, char *text, \
-                          int reglen, int textlen);
+                          int reglen, int textlen, \
+                          mln_reg_match_t **head, mln_reg_match_t **tail);
 static int mln_match_here(unsigned int flag, \
                           char *regexp, char *text, \
-                          int reglen, int textlen);
+                          int reglen, int textlen, \
+                          mln_reg_match_t **head, mln_reg_match_t **tail);
 static int mln_match_plus(char *mregexp, int mreglen, \
                           char *regexp, char *text, \
-                          int reglen, int textlen);
+                          int reglen, int textlen, \
+                          mln_reg_match_t **head, mln_reg_match_t **tail);
 static int mln_match_question(char *mregexp, int mreglen, \
                               char *regexp, char *text, \
-                              int reglen, int textlen);
+                              int reglen, int textlen, \
+                              mln_reg_match_t **head, mln_reg_match_t **tail);
 static int mln_match_brace(char *mregexp, int mreglen, \
                            char *regexp, char *text, \
                            int reglen, int textlen, \
-                           int min, int max);
+                           int min, int max, \
+                           mln_reg_match_t **head, mln_reg_match_t **tail);
 static inline int
-mln_match_square(char *regexp, int reglen, char **text, int *textlen);
+mln_match_square(char *regexp, int reglen, char **text, int *textlen, mln_reg_match_t **head, mln_reg_match_t **tail);
 static inline void
 mln_match_get_limit(char *regexp, int reglen, int *min, int *max);
 static inline int mln_get_char(unsigned int flag, char *s, int len);
@@ -35,15 +49,19 @@ static inline int mln_get_length(char *s, int len);
 static inline int
 mln_process_or(unsigned int flag, \
                char **regexp, int *reglen, \
-               char **text,   int *textlen);
+               char **text,   int *textlen, \
+               mln_reg_match_t **head, mln_reg_match_t **tail);
 static int
 mln_or_return_val(char **regexp, int *reglen, char *rexp, int rlen, int rv);
 static inline void
 mln_adjust_or_pos(unsigned int flag, char **rexp, int *rlen);
+static inline mln_reg_match_t *mln_reg_match_new(mln_u8ptr_t data, mln_size_t len);
+static inline void mln_reg_match_free(mln_reg_match_t *match);
 
 static int mln_match_here(unsigned int flag, \
                           char *regexp, char *text, \
-                          int reglen, int textlen)
+                          int reglen, int textlen, \
+                          mln_reg_match_t **head, mln_reg_match_t **tail)
 {
     int steplen, count, c_0, len_0, c_n, len_n, ret;
 
@@ -58,9 +76,12 @@ again:
 
     if (!(flag & M_REGEXP_SPECIAL_MASK)) {
         if (!(flag & M_REGEXP_MASK_OR)) {
-            ret = mln_process_or(flag, &regexp, &reglen, &text, &textlen);
-            if (ret < 0) return -1;
-            else if (ret > 0) goto again;
+            ret = mln_process_or(flag, &regexp, &reglen, &text, &textlen, head, tail);
+            if (ret < 0) {
+                return -1;
+            } else if (ret > 0) {
+                goto again;
+            }
         }
 
         if (c_0 == M_REGEXP_LPAR) {
@@ -72,7 +93,9 @@ again:
                 if (c == M_REGEXP_RPAR && --count == 0) break;
                 len -= mln_get_length(regexp+(reglen-len), len);
             }
-            if (len <= 0) return -1;
+            if (len <= 0) {
+                return -1;
+            }
             steplen = reglen - len + len_0;
             if (reglen - len == len_0) {
                 regexp += (len_0 << 1);
@@ -90,7 +113,9 @@ again:
                 if (c == M_REGEXP_RSQUAR && --count == 0) break;
                 len -= mln_get_length(regexp+(reglen-len), len);
             }
-            if (len <= 0) return -1;
+            if (len <= 0) {
+                return -1;
+            }
             steplen = reglen - len + len_0;
             if (reglen - len == len_0) {
                 regexp += (len_0 << 1);
@@ -106,17 +131,20 @@ again:
             if (c_n == M_REGEXP_STAR) {
                 return mln_match_star(regexp, steplen, \
                                       regexp+steplen+len_n, text, \
-                                      reglen-steplen-len_n, textlen);
+                                      reglen-steplen-len_n, textlen, \
+                                      head, tail);
             }
             if (c_n == M_REGEXP_PLUS) {
                 return mln_match_plus(regexp, steplen, \
                                       regexp+steplen+len_n, text, \
-                                      reglen-steplen-len_n, textlen);
+                                      reglen-steplen-len_n, textlen, \
+                                      head, tail);
             }
             if (c_n == M_REGEXP_QUES) {
                 return mln_match_question(regexp, steplen, \
                                           regexp+steplen+len_n, text, \
-                                          reglen-steplen-len_n, textlen);
+                                          reglen-steplen-len_n, textlen, \
+                                          head, tail);
             }
             if (c_n == M_REGEXP_LBRACE) {
                 int part = 1, min, max, existent = 0;
@@ -139,17 +167,23 @@ again:
                         len -= mln_get_length(regexp+steplen+(reglen-len), reglen-steplen-(reglen-len));
                         continue;
                     }
-                    if (!isdigit(c)) return -1;
+                    if (!isdigit(c)) {
+                        return -1;
+                    }
                     existent = 1;
                     len -= mln_get_length(regexp+steplen+(reglen-len), reglen-steplen-(reglen-len));
                 }
-                if (len <= steplen || !existent || part > 2) return -1;
+                if (len <= steplen || !existent || part > 2) {
+                    return -1;
+                }
                 mln_match_get_limit(regexp+steplen+l, reglen-len-l, &min, &max);
-                if (max > 0 && min > max) return -1;
+                if (max > 0 && min > max) {
+                    return -1;
+                }
                 return mln_match_brace(regexp, steplen, \
                                        regexp+steplen+(reglen-len)+l, text, \
                                        len-steplen-l, textlen, \
-                                       min, max);
+                                       min, max, head, tail);
             }
         }
 
@@ -176,7 +210,9 @@ again:
             }
         }
         if (c_0 == M_REGEXP_NUM && textlen > 0) {
-            if (!isdigit(*text)) return -1;
+            if (!isdigit(*text)) {
+                return -1;
+            }
             ++text;
             --textlen;
             regexp += len_0;
@@ -184,7 +220,9 @@ again:
             goto again;
         }
         if (c_0 == M_REGEXP_NOT_NUM && textlen > 0) {
-            if (isdigit(*text)) return -1;
+            if (isdigit(*text)) {
+                return -1;
+            }
             ++text;
             --textlen;
             regexp += len_0;
@@ -192,7 +230,9 @@ again:
             goto again;
         }
         if (c_0 == M_REGEXP_ALPHA && textlen > 0) {
-            if (!isalpha(*text)) return -1;
+            if (!isalpha(*text)) {
+                return -1;
+            }
             ++text;
             --textlen;
             regexp += len_0;
@@ -209,16 +249,26 @@ again:
     }
 
     if (c_0 == M_REGEXP_LSQUAR) {
-        if (mln_match_square(regexp, steplen, &text, &textlen) < 0)
+        if (mln_match_square(regexp, steplen, &text, &textlen, head, tail) < 0) {
             return -1;
+        }
         regexp += steplen;
         reglen -= steplen;
         goto again;
     }
 
     if (c_0 == M_REGEXP_LPAR) {
-        int left = mln_match_here(M_REGEXP_MASK_NEW, regexp+len_0, text, steplen-(len_0<<1), textlen);
-        if (left < 0) return -1;
+        int left = mln_match_here(M_REGEXP_MASK_NEW, regexp+len_0, text, steplen-(len_0<<1), textlen, head, tail);
+        if (left < 0) {
+            return -1;
+        }
+        if (head != NULL && tail != NULL) {
+            mln_reg_match_t *match;
+            if ((match = mln_reg_match_new((mln_u8ptr_t)text, textlen-left)) == NULL) {
+                return -1;
+            }
+            mln_reg_match_chain_add(head, tail, match);
+        }
         regexp += steplen;
         reglen -= steplen;
         text += (textlen - left);
@@ -241,7 +291,8 @@ again:
 static inline int
 mln_process_or(unsigned int flag, \
                char **regexp, int *reglen, \
-               char **text,   int *textlen)
+               char **text,   int *textlen, \
+               mln_reg_match_t **head, mln_reg_match_t **tail)
 {
     char *rexp = *regexp;
     int rlen = *reglen;
@@ -322,7 +373,7 @@ again:
     match_len = rlen - left;
 
 match:
-    ret = mln_match_here(flag|M_REGEXP_MASK_OR, rexp, *text, match_len, *textlen);
+    ret = mln_match_here(flag|M_REGEXP_MASK_OR, rexp, *text, match_len, *textlen, head, tail);
 
     rexp += match_len;
     rlen -= match_len;
@@ -428,7 +479,7 @@ again:
 }
 
 static inline int
-mln_match_square(char *regexp, int reglen, char **text, int *textlen)
+mln_match_square(char *regexp, int reglen, char **text, int *textlen, mln_reg_match_t **head, mln_reg_match_t **tail)
 {
     int c, len, reverse = 0, count, left, steplen;
     int end_c, tmp_c, tmp_len;
@@ -505,7 +556,7 @@ again:
         }
 
         if (*textlen <= 0) return -1;
-        left = mln_match_here(M_REGEXP_MASK_SQUARE, regexp, *text, steplen, *textlen);
+        left = mln_match_here(M_REGEXP_MASK_SQUARE, regexp, *text, steplen, *textlen, head, tail);
         if (left >= 0) {
             if (!reverse) {
                 (*text) += (*textlen - left);
@@ -554,69 +605,90 @@ mln_match_get_limit(char *regexp, int reglen, int *min, int *max)
 
 static int mln_match_star(char *mregexp, int mreglen, \
                           char *regexp, char *text, \
-                          int reglen, int textlen)
+                          int reglen, int textlen, \
+                          mln_reg_match_t **head, mln_reg_match_t **tail)
 {
     int ret;
     char dot = (char)M_REGEXP_DOT;
+    char *record_text = NULL;
+    int record_len = -1;
 
     if (textlen <= 0) return textlen;
 
     if (mreglen > 1) {
+        int found = 0;
 again:
-        ret = mln_match_here(0, mregexp, text, mreglen, textlen);
+        ret = mln_match_here(0, mregexp, text, mreglen, textlen, head, tail);
         if (ret < 0) {
-            if (reglen <= 0) return ret;
-            return mln_match_here(0, regexp, text, reglen, textlen);
+            if (reglen <= 0) return found? textlen: ret;
+            ret =  mln_match_here(0, regexp, text, reglen, textlen, head, tail);
+            if (found) {
+                return ret < 0? textlen: ret;
+            } else {
+                return ret;
+            }
         } else {
+            found = 1;
             text += (textlen - ret);
             textlen = ret;
             if (textlen > 0) goto again;
-            if (reglen > 0) return mln_match_here(0, regexp, text, reglen, textlen);
+            if (reglen > 0) return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
             return 0;
         }
     }
 
     while (textlen > 0 && \
-           (mln_match_here(M_REGEXP_STAR, mregexp, text, mreglen, textlen) >= 0 || \
-            mln_match_here(M_REGEXP_STAR, mregexp, &dot, mreglen, 1) >= 0))
+           (mln_match_here(M_REGEXP_STAR, mregexp, text, mreglen, textlen, head, tail) >= 0 || \
+            mln_match_here(M_REGEXP_STAR, mregexp, &dot, mreglen, 1, head, tail) >= 0))
     {
         ++text;
         --textlen;
+        if (reglen > 0) {
+            if (mln_match_here(0, regexp, text, reglen, textlen, NULL, NULL) >= 0) {
+                record_text = text;
+                record_len = textlen;
+            }
+        }
     }
 
     if (reglen > 0) {
-        return mln_match_here(0, regexp, text, reglen, textlen);
+        if (record_text != NULL) {
+            text = record_text;
+            textlen = record_len;
+        }
+        return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
     }
 
-    return -1;
+    return textlen;
 }
 
 static int mln_match_plus(char *mregexp, int mreglen, \
                           char *regexp, char *text, \
-                          int reglen, int textlen)
+                          int reglen, int textlen, \
+                          mln_reg_match_t **head, mln_reg_match_t **tail)
 {
     int ret, found = 0;
     char dot = (char)M_REGEXP_DOT;
 
     if (mreglen > 1) {
 again:
-        ret = mln_match_here(0, mregexp, text, mreglen, textlen);
+        ret = mln_match_here(0, mregexp, text, mreglen, textlen, head, tail);
         if (ret < 0) {
             if (found == 0) return ret;
-            return mln_match_here(0, regexp, text, reglen, textlen);
+            return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
         } else {
             found = 1;
             text += (textlen - ret);
             textlen = ret;
             if (textlen > 0) goto again;
-            if (reglen > 0) return mln_match_here(0, regexp, text, reglen, textlen);
+            if (reglen > 0) return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
             return 0;
         }
     }
 
     while (textlen > 0 && \
-           (mln_match_here(M_REGEXP_PLUS, mregexp, text, mreglen, textlen) >= 0 || \
-            mln_match_here(M_REGEXP_PLUS, mregexp, &dot, mreglen, 1) >= 0))
+           (mln_match_here(M_REGEXP_PLUS, mregexp, text, mreglen, textlen, head, tail) >= 0 || \
+            mln_match_here(M_REGEXP_PLUS, mregexp, &dot, mreglen, 1, head, tail) >= 0))
     {
         found = 1;
         ++text;
@@ -624,7 +696,7 @@ again:
     }
     if (found) {
         if (textlen > 0)
-            return mln_match_here(0, regexp, text, reglen, textlen);
+            return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
         return textlen;
     }
 
@@ -633,51 +705,53 @@ again:
 
 static int mln_match_question(char *mregexp, int mreglen, \
                               char *regexp, char *text, \
-                              int reglen, int textlen)
+                              int reglen, int textlen, \
+                              mln_reg_match_t **head, mln_reg_match_t **tail)
 {
     int ret;
 
     if (mreglen > 1) {
-        ret = mln_match_here(0, mregexp, text, mreglen, textlen);
+        ret = mln_match_here(0, mregexp, text, mreglen, textlen, head, tail);
         if (ret >= 0) {
             text += (textlen - ret);
             textlen = ret;
         }
-        return mln_match_here(0, regexp, text, reglen, textlen);
+        return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
     }
 
-    if (mln_match_here(M_REGEXP_QUES, mregexp, text, mreglen, textlen) >= 0)
-        return mln_match_here(0, regexp, text+1, reglen, textlen-1);
-    return mln_match_here(0, regexp, text, reglen, textlen);
+    if (mln_match_here(M_REGEXP_QUES, mregexp, text, mreglen, textlen, head, tail) >= 0)
+        return mln_match_here(0, regexp, text+1, reglen, textlen-1, head, tail);
+    return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
 }
 
 static int mln_match_brace(char *mregexp, int mreglen, \
                            char *regexp, char *text, \
                            int reglen, int textlen, \
-                           int min, int max)
+                           int min, int max, \
+                           mln_reg_match_t **head, mln_reg_match_t **tail)
 {
     int ret, found = 0;
     char dot = (char)M_REGEXP_DOT;
 
     if (mreglen > 1) {
 again:
-        ret = mln_match_here(0, mregexp, text, mreglen, textlen);
+        ret = mln_match_here(0, mregexp, text, mreglen, textlen, head, tail);
         if (ret < 0) {
             if (reglen <= 0 || found < min) return ret;
-            return mln_match_here(0, regexp, text, reglen, textlen);
+            return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
         } else {
             ++found;
             text += (textlen - ret);
             textlen = ret;
             if (textlen > 0 && (max < 0 || found < max)) goto again;
             if (textlen <= 0 && reglen <= 0) return 0;
-            return mln_match_here(0, regexp, text, reglen, textlen);
+            return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
         }
     }
 
     while (textlen > 0 && \
-           (mln_match_here(M_REGEXP_LBRACE, mregexp, text, mreglen, textlen) >= 0 || \
-            mln_match_here(M_REGEXP_LBRACE, mregexp, &dot, mreglen, 1) >= 0))
+           (mln_match_here(M_REGEXP_LBRACE, mregexp, text, mreglen, textlen, head, tail) >= 0 || \
+            mln_match_here(M_REGEXP_LBRACE, mregexp, &dot, mreglen, 1, head, tail) >= 0))
     {
         ++found;
         ++text;
@@ -686,7 +760,7 @@ again:
     }
     if (found >= min) {
         if (textlen > 0 || reglen > 0)
-            return mln_match_here(0, regexp, text, reglen, textlen);
+            return mln_match_here(0, regexp, text, reglen, textlen, head, tail);
         return textlen;
     }
 
@@ -778,13 +852,49 @@ static inline int mln_get_length(char *s, int len)
     return 1;
 }
 
-int mln_reg_match(mln_string_t *exp, mln_string_t *text)
+static inline mln_reg_match_t *mln_reg_match_new(mln_u8ptr_t data, mln_size_t len)
 {
-    return mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len);
+    mln_reg_match_t *match;
+    if ((match = (mln_reg_match_t *)malloc(sizeof(mln_reg_match_t))) == NULL) {
+        return NULL;
+    }
+    match->data.data = data;
+    match->data.len = len;
+    match->prev = match->next = NULL;
+    return match;
+}
+
+static inline void mln_reg_match_free(mln_reg_match_t *match)
+{
+    if (match == NULL) return;
+    free(match);
+}
+
+int mln_reg_match(mln_string_t *exp, mln_string_t *text, mln_reg_match_t **head, mln_reg_match_t **tail)
+{
+    int ret;
+
+    if (head != NULL && tail != NULL)
+        *head = *tail = NULL;
+    ret = mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len, head, tail);
+    if (ret < 0 && head  != NULL && tail != NULL) {
+        mln_reg_match_result_free(*head);
+        *head = *tail = NULL;
+    }
+    return ret;
 }
 
 int mln_reg_equal(mln_string_t *exp, mln_string_t *text)
 {
-    return !mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len);
+    return !mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len, NULL, NULL);
+}
+
+void mln_reg_match_result_free(mln_reg_match_t *results)
+{
+    mln_reg_match_t *fr;
+    while ((fr = results) != NULL) {
+        results = results->next;
+        free(fr);
+    }
 }
 
