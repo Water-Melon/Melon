@@ -7256,8 +7256,8 @@ static void mln_lang_gc_item_rootSetter(mln_gc_t *gc, mln_lang_scope_t *scope)
     if (scope == NULL) return;
     ASSERT(scope->gc == gc);
     mln_rbtree_scan_all(scope->symbols, mln_lang_gc_item_rootSetterScanner, gc);
-    if (scope->ctx->scope_head != scope && scope->ctx->scope_head != NULL) {
-        mln_rbtree_scan_all(scope->ctx->scope_head->symbols, mln_lang_gc_item_rootSetterScanner, gc);
+    for (scope = scope->ctx->scope_tail; scope != NULL; scope = scope->prev) {
+        mln_rbtree_scan_all(scope->symbols, mln_lang_gc_item_rootSetterScanner, gc);
     }
 }
 
