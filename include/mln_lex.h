@@ -142,6 +142,7 @@ typedef struct {
     mln_u8ptr_t         buf;
     mln_u8ptr_t         pos;
     mln_u64_t           buf_len;
+    mln_u64_t           line;
 } mln_lex_input_t;
 
 typedef struct {
@@ -200,7 +201,7 @@ extern mln_lex_preprocessData_t *mln_lex_preprocessData_new(mln_alloc_t *pool) _
 extern void mln_lex_preprocessData_free(mln_lex_preprocessData_t *lpd);
 extern int mln_lex_conditionTest(mln_lex_t *lex) __NONNULL1(1);
 extern mln_lex_input_t *
-mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *err) __NONNULL3(1,3,4);
+mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line) __NONNULL3(1,3,4);
 extern void mln_lex_input_free(void *in);
 #define mln_lex_getPool(lex) ((lex)->pool)
 #define mln_lex_cleanResult(lex) ((lex)->result_pos = (lex)->result_buf)
@@ -257,6 +258,7 @@ lp:
         }
         if (in->pos >= in->buf+in->buf_len) {
             mln_lex_input_free(in);
+            lex->line = in->line;
             lex->cur = NULL;
             goto lp;
         }
@@ -276,6 +278,7 @@ again:
                 return MLN_ERR;
             } else if (n == 0) {
                 mln_lex_input_free(in);
+                lex->line = in->line;
                 lex->cur = NULL;
                 goto lp;
             }

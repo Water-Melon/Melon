@@ -55,7 +55,7 @@ void mln_lex_preprocessData_free(mln_lex_preprocessData_t *lpd)
 }
 
 mln_lex_input_t *
-mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *err)
+mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line)
 {
     mln_lex_input_t *li;
     if ((li = (mln_lex_input_t *)mln_alloc_m(pool, sizeof(mln_lex_input_t))) == NULL) {
@@ -63,6 +63,7 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
         return NULL;
     }
     li->type = type;
+    li->line = line;
     if ((li->data = mln_string_pool_dup(pool, data)) == NULL) {
         mln_alloc_free(li);
         *err = MLN_LEX_ENMEM;
@@ -369,7 +370,7 @@ char *mln_lex_strerror(mln_lex_t *lex)
 int mln_lex_push_InputFileStream(mln_lex_t *lex, mln_string_t *path)
 {
     int err = MLN_LEX_SUCCEED;
-    mln_lex_input_t *in = mln_lex_input_new(lex->pool, M_INPUT_T_FILE, path, &err);
+    mln_lex_input_t *in = mln_lex_input_new(lex->pool, M_INPUT_T_FILE, path, &err, lex->line);
     if (in == NULL) {
         lex->error = err;
         return -1;
@@ -385,13 +386,14 @@ int mln_lex_push_InputFileStream(mln_lex_t *lex, mln_string_t *path)
         lex->error = MLN_LEX_ENMEM;
         return -1;
     }
+    lex->line = 1;
     return 0;
 }
 
 int mln_lex_push_InputBufStream(mln_lex_t *lex, mln_string_t *buf)
 {
     int err = MLN_LEX_SUCCEED;
-    mln_lex_input_t *in = mln_lex_input_new(lex->pool, M_INPUT_T_BUF, buf, &err);
+    mln_lex_input_t *in = mln_lex_input_new(lex->pool, M_INPUT_T_BUF, buf, &err, lex->line);
     if (in == NULL) {
         lex->error = err;
         return -1;
@@ -407,6 +409,7 @@ int mln_lex_push_InputBufStream(mln_lex_t *lex, mln_string_t *buf)
         lex->error = MLN_LEX_ENMEM;
         return -1;
     }
+    lex->line = 1;
     return 0;
 }
 
