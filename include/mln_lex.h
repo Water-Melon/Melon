@@ -257,8 +257,8 @@ lp:
             in->pos = in->buf = in->data->data;
         }
         if (in->pos >= in->buf+in->buf_len) {
-            mln_lex_input_free(in);
             lex->line = in->line;
+            mln_lex_input_free(in);
             lex->cur = NULL;
             goto lp;
         }
@@ -277,8 +277,8 @@ again:
                 lex->error = MLN_LEX_EREAD;
                 return MLN_ERR;
             } else if (n == 0) {
-                mln_lex_input_free(in);
                 lex->line = in->line;
+                mln_lex_input_free(in);
                 lex->cur = NULL;
                 goto lp;
             }
