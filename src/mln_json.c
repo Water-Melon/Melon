@@ -53,10 +53,14 @@ mln_json_write_content_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void 
 
 mln_json_t *mln_json_parse(mln_string_t *jstr)
 {
-    if (jstr == NULL) return NULL;
+    if (jstr == NULL) {
+        return NULL;
+    }
 
     mln_json_t *j = mln_json_new();
-    if (j == NULL) return NULL;
+    if (j == NULL) {
+        return NULL;
+    }
 
     if (mln_json_parse_json(j, (char *)(jstr->data), jstr->len, 0) != 0) {
         mln_json_free(j);
@@ -111,12 +115,16 @@ void mln_json_free(void *json)
 static inline int
 mln_json_parse_json(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
-    if (jstr == NULL) return -1;
+    if (jstr == NULL) {
+        return -1;
+    }
 
     int left;
 
     mln_json_jumpoff_blank(&jstr, &len);
-    if (len <= 0) return len;
+    if (len <= 0) {
+        return len;
+    }
 
     switch (jstr[0]) {
         case '{':
@@ -148,7 +156,9 @@ mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
     /*jump off '{'*/
     ++jstr;
     --len;
-    if (len <= 0) return -1;
+    if (len <= 0) {
+        return -1;
+    }
 
     val->index = index;
     val->type = M_JSON_OBJECT;
@@ -166,54 +176,74 @@ mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
 
 again:
     obj = mln_json_obj_new();
-    if (obj == NULL) return -1;
+    if (obj == NULL) {
+        return -1;
+    }
 
     obj->key = mln_json_new();
     if (obj->key == NULL) {
         mln_json_obj_free(obj);
         return -1;
     }
-    left = mln_json_parse_json(obj->key, jstr, len, 0);
-    if (left <= 0) {
-        mln_json_obj_free(obj);
-        return -1;
+    if (jstr[0] != '}') {
+        left = mln_json_parse_json(obj->key, jstr, len, 0);
+        if (left <= 0) {
+            mln_json_obj_free(obj);
+            return -1;
+        }
+        if (obj->key->type != M_JSON_STRING) {
+            mln_json_obj_free(obj);
+            return -1;
+        }
+        jstr += (len - left);
+        len = left;
+        if (len <= 0) {
+            return -1;
+        }
+
+        if (mln_hash_insert(val->data.m_j_obj, obj->key->data.m_j_string, obj) < 0) {
+            mln_json_obj_free(obj);
+            return -1;
+        }
+
+        mln_json_jumpoff_blank(&jstr, &len);
+        if (len <= 0) {
+            return -1;
+        }
+
+        /*jump off ':'*/
+        if (jstr[0] != ':') {
+            return -1;
+        }
+        ++jstr;
+        --len;
+        if (len <= 0) {
+            return -1;
+        }
+
+        obj->val = mln_json_new();
+        if (obj->val == NULL) {
+            return -1;
+        }
+        left = mln_json_parse_json(obj->val, jstr, len, 0);
+        if (left <= 0) {
+            return -1;
+        }
+        jstr += (len - left);
+        len = left;
+
+        mln_json_jumpoff_blank(&jstr, &len);
+        if (len <= 0) {
+            return -1;
+        }
     }
-    if (obj->key->type != M_JSON_STRING) {
-        mln_json_obj_free(obj);
-        return -1;
-    }
-    jstr += (len - left);
-    len = left;
-    if (len <= 0) return -1;
-
-    if (mln_hash_insert(val->data.m_j_obj, obj->key->data.m_j_string, obj) < 0) {
-        mln_json_obj_free(obj);
-        return -1;
-    }
-
-    mln_json_jumpoff_blank(&jstr, &len);
-    if (len <= 0) return -1;
-
-    /*jump off ':'*/
-    if (jstr[0] != ':') return -1;
-    ++jstr;
-    --len;
-    if (len <= 0) return -1;
-
-    obj->val = mln_json_new();
-    if (obj->val == NULL) return -1;
-    left = mln_json_parse_json(obj->val, jstr, len, 0);
-    if (left <= 0) return -1;
-    jstr += (len - left);
-    len = left;
-
-    mln_json_jumpoff_blank(&jstr, &len);
-    if (len <= 0) return -1;
 
     if (jstr[0] == ',') {
         ++jstr;
         --len;
-        if (len <= 0) return -1;
+        if (len <= 0) {
+            return -1;
+        }
         goto again;
     } else if (jstr[0] == '}') {
         ++jstr;
@@ -238,25 +268,33 @@ mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
     val->index = index;
     val->type = M_JSON_ARRAY;
     val->data.m_j_array = mln_rbtree_init(&rbattr);
-    if (val->data.m_j_array == NULL) return -1;
+    if (val->data.m_j_array == NULL) {
+        return -1;
+    }
 
     ++jstr;
     --len;
-    if (len <= 0) return -1;
+    if (len <= 0) {
+        return -1;
+    }
 
 again:
     j = mln_json_new();
-    if (j == NULL) return -1;
-    left = mln_json_parse_json(j, jstr, len, ++cnt);
-    if (left <= 0) {
-        mln_json_free(j);
+    if (j == NULL) {
         return -1;
     }
-    jstr += (len - left);
-    len = left;
-    if (len <= 0) {
-        mln_json_free(j);
-        return -1;
+    if (jstr[0] != ']') {
+        left = mln_json_parse_json(j, jstr, len, ++cnt);
+        if (left <= 0) {
+            mln_json_free(j);
+            return -1;
+        }
+        jstr += (len - left);
+        len = left;
+        if (len <= 0) {
+            mln_json_free(j);
+            return -1;
+        }
     }
 
     rn = mln_rbtree_node_new(val->data.m_j_array, j);
@@ -267,11 +305,15 @@ again:
     mln_rbtree_insert(val->data.m_j_array, rn);
 
     mln_json_jumpoff_blank(&jstr, &len);
-    if (len <= 0) return -1;
+    if (len <= 0) {
+        return -1;
+    }
 
     if (jstr[0] == ',') {
         ++jstr; --len;
-        if (len <= 0) return -1;
+        if (len <= 0) {
+            return -1;
+        }
         goto again;
     }
     if (jstr[0] == ']') {
@@ -292,21 +334,29 @@ mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 
     ++jstr;
     --len;
-    if (len <= 0) return -1;
+    if (len <= 0) {
+        return -1;
+    }
 
     for (p = (mln_u8ptr_t)jstr, plen = len; plen > 0; ++p, ++count, --plen) {
         if (*p == (mln_u8_t)'\"' && (p == (mln_u8ptr_t)jstr || *(p-1) != (mln_u8_t)'\\')) {
             break;
         }
     }
-    if (plen <= 0) return -1;
+    if (plen <= 0) {
+        return -1;
+    }
 
     buf = mln_json_parse_string_fetch((mln_u8ptr_t)jstr, &count);
-    if (buf == NULL) return -1;
+    if (buf == NULL) {
+        return -1;
+    }
 
     str = mln_string_nConstDup((char *)buf, count);
     free(buf);
-    if (str == NULL) return -1;
+    if (str == NULL) {
+        return -1;
+    }
 
     j->index = index;
     j->type = M_JSON_STRING;
@@ -450,11 +500,15 @@ mln_json_parse_digit(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     if (jstr[0] == '-') {
         sub_flag = 1;
         ++jstr; --len;
-        if (len <= 0) return -1;
+        if (len <= 0) {
+            return -1;
+        }
     }
 
     left = mln_json_digit_process(&val, jstr, len);
-    if (left < 0) return -1;
+    if (left < 0) {
+        return -1;
+    }
 
     j->index = index;
     j->type = M_JSON_NUM;
@@ -531,9 +585,13 @@ mln_json_digit_process(double *val, char *s, int len)
 static int
 mln_json_parse_true(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
-    if (len < 4) return -1;
+    if (len < 4) {
+        return -1;
+    }
 
-    if (strncasecmp(jstr, "true", 4)) return -1;
+    if (strncasecmp(jstr, "true", 4)) {
+        return -1;
+    }
 
     j->index = index;
     j->type = M_JSON_TRUE;
@@ -545,9 +603,13 @@ mln_json_parse_true(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 static int
 mln_json_parse_false(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
-    if (len < 5) return -1;
+    if (len < 5) {
+        return -1;
+    }
 
-    if (strncasecmp(jstr, "false", 5)) return -1;
+    if (strncasecmp(jstr, "false", 5)) {
+        return -1;
+    }
 
     j->index = index;
     j->type = M_JSON_FALSE;
@@ -559,9 +621,13 @@ mln_json_parse_false(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 static int
 mln_json_parse_null(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
-    if (len < 4) return -1;
+    if (len < 4) {
+        return -1;
+    }
 
-    if (strncasecmp(jstr, "null", 4)) return -1;
+    if (strncasecmp(jstr, "null", 4)) {
+        return -1;
+    }
 
     j->index = index;
     j->type = M_JSON_NULL;
