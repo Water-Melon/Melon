@@ -119,7 +119,7 @@ static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
     }
-    mln_string_nSet(&t, res, sizeof(res));
+    mln_string_nSet(&t, res, sizeof(res)-1);
     if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &t, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
