@@ -922,7 +922,7 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
                 if ((*la)->token_type != TK_PREFIX##_TK_EOF && (*la)->data != NULL) \
                     name = (mln_s8ptr_t)(((PREFIX_NAME##_struct_t *)((*la)->data))->text->data);\
                 if ((filename = mln_lex_getCurFilename(spattr->lex)) == NULL) {\
-                    mln_log(error, "%d: Parse Error: Illegal token%s%s%s\n", \
+                    mln_log(none, "line %d: Parse Error: Illegal token%s%s%s\n", \
                             *is_reduce?top->line:(*la)->line, \
                             name==NULL? ".": " nearby '", \
                             name==NULL? " ": name, \
@@ -931,7 +931,7 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
                     char fname[1024];\
                     memcpy(fname, filename->data, filename->len>1023?1023:filename->len);\
                     fname[filename->len>1023?1023:filename->len] = 0;\
-                    mln_log(error, "%s%s%d: Parse Error: Illegal token%s%s%s\n", \
+                    mln_log(none, "%s%s%d: Parse Error: Illegal token%s%s%s\n", \
                             filename!=NULL? fname: " ", \
                             filename!=NULL? ":": " ",\
                             *is_reduce?top->line:(*la)->line, \
