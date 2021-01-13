@@ -108,7 +108,8 @@ static inline mln_lang_scope_t *
 mln_lang_scope_new(mln_lang_ctx_t *ctx, \
                    mln_string_t *name, \
                    mln_lang_scope_type_t type, \
-                   mln_lang_stack_node_t *cur_stack);
+                   mln_lang_stack_node_t *cur_stack, \
+                   mln_lang_stm_t *entry_stm);
 static void mln_lang_scope_free(mln_lang_scope_t *scope);
 static inline mln_gc_t *mln_lang_scope_getCurrentGC(mln_lang_ctx_t *ctx);
 static int mln_lang_symbolNode_cmp(const void *data1, const void *data2);
@@ -718,7 +719,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     }
 
     mln_lang_scope_t *outer_scope;
-    if ((outer_scope = mln_lang_scope_new(ctx, NULL, M_LANG_SCOPE_TYPE_FUNC, NULL)) == NULL) {
+    if ((outer_scope = mln_lang_scope_new(ctx, NULL, M_LANG_SCOPE_TYPE_FUNC, NULL, ctx->stm)) == NULL) {
         mln_lang_ctx_free(ctx);
         return NULL;
     }
@@ -1279,7 +1280,8 @@ static inline mln_lang_scope_t *
 mln_lang_scope_new(mln_lang_ctx_t *ctx, \
                    mln_string_t *name, \
                    mln_lang_scope_type_t type, \
-                   mln_lang_stack_node_t *cur_stack)
+                   mln_lang_stack_node_t *cur_stack, \
+                   mln_lang_stm_t *entry_stm)
 {
     mln_lang_scope_t *scope;
     struct mln_rbtree_attr rbattr;
@@ -1326,6 +1328,7 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
     }
     scope->ctx = ctx;
     scope->cur_stack = cur_stack;
+    scope->entry = entry_stm;
     scope->prev = scope->next = NULL;
     return scope;
 }
@@ -3175,7 +3178,7 @@ static void mln_lang_stack_handler_set(mln_lang_ctx_t *ctx)
         }
         if (set->stm != NULL) {
             node->step = 1;
-            if ((scope = mln_lang_scope_new(ctx, s_detail->name, M_LANG_SCOPE_TYPE_SET, NULL)) == NULL) {
+            if ((scope = mln_lang_scope_new(ctx, s_detail->name, M_LANG_SCOPE_TYPE_SET, NULL, NULL)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3465,49 +3468,30 @@ static inline int mln_lang_stack_handler_block_return(mln_lang_ctx_t *ctx, mln_l
 static inline int mln_lang_stack_handler_block_goto(mln_lang_ctx_t *ctx, mln_lang_block_t *block)
 {
     mln_string_t *pos = block->data.pos;
-    mln_lang_symbolNode_t *sym;
     mln_lang_stack_node_t *node;
     mln_lang_stm_t *stm;
     ASSERT(ctx->scope_tail->type == M_LANG_SCOPE_TYPE_FUNC);
     mln_lang_ctx_resetRetExp(ctx);
-    if ((sym = __mln_lang_symbolNode_search(ctx, pos, 1)) != NULL) {
-        if (sym->type != M_LANG_SYMBOL_LABEL) {
-            __mln_lang_errmsg(ctx, "Invalid a label.");
-            return -1;
-        }
-        stm = sym->data.label->stm;
-    } else {
-        while (1) {
-            node = (mln_lang_stack_node_t *)mln_stack_pop(ctx->run_stack);
-            ASSERT(node != NULL);
-            if (node->type == M_LSNT_STM) {
-                stm = node->data.stm->next;
-                __mln_lang_stack_node_free(node);
-                break;
-            }
-            __mln_lang_stack_node_free(node);
-        }
-        for (; stm != NULL; stm = stm->next) {
-            if (stm->type == M_STM_LABEL && !mln_string_strcmp(stm->data.pos, pos)) {
-                mln_lang_label_t *l;
-                stm = stm->next;
-                if ((l = mln_lang_label_new(ctx->pool, pos, stm)) == NULL) {
-                    __mln_lang_errmsg(ctx, "No memory.");
-                    return -1;
-                }
-                if (__mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_LABEL, l) < 0) {
-                    __mln_lang_errmsg(ctx, "No memory.");
-                    mln_lang_label_free(l);
-                    return -1;
-                }
-                break;
-            }
-        }
-        if (stm == NULL) {
-            __mln_lang_errmsg(ctx, "Invalid a label.");
-            return -1;
+
+    for (stm = ctx->scope_tail->entry; stm != NULL; stm = stm->next) {
+        if (stm->type == M_STM_LABEL && !mln_string_strcmp(stm->data.pos, pos)) {
+            stm = stm->next;
+            break;
         }
     }
+    if (stm == NULL) {
+        __mln_lang_errmsg(ctx, "Invalid label.");
+        return -1;
+    }
+
+    while (1) {
+        node = (mln_lang_stack_node_t *)mln_stack_pop(ctx->run_stack);
+        if (node == ctx->scope_tail->cur_stack) {
+            break;
+        }
+        __mln_lang_stack_node_free(node);
+    }
+
     if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_STM, stm)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
@@ -5368,7 +5352,7 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
     if ((scope = mln_lang_scope_new(ctx, \
                                     NULL, \
                                     M_LANG_SCOPE_TYPE_FUNC, \
-                                    node)) == NULL)
+                                    node, NULL)) == NULL)
     {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
@@ -5437,6 +5421,7 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
         mln_lang_ctx_setRetExp(ctx, retExp);
     } else {
         if (prototype->data.stm != NULL) {
+            scope->entry = prototype->data.stm;
             if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_STM, prototype->data.stm)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 return -1;

@@ -213,6 +213,7 @@ struct mln_lang_scope_s {
     mln_rbtree_t                    *symbols;
     mln_lang_ctx_t                  *ctx;
     mln_lang_stack_node_t           *cur_stack;
+    mln_lang_stm_t                  *entry;
     mln_lang_scope_t                *prev;
     mln_lang_scope_t                *next;
 };
