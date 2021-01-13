@@ -986,6 +986,18 @@ static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *c
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
+    if (mln_event_set_fd(ctx->lang->ev, \
+                         fd, \
+                         M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, \
+                         M_EV_UNLIMITED, \
+                         tcp, \
+                         mln_lang_network_tcp_connect_handler) < 0)
+    {
+        mln_lang_tcp_free(tcp);
+        freeaddrinfo(res);
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
     if (connect(fd, res->ai_addr, res->ai_addrlen) < 0 && errno != EINPROGRESS) {
         mln_lang_tcp_free(tcp);
         freeaddrinfo(res);
@@ -996,17 +1008,6 @@ static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *c
         return retExp;
     }
     freeaddrinfo(res);
-    if (mln_event_set_fd(ctx->lang->ev, \
-                         fd, \
-                         M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, \
-                         M_EV_UNLIMITED, \
-                         tcp, \
-                         mln_lang_network_tcp_connect_handler) < 0)
-    {
-        mln_lang_tcp_free(tcp);
-        mln_lang_errmsg(ctx, "No memory.");
-        return NULL;
-    }
     if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_lang_tcp_free(tcp);
