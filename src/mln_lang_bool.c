@@ -21,14 +21,6 @@ mln_lang_bool_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
 static int
 mln_lang_bool_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
 static int
-mln_lang_bool_less(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
-static int
-mln_lang_bool_lesseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
-static int
-mln_lang_bool_grea(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
-static int
-mln_lang_bool_greale(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
-static int
 mln_lang_bool_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
 static int
 mln_lang_bool_not(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
@@ -50,10 +42,10 @@ mln_lang_method_t mln_lang_bool_oprs = {
     NULL,
     mln_lang_bool_equal,
     mln_lang_bool_nonequal,
-    mln_lang_bool_less,
-    mln_lang_bool_lesseq,
-    mln_lang_bool_grea,
-    mln_lang_bool_greale,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
     NULL,
     NULL,
     mln_lang_bool_plus,
@@ -97,7 +89,7 @@ static int
 mln_lang_bool_pluseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
 {
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
+    mln_s32_t type = mln_lang_var_getValType(op1->data.var);
     if (type == M_LANG_VAL_TYPE_BOOL) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
@@ -156,99 +148,11 @@ mln_lang_bool_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_re
 }
 
 static int
-mln_lang_bool_less(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
-{
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
-    if (type == M_LANG_VAL_TYPE_BOOL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    mln_lang_method_t *method = mln_lang_methods[type];
-    if (method == NULL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    mln_lang_op handler = method->less_handler;
-    if (handler == NULL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    return handler(ctx, ret, op1, op2);
-}
-
-static int
-mln_lang_bool_lesseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
-{
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
-    if (type == M_LANG_VAL_TYPE_BOOL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    mln_lang_method_t *method = mln_lang_methods[type];
-    if (method == NULL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    mln_lang_op handler = method->lesseq_handler;
-    if (handler == NULL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    return handler(ctx, ret, op1, op2);
-}
-
-static int
-mln_lang_bool_grea(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
-{
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
-    if (type == M_LANG_VAL_TYPE_BOOL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    mln_lang_method_t *method = mln_lang_methods[type];
-    if (method == NULL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    mln_lang_op handler = method->grea_handler;
-    if (handler == NULL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    return handler(ctx, ret, op1, op2);
-}
-
-static int
-mln_lang_bool_greale(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
-{
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
-    if (type == M_LANG_VAL_TYPE_BOOL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    mln_lang_method_t *method = mln_lang_methods[type];
-    if (method == NULL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    mln_lang_op handler = method->greale_handler;
-    if (handler == NULL) {
-        mln_lang_errmsg(ctx, "Operation Not support.");
-        return -1;
-    }
-    return handler(ctx, ret, op1, op2);
-}
-
-static int
 mln_lang_bool_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
 {
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     mln_s32_t type = mln_lang_var_getValType(op2->data.var);
-    if (type == M_LANG_VAL_TYPE_BOOL) {
+    if (type != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
     }

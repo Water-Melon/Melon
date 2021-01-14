@@ -138,6 +138,15 @@ mln_lang_str_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     int rv;
     mln_string_t *tmp;
+    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
+
+    if (type != M_LANG_VAL_TYPE_INT && type != M_LANG_VAL_TYPE_REAL && type != M_LANG_VAL_TYPE_STRING) {
+        if ((*ret = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+        return 0;
+    }
     if ((tmp = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
@@ -164,6 +173,15 @@ mln_lang_str_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_ret
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     int rv;
     mln_string_t *tmp;
+    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
+
+    if (type != M_LANG_VAL_TYPE_INT && type != M_LANG_VAL_TYPE_REAL && type != M_LANG_VAL_TYPE_STRING) {
+        if ((*ret = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+        return 0;
+    }
     if ((tmp = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
@@ -189,13 +207,25 @@ mln_lang_str_less(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
 {
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     int rv;
-    mln_string_t *tmp;
-    if ((tmp = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
+    mln_string_t *tmp1, *tmp2;
+    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
+
+    if (type != M_LANG_VAL_TYPE_INT && type != M_LANG_VAL_TYPE_REAL && type != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Operation NOT support.");
+        return -1;
+    }
+    if ((tmp1 = mln_lang_var_toString(ctx->pool, op1->data.var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    rv = mln_string_strcmpSeq(mln_lang_var_getVal(op1->data.var)->data.s, tmp);
-    mln_string_pool_free(tmp);
+    if ((tmp2 = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_string_pool_free(tmp1);
+        return -1;
+    }
+    rv = mln_string_strcmpSeq(tmp1, tmp2);
+    mln_string_pool_free(tmp1);
+    mln_string_pool_free(tmp2);
     if (rv < 0) {
         if ((*ret = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
@@ -215,13 +245,25 @@ mln_lang_str_lesseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
 {
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     int rv;
-    mln_string_t *tmp;
-    if ((tmp = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
+    mln_string_t *tmp1, *tmp2;
+    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
+
+    if (type != M_LANG_VAL_TYPE_INT && type != M_LANG_VAL_TYPE_REAL && type != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Operation NOT support.");
+        return -1;
+    }
+    if ((tmp1 = mln_lang_var_toString(ctx->pool, op1->data.var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    rv = mln_string_strcmpSeq(mln_lang_var_getVal(op1->data.var)->data.s, tmp);
-    mln_string_pool_free(tmp);
+    if ((tmp2 = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_string_pool_free(tmp1);
+        return -1;
+    }
+    rv = mln_string_strcmpSeq(tmp1, tmp2);
+    mln_string_pool_free(tmp1);
+    mln_string_pool_free(tmp2);
     if (rv <= 0) {
         if ((*ret = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
@@ -241,13 +283,25 @@ mln_lang_str_grea(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
 {
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     int rv;
-    mln_string_t *tmp;
-    if ((tmp = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
+    mln_string_t *tmp1, *tmp2;
+    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
+
+    if (type != M_LANG_VAL_TYPE_INT && type != M_LANG_VAL_TYPE_REAL && type != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Operation NOT support.");
+        return -1;
+    }
+    if ((tmp1 = mln_lang_var_toString(ctx->pool, op1->data.var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    rv = mln_string_strcmpSeq(mln_lang_var_getVal(op1->data.var)->data.s, tmp);
-    mln_string_pool_free(tmp);
+    if ((tmp2 = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_string_pool_free(tmp1);
+        return -1;
+    }
+    rv = mln_string_strcmpSeq(tmp1, tmp2);
+    mln_string_pool_free(tmp1);
+    mln_string_pool_free(tmp2);
     if (rv > 0) {
         if ((*ret = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
@@ -267,13 +321,25 @@ mln_lang_str_greale(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
 {
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     int rv;
-    mln_string_t *tmp;
-    if ((tmp = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
+    mln_string_t *tmp1, *tmp2;
+    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
+
+    if (type != M_LANG_VAL_TYPE_INT && type != M_LANG_VAL_TYPE_REAL && type != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Operation NOT support.");
+        return -1;
+    }
+    if ((tmp1 = mln_lang_var_toString(ctx->pool, op1->data.var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    rv = mln_string_strcmpSeq(mln_lang_var_getVal(op1->data.var)->data.s, tmp);
-    mln_string_pool_free(tmp);
+    if ((tmp2 = mln_lang_var_toString(ctx->pool, op2->data.var)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_string_pool_free(tmp1);
+        return -1;
+    }
+    rv = mln_string_strcmpSeq(tmp1, tmp2);
+    mln_string_pool_free(tmp1);
+    mln_string_pool_free(tmp2);
     if (rv >= 0) {
         if ((*ret = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
@@ -356,7 +422,7 @@ mln_lang_str_index(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
     mln_string_t c;
     mln_string_t *s = mln_lang_var_getVal(op1->data.var)->data.s;
     if (mln_lang_var_getValType(op2->data.var) != M_LANG_VAL_TYPE_INT) {
-        mln_lang_errmsg(ctx, "Offset of string must be an integer.");
+        mln_lang_errmsg(ctx, "Offset must be an integer.");
         return -1;
     }
     offset = mln_lang_var_getVal(op2->data.var)->data.i;
