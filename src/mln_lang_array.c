@@ -178,8 +178,20 @@ mln_lang_array_index(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
     ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     mln_lang_array_t *array = mln_lang_var_getVal(op1->data.var)->data.array;
     mln_lang_var_t *rv, *var;
+    mln_s64_t save = ~((mln_s64_t)0);
+    if (mln_lang_var_getValType(op2->data.var) == M_LANG_VAL_TYPE_INT && mln_lang_var_getVal(op2->data.var)->data.i < 0) {
+        save = mln_lang_var_getVal(op2->data.var)->data.i;
+        mln_lang_var_getVal(op2->data.var)->data.i += array->index;
+        if (mln_lang_var_getVal(op2->data.var)->data.i < 0) {
+            mln_lang_errmsg(ctx, "Invalid offset");
+            return -1;
+        }
+    }
     if ((rv = mln_lang_array_getAndNew(ctx, array, op2->data.var)) == NULL) {
         return -1;
+    }
+    if (save != ~((mln_s64_t)0)) {
+        mln_lang_var_getVal(op2->data.var)->data.i = save;
     }
     if ((var = mln_lang_var_convert(ctx->pool, rv)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
