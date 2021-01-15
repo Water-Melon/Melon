@@ -8,6 +8,8 @@
 #include "mln_lang.h"
 #include "mln_connection.h"
 
+#define MLN_LANG_NETWORK_TCP_CONNECT_RETRY 64
+
 typedef struct mln_lang_tcp_s {
     mln_lang_t            *lang;
     mln_lang_ctx_t        *ctx;
@@ -18,6 +20,7 @@ typedef struct mln_lang_tcp_s {
     mln_u16_t              recv_closed:1;
     mln_u16_t              sending:1;
     mln_u16_t              recving:1;
+    mln_u16_t              retry:12;
     mln_s32_t              timeout;
     struct mln_lang_tcp_s *prev;
     struct mln_lang_tcp_s *next;

@@ -508,7 +508,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                 ctx->return_handler(ctx);
             }
             mln_lang_job_free(ctx);
-            return;
+            break;
         }
         mln_lang_stack_map[node->type](ctx);
         if (lang->ctx_cur != ctx || ctx->ref || ctx->step <= 0) {
