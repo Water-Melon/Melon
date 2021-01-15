@@ -3646,10 +3646,11 @@ Their definitions can be found in melon/include/mln_types.h.
           int, real, bool, nil, string
       In new task, if we want to fetch this data, we can use variable EVAL_DATA to access it.
 
-      <65> mln_tcpConnect(host, service);
+      <65> mln_tcpConnect(host, service, timeout);
       Connect to a server that indicated by 'host' and 'service'.
       'host' and 'service' must be string.
-      If succeed 'true' will be returned, otherwise 'false' returned.
+      'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
+      If succeed 'true' will be returned, 'nil' returned on timed out, otherwise 'false' returned.
 
       <66> mln_tcpListen(host, service);
       Set up a TCP listen socket.

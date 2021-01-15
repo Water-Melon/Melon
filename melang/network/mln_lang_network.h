@@ -22,6 +22,7 @@ typedef struct mln_lang_tcp_s {
     mln_u16_t              recving:1;
     mln_u16_t              retry:12;
     mln_s32_t              timeout;
+    mln_s32_t              connect_timeout;
     struct mln_lang_tcp_s *prev;
     struct mln_lang_tcp_s *next;
 } mln_lang_tcp_t;

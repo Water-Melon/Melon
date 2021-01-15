@@ -52,6 +52,7 @@ static void mln_lang_network_tcp_send_handler(mln_event_t *ev, int fd, void *dat
 static void mln_lang_network_tcp_timeout_handler(mln_event_t *ev, int fd, void *data);
 static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx);
 static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *data);
+static void mln_lang_network_tcp_connect_timeout_handler(mln_event_t *ev, int fd, void *data);
 static mln_lang_retExp_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx);
@@ -531,7 +532,7 @@ static mln_lang_retExp_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ct
     type = mln_lang_var_getValType(sym->data.var);
     if (type == M_LANG_VAL_TYPE_NIL) {
         timeout = M_EV_UNLIMITED;
-    } else if (type == M_LANG_VAL_TYPE_INT) {
+    } else if (type == M_LANG_VAL_TYPE_INT && sym->data.var->val->data.i >= 0) {
         timeout = sym->data.var->val->data.i;
     } else {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
@@ -852,7 +853,7 @@ static int mln_lang_network_tcp_connect(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t v1 = mln_string("host"), v2 = mln_string("service");
+    mln_string_t v1 = mln_string("host"), v2 = mln_string("service"), v3 = mln_string("timeout");
     mln_string_t funcname = mln_string("mln_tcpConnect");
 
     if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_network_tcp_connect_process, NULL)) == NULL) {
@@ -885,6 +886,19 @@ static int mln_lang_network_tcp_connect(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
+    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx->pool, &v3, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
 
     if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -909,13 +923,29 @@ static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *c
 {
     mln_lang_val_t *val;
     mln_lang_retExp_t *retExp;
-    mln_string_t v1 = mln_string("host"), v2 = mln_string("service");
+    mln_string_t v1 = mln_string("host"), v2 = mln_string("service"), v3 = mln_string("timeout");
     mln_lang_symbolNode_t *sym;
     mln_lang_tcp_t *tcp;
     struct addrinfo addr, *res = NULL;
-    int fd;
+    int fd, type, timeout;
     mln_u16_t port;
     char host[128] = {0}, service[32] = {0}, ip[128] = {0};
+
+    if ((sym = mln_lang_symbolNode_search(ctx, &v3, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    type = mln_lang_var_getValType(sym->data.var);
+    if (type == M_LANG_VAL_TYPE_NIL) {
+        timeout = M_EV_UNLIMITED;
+    } else if (type == M_LANG_VAL_TYPE_INT && sym->data.var->val->data.i >= 0) {
+        timeout = sym->data.var->val->data.i;
+    } else {
+        mln_lang_errmsg(ctx, "Invalid type of argument 3.");
+        return NULL;
+    }
 
     if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -986,10 +1016,11 @@ static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *c
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
+    tcp->connect_timeout = timeout;
     if (mln_event_set_fd(ctx->lang->ev, \
                          fd, \
                          M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, \
-                         M_EV_UNLIMITED, \
+                         timeout, \
                          tcp, \
                          mln_lang_network_tcp_connect_handler) < 0)
     {
@@ -1023,6 +1054,9 @@ static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *c
         return NULL;
     }
     tcp->sending = 1;
+    if (timeout != M_EV_UNLIMITED) {
+        mln_event_set_fd_timeout_handler(tcp->lang->ev, fd, tcp, mln_lang_network_tcp_connect_timeout_handler);
+    }
     mln_lang_ctx_tcp_resource_add(ctx, tcp);
     mln_lang_ctx_suspend(ctx);
 
@@ -1261,7 +1295,10 @@ static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) >= 0) {
         if (err) {
             if (err == EINPROGRESS && (++tcp->retry <= MLN_LANG_NETWORK_TCP_CONNECT_RETRY)) {
-                mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, tcp, mln_lang_network_tcp_connect_handler);
+                mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, tcp->connect_timeout, tcp, mln_lang_network_tcp_connect_handler);
+                if (tcp->connect_timeout != M_EV_UNLIMITED) {
+                    mln_event_set_fd_timeout_handler(ev, fd, tcp, mln_lang_network_tcp_connect_timeout_handler);
+                }
                 return;
             } else {
                 failed = 1;
@@ -1280,6 +1317,24 @@ static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *
     mln_lang_ctx_tcp_resource_remove(tcp);
     if (failed)
         mln_lang_network_tcp_resource_remove(ctx->lang, fd);
+}
+
+static void mln_lang_network_tcp_connect_timeout_handler(mln_event_t *ev, int fd, void *data)
+{
+    mln_lang_retExp_t *retExp;
+    mln_lang_tcp_t *tcp = (mln_lang_tcp_t *)data;
+    mln_lang_ctx_t *ctx = tcp->ctx;
+
+    mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+    tcp->sending = 0;
+    ASSERT(!tcp->recving);
+    tcp->timeout = M_EV_UNLIMITED;
+    mln_lang_ctx_tcp_resource_remove(tcp);
+    mln_lang_network_tcp_resource_remove(ctx->lang, fd);
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) != NULL) {
+        mln_lang_ctx_setRetExp(ctx, retExp);
+    }
+    mln_lang_ctx_continue(ctx);
 }
 
 static void mln_lang_network_tcp_accept_handler(mln_event_t *ev, int fd, void *data)
@@ -1434,6 +1489,7 @@ static mln_lang_tcp_t *mln_lang_tcp_new(mln_lang_t *lang, int fd, char *ip, mln_
     lt->sending = lt->recving = 0;
     lt->retry = 0;
     lt->timeout = 0;
+    lt->connect_timeout = 0;
     lt->prev = lt->next = NULL;
     return lt;
 }
