@@ -3485,10 +3485,11 @@ static inline int mln_lang_stack_handler_block_goto(mln_lang_ctx_t *ctx, mln_lan
     }
 
     while (1) {
-        node = (mln_lang_stack_node_t *)mln_stack_pop(ctx->run_stack);
+        node = (mln_lang_stack_node_t *)mln_stack_top(ctx->run_stack);
         if (node == ctx->scope_tail->cur_stack) {
             break;
         }
+        node = (mln_lang_stack_node_t *)mln_stack_pop(ctx->run_stack);
         __mln_lang_stack_node_free(node);
     }
 
