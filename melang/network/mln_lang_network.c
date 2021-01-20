@@ -1017,9 +1017,13 @@ static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *c
         return NULL;
     }
     tcp->connect_timeout = timeout;
+    /*
+     * M_EV_ERROR must be set, because epoll only trigger EPOLLERROR in sometime
+     * while EPOLLOUT and EPOLLIN will not be triggered.
+     */
     if (mln_event_set_fd(ctx->lang->ev, \
                          fd, \
-                         M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, \
+                         M_EV_SEND|M_EV_ERROR|M_EV_NONBLOCK|M_EV_ONESHOT, \
                          timeout, \
                          tcp, \
                          mln_lang_network_tcp_connect_handler) < 0)
@@ -1295,7 +1299,7 @@ static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) >= 0) {
         if (err) {
             if (err == EINPROGRESS && (++tcp->retry <= MLN_LANG_NETWORK_TCP_CONNECT_RETRY)) {
-                mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, tcp->connect_timeout, tcp, mln_lang_network_tcp_connect_handler);
+                mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_ERROR|M_EV_NONBLOCK|M_EV_ONESHOT, tcp->connect_timeout, tcp, mln_lang_network_tcp_connect_handler);
                 if (tcp->connect_timeout != M_EV_UNLIMITED) {
                     mln_event_set_fd_timeout_handler(ev, fd, tcp, mln_lang_network_tcp_connect_timeout_handler);
                 }
