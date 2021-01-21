@@ -12,8 +12,7 @@
 
 MLN_CHAIN_FUNC_DECLARE(mln_reg_match, \
                        mln_reg_match_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void, );
 MLN_CHAIN_FUNC_DEFINE(mln_reg_match, \
                       mln_reg_match_t, \
                       static inline void, \
@@ -907,5 +906,6 @@ void mln_reg_match_result_free(mln_reg_match_t *results)
         results = results->next;
         mln_reg_match_free(fr);
     }
+    mln_reg_match_chain_del(NULL, NULL, NULL);
 }
 
