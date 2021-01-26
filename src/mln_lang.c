@@ -40,6 +40,12 @@ struct mln_lang_gc_scan_s {
     mln_gc_t         *gc;
 };
 
+struct mln_lang_gc_setter_s {
+    mln_rbtree_t *visited;
+    mln_gc_t     *gc;
+};
+
+
 MLN_CHAIN_FUNC_DECLARE(mln_lang_ast_cache, \
                        mln_lang_ast_cache_t, \
                        static inline void, \
@@ -294,6 +300,8 @@ static inline void mln_lang_gc_item_freeImmediatly(mln_lang_gc_item_t *gcItem);
 static void *mln_lang_gc_item_getter(mln_lang_gc_item_t *gcItem);
 static void mln_lang_gc_item_setter(mln_lang_gc_item_t *gcItem, void *gcData);
 static void mln_lang_gc_item_memberSetter(mln_gc_t *gc, mln_lang_gc_item_t *gcItem);
+static int mln_lang_gc_setter_cmp(const void *data1, const void *data2);
+static void mln_lang_gc_item_memberSetter_recursive(struct mln_lang_gc_setter_s *lgs, mln_lang_gc_item_t *gcItem);
 static int mln_lang_gc_item_memberSetter_objScanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int mln_lang_gc_item_memberSetter_arrayScanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static void mln_lang_gc_item_moveHandler(mln_gc_t *destGC, mln_lang_gc_item_t *gcItem);
@@ -7177,15 +7185,49 @@ static void mln_lang_gc_item_setter(mln_lang_gc_item_t *gcItem, void *gcData)
 
 static void mln_lang_gc_item_memberSetter(mln_gc_t *gc, mln_lang_gc_item_t *gcItem)
 {
+    struct mln_lang_gc_setter_s lgs;
+    struct mln_rbtree_attr rbattr;
+
+    rbattr.cmp = mln_lang_gc_setter_cmp;
+    rbattr.data_free = NULL;
+
+    if ((lgs.visited = mln_rbtree_init(&rbattr)) == NULL) {
+        mln_log(error, "No memory.\n");
+        abort();
+    }
+    lgs.gc = gc;
+    mln_lang_gc_item_memberSetter_recursive(&lgs, gcItem);
+    mln_rbtree_destroy(lgs.visited);
+}
+
+static int mln_lang_gc_setter_cmp(const void *data1, const void *data2)
+{
+    return (mln_size_t)data1 - (mln_size_t)data2;
+}
+
+static void mln_lang_gc_item_memberSetter_recursive(struct mln_lang_gc_setter_s *lgs, mln_lang_gc_item_t *gcItem)
+{
     mln_rbtree_t *t;
+    mln_rbtree_node_t *node;
+
+    node = mln_rbtree_search(lgs->visited, lgs->visited->root, gcItem);
+    if (!mln_rbtree_null(node, lgs->visited)) {
+        return;
+    }
+    if ((node = mln_rbtree_node_new(lgs->visited, gcItem)) == NULL) {
+        mln_log(error, "No memory.\n");
+        abort();
+    }
+    mln_rbtree_insert(lgs->visited, node);
+
     switch (gcItem->type) {
         case M_GC_OBJ:
             t = gcItem->data.obj->members;
-            mln_rbtree_scan_all(t, mln_lang_gc_item_memberSetter_objScanner, gc);
+            mln_rbtree_scan_all(t, mln_lang_gc_item_memberSetter_objScanner, lgs);
             break;
         default:
             t = gcItem->data.array->elems_index;
-            mln_rbtree_scan_all(t, mln_lang_gc_item_memberSetter_arrayScanner, gc);
+            mln_rbtree_scan_all(t, mln_lang_gc_item_memberSetter_arrayScanner, lgs);
             break;
     }
 }
@@ -7194,13 +7236,15 @@ static int mln_lang_gc_item_memberSetter_objScanner(mln_rbtree_node_t *node, voi
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var = (mln_lang_var_t *)rn_data;
-    mln_gc_t *gc = (mln_gc_t *)udata;
+    struct mln_lang_gc_setter_s *lgs = (struct mln_lang_gc_setter_s *)udata;
     mln_s32_t type = __mln_lang_var_getValType(var);
     val = mln_lang_var_getVal(var);
     if (type == M_LANG_VAL_TYPE_OBJECT) {
-        mln_gc_addForCollect(gc, val->data.obj->gcItem);
+        mln_gc_addForCollect(lgs->gc, val->data.obj->gcItem);
+        mln_lang_gc_item_memberSetter_recursive(lgs, val->data.obj->gcItem);
     } else if (type == M_LANG_VAL_TYPE_ARRAY) {
-        mln_gc_addForCollect(gc, val->data.array->gcItem);
+        mln_gc_addForCollect(lgs->gc, val->data.array->gcItem);
+        mln_lang_gc_item_memberSetter_recursive(lgs, val->data.array->gcItem);
     }
     return 0;
 }
@@ -7209,24 +7253,28 @@ static int mln_lang_gc_item_memberSetter_arrayScanner(mln_rbtree_node_t *node, v
 {
     mln_lang_val_t *val;
     mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
-    mln_gc_t *gc = (mln_gc_t *)udata;
+    struct mln_lang_gc_setter_s *lgs = (struct mln_lang_gc_setter_s *)udata;
     mln_s32_t type;
     if (elem->key != NULL) {
         type = __mln_lang_var_getValType(elem->key);
         val = mln_lang_var_getVal(elem->key);
         if (type == M_LANG_VAL_TYPE_OBJECT) {
-            mln_gc_addForCollect(gc, val->data.obj->gcItem);
+            mln_gc_addForCollect(lgs->gc, val->data.obj->gcItem);
+            mln_lang_gc_item_memberSetter_recursive(lgs, val->data.obj->gcItem);
         } else if (type == M_LANG_VAL_TYPE_ARRAY) {
-            mln_gc_addForCollect(gc, val->data.array->gcItem);
+            mln_gc_addForCollect(lgs->gc, val->data.array->gcItem);
+            mln_lang_gc_item_memberSetter_recursive(lgs, val->data.array->gcItem);
         }
     }
     if (elem->value != NULL) {
         type = __mln_lang_var_getValType(elem->value);
         val = mln_lang_var_getVal(elem->value);
         if (type == M_LANG_VAL_TYPE_OBJECT) {
-            mln_gc_addForCollect(gc, val->data.obj->gcItem);
+            mln_gc_addForCollect(lgs->gc, val->data.obj->gcItem);
+            mln_lang_gc_item_memberSetter_recursive(lgs, val->data.obj->gcItem);
         } else if (type == M_LANG_VAL_TYPE_ARRAY) {
-            mln_gc_addForCollect(gc, val->data.array->gcItem);
+            mln_gc_addForCollect(lgs->gc, val->data.array->gcItem);
+            mln_lang_gc_item_memberSetter_recursive(lgs, val->data.array->gcItem);
         }
     }
     return 0;

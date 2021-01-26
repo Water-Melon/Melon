@@ -1409,7 +1409,7 @@ static int mln_lang_sys_size_handler(mln_lang_ctx_t *ctx)
         mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_REFER, val, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_val_free(val);
         mln_lang_func_detail_free(func);
@@ -1590,7 +1590,7 @@ static int mln_lang_sys_keys_handler(mln_lang_ctx_t *ctx)
         mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_REFER, val, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_val_free(val);
         mln_lang_func_detail_free(func);

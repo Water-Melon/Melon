@@ -169,7 +169,7 @@ mln_lang_array_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
     }
     return handler(ctx, ret, op1, op2);
 }
-
+#include <stdlib.h>
 static int
 mln_lang_array_index(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
 {
