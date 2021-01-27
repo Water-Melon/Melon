@@ -349,9 +349,9 @@ char *mln_lex_strerror(mln_lex_t *lex)
     if (lex->cur != NULL && lex->cur->fd >= 0)
         n += snprintf(lex->err_msg + n, len - n, "%s:", (char *)(lex->cur->data->data));
 #ifdef __x86_64
-    n += snprintf(lex->err_msg + n, len - n, "%ld: %s", lex->line, mln_lex_errmsg[lex->error]);
+    n += snprintf(lex->err_msg + n, len - n, "%lu: %s", lex->line, mln_lex_errmsg[lex->error]);
 #else
-    n += snprintf(lex->err_msg + n, len - n, "%lld: %s", lex->line, mln_lex_errmsg[lex->error]);
+    n += snprintf(lex->err_msg + n, len - n, "%llu: %s", lex->line, mln_lex_errmsg[lex->error]);
 #endif
     if (lex->result_pos > lex->result_buf) {
         *(lex->err_msg+(n++)) = ' ';
