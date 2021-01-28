@@ -695,6 +695,7 @@ mln_lang_sglq_handler(mln_lex_t *lex, void *data)
             return NULL;
         }
         if (c == '\'') break;
+        if (c == '\n') ++lex->line;
         if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
     }
     return mln_lang_new(lex, LANG_TK_STRING);
@@ -760,6 +761,7 @@ mln_lang_dblq_handler(mln_lex_t *lex, void *data)
             return NULL;
         }
         if (c == '\"') break;
+        if (c == '\n') ++lex->line;
         if (mln_get_char(lex, c) < 0) return NULL;
     }
     return mln_lang_new(lex, LANG_TK_STRING);
