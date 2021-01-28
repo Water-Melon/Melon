@@ -3,8 +3,8 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
-#ifndef __MLN_mln_rbtree_t_H
-#define __MLN_mln_rbtree_t_H
+#ifndef __MLN_RBTREE_H
+#define __MLN_RBTREE_H
 #include "mln_types.h"
 
 typedef struct mln_rbtree_node_s mln_rbtree_node_t;

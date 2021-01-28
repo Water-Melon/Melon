@@ -11,7 +11,7 @@
 #include "mln_path.h"
 #if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)
 typedef long                  mln_lock_t;
-#elif defined(i386) || defined(__x86_64) || defined(__arm__)
+#elif defined(i386) || defined(__x86_64)
 typedef unsigned long         mln_lock_t;
 #else
 #include <pthread.h>
