@@ -3211,20 +3211,20 @@ static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right,
     mln_s64_t i;
     if (ls->text->len > 1 && num[0] == '0') {
         if (num[1] == 'x' || num[1] == 'X') {
-#if defined(i386) || defined(MLN_ARM32)
+#if defined(i386) || defined(__arm__)
             sscanf(num, "%llx", &i);
 #else
             sscanf(num, "%lx", &i);
 #endif
         } else {
-#if defined(i386) || defined(MLN_ARM32)
+#if defined(i386) || defined(__arm__)
             sscanf(num, "%llo", &i);
 #else
             sscanf(num, "%lo", &i);
 #endif
         }
     } else {
-#if defined(i386) || defined(MLN_ARM32)
+#if defined(i386) || defined(__arm__)
         sscanf(num, "%lld", &i);
 #else
         sscanf(num, "%ld", &i);

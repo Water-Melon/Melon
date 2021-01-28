@@ -552,7 +552,7 @@ static mln_lang_retExp_t *mln_lang_sys_str_process(mln_lang_ctx_t *ctx)
         mln_string_t s;
         switch (type) {
             case M_LANG_VAL_TYPE_INT:
-#if defined(i386) || defined(MLN_ARM32)
+#if defined(i386) || defined(__arm__)
                 n = snprintf(buf, sizeof(buf)-1, "%lld", val->data.i);
 #else
                 n = snprintf(buf, sizeof(buf)-1, "%ld", val->data.i);
@@ -840,7 +840,7 @@ static mln_lang_retExp_t *mln_lang_sys_int_process(mln_lang_ctx_t *ctx)
             }
             memcpy(buf, val->data.s->data, val->data.s->len);
             buf[val->data.s->len] = 0;
-#if defined(i386) || defined(MLN_ARM32)
+#if defined(i386) || defined(__arm__)
             i = atoll(buf);
 #else
             i = atol(buf);

@@ -6,7 +6,6 @@
 #installation path
 install_path=`echo "/usr/local/melon"`
 cc="cc"
-enable_arm32=""
 mysql_lib=""
 
 #get all parameters
@@ -18,7 +17,6 @@ do
 		echo "Options:"
 		echo -e "\t--prefix=INSTALL_PATH"
 		echo -e "\t--cc=C compiler"
-		echo -e "\t--enable_arm32"
 		exit 0
 	fi
 	param_prefix=`echo $param|cut -d '=' -f 1`
@@ -28,9 +26,6 @@ do
 	fi
 	if [ $param_prefix == "--cc" ]; then
 		cc=$param_suffix
-	fi
-	if [ $param_prefix == "--enable_arm32" ]; then
-		enable_arm32="-DMLN_ARM32"
 	fi
 done
 
@@ -382,7 +377,7 @@ do
 		cc -o ev_test ev_test.c 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "event module		[EPOLL]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_EPOLL $enable_arm32" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_EPOLL" >> Makefile
 			rm -f ev_test ev_test.c
 			continue
 		fi
@@ -394,13 +389,13 @@ do
 		cc -o ev_test ev_test.c 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "event module		[KQUEUE]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_KQUEUE $enable_arm32" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_KQUEUE" >> Makefile
 			rm -f ev_test ev_test.c
 			continue
 		fi
 		rm -f ev_test ev_test.c
 		echo "event module		[SELECT]"
-		echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SELECT $enable_arm32" >> Makefile
+		echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SELECT" >> Makefile
 		continue
 	fi
 
@@ -425,16 +420,16 @@ do
 		if [ "$?" == "0" ]; then
 			echo "writev			[support]"
 			if [ $sendfile -eq "1" ]; then
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE -DMLN_WRITEV $enable_arm32" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE -DMLN_WRITEV" >> Makefile
 			else
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_WRITEV $enable_arm32" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_WRITEV" >> Makefile
 			fi
 		else
 			echo "writev			[NOT support]"
 			if [ $sendfile -eq "1" ]; then
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE $enable_arm32" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SENDFILE" >> Makefile
 			else
-				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
+				echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 			fi
 		fi
 		rm -f writev_test writev_test.c
@@ -450,10 +445,10 @@ do
 		cc -o unix98_test unix98_test.c -lpthread 2>/dev/null
 		if [ "$?" == "0" ]; then
 			echo "__USE_UNIX98		[support]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_USE_UNIX98 $enable_arm32" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_USE_UNIX98" >> Makefile
 		else
 			echo "__USE_UNIX98		[not support]"
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 		fi
 		rm -fr unix98_test unix98_test.c
 		continue
@@ -462,23 +457,23 @@ do
 	test $fname = "./melang/mysql/mln_lang_mysql.c"
 	if [ $? -eq 0 ]; then
 		if [ $mysql -eq 1 ]; then
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_MYSQL $mysql_lib $enable_arm32" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_MYSQL $mysql_lib" >> Makefile
 		else
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 		fi
 		continue
 	fi
 	test $fname = "./src/mln_melang.c"
 	if [ $? -eq 0 ]; then
 		if [ $mysql -eq 1 ]; then
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $mysql_lib $enable_arm32" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $mysql_lib" >> Makefile
 		else
-			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
+			echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 		fi
 		continue
 	fi
 
-	echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $enable_arm32" >> Makefile
+	echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 done
 echo "Configure done!"
 
