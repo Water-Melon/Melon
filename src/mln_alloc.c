@@ -500,7 +500,7 @@ static inline void *mln_alloc_shm_set_bitmap(mln_alloc_shm_t *as, mln_off_t Boff
     mln_u8ptr_t p, pend, addr;
     mln_alloc_blk_t *blk;
 
-    addr = as->addr + (Boff * 8 + (7 - boff)) * 64;
+    addr = as->addr + (Boff * 8 + (7 - boff)) * M_ALLOC_SHM_BIT_SIZE;
     blk = (mln_alloc_blk_t *)addr;
     memset(blk, 0, sizeof(mln_alloc_blk_t));
     blk->pool = as->pool;

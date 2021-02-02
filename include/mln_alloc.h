@@ -13,10 +13,10 @@
 #define M_ALLOC_MGR_LEN          18*M_ALLOC_MGR_GRAIN_SIZE-(M_ALLOC_MGR_GRAIN_SIZE-1)
 #define M_ALLOC_BLK_NUM          8
 
-#define M_ALLOC_SHM_BITMAP_LEN   8192
+#define M_ALLOC_SHM_BITMAP_LEN   4096
 #define M_ALLOC_SHM_BIT_SIZE     64
-#define M_ALLOC_SHM_LARGE_SIZE   (3*1024+512)*1024
-#define M_ALLOC_SHM_DEFAULT_SIZE 4*1024*1024
+#define M_ALLOC_SHM_LARGE_SIZE   (1*1024+512)*1024
+#define M_ALLOC_SHM_DEFAULT_SIZE 2*1024*1024
 
 typedef struct mln_alloc_s       mln_alloc_t;
 typedef struct mln_alloc_mgr_s   mln_alloc_mgr_t;
