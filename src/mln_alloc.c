@@ -89,14 +89,30 @@ static inline void mln_alloc_shm_free(mln_alloc_shm_t *shm)
 mln_alloc_t *mln_alloc_shm_init(void)
 {
     pthread_rwlockattr_t attr;
-    mln_alloc_t *pool = (mln_alloc_t *)malloc(sizeof(mln_alloc_t));
-    if (pool == NULL) return pool;
+    mln_alloc_shm_t *as;
+    mln_alloc_t *pool;
+    mln_alloc_blk_t *blk;
+    mln_off_t Boff = -1, boff = -1;
+
+    if ((as = mln_alloc_shm_new(NULL, M_ALLOC_SHM_DEFAULT_SIZE, 0)) == NULL) {
+        return NULL;
+    }
+    mln_alloc_shm_allowed(as, &Boff, &boff, sizeof(mln_alloc_t));
+    pool = mln_alloc_shm_set_bitmap(as, Boff, boff, sizeof(mln_alloc_t));
+    if (pool == NULL) {
+        mln_alloc_shm_free(as);
+        return NULL;
+    }
+    as->pool = pool;
+    blk = (mln_alloc_blk_t *)((mln_u8ptr_t)pool - sizeof(mln_alloc_blk_t));
+    blk->pool = pool;
     pool->large_used_head = pool->large_used_tail = NULL;
     pool->shm_head = pool->shm_tail = NULL;
     pool->shm = 1;
     pthread_rwlockattr_init(&attr);
     pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
     pthread_rwlock_init(&pool->rwlock, &attr);
+    mln_alloc_shm_chain_add(&pool->shm_head, &pool->shm_tail, as);
     return pool;
 }
 
@@ -157,15 +173,18 @@ void mln_alloc_destroy(mln_alloc_t *pool)
             mln_chunk_chain_del(&(pool->large_used_head), &(pool->large_used_tail), ch);
             free(ch);
         }
+        free(pool);
     } else {
-        mln_alloc_shm_t *shm;
-        while ((shm = pool->shm_head) != NULL) {
-            mln_alloc_shm_chain_del(&pool->shm_head, &pool->shm_tail, shm);
-            mln_alloc_shm_free(shm);
-        }
+        mln_alloc_shm_t *shm, *fr;
         pthread_rwlock_destroy(&pool->rwlock);
+        shm = pool->shm_head;
+        while (shm != NULL) {
+            fr = shm;
+            shm = shm->next;
+            mln_alloc_shm_chain_del(&pool->shm_head, &pool->shm_tail, fr);
+            mln_alloc_shm_free(fr);
+        }
     }
-    free(pool);
 }
 
 void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
