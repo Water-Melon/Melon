@@ -1,3 +1,9 @@
+Changes with melon 2.1.0                                          02 Feb 2021
+    *) Optimized melang performance
+    *) Fixed melang bugs
+    *) Added shared memory
+    *) Updated License
+
 Changes with melon 2.0.2                                          13 Apr 2020
     *) Optimized file function in melang
     *) Added functions for operating directoies in melang

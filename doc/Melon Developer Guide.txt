@@ -5,7 +5,7 @@
  
 Melon Developer Guide
 A C framework library for simplifying development on UNIX
-Melon Version 2.0.2
+Melon Version 2.1.0
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
@@ -1174,6 +1174,9 @@ Their definitions can be found in melon/include/mln_types.h.
 
      f) void mln_alloc_free(void *ptr);
         Free a memory block to a memory pool.
+
+     g) mln_alloc_t *mln_alloc_shm_init(void);
+        Initialize a shared memory pool.
 
   18) Chain & Buf
      These two structures do not have interfaces to operate.
