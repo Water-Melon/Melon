@@ -81,8 +81,9 @@ struct mln_alloc_s {
     mln_alloc_chunk_t        *large_used_tail;
     mln_alloc_shm_t          *shm_head;
     mln_alloc_shm_t          *shm_tail;
+    void                     *mem;
+    mln_size_t                shm_size;
     pthread_rwlock_t          rwlock;
-    mln_u32_t                 shm:1;
 };
 
 
@@ -91,7 +92,7 @@ extern int mln_alloc_shm_tryrdlock(mln_alloc_t *pool);
 extern int mln_alloc_shm_wrlock(mln_alloc_t *pool);
 extern int mln_alloc_shm_trywrlock(mln_alloc_t *pool);
 extern int mln_alloc_shm_unlock(mln_alloc_t *pool);
-extern mln_alloc_t *mln_alloc_shm_init(void);
+extern mln_alloc_t *mln_alloc_shm_init(mln_size_t size);
 extern mln_alloc_t *mln_alloc_init(void);
 extern void mln_alloc_destroy(mln_alloc_t *pool);
 extern void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size);

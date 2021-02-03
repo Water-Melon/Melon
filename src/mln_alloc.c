@@ -50,21 +50,44 @@ static inline void mln_alloc_free_shm(void *ptr);
 static inline mln_alloc_shm_t *mln_alloc_shm_new(mln_alloc_t *pool, mln_size_t size, int is_large)
 {
     int n, i, j;
-    mln_alloc_shm_t *shm;
+    mln_alloc_shm_t *shm, *tmp;
+    mln_u8ptr_t p = pool->mem + sizeof(mln_alloc_t);
 
-    if ((shm = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0)) == NULL) {
-        return NULL;
+    for (tmp = pool->shm_head; tmp != NULL; tmp = tmp->next) {
+        if ((mln_u8ptr_t)(tmp->addr) - p >= size) break;
+        p = tmp->addr + tmp->size;
     }
+    if (tmp == NULL) {
+        if ((mln_u8ptr_t)(pool->mem + pool->shm_size) - p < size)
+            return NULL;
+    }
+
+    shm = (mln_alloc_shm_t *)p;
     shm->pool = pool;
-    shm->addr = shm;
+    shm->addr = p;
     shm->size = size;
     shm->nfree = is_large ? 1: (size / M_ALLOC_SHM_BIT_SIZE);
     shm->base = shm->nfree;
     shm->large = is_large;
     shm->prev = shm->next = NULL;
-    memset(shm->bitmap, 0, M_ALLOC_SHM_BITMAP_LEN);
+    if (tmp == NULL) {
+        mln_alloc_shm_chain_add(&pool->shm_head, &pool->shm_tail, shm);
+    } else {
+        if (tmp == pool->shm_head) {
+            shm->next = tmp;
+            shm->prev = NULL;
+            tmp->prev = shm;
+            pool->shm_head = shm;
+        } else {
+            shm->next = tmp;
+            shm->prev = tmp->prev;
+            tmp->prev->next = shm;
+            tmp->prev = shm;
+        }
+    }
 
     if (!is_large) {
+        memset(shm->bitmap, 0, M_ALLOC_SHM_BITMAP_LEN);
         n = (sizeof(mln_alloc_shm_t)+M_ALLOC_SHM_BIT_SIZE-1) / M_ALLOC_SHM_BIT_SIZE;
         shm->nfree -= n;
         shm->base -= n;
@@ -80,39 +103,24 @@ static inline mln_alloc_shm_t *mln_alloc_shm_new(mln_alloc_t *pool, mln_size_t s
     return shm;
 }
 
-static inline void mln_alloc_shm_free(mln_alloc_shm_t *shm)
-{
-    if (shm == NULL) return;
-    munmap(shm->addr, shm->size);
-}
-
-mln_alloc_t *mln_alloc_shm_init(void)
+mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
 {
     pthread_rwlockattr_t attr;
-    mln_alloc_shm_t *as;
     mln_alloc_t *pool;
-    mln_alloc_blk_t *blk;
-    mln_off_t Boff = -1, boff = -1;
 
-    if ((as = mln_alloc_shm_new(NULL, M_ALLOC_SHM_DEFAULT_SIZE, 0)) == NULL) {
+    if (size < M_ALLOC_SHM_DEFAULT_SIZE+1024) {
         return NULL;
     }
-    mln_alloc_shm_allowed(as, &Boff, &boff, sizeof(mln_alloc_t));
-    pool = mln_alloc_shm_set_bitmap(as, Boff, boff, sizeof(mln_alloc_t));
-    if (pool == NULL) {
-        mln_alloc_shm_free(as);
-        return NULL;
-    }
-    as->pool = pool;
-    blk = (mln_alloc_blk_t *)((mln_u8ptr_t)pool - sizeof(mln_alloc_blk_t));
-    blk->pool = pool;
+
+    pool = (mln_alloc_t *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0);
+    if (pool == NULL) return NULL;
     pool->large_used_head = pool->large_used_tail = NULL;
     pool->shm_head = pool->shm_tail = NULL;
-    pool->shm = 1;
+    pool->mem = pool;
+    pool->shm_size = size;
     pthread_rwlockattr_init(&attr);
     pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
     pthread_rwlock_init(&pool->rwlock, &attr);
-    mln_alloc_shm_chain_add(&pool->shm_head, &pool->shm_tail, as);
     return pool;
 }
 
@@ -123,7 +131,8 @@ mln_alloc_t *mln_alloc_init(void)
     mln_alloc_mgr_table_init(pool->mgr_tbl);
     pool->large_used_head = pool->large_used_tail = NULL;
     pool->shm_head = pool->shm_tail = NULL;
-    pool->shm = 0;
+    pool->mem = NULL;
+    pool->shm_size = 0;
     memset(&pool->rwlock, 0, sizeof(pthread_rwlock_t));
     mln_chunk_blk_chain_del(NULL, NULL, NULL);/* get rid of warning in Darwin */
     return pool;
@@ -159,7 +168,7 @@ void mln_alloc_destroy(mln_alloc_t *pool)
 {
     if (pool == NULL) return;
 
-    if (!pool->shm) {
+    if (pool->mem == NULL) {
         mln_alloc_mgr_t *am, *amend;
         amend = pool->mgr_tbl + M_ALLOC_MGR_LEN;
         mln_alloc_chunk_t *ch;
@@ -175,15 +184,7 @@ void mln_alloc_destroy(mln_alloc_t *pool)
         }
         free(pool);
     } else {
-        mln_alloc_shm_t *shm, *fr;
-        pthread_rwlock_destroy(&pool->rwlock);
-        shm = pool->shm_head;
-        while (shm != NULL) {
-            fr = shm;
-            shm = shm->next;
-            mln_alloc_shm_chain_del(&pool->shm_head, &pool->shm_tail, fr);
-            mln_alloc_shm_free(fr);
-        }
+        munmap(pool->mem, pool->shm_size);
     }
 }
 
@@ -195,7 +196,7 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
     mln_u8ptr_t ptr;
     mln_size_t n, alloc_size;
 
-    if (pool->shm) {
+    if (pool->mem != NULL) {
         return mln_alloc_shm_m(pool, size);
     }
 
@@ -364,7 +365,7 @@ void mln_alloc_free(void *ptr)
     }
 
     pool = blk->pool;
-    if (pool->shm) {
+    if (pool->mem) {
         return mln_alloc_free_shm(ptr);
     }
 
@@ -444,7 +445,6 @@ static inline void *mln_alloc_shm_large_m(mln_alloc_t *pool, mln_size_t size)
     if ((as = mln_alloc_shm_new(pool, size + sizeof(mln_alloc_shm_t)+sizeof(mln_alloc_blk_t)+sizeof(mln_alloc_check_bits), 1)) == NULL)
         return NULL;
     as->nfree = 0;
-    mln_alloc_shm_chain_add(&pool->shm_head, &pool->shm_tail, as);
     blk = (mln_alloc_blk_t *)(as->addr+sizeof(mln_alloc_shm_t));
     memset(blk, 0, sizeof(mln_alloc_blk_t));
     blk->pool = pool;
@@ -464,7 +464,6 @@ static inline mln_alloc_shm_t *mln_alloc_shm_new_block(mln_alloc_t *pool, mln_of
         return NULL;
     }
     mln_alloc_shm_allowed(ret, Boff, boff, size);
-    mln_alloc_shm_chain_add(&pool->shm_head, &pool->shm_tail, ret);
     return ret;
 }
 
@@ -574,7 +573,6 @@ static inline void mln_alloc_free_shm(void *ptr)
     }
     if (as->large || as->nfree == as->base) {
         mln_alloc_shm_chain_del(&as->pool->shm_head, &as->pool->shm_tail, as);
-        mln_alloc_shm_free(as);
     }
 }
 

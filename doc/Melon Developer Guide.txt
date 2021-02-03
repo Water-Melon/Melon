@@ -1175,7 +1175,7 @@ Their definitions can be found in melon/include/mln_types.h.
      f) void mln_alloc_free(void *ptr);
         Free a memory block to a memory pool.
 
-     g) mln_alloc_t *mln_alloc_shm_init(void);
+     g) mln_alloc_t *mln_alloc_shm_init(mln_size_t size);
         Initialize a shared memory pool.
 
   18) Chain & Buf
