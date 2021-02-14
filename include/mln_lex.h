@@ -13,7 +13,6 @@
 #include "mln_string.h"
 #include "mln_alloc.h"
 #include "mln_rbtree.h"
-#include "mln_log.h"
 #include <stdlib.h>
 #include <errno.h>
 
@@ -213,7 +212,7 @@ static inline void mln_lex_stepBack(mln_lex_t *lex, char c)
 {
     if (c == MLN_EOF) return;
     if (lex->cur == NULL || lex->cur->pos <= lex->cur->buf) {
-        mln_log(error, "Lexer crashed.\n");
+        /* shouldn't be here, lexer crashed */
         abort();
     }
     --(lex->cur->pos);

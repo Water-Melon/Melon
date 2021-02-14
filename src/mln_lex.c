@@ -12,7 +12,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "mln_log.h"
 #include "mln_string.h"
 #include "mln_lex.h"
 
