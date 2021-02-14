@@ -4,24 +4,24 @@ int haha_main(int argc, char **argv)
     mln_thread_msg_t msg;
     int nfds;
     fd_set rdset;
-  for (;;) {
-    FD_ZERO(&rdset);
-    FD_SET(fd, &rdset);
-    nfds = select(fd+1, &rdset, NULL, NULL, NULL);
-    if (nfds < 0) {
-        if (errno == EINTR) continue;
-        mln_log(error, "select error. %s\n", strerror(errno));
-        return -1;
+    for (;;) {
+        FD_ZERO(&rdset);
+        FD_SET(fd, &rdset);
+        nfds = select(fd+1, &rdset, NULL, NULL, NULL);
+        if (nfds < 0) {
+            if (errno == EINTR) continue;
+            mln_log(error, "select error. %s\n", strerror(errno));
+            return -1;
+        }
+        memset(&msg, 0, sizeof(msg));
+        int n = read(fd, &msg, sizeof(msg));
+        if (n != sizeof(msg)) {
+            mln_log(debug, "write error. n=%d. %s\n", n, strerror(errno));
+            return -1;
+        }
+        mln_log(debug, "!!!src:%S auto:%l char:%c\n", msg.src, msg.sauto, msg.c);
+        mln_thread_clearMsg(&msg);
     }
-    memset(&msg, 0, sizeof(msg));
-    int n = read(fd, &msg, sizeof(msg));
-    if (n != sizeof(msg)) {
-        mln_log(debug, "write error. n=%d. %s\n", n, strerror(errno));
-        return -1;
-    }
-    mln_log(debug, "!!!src:%S auto:%l char:%c\n", msg.src, msg.sauto, msg.c);
-    mln_thread_clearMsg(&msg);
-  }
     return 0;
 }
 
