@@ -505,9 +505,9 @@ Their definitions can be found in melon/include/mln_types.h.
 
          'include' is a capability to include other local file into the current input stream.
          We can use it as,
-             @include "a.conf"
+             #include "a.conf"
          or
-             @include "/xxx/xxx/a.conf"
+             #include "/xxx/xxx/a.conf"
 
          'define' is a capability to define a macro.
          Example:
