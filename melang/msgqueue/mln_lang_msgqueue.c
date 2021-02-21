@@ -572,20 +572,29 @@ static void mln_lang_msgqueue_timeout_handler(mln_event_t *ev, void *data)
 
 static mln_lang_retExp_t *mln_lang_mq_msg_broadcast(mln_lang_ctx_t *ctx, mln_string_t *qname, int type, void *data)
 {
-    mln_lang_ctx_t *c;
+    mln_lang_ctx_t *c, *scan;
     mln_lang_retExp_t *retExp;
 
-    for (c = ctx->lang->run_head; c != NULL; c = c->next) {
+    scan = ctx->lang->run_head;
+    while (scan != NULL) {
+        c = scan;
+        scan = scan->next;
         if (mln_lang_mq_msg_broadcast_ctx(c, qname, type, data) < 0) {
             return NULL;
         }
     }
-    for (c = ctx->lang->blocked_head; c != NULL; c = c->next) {
+    scan = ctx->lang->blocked_head;
+    while (scan != NULL) {
+        c = scan;
+        scan = scan->next;
         if (mln_lang_mq_msg_broadcast_ctx(c, qname, type, data) < 0) {
             return NULL;
         }
     }
-    for (c = ctx->lang->wait_head; c != NULL; c = c->next) {
+    scan = ctx->lang->wait_head;
+    while (scan != NULL) {
+        c = scan;
+        scan = scan->next;
         if (mln_lang_mq_msg_broadcast_ctx(c, qname, type, data) < 0) {
             return NULL;
         }
