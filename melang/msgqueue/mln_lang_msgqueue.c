@@ -945,8 +945,13 @@ static mln_lang_mq_msg_t *mln_lang_mq_msg_new(mln_lang_t *lang, int type, void *
 static void mln_lang_mq_msg_free(mln_lang_mq_msg_t *msg)
 {
     if (msg == NULL) return;
-    if (msg->type == M_LANG_VAL_TYPE_STRING && msg->data.s != NULL)
+    if (msg->type == M_LANG_VAL_TYPE_STRING && msg->data.s != NULL) {
+        /*
+         * Note:
+         * must be identical with msg data allocation type
+         */
         mln_string_pool_free(msg->data.s);
+    }
     free(msg);
 }
 

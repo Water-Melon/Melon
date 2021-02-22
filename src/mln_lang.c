@@ -2016,6 +2016,60 @@ __mln_lang_var_setValue(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_
     return 0;
 }
 
+int mln_lang_var_setValue_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src)
+{
+    /*
+     * Note:
+     * ref string cannot be used in the case that string data can be modified.
+     */
+    ASSERT(dest != NULL && dest->val != NULL && src != NULL && src->val != NULL);
+    mln_lang_val_t *val1 = dest->val;
+    mln_lang_val_t *val2 = src->val;
+    mln_lang_val_freeData(val1);
+    switch (val2->type) {
+        case M_LANG_VAL_TYPE_NIL:
+            val1->type = M_LANG_VAL_TYPE_NIL;
+            val1->data.s = NULL;
+            break;
+        case M_LANG_VAL_TYPE_INT:
+            val1->type = M_LANG_VAL_TYPE_INT;
+            val1->data.i = val2->data.i;
+            break;
+        case M_LANG_VAL_TYPE_BOOL:
+            val1->type = M_LANG_VAL_TYPE_BOOL;
+            val1->data.b = val2->data.b;
+            break;
+        case M_LANG_VAL_TYPE_REAL:
+            val1->type = M_LANG_VAL_TYPE_REAL;
+            val1->data.f = val2->data.f;
+            break;
+        case M_LANG_VAL_TYPE_STRING:
+            val1->type = M_LANG_VAL_TYPE_STRING;
+            val1->data.s = mln_string_ref_dup(val2->data.s);
+            break;
+        case M_LANG_VAL_TYPE_OBJECT:
+            val1->type = M_LANG_VAL_TYPE_OBJECT;
+            val1->data.obj = val2->data.obj;
+            ++(val1->data.obj->ref);
+            break;
+        case M_LANG_VAL_TYPE_FUNC:
+            val1->type = M_LANG_VAL_TYPE_FUNC;
+            if ((val1->data.func = mln_lang_func_detail_dup(ctx, val2->data.func)) == NULL) {
+                return -1;
+            }
+            break;
+        case M_LANG_VAL_TYPE_ARRAY:
+            val1->type = M_LANG_VAL_TYPE_ARRAY;
+            val1->data.array = val2->data.array;
+            ++(val1->data.array->ref);
+            break;
+        default:
+            ASSERT(0);
+            return -1;
+    }
+    return 0;
+}
+
 void mln_lang_var_setInt(mln_lang_var_t *var, mln_s64_t i)
 {
     ASSERT(var != NULL && var->val != NULL);
@@ -5451,7 +5505,7 @@ static inline int mln_lang_funcall_run_add_args(mln_lang_ctx_t *ctx, mln_lang_ar
     if ((var = __mln_lang_array_getAndNew(ctx, array, NULL)) == NULL) {
         return -1;
     }
-    if (__mln_lang_var_setValue(ctx, var, arg) < 0) {
+    if (mln_lang_var_setValue_string_ref(ctx, var, arg) < 0) {
         return -1;
     }
     return 0;
@@ -6058,7 +6112,7 @@ static void mln_lang_stack_handler_elemlist(mln_lang_ctx_t *ctx)
             mln_lang_job_free(ctx);
             return;
         }
-        if (__mln_lang_var_setValue(ctx, val, ctx->retExp->data.var) < 0) {
+        if (mln_lang_var_setValue_string_ref(ctx, val, ctx->retExp->data.var) < 0) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;

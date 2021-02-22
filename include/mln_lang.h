@@ -436,6 +436,7 @@ extern mln_lang_var_t *mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var
 extern mln_lang_var_t *mln_lang_var_convert(mln_alloc_t *pool, mln_lang_var_t *var) __NONNULL2(1,2);
 extern void mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val) __NONNULL2(1,2);
 extern int mln_lang_var_setValue(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
+extern int mln_lang_var_setValue_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
 extern mln_s32_t mln_lang_var_getValType(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_lang_func_detail_t *
 mln_lang_func_detail_new(mln_alloc_t *pool, \
