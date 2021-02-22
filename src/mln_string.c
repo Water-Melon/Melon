@@ -23,6 +23,7 @@ static inline mln_string_t *mln_assign_string(char *s, mln_u32_t len)
     str->data = (mln_u8ptr_t)s;
     str->len = len;
     str->is_referred = 1;
+    str->ref = 1;
     return str;
 }
 
@@ -45,6 +46,7 @@ mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s)
     str->data[len] = 0;
     str->len = len;
     str->is_referred = 0;
+    str->ref = 1;
     return str;
 }
 
@@ -67,6 +69,7 @@ mln_string_t *mln_string_new(const char *s)
     str->data[len] = 0;
     str->len = len;
     str->is_referred = 0;
+    str->ref = 1;
     return str;
 }
 
@@ -82,6 +85,7 @@ mln_string_t *mln_string_dup(mln_string_t *str)
     s->data[str->len] = 0;
     s->len = str->len;
     s->is_referred = 0;
+    s->ref = 1;
     return s;
 }
 
@@ -97,6 +101,7 @@ mln_string_t *mln_string_pool_dup(mln_alloc_t *pool, mln_string_t *str)
     s->data[str->len] = 0;
     s->len = str->len;
     s->is_referred = 0;
+    s->ref = 1;
     return s;
 }
 
@@ -114,6 +119,7 @@ mln_string_t *mln_string_nDup(mln_string_t *str, mln_s32_t size)
     s->data[min] = 0;
     s->len = min;
     s->is_referred = 0;
+    s->ref = 1;
     return s;
 }
 
@@ -130,6 +136,7 @@ mln_string_t *mln_string_nConstDup(char *str, mln_s32_t size)
     s->data[size] = 0;
     s->len = size;
     s->is_referred = 0;
+    s->ref = 1;
     return s;
 }
 
@@ -140,6 +147,7 @@ mln_string_t *mln_string_refDup(mln_string_t *str)
     s->data = str->data;
     s->len = str->len;
     s->is_referred = 1;
+    s->ref = 1;
     return s;
 }
 
@@ -150,12 +158,17 @@ mln_string_t *mln_string_refConstDup(char *s)
     str->data = (mln_u8ptr_t)s;
     str->len = strlen(s);
     str->is_referred = 1;
+    str->ref = 1;
     return str;
 }
 
 void mln_string_free(mln_string_t *str)
 {
     if (str == NULL) return;
+    if (str->ref > 1) {
+        --str->ref;
+        return;
+    }
     if (!str->is_referred && str->data != NULL)
         free(str->data);
     free(str);
@@ -164,6 +177,10 @@ void mln_string_free(mln_string_t *str)
 void mln_string_pool_free(mln_string_t *str)
 {
     if (str == NULL) return;
+    if (str->ref > 1) {
+        --str->ref;
+        return;
+    }
     if (!str->is_referred && str->data != NULL)
         mln_alloc_free(str->data);
     mln_alloc_free(str);
@@ -441,6 +458,7 @@ static mln_string_t *mln_string_slice_recursive(char *s, mln_u64_t len, mln_u8pt
         ret[cnt-1].data = NULL;
         ret[cnt-1].len = 0;
         ret[cnt-1].is_referred = 0;
+        ret[cnt-1].ref = 1;
         return ret;
     }
     ++cnt;
@@ -453,6 +471,7 @@ static mln_string_t *mln_string_slice_recursive(char *s, mln_u64_t len, mln_u8pt
     array[cnt-2].data = (mln_u8ptr_t)jmp_ascii;
     array[cnt-2].len = jmp_valid - jmp_ascii;
     array[cnt-2].is_referred = 1;
+    array[cnt-2].ref = 1;
     return array;
 }
 
@@ -470,6 +489,7 @@ mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2)
         ret->data = NULL;
         ret->len = 0;
         ret->is_referred = 0;
+        ret->ref = 1;
         return ret;
     }
     if ((ret->data = (mln_u8ptr_t)malloc(len + 1)) == NULL) {
@@ -481,6 +501,7 @@ mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2)
     ret->data[len] = 0;
     ret->len = len;
     ret->is_referred = 0;
+    ret->ref = 1;
     return ret;
 }
 
@@ -493,6 +514,7 @@ mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_st
         ret->data = NULL;
         ret->len = 0;
         ret->is_referred = 0;
+        ret->ref = 1;
         return ret;
     }
     if ((ret->data = (mln_u8ptr_t)mln_alloc_m(pool, len + 1)) == NULL) {
@@ -504,6 +526,7 @@ mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_st
     ret->data[len] = 0;
     ret->len = len;
     ret->is_referred = 0;
+    ret->ref = 1;
     return ret;
 }
 

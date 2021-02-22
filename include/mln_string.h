@@ -12,7 +12,8 @@
 typedef struct {
     mln_u8ptr_t  data;
     mln_u64_t    len;
-    mln_u32_t    is_referred;
+    mln_uauto_t  is_referred:1;
+    mln_uauto_t  ref:31;
 } mln_string_t;
 
 /*
@@ -24,13 +25,17 @@ typedef struct {
         (pstring)->data = (mln_u8ptr_t)(s);\
         (pstring)->len = strlen(s);\
         (pstring)->is_referred = 1;\
+        (pstring)->ref = 1;\
     }
 #define mln_string_nSet(pstring,s,n); \
     {\
         (pstring)->data = (mln_u8ptr_t)(s);\
         (pstring)->len = (n);\
         (pstring)->is_referred = 1;\
+        (pstring)->ref = 1;\
     }
+#define mln_string_ref_dup(pstring) \
+    (++(pstring)->ref, (pstring))
 
 extern mln_string_t *
 mln_string_new(const char *s);

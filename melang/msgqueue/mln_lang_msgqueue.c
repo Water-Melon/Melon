@@ -931,10 +931,7 @@ static mln_lang_mq_msg_t *mln_lang_mq_msg_new(mln_lang_t *lang, int type, void *
             msg->data.f = *(double *)data;
             break;
         case M_LANG_VAL_TYPE_STRING:
-            if ((msg->data.s = mln_string_dup((mln_string_t *)data)) == NULL) {
-                free(msg);
-                return NULL;
-            }
+            msg->data.s = mln_string_ref_dup((mln_string_t *)data);
             break;
         default:
             ASSERT(0);
@@ -949,7 +946,7 @@ static void mln_lang_mq_msg_free(mln_lang_mq_msg_t *msg)
 {
     if (msg == NULL) return;
     if (msg->type == M_LANG_VAL_TYPE_STRING && msg->data.s != NULL)
-        mln_string_free(msg->data.s);
+        mln_string_pool_free(msg->data.s);
     free(msg);
 }
 
