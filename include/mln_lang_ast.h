@@ -156,6 +156,8 @@ struct mln_lang_exp_s {
     mln_u64_t                        line;
     mln_lang_assign_t               *assign;
     mln_lang_exp_t                  *next;
+    void                            *jump;
+    int                              type;
 };
 
 typedef enum mln_lang_assign_op_e {
@@ -178,6 +180,8 @@ struct mln_lang_assign_s {
     mln_lang_logicLow_t             *left;
     mln_lang_assign_op_t             op;
     mln_lang_assign_t               *right;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_assign_tmp_s {
@@ -196,6 +200,8 @@ struct mln_lang_logicLow_s {
     mln_lang_logicHigh_t            *left;
     mln_lang_logicLow_op_t           op;
     mln_lang_logicLow_t             *right;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_logicLow_tmp_s {
@@ -215,6 +221,8 @@ struct mln_lang_logicHigh_s {
     mln_lang_relativeLow_t          *left;
     mln_lang_logicHigh_op_t          op;
     mln_lang_logicHigh_t            *right;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_logicHigh_tmp_s {
@@ -233,6 +241,8 @@ struct mln_lang_relativeLow_s {
     mln_lang_relativeHigh_t         *left;
     mln_lang_relativeLow_op_t        op;
     mln_lang_relativeLow_t          *right;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_relativeLow_tmp_s {
@@ -253,6 +263,8 @@ struct mln_lang_relativeHigh_s {
     mln_lang_move_t                 *left;
     mln_lang_relativeHigh_op_t       op;
     mln_lang_relativeHigh_t         *right;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_relativeHigh_tmp_s {
@@ -271,6 +283,8 @@ struct mln_lang_move_s {
     mln_lang_addsub_t               *left;
     mln_lang_move_op_t               op;
     mln_lang_move_t                 *right;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_move_tmp_s {
@@ -289,6 +303,8 @@ struct mln_lang_addsub_s {
     mln_lang_muldiv_t               *left;
     mln_lang_addsub_op_t             op;
     mln_lang_addsub_t               *right;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_addsub_tmp_s {
@@ -308,6 +324,8 @@ struct mln_lang_muldiv_s {
     mln_lang_suffix_t               *left;
     mln_lang_muldiv_op_t             op;
     mln_lang_muldiv_t               *right;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_muldiv_tmp_s {
@@ -325,6 +343,8 @@ struct mln_lang_suffix_s {
     mln_u64_t                        line;
     mln_lang_locate_t               *left;
     mln_lang_suffix_op_t             op;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_suffix_tmp_s {
@@ -347,6 +367,8 @@ struct mln_lang_locate_s {
         mln_string_t            *id;
     } right;
     mln_lang_locate_t               *next;
+    void                            *jump;
+    int                              type;
 };
 
 struct mln_lang_locate_tmp_s {

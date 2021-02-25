@@ -1206,6 +1206,8 @@ mln_lang_exp_new(mln_alloc_t *pool, mln_lang_assign_t *assign, mln_lang_exp_t *n
     le->line = line;
     le->assign = assign;
     le->next = next;
+    le->jump = NULL;
+    le->type = 0;
     return le;
 }
 
@@ -1236,6 +1238,8 @@ mln_lang_assign_new(mln_alloc_t *pool, \
     la->left = left;
     la->op = op;
     la->right = right;
+    la->jump = NULL;
+    la->type = 0;
     return la;
 }
 
@@ -1287,6 +1291,8 @@ mln_lang_logicLow_new(mln_alloc_t *pool, \
     ll->left = left;
     ll->op = op;
     ll->right = right;
+    ll->jump = NULL;
+    ll->type = 0;
     return ll;
 }
 
@@ -1340,6 +1346,8 @@ mln_lang_logicHigh_new(mln_alloc_t *pool, \
     ll->left = left;
     ll->op = op;
     ll->right = right;
+    ll->jump = NULL;
+    ll->type = 0;
     return ll;
 }
 
@@ -1393,6 +1401,8 @@ mln_lang_relativeLow_new(mln_alloc_t *pool, \
     lr->left = left;
     lr->op = op;
     lr->right = right;
+    lr->jump = NULL;
+    lr->type = 0;
     return lr;
 }
 
@@ -1446,6 +1456,8 @@ mln_lang_relativeHigh_new(mln_alloc_t *pool, \
     lr->left = left;
     lr->op = op;
     lr->right = right;
+    lr->jump = NULL;
+    lr->type = 0;
     return lr;
 }
 
@@ -1499,6 +1511,8 @@ mln_lang_move_new(mln_alloc_t *pool, \
     lm->left = left;
     lm->op = op;
     lm->right = right;
+    lm->jump = NULL;
+    lm->type = 0;
     return lm;
 }
 
@@ -1552,6 +1566,8 @@ mln_lang_addsub_new(mln_alloc_t *pool, \
     la->left = left;
     la->op = op;
     la->right = right;
+    la->jump = NULL;
+    la->type = 0;
     return la;
 }
 
@@ -1605,6 +1621,8 @@ mln_lang_muldiv_new(mln_alloc_t *pool, \
     lm->left = left;
     lm->op = op;
     lm->right = right;
+    lm->jump = NULL;
+    lm->type = 0;
     return lm;
 }
 
@@ -1653,6 +1671,8 @@ mln_lang_suffix_new(mln_alloc_t *pool, mln_lang_locate_t *left, mln_lang_suffix_
     ls->line = line;
     ls->left = left;
     ls->op = op;
+    ls->jump = NULL;
+    ls->type = 0;
     return ls;
 }
 
@@ -1710,6 +1730,8 @@ mln_lang_locate_new(mln_alloc_t *pool, \
             ll->right.exp = NULL;
             break;
     }
+    ll->jump = NULL;
+    ll->type = 0;
     ll->next = NULL;
     if (next != NULL) {
         mln_lang_locate_t *tmp = ll;

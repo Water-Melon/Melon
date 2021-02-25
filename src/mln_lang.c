@@ -204,6 +204,7 @@ static inline mln_lang_funccall_val_t *__mln_lang_funccall_val_new(mln_alloc_t *
 static inline void __mln_lang_funccall_val_free(mln_lang_funccall_val_t *func);
 static inline void mln_lang_funccall_val_addArg(mln_lang_funccall_val_t *func, mln_lang_var_t *var);
 static void __mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg);
+static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_type_t type);
 static void mln_lang_stack_handler_stm(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_funcdef(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_set(mln_lang_ctx_t *ctx);
@@ -4059,6 +4060,161 @@ static void mln_lang_stack_handler_if(mln_lang_ctx_t *ctx)
     (void)__mln_lang_run(ctx->lang);
 }
 
+static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_type_t type)
+{
+    switch (type) {
+        case M_LSNT_EXP:
+        {
+            mln_lang_exp_t *exp = (mln_lang_exp_t *)ptr;
+            if (exp->assign->op != M_ASSIGN_NONE) {
+                exp->jump = exp->assign;
+                exp->type = M_LSNT_ASSIGN;
+            } else {
+                if (exp->assign->jump == NULL)
+                    mln_lang_generate_jump_ptr(exp->assign, M_LSNT_ASSIGN);
+                exp->jump = exp->assign->jump;
+                exp->type = exp->assign->type;
+            }
+            break;
+        }
+        case M_LSNT_ASSIGN:
+        {
+            mln_lang_assign_t *a = (mln_lang_assign_t *)ptr;
+            if (a->left->op != M_LOGICLOW_NONE) {
+                a->jump = a->left;
+                a->type = M_LSNT_LOGICLOW;
+            } else {
+                if (a->left->jump == NULL)
+                    mln_lang_generate_jump_ptr(a->left, M_LSNT_LOGICLOW);
+                a->jump = a->left->jump;
+                a->type = a->left->type;
+            }
+            break;
+        }
+        case M_LSNT_LOGICLOW:
+        {
+            mln_lang_logicLow_t *l = (mln_lang_logicLow_t *)ptr;
+            if (l->left->op != M_LOGICHIGH_NONE) {
+                l->jump = l->left;
+                l->type = M_LSNT_LOGICHIGH;
+            } else {
+                if (l->left->jump == NULL)
+                    mln_lang_generate_jump_ptr(l->left, M_LSNT_LOGICHIGH);
+                l->jump = l->left->jump;
+                l->type = l->left->type;
+            }
+            break;
+        }
+        case M_LSNT_LOGICHIGH:
+        {
+            mln_lang_logicHigh_t *l = (mln_lang_logicHigh_t *)ptr;
+            if (l->left->op != M_RELATIVELOW_NONE) {
+                l->jump = l->left;
+                l->type = M_LSNT_RELATIVELOW;
+            } else {
+                if (l->left->jump == NULL)
+                    mln_lang_generate_jump_ptr(l->left, M_LSNT_RELATIVELOW);
+                l->jump = l->left->jump;
+                l->type = l->left->type;
+            }
+            break;
+        }
+        case M_LSNT_RELATIVELOW:
+        {
+            mln_lang_relativeLow_t *r = (mln_lang_relativeLow_t *)ptr;
+            if (r->left->op != M_RELATIVEHIGH_NONE) {
+                r->jump = r->left;
+                r->type = M_LSNT_RELATIVEHIGH;
+            } else {
+                if (r->left->jump == NULL)
+                    mln_lang_generate_jump_ptr(r->left, M_LSNT_RELATIVEHIGH);
+                r->jump = r->left->jump;
+                r->type = r->left->type;
+            }
+            break;
+        }
+        case M_LSNT_RELATIVEHIGH:
+        {
+            mln_lang_relativeHigh_t *r = (mln_lang_relativeHigh_t *)ptr;
+            if (r->left->op != M_MOVE_NONE) {
+                r->jump = r->left;
+                r->type = M_LSNT_MOVE;
+            } else {
+                if (r->left->jump == NULL)
+                    mln_lang_generate_jump_ptr(r->left, M_LSNT_MOVE);
+                r->jump = r->left->jump;
+                r->type = r->left->type;
+            }
+            break;
+        }
+        case M_LSNT_MOVE:
+        {
+            mln_lang_move_t *m = (mln_lang_move_t *)ptr;
+            if (m->left->op != M_ADDSUB_NONE) {
+                m->jump = m->left;
+                m->type = M_LSNT_ADDSUB;
+            } else {
+                if (m->left->jump == NULL)
+                    mln_lang_generate_jump_ptr(m->left, M_LSNT_ADDSUB);
+                m->jump = m->left->jump;
+                m->type = m->left->type;
+            }
+            break;
+        }
+        case M_LSNT_ADDSUB:
+        {
+            mln_lang_addsub_t *a = (mln_lang_addsub_t *)ptr;
+            if (a->left->op != M_MULDIV_NONE) {
+                a->jump = a->left;
+                a->type = M_LSNT_MULDIV;
+            } else {
+                if (a->left->jump == NULL)
+                    mln_lang_generate_jump_ptr(a->left, M_LSNT_MULDIV);
+                a->jump = a->left->jump;
+                a->type = a->left->type;
+            }
+            break;
+        }
+        case M_LSNT_MULDIV:
+        {
+            mln_lang_muldiv_t *m = (mln_lang_muldiv_t *)ptr;
+            if (m->left->op != M_SUFFIX_NONE) {
+                m->jump = m->left;
+                m->type = M_LSNT_SUFFIX;
+            } else {
+                if (m->left->jump == NULL)
+                    mln_lang_generate_jump_ptr(m->left, M_LSNT_SUFFIX);
+                m->jump = m->left->jump;
+                m->type = m->left->type;
+            }
+            break;
+        }
+        case M_LSNT_SUFFIX:
+        {
+            mln_lang_suffix_t *s = (mln_lang_suffix_t *)ptr;
+            if (s->left->op != M_LOCATE_NONE) {
+                s->jump = s->left;
+                s->type = M_LSNT_LOCATE;
+            } else {
+                if (s->left->jump == NULL)
+                    mln_lang_generate_jump_ptr(s->left, M_LSNT_LOCATE);
+                s->jump = s->left->jump;
+                s->type = s->left->type;
+            }
+            break;
+        }
+        case M_LSNT_LOCATE:
+        {
+            mln_lang_locate_t *l = (mln_lang_locate_t *)ptr;
+            l->jump = l->left;
+            l->type = M_LSNT_SPEC;
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 static void mln_lang_stack_handler_exp(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node = (mln_lang_stack_node_t *)mln_stack_top(ctx->run_stack);
@@ -4066,7 +4222,9 @@ static void mln_lang_stack_handler_exp(mln_lang_ctx_t *ctx)
     if (node->step == 0) {
         mln_lang_ctx_resetRetExp(ctx);
         node->step = 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ASSIGN, exp->assign)) == NULL) {
+        if (exp->jump == NULL)
+            mln_lang_generate_jump_ptr(exp, M_LSNT_EXP);
+        if ((node = mln_lang_stack_node_new(ctx->pool, exp->type, exp->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4105,7 +4263,9 @@ static void mln_lang_stack_handler_assign(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         if (assign->op == M_ASSIGN_NONE) node->step = 3;
         else node->step = 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_LOGICLOW, assign->left)) == NULL) {
+        if (assign->jump == NULL)
+            mln_lang_generate_jump_ptr(assign, M_LSNT_ASSIGN);
+        if ((node = mln_lang_stack_node_new(ctx->pool, assign->type, assign->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4258,7 +4418,9 @@ static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         if (logicLow->op == M_LOGICLOW_NONE) node->step = 2;
         else node->step = 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_LOGICHIGH, logicLow->left)) == NULL) {
+        if (logicLow->jump == NULL)
+            mln_lang_generate_jump_ptr(logicLow, M_LSNT_LOGICLOW);
+        if ((node = mln_lang_stack_node_new(ctx->pool, logicLow->type, logicLow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4318,7 +4480,9 @@ static void mln_lang_stack_handler_logicHigh(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         if (logicHigh->op == M_LOGICHIGH_NONE) node->step = 4;
         else node->step = 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_RELATIVELOW, logicHigh->left)) == NULL) {
+        if (logicHigh->jump == NULL)
+            mln_lang_generate_jump_ptr(logicHigh, M_LSNT_LOGICHIGH);
+        if ((node = mln_lang_stack_node_new(ctx->pool, logicHigh->type, logicHigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4425,7 +4589,9 @@ static void mln_lang_stack_handler_relativeLow(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         if (relativeLow->op == M_RELATIVELOW_NONE) node->step = 4;
         else node->step = 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_RELATIVEHIGH, relativeLow->left)) == NULL) {
+        if (relativeLow->jump == NULL)
+            mln_lang_generate_jump_ptr(relativeLow, M_LSNT_RELATIVELOW);
+        if ((node = mln_lang_stack_node_new(ctx->pool, relativeLow->type, relativeLow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4529,7 +4695,9 @@ static void mln_lang_stack_handler_relativeHigh(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         if (relativeHigh->op == M_RELATIVEHIGH_NONE) node->step = 4;
         else node->step = 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_MOVE, relativeHigh->left)) == NULL) {
+        if (relativeHigh->jump == NULL)
+            mln_lang_generate_jump_ptr(relativeHigh, M_LSNT_RELATIVEHIGH);
+        if ((node = mln_lang_stack_node_new(ctx->pool, relativeHigh->type, relativeHigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4639,7 +4807,9 @@ static void mln_lang_stack_handler_move(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         if (move->op == M_MOVE_NONE) node->step = 4;
         else node->step = 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ADDSUB, move->left)) == NULL) {
+        if (move->jump == NULL)
+            mln_lang_generate_jump_ptr(move, M_LSNT_MOVE);
+        if ((node = mln_lang_stack_node_new(ctx->pool, move->type, move->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4743,7 +4913,9 @@ static void mln_lang_stack_handler_addsub(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         if (addsub->op == M_ADDSUB_NONE) node->step = 4;
         else node->step = 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_MULDIV, addsub->left)) == NULL) {
+        if (addsub->jump == NULL)
+            mln_lang_generate_jump_ptr(addsub, M_LSNT_ADDSUB);
+        if ((node = mln_lang_stack_node_new(ctx->pool, addsub->type, addsub->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4847,7 +5019,9 @@ static void mln_lang_stack_handler_muldiv(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         if (muldiv->op == M_MULDIV_NONE) node->step = 4;
         else node->step = 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_SUFFIX, muldiv->left)) == NULL) {
+        if (muldiv->jump == NULL)
+            mln_lang_generate_jump_ptr(muldiv, M_LSNT_MULDIV);
+        if ((node = mln_lang_stack_node_new(ctx->pool, muldiv->type, muldiv->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4953,7 +5127,9 @@ static void mln_lang_stack_handler_suffix(mln_lang_ctx_t *ctx)
         mln_lang_stack_node_resetRetExp(node);
         mln_lang_ctx_resetRetExp(ctx);
         node->step = suffix->op == M_SUFFIX_NONE? 2: 1;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_LOCATE, suffix->left)) == NULL) {
+        if (suffix->jump == NULL)
+            mln_lang_generate_jump_ptr(suffix, M_LSNT_SUFFIX);
+        if ((node = mln_lang_stack_node_new(ctx->pool, suffix->type, suffix->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -5059,7 +5235,9 @@ static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx)
         else if (locate->op == M_LOCATE_PROPERTY) node->step = 4;
         else if (locate->op == M_LOCATE_INDEX) node->step = 1;
         else node->step = 5;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_SPEC, locate->left)) == NULL) {
+        if (locate->jump == NULL)
+            mln_lang_generate_jump_ptr(locate, M_LSNT_LOCATE);
+        if ((node = mln_lang_stack_node_new(ctx->pool, locate->type, locate->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
