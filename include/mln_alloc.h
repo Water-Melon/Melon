@@ -12,6 +12,7 @@
 #define M_ALLOC_MGR_GRAIN_SIZE   2
 #define M_ALLOC_MGR_LEN          18*M_ALLOC_MGR_GRAIN_SIZE-(M_ALLOC_MGR_GRAIN_SIZE-1)
 #define M_ALLOC_BLK_NUM          8
+#define M_ALLOC_CHUNK_COUNT      131
 
 #define M_ALLOC_SHM_BITMAP_LEN   4096
 #define M_ALLOC_SHM_BIT_SIZE     64
@@ -48,6 +49,7 @@ struct mln_alloc_chunk_s {
     struct mln_alloc_chunk_s *prev;
     struct mln_alloc_chunk_s *next;
     mln_size_t                refer;
+    mln_size_t                count;
     mln_alloc_mgr_t          *mgr;
     mln_alloc_blk_t          *head;
     mln_alloc_blk_t          *tail;

@@ -13,13 +13,6 @@
 #include "mln_log.h"
 
 
-char mln_alloc_check_bits[] = {
-  0x4d, 0x61, 0x67, 0x65,
-  0x62, 0x69, 0x74, 0x4e,
-  0x69, 0x6b, 0x6c, 0x61,
-  0x75, 0x73, 0x46, 0x53
-};
-
 MLN_CHAIN_FUNC_DECLARE(mln_chunk_blk, \
                        mln_alloc_blk_t, \
                        static inline void, \
@@ -203,7 +196,7 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
     am = mln_alloc_get_mgr_by_size(pool->mgr_tbl, size);
 
     if (am == NULL) {
-        size += (sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_check_bits) + sizeof(mln_alloc_chunk_t));
+        size += (sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_chunk_t));
         n = size / sizeof(mln_uauto_t);
         if (size % sizeof(mln_uauto_t)) ++n;
         size = n * sizeof(mln_uauto_t);
@@ -212,6 +205,7 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
         ch = (mln_alloc_chunk_t *)ptr;
         ch->prev = ch->next = NULL;
         ch->refer = 1;
+        ch->count = 0;
         ch->mgr = NULL;
         ch->head = ch->tail = NULL;
         mln_chunk_chain_add(&(pool->large_used_head), &(pool->large_used_tail), ch);
@@ -221,11 +215,10 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
         blk->data = ptr + sizeof(mln_alloc_chunk_t) + sizeof(mln_alloc_blk_t);
         blk->chunk = ch;
         blk->pool = pool;
-        blk->blk_size = size - (sizeof(mln_alloc_chunk_t) + sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_check_bits));
+        blk->blk_size = size - (sizeof(mln_alloc_chunk_t) + sizeof(mln_alloc_blk_t));
         blk->is_large = 1;
         blk->in_used = 1;
         blk->padding = 0;
-        memcpy(ptr+sizeof(mln_alloc_chunk_t)+sizeof(mln_alloc_blk_t)+blk->blk_size, mln_alloc_check_bits, sizeof(mln_alloc_check_bits));
         mln_chunk_blk_chain_add(&(ch->head), &(ch->tail), blk);
         return blk->data;
     }
@@ -233,7 +226,7 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
     if (am->free_head == NULL) {
         mln_alloc_blk_t *arr[M_ALLOC_BLK_NUM];
 
-        size = sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_check_bits) + am->blk_size;
+        size = sizeof(mln_alloc_blk_t) + am->blk_size;
         n = size / sizeof(mln_uauto_t);
         if (size % sizeof(mln_uauto_t)) ++n;
         size = n * sizeof(mln_uauto_t);
@@ -252,6 +245,7 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
         ch = (mln_alloc_chunk_t *)ptr;
         ch->prev = ch->next = NULL;
         ch->refer = 0;
+        ch->count = 0;
         ch->mgr = am;
         ch->head = ch->tail = NULL;
         mln_chunk_chain_add(&(am->chunk_head), &(am->chunk_tail), ch);
@@ -268,7 +262,6 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
             blk->prev = blk->next = NULL;
             blk->chunk_prev = blk->chunk_next = NULL;
             mln_chunk_blk_chain_add(&(ch->head), &(ch->tail), blk);
-            memcpy(ptr+sizeof(mln_alloc_blk_t)+am->blk_size, mln_alloc_check_bits, sizeof(mln_alloc_check_bits));
             ptr += size;
             arr[n] = blk;
         }
@@ -359,11 +352,6 @@ void mln_alloc_free(void *ptr)
         abort();
     }
 
-    if (memcmp(ptr + blk->blk_size, mln_alloc_check_bits, sizeof(mln_alloc_check_bits))) {
-        mln_log(error, "Buffer overflow.\n");
-        abort();
-    }
-
     pool = blk->pool;
     if (pool->mem) {
         return mln_alloc_free_shm(ptr);
@@ -379,7 +367,7 @@ void mln_alloc_free(void *ptr)
     blk->in_used = 0;
     mln_blk_chain_del(&(am->used_head), &(am->used_tail), blk);
     mln_blk_chain_add(&(am->free_head), &(am->free_tail), blk);
-    if (!--(ch->refer)) {
+    if (!--(ch->refer) && ++(ch->count) > M_ALLOC_CHUNK_COUNT) {
         for (blk = ch->head; blk != NULL; blk = blk->chunk_next) {
             mln_blk_chain_del(&(am->free_head), &(am->free_tail), blk);
         }
@@ -442,7 +430,7 @@ static inline void *mln_alloc_shm_large_m(mln_alloc_t *pool, mln_size_t size)
     mln_alloc_shm_t *as;
     mln_alloc_blk_t *blk;
 
-    if ((as = mln_alloc_shm_new(pool, size + sizeof(mln_alloc_shm_t)+sizeof(mln_alloc_blk_t)+sizeof(mln_alloc_check_bits), 1)) == NULL)
+    if ((as = mln_alloc_shm_new(pool, size + sizeof(mln_alloc_shm_t)+sizeof(mln_alloc_blk_t), 1)) == NULL)
         return NULL;
     as->nfree = 0;
     blk = (mln_alloc_blk_t *)(as->addr+sizeof(mln_alloc_shm_t));
@@ -453,7 +441,6 @@ static inline void *mln_alloc_shm_large_m(mln_alloc_t *pool, mln_size_t size)
     blk->chunk = (mln_alloc_chunk_t *)as;
     blk->is_large = 1;
     blk->in_used = 1;
-    memcpy(blk->data+blk->blk_size, mln_alloc_check_bits, sizeof(mln_alloc_check_bits));
     return blk->data;
 }
 
@@ -470,7 +457,7 @@ static inline mln_alloc_shm_t *mln_alloc_shm_new_block(mln_alloc_t *pool, mln_of
 static inline int mln_alloc_shm_allowed(mln_alloc_shm_t *as, mln_off_t *Boff, mln_off_t *boff, mln_size_t size)
 {
     int i, j = -1, s = -1;
-    int n = (size+sizeof(mln_alloc_blk_t)+sizeof(mln_alloc_check_bits)+M_ALLOC_SHM_BIT_SIZE-1) / M_ALLOC_SHM_BIT_SIZE;
+    int n = (size+sizeof(mln_alloc_blk_t)+M_ALLOC_SHM_BIT_SIZE-1) / M_ALLOC_SHM_BIT_SIZE;
     mln_u8ptr_t p, pend, save = NULL;
 
     if (n > as->nfree) return 0;
@@ -514,7 +501,7 @@ static inline int mln_alloc_shm_allowed(mln_alloc_shm_t *as, mln_off_t *Boff, ml
 
 static inline void *mln_alloc_shm_set_bitmap(mln_alloc_shm_t *as, mln_off_t Boff, mln_off_t boff, mln_size_t size)
 {
-    int i, n = (size+sizeof(mln_alloc_blk_t)+sizeof(mln_alloc_check_bits)+M_ALLOC_SHM_BIT_SIZE-1) / M_ALLOC_SHM_BIT_SIZE;
+    int i, n = (size+sizeof(mln_alloc_blk_t)+M_ALLOC_SHM_BIT_SIZE-1) / M_ALLOC_SHM_BIT_SIZE;
     mln_u8ptr_t p, pend, addr;
     mln_alloc_blk_t *blk;
 
@@ -528,7 +515,6 @@ static inline void *mln_alloc_shm_set_bitmap(mln_alloc_shm_t *as, mln_off_t Boff
     blk->padding = ((Boff & 0xffff) << 8) | (boff & 0xff);
     blk->is_large = 0;
     blk->in_used = 1;
-    memcpy(blk->data+blk->blk_size, mln_alloc_check_bits, sizeof(mln_alloc_check_bits));
     p = as->bitmap + Boff;
     pend = p + M_ALLOC_SHM_BITMAP_LEN;
     for (i = boff; p < pend;) {
@@ -559,7 +545,7 @@ static inline void mln_alloc_free_shm(void *ptr)
         boff = blk->padding & 0xff;
         blk->in_used = 0;
         p = as->bitmap + Boff;
-        n = (blk->blk_size+sizeof(mln_alloc_blk_t)+sizeof(mln_alloc_check_bits)+M_ALLOC_SHM_BIT_SIZE-1) / M_ALLOC_SHM_BIT_SIZE;
+        n = (blk->blk_size+sizeof(mln_alloc_blk_t)+M_ALLOC_SHM_BIT_SIZE-1) / M_ALLOC_SHM_BIT_SIZE;
         i = boff;
         for (pend = as->bitmap+M_ALLOC_SHM_BITMAP_LEN; p < pend;) {
             *p &= (~((mln_u8_t)1 << i));

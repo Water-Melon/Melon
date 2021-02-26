@@ -16,7 +16,7 @@
 #include "mln_connection.h"
 
 #define M_LANG_MAX_OPENFILE      67
-#define M_LANG_DEFAULT_STEP      1024
+#define M_LANG_DEFAULT_STEP      10000
 #define M_LANG_HEARTBEAT_US      50000
 
 #define M_LANG_VAL_TYPE_NIL      0
@@ -103,6 +103,8 @@ struct mln_lang_ctx_s {
     mln_lang_ast_cache_t            *cache;
     struct mln_lang_ctx_s           *prev;
     struct mln_lang_ctx_s           *next;
+    mln_lang_stack_node_t           *free_node_head;
+    mln_lang_stack_node_t           *free_node_tail;
 };
 
 struct mln_lang_resource_s {
@@ -166,6 +168,9 @@ typedef enum {
 } mln_lang_stack_node_type_t;
 
 struct mln_lang_stack_node_s {
+    mln_lang_ctx_t                  *ctx;
+    struct mln_lang_stack_node_s    *prev;
+    struct mln_lang_stack_node_s    *next;
     mln_lang_stack_node_type_t       type;
     union {
         mln_lang_stm_t          *stm;

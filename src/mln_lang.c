@@ -46,6 +46,15 @@ struct mln_lang_gc_setter_s {
 };
 
 
+MLN_CHAIN_FUNC_DECLARE(mln_lang_stack_node, \
+                       mln_lang_stack_node_t, \
+                       static inline void, \
+                       __NONNULL3(1,2,3));
+MLN_CHAIN_FUNC_DEFINE(mln_lang_stack_node, \
+                      mln_lang_stack_node_t, \
+                      static inline void, \
+                      prev, \
+                      next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_ast_cache, \
                        mln_lang_ast_cache_t, \
                        static inline void, \
@@ -102,7 +111,7 @@ __mln_lang_retExp_createTmpObj(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet
 static inline mln_lang_retExp_t *
 __mln_lang_retExp_createTmpTrue(mln_alloc_t *pool, mln_string_t *name);
 static inline mln_lang_stack_node_t *
-mln_lang_stack_node_new(mln_alloc_t *pool, mln_lang_stack_node_type_t type, void *data);
+mln_lang_stack_node_new(mln_lang_ctx_t *ctx, mln_lang_stack_node_type_t type, void *data);
 static inline void __mln_lang_stack_node_free(void *data);
 static inline void
 mln_lang_stack_node_getRetExpFromCTX(mln_lang_stack_node_t *node, mln_lang_ctx_t *ctx);
@@ -139,6 +148,12 @@ __mln_lang_var_new(mln_alloc_t *pool, \
                  mln_lang_var_type_t type, \
                  mln_lang_val_t *val, \
                  mln_lang_set_detail_t *inSet);
+static inline mln_lang_var_t *
+__mln_lang_var_new_ref_string(mln_alloc_t *pool, \
+                              mln_string_t *name, \
+                              mln_lang_var_type_t type, \
+                              mln_lang_val_t *val, \
+                              mln_lang_set_detail_t *inSet);
 static inline void __mln_lang_var_free(void *data);
 static inline mln_lang_var_t *
 __mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var);
@@ -713,8 +728,9 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->retExp = NULL;
     ctx->return_handler = NULL;
     ctx->prev = ctx->next = NULL;
+    ctx->free_node_head = ctx->free_node_tail = NULL;
 
-    mln_lang_stack_node_t *node = mln_lang_stack_node_new(ctx->pool, M_LSNT_STM, ctx->stm);
+    mln_lang_stack_node_t *node = mln_lang_stack_node_new(ctx, M_LSNT_STM, ctx->stm);
     if (node == NULL) {
         mln_lang_ctx_free(ctx);
         return NULL;
@@ -757,11 +773,17 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
 {
     if (ctx == NULL) return;
     mln_lang_scope_t *scope;
+    mln_lang_stack_node_t *sn;
     if (ctx->retExp != NULL) __mln_lang_retExp_free(ctx->retExp);
     if (ctx->filename != NULL) mln_string_pool_free(ctx->filename);
     if (ctx->resource_set != NULL) mln_rbtree_destroy(ctx->resource_set);
     if (ctx->msg_map != NULL) mln_rbtree_destroy(ctx->msg_map);
     if (ctx->run_stack != NULL) mln_stack_destroy(ctx->run_stack);
+    while ((sn = ctx->free_node_head) != NULL) {
+        mln_lang_stack_node_chain_del(&(ctx->free_node_head), &(ctx->free_node_tail), sn);
+        sn->ctx = NULL;
+        __mln_lang_stack_node_free(sn);
+    }
     while ((scope = ctx->scope_head) != NULL) {
         mln_lang_scope_chain_del(&(ctx->scope_head), &(ctx->scope_tail), scope);
         mln_lang_scope_free(scope);
@@ -1183,12 +1205,18 @@ mln_lang_retExp_t *mln_lang_retExp_createTmpArray(mln_lang_ctx_t *ctx, mln_strin
 }
 
 static inline mln_lang_stack_node_t *
-mln_lang_stack_node_new(mln_alloc_t *pool, mln_lang_stack_node_type_t type, void *data)
+mln_lang_stack_node_new(mln_lang_ctx_t *ctx, mln_lang_stack_node_type_t type, void *data)
 {
     mln_lang_stack_node_t *sn;
-    if ((sn = (mln_lang_stack_node_t *)mln_alloc_m(pool, sizeof(mln_lang_stack_node_t))) == NULL) {
-        return NULL;
+    if ((sn = ctx->free_node_head) != NULL) {
+        mln_lang_stack_node_chain_del(&(ctx->free_node_head), &(ctx->free_node_tail), sn);
+    } else {
+        if ((sn = (mln_lang_stack_node_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_stack_node_t))) == NULL) {
+            return NULL;
+        }
     }
+    sn->ctx = ctx;
+    sn->prev = sn->next = NULL;
     sn->type = type;
     sn->pos = NULL;
     switch (type) {
@@ -1293,7 +1321,12 @@ static inline void __mln_lang_stack_node_free(void *data)
     mln_lang_stack_node_t *node = (mln_lang_stack_node_t *)data;
     if (node->retExp != NULL) __mln_lang_retExp_free(node->retExp);
     if (node->retExp2 != NULL) __mln_lang_retExp_free(node->retExp2);
-    mln_alloc_free(node);
+    if (node->ctx != NULL) {
+        node->prev = node->next = NULL;
+        mln_lang_stack_node_chain_add(&(node->ctx->free_node_head), &(node->ctx->free_node_tail), node);
+    } else {
+        mln_alloc_free(node);
+    }
 }
 
 static inline void
@@ -1715,6 +1748,31 @@ __mln_lang_var_new(mln_alloc_t *pool, \
     return var;
 }
 
+static inline mln_lang_var_t *
+__mln_lang_var_new_ref_string(mln_alloc_t *pool, \
+                              mln_string_t *name, \
+                              mln_lang_var_type_t type, \
+                              mln_lang_val_t *val, \
+                              mln_lang_set_detail_t *inSet)
+{
+    mln_lang_var_t *var;
+    if ((var = (mln_lang_var_t *)mln_alloc_m(pool, sizeof(mln_lang_var_t))) == NULL) {
+        return NULL;
+    }
+    var->type = type;
+    if (name != NULL) {
+        var->name = mln_string_ref_dup(name);
+    } else {
+        var->name = NULL;
+    }
+    var->val = val;
+    if (val != NULL) ++(val->ref);
+    var->inSet = inSet;
+    if (inSet != NULL) ++(inSet->ref);
+    var->prev = var->next = NULL;
+    return var;
+}
+
 void mln_lang_var_free(void *data)
 {
     return __mln_lang_var_free(data);
@@ -1834,9 +1892,8 @@ __mln_lang_var_convert(mln_alloc_t *pool, mln_lang_var_t *var)
     }
     ret->type = M_LANG_VAR_NORMAL;
     ret->name = NULL;
-    if (var->name != NULL && (ret->name = mln_string_pool_dup(pool, var->name)) == NULL) {
-        mln_alloc_free(ret);
-        return NULL;
+    if (var->name != NULL) {
+        ret->name = mln_string_ref_dup(var->name);
     }
     ret->val = var->val;
     ++(ret->val->ref);
@@ -3179,7 +3236,7 @@ in:
                 type = M_LSNT_FOR;
                 break;
         }
-        if ((node = mln_lang_stack_node_new(ctx->pool, type, data)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, type, data)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -3193,7 +3250,7 @@ in:
     } else {
         __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
         if (ctx->retExp == NULL && stm->next != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_STM, stm->next)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_STM, stm->next)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3282,7 +3339,7 @@ static void mln_lang_stack_handler_set(mln_lang_ctx_t *ctx)
                 return;
             }
             mln_lang_scope_chain_add(&(ctx->scope_head), &(ctx->scope_tail), scope);
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_SETSTM, set->stm)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_SETSTM, set->stm)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3342,7 +3399,7 @@ static void mln_lang_stack_handler_setstm(mln_lang_ctx_t *ctx)
                 }
             }
         } else {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_FUNCDEF, ls->data.func)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_FUNCDEF, ls->data.func)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3357,7 +3414,7 @@ static void mln_lang_stack_handler_setstm(mln_lang_ctx_t *ctx)
     } else {
         __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
         if (ls->next != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_SETSTM, ls->next)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_SETSTM, ls->next)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3490,7 +3547,7 @@ static inline int mln_lang_metReturn(mln_lang_ctx_t *ctx)
 static inline int mln_lang_stack_handler_block_exp(mln_lang_ctx_t *ctx, mln_lang_block_t *block)
 {
     mln_lang_stack_node_t *node;
-    if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, block->data.exp)) == NULL) {
+    if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, block->data.exp)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -3505,7 +3562,7 @@ static inline int mln_lang_stack_handler_block_exp(mln_lang_ctx_t *ctx, mln_lang
 static inline int mln_lang_stack_handler_block_stm(mln_lang_ctx_t *ctx, mln_lang_block_t *block)
 {
     mln_lang_stack_node_t *node;
-    if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_STM, block->data.stm)) == NULL) {
+    if ((node = mln_lang_stack_node_new(ctx, M_LSNT_STM, block->data.stm)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -3551,7 +3608,7 @@ static inline int mln_lang_stack_handler_block_return(mln_lang_ctx_t *ctx, mln_l
         return 0;
     }
     mln_lang_stack_node_t *node;
-    if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, block->data.exp)) == NULL) {
+    if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, block->data.exp)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -3591,7 +3648,7 @@ static inline int mln_lang_stack_handler_block_goto(mln_lang_ctx_t *ctx, mln_lan
         __mln_lang_stack_node_free(node);
     }
 
-    if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_STM, stm)) == NULL) {
+    if ((node = mln_lang_stack_node_new(ctx, M_LSNT_STM, stm)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -3606,7 +3663,7 @@ static inline int mln_lang_stack_handler_block_goto(mln_lang_ctx_t *ctx, mln_lan
 static inline int mln_lang_stack_handler_block_if(mln_lang_ctx_t *ctx, mln_lang_block_t *block)
 {
     mln_lang_stack_node_t *node;
-    if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_IF, block->data.i)) == NULL) {
+    if ((node = mln_lang_stack_node_new(ctx, M_LSNT_IF, block->data.i)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -3705,7 +3762,7 @@ static void mln_lang_stack_handler_while(mln_lang_ctx_t *ctx)
             }
             mln_lang_ctx_setRetExp(ctx, retExp);
         } else {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, w->condition)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, w->condition)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3723,7 +3780,7 @@ static void mln_lang_stack_handler_while(mln_lang_ctx_t *ctx)
         if (__mln_lang_condition_isTrue(retExp->data.var)) {
             node->step = 0;
             if (w->blockstm != NULL) {
-                if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_BLOCK, w->blockstm)) == NULL) {
+                if ((node = mln_lang_stack_node_new(ctx, M_LSNT_BLOCK, w->blockstm)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     mln_lang_job_free(ctx);
                     return;
@@ -3795,7 +3852,7 @@ static void mln_lang_stack_handler_switch(mln_lang_ctx_t *ctx)
         if (sw->condition == NULL) {
             mln_lang_ctx_setRetExp(ctx, NULL);
         } else {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, sw->condition)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, sw->condition)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3810,7 +3867,7 @@ static void mln_lang_stack_handler_switch(mln_lang_ctx_t *ctx)
     } else if (node->step == 1) {
         node->step = 2;
         mln_lang_stack_node_getRetExpFromCTX(node, ctx);
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_SWITCHSTM, sw->switchstm)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_SWITCHSTM, sw->switchstm)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -3845,7 +3902,7 @@ static void mln_lang_stack_handler_switchstm(mln_lang_ctx_t *ctx)
         }
         ASSERT(sw_node != NULL && sw_node->type == M_LSNT_SWITCH);
         if (sw_node->retExp != NULL && sw_stm->factor != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_FACTOR, sw_stm->factor)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_FACTOR, sw_stm->factor)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3928,7 +3985,7 @@ again:
     } else if (node->step == 3) {
         ASSERT(ctx->retExp == NULL && sw_stm->stm != NULL);
         node->step = 4;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_STM, sw_stm->stm)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_STM, sw_stm->stm)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -3942,7 +3999,7 @@ again:
     } else {
         __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
         if (sw_stm->next != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_SWITCHSTM, sw_stm->next)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_SWITCHSTM, sw_stm->next)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3966,7 +4023,7 @@ static void mln_lang_stack_handler_for(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         node->step = 1;
         if (f->init_exp != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, f->init_exp)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, f->init_exp)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3982,7 +4039,7 @@ static void mln_lang_stack_handler_for(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         node->step = 2;
         if (f->condition != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, f->condition)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, f->condition)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -3999,7 +4056,7 @@ static void mln_lang_stack_handler_for(mln_lang_ctx_t *ctx)
         if (retExp != NULL) ASSERT(retExp->type == M_LANG_RETEXP_VAR);
         if (retExp == NULL || __mln_lang_condition_isTrue(retExp->data.var)) {
             node->step = 3;
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_BLOCK, f->blockstm)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_BLOCK, f->blockstm)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -4018,7 +4075,7 @@ static void mln_lang_stack_handler_for(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         node->step = 1;
         if (f->mod_exp != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, f->mod_exp)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, f->mod_exp)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -4045,7 +4102,7 @@ static void mln_lang_stack_handler_if(mln_lang_ctx_t *ctx)
         node->step = 1;
         mln_lang_ctx_resetRetExp(ctx);
         if (i->condition != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, i->condition)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, i->condition)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -4063,7 +4120,7 @@ static void mln_lang_stack_handler_if(mln_lang_ctx_t *ctx)
         if (retExp != NULL) ASSERT(retExp->type == M_LANG_RETEXP_VAR);
         if (!__mln_lang_condition_isTrue(retExp->data.var)) {
             if (i->elsestm != NULL) {
-                if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_BLOCK, i->elsestm)) == NULL) {
+                if ((node = mln_lang_stack_node_new(ctx, M_LSNT_BLOCK, i->elsestm)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     mln_lang_job_free(ctx);
                     return;
@@ -4076,7 +4133,7 @@ static void mln_lang_stack_handler_if(mln_lang_ctx_t *ctx)
                 }
             }
         } else {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_BLOCK, i->blockstm)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_BLOCK, i->blockstm)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -4241,8 +4298,13 @@ static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_typ
         case M_LSNT_LOCATE:
         {
             mln_lang_locate_t *l = (mln_lang_locate_t *)ptr;
-            l->jump = l->left;
-            l->type = M_LSNT_SPEC;
+            if (l->left->op != M_SPEC_FACTOR) {
+                l->jump = l->left;
+                l->type = M_LSNT_SPEC;
+            } else {
+                l->jump = l->left->data.factor;
+                l->type = M_LSNT_FACTOR;
+            }
             break;
         }
         default:
@@ -4259,7 +4321,7 @@ static void mln_lang_stack_handler_exp(mln_lang_ctx_t *ctx)
         node->step = 1;
         if (exp->jump == NULL)
             mln_lang_generate_jump_ptr(exp, M_LSNT_EXP);
-        if ((node = mln_lang_stack_node_new(ctx->pool, exp->type, exp->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, exp->type, exp->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4273,7 +4335,7 @@ static void mln_lang_stack_handler_exp(mln_lang_ctx_t *ctx)
     } else {
         __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
         if (exp->next != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, exp->next)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, exp->next)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -4300,7 +4362,7 @@ static void mln_lang_stack_handler_assign(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (assign->jump == NULL)
             mln_lang_generate_jump_ptr(assign, M_LSNT_ASSIGN);
-        if ((node = mln_lang_stack_node_new(ctx->pool, assign->type, assign->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, assign->type, assign->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4316,7 +4378,7 @@ static void mln_lang_stack_handler_assign(mln_lang_ctx_t *ctx)
         ASSERT(assign->right != NULL);
         ASSERT(ctx->retExp->type == M_LANG_RETEXP_VAR);
         mln_lang_stack_node_getRetExpFromCTX(node, ctx);
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ASSIGN, assign->right)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_ASSIGN, assign->right)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4455,7 +4517,7 @@ static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (logicLow->jump == NULL)
             mln_lang_generate_jump_ptr(logicLow, M_LSNT_LOGICLOW);
-        if ((node = mln_lang_stack_node_new(ctx->pool, logicLow->type, logicLow->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, logicLow->type, logicLow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4472,7 +4534,7 @@ static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx)
         ASSERT(ctx->retExp->type == M_LANG_RETEXP_VAR);
         if (__mln_lang_condition_isTrue(ctx->retExp->data.var)) {
             if (logicLow->op == M_LOGICLOW_AND) {
-                if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_LOGICLOW, logicLow->right)) == NULL) {
+                if ((node = mln_lang_stack_node_new(ctx, M_LSNT_LOGICLOW, logicLow->right)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     mln_lang_job_free(ctx);
                     return;
@@ -4486,7 +4548,7 @@ static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx)
             }
         } else {
             if (logicLow->op == M_LOGICLOW_OR) {
-                if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_LOGICLOW, logicLow->right)) == NULL) {
+                if ((node = mln_lang_stack_node_new(ctx, M_LSNT_LOGICLOW, logicLow->right)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     mln_lang_job_free(ctx);
                     return;
@@ -4517,7 +4579,7 @@ static void mln_lang_stack_handler_logicHigh(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (logicHigh->jump == NULL)
             mln_lang_generate_jump_ptr(logicHigh, M_LSNT_LOGICHIGH);
-        if ((node = mln_lang_stack_node_new(ctx->pool, logicHigh->type, logicHigh->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, logicHigh->type, logicHigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4537,7 +4599,7 @@ static void mln_lang_stack_handler_logicHigh(mln_lang_ctx_t *ctx)
     } else if (node->step == 2) {
         node->step = 3;
         mln_lang_logicHigh_t *ll = logicHigh->right;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_RELATIVELOW, ll->left)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_RELATIVELOW, ll->left)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4626,7 +4688,7 @@ static void mln_lang_stack_handler_relativeLow(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (relativeLow->jump == NULL)
             mln_lang_generate_jump_ptr(relativeLow, M_LSNT_RELATIVELOW);
-        if ((node = mln_lang_stack_node_new(ctx->pool, relativeLow->type, relativeLow->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, relativeLow->type, relativeLow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4646,7 +4708,7 @@ static void mln_lang_stack_handler_relativeLow(mln_lang_ctx_t *ctx)
     } else if (node->step == 2) {
         node->step = 3;
         mln_lang_relativeLow_t *tmp = relativeLow->right;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_RELATIVEHIGH, tmp->left)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_RELATIVEHIGH, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4732,7 +4794,7 @@ static void mln_lang_stack_handler_relativeHigh(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (relativeHigh->jump == NULL)
             mln_lang_generate_jump_ptr(relativeHigh, M_LSNT_RELATIVEHIGH);
-        if ((node = mln_lang_stack_node_new(ctx->pool, relativeHigh->type, relativeHigh->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, relativeHigh->type, relativeHigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4752,7 +4814,7 @@ static void mln_lang_stack_handler_relativeHigh(mln_lang_ctx_t *ctx)
     } else if (node->step == 2) {
         node->step = 3;
         mln_lang_relativeHigh_t *tmp = relativeHigh->right;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_MOVE, tmp->left)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_MOVE, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4844,7 +4906,7 @@ static void mln_lang_stack_handler_move(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (move->jump == NULL)
             mln_lang_generate_jump_ptr(move, M_LSNT_MOVE);
-        if ((node = mln_lang_stack_node_new(ctx->pool, move->type, move->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, move->type, move->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4864,7 +4926,7 @@ static void mln_lang_stack_handler_move(mln_lang_ctx_t *ctx)
     } else if (node->step == 2) {
         node->step = 3;
         mln_lang_move_t *tmp = move->right;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ADDSUB, tmp->left)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_ADDSUB, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4950,7 +5012,7 @@ static void mln_lang_stack_handler_addsub(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (addsub->jump == NULL)
             mln_lang_generate_jump_ptr(addsub, M_LSNT_ADDSUB);
-        if ((node = mln_lang_stack_node_new(ctx->pool, addsub->type, addsub->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, addsub->type, addsub->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4970,7 +5032,7 @@ static void mln_lang_stack_handler_addsub(mln_lang_ctx_t *ctx)
     } else if (node->step == 2) {
         node->step = 3;
         mln_lang_addsub_t *tmp = addsub->right;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_MULDIV, tmp->left)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_MULDIV, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -5056,7 +5118,7 @@ static void mln_lang_stack_handler_muldiv(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (muldiv->jump == NULL)
             mln_lang_generate_jump_ptr(muldiv, M_LSNT_MULDIV);
-        if ((node = mln_lang_stack_node_new(ctx->pool, muldiv->type, muldiv->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, muldiv->type, muldiv->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -5076,7 +5138,7 @@ static void mln_lang_stack_handler_muldiv(mln_lang_ctx_t *ctx)
     } else if (node->step == 2) {
         node->step = 3;
         mln_lang_muldiv_t *tmp = muldiv->right;
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_SUFFIX, tmp->left)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_SUFFIX, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -5164,7 +5226,7 @@ static void mln_lang_stack_handler_suffix(mln_lang_ctx_t *ctx)
         node->step = suffix->op == M_SUFFIX_NONE? 2: 1;
         if (suffix->jump == NULL)
             mln_lang_generate_jump_ptr(suffix, M_LSNT_SUFFIX);
-        if ((node = mln_lang_stack_node_new(ctx->pool, suffix->type, suffix->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, suffix->type, suffix->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -5272,7 +5334,7 @@ static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx)
         else node->step = 5;
         if (locate->jump == NULL)
             mln_lang_generate_jump_ptr(locate, M_LSNT_LOCATE);
-        if ((node = mln_lang_stack_node_new(ctx->pool, locate->type, locate->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, locate->type, locate->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -5297,7 +5359,7 @@ static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx)
             }
             mln_lang_ctx_setRetExp(ctx, retExp);
         } else {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_EXP, locate->right.exp)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, locate->right.exp)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -5492,7 +5554,7 @@ again_property:
         if (node->pos != NULL) {
             mln_lang_exp_t *exp = (mln_lang_exp_t *)(node->pos);
             node->pos = exp->next;
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ASSIGN, exp->assign)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_ASSIGN, exp->assign)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -5527,7 +5589,7 @@ again_property:
     } else {
         mln_lang_stack_node_t *cur = mln_stack_pop(ctx->run_stack);
         if (locate->next != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_LOCATE, locate->next)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_LOCATE, locate->next)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 __mln_lang_stack_node_free(cur);
                 mln_lang_job_free(ctx);
@@ -5698,7 +5760,7 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
     } else {
         if (prototype->data.stm != NULL) {
             scope->entry = prototype->data.stm;
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_STM, prototype->data.stm)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_STM, prototype->data.stm)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 return -1;
             }
@@ -5806,7 +5868,7 @@ static void mln_lang_stack_handler_spec(mln_lang_ctx_t *ctx)
                 break;
         }
         if (data != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, type, data)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, type, data)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -6077,10 +6139,7 @@ mln_lang_stack_handler_factor_string(mln_lang_ctx_t *ctx, mln_lang_factor_t *fac
     mln_lang_retExp_t *retExp;
     mln_string_t *s;
 
-    if ((s = mln_string_pool_dup(ctx->pool, factor->data.s_id)) == NULL) {
-        __mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    s = mln_string_ref_dup(factor->data.s_id);
     if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_STRING, s)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         mln_string_pool_free(s);
@@ -6180,7 +6239,7 @@ mln_lang_stack_handler_factor_array(mln_lang_ctx_t *ctx, mln_lang_factor_t *fact
     }
     mln_lang_stack_node_setRetExp(node, retExp);
     if (factor->data.array != NULL) {
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ELEMLIST, factor->data.array)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_ELEMLIST, factor->data.array)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
@@ -6227,7 +6286,7 @@ mln_lang_stack_handler_factor_id(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor)
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, factor->data.s_id, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new_ref_string(ctx->pool, factor->data.s_id, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6271,7 +6330,7 @@ static void mln_lang_stack_handler_elemlist(mln_lang_ctx_t *ctx)
         mln_lang_ctx_resetRetExp(ctx);
         ASSERT(node->retExp == NULL);
         if (elem->key != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ASSIGN, elem->key)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_ASSIGN, elem->key)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -6289,7 +6348,7 @@ static void mln_lang_stack_handler_elemlist(mln_lang_ctx_t *ctx)
             ASSERT(ctx->retExp->type == M_LANG_RETEXP_VAR);
             mln_lang_stack_node_getRetExpFromCTX(node, ctx);
         }
-        if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ASSIGN, elem->val)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, M_LSNT_ASSIGN, elem->val)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -6334,7 +6393,7 @@ static void mln_lang_stack_handler_elemlist(mln_lang_ctx_t *ctx)
         __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
         mln_lang_ctx_resetRetExp(ctx);
         if (elem->next != NULL) {
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ELEMLIST, elem->next)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_ELEMLIST, elem->next)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -6388,7 +6447,7 @@ static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx)
         if (node->pos != NULL) {
             mln_lang_exp_t *exp = (mln_lang_exp_t *)(node->pos);
             node->pos = exp->next;
-            if ((node = mln_lang_stack_node_new(ctx->pool, M_LSNT_ASSIGN, exp->assign)) == NULL) {
+            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_ASSIGN, exp->assign)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;

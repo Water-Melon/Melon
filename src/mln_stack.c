@@ -147,7 +147,6 @@ mln_stack_t *mln_stack_dup(mln_stack_t *st, void *udata)
 /*
  * scan
  */
-#include <stdio.h>
 int mln_stack_scan_all(mln_stack_t *st, stack_scan scanner, void *data)
 {
     mln_stack_node_t *sn;
