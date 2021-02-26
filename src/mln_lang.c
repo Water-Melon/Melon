@@ -486,20 +486,7 @@ static inline int __mln_lang_run(mln_lang_t *lang)
         mln_gc_collect(scope->gc, scope);
     }
 
-    if (lang->ctx_cur != NULL) {
 ok:
-        if (mln_event_set_fd(lang->ev, \
-                             lang->fd_signal, \
-                             M_EV_SEND|M_EV_ONESHOT, \
-                             M_EV_UNLIMITED, \
-                             lang->ctx_cur, \
-                             mln_lang_run_handler) < 0)
-        {
-            return -1;
-        }
-    } else {
-        mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-    }
     return 0;
 }
 
@@ -523,6 +510,17 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
         if (lang->ctx_cur != ctx || ctx->ref || ctx->step <= 0) {
             break;
         }
+    }
+
+    if (lang->ctx_cur != NULL) {
+        mln_event_set_fd(lang->ev, \
+                         lang->fd_signal, \
+                         M_EV_SEND|M_EV_ONESHOT, \
+                         M_EV_UNLIMITED, \
+                         lang->ctx_cur, \
+                         mln_lang_run_handler);
+    } else {
+        mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     }
 }
 
@@ -799,6 +797,16 @@ void mln_lang_ctx_continue(mln_lang_ctx_t *ctx)
     else
         mln_lang_ctx_chain_add(&(ctx->lang->blocked_head), &(ctx->lang->blocked_tail), ctx);
     __mln_lang_run(ctx->lang);
+    if (ctx->lang->ctx_cur != NULL) {
+        mln_event_set_fd(ctx->lang->ev, \
+                         ctx->lang->fd_signal, \
+                         M_EV_SEND|M_EV_ONESHOT, \
+                         M_EV_UNLIMITED, \
+                         ctx->lang->ctx_cur, \
+                         mln_lang_run_handler);
+    } else {
+        mln_event_set_fd(ctx->lang->ev, ctx->lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+    }
 }
 
 static inline void mln_lang_ctx_resetRetExp(mln_lang_ctx_t *ctx)
@@ -877,6 +885,21 @@ mln_lang_job_new(mln_lang_t *lang, \
         mln_lang_ctx_free(ctx);
         return NULL;
     }
+    if (lang->ctx_cur != NULL) {
+        if (mln_event_set_fd(lang->ev, \
+                             lang->fd_signal, \
+                             M_EV_SEND|M_EV_ONESHOT, \
+                             M_EV_UNLIMITED, \
+                             lang->ctx_cur, \
+                             mln_lang_run_handler) < 0)
+        {
+            mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), ctx);
+            mln_lang_ctx_free(ctx);
+            return NULL;
+        }
+    } else {
+        mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+    }
     return ctx;
 }
 
@@ -892,7 +915,19 @@ void mln_lang_job_free(mln_lang_ctx_t *ctx)
     else
         mln_lang_ctx_chain_del(&(lang->blocked_head), &(lang->blocked_tail), ctx);
     mln_lang_ctx_free(ctx);
-    if (lang->ctx_cur == NULL) (void)__mln_lang_run(lang);
+    if (lang->ctx_cur == NULL) {
+        (void)__mln_lang_run(lang);
+        if (lang->ctx_cur != NULL) {
+            mln_event_set_fd(lang->ev, \
+                             lang->fd_signal, \
+                             M_EV_SEND|M_EV_ONESHOT, \
+                             M_EV_UNLIMITED, \
+                             lang->ctx_cur, \
+                             mln_lang_run_handler);
+        } else {
+            mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+        }
+    }
 }
 
 
