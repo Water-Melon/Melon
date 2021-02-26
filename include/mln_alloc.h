@@ -11,7 +11,7 @@
 #define M_ALLOC_BEGIN_OFF        ((mln_size_t)4)
 #define M_ALLOC_MGR_GRAIN_SIZE   2
 #define M_ALLOC_MGR_LEN          18*M_ALLOC_MGR_GRAIN_SIZE-(M_ALLOC_MGR_GRAIN_SIZE-1)
-#define M_ALLOC_BLK_NUM          8
+#define M_ALLOC_BLK_NUM          16
 #define M_ALLOC_CHUNK_COUNT      1023
 
 #define M_ALLOC_SHM_BITMAP_LEN   4096
@@ -41,8 +41,6 @@ typedef struct mln_alloc_blk_s {
     mln_size_t                padding:30;
     struct mln_alloc_blk_s   *prev;
     struct mln_alloc_blk_s   *next;
-    struct mln_alloc_blk_s   *chunk_prev;
-    struct mln_alloc_blk_s   *chunk_next;
 } mln_alloc_blk_t __cacheline_aligned;
 
 struct mln_alloc_chunk_s {
@@ -51,8 +49,7 @@ struct mln_alloc_chunk_s {
     mln_size_t                refer;
     mln_size_t                count;
     mln_alloc_mgr_t          *mgr;
-    mln_alloc_blk_t          *head;
-    mln_alloc_blk_t          *tail;
+    mln_alloc_blk_t          *blks[M_ALLOC_BLK_NUM];
 };
 
 struct mln_alloc_mgr_s {

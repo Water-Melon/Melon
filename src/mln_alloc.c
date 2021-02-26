@@ -13,10 +13,6 @@
 #include "mln_log.h"
 
 
-MLN_CHAIN_FUNC_DECLARE(mln_chunk_blk, \
-                       mln_alloc_blk_t, \
-                       static inline void, \
-                       );
 MLN_CHAIN_FUNC_DECLARE(mln_blk, \
                        mln_alloc_blk_t, \
                        static inline void, \
@@ -127,7 +123,6 @@ mln_alloc_t *mln_alloc_init(void)
     pool->mem = NULL;
     pool->shm_size = 0;
     memset(&pool->rwlock, 0, sizeof(pthread_rwlock_t));
-    mln_chunk_blk_chain_del(NULL, NULL, NULL);/* get rid of warning in Darwin */
     return pool;
 }
 
@@ -196,58 +191,39 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
     am = mln_alloc_get_mgr_by_size(pool->mgr_tbl, size);
 
     if (am == NULL) {
-        size += (sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_chunk_t));
-        n = size / sizeof(mln_uauto_t);
-        if (size % sizeof(mln_uauto_t)) ++n;
+        n = (size + sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_chunk_t) + sizeof(mln_uauto_t) - 1) /  sizeof(mln_uauto_t);
         size = n * sizeof(mln_uauto_t);
-        ptr = (mln_u8ptr_t)malloc(size);
+        ptr = (mln_u8ptr_t)calloc(1, size);
         if (ptr == NULL) return NULL;
         ch = (mln_alloc_chunk_t *)ptr;
-        ch->prev = ch->next = NULL;
         ch->refer = 1;
-        ch->count = 0;
-        ch->mgr = NULL;
-        ch->head = ch->tail = NULL;
         mln_chunk_chain_add(&(pool->large_used_head), &(pool->large_used_tail), ch);
         blk = (mln_alloc_blk_t *)(ptr + sizeof(mln_alloc_chunk_t));
-        blk->prev = blk->next = NULL;
-        blk->chunk_prev = blk->chunk_next = NULL;
         blk->data = ptr + sizeof(mln_alloc_chunk_t) + sizeof(mln_alloc_blk_t);
         blk->chunk = ch;
         blk->pool = pool;
         blk->blk_size = size - (sizeof(mln_alloc_chunk_t) + sizeof(mln_alloc_blk_t));
         blk->is_large = 1;
         blk->in_used = 1;
-        blk->padding = 0;
-        mln_chunk_blk_chain_add(&(ch->head), &(ch->tail), blk);
+        ch->blks[0] = blk;
         return blk->data;
     }
 
     if (am->free_head == NULL) {
-        mln_alloc_blk_t *arr[M_ALLOC_BLK_NUM];
-
-        size = sizeof(mln_alloc_blk_t) + am->blk_size;
-        n = size / sizeof(mln_uauto_t);
-        if (size % sizeof(mln_uauto_t)) ++n;
+        n = (sizeof(mln_alloc_blk_t) + am->blk_size + sizeof(mln_uauto_t) - 1) / sizeof(mln_uauto_t);
         size = n * sizeof(mln_uauto_t);
 
-        alloc_size = sizeof(mln_alloc_chunk_t) + M_ALLOC_BLK_NUM * size;
-        n = alloc_size / sizeof(mln_uauto_t);
-        if (alloc_size % sizeof(mln_uauto_t)) ++n;
+        n = (sizeof(mln_alloc_chunk_t) + M_ALLOC_BLK_NUM * size + sizeof(mln_uauto_t) - 1) / sizeof(mln_uauto_t);
         alloc_size = n * sizeof(mln_uauto_t);;
 
-        if ((ptr = (mln_u8ptr_t)malloc(alloc_size)) == NULL) {
+        if ((ptr = (mln_u8ptr_t)calloc(1, alloc_size)) == NULL) {
             for (; am < pool->mgr_tbl + M_ALLOC_MGR_LEN; ++am) {
                 if (am->free_head != NULL) goto out;
             }
             return NULL;
         }
         ch = (mln_alloc_chunk_t *)ptr;
-        ch->prev = ch->next = NULL;
-        ch->refer = 0;
-        ch->count = 0;
         ch->mgr = am;
-        ch->head = ch->tail = NULL;
         mln_chunk_chain_add(&(am->chunk_head), &(am->chunk_tail), ch);
         ptr += sizeof(mln_alloc_chunk_t);
         for (n = 0; n < M_ALLOC_BLK_NUM; ++n) {
@@ -256,17 +232,9 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
             blk->chunk = ch;
             blk->pool = pool;
             blk->blk_size = am->blk_size;
-            blk->is_large = 0;
-            blk->in_used = 0;
-            blk->padding = 0;
-            blk->prev = blk->next = NULL;
-            blk->chunk_prev = blk->chunk_next = NULL;
-            mln_chunk_blk_chain_add(&(ch->head), &(ch->tail), blk);
+            ch->blks[n] = blk;
             ptr += size;
-            arr[n] = blk;
-        }
-        for (n = 0; n < M_ALLOC_BLK_NUM; ++n) {
-            mln_blk_chain_add(&(am->free_head), &(am->free_tail), arr[M_ALLOC_BLK_NUM-1-n]);
+            mln_blk_chain_add(&(am->free_head), &(am->free_tail), blk);
         }
     }
 
@@ -368,8 +336,10 @@ void mln_alloc_free(void *ptr)
     mln_blk_chain_del(&(am->used_head), &(am->used_tail), blk);
     mln_blk_chain_add(&(am->free_head), &(am->free_tail), blk);
     if (!--(ch->refer) && ++(ch->count) > M_ALLOC_CHUNK_COUNT) {
-        for (blk = ch->head; blk != NULL; blk = blk->chunk_next) {
-            mln_blk_chain_del(&(am->free_head), &(am->free_tail), blk);
+        int n;
+        for (n = 0; n < M_ALLOC_BLK_NUM; ++n) {
+            if (ch->blks[n] == NULL) break;
+            mln_blk_chain_del(&(am->free_head), &(am->free_tail), ch->blks[n]);
         }
         mln_chunk_chain_del(&(am->chunk_head), &(am->chunk_tail), ch);
         free(ch);
@@ -565,17 +535,11 @@ static inline void mln_alloc_free_shm(void *ptr)
 /*
  * chain
  */
-MLN_CHAIN_FUNC_DEFINE(mln_chunk_blk, \
-                      mln_alloc_blk_t, \
-                      static inline void, \
-                      chunk_prev, \
-                      chunk_next);
 MLN_CHAIN_FUNC_DEFINE(mln_blk, \
                       mln_alloc_blk_t, \
                       static inline void, \
                       prev, \
                       next);
-
 MLN_CHAIN_FUNC_DEFINE(mln_chunk, \
                       mln_alloc_chunk_t, \
                       static inline void, \
