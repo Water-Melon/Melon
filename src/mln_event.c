@@ -133,6 +133,7 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
     struct mln_rbtree_attr rbattr;
     rbattr.cmp = mln_event_rbtree_fd_cmp;
     rbattr.data_free = NULL;
+    rbattr.cache = 0;
     ev->ev_fd_tree = mln_rbtree_init(&rbattr);
     if (ev->ev_fd_tree == NULL) {
         mln_log(error, "No memory.\n");
@@ -178,6 +179,7 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
     /*signal rbtree*/
     rbattr.cmp = mln_event_rbtree_sig_cmp;
     rbattr.data_free = mln_event_rbtree_sig_chain_free;
+    rbattr.cache = 0;
     ev->ev_signal_tree = mln_rbtree_init(&rbattr);
     if (ev->ev_signal_tree == NULL) {
         mln_log(error, "No memory.\n");
@@ -1510,6 +1512,7 @@ mln_event_rbtree_refer_init(void)
     struct mln_rbtree_attr rbattr;
     rbattr.cmp = mln_event_rbtree_refer_cmp;
     rbattr.data_free = mln_event_rbtree_refer_free;
+    rbattr.cache = 0;
     ev_signal_refer_tree = mln_rbtree_init(&rbattr);
     if (ev_signal_refer_tree == NULL) {
         mln_log(error, "No memory.\n");

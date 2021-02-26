@@ -402,6 +402,7 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
     gettimeofday(&tv, NULL);
     rbattr.cmp = (rbtree_cmp)mln_lang_resource_cmp;
     rbattr.data_free = (rbtree_free_data)mln_lang_resource_free_handler;
+    rbattr.cache = 0;
     if ((lang->resource_set = mln_rbtree_init(&rbattr)) == NULL) {
         mln_lang_free(lang);
         return NULL;
@@ -671,6 +672,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     }
     stattr.free_handler = mln_lang_stack_node_free;
     stattr.copy_handler = NULL;
+    stattr.cache = 1;
     if ((ctx->run_stack = mln_stack_init(&stattr)) == NULL) {
         if (ctx->cache != NULL) {
             if (!(--(ctx->cache->ref))) {
@@ -691,6 +693,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->filename = NULL;
     rbattr.cmp = mln_lang_msg_cmp;
     rbattr.data_free = __mln_lang_msg_free;
+    rbattr.cache = 0;
     if ((ctx->msg_map = mln_rbtree_init(&rbattr)) == NULL) {
         mln_stack_destroy(ctx->run_stack);
         if (ctx->cache != NULL) {
@@ -708,6 +711,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     }
     rbattr.cmp = (rbtree_cmp)mln_lang_resource_cmp;
     rbattr.data_free = (rbtree_free_data)mln_lang_ctx_resource_free_handler;
+    rbattr.cache = 0;
     if ((ctx->resource_set = mln_rbtree_init(&rbattr)) == NULL) {
         mln_rbtree_destroy(ctx->msg_map);
         mln_stack_destroy(ctx->run_stack);
@@ -1397,6 +1401,7 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
 
     rbattr.cmp = mln_lang_symbolNode_cmp;
     rbattr.data_free = mln_lang_symbolNode_free;
+    rbattr.cache = 1;
     if ((scope->symbols = mln_rbtree_init(&rbattr)) == NULL) {
         if (scope->gc != NULL) mln_gc_free(scope->gc);
         if (scope->name != NULL) mln_string_pool_free(scope->name);
@@ -1605,6 +1610,7 @@ mln_lang_set_detail_new(mln_alloc_t *pool, mln_string_t *name)
     }
     rbattr.cmp = mln_lang_var_cmpName;
     rbattr.data_free = mln_lang_var_free;
+    rbattr.cache = 0;
     if ((lcd->members = mln_rbtree_init(&rbattr)) == NULL) {
         mln_alloc_free(lcd);
         return NULL;
@@ -2364,6 +2370,7 @@ mln_lang_object_new(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet)
     if (inSet != NULL) ++(inSet->ref);
     rbattr.cmp = mln_lang_var_cmpName;
     rbattr.data_free = mln_lang_var_free;
+    rbattr.cache = 0;
     if ((obj->members = mln_rbtree_init(&rbattr)) == NULL) {
         mln_alloc_free(obj);
         return NULL;
@@ -2427,6 +2434,7 @@ mln_lang_object_dup(mln_lang_ctx_t *ctx, mln_lang_object_t *src)
     if (obj->inSet != NULL) ++(obj->inSet->ref);
     rbattr.cmp = mln_lang_var_cmpName;
     rbattr.data_free = mln_lang_var_free;
+    rbattr.cache = 0;
     if ((obj->members = mln_rbtree_init(&rbattr)) == NULL) {
         mln_alloc_free(obj);
         return NULL;
@@ -2705,12 +2713,14 @@ static inline mln_lang_array_t *__mln_lang_array_new(mln_lang_ctx_t *ctx)
     }
     rbattr.cmp = mln_lang_array_elem_indexCmp;
     rbattr.data_free = mln_lang_array_elem_free;
+    rbattr.cache = 0;
     if ((la->elems_index = mln_rbtree_init(&rbattr)) == NULL) {
         mln_alloc_free(la);
         return NULL;
     }
     rbattr.cmp = mln_lang_array_elem_keyCmp;
     rbattr.data_free = NULL;
+    rbattr.cache = 0;
     if ((la->elems_key = mln_rbtree_init(&rbattr)) == NULL) {
         mln_rbtree_destroy(la->elems_index);
         mln_alloc_free(la);
@@ -6096,7 +6106,9 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                 }
                 break;
         }
+        if (factor->type != M_FACTOR_ARRAY) goto goon;
     } else {
+goon:
         if (factor->type == M_FACTOR_ARRAY) {
             mln_lang_ctx_getRetExpFromNode(ctx, node);
         }
@@ -7516,6 +7528,7 @@ static void mln_lang_gc_item_memberSetter(mln_gc_t *gc, mln_lang_gc_item_t *gcIt
 
     rbattr.cmp = mln_lang_gc_setter_cmp;
     rbattr.data_free = NULL;
+    rbattr.cache = 0;
 
     if ((lgs.visited = mln_rbtree_init(&rbattr)) == NULL) {
         mln_log(error, "No memory.\n");

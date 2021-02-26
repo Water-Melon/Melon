@@ -320,6 +320,7 @@ Their definitions can be found in melon/include/mln_types.h.
     struct mln_rbtree_attr {
         rbtree_cmp                cmp;
         rbtree_free_data          data_free;
+        mln_u32_t                 cache:1;
     };
     cmp -- is a function pointer to compare with two RB-tree
     data. Its prototype is
@@ -965,6 +966,7 @@ Their definitions can be found in melon/include/mln_types.h.
      struct mln_stack_attr {
          stack_free               free_handler;
          stack_copy               copy_handler;
+         mln_u32_t                cache:1;
      };
      This structure is used to initialize a stack object.
      free_handler -- is a function pointer to free stack data.

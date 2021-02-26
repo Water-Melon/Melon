@@ -96,6 +96,7 @@ int mln_pre_fork(void)
     struct mln_rbtree_attr rbattr;
     rbattr.cmp = mln_fork_rbtree_cmp;
     rbattr.data_free = NULL;
+    rbattr.cache = 0;
     if ((master_ipc_tree = mln_rbtree_init(&rbattr)) < 0) {
         mln_log(error, "No memory.\n");
         if (mln_tcp_conn_get_fd(&master_conn) >= 0)

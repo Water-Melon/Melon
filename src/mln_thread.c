@@ -636,6 +636,7 @@ mln_thread_rbtree_init(void)
     struct mln_rbtree_attr rbattr;
     rbattr.cmp = mln_thread_rbtree_cmp;
     rbattr.data_free = NULL;
+    rbattr.cache = 0;
     if ((thread_tree = mln_rbtree_init(&rbattr)) == NULL) {
         return -1;
     }

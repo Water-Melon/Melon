@@ -16,7 +16,7 @@ MLN_CHAIN_FUNC_DECLARE(mln_stack, \
 static mln_stack_node_t *
 mln_stack_node_init(void *data);
 static void
-mln_stack_node_destroy(stack_free free_handler, mln_stack_node_t *sn);
+mln_stack_node_destroy(mln_stack_t *st, stack_free free_handler, mln_stack_node_t *sn);
 
 /*
  * stack_node
@@ -33,12 +33,17 @@ mln_stack_node_init(void *data)
 }
 
 static void
-mln_stack_node_destroy(stack_free free_handler, mln_stack_node_t *sn)
+mln_stack_node_destroy(mln_stack_t *st, stack_free free_handler, mln_stack_node_t *sn)
 {
     if (sn == NULL) return;
     if (free_handler != NULL)
         free_handler(sn->data);
-    free(sn);
+    if (st->cache) {
+        sn->prev = sn->next = NULL;
+        mln_stack_chain_add(&(st->free_head), &(st->free_tail), sn);
+    } else {
+        free(sn);
+    }
 }
 
 /*
@@ -50,19 +55,28 @@ mln_stack_t *mln_stack_init(struct mln_stack_attr *attr)
     if (st == NULL) return NULL;
     st->bottom = NULL;
     st->top = NULL;
+    st->free_head = st->free_tail = NULL;
     st->nr_node = 0;
     st->free_handler = attr->free_handler;
     st->copy_handler = attr->copy_handler;
+    st->cache = attr->cache;
     return st;
 }
 
 void mln_stack_destroy(mln_stack_t *st)
 {
     if (st == NULL) return;
+
     mln_stack_node_t *sn;
+
+    st->cache = 0;
     while ((sn = st->bottom) != NULL) {
         mln_stack_chain_del(&(st->bottom), &(st->top), sn);
-        mln_stack_node_destroy(st->free_handler, sn);
+        mln_stack_node_destroy(st, st->free_handler, sn);
+    }
+    while ((sn = st->free_head) != NULL) {
+        mln_stack_chain_del(&(st->free_head), &(st->free_tail), sn);
+        mln_stack_node_destroy(st, NULL, sn);
     }
     free(st);
 }
@@ -82,8 +96,14 @@ MLN_CHAIN_FUNC_DEFINE(mln_stack, \
  */
 int mln_stack_push(mln_stack_t *st, void *data)
 {
-    mln_stack_node_t *sn = mln_stack_node_init(data);
-    if (sn == NULL) return -1;
+    mln_stack_node_t *sn;
+    if ((sn = st->free_head) != NULL) {
+        mln_stack_chain_del(&(st->free_head), &(st->free_tail), sn);
+        sn->data = data;
+    } else {
+        sn = mln_stack_node_init(data);
+        if (sn == NULL) return -1;
+    }
     mln_stack_chain_add(&(st->bottom), &(st->top), sn);
     ++(st->nr_node);
     return 0;
@@ -99,18 +119,10 @@ void *mln_stack_pop(mln_stack_t *st)
     mln_stack_chain_del(&(st->bottom), &(st->top), sn);
     --(st->nr_node);
     void *ptr = sn->data;
-    mln_stack_node_destroy(NULL, sn);
+    mln_stack_node_destroy(st, NULL, sn);
     return ptr;
 }
 
-
-/*
- * top
- */
-void *mln_stack_top(mln_stack_t *st)
-{
-    return st->top==NULL? NULL: st->top->data;
-}
 
 /*
  * dup

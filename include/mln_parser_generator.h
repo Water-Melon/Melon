@@ -555,6 +555,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     struct mln_rbtree_attr rbattr;\
     rbattr.cmp = mln_pg_token_rbtree_cmp;\
     rbattr.data_free = mln_pg_token_free;\
+    rbattr.cache = 0;\
     attr->token_tree = mln_rbtree_init(&rbattr);\
     if (attr->token_tree == NULL) {\
         mln_log(error, "No memory.\n");\
@@ -741,6 +742,7 @@ SCOPE mln_parser_t *PREFIX_NAME##_parser_init(void)\
     struct mln_stack_attr sattr;\
     sattr.free_handler = PREFIX_NAME##_factor_destroy;\
     sattr.copy_handler = PREFIX_NAME##_factor_copy;\
+    sattr.cache = 0;\
     p->cur_stack = mln_stack_init(&sattr);\
     if (p->cur_stack == NULL) {\
         goto err1;\

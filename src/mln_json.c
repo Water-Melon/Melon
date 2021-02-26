@@ -265,6 +265,7 @@ mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
 
     rbattr.cmp = mln_json_rbtree_cmp;
     rbattr.data_free = mln_json_free;
+    rbattr.cache = 0;
     val->index = index;
     val->type = M_JSON_ARRAY;
     val->data.m_j_array = mln_rbtree_init(&rbattr);
@@ -1121,6 +1122,7 @@ int mln_json_add_element(mln_json_t *j, mln_json_t *value)
         struct mln_rbtree_attr rbattr;
         rbattr.cmp = mln_json_rbtree_cmp;
         rbattr.data_free = mln_json_free;
+        rbattr.cache = 0;
         j->data.m_j_array = mln_rbtree_init(&rbattr);
         if (j->data.m_j_array == NULL) return -1;
         M_JSON_SET_TYPE_ARRAY(j);

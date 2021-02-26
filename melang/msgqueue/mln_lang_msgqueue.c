@@ -87,6 +87,7 @@ static int mln_lang_msgqueue_resource_register(mln_lang_ctx_t *ctx)
         struct mln_rbtree_attr rbattr;
         rbattr.cmp = (rbtree_cmp)mln_lang_mq_cmp;
         rbattr.data_free = (rbtree_free_data)mln_lang_mq_free;
+        rbattr.cache = 0;
         if ((mq_set = mln_rbtree_init(&rbattr)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
@@ -1048,6 +1049,7 @@ static mln_lang_ctx_mq_t *mln_lang_ctx_mq_new(mln_lang_ctx_t *ctx)
     lcm->mq_wait = NULL;
     rbattr.cmp = (rbtree_cmp)mln_lang_ctx_mq_topic_cmp;
     rbattr.data_free = (rbtree_free_data)mln_lang_ctx_mq_topic_free;
+    rbattr.cache = 0;
     if ((lcm->topics = mln_rbtree_init(&rbattr)) == NULL) {
         mln_alloc_free(lcm);
         return NULL;
