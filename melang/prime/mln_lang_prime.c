@@ -79,7 +79,7 @@ static mln_lang_retExp_t *mln_lang_prime_process(mln_lang_ctx_t *ctx)
 
     p = mln_prime_calc(val->data.i);
 
-    if ((retExp = mln_lang_retExp_createTmpInt(ctx->pool, p, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpInt(ctx, p, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }

@@ -182,7 +182,7 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
     mln_alloc_mgr_t *am;
     mln_alloc_chunk_t *ch;
     mln_u8ptr_t ptr;
-    mln_size_t n, alloc_size;
+    mln_size_t n;
 
     if (pool->mem != NULL) {
         return mln_alloc_shm_m(pool, size);
@@ -191,8 +191,8 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
     am = mln_alloc_get_mgr_by_size(pool->mgr_tbl, size);
 
     if (am == NULL) {
-        n = (size + sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_chunk_t) + sizeof(mln_uauto_t) - 1) /  sizeof(mln_uauto_t);
-        size = n * sizeof(mln_uauto_t);
+        n = (size + sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_chunk_t) + 3) >> 2;
+        size = n << 2;
         ptr = (mln_u8ptr_t)calloc(1, size);
         if (ptr == NULL) return NULL;
         ch = (mln_alloc_chunk_t *)ptr;
@@ -210,13 +210,12 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
     }
 
     if (am->free_head == NULL) {
-        n = (sizeof(mln_alloc_blk_t) + am->blk_size + sizeof(mln_uauto_t) - 1) / sizeof(mln_uauto_t);
-        size = n * sizeof(mln_uauto_t);
+        n = (sizeof(mln_alloc_blk_t) + am->blk_size + 3) >> 2;
+        size = n << 2;
 
-        n = (sizeof(mln_alloc_chunk_t) + M_ALLOC_BLK_NUM * size + sizeof(mln_uauto_t) - 1) / sizeof(mln_uauto_t);
-        alloc_size = n * sizeof(mln_uauto_t);;
+        n = (sizeof(mln_alloc_chunk_t) + M_ALLOC_BLK_NUM * size + 3) >> 2;
 
-        if ((ptr = (mln_u8ptr_t)calloc(1, alloc_size)) == NULL) {
+        if ((ptr = (mln_u8ptr_t)calloc(1, n << 2)) == NULL) {
             for (; am < pool->mgr_tbl + M_ALLOC_MGR_LEN; ++am) {
                 if (am->free_head != NULL) goto out;
             }
@@ -336,10 +335,9 @@ void mln_alloc_free(void *ptr)
     mln_blk_chain_del(&(am->used_head), &(am->used_tail), blk);
     mln_blk_chain_add(&(am->free_head), &(am->free_tail), blk);
     if (!--(ch->refer) && ++(ch->count) > M_ALLOC_CHUNK_COUNT) {
-        int n;
-        for (n = 0; n < M_ALLOC_BLK_NUM; ++n) {
-            if (ch->blks[n] == NULL) break;
-            mln_blk_chain_del(&(am->free_head), &(am->free_tail), ch->blks[n]);
+        mln_alloc_blk_t **blks = ch->blks;
+        while (*blks != NULL) {
+            mln_blk_chain_del(&(am->free_head), &(am->free_tail), *(blks++));
         }
         mln_chunk_chain_del(&(am->chunk_head), &(am->chunk_tail), ch);
         free(ch);

@@ -172,7 +172,7 @@ static mln_lang_retExp_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
     mln_des_buf(&des, tmp->data, tmp->len, outbuf, tmp->len, 0, encode);
     mln_string_nSet(&t, outbuf, tmp->len);
 
-    retExp = mln_lang_retExp_createTmpString(ctx->pool, &t, NULL);
+    retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL);
     free(outbuf);
     if (retExp == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -358,7 +358,7 @@ static mln_lang_retExp_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
     mln_3des_buf(&_3des, tmp->data, tmp->len, outbuf, tmp->len, 0, encode);
     mln_string_nSet(&t, outbuf, tmp->len);
 
-    retExp = mln_lang_retExp_createTmpString(ctx->pool, &t, NULL);
+    retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL);
     free(outbuf);
     if (retExp == NULL) {
         mln_lang_errmsg(ctx, "No memory.");

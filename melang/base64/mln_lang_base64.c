@@ -135,7 +135,7 @@ static mln_lang_retExp_t *mln_lang_base64_process(mln_lang_ctx_t *ctx)
     }
     mln_string_nSet(&t, outbuf, outlen);
 
-    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &t, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL)) == NULL) {
         mln_base64_free(outbuf);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;

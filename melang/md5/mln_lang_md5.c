@@ -107,7 +107,7 @@ static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
             mln_md5_calc(&md5, buf, n, 0);
         }
         if (n < 0) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -120,7 +120,7 @@ static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     mln_string_nSet(&t, res, sizeof(res)-1);
-    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &t, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }

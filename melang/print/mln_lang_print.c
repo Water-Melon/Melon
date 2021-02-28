@@ -106,7 +106,7 @@ static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
             break;
     }
 
-    if ((retExp = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }

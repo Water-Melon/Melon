@@ -423,16 +423,16 @@ static int mln_lang_mq_msg_subscribe_get(mln_lang_ctx_t *ctx, mln_string_t *qnam
 
     switch (msg->type) {
         case M_LANG_VAL_TYPE_INT:
-            *retExp = mln_lang_retExp_createTmpInt(ctx->pool, msg->data.i, NULL);
+            *retExp = mln_lang_retExp_createTmpInt(ctx, msg->data.i, NULL);
             break;
         case M_LANG_VAL_TYPE_BOOL:
-            *retExp = mln_lang_retExp_createTmpBool(ctx->pool, msg->data.b, NULL);
+            *retExp = mln_lang_retExp_createTmpBool(ctx, msg->data.b, NULL);
             break;
         case M_LANG_VAL_TYPE_REAL:
-            *retExp = mln_lang_retExp_createTmpReal(ctx->pool, msg->data.f, NULL);
+            *retExp = mln_lang_retExp_createTmpReal(ctx, msg->data.f, NULL);
             break;
         case M_LANG_VAL_TYPE_STRING:
-            *retExp = mln_lang_retExp_createTmpString(ctx->pool, msg->data.s, NULL);
+            *retExp = mln_lang_retExp_createTmpString(ctx, msg->data.s, NULL);
             break;
         default:
             mln_lang_errmsg(ctx, "Invalid type.");
@@ -471,7 +471,7 @@ static mln_lang_retExp_t *mln_lang_mq_msg_get(mln_lang_ctx_t *ctx, mln_string_t 
         }
         mln_rbtree_insert(mq_set, rn);
     }
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -485,16 +485,16 @@ static mln_lang_retExp_t *mln_lang_mq_msg_get(mln_lang_ctx_t *ctx, mln_string_t 
         mln_lang_retExp_free(retExp);
         switch (msg->type) {
             case M_LANG_VAL_TYPE_INT:
-                retExp = mln_lang_retExp_createTmpInt(ctx->pool, msg->data.i, NULL);
+                retExp = mln_lang_retExp_createTmpInt(ctx, msg->data.i, NULL);
                 break;
             case M_LANG_VAL_TYPE_BOOL:
-                retExp = mln_lang_retExp_createTmpBool(ctx->pool, msg->data.b, NULL);
+                retExp = mln_lang_retExp_createTmpBool(ctx, msg->data.b, NULL);
                 break;
             case M_LANG_VAL_TYPE_REAL:
-                retExp = mln_lang_retExp_createTmpReal(ctx->pool, msg->data.f, NULL);
+                retExp = mln_lang_retExp_createTmpReal(ctx, msg->data.f, NULL);
                 break;
             case M_LANG_VAL_TYPE_STRING:
-                retExp = mln_lang_retExp_createTmpString(ctx->pool, msg->data.s, NULL);
+                retExp = mln_lang_retExp_createTmpString(ctx, msg->data.s, NULL);
                 break;
             default:
                 mln_lang_errmsg(ctx, "Invalid type.");
@@ -600,7 +600,7 @@ static mln_lang_retExp_t *mln_lang_mq_msg_broadcast(mln_lang_ctx_t *ctx, mln_str
             return NULL;
         }
     }
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -633,16 +633,16 @@ static int mln_lang_mq_msg_broadcast_ctx(mln_lang_ctx_t *ctx, mln_string_t *qnam
         mln_lang_mq_t *mq = wait->mq;
         switch (msg->type) {
             case M_LANG_VAL_TYPE_INT:
-                retExp = mln_lang_retExp_createTmpInt(ctx->pool, msg->data.i, NULL);
+                retExp = mln_lang_retExp_createTmpInt(ctx, msg->data.i, NULL);
                 break;
             case M_LANG_VAL_TYPE_BOOL:
-                retExp = mln_lang_retExp_createTmpBool(ctx->pool, msg->data.b, NULL);
+                retExp = mln_lang_retExp_createTmpBool(ctx, msg->data.b, NULL);
                 break;
             case M_LANG_VAL_TYPE_REAL:
-                retExp = mln_lang_retExp_createTmpReal(ctx->pool, msg->data.f, NULL);
+                retExp = mln_lang_retExp_createTmpReal(ctx, msg->data.f, NULL);
                 break;
             case M_LANG_VAL_TYPE_STRING:
-                retExp = mln_lang_retExp_createTmpString(ctx->pool, msg->data.s, NULL);
+                retExp = mln_lang_retExp_createTmpString(ctx, msg->data.s, NULL);
                 break;
             default:
                 mln_lang_errmsg(ctx, "Invalid type.");
@@ -695,7 +695,7 @@ static mln_lang_retExp_t *mln_lang_mq_msg_set(mln_lang_ctx_t *ctx, mln_string_t 
     }
     mln_lang_mq_msg_chain_add(&(mq->msg_head), &(mq->msg_tail), msg);
 
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -704,16 +704,16 @@ static mln_lang_retExp_t *mln_lang_mq_msg_set(mln_lang_ctx_t *ctx, mln_string_t 
         mln_lang_retExp_t *retExp2;
         switch (msg->type) {
             case M_LANG_VAL_TYPE_INT:
-                retExp2 = mln_lang_retExp_createTmpInt(wait->ctx->pool, msg->data.i, NULL);
+                retExp2 = mln_lang_retExp_createTmpInt(wait->ctx, msg->data.i, NULL);
                 break;
             case M_LANG_VAL_TYPE_BOOL:
-                retExp2 = mln_lang_retExp_createTmpBool(wait->ctx->pool, msg->data.b, NULL);
+                retExp2 = mln_lang_retExp_createTmpBool(wait->ctx, msg->data.b, NULL);
                 break;
             case M_LANG_VAL_TYPE_REAL:
-                retExp2 = mln_lang_retExp_createTmpReal(wait->ctx->pool, msg->data.f, NULL);
+                retExp2 = mln_lang_retExp_createTmpReal(wait->ctx, msg->data.f, NULL);
                 break;
             case M_LANG_VAL_TYPE_STRING:
-                retExp2 = mln_lang_retExp_createTmpString(wait->ctx->pool, msg->data.s, NULL);
+                retExp2 = mln_lang_retExp_createTmpString(wait->ctx, msg->data.s, NULL);
                 break;
             default:
                 mln_lang_errmsg(ctx, "Invalid type.");
@@ -801,7 +801,7 @@ static mln_lang_retExp_t *mln_lang_msgqueue_topic_subscribe_process(mln_lang_ctx
     }
     qname = mln_lang_var_getVal(sym->data.var)->data.s;
 
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -893,7 +893,7 @@ static mln_lang_retExp_t *mln_lang_msgqueue_topic_unsubscribe_process(mln_lang_c
     }
     qname = mln_lang_var_getVal(sym->data.var)->data.s;
 
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }

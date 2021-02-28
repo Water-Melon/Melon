@@ -115,7 +115,7 @@ static mln_lang_retExp_t *mln_lang_rc4_process(mln_lang_ctx_t *ctx)
     mln_rc4_init(s, val->data.s->data, val->data.s->len);
     mln_rc4_calc(s, tmp->data, tmp->len);
 
-    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, tmp, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpString(ctx, tmp, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }

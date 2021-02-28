@@ -314,10 +314,10 @@ static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     }
     free(path);
     if (val->data.i < 0) {
-        retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL);
+        retExp = mln_lang_retExp_createTmpFalse(ctx, NULL);
     } else {
         mln_lang_val_setNotModify(val);
-        retExp = mln_lang_retExp_createTmpTrue(ctx->pool, NULL);
+        retExp = mln_lang_retExp_createTmpTrue(ctx, NULL);
     }
     if (retExp == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -495,7 +495,7 @@ static mln_lang_retExp_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
         if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
             return NULL;
         }
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -535,9 +535,9 @@ static mln_lang_retExp_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (t < 0) {
-        retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL);
+        retExp = mln_lang_retExp_createTmpFalse(ctx, NULL);
     } else {
-        retExp = mln_lang_retExp_createTmpTrue(ctx->pool, NULL);
+        retExp = mln_lang_retExp_createTmpTrue(ctx, NULL);
     }
     if (retExp == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -636,7 +636,7 @@ static mln_lang_retExp_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
         if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
             return NULL;
         }
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -656,7 +656,7 @@ static mln_lang_retExp_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
     }
     val1 = sym->data.var->val;
     if (val1->data.i <= 0) {
-        if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -674,10 +674,10 @@ static mln_lang_retExp_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
     }
     if (n < 0) {
         free(buf);
-        retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL);
+        retExp = mln_lang_retExp_createTmpFalse(ctx, NULL);
     } else {
         mln_string_nSet(&tmp, buf, n);
-        retExp = mln_lang_retExp_createTmpString(ctx->pool, &tmp, NULL);
+        retExp = mln_lang_retExp_createTmpString(ctx, &tmp, NULL);
         free(buf);
     }
     if (retExp == NULL) {
@@ -775,7 +775,7 @@ static mln_lang_retExp_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
         if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
             return NULL;
         }
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -804,9 +804,9 @@ static mln_lang_retExp_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (n < 0) {
-        retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL);
+        retExp = mln_lang_retExp_createTmpFalse(ctx, NULL);
     } else {
-        retExp = mln_lang_retExp_createTmpInt(ctx->pool, n, NULL);
+        retExp = mln_lang_retExp_createTmpInt(ctx, n, NULL);
     }
     if (retExp == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -886,7 +886,7 @@ static mln_lang_retExp_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
         if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
             return NULL;
         }
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -898,7 +898,7 @@ static mln_lang_retExp_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx->pool, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -974,7 +974,7 @@ static mln_lang_retExp_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx)
     t = snprintf(msg, sizeof(msg)-1, "%s", strerror(val->data.i));
     msg[t] = 0;
     mln_string_nSet(&tmp, msg, t);
-    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &tmp, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpString(ctx, &tmp, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -1087,7 +1087,7 @@ static mln_lang_retExp_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
         if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
             return NULL;
         }
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -1100,12 +1100,12 @@ static mln_lang_retExp_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (t < 0) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     } else {
-        if ((retExp = mln_lang_retExp_createTmpInt(ctx->pool, st.st_size, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpInt(ctx, st.st_size, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }

@@ -142,7 +142,7 @@ static mln_lang_retExp_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
     mln_matrix_free(m2);
     if (mres == NULL) {
         if (err == EINVAL) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -234,7 +234,7 @@ static mln_lang_retExp_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx)
     mln_matrix_free(m);
     if (mres == NULL) {
         if (err == EINVAL) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }

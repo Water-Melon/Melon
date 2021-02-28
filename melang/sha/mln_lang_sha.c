@@ -117,7 +117,7 @@ static mln_lang_retExp_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
             mln_sha1_calc(&sha1, buf, n, 0);
         }
         if (n < 0) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -130,7 +130,7 @@ static mln_lang_retExp_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     mln_string_nSet(&t, res, sizeof(res)-1);
-    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &t, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -230,7 +230,7 @@ static mln_lang_retExp_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
             mln_sha256_calc(&sha256, buf, n, 0);
         }
         if (n < 0) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -243,7 +243,7 @@ static mln_lang_retExp_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     mln_string_nSet(&t, res, sizeof(res)-1);
-    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, &t, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }

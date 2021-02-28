@@ -220,7 +220,7 @@ static mln_lang_retExp_t *mln_lang_aes_process(mln_lang_ctx_t *ctx)
             (void)mln_aes_decrypt(&aes, p);
         }
     }
-    if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, val->data.s, NULL)) == NULL) {
+    if ((retExp = mln_lang_retExp_createTmpString(ctx, val->data.s, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }

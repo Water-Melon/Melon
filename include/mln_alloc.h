@@ -49,7 +49,7 @@ struct mln_alloc_chunk_s {
     mln_size_t                refer;
     mln_size_t                count;
     mln_alloc_mgr_t          *mgr;
-    mln_alloc_blk_t          *blks[M_ALLOC_BLK_NUM];
+    mln_alloc_blk_t          *blks[M_ALLOC_BLK_NUM+1];
 };
 
 struct mln_alloc_mgr_s {

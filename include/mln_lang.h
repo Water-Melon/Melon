@@ -15,6 +15,8 @@
 #include "mln_gc.h"
 #include "mln_connection.h"
 
+#define M_LANG_CACHE_COUNT       100
+
 #define M_LANG_MAX_OPENFILE      67
 #define M_LANG_DEFAULT_STEP      10000
 #define M_LANG_HEARTBEAT_US      50000
@@ -105,6 +107,9 @@ struct mln_lang_ctx_s {
     struct mln_lang_ctx_s           *next;
     mln_lang_stack_node_t           *free_node_head;
     mln_lang_stack_node_t           *free_node_tail;
+    mln_lang_retExp_t               *retExp_head;
+    mln_lang_retExp_t               *retExp_tail;
+    mln_size_t                       retExp_count;
 };
 
 struct mln_lang_resource_s {
@@ -132,11 +137,14 @@ typedef enum {
 } mln_lang_retExp_type_t;
 
 struct mln_lang_retExp_s {
-    mln_lang_retExp_type_t           type;
+    mln_lang_ctx_t                  *ctx;
+    struct mln_lang_retExp_s        *prev;
+    struct mln_lang_retExp_s        *next;
     union {
         mln_lang_var_t          *var;
         mln_lang_funccall_val_t *func;
     } data;
+    mln_lang_retExp_type_t           type;
 };
 
 typedef enum {
@@ -405,17 +413,17 @@ extern void mln_lang_job_free(mln_lang_ctx_t *ctx);
 extern void mln_lang_funccall_val_addObject(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val) __NONNULL2(1,2);
 #define mln_lang_retExp_getVar(retexp) ((retexp)->data.var)
 extern mln_lang_retExp_t *
-mln_lang_retExp_new(mln_alloc_t *pool, mln_lang_retExp_type_t type, void *data) __NONNULL2(1,3);
+mln_lang_retExp_new(mln_lang_ctx_t *ctx, mln_lang_retExp_type_t type, void *data) __NONNULL2(1,3);
 extern void mln_lang_retExp_free(mln_lang_retExp_t *retExp);
-extern mln_lang_retExp_t *mln_lang_retExp_createTmpNil(mln_alloc_t *pool, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpNil(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_retExp_t *
 mln_lang_retExp_createTmpObj(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_retExp_t *mln_lang_retExp_createTmpTrue(mln_alloc_t *pool, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_retExp_t *mln_lang_retExp_createTmpFalse(mln_alloc_t *pool, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_retExp_t *mln_lang_retExp_createTmpInt(mln_alloc_t *pool, mln_s64_t off, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_retExp_t *mln_lang_retExp_createTmpReal(mln_alloc_t *pool, double f, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_retExp_t *mln_lang_retExp_createTmpBool(mln_alloc_t *pool, mln_u8_t b, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_retExp_t *mln_lang_retExp_createTmpString(mln_alloc_t *pool, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpTrue(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpFalse(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpInt(mln_lang_ctx_t *ctx, mln_s64_t off, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpReal(mln_lang_ctx_t *ctx, double f, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpBool(mln_lang_ctx_t *ctx, mln_u8_t b, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpString(mln_lang_ctx_t *ctx, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpArray(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_symbolNode_t *mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
 extern int mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data) __NONNULL2(1,3);

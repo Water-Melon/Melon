@@ -124,7 +124,7 @@ static mln_lang_retExp_t *mln_lang_json_encode_process(mln_lang_ctx_t *ctx)
 
     if ((json = mln_lang_json_encode_generate(array)) == NULL) {
 fout:
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -135,7 +135,7 @@ fout:
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        if ((retExp = mln_lang_retExp_createTmpString(ctx->pool, s, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpString(ctx, s, NULL)) == NULL) {
             mln_string_free(s);
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
@@ -459,7 +459,7 @@ static mln_lang_retExp_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx)
 
     if ((json = mln_json_parse(val->data.s)) == NULL) {
         mln_lang_retExp_free(retExp);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -484,7 +484,7 @@ static mln_lang_retExp_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx)
         mln_json_free(json);
         if (rc < 0) {
             mln_lang_retExp_free(retExp);
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }

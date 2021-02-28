@@ -77,7 +77,7 @@ mln_lang_func_assign(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((*ret = mln_lang_retExp_new(ctx->pool, M_LANG_RETEXP_VAR, var)) == NULL) {
+    if ((*ret = mln_lang_retExp_new(ctx, M_LANG_RETEXP_VAR, var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -93,7 +93,7 @@ mln_lang_func_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
     mln_lang_func_detail_t *f1, *f2;
     if (mln_lang_var_getValType(op1->data.var) != mln_lang_var_getValType(op2->data.var)) {
 f:
-        if ((*ret = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+        if ((*ret = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
@@ -105,7 +105,7 @@ f:
     data1 = f1->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f1->data.process: (mln_u8ptr_t)f1->data.stm;
     data2 = f2->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f2->data.process: (mln_u8ptr_t)f2->data.stm;
     if (data1 != data2) goto f;
-    if ((*ret = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
+    if ((*ret = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -142,7 +142,7 @@ mln_lang_func_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_re
     mln_lang_func_detail_t *f1, *f2;
     if (mln_lang_var_getValType(op1->data.var) != mln_lang_var_getValType(op2->data.var)) {
 t:
-        if ((*ret = mln_lang_retExp_createTmpTrue(ctx->pool, NULL)) == NULL) {
+        if ((*ret = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
@@ -154,7 +154,7 @@ t:
     data1 = f1->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f1->data.process: (mln_u8ptr_t)f1->data.stm;
     data2 = f2->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f2->data.process: (mln_u8ptr_t)f2->data.stm;
     if (data1 != data2) goto t;
-    if ((*ret = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+    if ((*ret = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -192,7 +192,7 @@ mln_lang_func_not(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
     else
         ASSERT(op1->data.var->val->data.func->data.stm);
 #endif
-    if ((*ret = mln_lang_retExp_createTmpFalse(ctx->pool, NULL)) == NULL) {
+    if ((*ret = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
