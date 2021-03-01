@@ -107,7 +107,10 @@ struct mln_lang_ctx_s {
     mln_lang_stack_node_t           *free_node_tail;
     mln_lang_retExp_t               *retExp_head;
     mln_lang_retExp_t               *retExp_tail;
-    mln_size_t                       retExp_count;
+    mln_lang_var_t                  *var_head;
+    mln_lang_var_t                  *var_tail;
+    mln_u32_t                        retExp_count:8;
+    mln_u32_t                        var_count:8;
 };
 
 struct mln_lang_resource_s {
@@ -263,12 +266,15 @@ typedef enum {
 } mln_lang_var_type_t;
 
 struct mln_lang_var_s {
+    mln_lang_ctx_t                  *ctx;
     mln_lang_var_type_t              type;
     mln_string_t                    *name;
     mln_lang_val_t                  *val;
     mln_lang_set_detail_t           *inSet;
     mln_lang_var_t                  *prev;
     mln_lang_var_t                  *next;
+    mln_lang_var_t                  *cache_prev;
+    mln_lang_var_t                  *cache_next;
 };
 
 typedef enum {
@@ -425,7 +431,7 @@ extern mln_lang_retExp_t *mln_lang_retExp_createTmpString(mln_lang_ctx_t *ctx, m
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpArray(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_symbolNode_t *mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
 extern int mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data) __NONNULL2(1,3);
-extern mln_lang_var_t *mln_lang_var_new(mln_alloc_t *pool, \
+extern mln_lang_var_t *mln_lang_var_new(mln_lang_ctx_t *ctx, \
                                         mln_string_t *name, \
                                         mln_lang_var_type_t type, \
                                         mln_lang_val_t *val, \
@@ -444,13 +450,13 @@ extern mln_s64_t mln_lang_var_toInt(mln_lang_var_t *var) __NONNULL1(1);
 extern double mln_lang_var_toReal(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var) __NONNULL2(1,2);
 extern mln_lang_var_t *mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var) __NONNULL2(1,2);
-extern mln_lang_var_t *mln_lang_var_convert(mln_alloc_t *pool, mln_lang_var_t *var) __NONNULL2(1,2);
+extern mln_lang_var_t *mln_lang_var_convert(mln_lang_ctx_t *ctx, mln_lang_var_t *var) __NONNULL2(1,2);
 extern void mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val) __NONNULL2(1,2);
 extern int mln_lang_var_setValue(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
 extern int mln_lang_var_setValue_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
 extern mln_s32_t mln_lang_var_getValType(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_lang_func_detail_t *
-mln_lang_func_detail_new(mln_alloc_t *pool, \
+mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                          mln_lang_funcType_t type, \
                          void *data, \
                          mln_lang_exp_t *exp) __NONNULL2(1,3);

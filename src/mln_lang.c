@@ -46,6 +46,15 @@ struct mln_lang_gc_setter_s {
 };
 
 
+MLN_CHAIN_FUNC_DECLARE(mln_lang_var_cache, \
+                       mln_lang_var_t, \
+                       static inline void, \
+                       __NONNULL3(1,2,3));
+MLN_CHAIN_FUNC_DEFINE(mln_lang_var_cache, \
+                      mln_lang_var_t, \
+                      static inline void, \
+                      cache_prev, \
+                      cache_next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_retExp, \
                        mln_lang_retExp_t, \
                        static inline void, \
@@ -151,13 +160,13 @@ static inline mln_lang_var_t *
 __mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name);
 static int mln_lang_set_member_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static inline mln_lang_var_t *
-__mln_lang_var_new(mln_alloc_t *pool, \
+__mln_lang_var_new(mln_lang_ctx_t *ctx, \
                  mln_string_t *name, \
                  mln_lang_var_type_t type, \
                  mln_lang_val_t *val, \
                  mln_lang_set_detail_t *inSet);
 static inline mln_lang_var_t *
-__mln_lang_var_new_ref_string(mln_alloc_t *pool, \
+__mln_lang_var_new_ref_string(mln_lang_ctx_t *ctx, \
                               mln_string_t *name, \
                               mln_lang_var_type_t type, \
                               mln_lang_val_t *val, \
@@ -172,19 +181,19 @@ static int mln_lang_var_cmpName(const void *data1, const void *data2);
 static inline mln_lang_var_t *
 mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_var_t *defvar);
 static inline mln_lang_var_t *
-__mln_lang_var_convert(mln_alloc_t *pool, mln_lang_var_t *var);
+__mln_lang_var_convert(mln_lang_ctx_t *ctx, mln_lang_var_t *var);
 static inline void __mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val);
 static inline mln_s32_t __mln_lang_var_getValType(mln_lang_var_t *var);
 static inline int
 __mln_lang_var_setValue(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src);
 static inline int
-mln_lang_funcdef_getArgs(mln_alloc_t *ctx, \
+mln_lang_funcdef_getArgs(mln_lang_ctx_t *ctx, \
                          mln_lang_exp_t *exp, \
                          mln_lang_var_t **head, \
                          mln_lang_var_t **tail, \
                          mln_size_t *nargs);
 static inline mln_lang_func_detail_t *
-__mln_lang_func_detail_new(mln_alloc_t *pool, \
+__mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                          mln_lang_funcType_t type, \
                          void *data, \
                          mln_lang_exp_t *exp);
@@ -723,7 +732,9 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->prev = ctx->next = NULL;
     ctx->free_node_head = ctx->free_node_tail = NULL;
     ctx->retExp_head = ctx->retExp_tail = NULL;
+    ctx->var_head = ctx->var_tail = NULL;
     ctx->retExp_count = 0;
+    ctx->var_count = 0;
 
     mln_lang_stack_node_t *node = mln_lang_stack_node_new(ctx, M_LSNT_STM, ctx->stm);
     if (node == NULL) {
@@ -770,7 +781,13 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     mln_lang_scope_t *scope;
     mln_lang_stack_node_t *sn;
     mln_lang_retExp_t *r;
+    mln_lang_var_t *var;
 
+    while ((var = ctx->var_head) != NULL) {
+        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), var);
+        var->ctx = NULL;
+        __mln_lang_var_free(var);
+    }
     while ((r = ctx->retExp_head) != NULL) {
         mln_lang_retExp_chain_del(&(ctx->retExp_head), &(ctx->retExp_tail), r);
         r->ctx = NULL;
@@ -877,7 +894,7 @@ int mln_lang_ctx_addGlobalVar(mln_lang_ctx_t *ctx, mln_string_t *name, void *val
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, v, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, v, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(v);
         return -1;
@@ -1020,7 +1037,7 @@ __mln_lang_retExp_createTmpNil(mln_lang_ctx_t *ctx, mln_string_t *name)
     if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -1050,7 +1067,7 @@ __mln_lang_retExp_createTmpObj(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet
         mln_lang_object_free(obj);
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -1076,7 +1093,7 @@ __mln_lang_retExp_createTmpTrue(mln_lang_ctx_t *ctx, mln_string_t *name)
     if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &t)) == NULL) {
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -1096,7 +1113,7 @@ mln_lang_retExp_t *mln_lang_retExp_createTmpFalse(mln_lang_ctx_t *ctx, mln_strin
     if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &t)) == NULL) {
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -1115,7 +1132,7 @@ mln_lang_retExp_t *mln_lang_retExp_createTmpInt(mln_lang_ctx_t *ctx, mln_s64_t o
     if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_INT, &off)) == NULL) {
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -1134,7 +1151,7 @@ mln_lang_retExp_t *mln_lang_retExp_createTmpReal(mln_lang_ctx_t *ctx, double f, 
     if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &f)) == NULL) {
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -1153,7 +1170,7 @@ mln_lang_retExp_t *mln_lang_retExp_createTmpBool(mln_lang_ctx_t *ctx, mln_u8_t b
     if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -1177,7 +1194,7 @@ mln_lang_retExp_t *mln_lang_retExp_createTmpString(mln_lang_ctx_t *ctx, mln_stri
         mln_string_pool_free(dup);
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -1201,7 +1218,7 @@ mln_lang_retExp_t *mln_lang_retExp_createTmpArray(mln_lang_ctx_t *ctx, mln_strin
         __mln_lang_array_free(array);
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -1721,29 +1738,36 @@ int mln_lang_object_add_member(mln_lang_ctx_t *ctx, mln_lang_object_t *obj, mln_
 }
 
 
-mln_lang_var_t *mln_lang_var_new(mln_alloc_t *pool, \
+mln_lang_var_t *mln_lang_var_new(mln_lang_ctx_t *ctx, \
                                  mln_string_t *name, \
                                  mln_lang_var_type_t type, \
                                  mln_lang_val_t *val, \
                                  mln_lang_set_detail_t *inSet)
 {
-    return __mln_lang_var_new(pool, name, type, val, inSet);
+    return __mln_lang_var_new(ctx, name, type, val, inSet);
 }
 
 static inline mln_lang_var_t *
-__mln_lang_var_new(mln_alloc_t *pool, \
+__mln_lang_var_new(mln_lang_ctx_t *ctx, \
                    mln_string_t *name, \
                    mln_lang_var_type_t type, \
                    mln_lang_val_t *val, \
                    mln_lang_set_detail_t *inSet)
 {
     mln_lang_var_t *var;
-    if ((var = (mln_lang_var_t *)mln_alloc_m(pool, sizeof(mln_lang_var_t))) == NULL) {
-        return NULL;
+    if ((var = ctx->var_head) != NULL) {
+        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), var);
+        --(ctx->var_count);
+    } else {
+        if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+            return NULL;
+        }
+        var->ctx = ctx;
+        var->cache_prev = var->cache_next = NULL;
     }
     var->type = type;
     if (name != NULL) {
-        if ((var->name = mln_string_pool_dup(pool, name)) == NULL) {
+        if ((var->name = mln_string_pool_dup(ctx->pool, name)) == NULL) {
             mln_alloc_free(var);
             return NULL;
         }
@@ -1759,15 +1783,22 @@ __mln_lang_var_new(mln_alloc_t *pool, \
 }
 
 static inline mln_lang_var_t *
-__mln_lang_var_new_ref_string(mln_alloc_t *pool, \
+__mln_lang_var_new_ref_string(mln_lang_ctx_t *ctx, \
                               mln_string_t *name, \
                               mln_lang_var_type_t type, \
                               mln_lang_val_t *val, \
                               mln_lang_set_detail_t *inSet)
 {
     mln_lang_var_t *var;
-    if ((var = (mln_lang_var_t *)mln_alloc_m(pool, sizeof(mln_lang_var_t))) == NULL) {
-        return NULL;
+    if ((var = ctx->var_head) != NULL) {
+        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), var);
+        --(ctx->var_count);
+    } else {
+        if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+            return NULL;
+        }
+        var->ctx = ctx;
+        var->cache_prev = var->cache_next = NULL;
     }
     var->type = type;
     if (name != NULL) {
@@ -1783,84 +1814,19 @@ __mln_lang_var_new_ref_string(mln_alloc_t *pool, \
     return var;
 }
 
-void mln_lang_var_free(void *data)
-{
-    return __mln_lang_var_free(data);
-}
-
-static inline void __mln_lang_var_free(void *data)
-{
-    if (data == NULL) return;
-    mln_lang_var_t *var = (mln_lang_var_t *)data;
-    if (var->name != NULL) mln_string_pool_free(var->name);
-    if (var->val != NULL) __mln_lang_val_free(var->val);
-    if (var->inSet != NULL) mln_lang_set_detail_free(var->inSet);
-    mln_alloc_free(var);
-}
-
-mln_lang_var_t *mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
-{
-    return __mln_lang_var_dup(ctx, var);
-}
-
-static inline mln_lang_var_t *
-__mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
-{
-    mln_lang_var_t *ret;
-    mln_lang_val_t *val = var->val;
-    if (var->type == M_LANG_VAR_NORMAL && var->val != NULL) {
-        if ((val = mln_lang_val_dup(ctx, var->val)) == NULL) {
-            return NULL;
-        }
-    }
-    if ((ret = __mln_lang_var_new(ctx->pool, var->name, var->type, val, var->inSet)) == NULL) {
-        if (var->type == M_LANG_VAR_NORMAL && var->val != NULL) {
-            __mln_lang_val_free(val);
-        }
-        return NULL;
-    }
-    return ret;
-}
-
-static inline mln_lang_var_t *
-mln_lang_var_dupWithVal(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
-{
-    mln_lang_var_t *ret;
-    mln_lang_val_t *val;
-    if ((val = mln_lang_val_dup(ctx, var->val)) == NULL) {
-        return NULL;
-    }
-    if ((ret = __mln_lang_var_new(ctx->pool, var->name, M_LANG_VAR_NORMAL, val, var->inSet)) == NULL) {
-        __mln_lang_val_free(val);
-        return NULL;
-    }
-    return ret;
-}
-
-static int mln_lang_var_cmpForElemCmp(const void *data1, const void *data2)
-{
-    mln_lang_var_t *v1 = (mln_lang_var_t *)data1;
-    mln_lang_var_t *v2 = (mln_lang_var_t *)data2;
-    if (v1 == NULL && v2 != NULL) return -1;
-    else if (v1 != NULL && v2 == NULL) return 1;
-    if (v1->val == NULL && v2->val != NULL) return -1;
-    else if (v1->val != NULL && v2->val == NULL) return 1;
-    return mln_lang_val_cmp(v1->val, v2->val);
-}
-
-static int mln_lang_var_cmpName(const void *data1, const void *data2)
-{
-    mln_lang_var_t *v1 = (mln_lang_var_t *)data1;
-    mln_lang_var_t *v2 = (mln_lang_var_t *)data2;
-    return mln_string_strcmp(v1->name, v2->name);
-}
-
 static inline mln_lang_var_t *
 mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_var_t *defvar)
 {
     mln_lang_var_t *var;
-    if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
-        return NULL;
+    if ((var = ctx->var_head) != NULL) {
+        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), var);
+        --(ctx->var_count);
+    } else {
+        if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+            return NULL;
+        }
+        var->ctx = ctx;
+        var->cache_prev = var->cache_next = NULL;
     }
     var->type = defvar->type;
     if (defvar->name != NULL) {
@@ -1888,17 +1854,24 @@ mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_va
     return var;
 }
 
-mln_lang_var_t *mln_lang_var_convert(mln_alloc_t *pool, mln_lang_var_t *var)
+mln_lang_var_t *mln_lang_var_convert(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
 {
-    return __mln_lang_var_convert(pool, var);
+    return __mln_lang_var_convert(ctx, var);
 }
 
 static inline mln_lang_var_t *
-__mln_lang_var_convert(mln_alloc_t *pool, mln_lang_var_t *var)
+__mln_lang_var_convert(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
 {
     mln_lang_var_t *ret;
-    if ((ret = (mln_lang_var_t *)mln_alloc_m(pool, sizeof(mln_lang_var_t))) == NULL) {
-        return NULL;
+    if ((ret = ctx->var_head) != NULL) {
+        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), ret);
+        --(ctx->var_count);
+    } else {
+        if ((ret = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+            return NULL;
+        }
+        ret->ctx = ctx;
+        ret->cache_prev = ret->cache_next = NULL;
     }
     ret->type = M_LANG_VAR_NORMAL;
     ret->name = NULL;
@@ -1911,6 +1884,92 @@ __mln_lang_var_convert(mln_alloc_t *pool, mln_lang_var_t *var)
     ret->prev = ret->next = NULL;
     if (ret->inSet != NULL) ++(ret->inSet->ref);
     return ret;
+}
+
+void mln_lang_var_free(void *data)
+{
+    return __mln_lang_var_free(data);
+}
+
+static inline void __mln_lang_var_free(void *data)
+{
+    if (data == NULL) return;
+    mln_lang_var_t *var = (mln_lang_var_t *)data;
+    if (var->name != NULL) {
+        mln_string_pool_free(var->name);
+        var->name = NULL;
+    }
+    if (var->val != NULL) {
+        __mln_lang_val_free(var->val);
+        var->val = NULL;
+    }
+    if (var->inSet != NULL) {
+        mln_lang_set_detail_free(var->inSet);
+        var->inSet = NULL;
+    }
+    if (var->ctx != NULL && var->ctx->var_count < M_LANG_CACHE_COUNT) {
+        mln_lang_var_cache_chain_add(&(var->ctx->var_head), &(var->ctx->var_tail), var);
+        ++(var->ctx->var_count);
+    } else {
+        mln_alloc_free(var);
+    }
+}
+
+mln_lang_var_t *mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
+{
+    return __mln_lang_var_dup(ctx, var);
+}
+
+static inline mln_lang_var_t *
+__mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
+{
+    mln_lang_var_t *ret;
+    mln_lang_val_t *val = var->val;
+    if (var->type == M_LANG_VAR_NORMAL && var->val != NULL) {
+        if ((val = mln_lang_val_dup(ctx, var->val)) == NULL) {
+            return NULL;
+        }
+    }
+    if ((ret = __mln_lang_var_new(ctx, var->name, var->type, val, var->inSet)) == NULL) {
+        if (var->type == M_LANG_VAR_NORMAL && var->val != NULL) {
+            __mln_lang_val_free(val);
+        }
+        return NULL;
+    }
+    return ret;
+}
+
+static inline mln_lang_var_t *
+mln_lang_var_dupWithVal(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
+{
+    mln_lang_var_t *ret;
+    mln_lang_val_t *val;
+    if ((val = mln_lang_val_dup(ctx, var->val)) == NULL) {
+        return NULL;
+    }
+    if ((ret = __mln_lang_var_new(ctx, var->name, M_LANG_VAR_NORMAL, val, var->inSet)) == NULL) {
+        __mln_lang_val_free(val);
+        return NULL;
+    }
+    return ret;
+}
+
+static int mln_lang_var_cmpForElemCmp(const void *data1, const void *data2)
+{
+    mln_lang_var_t *v1 = (mln_lang_var_t *)data1;
+    mln_lang_var_t *v2 = (mln_lang_var_t *)data2;
+    if (v1 == NULL && v2 != NULL) return -1;
+    else if (v1 != NULL && v2 == NULL) return 1;
+    if (v1->val == NULL && v2->val != NULL) return -1;
+    else if (v1->val != NULL && v2->val == NULL) return 1;
+    return mln_lang_val_cmp(v1->val, v2->val);
+}
+
+static int mln_lang_var_cmpName(const void *data1, const void *data2)
+{
+    mln_lang_var_t *v1 = (mln_lang_var_t *)data1;
+    mln_lang_var_t *v2 = (mln_lang_var_t *)data2;
+    return mln_string_strcmp(v1->name, v2->name);
 }
 
 void mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val)
@@ -2202,7 +2261,7 @@ void mln_lang_var_setString(mln_lang_var_t *var, mln_string_t *s)
 
 
 static inline int
-mln_lang_funcdef_getArgs(mln_alloc_t *pool, \
+mln_lang_funcdef_getArgs(mln_lang_ctx_t *ctx, \
                          mln_lang_exp_t *exp, \
                          mln_lang_var_t **head, \
                          mln_lang_var_t **tail, \
@@ -2254,7 +2313,7 @@ mln_lang_funcdef_getArgs(mln_alloc_t *pool, \
         factor = spec->data.factor;
         if (factor->type != M_FACTOR_ID) goto err;
 
-        if ((var = __mln_lang_var_new(pool, factor->data.s_id, type, NULL, NULL)) == NULL) {
+        if ((var = __mln_lang_var_new(ctx, factor->data.s_id, type, NULL, NULL)) == NULL) {
             while ((var = *head) != NULL) {
                 mln_lang_var_chain_del(head, tail, var);
                 __mln_lang_var_free(var);
@@ -2277,22 +2336,22 @@ err:
 }
 
 
-mln_lang_func_detail_t *mln_lang_func_detail_new(mln_alloc_t *pool, \
+mln_lang_func_detail_t *mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                                                  mln_lang_funcType_t type, \
                                                  void *data, \
                                                  mln_lang_exp_t *exp)
 {
-    return __mln_lang_func_detail_new(pool, type, data, exp);
+    return __mln_lang_func_detail_new(ctx, type, data, exp);
 }
 
 static inline mln_lang_func_detail_t *
-__mln_lang_func_detail_new(mln_alloc_t *pool, \
+__mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                            mln_lang_funcType_t type, \
                            void *data, \
                            mln_lang_exp_t *exp)
 {
     mln_lang_func_detail_t *lfd;
-    if ((lfd = (mln_lang_func_detail_t *)mln_alloc_m(pool, sizeof(mln_lang_func_detail_t))) == NULL) {
+    if ((lfd = (mln_lang_func_detail_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_func_detail_t))) == NULL) {
         return NULL;
     }
     lfd->exp = exp;
@@ -2309,7 +2368,7 @@ __mln_lang_func_detail_new(mln_alloc_t *pool, \
             break;
     }
     if (exp != NULL) {
-        if (mln_lang_funcdef_getArgs(pool, exp, &(lfd->args_head), &(lfd->args_tail), &(lfd->nargs)) < 0) {
+        if (mln_lang_funcdef_getArgs(ctx, exp, &(lfd->args_head), &(lfd->args_tail), &(lfd->nargs)) < 0) {
             __mln_lang_func_detail_free(lfd);
             return NULL;
         }
@@ -2347,7 +2406,7 @@ mln_lang_func_detail_dup(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *func)
             data = (mln_u8ptr_t)(func->data.stm);
             break;
     }
-    ret = __mln_lang_func_detail_new(ctx->pool, \
+    ret = __mln_lang_func_detail_new(ctx, \
                                      func->type, \
                                      data, \
                                      NULL);
@@ -2910,7 +2969,7 @@ mln_lang_array_getAndNew_int(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_l
         __mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    if ((nil = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((nil = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return NULL;
@@ -2951,7 +3010,7 @@ mln_lang_array_getAndNew_other(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln
         __mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    if ((nil = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((nil = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return NULL;
@@ -3003,7 +3062,7 @@ mln_lang_array_getAndNew_nil(mln_lang_ctx_t *ctx, mln_lang_array_t *array)
         __mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    if ((nil = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((nil = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return NULL;
@@ -3034,7 +3093,7 @@ int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key)
     if ((val = __mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         return 0;
     }
-    if ((nil = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((nil = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return 0;
     }
@@ -3288,7 +3347,7 @@ static void mln_lang_stack_handler_funcdef(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_lang_set_detail_t *inSet = mln_lang_ctx_getClass(ctx);
-    if ((func = __mln_lang_func_detail_new(ctx->pool, \
+    if ((func = __mln_lang_func_detail_new(ctx, \
                                          M_FUNC_EXTERNAL, \
                                          funcdef->stm, \
                                          funcdef->args)) == NULL)
@@ -3303,7 +3362,7 @@ static void mln_lang_stack_handler_funcdef(mln_lang_ctx_t *ctx)
         mln_lang_job_free(ctx);
         return;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, funcdef->name, M_LANG_VAR_NORMAL, val, inSet)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, funcdef->name, M_LANG_VAR_NORMAL, val, inSet)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         mln_lang_job_free(ctx);
@@ -3391,7 +3450,7 @@ static void mln_lang_stack_handler_setstm(mln_lang_ctx_t *ctx)
                 mln_lang_job_free(ctx);
                 return;
             }
-            if ((var = __mln_lang_var_new(ctx->pool, ls->data.var, M_LANG_VAR_NORMAL, val, inSet)) == NULL) {
+            if ((var = __mln_lang_var_new(ctx, ls->data.var, M_LANG_VAR_NORMAL, val, inSet)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 __mln_lang_val_free(val);
                 mln_lang_job_free(ctx);
@@ -5460,7 +5519,7 @@ again_index:
             mln_lang_job_free(ctx);
             return;
         }
-        if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             node->retExp2 = NULL;
             __mln_lang_val_free(val);
@@ -5556,7 +5615,7 @@ again_property:
         if (ctx->retExp != NULL) {
             mln_lang_var_t *var;
             ASSERT(ctx->retExp->type == M_LANG_RETEXP_VAR);
-            if ((var = __mln_lang_var_convert(ctx->pool, ctx->retExp->data.var)) == NULL) {
+            if ((var = __mln_lang_var_convert(ctx, ctx->retExp->data.var)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -5712,7 +5771,7 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
     mln_lang_scope_chain_add(&(ctx->scope_head), &(ctx->scope_tail), scope);
 
     if (funccall->object != NULL) {
-        if ((newvar = __mln_lang_var_new(ctx->pool, &_this, M_LANG_VAR_NORMAL, funccall->object, NULL)) == NULL) {
+        if ((newvar = __mln_lang_var_new(ctx, &_this, M_LANG_VAR_NORMAL, funccall->object, NULL)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
@@ -5814,7 +5873,7 @@ static inline mln_lang_array_t *mln_lang_funccall_run_build_args(mln_lang_ctx_t 
         __mln_lang_array_free(array);
         return NULL;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }
@@ -6046,7 +6105,7 @@ goon:
         mln_lang_object_free(obj);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6133,7 +6192,7 @@ mln_lang_stack_handler_factor_bool(mln_lang_ctx_t *ctx, mln_lang_factor_t *facto
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6161,7 +6220,7 @@ mln_lang_stack_handler_factor_string(mln_lang_ctx_t *ctx, mln_lang_factor_t *fac
         mln_string_pool_free(s);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6186,7 +6245,7 @@ mln_lang_stack_handler_factor_int(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6211,7 +6270,7 @@ mln_lang_stack_handler_factor_real(mln_lang_ctx_t *ctx, mln_lang_factor_t *facto
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6243,7 +6302,7 @@ mln_lang_stack_handler_factor_array(mln_lang_ctx_t *ctx, mln_lang_factor_t *fact
         __mln_lang_array_free(array);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6278,7 +6337,7 @@ mln_lang_stack_handler_factor_id(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor)
 
     if ((sym = mln_lang_symbolNode_idSearch(ctx, factor->data.s_id)) != NULL) {
         if (sym->type == M_LANG_SYMBOL_VAR) {
-            if ((var = __mln_lang_var_convert(ctx->pool, sym->data.var)) == NULL) {
+            if ((var = __mln_lang_var_convert(ctx, sym->data.var)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 return -1;
             }
@@ -6302,7 +6361,7 @@ mln_lang_stack_handler_factor_id(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor)
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = __mln_lang_var_new_ref_string(ctx->pool, factor->data.s_id, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new_ref_string(ctx, factor->data.s_id, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6312,7 +6371,7 @@ mln_lang_stack_handler_factor_id(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor)
         __mln_lang_var_free(var);
         return -1;
     }
-    if ((var = __mln_lang_var_convert(ctx->pool, var)) == NULL) {
+    if ((var = __mln_lang_var_convert(ctx, var)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -6451,7 +6510,7 @@ static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx)
             mln_lang_var_t *var;
             ASSERT(node->retExp != NULL && node->retExp->type == M_LANG_RETEXP_FUNC);
             ASSERT(ctx->retExp->type == M_LANG_RETEXP_VAR);
-            if ((var = __mln_lang_var_convert(ctx->pool, ctx->retExp->data.var)) == NULL) {
+            if ((var = __mln_lang_var_convert(ctx, ctx->retExp->data.var)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
@@ -6792,7 +6851,7 @@ static void mln_lang_msg_scriptRecver(mln_event_t *ev, int fd, void *data)
     val = lm->script_val;
     lm->script_val = NULL;
     --(val->ref);
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return;
@@ -6826,7 +6885,7 @@ static int mln_lang_msg_func_new(mln_lang_ctx_t *ctx)
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_msgNew");
     mln_string_t name = mln_string("name");
-    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msg_func_new_process, NULL)) == NULL) {
+    if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msg_func_new_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -6835,7 +6894,7 @@ static int mln_lang_msg_func_new(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -6848,7 +6907,7 @@ static int mln_lang_msg_func_new(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6899,7 +6958,7 @@ static int mln_lang_msg_func_free(mln_lang_ctx_t *ctx)
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_msgFree");
     mln_string_t name = mln_string("name");
-    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msg_func_free_process, NULL)) == NULL) {
+    if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msg_func_free_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -6908,7 +6967,7 @@ static int mln_lang_msg_func_free(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -6921,7 +6980,7 @@ static int mln_lang_msg_func_free(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -6966,7 +7025,7 @@ static int mln_lang_msg_func_recv(mln_lang_ctx_t *ctx)
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_msgRecv");
     mln_string_t name = mln_string("name");
-    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msg_func_recv_process, NULL)) == NULL) {
+    if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msg_func_recv_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -6975,7 +7034,7 @@ static int mln_lang_msg_func_recv(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -6988,7 +7047,7 @@ static int mln_lang_msg_func_recv(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -7046,7 +7105,7 @@ static mln_lang_retExp_t *mln_lang_msg_func_recv_process(mln_lang_ctx_t *ctx)
         lm->script_val = NULL;
         --(val->ref);
         lm->script_read = 1;
-        if ((var = __mln_lang_var_new(lm->ctx->pool, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        if ((var = __mln_lang_var_new(lm->ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             __mln_lang_val_free(val);
             return NULL;
@@ -7068,7 +7127,7 @@ static int mln_lang_msg_func_send(mln_lang_ctx_t *ctx)
     mln_string_t funcname = mln_string("mln_msgSend");
     mln_string_t name = mln_string("name");
     mln_string_t data = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msg_func_send_process, NULL)) == NULL) {
+    if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msg_func_send_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -7077,7 +7136,7 @@ static int mln_lang_msg_func_send(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -7090,7 +7149,7 @@ static int mln_lang_msg_func_send(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &data, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &data, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -7103,7 +7162,7 @@ static int mln_lang_msg_func_send(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -7168,7 +7227,7 @@ static int mln_lang_func_watch(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("var");
     mln_string_t v2 = mln_string("func");
     mln_string_t v3 = mln_string("data");
-    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_func_watch_process, NULL)) == NULL) {
+    if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_func_watch_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -7177,7 +7236,7 @@ static int mln_lang_func_watch(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_REFER, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &v1, M_LANG_VAR_REFER, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -7190,7 +7249,7 @@ static int mln_lang_func_watch(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &v2, M_LANG_VAR_REFER, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &v2, M_LANG_VAR_REFER, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -7203,7 +7262,7 @@ static int mln_lang_func_watch(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &v3, M_LANG_VAR_REFER, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &v3, M_LANG_VAR_REFER, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -7216,7 +7275,7 @@ static int mln_lang_func_watch(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -7295,7 +7354,7 @@ static int mln_lang_func_unwatch(mln_lang_ctx_t *ctx)
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_unwatch");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_func_unwatch_process, NULL)) == NULL) {
+    if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_func_unwatch_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -7304,7 +7363,7 @@ static int mln_lang_func_unwatch(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_REFER, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &v1, M_LANG_VAR_REFER, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -7317,7 +7376,7 @@ static int mln_lang_func_unwatch(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;
@@ -7365,14 +7424,14 @@ mln_lang_watch_funcBuild(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node, mln_l
         return -1;
     }
     func->prototype = funcdef;
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_REFER, new, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_REFER, new, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_funccall_val_free(func);
         return -1;
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     func->nargs = 1;
-    if ((var = __mln_lang_var_new(ctx->pool, NULL, M_LANG_VAR_REFER, udata, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_REFER, udata, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_funccall_val_free(func);
         return -1;
@@ -7396,7 +7455,7 @@ static int mln_lang_msg_func_dump(mln_lang_ctx_t *ctx)
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_dump");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx->pool, M_FUNC_INTERNAL, mln_lang_msg_func_dump_process, NULL)) == NULL) {
+    if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msg_func_dump_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -7405,7 +7464,7 @@ static int mln_lang_msg_func_dump(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &v1, M_LANG_VAR_REFER, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &v1, M_LANG_VAR_REFER, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         __mln_lang_func_detail_free(func);
@@ -7418,7 +7477,7 @@ static int mln_lang_msg_func_dump(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = __mln_lang_var_new(ctx->pool, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         return -1;

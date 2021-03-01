@@ -75,7 +75,7 @@ mln_lang_array_assign(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_ret
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = mln_lang_var_convert(ctx->pool, op1->data.var)) == NULL) {
+    if ((var = mln_lang_var_convert(ctx, op1->data.var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -191,7 +191,7 @@ mln_lang_array_index(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
     if (save != ~((mln_s64_t)0)) {
         mln_lang_var_getVal(op2->data.var)->data.i = save;
     }
-    if ((var = mln_lang_var_convert(ctx->pool, rv)) == NULL) {
+    if ((var = mln_lang_var_convert(ctx, rv)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }

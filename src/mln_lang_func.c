@@ -73,7 +73,7 @@ mln_lang_func_assign(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = mln_lang_var_convert(ctx->pool, op1->data.var)) == NULL) {
+    if ((var = mln_lang_var_convert(ctx, op1->data.var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }

@@ -75,7 +75,7 @@ mln_lang_obj_assign(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = mln_lang_var_convert(ctx->pool, op1->data.var)) == NULL) {
+    if ((var = mln_lang_var_convert(ctx, op1->data.var)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -204,7 +204,7 @@ mln_lang_obj_property(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_ret
             }
             mln_rbtree_insert(obj->members, rn);
         }
-        if ((rv = mln_lang_var_convert(ctx->pool, var)) == NULL) {
+        if ((rv = mln_lang_var_convert(ctx, var)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
