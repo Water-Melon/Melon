@@ -16,8 +16,7 @@ char mln_file_tmp_dir[256] = "tmp";
 
 MLN_CHAIN_FUNC_DECLARE(reg_file, \
                        mln_file_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 static int mln_file_set_cmp(const void *data1, const void *data2);
 static void mln_file_free(void *pfile);
 
@@ -170,7 +169,7 @@ static void mln_file_free(void *pfile)
 
 mln_file_t *mln_file_open_tmp(mln_alloc_t *pool)
 {
-    char dir_path[1024] = {0};
+    char dir_path[512] = {0};
     char tmp_path[1024] = {0};
     struct timeval now;
     unsigned long suffix;

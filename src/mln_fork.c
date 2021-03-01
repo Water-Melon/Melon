@@ -30,8 +30,7 @@ int wait_signo = SIGUSR1;
 
 MLN_CHAIN_FUNC_DECLARE(worker_list, \
                        mln_fork_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 static int
 mln_fork_rbtree_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
 static int

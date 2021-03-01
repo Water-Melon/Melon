@@ -492,8 +492,7 @@ extern mln_lang_array_t *mln_lang_array_new(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern void mln_lang_array_free(mln_lang_array_t *array);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
                        mln_lang_var_t, \
-                       extern void, \
-                       __NONNULL3(1,2,3));
+                       extern void,);
 extern int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
 extern int mln_lang_ctx_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler) __NONNULL2(1,2);
 extern void *mln_lang_ctx_resource_fetch(mln_lang_ctx_t *ctx, const char *name) __NONNULL2(1,2);

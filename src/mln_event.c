@@ -16,20 +16,16 @@
 /*declarations*/
 MLN_CHAIN_FUNC_DECLARE(ev_fd_wait, \
                        mln_event_desc_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DECLARE(ev_fd_active, \
                        mln_event_desc_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DECLARE(event, \
                        mln_event_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DECLARE(ev_sig, \
                        mln_event_desc_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 static void mln_event_atfork_lock(void);
 static void mln_event_atfork_unlock(void);
 static inline void

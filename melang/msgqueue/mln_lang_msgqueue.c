@@ -31,8 +31,8 @@ static mln_lang_retExp_t *mln_lang_msgqueue_topic_subscribe_process(mln_lang_ctx
 static int mln_lang_msgqueue_topic_unsubscribe(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_lang_msgqueue_topic_unsubscribe_process(mln_lang_ctx_t *ctx);
 /*components*/
-MLN_CHAIN_FUNC_DECLARE(mln_lang_mq_msg, mln_lang_mq_msg_t, static inline void, __NONNULL3(1,2,3));
-MLN_CHAIN_FUNC_DECLARE(mln_lang_mq_wait, mln_lang_mq_wait_t, static inline void, __NONNULL3(1,2,3));
+MLN_CHAIN_FUNC_DECLARE(mln_lang_mq_msg, mln_lang_mq_msg_t, static inline void,);
+MLN_CHAIN_FUNC_DECLARE(mln_lang_mq_wait, mln_lang_mq_wait_t, static inline void,);
 static mln_lang_mq_msg_t *mln_lang_mq_msg_new(mln_lang_t *lang, int type, void *data);
 static void mln_lang_mq_msg_free(mln_lang_mq_msg_t *msg);
 static mln_lang_mq_wait_t *mln_lang_mq_wait_new(mln_lang_ctx_t *ctx, mln_lang_mq_t *mq);

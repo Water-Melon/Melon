@@ -37,12 +37,10 @@ char thread_start_func[] = "thread_main";
  */
 MLN_CHAIN_FUNC_DECLARE(msg_dest, \
                        mln_thread_msgq_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DECLARE(msg_local, \
                        mln_thread_msgq_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 static mln_thread_msgq_t *
 mln_thread_msgq_init(mln_thread_t *sender, mln_thread_msg_t *msg);
 static void

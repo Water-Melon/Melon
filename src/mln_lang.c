@@ -48,8 +48,7 @@ struct mln_lang_gc_setter_s {
 
 MLN_CHAIN_FUNC_DECLARE(mln_lang_val, \
                        mln_lang_val_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_val, \
                       mln_lang_val_t, \
                       static inline void, \
@@ -57,8 +56,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_val, \
                       next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_var_cache, \
                        mln_lang_var_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_var_cache, \
                       mln_lang_var_t, \
                       static inline void, \
@@ -66,8 +64,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_var_cache, \
                       cache_next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_retExp, \
                        mln_lang_retExp_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_retExp, \
                       mln_lang_retExp_t, \
                       static inline void, \
@@ -75,8 +72,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_retExp, \
                       next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_stack_node, \
                        mln_lang_stack_node_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_stack_node, \
                       mln_lang_stack_node_t, \
                       static inline void, \
@@ -84,8 +80,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_stack_node, \
                       next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_ast_cache, \
                        mln_lang_ast_cache_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_ast_cache, \
                       mln_lang_ast_cache_t, \
                       static inline void, \
@@ -93,8 +88,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_ast_cache, \
                       next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_ctx, \
                        mln_lang_ctx_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_ctx, \
                       mln_lang_ctx_t, \
                       static inline void, \
@@ -102,8 +96,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_ctx, \
                       next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_scope, \
                        mln_lang_scope_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_scope, \
                       mln_lang_scope_t, \
                       static inline void, \

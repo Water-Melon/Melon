@@ -19,7 +19,7 @@ enum log_level {
 };
 
 typedef struct {
-    char           dir_path[M_LOG_PATH_LEN];
+    char           dir_path[M_LOG_PATH_LEN/2];
     char           pid_path[M_LOG_PATH_LEN];
     char           log_path[M_LOG_PATH_LEN];
     int            fd;

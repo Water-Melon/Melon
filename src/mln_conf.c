@@ -46,8 +46,7 @@ MLN_DEFINE_TOKEN(mln_conf_lex, CONF, \
 
 MLN_CHAIN_FUNC_DECLARE(conf_hook, \
                        mln_conf_hook_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 
 /*
  * declarations

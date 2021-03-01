@@ -11,8 +11,7 @@
  */
 MLN_CHAIN_FUNC_DECLARE(mln_stack, \
                        mln_stack_node_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 static mln_stack_node_t *
 mln_stack_node_init(void *data);
 static void

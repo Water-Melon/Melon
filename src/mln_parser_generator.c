@@ -56,8 +56,7 @@ mln_pg_state_duplicate(mln_pg_state_t **q_head, \
                        mln_pg_state_t *src);
 MLN_CHAIN_FUNC_DECLARE(mln_item, \
                        mln_pg_item_t, \
-                       static void, \
-                       __NONNULL3(1,2,3));
+                       static void,);
 MLN_CHAIN_FUNC_DEFINE(mln_item, \
                       mln_pg_item_t, \
                       static void, \
@@ -65,8 +64,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_item, \
                       next);
 MLN_CHAIN_FUNC_DECLARE(mln_state, \
                        mln_pg_state_t, \
-                       static void, \
-                       __NONNULL3(1,2,3));
+                       static void,);
 MLN_CHAIN_FUNC_DEFINE(mln_state, \
                       mln_pg_state_t, \
                       static void, \

@@ -15,16 +15,13 @@
 
 MLN_CHAIN_FUNC_DECLARE(mln_blk, \
                        mln_alloc_blk_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DECLARE(mln_chunk, \
                        mln_alloc_chunk_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DECLARE(mln_alloc_shm, \
                        mln_alloc_shm_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 static inline void
 mln_alloc_mgr_table_init(mln_alloc_mgr_t *tbl);
 static inline mln_alloc_mgr_t *

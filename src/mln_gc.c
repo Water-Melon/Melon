@@ -9,8 +9,7 @@
 
 MLN_CHAIN_FUNC_DECLARE(mln_gc_item, \
                        mln_gc_item_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_gc_item, \
                       mln_gc_item_t, \
                       static inline void, \
@@ -18,8 +17,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_gc_item, \
                       next);
 MLN_CHAIN_FUNC_DECLARE(mln_gc_item_proc, \
                        mln_gc_item_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_gc_item_proc, \
                       mln_gc_item_t, \
                       static inline void, \

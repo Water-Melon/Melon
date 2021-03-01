@@ -10,8 +10,7 @@
 
 MLN_CHAIN_FUNC_DECLARE(mln_hash_entry, \
                        mln_hash_entry_t, \
-                       static inline void, \
-                       __NONNULL3(1,2,3));
+                       static inline void,);
 static inline mln_hash_entry_t *
 mln_hash_entry_new(void *key, void *val) __NONNULL2(1,2);
 static inline void
