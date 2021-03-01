@@ -70,8 +70,6 @@ struct mln_lang_s {
     mln_alloc_t                     *pool;
     mln_lang_ctx_t                  *run_head;
     mln_lang_ctx_t                  *run_tail;
-    mln_lang_ctx_t                  *blocked_head;
-    mln_lang_ctx_t                  *blocked_tail;
     mln_lang_ctx_t                  *wait_head;
     mln_lang_ctx_t                  *wait_tail;
     mln_lang_ctx_t                  *ctx_cur;

@@ -584,14 +584,6 @@ static mln_lang_retExp_t *mln_lang_mq_msg_broadcast(mln_lang_ctx_t *ctx, mln_str
             return NULL;
         }
     }
-    scan = ctx->lang->blocked_head;
-    while (scan != NULL) {
-        c = scan;
-        scan = scan->next;
-        if (mln_lang_mq_msg_broadcast_ctx(c, qname, type, data) < 0) {
-            return NULL;
-        }
-    }
     scan = ctx->lang->wait_head;
     while (scan != NULL) {
         c = scan;
