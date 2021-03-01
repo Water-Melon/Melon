@@ -28,7 +28,7 @@ int mln_lang_aes(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -41,7 +41,7 @@ int mln_lang_aes(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -54,7 +54,7 @@ int mln_lang_aes(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -67,7 +67,7 @@ int mln_lang_aes(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -80,7 +80,7 @@ int mln_lang_aes(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;

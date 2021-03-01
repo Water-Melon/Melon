@@ -122,7 +122,7 @@ static int mln_lang_sys_array_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -135,7 +135,7 @@ static int mln_lang_sys_array_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -394,7 +394,7 @@ static int mln_lang_sys_obj_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -407,7 +407,7 @@ static int mln_lang_sys_obj_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -502,7 +502,7 @@ static int mln_lang_sys_str_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -515,7 +515,7 @@ static int mln_lang_sys_str_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -615,7 +615,7 @@ static int mln_lang_sys_real_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -628,7 +628,7 @@ static int mln_lang_sys_real_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -705,7 +705,7 @@ static int mln_lang_sys_bool_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -718,7 +718,7 @@ static int mln_lang_sys_bool_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -774,7 +774,7 @@ static int mln_lang_sys_int_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -787,7 +787,7 @@ static int mln_lang_sys_int_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -868,7 +868,7 @@ static int mln_lang_sys_isInt_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -881,7 +881,7 @@ static int mln_lang_sys_isInt_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -935,7 +935,7 @@ static int mln_lang_sys_isReal_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -948,7 +948,7 @@ static int mln_lang_sys_isReal_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1002,7 +1002,7 @@ static int mln_lang_sys_isStr_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1015,7 +1015,7 @@ static int mln_lang_sys_isStr_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1069,7 +1069,7 @@ static int mln_lang_sys_isNil_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1082,7 +1082,7 @@ static int mln_lang_sys_isNil_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1136,7 +1136,7 @@ static int mln_lang_sys_isBool_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1149,7 +1149,7 @@ static int mln_lang_sys_isBool_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1203,7 +1203,7 @@ static int mln_lang_sys_isObj_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1216,7 +1216,7 @@ static int mln_lang_sys_isObj_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1270,7 +1270,7 @@ static int mln_lang_sys_isFunc_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1283,7 +1283,7 @@ static int mln_lang_sys_isFunc_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1337,7 +1337,7 @@ static int mln_lang_sys_isArray_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1350,7 +1350,7 @@ static int mln_lang_sys_isArray_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1404,7 +1404,7 @@ static int mln_lang_sys_size_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1417,7 +1417,7 @@ static int mln_lang_sys_size_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1474,7 +1474,7 @@ static int mln_lang_sys_has_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1487,7 +1487,7 @@ static int mln_lang_sys_has_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1500,7 +1500,7 @@ static int mln_lang_sys_has_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1585,7 +1585,7 @@ static int mln_lang_sys_keys_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1598,7 +1598,7 @@ static int mln_lang_sys_keys_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1673,7 +1673,7 @@ static int mln_lang_sys_merge_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1686,7 +1686,7 @@ static int mln_lang_sys_merge_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1699,7 +1699,7 @@ static int mln_lang_sys_merge_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1857,7 +1857,7 @@ static int mln_lang_sys_type_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1870,7 +1870,7 @@ static int mln_lang_sys_type_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1900,7 +1900,7 @@ static int mln_lang_sys_getproperty_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1913,7 +1913,7 @@ static int mln_lang_sys_getproperty_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1926,7 +1926,7 @@ static int mln_lang_sys_getproperty_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2009,7 +2009,7 @@ static int mln_lang_sys_setproperty_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2022,7 +2022,7 @@ static int mln_lang_sys_setproperty_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2035,7 +2035,7 @@ static int mln_lang_sys_setproperty_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2048,7 +2048,7 @@ static int mln_lang_sys_setproperty_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2169,7 +2169,7 @@ static int mln_lang_sys_eval_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2182,7 +2182,7 @@ static int mln_lang_sys_eval_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2195,7 +2195,7 @@ static int mln_lang_sys_eval_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2208,7 +2208,7 @@ static int mln_lang_sys_eval_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2338,7 +2338,7 @@ static int mln_lang_sys_remove_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2351,7 +2351,7 @@ static int mln_lang_sys_remove_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2451,7 +2451,7 @@ static int mln_lang_sys_mkdir_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2464,7 +2464,7 @@ static int mln_lang_sys_mkdir_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2477,7 +2477,7 @@ static int mln_lang_sys_mkdir_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2576,7 +2576,7 @@ static int mln_lang_sys_exist_handler(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -2589,7 +2589,7 @@ static int mln_lang_sys_exist_handler(mln_lang_ctx_t *ctx)
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;

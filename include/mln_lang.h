@@ -109,8 +109,11 @@ struct mln_lang_ctx_s {
     mln_lang_retExp_t               *retExp_tail;
     mln_lang_var_t                  *var_head;
     mln_lang_var_t                  *var_tail;
+    mln_lang_val_t                  *val_head;
+    mln_lang_val_t                  *val_tail;
     mln_u32_t                        retExp_count:8;
     mln_u32_t                        var_count:8;
+    mln_u32_t                        val_count:8;
 };
 
 struct mln_lang_resource_s {
@@ -318,6 +321,9 @@ struct mln_lang_object_s {
 };
 
 struct mln_lang_val_s {
+    mln_lang_ctx_t                  *ctx;
+    struct mln_lang_val_s           *prev;
+    struct mln_lang_val_s           *next;
     union {
         mln_s64_t                i;
         mln_u8_t                 b;
@@ -461,7 +467,7 @@ mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                          void *data, \
                          mln_lang_exp_t *exp) __NONNULL2(1,3);
 extern void mln_lang_func_detail_free(mln_lang_func_detail_t *lfd);
-extern mln_lang_val_t *mln_lang_val_new(mln_alloc_t *pool, mln_s32_t type, void *data) __NONNULL1(1);
+extern mln_lang_val_t *mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data) __NONNULL1(1);
 extern void mln_lang_val_free(mln_lang_val_t *val);
 extern int mln_lang_condition_isTrue(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_lang_var_t *mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name) __NONNULL2(1,2);

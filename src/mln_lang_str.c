@@ -378,7 +378,7 @@ mln_lang_str_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
     }
     mln_string_pool_free(tmp1);
     mln_string_pool_free(tmp2);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_STRING, s)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_STRING, s)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_string_pool_free(s);
         return -1;

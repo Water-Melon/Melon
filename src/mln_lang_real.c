@@ -276,7 +276,7 @@ mln_lang_real_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     mln_u8_t b = mln_lang_var_toReal(op1->data.var) == mln_lang_var_toReal(op2->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -313,7 +313,7 @@ mln_lang_real_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_re
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     mln_u8_t b = mln_lang_var_toReal(op1->data.var) != mln_lang_var_toReal(op2->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -361,7 +361,7 @@ mln_lang_real_less(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
         return handler(ctx, ret, op1, op2);
     }
     b = mln_lang_var_toReal(op1->data.var) < mln_lang_var_toReal(op2->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -409,7 +409,7 @@ mln_lang_real_lesseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
         return handler(ctx, ret, op1, op2);
     }
     b = mln_lang_var_toReal(op1->data.var) <= mln_lang_var_toReal(op2->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -457,7 +457,7 @@ mln_lang_real_grea(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
         return handler(ctx, ret, op1, op2);
     }
     b = mln_lang_var_toReal(op1->data.var) > mln_lang_var_toReal(op2->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -505,7 +505,7 @@ mln_lang_real_greale(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
         return handler(ctx, ret, op1, op2);
     }
     b = mln_lang_var_toReal(op1->data.var) >= mln_lang_var_toReal(op2->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -552,7 +552,7 @@ mln_lang_real_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     double r = mln_lang_var_toReal(op1->data.var) + mln_lang_var_toReal(op2->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -586,7 +586,7 @@ mln_lang_real_sub(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     double r = mln_lang_var_toReal(op1->data.var) - mln_lang_var_toReal(op2->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -620,7 +620,7 @@ mln_lang_real_mul(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     double r = mln_lang_var_toReal(op1->data.var) * mln_lang_var_toReal(op2->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -660,7 +660,7 @@ mln_lang_real_div(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
         return -1;
     }
     double r = mln_lang_var_toReal(op1->data.var) / tmp;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -685,7 +685,7 @@ mln_lang_real_sdec(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
     mln_lang_val_t *val;
     double r = mln_lang_var_toReal(op1->data.var);
     mln_lang_var_setReal(op1->data.var, r-1);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -710,7 +710,7 @@ mln_lang_real_sinc(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
     mln_lang_val_t *val;
     double r = mln_lang_var_toReal(op1->data.var);
     mln_lang_var_setReal(op1->data.var, r+1);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -734,7 +734,7 @@ mln_lang_real_negative(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_re
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     double r = -mln_lang_var_toReal(op1->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -758,7 +758,7 @@ mln_lang_real_not(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     mln_u8_t b = !mln_lang_var_toReal(op1->data.var);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_BOOL, &b)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -783,7 +783,7 @@ mln_lang_real_pinc(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
     mln_lang_val_t *val;
     double r = mln_lang_var_toReal(op1->data.var) + 1;
     mln_lang_var_setReal(op1->data.var, r);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -808,7 +808,7 @@ mln_lang_real_pdec(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
     mln_lang_val_t *val;
     double r = mln_lang_var_toReal(op1->data.var) - 1;
     mln_lang_var_setReal(op1->data.var, r);
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_REAL, &r)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }

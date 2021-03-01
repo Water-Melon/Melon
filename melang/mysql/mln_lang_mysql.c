@@ -121,7 +121,7 @@ static int mln_lang_mysql_add_fd(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set
     mln_lang_var_t *var;
     mln_string_t varname = mln_string("fd");
 
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_INT, &fd)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_INT, &fd)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -371,7 +371,7 @@ static int mln_lang_mysql_add_connect(mln_lang_ctx_t *ctx, mln_lang_set_detail_t
         return -1;
     }
     for (i = 0; i < sizeof(arr)/sizeof(mln_string_t); ++i) {
-        if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             mln_lang_func_detail_free(func);
             return -1;
@@ -385,7 +385,7 @@ static int mln_lang_mysql_add_connect(mln_lang_ctx_t *ctx, mln_lang_set_detail_t
         mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
         ++func->nargs;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -462,7 +462,7 @@ static int mln_lang_mysql_add_close(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -543,7 +543,7 @@ static int mln_lang_mysql_add_commit(mln_lang_ctx_t *ctx, mln_lang_set_detail_t 
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -624,7 +624,7 @@ static int mln_lang_mysql_add_rollback(mln_lang_ctx_t *ctx, mln_lang_set_detail_
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -708,7 +708,7 @@ static int mln_lang_mysql_add_error(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -791,7 +791,7 @@ static int mln_lang_mysql_add_errno(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1083,7 +1083,7 @@ static int mln_lang_mysql_add_execute(mln_lang_ctx_t *ctx, mln_lang_set_detail_t
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1096,7 +1096,7 @@ static int mln_lang_mysql_add_execute(mln_lang_ctx_t *ctx, mln_lang_set_detail_t
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1201,7 +1201,7 @@ static int mln_lang_mysql_add_autocommit(mln_lang_ctx_t *ctx, mln_lang_set_detai
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
@@ -1214,7 +1214,7 @@ static int mln_lang_mysql_add_autocommit(mln_lang_ctx_t *ctx, mln_lang_set_detai
     }
     mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
     ++func->nargs;
-    if ((val = mln_lang_val_new(ctx->pool, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_func_detail_free(func);
         return -1;
