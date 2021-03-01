@@ -677,7 +677,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         mln_alloc_free(ctx);
         return NULL;
     }
-    stattr.free_handler = mln_lang_stack_node_free;
+    stattr.free_handler = __mln_lang_stack_node_free;
     stattr.copy_handler = NULL;
     stattr.cache = 1;
     if ((ctx->run_stack = mln_stack_init(&stattr)) == NULL) {
@@ -751,7 +751,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
     if (mln_stack_push(ctx->run_stack, node) < 0) {
-        mln_lang_stack_node_free(node);
+        __mln_lang_stack_node_free(node);
         mln_lang_ctx_free(ctx);
         return NULL;
     }
@@ -1348,11 +1348,6 @@ mln_lang_stack_node_new(mln_lang_ctx_t *ctx, mln_lang_stack_node_type_t type, vo
     sn->step = 0;
     sn->call = 0;
     return sn;
-}
-
-void mln_lang_stack_node_free(void *data)
-{
-    __mln_lang_stack_node_free(data);
 }
 
 static inline void __mln_lang_stack_node_free(void *data)
