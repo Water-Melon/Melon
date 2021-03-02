@@ -1246,9 +1246,9 @@ mln_lang_stack_node_new(mln_lang_ctx_t *ctx, mln_lang_stack_node_type_t type, vo
         if ((sn = (mln_lang_stack_node_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_stack_node_t))) == NULL) {
             return NULL;
         }
+        sn->ctx = ctx;
+        sn->prev = sn->next = NULL;
     }
-    sn->ctx = ctx;
-    sn->prev = sn->next = NULL;
     sn->type = type;
     sn->pos = NULL;
     switch (type) {
@@ -1335,8 +1335,7 @@ mln_lang_stack_node_new(mln_lang_ctx_t *ctx, mln_lang_stack_node_type_t type, vo
             sn->pos = sn->data.funccall->args;
             break;
     }
-    sn->retExp = NULL;
-    sn->retExp2 = NULL;
+    sn->retExp = sn->retExp2 = NULL;
     sn->step = 0;
     sn->call = 0;
     return sn;
