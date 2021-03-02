@@ -512,6 +512,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     hattr.len_base = M_PG_DFL_HASHLEN;\
     hattr.expandable = 1;\
     hattr.calc_prime = 0;\
+    hattr.cache = 0;\
     attr->map_tbl = mln_hash_init(&hattr);\
     if (attr->map_tbl == NULL) {\
         mln_log(error, "No memory.\n");\

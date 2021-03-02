@@ -33,6 +33,7 @@ int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
     hattr.len_base = 37;
     hattr.expandable = 0;
     hattr.calc_prime = 0;
+    hattr.cache = 0;
 
     ws->http = http;
     ws->pool = mln_http_get_pool(http);

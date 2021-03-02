@@ -169,6 +169,7 @@ mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
     hattr.len_base = M_JSON_HASH_LEN;
     hattr.expandable = 1;
     hattr.calc_prime = 0;
+    hattr.cache = 0;
     val->data.m_j_obj = mln_hash_init(&hattr);
     if (val->data.m_j_obj == NULL) {
         return -1;
@@ -1073,6 +1074,7 @@ int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val)
         hattr.len_base = M_JSON_HASH_LEN;
         hattr.expandable = 1;
         hattr.calc_prime = 0;
+        hattr.cache = 0;
         j->data.m_j_obj = mln_hash_init(&hattr);
         if (j->data.m_j_obj == NULL) {
             return -1;

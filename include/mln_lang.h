@@ -8,6 +8,7 @@
 #include "mln_alloc.h"
 #include "mln_file.h"
 #include "mln_rbtree.h"
+#include "mln_hash.h"
 #include "mln_stack.h"
 #include "mln_event.h"
 #include "mln_lang_ast.h"
@@ -16,6 +17,7 @@
 #include "mln_connection.h"
 
 #define M_LANG_CACHE_COUNT       100
+#define M_LANG_SYMBOL_TABLE_LEN  253
 
 #define M_LANG_MAX_OPENFILE      67
 #define M_LANG_DEFAULT_STEP      10000
@@ -227,7 +229,7 @@ struct mln_lang_scope_s {
     mln_lang_scope_type_t            type;
     mln_string_t                    *name;
     mln_gc_t                        *gc;
-    mln_rbtree_t                    *symbols;
+    mln_hash_t                      *symbols;
     mln_lang_ctx_t                  *ctx;
     mln_lang_stack_node_t           *cur_stack;
     mln_lang_stm_t                  *entry;
