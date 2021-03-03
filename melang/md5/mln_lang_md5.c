@@ -85,7 +85,7 @@ static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
         mln_md5_calc(&md5, val->data.s->data, val->data.s->len, 1);
         mln_md5_toString(&md5, res, sizeof(res));
     } else if (type == M_LANG_VAL_TYPE_OBJECT && \
-               !mln_string_constStrcmp(val->data.obj->inSet->name, "MFile"))
+               !mln_string_constStrcmp(val->data.obj->inSet->name, "File"))
     {
         int n, fd;
         mln_string_t v = mln_string("fd");

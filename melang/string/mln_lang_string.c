@@ -24,7 +24,7 @@ static int mln_lang_string_s2b_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_strlen_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_split_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_strncmp_handler(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_strcmpSeq_process(mln_lang_ctx_t *ctx);
+static mln_lang_retExp_t *mln_strcmpseq_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_strcmp_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_strncmp_process(mln_lang_ctx_t *ctx);
 static mln_lang_retExp_t *mln_strstr_process(mln_lang_ctx_t *ctx);
@@ -51,16 +51,16 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2");
     mln_string_t funcname;
     mln_s8ptr_t funcs[] = {
-        "mln_strcmpSeq",
+        "mln_strcmpseq",
         "mln_strcmp",
         "mln_strstr",
         "mln_kmp",
         "mln_slice",
-        "mln_regEqual",
-        "mln_regMatch"
+        "mln_reg_equal",
+        "mln_reg_match"
     };
     mln_lang_internal handlers[] = {
-        mln_strcmpSeq_process,
+        mln_strcmpseq_process,
         mln_strcmp_process,
         mln_strstr_process,
         mln_kmp_process,
@@ -157,7 +157,7 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_strcmpSeq_process(mln_lang_ctx_t *ctx)
+static mln_lang_retExp_t *mln_strcmpseq_process(mln_lang_ctx_t *ctx)
 {
     int ret;
     mln_lang_val_t *val1, *val2;

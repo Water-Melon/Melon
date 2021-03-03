@@ -3315,19 +3315,19 @@ Their definitions can be found in melon/include/mln_types.h.
       <1> mln_print(var);
       Output var's value. But it cannot output the details of object, function and array.
 
-      <2> mln_msgNew(name);
+      <2> mln_msg_new(name);
       Register a message communication item via argument 'name'.
       If it failed, 'false' will be returned. Otherwise, 'true' will be returned.
 
-      <3> mln_msgFree(name);
+      <3> mln_msg_free(name);
       Unregister a message communication item via the argument.
       Always return NIL.
 
-      <4> mln_msgRecv(name);
+      <4> mln_msg_recv(name);
       Receive the data from message communication which is located by 'name'.
       Data will be returned as the return value of this function.
 
-      <5> mln_msgSend(name, var);
+      <5> mln_msg_send(name, var);
       Send the data to the C-side via the message communication item which is located by 'name'.
       'var' is the data which can be:
           a. NIL
@@ -3340,7 +3340,7 @@ Their definitions can be found in melon/include/mln_types.h.
           h. FUNCTION
       If it succeed, 'true' will be returned. Otherwise, 'false' will be returned.
 
-      <6> mln_strcmpSeq(s1, s2);
+      <6> mln_strcmpseq(s1, s2);
       Its functionality is the same as 'strcmp()' in C.
       This function will check every byte strictly.
       Both of arguments must be 'string'.
@@ -3386,9 +3386,9 @@ Their definitions can be found in melon/include/mln_types.h.
       Convert string 's' to be type 'type'.
       'type' is a string which can be "int", "real" and "bool".
       
-      <16> MFile
-      MFile is the name that a Set to operate file, its melang prototype can be given as,
-          set MFile {
+      <16> File
+      File is the name that a Set to operate file, its melang prototype can be given as,
+          set File {
               fd;
               errno;
               open(path, op, prio);
@@ -3471,15 +3471,15 @@ Their definitions can be found in melon/include/mln_types.h.
 
       <26> mln_md5(data);
       Calculate and return MD5 value.
-      'data' can be string type or set 'MFile'.
+      'data' can be string type or set 'File'.
 
       <27> mln_sha1(data);
       Calculate and return SHA1 value.
-      'data' can be string type or set 'MFile'.
+      'data' can be string type or set 'File'.
 
       <28> mln_sha256(data);
       Calculate and return SHA256 value.
-      'data' can be string type or set 'MFile'.
+      'data' can be string type or set 'File'.
 
       <29> mln_json_encode(array);
       Encode 'array' to be a string. If succeed, result will be returned. Otherwise, 'false'
@@ -3511,28 +3511,28 @@ Their definitions can be found in melon/include/mln_types.h.
       <33> mln_size(array);
       Return array's length.
 
-      <34> mln_isInt(var);
+      <34> mln_is_int(var);
       Return a boolean value indicating whether var is an integer.
 
-      <35> mln_isReal(var);
+      <35> mln_is_real(var);
       Return a boolean value indicating whether var is a Real-number.
 
-      <36> mln_isStr(var);
+      <36> mln_is_str(var);
       Return a boolean value indicating whether var is a String.
 
-      <37> mln_isNil(var);
+      <37> mln_is_nil(var);
       Return a boolean value indicating whether var is Nil.
 
-      <38> mln_isBool(var);
+      <38> mln_is_bool(var);
       Return a boolean value indicating whether var is Boolean.
 
-      <39> mln_isObj(var);
+      <39> mln_is_obj(var);
       Return a boolean value indicating whether var is an Object.
 
-      <40> mln_isFunc(var);
+      <40> mln_is_func(var);
       Return a boolean value indicating whether var is an Function.
 
-      <41> mln_isArray(var);
+      <41> mln_is_array(var);
       Return a boolean value indicating whether var is an Array.
 
       <42> mln_int(var);
@@ -3607,9 +3607,9 @@ Their definitions can be found in melon/include/mln_types.h.
       <59> mln_real2bin(r);
       Translate 'r' to be a binary value indicated by 'r'.
 
-      <60> MMysql
-      MMysql is the set operating MySQL database. Its melang prototype is:
-          set MMysql {
+      <60> Mysql
+      Mysql is the set operating MySQL database. Its melang prototype is:
+          set Mysql {
               fd;
               connect(host, port, dbname, username, password);
               close();
@@ -3636,10 +3636,10 @@ Their definitions can be found in melon/include/mln_types.h.
       <61> mln_type(var);
       Return the type of variable. If 'var' is an object, the return value is its set name.
 
-      <62> mln_setProperty(&obj, prop, &val);
+      <62> mln_set_property(&obj, prop, &val);
       Set object "obj's" property "prop's" value to be 'val'.
 
-      <63> mln_getProperty(&obj, prop);
+      <63> mln_get_property(&obj, prop);
       Get object "obj's" property "prop's" value.
 
       <64> mln_eval(val, data, in_string);
@@ -3651,60 +3651,60 @@ Their definitions can be found in melon/include/mln_types.h.
           int, real, bool, nil, string
       In new task, if we want to fetch this data, we can use variable EVAL_DATA to access it.
 
-      <65> mln_tcpConnect(host, service, timeout);
+      <65> mln_tcp_connect(host, service, timeout);
       Connect to a server that indicated by 'host' and 'service'.
       'host' and 'service' must be string.
       'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
       If succeed 'true' will be returned, 'nil' returned on timed out, otherwise 'false' returned.
 
-      <66> mln_tcpListen(host, service);
+      <66> mln_tcp_listen(host, service);
       Set up a TCP listen socket.
       'host' and 'service' must be string.
       If succeed socket file descriptor will be returned, otherwise 'false' returned.
 
-      <67> mln_tcpAccept(listenfd, timeout);
+      <67> mln_tcp_accept(listenfd, timeout);
       Accept a TCP connection.
-      'listenfd' is created by 'mln_tcpListen'.
+      'listenfd' is created by 'mln_tcp_listen'.
       'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
       If succeed a new socket file descriptor will be returned, otherwise 'false' returned.
       If 'timeout' was given and accept timed out, 'nil' would be returned.
 
-      <68> mln_tcpSend(sockfd, data);
+      <68> mln_tcp_send(sockfd, data);
       Send 'data' via 'sockfd'.
       If succeed 'true' will be returned, otherwise 'false' returned.
 
-      <69> mln_tcpRecv(sockfd, timeout);
+      <69> mln_tcp_recv(sockfd, timeout);
       Receive data from 'sockfd'.
       'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
       If succeed received data will be returned. If connection closed by peer, 'true' will be returned.
       Otherwise 'false' returned.
       If 'timeout' was given and accept timed out, 'nil' would be returned.
-      Notice: If one script task call 'mln_tcpRecv' to wait for data, but another script task call
-      'mln_tcpShutdown' to shutdown 'send' direction, this function will return 'true', because system call
+      Notice: If one script task call 'mln_tcp_recv' to wait for data, but another script task call
+      'mln_tcp_shutdown' to shutdown 'send' direction, this function will return 'true', because system call
       'recv' will return 0.
 
-      <70> mln_tcpClose(sockfd);
+      <70> mln_tcp_close(sockfd);
       Close the TCP connection indicated by 'sockfd'.
 
-      <71> mln_tcpShutdown(sockfd, mode);
+      <71> mln_tcp_shutdown(sockfd, mode);
       Shutdown TCP connection.
       'mode' has two values: 'send' and 'recv'.
 
-      <72> mln_udpCreate(host, service);
+      <72> mln_udp_create(host, service);
       Create an UDP socket.
       'host' and 'service' are optional arguments. They must be string.
       If they are given, UDP socket will be bound with the address that is indicated by them.
       If succeed, a socket file descriptor will be returned, otherwise 'false' returned.
 
-      <73> mln_udpClose(fd);
+      <73> mln_udp_close(fd);
       Close an UDP socket.
 
-      <74> mln_udpSend(fd, data, host, service);
+      <74> mln_udp_send(fd, data, host, service);
       Send 'data' via the UDP socket indicated by 'fd'.
       'host' and 'service' must be given to set destination address. They must be string.
       If succeed, 'true' will be returned, otherwise 'false' returned.
 
-      <75> mln_udpRecv(fd, bufsize, &ip, &port, timeout);
+      <75> mln_udp_recv(fd, bufsize, &ip, &port, timeout);
       Receive remote peer's data via the UDP socket indicated by 'fd'.
       The last three arguments are optional.
       'timeout' is an zero or positive integer. If omit, that would be means wait until data arrived.
@@ -3713,13 +3713,13 @@ Their definitions can be found in melon/include/mln_types.h.
       Return value: If succeed, data will be returned, otherwise 'false' returned. If timed out,
       'nil' will be returned.
 
-      <76> mln_msgTopicSubscribe(qname);
+      <76> mln_msg_topic_subscribe(qname);
       Subscribe topic 'qname' in current script task.
 
-      <77> mln_msgTopicUnsubscribe(qname);
+      <77> mln_msg_topic_unsubscribe(qname);
       Unsubscribe topic 'qname' in current script task.
 
-      <78> mln_msgQueueSend(qname, msg, asTopic);
+      <78> mln_msg_queue_send(qname, msg, asTopic);
       Send 'msg' to message queue 'qname'.
       'msg' must be an integer, boolean, real number or string.
       'asTopic' is optional. If omitted, it just send a normal queue message.
@@ -3727,18 +3727,18 @@ Their definitions can be found in melon/include/mln_types.h.
       Topic message will be received by all of receivers who subscribed topic 'qname'.
       Return value always be 'nil'.
 
-      <79> mln_msgQueueRecv(qname, timeout);
+      <79> mln_msg_queue_recv(qname, timeout);
       Receive a normal or topic message from queue 'qname'.
       'timeout' is optional. It must be a positive integer.
       If no message arrived and function timed out, 'nil' would be returned.
       Otherwise message returned.
 
-      <80> mln_regEqual(exp, text);
+      <80> mln_reg_equal(exp, text);
       'exp' is the regular expression.
       'text' is the input text.
       If completely matched, 'true' will be returned, otherwise 'false'.
 
-      <81> mln_regMatch(exp, text);
+      <81> mln_reg_match(exp, text);
       'exp' is the regular expression.
       'text' is the input text.
       Return value is an array stored every matched pieces of 'text'.

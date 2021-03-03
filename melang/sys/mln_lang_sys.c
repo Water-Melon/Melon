@@ -862,7 +862,7 @@ static int mln_lang_sys_isInt_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_isInt");
+    mln_string_t funcname = mln_string("mln_is_int");
     mln_string_t v1 = mln_string("var");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isInt_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -929,7 +929,7 @@ static int mln_lang_sys_isReal_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_isReal");
+    mln_string_t funcname = mln_string("mln_is_real");
     mln_string_t v1 = mln_string("var");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isReal_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -996,7 +996,7 @@ static int mln_lang_sys_isStr_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_isStr");
+    mln_string_t funcname = mln_string("mln_is_str");
     mln_string_t v1 = mln_string("var");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isStr_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1063,7 +1063,7 @@ static int mln_lang_sys_isNil_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_isNil");
+    mln_string_t funcname = mln_string("mln_is_nil");
     mln_string_t v1 = mln_string("var");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isNil_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1130,7 +1130,7 @@ static int mln_lang_sys_isBool_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_isBool");
+    mln_string_t funcname = mln_string("mln_is_bool");
     mln_string_t v1 = mln_string("var");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isBool_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1197,7 +1197,7 @@ static int mln_lang_sys_isObj_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_isObj");
+    mln_string_t funcname = mln_string("mln_is_obj");
     mln_string_t v1 = mln_string("var");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isObj_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1264,7 +1264,7 @@ static int mln_lang_sys_isFunc_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_isFunc");
+    mln_string_t funcname = mln_string("mln_is_func");
     mln_string_t v1 = mln_string("var");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isFunc_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1331,7 +1331,7 @@ static int mln_lang_sys_isArray_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_isArray");
+    mln_string_t funcname = mln_string("mln_is_array");
     mln_string_t v1 = mln_string("var");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isArray_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1893,7 +1893,7 @@ static int mln_lang_sys_getproperty_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_getProperty");
+    mln_string_t funcname = mln_string("mln_get_property");
     mln_string_t v1 = mln_string("obj");
     mln_string_t v2 = mln_string("prop");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_getproperty_process, NULL)) == NULL) {
@@ -2001,7 +2001,7 @@ static int mln_lang_sys_setproperty_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_setProperty");
+    mln_string_t funcname = mln_string("mln_set_property");
     mln_string_t v1 = mln_string("obj");
     mln_string_t v2 = mln_string("prop");
     mln_string_t v3 = mln_string("val");

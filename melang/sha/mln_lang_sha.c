@@ -95,7 +95,7 @@ static mln_lang_retExp_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
         mln_sha1_calc(&sha1, val->data.s->data, val->data.s->len, 1);
         mln_sha1_toString(&sha1, res, sizeof(res));
     } else if (type == M_LANG_VAL_TYPE_OBJECT && \
-               !mln_string_constStrcmp(val->data.obj->inSet->name, "MFile"))
+               !mln_string_constStrcmp(val->data.obj->inSet->name, "File"))
     {
         int n, fd;
         mln_string_t v = mln_string("fd");
@@ -208,7 +208,7 @@ static mln_lang_retExp_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
         mln_sha256_calc(&sha256, val->data.s->data, val->data.s->len, 1);
         mln_sha256_toString(&sha256, res, sizeof(res));
     } else if (type == M_LANG_VAL_TYPE_OBJECT && \
-               !mln_string_constStrcmp(val->data.obj->inSet->name, "MFile"))
+               !mln_string_constStrcmp(val->data.obj->inSet->name, "File"))
     {
         int n, fd;
         mln_string_t v = mln_string("fd");

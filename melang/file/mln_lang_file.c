@@ -39,7 +39,7 @@ static int mln_lang_file_setErrno(mln_lang_ctx_t *ctx, int err);
 
 int mln_lang_file(mln_lang_ctx_t *ctx)
 {
-    mln_string_t setname = mln_string("MFile");
+    mln_string_t setname = mln_string("File");
     mln_lang_set_detail_t *set;
 
     if ((set = mln_lang_set_detail_new(ctx->pool, &setname)) == NULL) {
@@ -210,7 +210,7 @@ static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     mln_string_t v2 = mln_string("op");
     mln_string_t v3 = mln_string("prio");
     mln_string_t v = mln_string("fd");
-    mln_string_t typename = mln_string("MFile");
+    mln_string_t typename = mln_string("File");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_s8ptr_t path;
@@ -231,7 +231,7 @@ static mln_lang_retExp_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
-        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
+        mln_lang_errmsg(ctx, "Invalid set type, File object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -445,7 +445,7 @@ static mln_lang_retExp_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("offset");
     mln_string_t v2 = mln_string("whence");
     mln_string_t v = mln_string("fd");
-    mln_string_t typename = mln_string("MFile");
+    mln_string_t typename = mln_string("File");
     mln_string_t *tmp;
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
@@ -465,7 +465,7 @@ static mln_lang_retExp_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
-        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
+        mln_lang_errmsg(ctx, "Invalid set type, File object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -599,7 +599,7 @@ static mln_lang_retExp_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
     mln_string_t _this = mln_string("this");
     mln_string_t v1 = mln_string("nbytes");
     mln_string_t v = mln_string("fd");
-    mln_string_t typename = mln_string("MFile");
+    mln_string_t typename = mln_string("File");
     mln_string_t tmp;
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
@@ -620,7 +620,7 @@ static mln_lang_retExp_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
-        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
+        mln_lang_errmsg(ctx, "Invalid set type, File object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -740,7 +740,7 @@ static mln_lang_retExp_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
     mln_string_t _this = mln_string("this");
     mln_string_t v1 = mln_string("buf");
     mln_string_t v = mln_string("fd");
-    mln_string_t typename = mln_string("MFile");
+    mln_string_t typename = mln_string("File");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
@@ -759,7 +759,7 @@ static mln_lang_retExp_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
-        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
+        mln_lang_errmsg(ctx, "Invalid set type, File object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -851,7 +851,7 @@ static mln_lang_retExp_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd");
-    mln_string_t typename = mln_string("MFile");
+    mln_string_t typename = mln_string("File");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
@@ -870,7 +870,7 @@ static mln_lang_retExp_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
-        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
+        mln_lang_errmsg(ctx, "Invalid set type, File object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -941,7 +941,7 @@ static mln_lang_retExp_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("errno");
-    mln_string_t typename = mln_string("MFile");
+    mln_string_t typename = mln_string("File");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
@@ -962,7 +962,7 @@ static mln_lang_retExp_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
-        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
+        mln_lang_errmsg(ctx, "Invalid set type, File object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
@@ -1051,7 +1051,7 @@ static mln_lang_retExp_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd");
-    mln_string_t typename = mln_string("MFile");
+    mln_string_t typename = mln_string("File");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
     mln_lang_retExp_t *retExp;
@@ -1071,7 +1071,7 @@ static mln_lang_retExp_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL || mln_string_strcmp(val->data.obj->inSet->name, &typename)) {
-        mln_lang_errmsg(ctx, "Invalid set type, MFile object required.");
+        mln_lang_errmsg(ctx, "Invalid set type, File object required.");
         return NULL;
     }
     if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {

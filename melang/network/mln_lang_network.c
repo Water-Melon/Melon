@@ -254,7 +254,7 @@ static int mln_lang_network_tcp_listen(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("host"), v2 = mln_string("service");
-    mln_string_t funcname = mln_string("mln_tcpListen");
+    mln_string_t funcname = mln_string("mln_tcp_listen");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_tcp_listen_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -453,7 +453,7 @@ static int mln_lang_network_tcp_accept(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("timeout");
-    mln_string_t funcname = mln_string("mln_tcpAccept");
+    mln_string_t funcname = mln_string("mln_tcp_accept");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_tcp_accept_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -583,7 +583,7 @@ static int mln_lang_network_tcp_recv(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("timeout");
-    mln_string_t funcname = mln_string("mln_tcpRecv");
+    mln_string_t funcname = mln_string("mln_tcp_recv");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_tcp_recv_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -707,7 +707,7 @@ static int mln_lang_network_tcp_send(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("data");
-    mln_string_t funcname = mln_string("mln_tcpSend");
+    mln_string_t funcname = mln_string("mln_tcp_send");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_tcp_send_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -856,7 +856,7 @@ static int mln_lang_network_tcp_connect(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("host"), v2 = mln_string("service"), v3 = mln_string("timeout");
-    mln_string_t funcname = mln_string("mln_tcpConnect");
+    mln_string_t funcname = mln_string("mln_tcp_connect");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_tcp_connect_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1075,7 +1075,7 @@ static int mln_lang_network_tcp_shutdown(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("mode");
-    mln_string_t funcname = mln_string("mln_tcpShutdown");
+    mln_string_t funcname = mln_string("mln_tcp_shutdown");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_tcp_shutdown_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1227,7 +1227,7 @@ static int mln_lang_network_tcp_close(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("fd");
-    mln_string_t funcname = mln_string("mln_tcpClose");
+    mln_string_t funcname = mln_string("mln_tcp_close");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_tcp_close_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1608,7 +1608,7 @@ static int mln_lang_network_udp_create(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("host"), v2 = mln_string("service");
-    mln_string_t funcname = mln_string("mln_udpCreate");
+    mln_string_t funcname = mln_string("mln_udp_create");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_udp_create_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1799,7 +1799,7 @@ static int mln_lang_network_udp_close(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("fd");
-    mln_string_t funcname = mln_string("mln_udpClose");
+    mln_string_t funcname = mln_string("mln_udp_close");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_udp_close_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1868,7 +1868,7 @@ static int mln_lang_network_udp_send(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("data"), v3 = mln_string("host"), v4 = mln_string("service");
-    mln_string_t funcname = mln_string("mln_udpSend");
+    mln_string_t funcname = mln_string("mln_udp_send");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_udp_send_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -2084,7 +2084,7 @@ static int mln_lang_network_udp_recv(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("bufsize"), v3 = mln_string("ip"), v4 = mln_string("port"), v5 = mln_string("timeout");
-    mln_string_t funcname = mln_string("mln_udpRecv");
+    mln_string_t funcname = mln_string("mln_udp_recv");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_network_udp_recv_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");

@@ -6991,7 +6991,7 @@ static int mln_lang_msg_func_new(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_msgNew");
+    mln_string_t funcname = mln_string("mln_msg_new");
     mln_string_t name = mln_string("name");
     if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msg_func_new_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
@@ -7064,7 +7064,7 @@ static int mln_lang_msg_func_free(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_msgFree");
+    mln_string_t funcname = mln_string("mln_msg_free");
     mln_string_t name = mln_string("name");
     if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msg_func_free_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
@@ -7131,7 +7131,7 @@ static int mln_lang_msg_func_recv(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_msgRecv");
+    mln_string_t funcname = mln_string("mln_msg_recv");
     mln_string_t name = mln_string("name");
     if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msg_func_recv_process, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
@@ -7232,7 +7232,7 @@ static int mln_lang_msg_func_send(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("mln_msgSend");
+    mln_string_t funcname = mln_string("mln_msg_send");
     mln_string_t name = mln_string("name");
     mln_string_t data = mln_string("var");
     if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msg_func_send_process, NULL)) == NULL) {

@@ -153,7 +153,7 @@ static int mln_lang_msgqueue_mq_send(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("qname"), v2 = mln_string("msg"), v3 = mln_string("asTopic");
-    mln_string_t funcname = mln_string("mln_msgQueueSend");
+    mln_string_t funcname = mln_string("mln_msg_queue_send");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msgqueue_mq_send_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -303,7 +303,7 @@ static int mln_lang_msgqueue_mq_recv(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("qname"), v2 = mln_string("timeout");
-    mln_string_t funcname = mln_string("mln_msgQueueRecv");
+    mln_string_t funcname = mln_string("mln_msg_queue_recv");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msgqueue_mq_recv_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -733,7 +733,7 @@ static int mln_lang_msgqueue_topic_subscribe(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("qname");
-    mln_string_t funcname = mln_string("mln_msgTopicSubscribe");
+    mln_string_t funcname = mln_string("mln_msg_topic_subscribe");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msgqueue_topic_subscribe_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -825,7 +825,7 @@ static int mln_lang_msgqueue_topic_unsubscribe(mln_lang_ctx_t *ctx)
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t v1 = mln_string("qname");
-    mln_string_t funcname = mln_string("mln_msgTopicUnsubscribe");
+    mln_string_t funcname = mln_string("mln_msg_topic_unsubscribe");
 
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_msgqueue_topic_unsubscribe_process, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
