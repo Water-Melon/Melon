@@ -156,9 +156,6 @@ static inline mln_lang_symbolNode_t *
 __mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local);
 static inline mln_lang_symbolNode_t *
 mln_lang_symbolNode_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name);
-static inline mln_lang_label_t *
-mln_lang_label_new(mln_alloc_t *pool, mln_string_t *label, mln_lang_stm_t *stm);
-static inline void mln_lang_label_free(mln_lang_label_t *label);
 static inline mln_lang_var_t *
 __mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name);
 static int mln_lang_set_member_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
@@ -1508,11 +1505,8 @@ mln_lang_symbolNode_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symb
         case M_LANG_SYMBOL_VAR:
             ls->data.var = (mln_lang_var_t *)data;
             break;
-        case M_LANG_SYMBOL_SET:
+        default: /*M_LANG_SYMBOL_SET*/
             ls->data.set = (mln_lang_set_detail_t *)data;
-            break;
-        default:
-            ls->data.label = (mln_lang_label_t *)data;
             break;
     }
     return ls;
@@ -1526,11 +1520,8 @@ static void mln_lang_symbolNode_free(void *data)
         case M_LANG_SYMBOL_VAR:
             if (ls->data.var != NULL) __mln_lang_var_free(ls->data.var);
             break;
-        case M_LANG_SYMBOL_SET:
+        default: /*M_LANG_SYMBOL_SET*/
             if (ls->data.set != NULL) mln_lang_set_detail_freeSelf(ls->data.set);
-            break;
-        default:
-            if (ls->data.label != NULL) mln_lang_label_free(ls->data.label);
             break;
     }
     mln_alloc_free(ls);
@@ -1550,11 +1541,8 @@ static inline int __mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbo
         case M_LANG_SYMBOL_VAR:
             name = ((mln_lang_var_t *)data)->name;
             break;
-        case M_LANG_SYMBOL_SET:
+        default: /*M_LANG_SYMBOL_SET*/
             name = ((mln_lang_set_detail_t *)data)->name;
-            break;
-        default:
-            name = ((mln_lang_label_t *)data)->label;
             break;
     }
     if ((symbol = mln_lang_symbolNode_new(ctx, name, type, data)) == NULL) {
@@ -1605,30 +1593,6 @@ mln_lang_symbolNode_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name)
     }
     return __mln_lang_symbolNode_search(ctx, name, 1);
 }
-
-
-static inline mln_lang_label_t *
-mln_lang_label_new(mln_alloc_t *pool, mln_string_t *label, mln_lang_stm_t *stm)
-{
-    mln_lang_label_t *ll;
-    if ((ll = (mln_lang_label_t *)mln_alloc_m(pool, sizeof(mln_lang_label_t))) == NULL) {
-        return NULL;
-    }
-    if ((ll->label = mln_string_pool_dup(pool, label)) == NULL) {
-        mln_alloc_free(ll);
-        return NULL;
-    }
-    ll->stm = stm;
-    return ll;
-}
-
-static inline void mln_lang_label_free(mln_lang_label_t *label)
-{
-    if (label == NULL) return;
-    if (label->label != NULL) mln_string_pool_free(label->label);
-    mln_alloc_free(label);
-}
-
 
 mln_lang_set_detail_t *
 mln_lang_set_detail_new(mln_alloc_t *pool, mln_string_t *name)
@@ -3295,7 +3259,7 @@ static void mln_lang_stack_handler_stm(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node = (mln_lang_stack_node_t *)mln_stack_top(ctx->run_stack);
     mln_lang_stm_t *stm = node->data.stm;
-in:
+
     if (node->step == 0) {
         ++(node->step);
         mln_u8ptr_t data;
@@ -3314,20 +3278,7 @@ in:
                 type = M_LSNT_SET;
                 break;
             case M_STM_LABEL:
-            {
-                mln_lang_label_t *ll = mln_lang_label_new(ctx->pool, stm->data.pos, stm->next);
-                if (ll == NULL) {
-                    __mln_lang_errmsg(ctx, "No memory.");
-                    mln_lang_job_free(ctx);
-                    return;
-                }
-                if (__mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_LABEL, ll) < 0) {
-                    mln_lang_label_free(ll);
-                    mln_lang_job_free(ctx);
-                    return;
-                }
-                goto in;
-            }
+                goto goon1;
             case M_STM_SWITCH:
                 data = (mln_u8ptr_t)(stm->data.sw);
                 type = M_LSNT_SWITCH;
@@ -3353,6 +3304,7 @@ in:
             return;
         }
     } else {
+goon1:
         __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
         if (ctx->retExp == NULL && stm->next != NULL) {
             if ((node = mln_lang_stack_node_new(ctx, M_LSNT_STM, stm->next)) == NULL) {
@@ -6454,11 +6406,8 @@ mln_lang_stack_handler_factor_id(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor)
                 __mln_lang_var_free(var);
                 return -1;
             }
-        } else if (sym->type == M_LANG_SYMBOL_SET) {
+        } else {/*M_LANG_SYMBOL_SET*/
             __mln_lang_errmsg(ctx, "Invalid token. Token is a SET name, not a value or function.");
-            return -1;
-        } else {/*M_LANG_SYMBOL_LABEL*/
-            __mln_lang_errmsg(ctx, "Invalid token. Token is a Label, not a value or function.");
             return -1;
         }
         mln_lang_ctx_setRetExp(ctx, retExp);
@@ -6687,12 +6636,8 @@ static int mln_lang_dump_symbol(void *key, void *val, void *udata)
         case M_LANG_SYMBOL_VAR:
             mln_lang_dump_var(sym->data.var, 4);
             break;
-        case M_LANG_SYMBOL_SET:
+        default: /*M_LANG_SYMBOL_SET*/
             mln_lang_dump_set(sym->data.set);
-            break;
-        default:
-            mln_log(none, "    \"%S\" pos: %X\n", \
-                    sym->data.label->label, (mln_uptr_t)(sym->data.label->stm));
             break;
     }
     return 0;

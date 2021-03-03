@@ -1800,8 +1800,6 @@ static mln_lang_retExp_t *mln_lang_sys_type_process(mln_lang_ctx_t *ctx)
     }
     if (sym->type == M_LANG_SYMBOL_SET) {
         mln_string_set(&tmp, "set");
-    } else if (sym->type == M_LANG_SYMBOL_LABEL) {
-        mln_string_set(&tmp, "label");
     } else {
         type = mln_lang_var_getValType(sym->data.var);
         val = sym->data.var->val;

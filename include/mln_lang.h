@@ -38,7 +38,6 @@ typedef struct mln_lang_object_s        mln_lang_object_t;
 typedef struct mln_lang_func_detail_s   mln_lang_func_detail_t;
 typedef struct mln_lang_var_s           mln_lang_var_t;
 typedef struct mln_lang_set_detail_s    mln_lang_set_detail_t;
-typedef struct mln_lang_label_s         mln_lang_label_t;
 typedef struct mln_lang_symbolNode_s    mln_lang_symbolNode_t;
 typedef struct mln_lang_scope_s         mln_lang_scope_t;
 typedef struct mln_lang_stack_node_s    mln_lang_stack_node_t;
@@ -239,8 +238,7 @@ struct mln_lang_scope_s {
 
 typedef enum {
     M_LANG_SYMBOL_VAR = 0,
-    M_LANG_SYMBOL_SET,
-    M_LANG_SYMBOL_LABEL
+    M_LANG_SYMBOL_SET
 } mln_lang_symbolType_t;
 
 struct mln_lang_symbolNode_s {
@@ -250,13 +248,7 @@ struct mln_lang_symbolNode_s {
     union {
         mln_lang_var_t          *var;
         mln_lang_set_detail_t   *set;
-        mln_lang_label_t        *label;
     } data;
-};
-
-struct mln_lang_label_s {
-    mln_string_t                    *label;
-    mln_lang_stm_t                  *stm;
 };
 
 struct mln_lang_set_detail_s {
