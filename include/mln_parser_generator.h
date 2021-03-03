@@ -505,6 +505,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
 {\
     /*Init hash table*/\
     struct mln_hash_attr hattr;\
+    hattr.pool = NULL;\
     hattr.hash = mln_pg_map_hash_calc;\
     hattr.cmp = mln_pg_map_hash_cmp;\
     hattr.free_key = mln_pg_map_hash_free;\

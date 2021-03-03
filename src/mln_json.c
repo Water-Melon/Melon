@@ -162,6 +162,7 @@ mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
 
     val->index = index;
     val->type = M_JSON_OBJECT;
+    hattr.pool = NULL;
     hattr.hash = mln_json_hash_calc;
     hattr.cmp = mln_json_hash_cmp;
     hattr.free_key = NULL;
@@ -1067,6 +1068,7 @@ int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val)
         is_new = 1;
         M_JSON_SET_TYPE_OBJECT(j);
         struct mln_hash_attr hattr;
+        hattr.pool = NULL;
         hattr.hash = mln_json_hash_calc;
         hattr.cmp = mln_json_hash_cmp;
         hattr.free_key = NULL;

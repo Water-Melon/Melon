@@ -28,17 +28,28 @@ mln_move_hash_entry(mln_hash_t *h, mln_hash_mgr_t *old_tbl, mln_u32_t old_len) _
 mln_hash_t *
 mln_hash_init(struct mln_hash_attr *attr)
 {
-    mln_hash_t *h = (mln_hash_t *)malloc(sizeof(mln_hash_t));
+    mln_hash_t *h;
+    if (attr->pool != NULL) {
+        h = (mln_hash_t *)mln_alloc_m(attr->pool, sizeof(mln_hash_t));
+    } else {
+        h = (mln_hash_t *)malloc(sizeof(mln_hash_t));
+    }
     if (h == NULL) return NULL;
 
+    h->pool = attr->pool;
     h->hash = attr->hash;
     h->cmp = attr->cmp;
     h->free_key = attr->free_key;
     h->free_val = attr->free_val;
     h->len = attr->calc_prime? mln_prime_calc(attr->len_base): attr->len_base;
-    h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
+    if (h->pool != NULL) {
+        h->tbl = (mln_hash_mgr_t *)mln_alloc_c(h->pool, h->len*sizeof(mln_hash_mgr_t));
+    } else {
+        h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
+    }
     if (h->tbl == NULL) {
-        free(h);
+        if (h->pool != NULL) mln_alloc_free(h);
+        else free(h);
         return NULL;
     }
     h->cache_head = h->cache_tail = NULL;
@@ -51,8 +62,13 @@ mln_hash_init(struct mln_hash_attr *attr)
             h->hash == NULL || \
             h->cmp == NULL)
     {
-        free(h->tbl);
-        free(h);
+        if (h->pool != NULL) {
+            mln_alloc_free(h->tbl);
+            mln_alloc_free(h);
+        } else {
+            free(h->tbl);
+            free(h);
+        }
         return NULL;
     }
     return h;
@@ -70,13 +86,15 @@ mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg)
             mln_hash_entry_free(h, he, flg);
         }
     }
-    free(h->tbl);
+    if (h->pool != NULL) mln_alloc_free(h->tbl);
+    else free(h->tbl);
     while ((he = h->cache_head) != NULL) {
         mln_hash_entry_cache_chain_del(&(h->cache_head), &(h->cache_tail), he);
         he->hash = NULL;
         mln_hash_entry_free(h, he, M_HASH_F_NONE);
     }
-    free(h);
+    if (h->pool != NULL) mln_alloc_free(h);
+    else free(h);
 }
 
 int mln_hash_replace(mln_hash_t *h, void *key, void *val)
@@ -136,7 +154,11 @@ static inline void mln_hash_reduce(mln_hash_t *h)
     mln_u32_t len = h->len;
     h->len = h->calc_prime? mln_prime_calc(h->threshold >> 2): h->threshold >> 2;
     if (h->len == 0) h->len = 1;
-    h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
+    if (h->pool != NULL) {
+        h->tbl = (mln_hash_mgr_t *)mln_alloc_c(h->pool, h->len*sizeof(mln_hash_mgr_t));
+    } else {
+        h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
+    }
     if (h->tbl == NULL) {
         h->tbl = old_tbl;
         h->len = len;
@@ -144,7 +166,8 @@ static inline void mln_hash_reduce(mln_hash_t *h)
     }
     h->threshold = h->calc_prime? mln_prime_calc(h->threshold >> 1): h->threshold >> 1;
     mln_move_hash_entry(h, old_tbl, len);
-    free(old_tbl);
+    if (h->pool != NULL) mln_alloc_free(old_tbl);
+    else free(old_tbl);
 }
 
 static inline void mln_hash_expand(mln_hash_t *h)
@@ -152,7 +175,11 @@ static inline void mln_hash_expand(mln_hash_t *h)
     mln_hash_mgr_t *old_tbl = h->tbl;
     mln_u32_t len = h->len;
     h->len = h->calc_prime? mln_prime_calc(len + (len >> 1)): (len + (len >> 1));
-    h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
+    if (h->pool != NULL) {
+        h->tbl = (mln_hash_mgr_t *)mln_alloc_c(h->pool, h->len*sizeof(mln_hash_mgr_t));
+    } else {
+        h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
+    }
     if (h->tbl == NULL) {
         h->tbl = old_tbl;
         h->len = len;
@@ -161,7 +188,8 @@ static inline void mln_hash_expand(mln_hash_t *h)
     h->threshold = h->calc_prime? mln_prime_calc(h->threshold + (h->threshold >> 1)): \
                                   (h->threshold + (h->threshold >> 1));
     mln_move_hash_entry(h, old_tbl, len);
-    free(old_tbl);
+    if (h->pool != NULL) mln_alloc_free(old_tbl);
+    else free(old_tbl);
 }
 
 static inline void
@@ -254,7 +282,11 @@ mln_hash_entry_new(mln_hash_t *h, void *key, void *val)
     if ((he = h->cache_head) != NULL) {
         mln_hash_entry_cache_chain_del(&(h->cache_head), &(h->cache_tail), he);
     } else {
-        he = (mln_hash_entry_t *)malloc(sizeof(mln_hash_entry_t));
+        if (h->pool != NULL) {
+            he = (mln_hash_entry_t *)mln_alloc_m(h->pool, sizeof(mln_hash_entry_t));
+        } else {
+            he = (mln_hash_entry_t *)malloc(sizeof(mln_hash_entry_t));
+        }
         if (he == NULL) return NULL;
         he->hash = h;
         he->cache_prev = he->cache_next = NULL;
@@ -289,7 +321,8 @@ mln_hash_entry_free(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg)
     if (he->hash != NULL) {
         mln_hash_entry_cache_chain_add(&(he->hash->cache_head), &(he->hash->cache_tail), he);
     } else {
-        free(he);
+        if (h->pool != NULL) mln_alloc_free(he);
+        else free(he);
     }
 }
 

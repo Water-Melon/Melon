@@ -882,6 +882,7 @@ mln_http_t *mln_http_init(mln_tcp_conn_t *connection, void *data, mln_http_handl
     http->connection = connection;
     http->pool = pool;
 
+    hattr.pool = pool;
     hattr.hash = mln_http_hash_calc;
     hattr.cmp = mln_http_hash_cmp;
     hattr.free_key = mln_http_hash_free;

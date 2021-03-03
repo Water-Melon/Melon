@@ -184,6 +184,7 @@ Their definitions can be found in melon/include/mln_types.h.
 
   2) Hash Table
     struct mln_hash_attr {
+        mln_alloc_t         *pool;
         hash_calc_handler    hash;
         hash_cmp_handler     cmp;
         hash_free_handler    free_key;
@@ -201,6 +202,7 @@ Their definitions can be found in melon/include/mln_types.h.
     typedef void (*hash_free_handler)(void *);
 
     This structure is used to be the argument that will be passed to mln_hash_init() to initialize a hash table.
+    pool -- a memory pool initiated by mln_alloc_init() or mln_alloc_shm_init();
     hash -- is used to calculate and return a hash value to be the hash table index.
     cmp -- is used to compare with two hash elements' value.
     free_key and free_val -- are used to free hash element's key and value. These two pointers can be NULL.

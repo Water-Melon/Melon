@@ -1415,6 +1415,7 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
         scope->name = NULL;
     }
 
+    hattr.pool = ctx->pool;
     hattr.hash = (hash_calc_handler)mln_lang_symbolNode_hash;
     hattr.cmp = (hash_cmp_handler)mln_lang_symbolNode_cmp;
     hattr.free_key = NULL;
