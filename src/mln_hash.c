@@ -77,21 +77,25 @@ mln_hash_init(struct mln_hash_attr *attr)
 void
 mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg)
 {
-    mln_hash_entry_t *he;
+    mln_hash_entry_t *he, *fr;
     mln_hash_mgr_t *mgr, *mgr_end = h->tbl + h->len;
     for (mgr = h->tbl; mgr < mgr_end; ++mgr) {
-        while ((he = mgr->head) != NULL) {
-            mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
-            --(h->nr_nodes);
-            mln_hash_entry_free(h, he, flg);
+        he = mgr->head;
+        while (he != NULL) {
+            fr = he;
+            he = he->next;
+            fr->hash = NULL;
+            mln_hash_entry_free(h, fr, flg);
         }
     }
     if (h->pool != NULL) mln_alloc_free(h->tbl);
     else free(h->tbl);
-    while ((he = h->cache_head) != NULL) {
-        mln_hash_entry_cache_chain_del(&(h->cache_head), &(h->cache_tail), he);
-        he->hash = NULL;
-        mln_hash_entry_free(h, he, M_HASH_F_NONE);
+    he = h->cache_head;
+    while (he != NULL) {
+        fr = he;
+        he = he->next;
+        fr->hash = NULL;
+        mln_hash_entry_free(h, fr, M_HASH_F_NONE);
     }
     if (h->pool != NULL) mln_alloc_free(h);
     else free(h);
