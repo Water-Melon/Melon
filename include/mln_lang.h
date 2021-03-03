@@ -102,6 +102,7 @@ struct mln_lang_ctx_s {
     mln_lang_retExp_t               *retExp;
     mln_lang_return_handler          return_handler;
     mln_lang_ast_cache_t            *cache;
+    mln_gc_t                        *gc;
     struct mln_lang_ctx_s           *prev;
     struct mln_lang_ctx_s           *next;
     mln_lang_stack_node_t           *free_node_head;
@@ -227,7 +228,6 @@ typedef enum {
 struct mln_lang_scope_s {
     mln_lang_scope_type_t            type;
     mln_string_t                    *name;
-    mln_gc_t                        *gc;
     mln_hash_t                      *symbols;
     mln_lang_ctx_t                  *ctx;
     mln_lang_stack_node_t           *cur_stack;

@@ -146,7 +146,6 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
                    mln_lang_stack_node_t *cur_stack, \
                    mln_lang_stm_t *entry_stm);
 static void mln_lang_scope_free(mln_lang_scope_t *scope);
-static inline mln_gc_t *mln_lang_scope_getCurrentGC(mln_lang_ctx_t *ctx);
 static int mln_lang_symbolNode_cmp(mln_hash_t *hash, mln_string_t *s1, mln_string_t *s2);
 static inline mln_lang_symbolNode_t *
 mln_lang_symbolNode_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbolType_t type, void *data);
@@ -338,7 +337,7 @@ static void mln_lang_gc_item_memberSetter_recursive(struct mln_lang_gc_setter_s 
 static int mln_lang_gc_item_memberSetter_objScanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int mln_lang_gc_item_memberSetter_arrayScanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static void mln_lang_gc_item_moveHandler(mln_gc_t *destGC, mln_lang_gc_item_t *gcItem);
-static void mln_lang_gc_item_rootSetter(mln_gc_t *gc, mln_lang_scope_t *scope);
+static void mln_lang_gc_item_rootSetter(mln_gc_t *gc, mln_lang_ctx_t *ctx);
 static int mln_lang_gc_item_rootSetterScanner(void *key, void *value, void *udata);
 static void mln_lang_gc_item_cleanSearcher(mln_gc_t *gc, mln_lang_gc_item_t *gcItem);
 static int mln_lang_gc_item_cleanSearcher_objScanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
@@ -489,13 +488,7 @@ void mln_lang_free(mln_lang_t *lang)
     (lang)->ctx_cur = (lang)->run_head;\
 \
     if ((lang)->ctx_cur != NULL) {\
-        mln_lang_scope_t *scope = (lang)->ctx_cur->scope_tail;\
-        for (; scope != NULL; scope = scope->prev) {\
-            if (scope->type == M_LANG_SCOPE_TYPE_FUNC)\
-                break;\
-        }\
-        ASSERT(scope && scope->gc);\
-        mln_gc_collect(scope->gc, scope);\
+        mln_gc_collect(lang->ctx_cur->gc, lang->ctx_cur);\
     }\
 ok:
 
@@ -635,6 +628,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     mln_lang_ctx_t *ctx;
     struct mln_rbtree_attr rbattr;
     struct mln_stack_attr stattr;
+    struct mln_gc_attr gcattr;
     melang_installer *installer, *end;
 
     if ((ctx = (mln_lang_ctx_t *)mln_alloc_m(lang->pool, sizeof(mln_lang_ctx_t))) == NULL) {
@@ -727,6 +721,20 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
 
+    gcattr.pool = ctx->pool;
+    gcattr.itemGetter = (gcItemGetter)mln_lang_gc_item_getter;
+    gcattr.itemSetter = (gcItemSetter)mln_lang_gc_item_setter;
+    gcattr.itemFreer = (gcItemFreer)mln_lang_gc_item_free;
+    gcattr.memberSetter = (gcMemberSetter)mln_lang_gc_item_memberSetter;
+    gcattr.moveHandler = (gcMoveHandler)mln_lang_gc_item_moveHandler;
+    gcattr.rootSetter = (gcRootSetter)mln_lang_gc_item_rootSetter;
+    gcattr.cleanSearcher = (gcCleanSearcher)mln_lang_gc_item_cleanSearcher;
+    gcattr.freeHandler = (gcFreeHandler)mln_lang_gc_item_freeHandler;
+    if ((ctx->gc = mln_gc_new(&gcattr)) == NULL) {
+        mln_lang_ctx_free(ctx);
+        return NULL;
+    }
+
     ctx->retExp = NULL;
     ctx->return_handler = NULL;
     ctx->prev = ctx->next = NULL;
@@ -812,6 +820,9 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     while ((scope = ctx->scope_head) != NULL) {
         mln_lang_scope_chain_del(&(ctx->scope_head), &(ctx->scope_tail), scope);
         mln_lang_scope_free(scope);
+    }
+    if (ctx->gc != NULL) {
+        mln_gc_free(ctx->gc);
     }
     if (ctx->stm != NULL) {
         if (ctx->cache) {
@@ -1404,26 +1415,6 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
         scope->name = NULL;
     }
 
-    if (type == M_LANG_SCOPE_TYPE_FUNC) {
-        struct mln_gc_attr gcattr;
-        gcattr.pool = ctx->pool;
-        gcattr.itemGetter = (gcItemGetter)mln_lang_gc_item_getter;
-        gcattr.itemSetter = (gcItemSetter)mln_lang_gc_item_setter;
-        gcattr.itemFreer = (gcItemFreer)mln_lang_gc_item_free;
-        gcattr.memberSetter = (gcMemberSetter)mln_lang_gc_item_memberSetter;
-        gcattr.moveHandler = (gcMoveHandler)mln_lang_gc_item_moveHandler;
-        gcattr.rootSetter = (gcRootSetter)mln_lang_gc_item_rootSetter;
-        gcattr.cleanSearcher = (gcCleanSearcher)mln_lang_gc_item_cleanSearcher;
-        gcattr.freeHandler = (gcFreeHandler)mln_lang_gc_item_freeHandler;
-        if ((scope->gc = mln_gc_new(&gcattr)) == NULL) {
-            if (scope->name != NULL) mln_string_pool_free(scope->name);
-            mln_alloc_free(scope);
-            return NULL;
-        }
-    } else {
-        scope->gc = NULL;
-    }
-
     hattr.hash = (hash_calc_handler)mln_lang_symbolNode_hash;
     hattr.cmp = (hash_cmp_handler)mln_lang_symbolNode_cmp;
     hattr.free_key = NULL;
@@ -1433,7 +1424,6 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
     hattr.calc_prime = 0;
     hattr.cache = 1;
     if ((scope->symbols = mln_hash_init(&hattr)) == NULL) {
-        if (scope->gc != NULL) mln_gc_free(scope->gc);
         if (scope->name != NULL) mln_string_pool_free(scope->name);
         mln_alloc_free(scope);
         return NULL;
@@ -1448,33 +1438,9 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
 static void mln_lang_scope_free(mln_lang_scope_t *scope)
 {
     if (scope == NULL) return;
-    mln_gc_t *cur = mln_lang_scope_getCurrentGC(scope->ctx);
-    if (scope->gc != NULL) {
-        mln_gc_collect(scope->gc, scope);
-        if (cur != NULL) {
-            mln_gc_merge(cur, scope->gc);
-            mln_gc_free(scope->gc);
-        }
-    }
     if (scope->name != NULL) mln_string_pool_free(scope->name);
     if (scope->symbols != NULL) mln_hash_destroy(scope->symbols, M_HASH_F_VAL);
-    if (cur == NULL) {
-        mln_gc_collect(scope->gc, NULL);
-        mln_gc_free(scope->gc);
-    }
     mln_alloc_free(scope);
-}
-
-static inline mln_gc_t *
-mln_lang_scope_getCurrentGC(mln_lang_ctx_t *ctx)
-{
-    mln_lang_scope_t *scope = ctx->scope_tail;
-    for (; scope != NULL; scope = scope->prev) {
-        if (scope->type == M_LANG_SCOPE_TYPE_FUNC)
-            break;
-    }
-    if (scope == NULL) return NULL;
-    return scope->gc;
 }
 
 static mln_u64_t mln_lang_symbolNode_hash(mln_hash_t *hash, mln_string_t *s)
@@ -2430,9 +2396,7 @@ mln_lang_object_new(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet)
     obj->gcItem = NULL;
     obj->ctx = ctx;
 
-    mln_gc_t *gc = mln_lang_scope_getCurrentGC(ctx);
-    ASSERT(gc);
-    if (mln_lang_gc_item_new(ctx->pool, gc, M_GC_OBJ, obj) < 0) {
+    if (mln_lang_gc_item_new(ctx->pool, ctx->gc, M_GC_OBJ, obj) < 0) {
         mln_lang_object_free(obj);
         obj = NULL;
     }
@@ -2454,9 +2418,8 @@ static inline void mln_lang_object_free(mln_lang_object_t *obj)
     if (obj->members != NULL) mln_rbtree_destroy(obj->members);
     if (obj->inSet != NULL) mln_lang_set_detail_free(obj->inSet);
     if (obj->gcItem != NULL) {
-        mln_gc_t *cur = mln_lang_scope_getCurrentGC(obj->ctx);
         if (obj->gcItem->gc != NULL)
-            mln_gc_remove(obj->gcItem->gc, obj->gcItem, cur);
+            mln_gc_remove(obj->gcItem->gc, obj->gcItem, obj->ctx->gc);
         mln_lang_gc_item_freeImmediatly(obj->gcItem);
     }
     mln_alloc_free(obj);
@@ -2492,9 +2455,7 @@ mln_lang_object_dup(mln_lang_ctx_t *ctx, mln_lang_object_t *src)
     obj->gcItem = NULL;
     obj->ctx = ctx;
 
-    mln_gc_t *gc = mln_lang_scope_getCurrentGC(ctx);
-    ASSERT(gc);
-    if (mln_lang_gc_item_new(ctx->pool, gc, M_GC_OBJ, obj) < 0) {
+    if (mln_lang_gc_item_new(ctx->pool, ctx->gc, M_GC_OBJ, obj) < 0) {
         mln_lang_object_free(obj);
         obj = NULL;
     }
@@ -2790,9 +2751,7 @@ static inline mln_lang_array_t *__mln_lang_array_new(mln_lang_ctx_t *ctx)
     la->gcItem = NULL;
     la->ctx = ctx;
 
-    mln_gc_t *gc = mln_lang_scope_getCurrentGC(ctx);
-    ASSERT(gc);
-    if (mln_lang_gc_item_new(ctx->pool, gc, M_GC_ARRAY, la) < 0) {
+    if (mln_lang_gc_item_new(ctx->pool, ctx->gc, M_GC_ARRAY, la) < 0) {
         __mln_lang_array_free(la);
         la = NULL;
     }
@@ -2818,9 +2777,8 @@ static inline void __mln_lang_array_free(mln_lang_array_t *array)
     if (array->elems_index != NULL) mln_rbtree_destroy(array->elems_index);
 
     if (array->gcItem != NULL) {
-        mln_gc_t *cur = mln_lang_scope_getCurrentGC(array->ctx);
         if (array->gcItem->gc != NULL)
-            mln_gc_remove(array->gcItem->gc, array->gcItem, cur);
+            mln_gc_remove(array->gcItem->gc, array->gcItem, array->ctx->gc);
         mln_lang_gc_item_freeImmediatly(array->gcItem);
     }
     mln_alloc_free(array);
@@ -7740,12 +7698,11 @@ static void mln_lang_gc_item_moveHandler(mln_gc_t *destGC, mln_lang_gc_item_t *g
     gcItem->gc = destGC;
 }
 
-static void mln_lang_gc_item_rootSetter(mln_gc_t *gc, mln_lang_scope_t *scope)
+static void mln_lang_gc_item_rootSetter(mln_gc_t *gc, mln_lang_ctx_t *ctx)
 {
-    if (scope == NULL) return;
-    ASSERT(scope->gc == gc);
-    mln_hash_scan_all(scope->symbols, mln_lang_gc_item_rootSetterScanner, gc);
-    for (scope = scope->ctx->scope_tail; scope != NULL; scope = scope->prev) {
+    if (ctx == NULL) return;
+    mln_lang_scope_t *scope;
+    for (scope = ctx->scope_tail; scope != NULL; scope = scope->prev) {
         mln_hash_scan_all(scope->symbols, mln_lang_gc_item_rootSetterScanner, gc);
     }
 }
