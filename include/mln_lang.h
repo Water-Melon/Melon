@@ -16,7 +16,7 @@
 #include "mln_gc.h"
 #include "mln_connection.h"
 
-#define M_LANG_CACHE_COUNT       100
+#define M_LANG_CACHE_COUNT       200
 #define M_LANG_SYMBOL_TABLE_LEN  253
 
 #define M_LANG_MAX_OPENFILE      67
@@ -113,9 +113,12 @@ struct mln_lang_ctx_s {
     mln_lang_var_t                  *var_tail;
     mln_lang_val_t                  *val_head;
     mln_lang_val_t                  *val_tail;
+    mln_lang_symbolNode_t           *sym_head;
+    mln_lang_symbolNode_t           *sym_tail;
     mln_u32_t                        retExp_count:8;
     mln_u32_t                        var_count:8;
     mln_u32_t                        val_count:8;
+    mln_u32_t                        sym_count:8;
 };
 
 struct mln_lang_resource_s {
@@ -249,6 +252,8 @@ struct mln_lang_symbolNode_s {
         mln_lang_var_t          *var;
         mln_lang_set_detail_t   *set;
     } data;
+    struct mln_lang_symbolNode_s    *prev;
+    struct mln_lang_symbolNode_s    *next;
 };
 
 struct mln_lang_set_detail_s {

@@ -46,6 +46,14 @@ struct mln_lang_gc_setter_s {
 };
 
 
+MLN_CHAIN_FUNC_DECLARE(mln_lang_sym, \
+                       mln_lang_symbolNode_t, \
+                       static inline void,);
+MLN_CHAIN_FUNC_DEFINE(mln_lang_sym, \
+                      mln_lang_symbolNode_t, \
+                      static inline void, \
+                      prev, \
+                      next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_val, \
                        mln_lang_val_t, \
                        static inline void,);
@@ -742,7 +750,8 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->retExp_head = ctx->retExp_tail = NULL;
     ctx->var_head = ctx->var_tail = NULL;
     ctx->val_head = ctx->val_tail = NULL;
-    ctx->retExp_count = ctx->var_count = ctx->val_count = 0;
+    ctx->sym_head = ctx->sym_tail = NULL;
+    ctx->retExp_count = ctx->var_count = ctx->val_count = ctx->sym_count = 0;
 
     mln_lang_stack_node_t *node = mln_lang_stack_node_new(ctx, M_LSNT_STM, ctx->stm);
     if (node == NULL) {
@@ -791,7 +800,13 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     mln_lang_retExp_t *r;
     mln_lang_var_t *var;
     mln_lang_val_t *val;
+    mln_lang_symbolNode_t *sym;
 
+    while ((sym = ctx->sym_head) != NULL) {
+        mln_lang_sym_chain_del(&(ctx->sym_head), &(ctx->sym_tail), sym);
+        sym->ctx = NULL;
+        mln_lang_symbolNode_free(sym);
+    }
     while ((val = ctx->val_head) != NULL) {
         mln_lang_val_chain_del(&(ctx->val_head), &(ctx->val_tail), val);
         val->ctx = NULL;
@@ -1462,11 +1477,17 @@ static inline mln_lang_symbolNode_t *
 mln_lang_symbolNode_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbolType_t type, void *data)
 {
     mln_lang_symbolNode_t *ls;
-    if ((ls = (mln_lang_symbolNode_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_symbolNode_t))) == NULL) {
-        return NULL;
+    if ((ls = ctx->sym_head) != NULL) {
+        mln_lang_sym_chain_del(&(ctx->sym_head), &(ctx->sym_tail), ls);
+        --(ctx->sym_count);
+    } else {
+        if ((ls = (mln_lang_symbolNode_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_symbolNode_t))) == NULL) {
+            return NULL;
+        }
+        ls->ctx = ctx;
+        ls->prev = ls->next = NULL;
     }
     ls->symbol = symbol;
-    ls->ctx = ctx;
     ls->type = type;
     switch (type) {
         case M_LANG_SYMBOL_VAR:
@@ -1485,13 +1506,24 @@ static void mln_lang_symbolNode_free(void *data)
     mln_lang_symbolNode_t *ls = (mln_lang_symbolNode_t *)data;
     switch (ls->type) {
         case M_LANG_SYMBOL_VAR:
-            if (ls->data.var != NULL) __mln_lang_var_free(ls->data.var);
+            if (ls->data.var != NULL) {
+                __mln_lang_var_free(ls->data.var);
+                ls->data.var = NULL;
+            }
             break;
         default: /*M_LANG_SYMBOL_SET*/
-            if (ls->data.set != NULL) mln_lang_set_detail_freeSelf(ls->data.set);
+            if (ls->data.set != NULL) {
+                mln_lang_set_detail_freeSelf(ls->data.set);
+                ls->data.set = NULL;
+            }
             break;
     }
-    mln_alloc_free(ls);
+    if (ls->ctx != NULL && ls->ctx->sym_count < M_LANG_CACHE_COUNT) {
+        mln_lang_sym_chain_add(&(ls->ctx->sym_head), &(ls->ctx->sym_tail), ls);
+        ++(ls->ctx->sym_count);
+    } else {
+        mln_alloc_free(ls);
+    }
 }
 
 int mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data)
