@@ -17,10 +17,10 @@
 #include "mln_connection.h"
 
 #define M_LANG_CACHE_COUNT       200
-#define M_LANG_SYMBOL_TABLE_LEN  253
+#define M_LANG_SYMBOL_TABLE_LEN  187
 
 #define M_LANG_MAX_OPENFILE      67
-#define M_LANG_DEFAULT_STEP      10000
+#define M_LANG_DEFAULT_STEP      20000
 #define M_LANG_HEARTBEAT_US      50000
 
 #define M_LANG_VAL_TYPE_NIL      0
