@@ -1449,10 +1449,7 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
     }
     scope->type = type;
     if (name != NULL) {
-        if ((scope->name = mln_string_pool_dup(ctx->pool, name)) == NULL) {
-            mln_alloc_free(scope);
-            return NULL;
-        }
+        scope->name = mln_string_ref_dup(name);
     } else {
         scope->name = NULL;
     }
@@ -1827,10 +1824,7 @@ mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_va
     }
     var->type = defvar->type;
     if (defvar->name != NULL) {
-        if ((var->name = mln_string_pool_dup(ctx->pool, defvar->name)) == NULL) {
-            mln_alloc_free(var);
-            return NULL;
-        }
+        var->name = mln_string_ref_dup(defvar->name);
     } else {
         var->name = NULL;
     }
@@ -2107,7 +2101,10 @@ mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var)
             n = snprintf(buf, sizeof(buf)-1, "%lf", val->data.f);
             break;
         case M_LANG_VAL_TYPE_STRING:
-            return mln_string_pool_dup(pool, val->data.s);
+        {
+            mln_string_t *s = mln_string_ref_dup(val->data.s);
+            return s;
+        }
         default:
             ASSERT(0);
             break;
@@ -2657,9 +2654,7 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
             data = (mln_u8ptr_t)&(val->data.f);
             break;
         case M_LANG_VAL_TYPE_STRING:
-            if ((data = (mln_u8ptr_t)mln_string_pool_dup(ctx->pool, val->data.s)) == NULL) {
-                return NULL;
-            }
+            data = (mln_u8ptr_t)mln_string_ref_dup(val->data.s);
             break;
         case M_LANG_VAL_TYPE_OBJECT:
             if ((data = (mln_u8ptr_t)mln_lang_object_dup(ctx, val->data.obj)) == NULL) {
@@ -3139,11 +3134,6 @@ int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key)
 }
 
 
-mln_lang_funccall_val_t *mln_lang_funccall_val_new(mln_alloc_t *pool, mln_string_t *name)
-{
-    return __mln_lang_funccall_val_new(pool, name);
-}
-
 static inline mln_lang_funccall_val_t *__mln_lang_funccall_val_new(mln_alloc_t *pool, mln_string_t *name)
 {
     mln_lang_funccall_val_t *func;
@@ -3151,10 +3141,7 @@ static inline mln_lang_funccall_val_t *__mln_lang_funccall_val_new(mln_alloc_t *
         return NULL;
     }
     if (name != NULL) {
-        if ((func->name = mln_string_pool_dup(pool, name)) == NULL) {
-            mln_alloc_free(func);
-            return NULL;
-        }
+        func->name = mln_string_ref_dup(name);
     } else {
         func->name = NULL;
     }
@@ -5564,16 +5551,10 @@ goon3:
             mln_lang_job_free(ctx);
             return;
         }
-        mln_string_t *id;
         mln_lang_retExp_t *res = NULL, *retExp;
         mln_lang_val_t *val;
         mln_lang_var_t *var;
-        if ((id = mln_string_pool_dup(ctx->pool, locate->right.id)) == NULL) {
-            __mln_lang_errmsg(ctx, "No memory.");
-            node->retExp2 = NULL;
-            mln_lang_job_free(ctx);
-            return;
-        }
+        mln_string_t *id = mln_string_ref_dup(locate->right.id);
         if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_STRING, id)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             node->retExp2 = NULL;

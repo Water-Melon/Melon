@@ -489,7 +489,6 @@ extern mln_lang_val_t *mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, voi
 extern void mln_lang_val_free(mln_lang_val_t *val);
 extern int mln_lang_condition_isTrue(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_lang_var_t *mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name) __NONNULL2(1,2);
-extern mln_lang_funccall_val_t *mln_lang_funccall_val_new(mln_alloc_t *pool, mln_string_t *name) __NONNULL1(1);
 extern void mln_lang_funccall_val_free(mln_lang_funccall_val_t *func);
 extern mln_lang_var_t *
 mln_lang_array_getAndNew(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
