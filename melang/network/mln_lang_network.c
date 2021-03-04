@@ -320,7 +320,7 @@ static mln_lang_retExp_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ct
 
     if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
-        mln_lang_errmsg(ctx, "Argument missing.");
+        mln_lang_errmsg(ctx, "Argument1 missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
@@ -337,7 +337,7 @@ static mln_lang_retExp_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ct
 
     if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
-        mln_lang_errmsg(ctx, "Argument missing.");
+        mln_lang_errmsg(ctx, "Argument2 missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);

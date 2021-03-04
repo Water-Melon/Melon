@@ -8,7 +8,6 @@
 #include "mln_alloc.h"
 #include "mln_file.h"
 #include "mln_rbtree.h"
-#include "mln_hash.h"
 #include "mln_stack.h"
 #include "mln_event.h"
 #include "mln_lang_ast.h"
@@ -17,7 +16,7 @@
 #include "mln_connection.h"
 
 #define M_LANG_CACHE_COUNT       200
-#define M_LANG_SYMBOL_TABLE_LEN  187
+#define M_LANG_SYMBOL_TABLE_LEN  247
 
 #define M_LANG_MAX_OPENFILE      67
 #define M_LANG_DEFAULT_STEP      20000
@@ -50,6 +49,8 @@ typedef struct mln_lang_methods_s       mln_lang_method_t;
 typedef struct mln_lang_retExp_s        mln_lang_retExp_t;
 typedef struct mln_lang_resource_s      mln_lang_resource_t;
 typedef struct mln_lang_ast_cache_s     mln_lang_ast_cache_t;
+typedef struct mln_lang_hash_s          mln_lang_hash_t;
+typedef struct mln_lang_hash_bucket_s   mln_lang_hash_bucket_t;
 
 typedef void (*mln_lang_stack_handler)(mln_lang_ctx_t *);
 typedef int (*mln_lang_op)(mln_lang_ctx_t *, mln_lang_retExp_t **, mln_lang_retExp_t *, mln_lang_retExp_t *);
@@ -57,6 +58,17 @@ typedef mln_lang_retExp_t *(*mln_lang_internal) (mln_lang_ctx_t *);
 typedef int (*mln_msg_c_handler)(mln_lang_ctx_t *, const mln_lang_val_t *);
 typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 typedef void (*mln_lang_resource_free)(void *data);
+
+
+struct mln_lang_hash_s {
+    mln_lang_hash_bucket_t          *bucket;
+    mln_size_t                       len;
+};
+
+struct mln_lang_hash_bucket_s {
+    mln_lang_symbolNode_t           *head;
+    mln_lang_symbolNode_t           *tail;
+};
 
 struct mln_lang_ast_cache_s {
     mln_lang_stm_t                  *stm;
@@ -103,6 +115,7 @@ struct mln_lang_ctx_s {
     mln_lang_return_handler          return_handler;
     mln_lang_ast_cache_t            *cache;
     mln_gc_t                        *gc;
+    mln_lang_hash_t                 *symbols;
     struct mln_lang_ctx_s           *prev;
     struct mln_lang_ctx_s           *next;
     mln_lang_stack_node_t           *free_node_head;
@@ -231,10 +244,12 @@ typedef enum {
 struct mln_lang_scope_s {
     mln_lang_scope_type_t            type;
     mln_string_t                    *name;
-    mln_hash_t                      *symbols;
     mln_lang_ctx_t                  *ctx;
     mln_lang_stack_node_t           *cur_stack;
     mln_lang_stm_t                  *entry;
+    mln_uauto_t                      layer;
+    mln_lang_symbolNode_t           *sym_head;
+    mln_lang_symbolNode_t           *sym_tail;
     mln_lang_scope_t                *prev;
     mln_lang_scope_t                *next;
 };
@@ -252,8 +267,12 @@ struct mln_lang_symbolNode_s {
         mln_lang_var_t          *var;
         mln_lang_set_detail_t   *set;
     } data;
+    mln_uauto_t                      layer;
+    mln_lang_hash_bucket_t          *bucket;
     struct mln_lang_symbolNode_s    *prev;
     struct mln_lang_symbolNode_s    *next;
+    struct mln_lang_symbolNode_s    *scope_prev;
+    struct mln_lang_symbolNode_s    *scope_next;
 };
 
 struct mln_lang_set_detail_s {
@@ -474,7 +493,6 @@ extern mln_lang_funccall_val_t *mln_lang_funccall_val_new(mln_alloc_t *pool, mln
 extern void mln_lang_funccall_val_free(mln_lang_funccall_val_t *func);
 extern mln_lang_var_t *
 mln_lang_array_getAndNew(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
-extern void mln_lang_dump(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern int mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_msg_free(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_msg_setHandler(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler) __NONNULL2(1,2);
