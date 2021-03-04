@@ -555,6 +555,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
 \
     /*Init token rbtree*/\
     struct mln_rbtree_attr rbattr;\
+    rbattr.pool = NULL;\
     rbattr.cmp = mln_pg_token_rbtree_cmp;\
     rbattr.data_free = mln_pg_token_free;\
     rbattr.cache = 0;\

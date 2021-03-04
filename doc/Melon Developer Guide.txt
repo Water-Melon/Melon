@@ -202,7 +202,7 @@ Their definitions can be found in melon/include/mln_types.h.
     typedef void (*hash_free_handler)(void *);
 
     This structure is used to be the argument that will be passed to mln_hash_init() to initialize a hash table.
-    pool -- a memory pool initiated by mln_alloc_init() or mln_alloc_shm_init();
+    pool -- a memory pool created by mln_alloc_init() or mln_alloc_shm_init();
     hash -- is used to calculate and return a hash value to be the hash table index.
     cmp -- is used to compare with two hash elements' value.
     free_key and free_val -- are used to free hash element's key and value. These two pointers can be NULL.
@@ -320,10 +320,12 @@ Their definitions can be found in melon/include/mln_types.h.
 
   4) Red-Black Tree
     struct mln_rbtree_attr {
+        mln_alloc_t              *pool;
         rbtree_cmp                cmp;
         rbtree_free_data          data_free;
         mln_u32_t                 cache:1;
     };
+    pool -- a memory pool created by mln_alloc_init() or mln_alloc_shm_init().
     cmp -- is a function pointer to compare with two RB-tree
     data. Its prototype is
         typedef int (*rbtree_cmp)(const void *, const void *);

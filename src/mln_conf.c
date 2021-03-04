@@ -305,6 +305,7 @@ static inline mln_conf_t *mln_conf_init(void)
     cf->search = mln_conf_search_domain;
 
     struct mln_rbtree_attr rbattr;
+    rbattr.pool = NULL;
     rbattr.cmp = mln_conf_domain_cmp;
     rbattr.data_free = mln_conf_domain_destroy;
     rbattr.cache = 0;
@@ -412,6 +413,7 @@ mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name)
         return NULL;
     }
     struct mln_rbtree_attr rbattr;
+    rbattr.pool = NULL;
     rbattr.cmp = mln_conf_cmd_cmp;
     rbattr.data_free = mln_conf_cmd_destroy;
     rbattr.cache = 0;

@@ -36,6 +36,7 @@ mln_fileset_t *mln_fileset_init(mln_size_t max_file)
         return NULL;
     }
 
+    attr.pool = NULL;
     attr.cmp = mln_file_set_cmp;
     attr.data_free = mln_file_free;
     attr.cache = 0;

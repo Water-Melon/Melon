@@ -127,6 +127,7 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
     ev->callback = NULL;
     ev->callback_data = NULL;
     struct mln_rbtree_attr rbattr;
+    rbattr.pool = NULL;
     rbattr.cmp = mln_event_rbtree_fd_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;
@@ -173,6 +174,7 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
         goto err3;
     }
     /*signal rbtree*/
+    rbattr.pool = NULL;
     rbattr.cmp = mln_event_rbtree_sig_cmp;
     rbattr.data_free = mln_event_rbtree_sig_chain_free;
     rbattr.cache = 0;
@@ -1506,6 +1508,7 @@ static int
 mln_event_rbtree_refer_init(void)
 {
     struct mln_rbtree_attr rbattr;
+    rbattr.pool = NULL;
     rbattr.cmp = mln_event_rbtree_refer_cmp;
     rbattr.data_free = mln_event_rbtree_refer_free;
     rbattr.cache = 0;

@@ -6,6 +6,7 @@
 #ifndef __MLN_RBTREE_H
 #define __MLN_RBTREE_H
 #include "mln_types.h"
+#include "mln_alloc.h"
 
 typedef struct mln_rbtree_node_s mln_rbtree_node_t;
 /*
@@ -23,6 +24,7 @@ enum rbtree_color {
 };
 
 struct mln_rbtree_attr {
+    mln_alloc_t              *pool;
     rbtree_cmp                cmp;
     rbtree_free_data          data_free;
     mln_u32_t                 cache:1;
@@ -39,6 +41,7 @@ struct mln_rbtree_node_s {
 };
 
 typedef struct rbtree_s {
+    mln_alloc_t              *pool;
     mln_rbtree_node_t         nil;
     mln_rbtree_node_t        *root;
     mln_rbtree_node_t        *min;

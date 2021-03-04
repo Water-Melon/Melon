@@ -431,6 +431,7 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
     lang->fd_notInUsed = fds[0];
     lang->fd_signal = fds[1];
     gettimeofday(&tv, NULL);
+    rbattr.pool = pool;
     rbattr.cmp = (rbtree_cmp)mln_lang_resource_cmp;
     rbattr.data_free = (rbtree_free_data)mln_lang_resource_free_handler;
     rbattr.cache = 0;
@@ -700,6 +701,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->step = M_LANG_DEFAULT_STEP;
     ctx->filename = NULL;
     ctx->symbols = NULL;
+    rbattr.pool = ctx->pool;
     rbattr.cmp = mln_lang_msg_cmp;
     rbattr.data_free = __mln_lang_msg_free;
     rbattr.cache = 0;
@@ -718,6 +720,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         mln_alloc_free(ctx);
         return NULL;
     }
+    rbattr.pool = ctx->pool;
     rbattr.cmp = (rbtree_cmp)mln_lang_resource_cmp;
     rbattr.data_free = (rbtree_free_data)mln_lang_ctx_resource_free_handler;
     rbattr.cache = 0;
@@ -1622,6 +1625,7 @@ mln_lang_set_detail_new(mln_alloc_t *pool, mln_string_t *name)
         mln_alloc_free(lcd);
         return NULL;
     }
+    rbattr.pool = pool;
     rbattr.cmp = mln_lang_var_cmpName;
     rbattr.data_free = mln_lang_var_free;
     rbattr.cache = 0;
@@ -2424,6 +2428,7 @@ mln_lang_object_new(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet)
     }
     obj->inSet = inSet;
     if (inSet != NULL) ++(inSet->ref);
+    rbattr.pool = ctx->pool;
     rbattr.cmp = mln_lang_var_cmpName;
     rbattr.data_free = mln_lang_var_free;
     rbattr.cache = 0;
@@ -2485,6 +2490,7 @@ mln_lang_object_dup(mln_lang_ctx_t *ctx, mln_lang_object_t *src)
     }
     obj->inSet = src->inSet;
     if (obj->inSet != NULL) ++(obj->inSet->ref);
+    rbattr.pool = ctx->pool;
     rbattr.cmp = mln_lang_var_cmpName;
     rbattr.data_free = mln_lang_var_free;
     rbattr.cache = 0;
@@ -2781,6 +2787,7 @@ static inline mln_lang_array_t *__mln_lang_array_new(mln_lang_ctx_t *ctx)
     if ((la = (mln_lang_array_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_array_t))) == NULL) {
         return NULL;
     }
+    rbattr.pool = ctx->pool;
     rbattr.cmp = mln_lang_array_elem_indexCmp;
     rbattr.data_free = mln_lang_array_elem_free;
     rbattr.cache = 0;
@@ -2790,7 +2797,6 @@ static inline mln_lang_array_t *__mln_lang_array_new(mln_lang_ctx_t *ctx)
     }
     rbattr.cmp = mln_lang_array_elem_keyCmp;
     rbattr.data_free = NULL;
-    rbattr.cache = 0;
     if ((la->elems_key = mln_rbtree_init(&rbattr)) == NULL) {
         mln_rbtree_destroy(la->elems_index);
         mln_alloc_free(la);
@@ -7634,6 +7640,7 @@ static void mln_lang_gc_item_memberSetter(mln_gc_t *gc, mln_lang_gc_item_t *gcIt
     struct mln_lang_gc_setter_s lgs;
     struct mln_rbtree_attr rbattr;
 
+    rbattr.pool = gcItem->type == M_GC_OBJ? gcItem->data.obj->ctx->pool: gcItem->data.array->ctx->pool;
     rbattr.cmp = mln_lang_gc_setter_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;

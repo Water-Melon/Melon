@@ -227,6 +227,7 @@ mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
     }
     lex->pool = attr->pool;
 
+    rbattr.pool = lex->pool;
     rbattr.cmp = mln_lex_macro_cmp;
     rbattr.data_free = mln_lex_macro_free;
     rbattr.cache = 0;
@@ -264,6 +265,7 @@ err:
         memset(&(lex->hooks), 0, sizeof(mln_lex_hooks_t));
 
     if (attr->keywords != NULL) {
+        rbattr.pool = lex->pool;
         rbattr.cmp = mln_lex_keywords_cmp;
         rbattr.data_free = mln_lex_keyword_free;
         rbattr.cache = 0;

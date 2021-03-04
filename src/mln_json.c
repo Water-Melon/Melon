@@ -265,6 +265,7 @@ mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
     mln_rbtree_node_t *rn;
     struct mln_rbtree_attr rbattr;
 
+    rbattr.pool = NULL;
     rbattr.cmp = mln_json_rbtree_cmp;
     rbattr.data_free = mln_json_free;
     rbattr.cache = 0;
@@ -1124,6 +1125,7 @@ int mln_json_add_element(mln_json_t *j, mln_json_t *value)
     if (M_JSON_IS_NONE(j)) {
         is_new = 1;
         struct mln_rbtree_attr rbattr;
+        rbattr.pool = NULL;
         rbattr.cmp = mln_json_rbtree_cmp;
         rbattr.data_free = mln_json_free;
         rbattr.cache = 0;
