@@ -5846,10 +5846,6 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
             return -1;
         }
     }
-    if ((args_array = mln_lang_funccall_run_build_args(ctx)) == NULL) {
-        __mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
     for (scan = prototype->args_head, var = funccall->args_head; \
          scan != NULL; \
          scan = scan->next)
@@ -5874,15 +5870,17 @@ static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
             __mln_lang_var_free(newvar);
             return -1;
         }
-        if (mln_lang_funcall_run_add_args(ctx, args_array, newvar) < 0) {
+    }
+    if (var != NULL) {
+        if ((args_array = mln_lang_funccall_run_build_args(ctx)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
-    }
-    for (; var != NULL; var = var->next) {
-        if (mln_lang_funcall_run_add_args(ctx, args_array, var) < 0) {
-            __mln_lang_errmsg(ctx, "No memory.");
-            return -1;
+        for (; var != NULL; var = var->next) {
+            if (mln_lang_funcall_run_add_args(ctx, args_array, var) < 0) {
+                __mln_lang_errmsg(ctx, "No memory.");
+                return -1;
+            }
         }
     }
     mln_lang_ctx_resetRetExp(ctx);
