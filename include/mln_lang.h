@@ -30,6 +30,7 @@
 #define M_LANG_VAL_TYPE_OBJECT   5
 #define M_LANG_VAL_TYPE_FUNC     6
 #define M_LANG_VAL_TYPE_ARRAY    7
+#define M_LANG_VAL_TYPE_CALL     8
 
 typedef struct mln_lang_funccall_val_s  mln_lang_funccall_val_t;
 typedef struct mln_lang_val_s           mln_lang_val_t;
@@ -155,7 +156,6 @@ struct mln_lang_msg_s {
 
 typedef enum {
     M_LANG_RETEXP_VAR = 0,
-    M_LANG_RETEXP_FUNC
 } mln_lang_retExp_type_t;
 
 struct mln_lang_retExp_s {
@@ -164,7 +164,6 @@ struct mln_lang_retExp_s {
     struct mln_lang_retExp_s        *next;
     union {
         mln_lang_var_t          *var;
-        mln_lang_funccall_val_t *func;
     } data;
     mln_lang_retExp_type_t           type;
 };
@@ -350,6 +349,7 @@ struct mln_lang_val_s {
         mln_lang_object_t       *obj;
         mln_lang_func_detail_t  *func;
         mln_lang_array_t        *array;
+        mln_lang_funccall_val_t *call;
     } data;
     mln_s32_t                        type;
     mln_u32_t                        ref;
@@ -443,6 +443,7 @@ extern void mln_lang_funccall_val_addObject(mln_lang_funccall_val_t *func, mln_l
 extern mln_lang_retExp_t *
 mln_lang_retExp_new(mln_lang_ctx_t *ctx, mln_lang_retExp_type_t type, void *data) __NONNULL2(1,3);
 extern void mln_lang_retExp_free(mln_lang_retExp_t *retExp);
+extern mln_lang_retExp_t *mln_lang_retExp_createTmpCall(mln_lang_ctx_t *ctx, mln_lang_funccall_val_t *call);
 extern mln_lang_retExp_t *mln_lang_retExp_createTmpNil(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_retExp_t *
 mln_lang_retExp_createTmpObj(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet, mln_string_t *name) __NONNULL1(1);

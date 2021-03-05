@@ -142,6 +142,8 @@ static inline void __mln_lang_retExp_free(mln_lang_retExp_t *retExp);
 static inline mln_lang_retExp_t *
 __mln_lang_retExp_createTmpNil(mln_lang_ctx_t *ctx, mln_string_t *name);
 static inline mln_lang_retExp_t *
+__mln_lang_retExp_createTmpCall(mln_lang_ctx_t *ctx, mln_lang_funccall_val_t *call);
+static inline mln_lang_retExp_t *
 __mln_lang_retExp_createTmpObj(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet, mln_string_t *name);
 static inline mln_lang_retExp_t *
 __mln_lang_retExp_createTmpTrue(mln_lang_ctx_t *ctx, mln_string_t *name);
@@ -1041,14 +1043,7 @@ __mln_lang_retExp_new(mln_lang_ctx_t *ctx, mln_lang_retExp_type_t type, void *da
         retExp->prev = retExp->next = NULL;
     }
     retExp->type = type;
-    switch (type) {
-        case M_LANG_RETEXP_VAR:
-            retExp->data.var = (mln_lang_var_t *)data;
-            break;
-        default:
-            retExp->data.func = (mln_lang_funccall_val_t *)data;
-            break;
-    }
+    retExp->data.var = (mln_lang_var_t *)data;
     return retExp;
 }
 
@@ -1061,16 +1056,8 @@ static inline void __mln_lang_retExp_free(mln_lang_retExp_t *retExp)
 {
     if (retExp == NULL) return;
 
-    switch (retExp->type) {
-        case M_LANG_RETEXP_VAR:
-            if (retExp->data.var != NULL)
-                __mln_lang_var_free(retExp->data.var);
-            break;
-        default:
-            if (retExp->data.func != NULL)
-                __mln_lang_funccall_val_free(retExp->data.func);
-            break;
-    }
+    if (retExp->data.var != NULL)
+        __mln_lang_var_free(retExp->data.var);
     retExp->data.var = NULL;
 
     if (retExp->ctx != NULL && retExp->ctx->retExp_count < M_LANG_CACHE_COUNT) {
@@ -1079,6 +1066,31 @@ static inline void __mln_lang_retExp_free(mln_lang_retExp_t *retExp)
     } else {
         mln_alloc_free(retExp);
     }
+}
+
+mln_lang_retExp_t *mln_lang_retExp_createTmpCall(mln_lang_ctx_t *ctx, mln_lang_funccall_val_t *call)
+{
+    return __mln_lang_retExp_createTmpCall(ctx, call);
+}
+
+static inline mln_lang_retExp_t *
+__mln_lang_retExp_createTmpCall(mln_lang_ctx_t *ctx, mln_lang_funccall_val_t *call)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_retExp_t *retExp;
+    if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_CALL, call)) == NULL) {
+        return NULL;
+    }
+    if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        __mln_lang_val_free(val);
+        return NULL;
+    }
+    if ((retExp = __mln_lang_retExp_new(ctx, M_LANG_RETEXP_VAR, var)) == NULL) {
+        __mln_lang_var_free(var);
+        return NULL;
+    }
+    return retExp;
 }
 
 mln_lang_retExp_t *mln_lang_retExp_createTmpNil(mln_lang_ctx_t *ctx, mln_string_t *name)
@@ -1998,6 +2010,7 @@ mln_s64_t mln_lang_var_toInt(mln_lang_var_t *var)
         case M_LANG_VAL_TYPE_OBJECT:
         case M_LANG_VAL_TYPE_FUNC:
         case M_LANG_VAL_TYPE_ARRAY:
+        case M_LANG_VAL_TYPE_CALL:
             break;
         case M_LANG_VAL_TYPE_INT:
             i = val->data.i;
@@ -2040,6 +2053,7 @@ double mln_lang_var_toReal(mln_lang_var_t *var)
         case M_LANG_VAL_TYPE_OBJECT:
         case M_LANG_VAL_TYPE_FUNC:
         case M_LANG_VAL_TYPE_ARRAY:
+        case M_LANG_VAL_TYPE_CALL:
             break;
         case M_LANG_VAL_TYPE_INT:
             r = (double)val->data.i;
@@ -2561,6 +2575,9 @@ __mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data)
             val->data.array = (mln_lang_array_t *)data;
             ++(val->data.array->ref);
             break;
+        case M_LANG_VAL_TYPE_CALL:
+            val->data.call = (mln_lang_funccall_val_t *)data;
+            break;
         default:
             ASSERT(0);
             mln_alloc_free(val);
@@ -2627,6 +2644,12 @@ static inline void mln_lang_val_freeData(mln_lang_val_t *val)
             if (val->data.s != NULL) {
                 mln_string_pool_free(val->data.s);
                 val->data.s = NULL;
+            }
+            break;
+        case M_LANG_VAL_TYPE_CALL:
+            if (val->data.call != NULL) {
+                __mln_lang_funccall_val_free(val->data.call);
+                val->data.call = NULL;
             }
             break;
         default:
@@ -4012,11 +4035,11 @@ static void mln_lang_stack_handler_switchstm(mln_lang_ctx_t *ctx)
             return;
         }
         mln_lang_ctx_setRetExp(ctx, res);
-        if (res->type == M_LANG_RETEXP_FUNC) {
+        if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
             node->call = 1;
 again:
             node->step = 2;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4041,7 +4064,7 @@ goon2:
                 return;
             }
             res = ctx->retExp;
-            if (ctx->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (ctx->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         if (__mln_lang_condition_isTrue(ctx->retExp->data.var)) {
             mln_lang_stack_node_resetRetExp(sw_node);
@@ -4524,10 +4547,10 @@ static void mln_lang_stack_handler_assign(mln_lang_ctx_t *ctx)
                 return;
             }
             mln_lang_ctx_setRetExp(ctx, res);
-            if (res->type == M_LANG_RETEXP_FUNC) {
+            if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
                 node->call = 1;
 again:
-                if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+                if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                     mln_lang_job_free(ctx);
                     return;
                 }
@@ -4552,7 +4575,7 @@ goon3:
                 return;
             }
             res = ctx->retExp;
-            if (ctx->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (ctx->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         node->step = 4;
         if (node->retExp != NULL && node->retExp->type == M_LANG_RETEXP_VAR && node->retExp->data.var->val->func != NULL) {
@@ -4729,10 +4752,10 @@ goon2:
             return;
         }
         mln_lang_stack_node_setRetExp(node, res);
-        if (res->type == M_LANG_RETEXP_FUNC) {
+        if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
 again:
             node->call = 1;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4749,7 +4772,7 @@ goon4:
             node->call = 0;
             mln_lang_stack_node_getRetExpFromCTX(node, ctx);
             res = node->retExp;
-            if (node->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (node->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         node->pos = logicHigh->right;
         if (node->pos != NULL && logicHigh->right->op != M_LOGICHIGH_NONE) {
@@ -4840,10 +4863,10 @@ goon2:
             return;
         }
         mln_lang_stack_node_setRetExp(node, res);
-        if (res->type == M_LANG_RETEXP_FUNC) {
+        if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
 again:
             node->call = 1;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4860,7 +4883,7 @@ goon4:
             node->call = 0;
             mln_lang_stack_node_getRetExpFromCTX(node, ctx);
             res = node->retExp;
-            if (node->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (node->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         node->pos = relativeLow->right;
         if (node->pos != NULL && relativeLow->right->op != M_RELATIVELOW_NONE) {
@@ -4957,10 +4980,10 @@ goon2:
             return;
         }
         mln_lang_stack_node_setRetExp(node, res);
-        if (res->type == M_LANG_RETEXP_FUNC) {
+        if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
 again:
             node->call = 1;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4977,7 +5000,7 @@ goon4:
             node->call = 0;
             mln_lang_stack_node_getRetExpFromCTX(node, ctx);
             res = node->retExp;
-            if (node->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (node->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         node->pos = relativeHigh->right;
         if (node->pos != NULL && relativeHigh->right->op != M_RELATIVEHIGH_NONE) {
@@ -5068,10 +5091,10 @@ goon2:
             return;
         }
         mln_lang_stack_node_setRetExp(node, res);
-        if (res->type == M_LANG_RETEXP_FUNC) {
+        if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
 again:
             node->call = 1;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5088,7 +5111,7 @@ goon4:
             node->call = 0;
             mln_lang_stack_node_getRetExpFromCTX(node, ctx);
             res = node->retExp;
-            if (node->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (node->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         node->pos = move->right;
         if (node->pos != NULL && move->right->op != M_MOVE_NONE) {
@@ -5179,10 +5202,10 @@ goon2:
             return;
         }
         mln_lang_stack_node_setRetExp(node, res);
-        if (res->type == M_LANG_RETEXP_FUNC) {
+        if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
 again:
             node->call = 1;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5199,7 +5222,7 @@ goon4:
             node->call = 0;
             mln_lang_stack_node_getRetExpFromCTX(node, ctx);
             res = node->retExp;
-            if (node->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (node->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         node->pos = addsub->right;
         if (node->pos != NULL && addsub->right->op != M_ADDSUB_NONE) {
@@ -5293,10 +5316,10 @@ goon2:
             return;
         }
         mln_lang_stack_node_setRetExp(node, res);
-        if (res->type == M_LANG_RETEXP_FUNC) {
+        if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
 again:
             node->call = 1;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5313,7 +5336,7 @@ goon4:
             node->call = 0;
             mln_lang_stack_node_getRetExpFromCTX(node, ctx);
             res = node->retExp;
-            if (node->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (node->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         node->pos = muldiv->right;
         if (node->pos != NULL && muldiv->right->op != M_MULDIV_NONE) {
@@ -5381,10 +5404,10 @@ static void mln_lang_stack_handler_suffix(mln_lang_ctx_t *ctx)
             }
             mln_lang_stack_node_getRetExpFromCTX(node, ctx);
             mln_lang_ctx_setRetExp(ctx, res);
-            if (res->type == M_LANG_RETEXP_FUNC) {
+            if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
                 node->call = 1;
 again:
-                if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+                if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                     mln_lang_job_free(ctx);
                     return;
                 }
@@ -5404,7 +5427,7 @@ goon2:
                 return;
             }
             res = ctx->retExp;
-            if (ctx->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (ctx->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         node->step = 3;
         if (node->retExp != NULL && node->retExp->type == M_LANG_RETEXP_VAR && node->retExp->data.var->val->func != NULL) {
@@ -5510,11 +5533,11 @@ static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx)
             return;
         }
         mln_lang_ctx_setRetExp(ctx, res);
-        if (res->type == M_LANG_RETEXP_FUNC) {
+        if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
 again_index:
             node->call = 1;
             node->step = 3;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5531,7 +5554,7 @@ goon3:
             }
             node->call = 0;
             res = ctx->retExp;
-            if (ctx->retExp->type == M_LANG_RETEXP_FUNC) goto again_index;
+            if (ctx->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again_index;
         }
         node->step = 7;
         goto goon7;
@@ -5585,12 +5608,12 @@ goon3:
         __mln_lang_retExp_free(retExp);
         ctx->retExp = NULL;
         mln_lang_ctx_setRetExp(ctx, res);
-        if (res->type == M_LANG_RETEXP_FUNC) {
+        if (res->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
 again_property:
             res = ctx->retExp;
             node->call = 1;
             node->step = 6;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, res->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5623,7 +5646,7 @@ again_property:
                 mln_lang_retExp_free(node->retExp2);
                 node->retExp2 = NULL;
             }
-            if ((retExp = __mln_lang_retExp_new(ctx, M_LANG_RETEXP_FUNC, funccall)) == NULL) {
+            if ((retExp = __mln_lang_retExp_createTmpCall(ctx, funccall)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 __mln_lang_funccall_val_free(funccall);
                 mln_lang_job_free(ctx);
@@ -5643,7 +5666,7 @@ again_property:
                 mln_lang_retExp_free(node->retExp2);
                 node->retExp2 = NULL;
             }
-            if ((retExp = __mln_lang_retExp_new(ctx, M_LANG_RETEXP_FUNC, funccall)) == NULL) {
+            if ((retExp = __mln_lang_retExp_createTmpCall(ctx, funccall)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 __mln_lang_funccall_val_free(funccall);
                 mln_lang_job_free(ctx);
@@ -5664,7 +5687,7 @@ again_property:
                 mln_lang_job_free(ctx);
                 return;
             }
-            mln_lang_funccall_val_addArg(node->retExp->data.func, var);
+            mln_lang_funccall_val_addArg(node->retExp->data.var->val->data.call, var);
             mln_lang_ctx_resetRetExp(ctx);
         }
         ASSERT(ctx->retExp == NULL);
@@ -5685,7 +5708,7 @@ again_property:
         } else {
             node->call = 1;
             node->step = 6;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, node->retExp->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, node->retExp->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5701,7 +5724,7 @@ goon6:
             }
             node->call = 0;
             res = ctx->retExp;
-            if (ctx->retExp->type == M_LANG_RETEXP_FUNC) goto again_property;
+            if (ctx->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again_property;
         }
         node->step = 7;
         goto goon7;
@@ -6004,10 +6027,10 @@ static void mln_lang_stack_handler_spec(mln_lang_ctx_t *ctx)
         node->step = 2;
         retExp = ctx->retExp;
         ASSERT(retExp != NULL);
-        if (retExp->type == M_LANG_RETEXP_FUNC) {
+        if (retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
 again:
             node->call = 1;
-            if (mln_lang_stack_handler_funccall_run(ctx, node, retExp->data.func) < 0) {
+            if (mln_lang_stack_handler_funccall_run(ctx, node, retExp->data.var->val->data.call) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -6053,7 +6076,7 @@ again:
                 }
                 mln_lang_stack_node_getRetExpFromCTX(node, ctx);
                 mln_lang_ctx_setRetExp(ctx, retExp);
-                if (retExp->type == M_LANG_RETEXP_FUNC) {
+                if (retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) {
                     goto again;
                 } else {
                     goto goon2;
@@ -6073,7 +6096,7 @@ goon2:
             }
             node->call = 0;
             retExp = ctx->retExp;
-            if (ctx->retExp->type == M_LANG_RETEXP_FUNC) goto again;
+            if (ctx->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
         node->step = 3;
         if ((spec->op == M_SPEC_INC || spec->op == M_SPEC_DEC) && \
@@ -6547,7 +6570,7 @@ static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx)
             mln_lang_job_free(ctx);
             return;
         }
-        if ((retExp = __mln_lang_retExp_new(ctx, M_LANG_RETEXP_FUNC, funccall)) == NULL) {
+        if ((retExp = __mln_lang_retExp_createTmpCall(ctx, funccall)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             __mln_lang_funccall_val_free(funccall);
             mln_lang_job_free(ctx);
@@ -6558,14 +6581,14 @@ static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx)
     } else if (node->step == 1) {
         if (ctx->retExp != NULL) {
             mln_lang_var_t *var;
-            ASSERT(node->retExp != NULL && node->retExp->type == M_LANG_RETEXP_FUNC);
+            ASSERT(node->retExp != NULL && node->retExp->data.var->val->type == M_LANG_VAL_TYPE_CALL);
             ASSERT(ctx->retExp->type == M_LANG_RETEXP_VAR);
             if ((var = __mln_lang_var_convert(ctx, ctx->retExp->data.var)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
                 return;
             }
-            mln_lang_funccall_val_addArg(node->retExp->data.func, var);
+            mln_lang_funccall_val_addArg(node->retExp->data.var->val->data.call, var);
             mln_lang_ctx_resetRetExp(ctx);
         }
         ASSERT(ctx->retExp == NULL);
@@ -6668,8 +6691,12 @@ static void mln_lang_dump_var(mln_lang_var_t *var, int cnt)
         case M_LANG_VAL_TYPE_FUNC:
             mln_lang_dump_function(var->val->data.func, cnt);
             break;
-        default: /*M_LANG_VAL_TYPE_ARRAY:*/
+        case M_LANG_VAL_TYPE_ARRAY:
             mln_lang_dump_array(var->val->data.array, cnt);
+            break;
+        default: /*M_LANG_VAL_TYPE_CALL:*/
+            blank();
+            mln_log(none, "<CALL>\n");
             break;
     }
 }

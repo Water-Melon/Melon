@@ -214,7 +214,7 @@ mln_lang_obj_property(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_ret
             return -1;
         }
     } else {
-        if ((*ret = mln_lang_retExp_new(ctx, M_LANG_RETEXP_FUNC, op2->data.func)) == NULL) {
+        if ((*ret = mln_lang_retExp_createTmpCall(ctx, op2->data.func)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
