@@ -944,7 +944,7 @@ static void mln_lang_mq_msg_free(mln_lang_mq_msg_t *msg)
          * Note:
          * must be identical with msg data allocation type
          */
-        mln_string_pool_free(msg->data.s);
+        mln_string_free(msg->data.s);
     }
     free(msg);
 }
@@ -1108,7 +1108,7 @@ static void mln_lang_ctx_mq_topic_free(mln_lang_ctx_mq_topic_t *lcmt)
 {
     mln_lang_mq_msg_t *msg;
     if (lcmt == NULL) return;
-    if (lcmt->topic_name != NULL) mln_string_pool_free(lcmt->topic_name);
+    if (lcmt->topic_name != NULL) mln_string_free(lcmt->topic_name);
     while ((msg = lcmt->msg_head) != NULL) {
         mln_lang_mq_msg_chain_del(&(lcmt->msg_head), &(lcmt->msg_tail), msg);
         mln_lang_mq_msg_free(msg);

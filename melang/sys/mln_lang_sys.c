@@ -2292,7 +2292,7 @@ static mln_lang_var_t *mln_lang_sys_eval_process(mln_lang_ctx_t *ctx)
     }
     if (mln_lang_ctx_addGlobalVar(newctx, &data_name, data, type) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
-        if (type == M_LANG_VAL_TYPE_STRING) mln_string_pool_free((mln_string_t *)data);
+        if (type == M_LANG_VAL_TYPE_STRING) mln_string_free((mln_string_t *)data);
         mln_lang_job_free(newctx);
         return NULL;
     }

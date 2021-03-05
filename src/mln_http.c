@@ -413,14 +413,14 @@ static inline int mln_http_parse_field(mln_http_t *http, mln_u8ptr_t buf, mln_si
     }
     if (buf >= end) {
         if (mln_hash_insert(header_fields, s, NULL) < 0) {
-            mln_string_pool_free(s);
+            mln_string_free(s);
             mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
             return M_HTTP_RET_ERROR;
         }
         return M_HTTP_RET_OK;
     }
     if (buf[0] != (mln_u8_t)':') {
-        mln_string_pool_free(s);
+        mln_string_free(s);
         if (type == M_HTTP_REQUEST) {
             mln_http_set_error(http, M_HTTP_BAD_REQUEST);
         } else {
@@ -437,7 +437,7 @@ static inline int mln_http_parse_field(mln_http_t *http, mln_u8ptr_t buf, mln_si
     }
     if (buf >= end) {
         if (mln_hash_insert(header_fields, s, NULL) < 0) {
-            mln_string_pool_free(s);
+            mln_string_free(s);
             mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
             return M_HTTP_RET_ERROR;
         }
@@ -446,13 +446,13 @@ static inline int mln_http_parse_field(mln_http_t *http, mln_u8ptr_t buf, mln_si
     mln_string_nSet(&tmp, buf, end-buf);
     v = mln_string_pool_dup(pool, &tmp);
     if (v == NULL) {
-        mln_string_pool_free(s);
+        mln_string_free(s);
         mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     if (mln_hash_insert(header_fields, s, v) < 0) {
-        mln_string_pool_free(v);
-        mln_string_pool_free(s);
+        mln_string_free(v);
+        mln_string_free(s);
         mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
@@ -781,12 +781,12 @@ int mln_http_set_field(mln_http_t *http, mln_string_t *key, mln_string_t *val)
     if (dup_key == NULL) return M_HTTP_RET_ERROR;
     dup_val = mln_string_pool_dup(pool, val);
     if (dup_val == NULL) {
-        mln_string_pool_free(dup_key);
+        mln_string_free(dup_key);
         return M_HTTP_RET_ERROR;
     }
     int ret = mln_hash_replace(header_fields, &dup_key, &dup_val);
-    mln_string_pool_free(dup_key);
-    mln_string_pool_free(dup_val);
+    mln_string_free(dup_key);
+    mln_string_free(dup_val);
 
     if (ret < 0) return M_HTTP_RET_ERROR;
     return M_HTTP_RET_OK;
@@ -923,13 +923,13 @@ void mln_http_destroy(mln_http_t *http)
         mln_chain_pool_release_all(http->body_head);
     }
     if (http->uri != NULL) {
-        mln_string_pool_free(http->uri);
+        mln_string_free(http->uri);
     }
     if (http->args != NULL) {
-        mln_string_pool_free(http->args);
+        mln_string_free(http->args);
     }
     if (http->response_msg != NULL) {
-        mln_string_pool_free(http->response_msg);
+        mln_string_free(http->response_msg);
     }
 
     mln_alloc_free(http);
@@ -947,15 +947,15 @@ void mln_http_reset(mln_http_t *http)
         http->body_head = http->body_tail = NULL;
     }
     if (http->uri != NULL) {
-        mln_string_pool_free(http->uri);
+        mln_string_free(http->uri);
         http->uri = NULL;
     }
     if (http->args != NULL) {
-        mln_string_pool_free(http->args);
+        mln_string_free(http->args);
         http->args = NULL;
     }
     if (http->response_msg != NULL) {
-        mln_string_pool_free(http->response_msg);
+        mln_string_free(http->response_msg);
         http->response_msg = NULL;
     }
     http->error = M_HTTP_OK;
@@ -968,7 +968,7 @@ void mln_http_reset(mln_http_t *http)
 
 static void mln_http_hash_free(void *data)
 {
-    mln_string_pool_free((mln_string_t *)data);
+    mln_string_free((mln_string_t *)data);
 }
 
 static mln_u64_t mln_http_hash_calc(mln_hash_t *h, void *key)

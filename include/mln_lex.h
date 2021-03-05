@@ -654,7 +654,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
     void PREFIX_NAME##_free(PREFIX_NAME##_struct_t *ptr)\
     {\
         if (ptr == NULL) return ;\
-        if (ptr->text != NULL) mln_string_pool_free(ptr->text);\
+        if (ptr->text != NULL) mln_string_free(ptr->text);\
         mln_alloc_free(ptr);\
     }\
     \
@@ -929,7 +929,7 @@ lp:\
         tmp.val = NULL;\
         rn = mln_rbtree_search(lex->macros, lex->macros->root, &tmp);\
         if (!mln_rbtree_null(rn, lex->macros)) {\
-            mln_string_pool_free(k);\
+            mln_string_free(k);\
             return NULL;\
         }\
         if (c != '\n') {\
@@ -964,11 +964,11 @@ again:\
         }\
 goon:\
         if ((lm = mln_lex_macro_new(lex->pool, k, v)) == NULL) {\
-            mln_string_pool_free(k);\
+            mln_string_free(k);\
             mln_lex_setError(lex, MLN_LEX_ENMEM);\
             return NULL;\
         }\
-        mln_string_pool_free(k);\
+        mln_string_free(k);\
         if ((rn = mln_rbtree_node_new(lex->macros, lm)) == NULL) {\
             mln_lex_setError(lex, MLN_LEX_ENMEM);\
             return NULL;\

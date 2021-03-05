@@ -91,14 +91,14 @@ mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
             return NULL;
         }
         if ((f->fd = open(filepath, O_RDONLY)) < 0) {
-            mln_string_pool_free(f->file_path);
+            mln_string_free(f->file_path);
             mln_alloc_free(f);
             return NULL;
         }
         f->is_tmp = 0;
         if (fstat(f->fd, &st) < 0) {
             close(f->fd);
-            mln_string_pool_free(f->file_path);
+            mln_string_free(f->file_path);
             mln_alloc_free(f);
             return NULL;
         }
@@ -111,7 +111,7 @@ mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
         f->fset = fs;
         if ((rn = mln_rbtree_node_new(fs->reg_file_tree, f)) == NULL) {
             close(f->fd);
-            mln_string_pool_free(f->file_path);
+            mln_string_free(f->file_path);
             mln_alloc_free(f);
             return NULL;
         }
@@ -163,7 +163,7 @@ static void mln_file_free(void *pfile)
 
     mln_file_t *f = (mln_file_t *)pfile;
     if (f->file_path != NULL)
-        mln_string_pool_free(f->file_path);
+        mln_string_free(f->file_path);
     if (f->fd >= 0) close(f->fd);
     mln_alloc_free(f);
 }

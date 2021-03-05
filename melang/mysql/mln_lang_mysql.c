@@ -44,24 +44,24 @@ static mln_lang_mysql_t *mln_lang_mysql_new(mln_lang_ctx_t *ctx, mln_string_t *d
         return NULL;
     }
     if ((lm->username = mln_string_pool_dup(ctx->pool, username)) == NULL) {
-        mln_string_pool_free(lm->db);
+        mln_string_free(lm->db);
         mln_alloc_free(lm);
         close(fds[0]);
         close(fds[1]);
         return NULL;
     }
     if ((lm->password = mln_string_pool_dup(ctx->pool, password)) == NULL) {
-        mln_string_pool_free(lm->username);
-        mln_string_pool_free(lm->db);
+        mln_string_free(lm->username);
+        mln_string_free(lm->db);
         mln_alloc_free(lm);
         close(fds[0]);
         close(fds[1]);
         return NULL;
     }
     if ((lm->host = mln_string_pool_dup(ctx->pool, host)) == NULL) {
-        mln_string_pool_free(lm->password);
-        mln_string_pool_free(lm->username);
-        mln_string_pool_free(lm->db);
+        mln_string_free(lm->password);
+        mln_string_free(lm->username);
+        mln_string_free(lm->db);
         mln_alloc_free(lm);
         close(fds[0]);
         close(fds[1]);
@@ -81,11 +81,11 @@ static void mln_lang_mysql_free(mln_lang_mysql_t *lm)
     if (lm->ret_var != NULL) mln_lang_var_free(lm->ret_var);
     ASSERT(lm->result == NULL);
     if (lm->mysql != NULL) mysql_close(lm->mysql);
-    if (lm->db != NULL) mln_string_pool_free(lm->db);
-    if (lm->username != NULL) mln_string_pool_free(lm->username);
-    if (lm->password != NULL) mln_string_pool_free(lm->password);
-    if (lm->host != NULL) mln_string_pool_free(lm->host);
-    if (lm->sql != NULL) mln_string_pool_free(lm->sql);
+    if (lm->db != NULL) mln_string_free(lm->db);
+    if (lm->username != NULL) mln_string_free(lm->username);
+    if (lm->password != NULL) mln_string_free(lm->password);
+    if (lm->host != NULL) mln_string_free(lm->host);
+    if (lm->sql != NULL) mln_string_free(lm->sql);
     close(lm->fd_signal);
     close(lm->fd_useless);
     mln_alloc_free(lm);
@@ -1046,7 +1046,7 @@ static mln_lang_var_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
     }
 
     if (mysql->sql != NULL) {
-        mln_string_pool_free(mysql->sql);
+        mln_string_free(mysql->sql);
         mysql->sql = NULL;
     }
     if ((mysql->sql = mln_string_pool_dup(ctx->pool, val1->data.s)) == NULL) {

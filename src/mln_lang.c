@@ -566,7 +566,7 @@ mln_lang_ast_cache_free(mln_lang_ast_cache_t *cache)
     if (cache->stm != NULL)
         mln_lang_ast_free(cache->stm);
     if (cache->code != NULL)
-        mln_string_pool_free(cache->code);
+        mln_string_free(cache->code);
     mln_alloc_free(cache);
 }
 
@@ -825,7 +825,7 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
         __mln_lang_var_free(var);
     }
     if (ctx->ret_var != NULL) __mln_lang_var_free(ctx->ret_var);
-    if (ctx->filename != NULL) mln_string_pool_free(ctx->filename);
+    if (ctx->filename != NULL) mln_string_free(ctx->filename);
     if (ctx->resource_set != NULL) mln_rbtree_destroy(ctx->resource_set);
     if (ctx->msg_map != NULL) mln_rbtree_destroy(ctx->msg_map);
     if (ctx->run_stack != NULL) mln_stack_destroy(ctx->run_stack);
@@ -1158,7 +1158,7 @@ mln_lang_var_t *mln_lang_var_createTmpString(mln_lang_ctx_t *ctx, mln_string_t *
         return NULL;
     }
     if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_STRING, dup)) == NULL) {
-        mln_string_pool_free(dup);
+        mln_string_free(dup);
         return NULL;
     }
     if ((var = __mln_lang_var_new(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
@@ -1368,7 +1368,7 @@ static void mln_lang_scope_free(mln_lang_scope_t *scope)
     if (scope == NULL) return;
     mln_lang_symbolNode_t *sym;
 
-    if (scope->name != NULL) mln_string_pool_free(scope->name);
+    if (scope->name != NULL) mln_string_free(scope->name);
     while ((sym = scope->sym_head) != NULL) {
         mln_lang_sym_scope_chain_del(&(scope->sym_head), &(scope->sym_tail), sym);
         mln_lang_sym_chain_del(&(sym->bucket->head), &(sym->bucket->tail), sym);
@@ -1538,7 +1538,7 @@ void mln_lang_set_detail_free(mln_lang_set_detail_t *c)
 {
     if (c == NULL) return;
     if (c->ref-- > 1) return;
-    if (c->name != NULL) mln_string_pool_free(c->name);
+    if (c->name != NULL) mln_string_free(c->name);
     if (c->members != NULL) mln_rbtree_destroy(c->members);
     mln_alloc_free(c);
 }
@@ -1551,7 +1551,7 @@ void mln_lang_set_detail_freeSelf(mln_lang_set_detail_t *c)
         c->members = NULL;
     }
     if (c->ref-- > 1) return;
-    if (c->name != NULL) mln_string_pool_free(c->name);
+    if (c->name != NULL) mln_string_free(c->name);
     mln_alloc_free(c);
 }
 
@@ -1730,7 +1730,7 @@ mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_va
     }
     if (var->type == M_LANG_VAR_NORMAL) {
         if ((var->val = mln_lang_val_dup(ctx, realvar->val)) == NULL) {
-            if (var->name != NULL) mln_string_pool_free(var->name);
+            if (var->name != NULL) mln_string_free(var->name);
             mln_alloc_free(var);
             return NULL;
         }
@@ -1787,7 +1787,7 @@ static inline void __mln_lang_var_free(void *data)
     if (data == NULL) return;
     mln_lang_var_t *var = (mln_lang_var_t *)data;
     if (var->name != NULL) {
-        mln_string_pool_free(var->name);
+        mln_string_free(var->name);
         var->name = NULL;
     }
     if (var->val != NULL) {
@@ -2530,7 +2530,7 @@ static inline void mln_lang_val_freeData(mln_lang_val_t *val)
             break;
         case M_LANG_VAL_TYPE_STRING:
             if (val->data.s != NULL) {
-                mln_string_pool_free(val->data.s);
+                mln_string_free(val->data.s);
                 val->data.s = NULL;
             }
             break;
@@ -2591,7 +2591,7 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
     if (ret == NULL) {
         switch (type) {
             case M_LANG_VAL_TYPE_STRING:
-                mln_string_pool_free((mln_string_t *)data);
+                mln_string_free((mln_string_t *)data);
                 break;
             case M_LANG_VAL_TYPE_OBJECT:
                 --(((mln_lang_object_t *)data)->ref);
@@ -3072,7 +3072,7 @@ static inline void __mln_lang_funccall_val_free(mln_lang_funccall_val_t *func)
 {
     if (func == NULL) return;
     mln_lang_var_t *var, *fr;
-    if (func->name != NULL) mln_string_pool_free(func->name);
+    if (func->name != NULL) mln_string_free(func->name);
     var = func->args_head;
     while (var != NULL) {
         fr = var;
@@ -5435,7 +5435,7 @@ goon3:
         if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_STRING, id)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             node->ret_var2 = NULL;
-            mln_string_pool_free(id);
+            mln_string_free(id);
             mln_lang_job_free(ctx);
             return;
         }
@@ -6121,7 +6121,7 @@ mln_lang_stack_handler_factor_string(mln_lang_ctx_t *ctx, mln_lang_factor_t *fac
     s = mln_string_ref_dup(factor->data.s_id);
     if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_STRING, s)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
-        mln_string_pool_free(s);
+        mln_string_free(s);
         return -1;
     }
     if ((var = __mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
@@ -6585,7 +6585,7 @@ static mln_lang_msg_t *__mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *nam
     }
     lm->script_val = lm->c_val = NULL;
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
-        mln_string_pool_free(lm->name);
+        mln_string_free(lm->name);
         mln_alloc_free(lm);
         return NULL;
     }
@@ -6617,7 +6617,7 @@ static void __mln_lang_msg_free(void *data)
 {
     if (data == NULL) return;
     mln_lang_msg_t *lm = (mln_lang_msg_t *)data;
-    if (lm->name != NULL) mln_string_pool_free(lm->name);
+    if (lm->name != NULL) mln_string_free(lm->name);
     if (lm->script_val != NULL) __mln_lang_val_free(lm->script_val);
     if (lm->c_val != NULL) __mln_lang_val_free(lm->c_val);
     mln_event_set_fd(lm->ctx->lang->ev, lm->script_fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
@@ -7684,7 +7684,7 @@ static void mln_lang_ctx_resource_free_handler(mln_lang_resource_t *lr)
 {
     if (lr == NULL) return;
     if (lr->free_handler != NULL) lr->free_handler(lr->data);
-    mln_string_pool_free(lr->name);
+    mln_string_free(lr->name);
     mln_alloc_free(lr);
 }
 

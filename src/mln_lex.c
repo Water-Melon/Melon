@@ -139,7 +139,7 @@ void mln_lex_input_free(void *in)
     if (in == NULL) return;
     mln_lex_input_t *input = (mln_lex_input_t *)in;
     if (input->fd >= 0) close(input->fd);
-    if (input->data != NULL) mln_string_pool_free(input->data);
+    if (input->data != NULL) mln_string_free(input->data);
     if (input->buf != NULL && input->type == M_INPUT_T_FILE) mln_alloc_free(input->buf);
     mln_alloc_free(input);
 }
@@ -156,7 +156,7 @@ mln_lex_macro_new(mln_alloc_t *pool, mln_string_t *key, mln_string_t *val)
         return NULL;
     }
     if (val != NULL && (lm->val = mln_string_pool_dup(pool, val)) == NULL) {
-        mln_string_pool_free(lm->key);
+        mln_string_free(lm->key);
         mln_alloc_free(lm);
         return NULL;
     }
@@ -168,8 +168,8 @@ void mln_lex_macro_free(void *data)
 {
     if (data == NULL) return;
     mln_lex_macro_t *lm = (mln_lex_macro_t *)data;
-    if (lm->key != NULL) mln_string_pool_free(lm->key);
-    if (lm->val != NULL) mln_string_pool_free(lm->val);
+    if (lm->key != NULL) mln_string_free(lm->key);
+    if (lm->val != NULL) mln_string_free(lm->val);
     mln_alloc_free(lm);
 }
 
