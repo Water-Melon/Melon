@@ -121,15 +121,12 @@ struct mln_lang_ctx_s {
     struct mln_lang_ctx_s           *next;
     mln_lang_stack_node_t           *free_node_head;
     mln_lang_stack_node_t           *free_node_tail;
-    mln_lang_retExp_t               *retExp_head;
-    mln_lang_retExp_t               *retExp_tail;
     mln_lang_var_t                  *var_head;
     mln_lang_var_t                  *var_tail;
     mln_lang_val_t                  *val_head;
     mln_lang_val_t                  *val_tail;
     mln_lang_symbolNode_t           *sym_head;
     mln_lang_symbolNode_t           *sym_tail;
-    mln_u32_t                        retExp_count:8;
     mln_u32_t                        var_count:8;
     mln_u32_t                        val_count:8;
     mln_u32_t                        sym_count:8;
@@ -159,9 +156,6 @@ typedef enum {
 } mln_lang_retExp_type_t;
 
 struct mln_lang_retExp_s {
-    mln_lang_ctx_t                  *ctx;
-    struct mln_lang_retExp_s        *prev;
-    struct mln_lang_retExp_s        *next;
     union {
         mln_lang_var_t          *var;
     } data;

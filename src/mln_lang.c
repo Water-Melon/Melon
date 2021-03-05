@@ -78,14 +78,6 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_var_cache, \
                       static inline void, \
                       cache_prev, \
                       cache_next);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_retExp, \
-                       mln_lang_retExp_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_lang_retExp, \
-                      mln_lang_retExp_t, \
-                      static inline void, \
-                      prev, \
-                      next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_stack_node, \
                        mln_lang_stack_node_t, \
                        static inline void,);
@@ -766,11 +758,10 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->return_handler = NULL;
     ctx->prev = ctx->next = NULL;
     ctx->free_node_head = ctx->free_node_tail = NULL;
-    ctx->retExp_head = ctx->retExp_tail = NULL;
     ctx->var_head = ctx->var_tail = NULL;
     ctx->val_head = ctx->val_tail = NULL;
     ctx->sym_head = ctx->sym_tail = NULL;
-    ctx->retExp_count = ctx->var_count = ctx->val_count = ctx->sym_count = 0;
+    ctx->var_count = ctx->val_count = ctx->sym_count = 0;
 
     mln_lang_stack_node_t *node = mln_lang_stack_node_new(ctx, M_LSNT_STM, ctx->stm);
     if (node == NULL) {
@@ -816,7 +807,6 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     if (ctx == NULL) return;
     mln_lang_scope_t *scope;
     mln_lang_stack_node_t *sn;
-    mln_lang_retExp_t *r;
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     mln_lang_symbolNode_t *sym;
@@ -835,11 +825,6 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
         mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), var);
         var->ctx = NULL;
         __mln_lang_var_free(var);
-    }
-    while ((r = ctx->retExp_head) != NULL) {
-        mln_lang_retExp_chain_del(&(ctx->retExp_head), &(ctx->retExp_tail), r);
-        r->ctx = NULL;
-        __mln_lang_retExp_free(r);
     }
     if (ctx->retExp != NULL) __mln_lang_retExp_free(ctx->retExp);
     if (ctx->filename != NULL) mln_string_pool_free(ctx->filename);
@@ -1032,15 +1017,8 @@ static inline mln_lang_retExp_t *
 __mln_lang_retExp_new(mln_lang_ctx_t *ctx, mln_lang_retExp_type_t type, void *data)
 {
     mln_lang_retExp_t *retExp;
-    if ((retExp = ctx->retExp_head) != NULL) {
-        mln_lang_retExp_chain_del(&(ctx->retExp_head), &(ctx->retExp_tail), retExp);
-        --(ctx->retExp_count);
-    } else {
-        if ((retExp = (mln_lang_retExp_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_retExp_t))) == NULL) {
-            return NULL;
-        }
-        retExp->ctx = ctx;
-        retExp->prev = retExp->next = NULL;
+    if ((retExp = (mln_lang_retExp_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_retExp_t))) == NULL) {
+        return NULL;
     }
     retExp->type = type;
     retExp->data.var = (mln_lang_var_t *)data;
@@ -1060,12 +1038,7 @@ static inline void __mln_lang_retExp_free(mln_lang_retExp_t *retExp)
         __mln_lang_var_free(retExp->data.var);
     retExp->data.var = NULL;
 
-    if (retExp->ctx != NULL && retExp->ctx->retExp_count < M_LANG_CACHE_COUNT) {
-        mln_lang_retExp_chain_add(&(retExp->ctx->retExp_head), &(retExp->ctx->retExp_tail), retExp);
-        ++(retExp->ctx->retExp_count);
-    } else {
-        mln_alloc_free(retExp);
-    }
+    mln_alloc_free(retExp);
 }
 
 mln_lang_retExp_t *mln_lang_retExp_createTmpCall(mln_lang_ctx_t *ctx, mln_lang_funccall_val_t *call)

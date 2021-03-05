@@ -214,12 +214,12 @@ mln_lang_obj_property(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_ret
             return -1;
         }
     } else {
-        if ((*ret = mln_lang_retExp_createTmpCall(ctx, op2->data.func)) == NULL) {
+        if ((*ret = mln_lang_retExp_createTmpCall(ctx, op2->data.var->val->data.call)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
-        mln_lang_funccall_val_addObject(op2->data.func, mln_lang_var_getVal(op1->data.var));
-        op2->data.func = NULL;
+        mln_lang_funccall_val_addObject(op2->data.var->val->data.call, mln_lang_var_getVal(op1->data.var));
+        op2->data.var->val->data.call = NULL;
     }
     return 0;
 }
