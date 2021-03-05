@@ -3071,11 +3071,13 @@ void mln_lang_funccall_val_free(mln_lang_funccall_val_t *func)
 static inline void __mln_lang_funccall_val_free(mln_lang_funccall_val_t *func)
 {
     if (func == NULL) return;
-    mln_lang_var_t *var;
+    mln_lang_var_t *var, *fr;
     if (func->name != NULL) mln_string_pool_free(func->name);
-    while ((var = func->args_head) != NULL) {
-        mln_lang_var_chain_del(&(func->args_head), &(func->args_tail), var);
-        __mln_lang_var_free(var);
+    var = func->args_head;
+    while (var != NULL) {
+        fr = var;
+        var = var->next;
+        __mln_lang_var_free(fr);
     }
     if (func->object != NULL) __mln_lang_val_free(func->object);
     mln_alloc_free(func);
