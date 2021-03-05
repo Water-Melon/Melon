@@ -12,7 +12,7 @@
 #define ASSERT(x);
 #endif
 
-static mln_lang_retExp_t *mln_lang_rc4_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_rc4_process(mln_lang_ctx_t *ctx);
 
 int mln_lang_rc(mln_lang_ctx_t *ctx)
 {
@@ -70,11 +70,11 @@ int mln_lang_rc(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_rc4_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_rc4_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_string_t *tmp;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("key");
     mln_lang_symbolNode_t *sym;
@@ -115,10 +115,10 @@ static mln_lang_retExp_t *mln_lang_rc4_process(mln_lang_ctx_t *ctx)
     mln_rc4_init(s, val->data.s->data, val->data.s->len);
     mln_rc4_calc(s, tmp->data, tmp->len);
 
-    if ((retExp = mln_lang_retExp_createTmpString(ctx, tmp, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpString(ctx, tmp, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 

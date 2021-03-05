@@ -13,17 +13,17 @@
 #endif
 
 static int
-mln_lang_func_assign(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_func_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_func_pluseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_func_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_func_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_func_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_func_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_func_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_func_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_func_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_func_not(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_func_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 
 mln_lang_method_t mln_lang_func_oprs = {
     mln_lang_func_assign,
@@ -65,47 +65,39 @@ mln_lang_method_t mln_lang_func_oprs = {
 };
 
 static int
-mln_lang_func_assign(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_func_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_lang_var_t *var;
-    if (mln_lang_var_setValue(ctx, op1->data.var, op2->data.var) < 0) {
+    if (mln_lang_var_setValue(ctx, op1, op2) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = mln_lang_var_convert(ctx, op1->data.var)) == NULL) {
+    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
-    if ((*ret = mln_lang_retExp_new(ctx, M_LANG_RETEXP_VAR, var)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        mln_lang_var_free(var);
         return -1;
     }
     return 0;
 }
 
 static int
-mln_lang_func_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_func_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     mln_u8ptr_t data1, data2;
     mln_lang_func_detail_t *f1, *f2;
-    if (mln_lang_var_getValType(op1->data.var) != mln_lang_var_getValType(op2->data.var)) {
+    if (mln_lang_var_getValType(op1) != mln_lang_var_getValType(op2)) {
 f:
-        if ((*ret = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
         return 0;
     }
-    f1 = mln_lang_var_getVal(op1->data.var)->data.func;
-    f2 = mln_lang_var_getVal(op2->data.var)->data.func;
+    f1 = mln_lang_var_getVal(op1)->data.func;
+    f2 = mln_lang_var_getVal(op2)->data.func;
     if (f1->type != f2->type) goto f;
     data1 = f1->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f1->data.process: (mln_u8ptr_t)f1->data.stm;
     data2 = f2->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f2->data.process: (mln_u8ptr_t)f2->data.stm;
     if (data1 != data2) goto f;
-    if ((*ret = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+    if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -113,10 +105,9 @@ f:
 }
 
 static int
-mln_lang_func_pluseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_func_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_s32_t type = mln_lang_var_getValType(op1->data.var);
+    mln_s32_t type = mln_lang_var_getValType(op1);
     if (type != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
@@ -135,26 +126,25 @@ mln_lang_func_pluseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
 }
 
 static int
-mln_lang_func_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_func_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
     mln_u8ptr_t data1, data2;
     mln_lang_func_detail_t *f1, *f2;
-    if (mln_lang_var_getValType(op1->data.var) != mln_lang_var_getValType(op2->data.var)) {
+    if (mln_lang_var_getValType(op1) != mln_lang_var_getValType(op2)) {
 t:
-        if ((*ret = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
         return 0;
     }
-    f1 = mln_lang_var_getVal(op1->data.var)->data.func;
-    f2 = mln_lang_var_getVal(op2->data.var)->data.func;
+    f1 = mln_lang_var_getVal(op1)->data.func;
+    f2 = mln_lang_var_getVal(op2)->data.func;
     if (f1->type != f2->type) goto t;
     data1 = f1->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f1->data.process: (mln_u8ptr_t)f1->data.stm;
     data2 = f2->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f2->data.process: (mln_u8ptr_t)f2->data.stm;
     if (data1 != data2) goto t;
-    if ((*ret = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -162,10 +152,9 @@ t:
 }
 
 static int
-mln_lang_func_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_func_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    if (mln_lang_var_getValType(op2->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_getValType(op2) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
     }
@@ -183,16 +172,15 @@ mln_lang_func_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp
 }
 
 static int
-mln_lang_func_not(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_func_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR);
 #ifdef __DEBUG__
-    if (op1->data.var->val->data.func->type == M_FUNC_INTERNAL)
-        ASSERT(op1->data.var->val->data.func->data.process);
+    if (op1->val->data.func->type == M_FUNC_INTERNAL)
+        ASSERT(op1->val->data.func->data.process);
     else
-        ASSERT(op1->data.var->val->data.func->data.stm);
+        ASSERT(op1->val->data.func->data.stm);
 #endif
-    if ((*ret = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }

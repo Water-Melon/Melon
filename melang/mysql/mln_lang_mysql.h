@@ -13,7 +13,7 @@
 
 typedef struct mln_lang_mysql_s {
     mln_lang_ctx_t          *ctx;
-    mln_lang_retExp_t       *retExp;
+    mln_lang_var_t          *ret_var;
     MYSQL                   *mysql;
     MYSQL_RES               *result;
     MYSQL_ROW                row;

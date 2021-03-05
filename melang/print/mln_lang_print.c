@@ -13,7 +13,7 @@
 #define ASSERT(x);
 #endif
 
-static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_print_process(mln_lang_ctx_t *ctx);
 static void mln_lang_print_array(mln_lang_array_t *arr);
 static int mln_lang_print_array_elem(mln_rbtree_node_t *node, void *rn_data, void *udata);
 
@@ -59,11 +59,11 @@ int mln_lang_print(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t type;
     mln_lang_val_t *val;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t var = mln_string("var");
     mln_lang_symbolNode_t *sym;
     if ((sym = mln_lang_symbolNode_search(ctx, &var, 1)) == NULL) {
@@ -106,11 +106,11 @@ static mln_lang_retExp_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
             break;
     }
 
-    if ((retExp = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 
 static void mln_lang_print_array(mln_lang_array_t *arr)

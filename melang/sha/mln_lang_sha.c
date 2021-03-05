@@ -12,8 +12,8 @@
 #define ASSERT(x);
 #endif
 
-static mln_lang_retExp_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx);
 static int mln_lang_sha1_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_sha256_handler(mln_lang_ctx_t *ctx);
 
@@ -66,7 +66,7 @@ static int mln_lang_sha1_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
 {
     mln_s8_t res[41];
     mln_sha1_t sha1;
@@ -74,7 +74,7 @@ static mln_lang_retExp_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_string_t *tmp, t;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_lang_symbolNode_t *sym;
 
@@ -117,11 +117,11 @@ static mln_lang_retExp_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
             mln_sha1_calc(&sha1, buf, n, 0);
         }
         if (n < 0) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
-            return retExp;
+            return ret_var;
         }
         mln_sha1_calc(&sha1, NULL, 0, 1);
         mln_sha1_toString(&sha1, res, sizeof(res));
@@ -130,11 +130,11 @@ static mln_lang_retExp_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     mln_string_nSet(&t, res, sizeof(res)-1);
-    if ((retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpString(ctx, &t, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_sha256_handler(mln_lang_ctx_t *ctx)
@@ -179,7 +179,7 @@ static int mln_lang_sha256_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
 {
     mln_s8_t res[65];
     mln_sha256_t sha256;
@@ -187,7 +187,7 @@ static mln_lang_retExp_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_string_t *tmp, t;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_lang_symbolNode_t *sym;
 
@@ -230,11 +230,11 @@ static mln_lang_retExp_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
             mln_sha256_calc(&sha256, buf, n, 0);
         }
         if (n < 0) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
-            return retExp;
+            return ret_var;
         }
         mln_sha256_calc(&sha256, NULL, 0, 1);
         mln_sha256_toString(&sha256, res, sizeof(res));
@@ -243,10 +243,10 @@ static mln_lang_retExp_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     mln_string_nSet(&t, res, sizeof(res)-1);
-    if ((retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpString(ctx, &t, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 

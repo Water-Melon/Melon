@@ -32,7 +32,7 @@ static mln_lang_mysql_t *mln_lang_mysql_new(mln_lang_ctx_t *ctx, mln_string_t *d
         return NULL;
     }
     lm->ctx = ctx;
-    lm->retExp = NULL;
+    lm->ret_var = NULL;
     lm->mysql = NULL;
     lm->result = NULL;
     lm->nfield = 0;
@@ -78,7 +78,7 @@ static mln_lang_mysql_t *mln_lang_mysql_new(mln_lang_ctx_t *ctx, mln_string_t *d
 static void mln_lang_mysql_free(mln_lang_mysql_t *lm)
 {
     if (lm == NULL) return;
-    if (lm->retExp != NULL) mln_lang_retExp_free(lm->retExp);
+    if (lm->ret_var != NULL) mln_lang_var_free(lm->ret_var);
     ASSERT(lm->result == NULL);
     if (lm->mysql != NULL) mysql_close(lm->mysql);
     if (lm->db != NULL) mln_string_pool_free(lm->db);
@@ -144,7 +144,7 @@ static void mln_lang_mysql_connect_test(mln_event_t *ev, int fd, void *data)
     mln_lang_mysql_timeout_t *lmt;
     mln_lang_mysql_t *mysql = (mln_lang_mysql_t *)data;
     mln_lang_ctx_t *ctx = mysql->ctx;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
 
     lmt = (mln_lang_mysql_timeout_t *)mln_lang_ctx_resource_fetch(ctx, "mysql");
     ASSERT(lmt != NULL);
@@ -167,7 +167,7 @@ static void mln_lang_mysql_connect_test(mln_event_t *ev, int fd, void *data)
     } else {
         mln_event_set_fd(ctx->lang->ev, mysql->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_lang_mysql_chain_del(&(lmt->head), &(lmt->tail), mysql);
-        if ((retExp = mln_lang_retExp_createTmpTrue(ctx, NULL)) != NULL) {
+        if ((ret_var = mln_lang_var_createTmpTrue(ctx, NULL)) != NULL) {
             mln_s32_t type;
             mln_lang_symbolNode_t *sym;
             mln_string_t _this = mln_string("this");
@@ -176,7 +176,7 @@ static void mln_lang_mysql_connect_test(mln_event_t *ev, int fd, void *data)
             mln_lang_var_t *var;
             if ((sym = mln_lang_symbolNode_search(ctx, &_this, 1)) == NULL) {
                 mln_lang_errmsg(ctx, "Lack of 'this'.");
-                mln_lang_retExp_free(retExp);
+                mln_lang_var_free(ret_var);
                 mln_lang_mysql_free(mysql);
                 goto out;
             }
@@ -185,25 +185,25 @@ static void mln_lang_mysql_connect_test(mln_event_t *ev, int fd, void *data)
             val = sym->data.var->val;
             if (type != M_LANG_VAL_TYPE_OBJECT) {
                 mln_lang_errmsg(ctx, "'this' not object.");
-                mln_lang_retExp_free(retExp);
+                mln_lang_var_free(ret_var);
                 mln_lang_mysql_free(mysql);
                 goto out;
             }
             /*fd*/
             if ((var = mln_lang_set_member_search(val->data.obj->members, &v)) == NULL) {
                 mln_lang_errmsg(ctx, "Lack of member 'fd'.");
-                mln_lang_retExp_free(retExp);
+                mln_lang_var_free(ret_var);
                 mln_lang_mysql_free(mysql);
                 goto out;
             }
             if (mln_lang_var_getValType(var) != M_LANG_VAL_TYPE_INT) {
                 mln_lang_errmsg(ctx, "Invalid type of 'fd'.");
-                mln_lang_retExp_free(retExp);
+                mln_lang_var_free(ret_var);
                 mln_lang_mysql_free(mysql);
                 goto out;
             }
             val = var->val;
-            mln_lang_ctx_setRetExp(mysql->ctx, retExp);
+            mln_lang_ctx_set_ret_var(mysql->ctx, ret_var);
             memcpy(&(val->data.s), &mysql, sizeof(mln_lang_mysql_t *));
             mln_lang_val_setNotModify(val);
         } else {
@@ -215,7 +215,7 @@ out:
     }
 }
 
-static mln_lang_retExp_t *mln_lang_mysql_connect_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_mysql_connect_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t type;
     mln_lang_val_t *val1, *val2, *val3, *val4, *val5, *val;
@@ -229,7 +229,7 @@ static mln_lang_retExp_t *mln_lang_mysql_connect_process(mln_lang_ctx_t *ctx)
     mln_string_t typename = mln_string("Mysql");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
     mln_lang_mysql_timeout_t *lmt;
 
@@ -340,7 +340,7 @@ static mln_lang_retExp_t *mln_lang_mysql_connect_process(mln_lang_ctx_t *ctx)
         mln_lang_mysql_free(mysql);
         return NULL;
     }
-    if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_event_set_fd(ctx->lang->ev, mysql->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_lang_mysql_free(mysql);
@@ -348,7 +348,7 @@ static mln_lang_retExp_t *mln_lang_mysql_connect_process(mln_lang_ctx_t *ctx)
     }
     mln_lang_mysql_chain_add(&(lmt->head), &(lmt->tail), mysql);
     mln_lang_ctx_suspend(ctx);
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_mysql_add_connect(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
@@ -404,7 +404,7 @@ static int mln_lang_mysql_add_connect(mln_lang_ctx_t *ctx, mln_lang_set_detail_t
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_mysql_close_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_mysql_close_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t type;
     mln_lang_val_t *val;
@@ -412,7 +412,7 @@ static mln_lang_retExp_t *mln_lang_mysql_close_process(mln_lang_ctx_t *ctx)
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
 
     if ((sym = mln_lang_symbolNode_search(ctx, &_this, 1)) == NULL) {
@@ -444,11 +444,11 @@ static mln_lang_retExp_t *mln_lang_mysql_close_process(mln_lang_ctx_t *ctx)
     memcpy(&mysql, &(val->data.s), sizeof(mln_lang_mysql_t *));
     mln_lang_mysql_free(mysql);
     val->data.i = 0;
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_mysql_add_close(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
@@ -480,7 +480,7 @@ static int mln_lang_mysql_add_close(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_mysql_commit_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_mysql_commit_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t type;
     mln_lang_val_t *val;
@@ -488,7 +488,7 @@ static mln_lang_retExp_t *mln_lang_mysql_commit_process(mln_lang_ctx_t *ctx)
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
 
     if ((sym = mln_lang_symbolNode_search(ctx, &_this, 1)) == NULL) {
@@ -519,17 +519,17 @@ static mln_lang_retExp_t *mln_lang_mysql_commit_process(mln_lang_ctx_t *ctx)
     val = var->val;
     memcpy(&mysql, &(val->data.s), sizeof(mln_lang_mysql_t *));
     if (mysql == NULL || mysql_commit(mysql->mysql)) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     } else {
-        if ((retExp = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_mysql_add_commit(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
@@ -561,7 +561,7 @@ static int mln_lang_mysql_add_commit(mln_lang_ctx_t *ctx, mln_lang_set_detail_t 
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_mysql_rollback_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_mysql_rollback_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t type;
     mln_lang_val_t *val;
@@ -569,7 +569,7 @@ static mln_lang_retExp_t *mln_lang_mysql_rollback_process(mln_lang_ctx_t *ctx)
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
 
     if ((sym = mln_lang_symbolNode_search(ctx, &_this, 1)) == NULL) {
@@ -600,17 +600,17 @@ static mln_lang_retExp_t *mln_lang_mysql_rollback_process(mln_lang_ctx_t *ctx)
     val = var->val;
     memcpy(&mysql, &(val->data.s), sizeof(mln_lang_mysql_t *));
     if (mysql == NULL || mysql_rollback(mysql->mysql)) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     } else {
-        if ((retExp = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_mysql_add_rollback(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
@@ -642,7 +642,7 @@ static int mln_lang_mysql_add_rollback(mln_lang_ctx_t *ctx, mln_lang_set_detail_
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_mysql_error_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_mysql_error_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t type;
     mln_lang_val_t *val;
@@ -650,7 +650,7 @@ static mln_lang_retExp_t *mln_lang_mysql_error_process(mln_lang_ctx_t *ctx)
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql"), tmp;
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
     const char *err;
 
@@ -682,19 +682,19 @@ static mln_lang_retExp_t *mln_lang_mysql_error_process(mln_lang_ctx_t *ctx)
     val = var->val;
     memcpy(&mysql, &(val->data.s), sizeof(mln_lang_mysql_t *));
     if (mysql == NULL) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     } else {
         err = mysql_error(mysql->mysql);
         mln_string_set(&tmp, err);
-        if ((retExp = mln_lang_retExp_createTmpString(ctx, &tmp, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpString(ctx, &tmp, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_mysql_add_error(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
@@ -726,7 +726,7 @@ static int mln_lang_mysql_add_error(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_mysql_errno_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_mysql_errno_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t type;
     mln_lang_val_t *val;
@@ -734,7 +734,7 @@ static mln_lang_retExp_t *mln_lang_mysql_errno_process(mln_lang_ctx_t *ctx)
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
     unsigned int err;
 
@@ -766,18 +766,18 @@ static mln_lang_retExp_t *mln_lang_mysql_errno_process(mln_lang_ctx_t *ctx)
     val = var->val;
     memcpy(&mysql, &(val->data.s), sizeof(mln_lang_mysql_t *));
     if (mysql == NULL) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     } else {
         err = mysql_errno(mysql->mysql);
-        if ((retExp = mln_lang_retExp_createTmpInt(ctx, err, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpInt(ctx, err, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_mysql_add_errno(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
@@ -841,13 +841,13 @@ static int mln_lang_mysql_build_return_value(mln_lang_mysql_t *mysql)
     mln_string_t tmp;
     mln_size_t *length;
     mln_lang_ctx_t *ctx = mysql->ctx;
-    if (mysql->retExp == NULL) {
-        if ((mysql->retExp = mln_lang_retExp_createTmpArray(ctx, NULL)) == NULL) {
+    if (mysql->ret_var == NULL) {
+        if ((mysql->ret_var = mln_lang_var_createTmpArray(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
     }
-    array = mysql->retExp->data.var->val->data.array;
+    array = mysql->ret_var->val->data.array;
 
     if ((newarr = mln_lang_array_new(ctx)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -915,12 +915,12 @@ static void mln_lang_mysql_fetch_test(mln_event_t *ev, int fd, void *data)
                 mln_event_set_fd(ctx->lang->ev, mysql->fd_signal, M_EV_SEND|M_EV_ONESHOT|M_EV_NONBLOCK, M_EV_UNLIMITED, mysql, mln_lang_mysql_fetch_test);
             }
         } else {
-            if (mysql->retExp == NULL && (mysql->retExp = mln_lang_retExp_createTmpArray(ctx, NULL)) == NULL) {
+            if (mysql->ret_var == NULL && (mysql->ret_var = mln_lang_var_createTmpArray(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
             }
-            if (mysql->retExp != NULL) {
-                mln_lang_ctx_setRetExp(mysql->ctx, mysql->retExp);
-                mysql->retExp = NULL;
+            if (mysql->ret_var != NULL) {
+                mln_lang_ctx_set_ret_var(mysql->ctx, mysql->ret_var);
+                mysql->ret_var = NULL;
             }
             mln_event_set_fd(ctx->lang->ev, mysql->fd_signal, M_EV_SEND|M_EV_ONESHOT|M_EV_NONBLOCK, M_EV_UNLIMITED, mysql, mln_lang_mysql_free_test);
         }
@@ -946,11 +946,11 @@ static void mln_lang_mysql_result_test(mln_event_t *ev, int fd, void *data)
         mln_lang_ctx_continue(ctx);
     } else {
         if (mysql->result == NULL) {
-            if ((mysql->retExp = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+            if ((mysql->ret_var = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
             } else {
-                mln_lang_ctx_setRetExp(mysql->ctx, mysql->retExp);
-                mysql->retExp = NULL;
+                mln_lang_ctx_set_ret_var(mysql->ctx, mysql->ret_var);
+                mysql->ret_var = NULL;
             }
             mln_event_set_fd(ctx->lang->ev, mysql->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
             mln_lang_mysql_chain_del(&(lmt->head), &(lmt->tail), mysql);
@@ -984,7 +984,7 @@ static void mln_lang_mysql_query_test(mln_event_t *ev, int fd, void *data)
     }
 }
 
-static mln_lang_retExp_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t type;
     mln_lang_val_t *val1, *val;
@@ -994,7 +994,7 @@ static mln_lang_retExp_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
     mln_string_t typename = mln_string("Mysql");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
     mln_lang_mysql_timeout_t *lmt;
 
@@ -1026,11 +1026,11 @@ static mln_lang_retExp_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
     val = var->val;
     memcpy(&mysql, &(val->data.s), sizeof(mln_lang_mysql_t *));
     if (mysql == NULL) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     /*arg1*/
     if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
@@ -1060,7 +1060,7 @@ static mln_lang_retExp_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_event_set_fd(ctx->lang->ev, mysql->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         return NULL;
@@ -1068,7 +1068,7 @@ static mln_lang_retExp_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
     mln_lang_mysql_chain_add(&(lmt->head), &(lmt->tail), mysql);
     mln_lang_ctx_suspend(ctx);
 
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_mysql_add_execute(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
@@ -1115,7 +1115,7 @@ static int mln_lang_mysql_add_execute(mln_lang_ctx_t *ctx, mln_lang_set_detail_t
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_mysql_autocommit_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_mysql_autocommit_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t type;
     mln_lang_val_t *val1, *val;
@@ -1125,7 +1125,7 @@ static mln_lang_retExp_t *mln_lang_mysql_autocommit_process(mln_lang_ctx_t *ctx)
     mln_string_t typename = mln_string("Mysql");
     mln_lang_symbolNode_t *sym;
     mln_lang_var_t *var;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
 
     if ((sym = mln_lang_symbolNode_search(ctx, &_this, 1)) == NULL) {
@@ -1156,11 +1156,11 @@ static mln_lang_retExp_t *mln_lang_mysql_autocommit_process(mln_lang_ctx_t *ctx)
     val = var->val;
     memcpy(&mysql, &(val->data.s), sizeof(mln_lang_mysql_t *));
     if (mysql == NULL) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     /*arg1*/
     if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
@@ -1176,17 +1176,17 @@ static mln_lang_retExp_t *mln_lang_mysql_autocommit_process(mln_lang_ctx_t *ctx)
     }
 
     if (mysql_autocommit(mysql->mysql, val1->data.b)) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     } else {
-        if ((retExp = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_mysql_add_autocommit(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)

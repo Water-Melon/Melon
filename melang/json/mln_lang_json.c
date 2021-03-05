@@ -19,7 +19,7 @@ struct mln_lang_json_scan_s {
 
 static int mln_lang_json_encode_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_json_decode_handler(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_json_encode_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_json_encode_process(mln_lang_ctx_t *ctx);
 static inline mln_json_t *mln_lang_json_encode_generate(mln_lang_array_t *array);
 static mln_json_t *mln_lang_json_encode_generate_array(mln_lang_array_t *array);
 static inline mln_json_t *
@@ -30,7 +30,7 @@ static inline mln_json_t *mln_lang_json_encode_generate_int(mln_s64_t i);
 static inline mln_json_t *mln_lang_json_encode_generate_real(double f);
 static inline mln_json_t *mln_lang_json_encode_generate_string(mln_string_t *s);
 static int mln_lang_json_encode_obj_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
-static mln_lang_retExp_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx);
 static inline int
 mln_lang_json_decode_obj(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_hash_t *obj);
 static inline int
@@ -98,10 +98,10 @@ static int mln_lang_json_encode_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_json_encode_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_json_encode_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("array");
     mln_lang_symbolNode_t *sym;
     mln_lang_array_t *array;
@@ -124,7 +124,7 @@ static mln_lang_retExp_t *mln_lang_json_encode_process(mln_lang_ctx_t *ctx)
 
     if ((json = mln_lang_json_encode_generate(array)) == NULL) {
 fout:
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -135,7 +135,7 @@ fout:
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        if ((retExp = mln_lang_retExp_createTmpString(ctx, s, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpString(ctx, s, NULL)) == NULL) {
             mln_string_free(s);
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
@@ -143,7 +143,7 @@ fout:
         mln_string_free(s);
     }
 
-    return retExp;
+    return ret_var;
 }
 
 static inline mln_json_t *mln_lang_json_encode_generate(mln_lang_array_t *array)
@@ -426,11 +426,11 @@ static int mln_lang_json_decode_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx)
 {
     int rc = 0;
     mln_lang_val_t *val;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s");
     mln_lang_symbolNode_t *sym;
     mln_lang_array_t *array;
@@ -451,15 +451,15 @@ static mln_lang_retExp_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
     }
-    if ((retExp = mln_lang_retExp_createTmpArray(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpArray(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    array = retExp->data.var->val->data.array;
+    array = ret_var->val->data.array;
 
     if ((json = mln_json_parse(val->data.s)) == NULL) {
-        mln_lang_retExp_free(retExp);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        mln_lang_var_free(ret_var);
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -483,14 +483,14 @@ static mln_lang_retExp_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx)
         }
         mln_json_free(json);
         if (rc < 0) {
-            mln_lang_retExp_free(retExp);
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            mln_lang_var_free(ret_var);
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
         }
     }
-    return retExp;
+    return ret_var;
 }
 
 static int

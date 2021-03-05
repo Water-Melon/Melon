@@ -13,7 +13,7 @@
 #define ASSERT(x);
 #endif
 
-static mln_lang_retExp_t *mln_lang_prime_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_prime_process(mln_lang_ctx_t *ctx);
 
 int mln_lang_prime(mln_lang_ctx_t *ctx)
 {
@@ -57,11 +57,11 @@ int mln_lang_prime(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_prime_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_prime_process(mln_lang_ctx_t *ctx)
 {
     mln_u32_t p;
     mln_lang_val_t *val;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t var = mln_string("base");
     mln_lang_symbolNode_t *sym;
     if ((sym = mln_lang_symbolNode_search(ctx, &var, 1)) == NULL) {
@@ -79,10 +79,10 @@ static mln_lang_retExp_t *mln_lang_prime_process(mln_lang_ctx_t *ctx)
 
     p = mln_prime_calc(val->data.i);
 
-    if ((retExp = mln_lang_retExp_createTmpInt(ctx, p, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpInt(ctx, p, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 

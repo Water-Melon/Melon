@@ -12,7 +12,7 @@
 #define ASSERT(x);
 #endif
 
-static mln_lang_retExp_t *mln_lang_base64_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_base64_process(mln_lang_ctx_t *ctx);
 
 int mln_lang_base64(mln_lang_ctx_t *ctx)
 {
@@ -70,12 +70,12 @@ int mln_lang_base64(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_base64_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_base64_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t encode = 0;
     mln_lang_val_t *val;
     mln_string_t *tmp, t;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("op");
     mln_lang_symbolNode_t *sym;
@@ -135,12 +135,12 @@ static mln_lang_retExp_t *mln_lang_base64_process(mln_lang_ctx_t *ctx)
     }
     mln_string_nSet(&t, outbuf, outlen);
 
-    if ((retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpString(ctx, &t, NULL)) == NULL) {
         mln_base64_free(outbuf);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     mln_base64_free(outbuf);
-    return retExp;
+    return ret_var;
 }
 

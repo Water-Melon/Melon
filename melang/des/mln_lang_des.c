@@ -15,8 +15,8 @@
 
 static int mln_lang_des_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_3des_handler(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_des_process(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_3des_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_des_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_3des_process(mln_lang_ctx_t *ctx);
 
 int mln_lang_des(mln_lang_ctx_t *ctx)
 {
@@ -95,12 +95,12 @@ static int mln_lang_des_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t encode = 0;
     mln_lang_val_t *val;
     mln_string_t *tmp, t;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("key");
     mln_string_t v3 = mln_string("op");
@@ -172,13 +172,13 @@ static mln_lang_retExp_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
     mln_des_buf(&des, tmp->data, tmp->len, outbuf, tmp->len, 0, encode);
     mln_string_nSet(&t, outbuf, tmp->len);
 
-    retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL);
+    ret_var = mln_lang_var_createTmpString(ctx, &t, NULL);
     free(outbuf);
-    if (retExp == NULL) {
+    if (ret_var == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_3des_handler(mln_lang_ctx_t *ctx)
@@ -265,13 +265,13 @@ static int mln_lang_3des_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
 {
     mln_s32_t encode = 0;
     mln_u64_t k1, k2;
     mln_lang_val_t *val;
     mln_string_t *tmp, t;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("key1");
     mln_string_t v3 = mln_string("key2");
@@ -358,12 +358,12 @@ static mln_lang_retExp_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
     mln_3des_buf(&_3des, tmp->data, tmp->len, outbuf, tmp->len, 0, encode);
     mln_string_nSet(&t, outbuf, tmp->len);
 
-    retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL);
+    ret_var = mln_lang_var_createTmpString(ctx, &t, NULL);
     free(outbuf);
-    if (retExp == NULL) {
+    if (ret_var == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 

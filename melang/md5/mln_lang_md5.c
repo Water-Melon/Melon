@@ -12,7 +12,7 @@
 #define ASSERT(x);
 #endif
 
-static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_md5_process(mln_lang_ctx_t *ctx);
 
 int mln_lang_md5(mln_lang_ctx_t *ctx)
 {
@@ -56,7 +56,7 @@ int mln_lang_md5(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
 {
     mln_s8_t res[33];
     mln_md5_t md5;
@@ -64,7 +64,7 @@ static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_string_t *tmp, t;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_lang_symbolNode_t *sym;
 
@@ -107,11 +107,11 @@ static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
             mln_md5_calc(&md5, buf, n, 0);
         }
         if (n < 0) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
-            return retExp;
+            return ret_var;
         }
         mln_md5_calc(&md5, NULL, 0, 1);
         mln_md5_toString(&md5, res, sizeof(res));
@@ -120,10 +120,10 @@ static mln_lang_retExp_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     mln_string_nSet(&t, res, sizeof(res)-1);
-    if ((retExp = mln_lang_retExp_createTmpString(ctx, &t, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpString(ctx, &t, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 

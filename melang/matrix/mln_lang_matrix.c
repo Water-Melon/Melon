@@ -17,11 +17,11 @@
 
 static int mln_lang_matrix_mul_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_matrix_inv_handler(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx);
 static mln_matrix_t *
 mln_lang_array2matrix(mln_lang_ctx_t *ctx, mln_lang_array_t *array);
-static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_t *m);
+static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_t *m);
 
 int mln_lang_matrix(mln_lang_ctx_t *ctx)
 {
@@ -85,11 +85,11 @@ static int mln_lang_matrix_mul_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
 {
     int err;
     mln_lang_val_t *val;
-    mln_lang_retExp_t *retExp = NULL;
+    mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("a1"), v2 = mln_string("a2");
     mln_lang_symbolNode_t *sym;
     mln_lang_array_t *a1, *a2;
@@ -142,7 +142,7 @@ static mln_lang_retExp_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
     mln_matrix_free(m2);
     if (mres == NULL) {
         if (err == EINVAL) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -151,10 +151,10 @@ static mln_lang_retExp_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
             return NULL;
         }
     } else {
-        retExp = mln_lang_matrix2arrayExp(ctx, mres);
+        ret_var = mln_lang_matrix2arrayExp(ctx, mres);
         mln_matrix_free(mres);
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_matrix_inv_handler(mln_lang_ctx_t *ctx)
@@ -199,11 +199,11 @@ static int mln_lang_matrix_inv_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx)
 {
     int err;
     mln_lang_val_t *val;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("array");
     mln_lang_symbolNode_t *sym;
     mln_lang_array_t *a;
@@ -234,7 +234,7 @@ static mln_lang_retExp_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx)
     mln_matrix_free(m);
     if (mres == NULL) {
         if (err == EINVAL) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -243,10 +243,10 @@ static mln_lang_retExp_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx)
             return NULL;
         }
     } else {
-        retExp = mln_lang_matrix2arrayExp(ctx, mres);
+        ret_var = mln_lang_matrix2arrayExp(ctx, mres);
         mln_matrix_free(mres);
     }
-    return retExp;
+    return ret_var;
 }
 
 /*
@@ -360,22 +360,22 @@ mln_lang_array2matrix(mln_lang_ctx_t *ctx, mln_lang_array_t *array)
     return m;
 }
 
-static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_t *m)
+static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_t *m)
 {
     double *p, *pend;
     mln_lang_array_t *array, *darray;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_var_t *array_val, var;
     mln_lang_val_t val;
     mln_string_t r = mln_string("row");
     mln_string_t c = mln_string("col");
     mln_string_t d = mln_string("data");
 
-    if ((retExp = mln_lang_retExp_createTmpArray(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpArray(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    array = retExp->data.var->val->data.array;
+    array = ret_var->val->data.array;
 
     var.type = M_LANG_VAR_NORMAL;
     var.name = NULL;
@@ -386,7 +386,7 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.type = M_LANG_VAL_TYPE_STRING;
     val.ref = 1;
     if ((array_val = mln_lang_array_getAndNew(ctx, array, &var)) == NULL) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     var.type = M_LANG_VAR_NORMAL;
@@ -398,7 +398,7 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.type = M_LANG_VAL_TYPE_INT;
     val.ref = 1;
     if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
 
@@ -411,7 +411,7 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.type = M_LANG_VAL_TYPE_STRING;
     val.ref = 1;
     if ((array_val = mln_lang_array_getAndNew(ctx, array, &var)) == NULL) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     var.type = M_LANG_VAR_NORMAL;
@@ -423,12 +423,12 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.type = M_LANG_VAL_TYPE_INT;
     val.ref = 1;
     if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
 
     if ((darray = mln_lang_array_new(ctx)) == NULL) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -436,7 +436,7 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     for (p = m->data, pend = m->data+m->row*m->col; p < pend; ++p) {
         if ((array_val = mln_lang_array_getAndNew(ctx, darray, NULL)) == NULL) {
             mln_lang_array_free(darray);
-            mln_lang_retExp_free(retExp);
+            mln_lang_var_free(ret_var);
             return NULL;
         }
         var.type = M_LANG_VAR_NORMAL;
@@ -449,7 +449,7 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
         val.ref = 1;
         if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
             mln_lang_array_free(darray);
-            mln_lang_retExp_free(retExp);
+            mln_lang_var_free(ret_var);
             return NULL;
         }
     }
@@ -464,7 +464,7 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.ref = 1;
     if ((array_val = mln_lang_array_getAndNew(ctx, array, &var)) == NULL) {
         mln_lang_array_free(darray);
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     var.type = M_LANG_VAR_NORMAL;
@@ -477,9 +477,9 @@ static mln_lang_retExp_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matr
     val.ref = 1;
     if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
         mln_lang_array_free(darray);
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 

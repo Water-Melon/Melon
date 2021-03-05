@@ -12,7 +12,7 @@
 #define ASSERT(x);
 #endif
 
-static mln_lang_retExp_t *mln_lang_aes_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_aes_process(mln_lang_ctx_t *ctx);
 
 int mln_lang_aes(mln_lang_ctx_t *ctx)
 {
@@ -98,13 +98,13 @@ int mln_lang_aes(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_aes_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_aes_process(mln_lang_ctx_t *ctx)
 {
     mln_u32_t bits = M_AES_128;
     mln_s32_t type, encode = 0;
     mln_lang_val_t *val;
     mln_string_t *tmp;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("key");
     mln_string_t v3 = mln_string("bits");
@@ -220,10 +220,10 @@ static mln_lang_retExp_t *mln_lang_aes_process(mln_lang_ctx_t *ctx)
             (void)mln_aes_decrypt(&aes, p);
         }
     }
-    if ((retExp = mln_lang_retExp_createTmpString(ctx, val->data.s, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpString(ctx, val->data.s, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 

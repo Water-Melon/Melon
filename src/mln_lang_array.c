@@ -13,19 +13,19 @@
 #endif
 
 static int
-mln_lang_array_assign(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_array_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_array_pluseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_array_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_array_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_array_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_array_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_array_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_array_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_array_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_array_index(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_array_index(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_array_not(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2);
+mln_lang_array_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 
 mln_lang_method_t mln_lang_array_oprs = {
     mln_lang_array_assign,
@@ -67,39 +67,32 @@ mln_lang_method_t mln_lang_array_oprs = {
 };
 
 static int
-mln_lang_array_assign(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_array_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_lang_var_t *var;
-    if (mln_lang_var_setValue(ctx, op1->data.var, op2->data.var) < 0) {
+    if (mln_lang_var_setValue(ctx, op1, op2) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((var = mln_lang_var_convert(ctx, op1->data.var)) == NULL) {
+    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
-    if ((*ret = mln_lang_retExp_new(ctx, M_LANG_RETEXP_VAR, var)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        mln_lang_var_free(var);
         return -1;
     }
     return 0;
 }
 
 static int
-mln_lang_array_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_array_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
-    if (type == mln_lang_var_getValType(op1->data.var) && \
-        mln_lang_var_getVal(op1->data.var)->data.array == mln_lang_var_getVal(op2->data.var)->data.array)
+    mln_s32_t type = mln_lang_var_getValType(op2);
+    if (type == mln_lang_var_getValType(op1) && \
+        mln_lang_var_getVal(op1)->data.array == mln_lang_var_getVal(op2)->data.array)
     {
-        if ((*ret = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
     } else {
-        if ((*ret = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
@@ -108,10 +101,9 @@ mln_lang_array_equal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retE
 }
 
 static int
-mln_lang_array_pluseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_array_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_s32_t type = mln_lang_var_getValType(op1->data.var);
+    mln_s32_t type = mln_lang_var_getValType(op1);
     if (type != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
@@ -130,18 +122,18 @@ mln_lang_array_pluseq(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_ret
 }
 
 static int
-mln_lang_array_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_array_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    mln_s32_t type = mln_lang_var_getValType(op2->data.var);
-    if (type != mln_lang_var_getValType(op1->data.var) || \
-        mln_lang_var_getVal(op1->data.var)->data.array != mln_lang_var_getVal(op2->data.var)->data.array)
+    mln_s32_t type = mln_lang_var_getValType(op2);
+    if (type != mln_lang_var_getValType(op1) || \
+        mln_lang_var_getVal(op1)->data.array != mln_lang_var_getVal(op2)->data.array)
     {
-        if ((*ret = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
     } else {
-        if ((*ret = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
@@ -150,10 +142,9 @@ mln_lang_array_nonequal(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_r
 }
 
 static int
-mln_lang_array_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_array_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    if (mln_lang_var_getValType(op2->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_getValType(op2) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
     }
@@ -171,49 +162,42 @@ mln_lang_array_plus(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retEx
 }
 #include <stdlib.h>
 static int
-mln_lang_array_index(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_array_index(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR && op2->type == M_LANG_RETEXP_VAR);
-    mln_lang_array_t *array = mln_lang_var_getVal(op1->data.var)->data.array;
-    mln_lang_var_t *rv, *var;
+    mln_lang_array_t *array = mln_lang_var_getVal(op1)->data.array;
+    mln_lang_var_t *rv;
     mln_s64_t save = ~((mln_s64_t)0);
-    if (mln_lang_var_getValType(op2->data.var) == M_LANG_VAL_TYPE_INT && mln_lang_var_getVal(op2->data.var)->data.i < 0) {
-        save = mln_lang_var_getVal(op2->data.var)->data.i;
-        mln_lang_var_getVal(op2->data.var)->data.i += array->index;
-        if (mln_lang_var_getVal(op2->data.var)->data.i < 0) {
+    if (mln_lang_var_getValType(op2) == M_LANG_VAL_TYPE_INT && mln_lang_var_getVal(op2)->data.i < 0) {
+        save = mln_lang_var_getVal(op2)->data.i;
+        mln_lang_var_getVal(op2)->data.i += array->index;
+        if (mln_lang_var_getVal(op2)->data.i < 0) {
             mln_lang_errmsg(ctx, "Invalid offset");
             return -1;
         }
     }
-    if ((rv = mln_lang_array_getAndNew(ctx, array, op2->data.var)) == NULL) {
+    if ((rv = mln_lang_array_getAndNew(ctx, array, op2)) == NULL) {
         return -1;
     }
     if (save != ~((mln_s64_t)0)) {
-        mln_lang_var_getVal(op2->data.var)->data.i = save;
+        mln_lang_var_getVal(op2)->data.i = save;
     }
-    if ((var = mln_lang_var_convert(ctx, rv)) == NULL) {
+    if ((*ret = mln_lang_var_convert(ctx, rv)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
-    if ((*ret = mln_lang_retExp_new(ctx, M_LANG_RETEXP_VAR, var)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        mln_lang_var_free(var);
         return -1;
     }
     return 0;
 }
 
 static int
-mln_lang_array_not(mln_lang_ctx_t *ctx, mln_lang_retExp_t **ret, mln_lang_retExp_t *op1, mln_lang_retExp_t *op2)
+mln_lang_array_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    ASSERT(op1->type == M_LANG_RETEXP_VAR);
-    if (mln_lang_condition_isTrue(op1->data.var)) {
-        if ((*ret = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if (mln_lang_condition_isTrue(op1)) {
+        if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
     } else {
-        if ((*ret = mln_lang_retExp_createTmpTrue(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }

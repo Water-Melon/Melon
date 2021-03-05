@@ -42,20 +42,20 @@ static int mln_lang_network_tcp_recv(mln_lang_ctx_t *ctx);
 static int mln_lang_network_tcp_connect(mln_lang_ctx_t *ctx);
 static int mln_lang_network_tcp_shutdown(mln_lang_ctx_t *ctx);
 static int mln_lang_network_tcp_close(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx);
 static int mln_lang_network_get_addr(const struct sockaddr *addr, char *ip, mln_u16_t *port);
-static mln_lang_retExp_t *mln_lang_network_tcp_close_process(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_tcp_close_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx);
 static void mln_lang_network_tcp_accept_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_network_tcp_recv_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_network_tcp_send_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_network_tcp_timeout_handler(mln_event_t *ev, int fd, void *data);
-static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx);
 static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_network_tcp_connect_timeout_handler(mln_event_t *ev, int fd, void *data);
-static mln_lang_retExp_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx);
 /*udp*/
 MLN_CHAIN_FUNC_DECLARE(mln_lang_udp, mln_lang_udp_t, static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_udp, mln_lang_udp_t, static inline void, prev, next);
@@ -70,14 +70,14 @@ static void mln_lang_ctx_udp_free(mln_lang_ctx_udp_t *lcu);
 static void mln_lang_ctx_udp_resource_add(mln_lang_ctx_t *ctx, mln_lang_udp_t *udp);
 static void mln_lang_ctx_udp_resource_remove(mln_lang_udp_t *udp);
 static int mln_lang_network_udp_create(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx);
 static int mln_lang_network_udp_close(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_network_udp_close_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_udp_close_process(mln_lang_ctx_t *ctx);
 static int mln_lang_network_udp_send(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx);
 static void mln_lang_network_udp_send_handler(mln_event_t *ev, int fd, void *data);
 static int mln_lang_network_udp_recv(mln_lang_ctx_t *ctx);
-static mln_lang_retExp_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx);
 static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_network_udp_timeout_handler(mln_event_t *ev, int fd, void *data);
 
@@ -308,10 +308,10 @@ static int mln_lang_network_tcp_listen(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val1, *val2;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("host"), v2 = mln_string("service");
     mln_lang_symbolNode_t *sym;
     struct addrinfo addr, *res = NULL;
@@ -359,28 +359,28 @@ static mln_lang_retExp_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ct
     addr.ai_socktype = SOCK_STREAM;
     addr.ai_protocol = IPPROTO_IP;
     if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
         freeaddrinfo(res);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     if (mln_lang_network_get_addr(res->ai_addr, ip, &port) < 0) {
         close(fd);
         freeaddrinfo(res);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     if ((tcp = mln_lang_tcp_new(ctx->lang, fd, ip, port)) == NULL) {
         close(fd);
@@ -391,42 +391,42 @@ static mln_lang_retExp_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ct
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         mln_lang_tcp_free(tcp);
         freeaddrinfo(res);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     if (bind(fd, res->ai_addr, res->ai_addrlen) < 0) {
         mln_lang_tcp_free(tcp);
         freeaddrinfo(res);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     freeaddrinfo(res);
     if (listen(fd, 32767) < 0) {
         mln_lang_tcp_free(tcp);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
-    if ((retExp = mln_lang_retExp_createTmpInt(ctx, fd, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpInt(ctx, fd, NULL)) == NULL) {
         mln_lang_tcp_free(tcp);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     if (mln_lang_network_tcp_resource_add(ctx->lang, tcp) < 0) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         mln_lang_tcp_free(tcp);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_network_get_addr(const struct sockaddr *addr, char *ip, mln_u16_t *port)
@@ -507,9 +507,9 @@ static int mln_lang_network_tcp_accept(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("timeout");
     mln_lang_symbolNode_t *sym;
     mln_lang_tcp_t *tcp;
@@ -543,30 +543,30 @@ static mln_lang_retExp_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ct
         return NULL;
     }
 
-    if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     if ((tcp = mln_lang_network_tcp_resource_fetch(ctx->lang, fd)) == NULL) {
-        return retExp;
+        return ret_var;
     }
     if (tcp->recving) {
         mln_lang_errmsg(ctx, "Socket used in other script task.");
-        return retExp;
+        return ret_var;
     }
     if (tcp->recv_closed) {
         mln_lang_errmsg(ctx, "Socket recv shutdown.");
-        return retExp;
+        return ret_var;
     }
     if (tcp->sending) {
         mln_lang_errmsg(ctx, "Listen socket sending data.");
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     tcp->timeout = timeout;
     if (mln_event_set_fd(ctx->lang->ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT,timeout, tcp, mln_lang_network_tcp_accept_handler) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     if (timeout >= 0) {
@@ -576,7 +576,7 @@ static mln_lang_retExp_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ct
     mln_lang_ctx_tcp_resource_add(ctx, tcp);
     mln_lang_ctx_suspend(ctx);
 
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_network_tcp_recv(mln_lang_ctx_t *ctx)
@@ -637,9 +637,9 @@ static int mln_lang_network_tcp_recv(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("timeout");
     mln_lang_symbolNode_t *sym;
     mln_lang_tcp_t *tcp;
@@ -673,24 +673,24 @@ static mln_lang_retExp_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     if ((tcp = mln_lang_network_tcp_resource_fetch(ctx->lang, fd)) == NULL) {
-        return retExp;
+        return ret_var;
     }
     if (tcp->recving || tcp->sending) {
         mln_lang_errmsg(ctx, "Socket used in other script task.");
-        return retExp;
+        return ret_var;
     }
     if (tcp->recv_closed) {
         mln_lang_errmsg(ctx, "Socket recv shutdown.");
-        return retExp;
+        return ret_var;
     }
     if (mln_event_set_fd(ctx->lang->ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, timeout, tcp, mln_lang_network_tcp_recv_handler) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     if (tcp->timeout != M_EV_UNLIMITED)
@@ -700,7 +700,7 @@ static mln_lang_retExp_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx)
     mln_lang_ctx_tcp_resource_add(ctx, tcp);
     mln_lang_ctx_suspend(ctx);
 
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_network_tcp_send(mln_lang_ctx_t *ctx)
@@ -761,9 +761,9 @@ static int mln_lang_network_tcp_send(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("data");
     mln_lang_symbolNode_t *sym;
     mln_lang_tcp_t *tcp;
@@ -797,37 +797,37 @@ static mln_lang_retExp_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx)
     }
     data = sym->data.var->val->data.s;
 
-    if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     if ((tcp = mln_lang_network_tcp_resource_fetch(ctx->lang, fd)) == NULL) {
-        return retExp;
+        return ret_var;
     }
     if (tcp->recving || tcp->sending) {
         mln_lang_errmsg(ctx, "Socket used in other script task.");
-        return retExp;
+        return ret_var;
     }
     if (tcp->send_closed) {
         mln_lang_errmsg(ctx, "Socket send shutdown.");
-        return retExp;
+        return ret_var;
     }
     if (mln_event_set_fd(ctx->lang->ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, tcp, mln_lang_network_tcp_send_handler) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     if ((c = mln_chain_new(mln_tcp_conn_get_pool(&(tcp->conn)))) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     if ((b = mln_buf_new(mln_tcp_conn_get_pool(&(tcp->conn)))) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_chain_pool_release(c);
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     c->buf = b;
@@ -835,7 +835,7 @@ static mln_lang_retExp_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         mln_chain_pool_release(c);
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     memcpy(buf, data->data, data->len);
@@ -849,7 +849,7 @@ static mln_lang_retExp_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx)
     mln_lang_ctx_tcp_resource_add(ctx, tcp);
     mln_lang_ctx_suspend(ctx);
 
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_network_tcp_connect(mln_lang_ctx_t *ctx)
@@ -923,10 +923,10 @@ static int mln_lang_network_tcp_connect(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("host"), v2 = mln_string("service"), v3 = mln_string("timeout");
     mln_lang_symbolNode_t *sym;
     mln_lang_tcp_t *tcp;
@@ -991,28 +991,28 @@ static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *c
     addr.ai_socktype = SOCK_STREAM;
     addr.ai_protocol = IPPROTO_IP;
     if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
         freeaddrinfo(res);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     if (mln_lang_network_get_addr(res->ai_addr, ip, &port) < 0) {
         close(fd);
         freeaddrinfo(res);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     if ((tcp = mln_lang_tcp_new(ctx->lang, fd, ip, port)) == NULL) {
         close(fd);
@@ -1041,21 +1041,21 @@ static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *c
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_lang_tcp_free(tcp);
         freeaddrinfo(res);
-        if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        return retExp;
+        return ret_var;
     }
     freeaddrinfo(res);
-    if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_lang_tcp_free(tcp);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     if (mln_lang_network_tcp_resource_add(ctx->lang, tcp) < 0) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_lang_tcp_free(tcp);
         mln_lang_errmsg(ctx, "No memory.");
@@ -1068,7 +1068,7 @@ static mln_lang_retExp_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *c
     mln_lang_ctx_tcp_resource_add(ctx, tcp);
     mln_lang_ctx_suspend(ctx);
 
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_network_tcp_shutdown(mln_lang_ctx_t *ctx)
@@ -1129,10 +1129,10 @@ static int mln_lang_network_tcp_shutdown(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("mode");
     mln_lang_symbolNode_t *sym;
     mln_lang_tcp_t *tcp;
@@ -1169,7 +1169,7 @@ static mln_lang_retExp_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *
     }
     val = sym->data.var->val;
 
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -1216,11 +1216,11 @@ static mln_lang_retExp_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *
         }
     } else {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
 
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_network_tcp_close(mln_lang_ctx_t *ctx)
@@ -1268,9 +1268,9 @@ static int mln_lang_network_tcp_close(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_tcp_close_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_tcp_close_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd");
     mln_lang_symbolNode_t *sym;
 
@@ -1284,12 +1284,12 @@ static mln_lang_retExp_t *mln_lang_network_tcp_close_process(mln_lang_ctx_t *ctx
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     mln_lang_network_tcp_resource_remove(ctx->lang, sym->data.var->val->data.i);
-    return retExp;
+    return ret_var;
 }
 
 static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *data)
@@ -1298,7 +1298,7 @@ static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *
     mln_lang_ctx_t *ctx = tcp->ctx;
     int err = 0, failed = 0;
     socklen_t len = sizeof(err);
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
 
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) >= 0) {
         if (err) {
@@ -1312,8 +1312,8 @@ static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *
                 failed = 1;
             }
         } else {
-            if ((retExp = mln_lang_retExp_createTmpInt(tcp->ctx, fd, NULL)) != NULL) {
-                mln_lang_ctx_setRetExp(tcp->ctx, retExp);
+            if ((ret_var = mln_lang_var_createTmpInt(tcp->ctx, fd, NULL)) != NULL) {
+                mln_lang_ctx_set_ret_var(tcp->ctx, ret_var);
             } else {
                 failed = 1;
             }
@@ -1329,7 +1329,7 @@ static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *
 
 static void mln_lang_network_tcp_connect_timeout_handler(mln_event_t *ev, int fd, void *data)
 {
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_tcp_t *tcp = (mln_lang_tcp_t *)data;
     mln_lang_ctx_t *ctx = tcp->ctx;
 
@@ -1339,8 +1339,8 @@ static void mln_lang_network_tcp_connect_timeout_handler(mln_event_t *ev, int fd
     tcp->timeout = M_EV_UNLIMITED;
     mln_lang_ctx_tcp_resource_remove(tcp);
     mln_lang_network_tcp_resource_remove(ctx->lang, fd);
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) != NULL) {
-        mln_lang_ctx_setRetExp(ctx, retExp);
+    if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) != NULL) {
+        mln_lang_ctx_set_ret_var(ctx, ret_var);
     }
     mln_lang_ctx_continue(ctx);
 }
@@ -1353,7 +1353,7 @@ static void mln_lang_network_tcp_accept_handler(mln_event_t *ev, int fd, void *d
     char ip[128] = {0};
     mln_u16_t port;
     socklen_t len;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
 
     memset(&addr, 0, sizeof(addr));
     len = sizeof(addr);
@@ -1371,14 +1371,14 @@ static void mln_lang_network_tcp_accept_handler(mln_event_t *ev, int fd, void *d
             if ((newtcp = mln_lang_tcp_new(tcp->lang, connfd, ip, port)) == NULL) {
                 close(connfd);
             } else {
-                if ((retExp = mln_lang_retExp_createTmpInt(tcp->ctx, connfd, NULL)) == NULL) {
+                if ((ret_var = mln_lang_var_createTmpInt(tcp->ctx, connfd, NULL)) == NULL) {
                     mln_lang_tcp_free(newtcp);
                 } else {
                     if (mln_lang_network_tcp_resource_add(tcp->lang, newtcp) < 0) {
-                        mln_lang_retExp_free(retExp);
+                        mln_lang_var_free(ret_var);
                         mln_lang_tcp_free(newtcp);
                     } else {
-                        mln_lang_ctx_setRetExp(tcp->ctx, retExp);
+                        mln_lang_ctx_set_ret_var(tcp->ctx, ret_var);
                     }
                 }
             }
@@ -1401,12 +1401,12 @@ static void mln_lang_network_tcp_recv_handler(mln_event_t *ev, int fd, void *dat
     if (rc == M_C_ERROR) {
         /* do nothing */
     } else if (rc == M_C_CLOSED && mln_tcp_conn_get_head(&(tcp->conn), M_C_RECV) == NULL) {
-        mln_lang_retExp_t *retExp = mln_lang_retExp_createTmpTrue(tcp->ctx, NULL);
-        if (retExp == NULL) {
+        mln_lang_var_t *ret_var = mln_lang_var_createTmpTrue(tcp->ctx, NULL);
+        if (ret_var == NULL) {
             mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, tcp, mln_lang_network_tcp_recv_handler);
             return;
         }
-        mln_lang_ctx_setRetExp(tcp->ctx, retExp);
+        mln_lang_ctx_set_ret_var(tcp->ctx, ret_var);
     } else {
         c = mln_tcp_conn_get_head(&(tcp->conn), M_C_RECV);
         for (; c != NULL; c = c->next) {
@@ -1423,13 +1423,13 @@ static void mln_lang_network_tcp_recv_handler(mln_event_t *ev, int fd, void *dat
             p += mln_buf_left_size(c->buf);
         }
         mln_string_nSet(&tmp, buf, size);
-        mln_lang_retExp_t *retExp = mln_lang_retExp_createTmpString(tcp->ctx, &tmp, NULL);
+        mln_lang_var_t *ret_var = mln_lang_var_createTmpString(tcp->ctx, &tmp, NULL);
         free(buf);
-        if (retExp == NULL) {
+        if (ret_var == NULL) {
             mln_event_set_fd(ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, tcp, mln_lang_network_tcp_recv_handler);
             return;
         }
-        mln_lang_ctx_setRetExp(tcp->ctx, retExp);
+        mln_lang_ctx_set_ret_var(tcp->ctx, ret_var);
         mln_chain_pool_release_all(mln_tcp_conn_remove(&(tcp->conn), M_C_RECV));
     }
     mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
@@ -1449,8 +1449,8 @@ static void mln_lang_network_tcp_send_handler(mln_event_t *ev, int fd, void *dat
             mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, tcp, mln_lang_network_tcp_send_handler);
             return;
         } else {
-            mln_lang_retExp_t *retExp = mln_lang_retExp_createTmpTrue(tcp->ctx, NULL);
-            if (retExp != NULL) mln_lang_ctx_setRetExp(tcp->ctx, retExp);
+            mln_lang_var_t *ret_var = mln_lang_var_createTmpTrue(tcp->ctx, NULL);
+            if (ret_var != NULL) mln_lang_ctx_set_ret_var(tcp->ctx, ret_var);
         }
     }
     mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
@@ -1462,13 +1462,13 @@ static void mln_lang_network_tcp_send_handler(mln_event_t *ev, int fd, void *dat
 static void mln_lang_network_tcp_timeout_handler(mln_event_t *ev, int fd, void *data)
 {
     mln_lang_tcp_t *tcp = (mln_lang_tcp_t *)data;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-    retExp = mln_lang_retExp_createTmpNil(tcp->ctx, NULL);
+    ret_var = mln_lang_var_createTmpNil(tcp->ctx, NULL);
     tcp->recving = 0;
     ASSERT(!tcp->sending);
-    if (retExp != NULL) {
-        mln_lang_ctx_setRetExp(tcp->ctx, retExp);
+    if (ret_var != NULL) {
+        mln_lang_ctx_set_ret_var(tcp->ctx, ret_var);
     }
     mln_lang_ctx_continue(tcp->ctx);
     mln_lang_ctx_tcp_resource_remove(tcp);
@@ -1662,10 +1662,10 @@ static int mln_lang_network_udp_create(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val1, *val2;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("host"), v2 = mln_string("service");
     mln_lang_symbolNode_t *sym;
     struct addrinfo addr, *res = NULL;
@@ -1724,11 +1724,11 @@ static mln_lang_retExp_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ct
 
     if (notbind) {
         if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
-            return retExp;
+            return ret_var;
         }
         if ((udp = mln_lang_udp_new(ctx->lang, fd)) == NULL) {
             close(fd);
@@ -1741,19 +1741,19 @@ static mln_lang_retExp_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ct
         addr.ai_socktype = SOCK_DGRAM;
         addr.ai_protocol = IPPROTO_IP;
         if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
-            return retExp;
+            return ret_var;
         }
         if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
             freeaddrinfo(res);
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
-            return retExp;
+            return ret_var;
         }
         if ((udp = mln_lang_udp_new(ctx->lang, fd)) == NULL) {
             close(fd);
@@ -1764,35 +1764,35 @@ static mln_lang_retExp_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ct
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
             mln_lang_udp_free(udp);
             freeaddrinfo(res);
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
-            return retExp;
+            return ret_var;
         }
         if (bind(fd, res->ai_addr, res->ai_addrlen) < 0) {
             mln_lang_udp_free(udp);
             freeaddrinfo(res);
-            if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
-            return retExp;
+            return ret_var;
         }
         freeaddrinfo(res);
     }
-    if ((retExp = mln_lang_retExp_createTmpInt(ctx, fd, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpInt(ctx, fd, NULL)) == NULL) {
         mln_lang_udp_free(udp);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     if (mln_lang_network_udp_resource_add(ctx->lang, udp) < 0) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         mln_lang_udp_free(udp);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_network_udp_close(mln_lang_ctx_t *ctx)
@@ -1840,9 +1840,9 @@ static int mln_lang_network_udp_close(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_udp_close_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_udp_close_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd");
     mln_lang_symbolNode_t *sym;
 
@@ -1856,12 +1856,12 @@ static mln_lang_retExp_t *mln_lang_network_udp_close_process(mln_lang_ctx_t *ctx
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
-    if ((retExp = mln_lang_retExp_createTmpNil(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     mln_lang_network_udp_resource_remove(ctx->lang, sym->data.var->val->data.i);
-    return retExp;
+    return ret_var;
 }
 
 static int mln_lang_network_udp_send(mln_lang_ctx_t *ctx)
@@ -1948,10 +1948,10 @@ static int mln_lang_network_udp_send(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("data"), v3 = mln_string("host"), v4 = mln_string("service");
     mln_lang_symbolNode_t *sym;
     struct addrinfo addr, *res = NULL;
@@ -2018,45 +2018,45 @@ static mln_lang_retExp_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
     }
     memcpy(service, val->data.s->data, val->data.s->len);
 
-    if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     udp = mln_lang_network_udp_resource_fetch(ctx->lang, fd);
     if (udp == NULL) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         mln_lang_errmsg(ctx, "socket not existing.");
         return NULL;
     }
     if (udp->recving || udp->sending) {
         mln_lang_errmsg(ctx, "Socket used in other script task.");
-        return retExp;
+        return ret_var;
     }
     addr.ai_flags = AI_PASSIVE;
     addr.ai_family = AF_UNSPEC;
     addr.ai_socktype = SOCK_DGRAM;
     addr.ai_protocol = IPPROTO_IP;
     if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
-        return retExp;
+        return ret_var;
     }
     memcpy(&(udp->addr), res->ai_addr, sizeof(struct sockaddr));
     udp->len = res->ai_addrlen;
     freeaddrinfo(res);
     ASSERT(udp->data==NULL);
     if ((udp->data = mln_string_dup(data)) == NULL) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     if (mln_event_set_fd(ctx->lang->ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, udp, mln_lang_network_udp_send_handler) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     udp->sending = 1;
     mln_lang_ctx_udp_resource_add(ctx, udp);
     mln_lang_ctx_suspend(ctx);
-    return retExp;
+    return ret_var;
 }
 
 static void mln_lang_network_udp_send_handler(mln_event_t *ev, int fd, void *data)
@@ -2071,8 +2071,8 @@ static void mln_lang_network_udp_send_handler(mln_event_t *ev, int fd, void *dat
         return;
     }
     if (rc >= 0) {
-        mln_lang_retExp_t *retExp = mln_lang_retExp_createTmpTrue(udp->ctx, NULL);
-        if (retExp != NULL) mln_lang_ctx_setRetExp(udp->ctx, retExp);
+        mln_lang_var_t *ret_var = mln_lang_var_createTmpTrue(udp->ctx, NULL);
+        if (ret_var != NULL) mln_lang_ctx_set_ret_var(udp->ctx, ret_var);
     }
     mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     udp->sending = 0;
@@ -2181,9 +2181,9 @@ static int mln_lang_network_udp_recv(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_retExp_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("bufsize"), v3 = mln_string("ip"), v4 = mln_string("port"), v5 = mln_string("timeout");
     mln_lang_symbolNode_t *sym;
     int fd, timeout, type;
@@ -2250,19 +2250,19 @@ static mln_lang_retExp_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((retExp = mln_lang_retExp_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
     udp = mln_lang_network_udp_resource_fetch(ctx->lang, fd);
     if (udp == NULL) {
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         mln_lang_errmsg(ctx, "socket not existing.");
         return NULL;
     }
     if (udp->recving || udp->sending) {
         mln_lang_errmsg(ctx, "Socket used in other script task.");
-        return retExp;
+        return ret_var;
     }
     udp->timeout = timeout;
     udp->bufsize = size;
@@ -2271,7 +2271,7 @@ static mln_lang_retExp_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
 
     if (mln_event_set_fd(ctx->lang->ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, udp->timeout, udp, mln_lang_network_udp_recv_handler) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
-        mln_lang_retExp_free(retExp);
+        mln_lang_var_free(ret_var);
         return NULL;
     }
     if (timeout != M_EV_UNLIMITED) {
@@ -2280,7 +2280,7 @@ static mln_lang_retExp_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
     udp->recving = 1;
     mln_lang_ctx_udp_resource_add(ctx, udp);
     mln_lang_ctx_suspend(ctx);
-    return retExp;
+    return ret_var;
 }
 
 static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *data)
@@ -2290,7 +2290,7 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
     struct sockaddr addr;
     socklen_t len;
     int rc;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_lang_var_t var;
     mln_lang_val_t val;
     mln_string_t tmp;
@@ -2352,9 +2352,9 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
     /*data*/
     if (rc > 0) {
         mln_string_nSet(&tmp, buf, rc);
-        retExp = mln_lang_retExp_createTmpString(udp->ctx, &tmp, NULL);
+        ret_var = mln_lang_var_createTmpString(udp->ctx, &tmp, NULL);
         free(buf);
-        if (retExp != NULL) mln_lang_ctx_setRetExp(udp->ctx, retExp);
+        if (ret_var != NULL) mln_lang_ctx_set_ret_var(udp->ctx, ret_var);
     }
 out:
     mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
@@ -2366,13 +2366,13 @@ out:
 static void mln_lang_network_udp_timeout_handler(mln_event_t *ev, int fd, void *data)
 {
     mln_lang_udp_t *udp = (mln_lang_udp_t *)data;
-    mln_lang_retExp_t *retExp;
+    mln_lang_var_t *ret_var;
     mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-    retExp = mln_lang_retExp_createTmpNil(udp->ctx, NULL);
+    ret_var = mln_lang_var_createTmpNil(udp->ctx, NULL);
     udp->recving = 0;
     ASSERT(!udp->sending);
-    if (retExp != NULL) {
-        mln_lang_ctx_setRetExp(udp->ctx, retExp);
+    if (ret_var != NULL) {
+        mln_lang_ctx_set_ret_var(udp->ctx, ret_var);
     }
     mln_lang_ctx_continue(udp->ctx);
     mln_lang_ctx_udp_resource_remove(udp);
