@@ -6370,7 +6370,9 @@ static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx)
         }
         mln_lang_stack_node_set_ret_var(node, ret_var);
         mln_lang_ctx_reset_ret_var(ctx);
+        goto goon1;
     } else if (node->step == 1) {
+goon1:
         if (ctx->ret_var != NULL) {
             mln_lang_var_t *var;
             ASSERT(node->ret_var != NULL && node->ret_var->val->type == M_LANG_VAL_TYPE_CALL);
