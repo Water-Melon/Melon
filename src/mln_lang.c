@@ -4288,6 +4288,9 @@ static void mln_lang_stack_handler_exp(mln_lang_ctx_t *ctx)
         node->step = 1;
         if (exp->jump == NULL)
             mln_lang_generate_jump_ptr(exp, M_LSNT_EXP);
+        if (exp->type == M_LSNT_FACTOR && exp->next == NULL) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, exp->type, exp->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4329,6 +4332,9 @@ static void mln_lang_stack_handler_assign(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (assign->jump == NULL)
             mln_lang_generate_jump_ptr(assign, M_LSNT_ASSIGN);
+        if (assign->type == M_LSNT_FACTOR && assign->op == M_ASSIGN_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, assign->type, assign->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4490,6 +4496,9 @@ static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (logicLow->jump == NULL)
             mln_lang_generate_jump_ptr(logicLow, M_LSNT_LOGICLOW);
+        if (logicLow->type == M_LSNT_FACTOR && logicLow->op == M_LOGICLOW_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, logicLow->type, logicLow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4551,6 +4560,9 @@ static void mln_lang_stack_handler_logicHigh(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (logicHigh->jump == NULL)
             mln_lang_generate_jump_ptr(logicHigh, M_LSNT_LOGICHIGH);
+        if (logicHigh->type == M_LSNT_FACTOR && logicHigh->op == M_LOGICHIGH_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, logicHigh->type, logicHigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4662,6 +4674,9 @@ static void mln_lang_stack_handler_relativeLow(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (relativeLow->jump == NULL)
             mln_lang_generate_jump_ptr(relativeLow, M_LSNT_RELATIVELOW);
+        if (relativeLow->type == M_LSNT_FACTOR && relativeLow->op == M_RELATIVELOW_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, relativeLow->type, relativeLow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4770,6 +4785,9 @@ static void mln_lang_stack_handler_relativeHigh(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (relativeHigh->jump == NULL)
             mln_lang_generate_jump_ptr(relativeHigh, M_LSNT_RELATIVEHIGH);
+        if (relativeHigh->type == M_LSNT_FACTOR && relativeHigh->op == M_RELATIVEHIGH_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, relativeHigh->type, relativeHigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4884,6 +4902,9 @@ static void mln_lang_stack_handler_move(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (move->jump == NULL)
             mln_lang_generate_jump_ptr(move, M_LSNT_MOVE);
+        if (move->type == M_LSNT_FACTOR && move->op == M_MOVE_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, move->type, move->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4992,6 +5013,9 @@ static void mln_lang_stack_handler_addsub(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (addsub->jump == NULL)
             mln_lang_generate_jump_ptr(addsub, M_LSNT_ADDSUB);
+        if (addsub->type == M_LSNT_FACTOR && addsub->op == M_ADDSUB_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, addsub->type, addsub->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -5100,6 +5124,9 @@ static void mln_lang_stack_handler_muldiv(mln_lang_ctx_t *ctx)
         else node->step = 1;
         if (muldiv->jump == NULL)
             mln_lang_generate_jump_ptr(muldiv, M_LSNT_MULDIV);
+        if (muldiv->type == M_LSNT_FACTOR && muldiv->op == M_MULDIV_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, muldiv->type, muldiv->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -5210,6 +5237,9 @@ static void mln_lang_stack_handler_suffix(mln_lang_ctx_t *ctx)
         node->step = suffix->op == M_SUFFIX_NONE? 2: 1;
         if (suffix->jump == NULL)
             mln_lang_generate_jump_ptr(suffix, M_LSNT_SUFFIX);
+        if (suffix->type == M_LSNT_FACTOR && suffix->op == M_SUFFIX_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, suffix->type, suffix->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -5325,6 +5355,9 @@ static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx)
         else node->step = 5;
         if (locate->jump == NULL)
             mln_lang_generate_jump_ptr(locate, M_LSNT_LOCATE);
+        if (locate->type == M_LSNT_FACTOR && locate->op == M_LOCATE_NONE) {
+            __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+        }
         if ((node = mln_lang_stack_node_new(ctx, locate->type, locate->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -5833,6 +5866,9 @@ static void mln_lang_stack_handler_spec(mln_lang_ctx_t *ctx)
                 break;
         }
         if (data != NULL) {
+            if (spec->op == M_SPEC_FACTOR) {
+                __mln_lang_stack_node_free(mln_stack_pop(ctx->run_stack));
+            }
             if ((node = mln_lang_stack_node_new(ctx, type, data)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
