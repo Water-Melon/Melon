@@ -131,6 +131,7 @@ mln_stack_t *mln_stack_dup(mln_stack_t *st, void *udata)
     struct mln_stack_attr sattr;
     sattr.free_handler = st->free_handler;
     sattr.copy_handler = st->copy_handler;
+    sattr.cache = st->cache;
     mln_stack_t *new_st = mln_stack_init(&sattr);
     if (new_st == NULL) return NULL;
     mln_stack_node_t *scan;
