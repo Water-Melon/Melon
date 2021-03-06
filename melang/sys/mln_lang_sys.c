@@ -579,7 +579,7 @@ static mln_lang_var_t *mln_lang_sys_str_process(mln_lang_ctx_t *ctx)
                 }
                 break;
             case M_LANG_VAL_TYPE_STRING:
-                if ((ret_var = mln_lang_var_createTmpString(ctx, val->data.s, NULL)) == NULL) {
+                if ((ret_var = mln_lang_var_createTmpString_ref(ctx, val->data.s, NULL)) == NULL) {
                     mln_lang_errmsg(ctx, "No memory.");
                     return NULL;
                 }
@@ -2210,7 +2210,7 @@ static mln_lang_var_t *mln_lang_sys_eval_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("val");
     mln_string_t v2 = mln_string("data");
     mln_string_t v3 = mln_string("in_string");
-    mln_string_t data_name = mln_string("EVAL_DATA");
+    mln_string_t data_name = mln_string("EVAL_DATA"), *dup;
     mln_lang_symbolNode_t *sym;
     mln_lang_val_t *val1, *val2;
     mln_s32_t type, type3;
@@ -2290,12 +2290,21 @@ static mln_lang_var_t *mln_lang_sys_eval_process(mln_lang_ctx_t *ctx)
             ASSERT(0);
             return NULL;
     }
-    if (mln_lang_ctx_addGlobalVar(newctx, &data_name, data, type) < 0) {
+    dup = mln_string_pool_dup(newctx->pool, &data_name);
+    if (dup == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         if (type == M_LANG_VAL_TYPE_STRING) mln_string_free((mln_string_t *)data);
         mln_lang_job_free(newctx);
         return NULL;
     }
+    if (mln_lang_ctx_addGlobalVar(newctx, dup, data, type) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_string_free(dup);
+        if (type == M_LANG_VAL_TYPE_STRING) mln_string_free((mln_string_t *)data);
+        mln_lang_job_free(newctx);
+        return NULL;
+    }
+    mln_string_free(dup);
     mln_lang_run(newctx->lang);
     if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");

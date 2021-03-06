@@ -135,7 +135,7 @@ fout:
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-        if ((ret_var = mln_lang_var_createTmpString(ctx, s, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_createTmpString_ref(ctx, s, NULL)) == NULL) {
             mln_string_free(s);
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;

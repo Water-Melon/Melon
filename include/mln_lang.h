@@ -16,7 +16,7 @@
 #include "mln_connection.h"
 
 #define M_LANG_CACHE_COUNT       200
-#define M_LANG_SYMBOL_TABLE_LEN  247
+#define M_LANG_SYMBOL_TABLE_LEN  371
 
 #define M_LANG_MAX_OPENFILE      67
 #define M_LANG_DEFAULT_STEP      20000
@@ -411,8 +411,6 @@ extern void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg) __NONNULL2(1,2);
 extern mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev) __NONNULL2(1,2);
 extern void mln_lang_free(mln_lang_t *lang);
 extern void mln_lang_run(mln_lang_t *lang) __NONNULL1(1);
-extern int
-mln_lang_ctx_addGlobalVar(mln_lang_ctx_t *ctx, mln_string_t *name, void *val, mln_u32_t type) __NONNULL2(1,2);
 extern mln_lang_ctx_t *
 mln_lang_job_new(mln_lang_t *lang, \
                  mln_u32_t type, \
@@ -421,6 +419,11 @@ mln_lang_job_new(mln_lang_t *lang, \
                  mln_lang_return_handler handler) __NONNULL2(1,3);
 extern void mln_lang_job_free(mln_lang_ctx_t *ctx);
 extern void mln_lang_funccall_val_addObject(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val) __NONNULL2(1,2);
+/*
+ * Note:
+ * 'name' must be in heap or global memory. It will be crashed in stack.
+ */
+extern int mln_lang_ctx_addGlobalVar(mln_lang_ctx_t *ctx, mln_string_t *name, void *val, mln_u32_t type) __NONNULL2(1,2);
 extern mln_lang_var_t *mln_lang_var_createTmpCall(mln_lang_ctx_t *ctx, mln_lang_funccall_val_t *call);
 extern mln_lang_var_t *mln_lang_var_createTmpNil(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_var_t *
@@ -430,9 +433,11 @@ extern mln_lang_var_t *mln_lang_var_createTmpFalse(mln_lang_ctx_t *ctx, mln_stri
 extern mln_lang_var_t *mln_lang_var_createTmpInt(mln_lang_ctx_t *ctx, mln_s64_t off, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_var_t *mln_lang_var_createTmpReal(mln_lang_ctx_t *ctx, double f, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_var_t *mln_lang_var_createTmpBool(mln_lang_ctx_t *ctx, mln_u8_t b, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_var_t *mln_lang_var_createTmpString_ref(mln_lang_ctx_t *ctx, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
 extern mln_lang_var_t *mln_lang_var_createTmpString(mln_lang_ctx_t *ctx, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
 extern mln_lang_var_t *mln_lang_var_createTmpArray(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_symbolNode_t *mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
+/* Note end*/
 extern int mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data) __NONNULL2(1,3);
 extern mln_lang_var_t *mln_lang_var_new(mln_lang_ctx_t *ctx, \
                                         mln_string_t *name, \

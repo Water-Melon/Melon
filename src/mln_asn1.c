@@ -362,6 +362,7 @@ static int mln_asn1_encode_addContent(mln_asn1_enResult_t *res, mln_u8ptr_t buf,
     s->data = buf;
     s->len = len;
     s->is_referred = 0;
+    s->pool = 1;
     s->ref = 1;
     return 0;
 }
