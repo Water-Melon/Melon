@@ -8,7 +8,6 @@
 #include "mln_alloc.h"
 #include "mln_file.h"
 #include "mln_rbtree.h"
-#include "mln_stack.h"
 #include "mln_event.h"
 #include "mln_lang_ast.h"
 #include "mln_defs.h"
@@ -31,6 +30,13 @@
 #define M_LANG_VAL_TYPE_FUNC     6
 #define M_LANG_VAL_TYPE_ARRAY    7
 #define M_LANG_VAL_TYPE_CALL     8
+
+#define mln_lang_stack_top(ctx)       ((ctx)->run_stack_tail)
+#define mln_lang_stack_push(ctx,node) mln_lang_stack_node_chain_add(&((ctx)->run_stack_head), &((ctx)->run_stack_tail), (node))
+#define mln_lang_stack_pop(ctx,node)  (\
+    (node) = (ctx)->run_stack_tail, \
+    mln_lang_stack_node_chain_del(&((ctx)->run_stack_head), &((ctx)->run_stack_tail), (node)), \
+    (node))
 
 typedef struct mln_lang_funccall_val_s  mln_lang_funccall_val_t;
 typedef struct mln_lang_val_s           mln_lang_val_t;
@@ -103,7 +109,8 @@ struct mln_lang_ctx_s {
     mln_fileset_t                   *fset;
     void                            *data;
     mln_lang_stm_t                  *stm;
-    mln_stack_t                     *run_stack;
+    mln_lang_stack_node_t           *run_stack_head;
+    mln_lang_stack_node_t           *run_stack_tail;
     mln_lang_scope_t                *scope_head;
     mln_lang_scope_t                *scope_tail;
     mln_u64_t                        ref;
