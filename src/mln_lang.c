@@ -890,7 +890,7 @@ static inline mln_lang_set_detail_t *
 mln_lang_ctx_getClass(mln_lang_ctx_t *ctx)
 {
     mln_lang_hash_bucket_t *hb;
-    mln_string_t *name = NULL;
+    mln_string_t *s, *name = NULL;
     mln_lang_symbolNode_t tmp, *sym;
 
     ASSERT(ctx->scope_tail != NULL);
@@ -902,7 +902,9 @@ mln_lang_ctx_getClass(mln_lang_ctx_t *ctx)
     tmp.layer = ctx->scope_tail->prev->layer;
     hb = mln_lang_hash_get_bucket(ctx->symbols, &tmp);
     for (sym = hb->tail; sym != NULL; sym = sym->prev) {
-        if (!mln_string_strcmp(sym->symbol, name) && sym->layer == tmp.layer) {
+        s = sym->symbol;
+        if (s->len != name->len) continue;
+        if ((s->data == name->data || !memcmp(s->data, name->data, s->len)) && sym->layer == tmp.layer) {
             ASSERT(sym->type == M_LANG_SYMBOL_SET);
             return sym->data.set;
         }
@@ -1439,7 +1441,7 @@ int mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, vo
 static inline int __mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data)
 {
     mln_lang_symbolNode_t *symbol, *tmp;
-    mln_string_t *name;
+    mln_string_t *name, *s;
 
     switch (type) {
         case M_LANG_SYMBOL_VAR:
@@ -1455,7 +1457,9 @@ static inline int __mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbo
     }
     symbol->bucket = mln_lang_hash_get_bucket(ctx->symbols, symbol);
     for (tmp = symbol->bucket->tail; tmp != NULL; tmp = tmp->prev) {
-         if (!mln_string_strcmp(tmp->symbol, symbol->symbol) && tmp->layer == symbol->layer) {
+         s = tmp->symbol;
+         if (s->len != name->len) continue;
+         if ((s->data == name->data || !memcmp(s->data, name->data, s->len)) && tmp->layer == symbol->layer) {
              mln_lang_sym_chain_del(&(tmp->bucket->head), &(tmp->bucket->tail), tmp);
              mln_lang_sym_scope_chain_del(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), tmp);
              mln_lang_symbolNode_free(tmp);
@@ -1479,6 +1483,7 @@ __mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
     mln_lang_symbolNode_t *sym, tmp;
     mln_lang_hash_bucket_t *hb;
     mln_lang_scope_t *scope = ctx->scope_tail;
+    mln_string_t *s;
 
     tmp.symbol = name;
 
@@ -1487,9 +1492,10 @@ __mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
         hb = mln_lang_hash_get_bucket(ctx->symbols, &tmp);
 
         for (sym = hb->tail; sym != NULL; sym = sym->prev) {
-            if (!mln_string_strcmp(sym->symbol, name) && sym->layer == scope->layer) {
+            s = sym->symbol;
+            if (s->len != name->len) continue;
+            if ((s->data == name->data || !memcmp(s->data, name->data, s->len)) && sym->layer == scope->layer)
                 return sym;
-            }
         }
         if (local) break;
     }
