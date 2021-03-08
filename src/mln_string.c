@@ -209,22 +209,15 @@ int mln_string_strcmp(mln_string_t *s1, mln_string_t *s2)
     if (s1 == s2 || s1->data == s2->data) return 0;
     if (s1->len > s2->len) return 1;
     if (s1->len < s2->len) return -1;
-    if (s1->len > 280) return memcmp(s1->data, s2->data, s1->len);
-    mln_u32_t i1 = 0, i2 = 0, j = 0, k = 0;
-    mln_u8ptr_t c1 = s1->data, c2 = s2->data;
-    while (j < s1->len) {
-        i1 |= (c1[j]<<k);
-        i2 |= (c2[j]<<k);
-        k += 8;
-        if (k > 24) {
-            if (i1 > i2) return 1;
-            if (i1 < i2) return -1;
-            i1 = i2 = k = 0;
-        }
-        ++j;
+    if (s1->len > 280 || (s1->len % sizeof(mln_u32_t)))
+        return memcmp(s1->data, s2->data, s1->len);
+    mln_u32_t *i1 = (mln_u32_t *)(s1->data), *i2 = (mln_u32_t *)(s2->data), i;
+    mln_s32_t res;
+    for (i = 0; i < s1->len; ) {
+        if ((res = (*i1++ - *i2++)) != 0)
+            return res;
+        i += sizeof(mln_u32_t);
     }
-    if (i1 > i2) return 1;
-    if (i1 < i2) return -1;
     return 0;
 }
 
@@ -234,22 +227,16 @@ int mln_string_constStrcmp(mln_string_t *s1, char *s2)
     mln_u32_t len = strlen(s2);
     if (s1->len > len) return 1;
     if (s1->len < len) return -1;
-    if (s1->len > 280) return memcmp(s1->data, s2, len);
-    mln_u32_t i1 = 0, i2 = 0, j = 0, k = 0;
-    mln_u8ptr_t c1 = s1->data, c2 = (mln_u8ptr_t)s2;
-    while (j < s1->len) {
-        i1 |= (c1[j]<<k);
-        i2 |= (c2[j]<<k);
-        k += 8;
-        if (k > 24) {
-            if (i1 > i2) return 1;
-            if (i1 < i2) return -1;
-            i1 = i2 = k = 0;
-        }
-        ++j;
+    if (s1->len > 280 || (len % sizeof(mln_u32_t)))
+        return memcmp(s1->data, s2, len);
+
+    mln_u32_t *i1 = (mln_u32_t *)(s1->data), *i2 = (mln_u32_t *)s2, i;
+    mln_s32_t res;
+    for (i = 0; i < len; ) {
+        if ((res = (*i1++ - *i2++)) != 0)
+            return res;
+        i += sizeof(mln_u32_t);
     }
-    if (i1 > i2) return 1;
-    if (i1 < i2) return -1;
     return 0;
 }
 
@@ -257,48 +244,33 @@ int mln_string_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n)
 {
     if (s1 == s2 || s1->data == s2->data) return 0;
     if (s1->len < n || s2->len < n) return -1;
-    if (n > 280) return memcmp(s1->data, s2->data, n);
-    mln_u32_t i1 = 0, i2 = 0;
-    mln_u32_t j = 0, k = 0;
-    mln_u8ptr_t c1 = s1->data, c2 = s2->data;
-    while (j < n) {
-        i1 |= (c1[j]<<k);
-        i2 |= (c2[j]<<k);
-        k += 8;
-        if (k > 24) {
-            if (i1 > i2) return 1;
-            if (i1 < i2) return -1;
-            i1 = i2 = k = 0;
-        }
-        ++j;
+    if (n > 280 || (n % sizeof(mln_u32_t)))
+        return memcmp(s1->data, s2->data, n);
+
+    mln_u32_t *i1 = (mln_u32_t *)(s1->data), *i2 = (mln_u32_t *)(s2->data), i;
+    mln_s32_t res;
+    for (i = 0; i < n; ) {
+        if ((res = (*i1++ - *i2++)) != 0)
+            return res;
+        i += sizeof(mln_u32_t);
     }
-    if (i1 > i2) return 1;
-    if (i1 < i2) return -1;
     return 0;
 }
 
 int mln_string_constStrncmp(mln_string_t *s1, char *s2, mln_u32_t n)
 {
     if (s1->data == (mln_u8ptr_t)s2) return 0;
-    mln_u32_t len = strlen(s2);
-    if (s1->len < n || len < n) return -1;
-    if (n > 280) return memcmp(s1->data, s2, n);
-    mln_u32_t i1 = 0, i2 = 0;
-    mln_u32_t j = 0, k = 0;
-    mln_u8ptr_t c1 = s1->data, c2 = (mln_u8ptr_t)s2;
-    while (j < n) {
-        i1 |= (c1[j]<<k);
-        i2 |= (c2[j]<<k);
-        k += 8;
-        if (k > 24) {
-            if (i1 > i2) return 1;
-            if (i1 < i2) return -1;
-            i1 = i2 = k = 0;
-        }
-        ++j;
+    if (s1->len < n || strlen(s2) < n) return -1;
+    if (n > 280 || (n % sizeof(mln_u32_t)))
+        return memcmp(s1->data, s2, n);
+
+    mln_u32_t *i1 = (mln_u32_t *)(s1->data), *i2 = (mln_u32_t *)s2, i;
+    mln_s32_t res;
+    for (i = 0; i < n; ) {
+        if ((res = (*i1++ - *i2++)) != 0)
+            return res;
+        i += sizeof(mln_u32_t);
     }
-    if (i1 > i2) return 1;
-    if (i1 < i2) return -1;
     return 0;
 }
 

@@ -1025,8 +1025,8 @@ mln_lang_ctx_getClass(mln_lang_ctx_t *ctx)
     hb = mln_lang_hash_get_bucket(ctx->symbols, &tmp);
     for (sym = hb->tail; sym != NULL; sym = sym->prev) {
         s = sym->symbol;
-        if (s->len != name->len) continue;
-        if ((s->data == name->data || !memcmp(s->data, name->data, s->len)) && sym->layer == tmp.layer) {
+        if (s->len != name->len || sym->layer != tmp.layer) continue;
+        if (!memcmp(s->data, name->data, s->len)) {
             ASSERT(sym->type == M_LANG_SYMBOL_SET);
             return sym->data.set;
         }
@@ -1438,7 +1438,7 @@ int mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, vo
 static inline int __mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data)
 {
     mln_lang_symbolNode_t *symbol, *tmp;
-    mln_string_t *name, *s;
+    mln_string_t *name;
 
     switch (type) {
         case M_LANG_SYMBOL_VAR:
@@ -1454,9 +1454,8 @@ static inline int __mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbo
     }
     symbol->bucket = mln_lang_hash_get_bucket(ctx->symbols, symbol);
     for (tmp = symbol->bucket->tail; tmp != NULL; tmp = tmp->prev) {
-         s = tmp->symbol;
-         if (s->len != name->len) continue;
-         if ((s->data == name->data || !memcmp(s->data, name->data, s->len)) && tmp->layer == symbol->layer) {
+         if (tmp->symbol->len != name->len || tmp->layer != symbol->layer) continue;
+         if (!memcmp(tmp->symbol->data, name->data, name->len)) {
              mln_lang_sym_chain_del(&(tmp->bucket->head), &(tmp->bucket->tail), tmp);
              mln_lang_sym_scope_chain_del(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), tmp);
              mln_lang_symbolNode_free(tmp);
@@ -1480,7 +1479,6 @@ __mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
     mln_lang_symbolNode_t *sym, tmp;
     mln_lang_hash_bucket_t *hb;
     mln_lang_scope_t *scope = ctx->scope_tail;
-    mln_string_t *s;
 
     tmp.symbol = name;
 
@@ -1489,10 +1487,8 @@ __mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
         hb = mln_lang_hash_get_bucket(ctx->symbols, &tmp);
 
         for (sym = hb->tail; sym != NULL; sym = sym->prev) {
-            s = sym->symbol;
-            if (s->len != name->len) continue;
-            if ((s->data == name->data || !memcmp(s->data, name->data, s->len)) && sym->layer == scope->layer)
-                return sym;
+            if (sym->symbol->len != name->len || sym->layer != scope->layer) continue;
+            if (!memcmp(sym->symbol->data, name->data, name->len)) return sym;
         }
         if (local) break;
     }
