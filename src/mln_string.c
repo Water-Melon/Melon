@@ -173,21 +173,6 @@ mln_string_t *mln_string_refConstDup(char *s)
     return str;
 }
 
-void mln_string_free(mln_string_t *str)
-{
-    if (str == NULL) return;
-    if (str->ref > 1) {
-        --str->ref;
-        return;
-    }
-    if (!str->is_referred && str->data != NULL) {
-        if (str->pool) mln_alloc_free(str->data);
-        else free(str->data);
-    }
-    if (str->pool) mln_alloc_free(str);
-    else free(str);
-}
-
 int mln_string_strcmpSeq(mln_string_t *s1, mln_string_t *s2)
 {
     int ret;

@@ -8,6 +8,7 @@
 #include "mln_types.h"
 #include <string.h>
 #include "mln_alloc.h"
+#include <stdlib.h>
 
 typedef struct {
     mln_u8ptr_t  data;
@@ -40,6 +41,23 @@ typedef struct {
 #define mln_string_ref_dup(pstring) \
     (++(pstring)->ref, (pstring))
 
+#define mln_string_free(pstr) \
+({\
+    if ((pstr) != NULL) {\
+        if ((pstr)->ref > 1) {\
+            --(pstr)->ref;\
+        } else {\
+            if (!(pstr)->is_referred && (pstr)->data != NULL) {\
+                if ((pstr)->pool) mln_alloc_free((pstr)->data);\
+                else free((pstr)->data);\
+            }\
+            if ((pstr)->pool) mln_alloc_free((pstr));\
+            else free((pstr));\
+        }\
+    }\
+})
+
+
 extern mln_string_t *
 mln_string_new(const char *s);
 extern mln_string_t *
@@ -56,8 +74,6 @@ extern mln_string_t *
 mln_string_refDup(mln_string_t *str) __NONNULL1(1);
 extern mln_string_t *
 mln_string_refConstDup(char *s);
-extern void
-mln_string_free(mln_string_t *str);
 
 /*
  * tool functions
