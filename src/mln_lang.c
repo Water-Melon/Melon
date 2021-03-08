@@ -78,14 +78,6 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_var_cache, \
                       static inline void, \
                       cache_prev, \
                       cache_next);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_stack_node, \
-                       mln_lang_stack_node_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_lang_stack_node, \
-                      mln_lang_stack_node_t, \
-                      static inline void, \
-                      prev, \
-                      next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_ast_cache, \
                        mln_lang_ast_cache_t, \
                        static inline void,);
@@ -351,11 +343,45 @@ static inline mln_lang_hash_t *mln_lang_hash_new(mln_lang_ctx_t *ctx);
 static inline void mln_lang_hash_free(mln_lang_hash_t *h);
 static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *h, mln_lang_symbolNode_t *sym);
 
+#define mln_lang_stack_node_chain_add(_head, _tail, _node); \
+        (_node)->prev = (_node)->next = NULL;\
+        if ((_head) == NULL) {\
+            (_head) = (_tail) = (_node);\
+        } else {\
+            (_tail)->next = (_node);\
+            (_node)->prev = (_tail);\
+            (_tail) = (_node);\
+        }
+
+#define mln_lang_stack_node_chain_del(_head, _tail, _node) \
+        if ((_head) == (_node)) {\
+            if ((_tail) == (_node)) {\
+                (_head) = (_tail) = NULL;\
+            } else {\
+                (_head) = (_node)->next;\
+                (_head)->prev = NULL;\
+            }\
+        } else {\
+            if ((_tail) == (_node)) {\
+                (_tail) = (_node)->prev;\
+                (_tail)->next = NULL;\
+            } else {\
+                (_node)->prev->next = (_node)->next;\
+                (_node)->next->prev = (_node)->prev;\
+            }\
+        }\
+        (_node)->prev = (_node)->next = NULL;
+
+#define mln_lang_stack_top(ctx)       ((ctx)->run_stack_tail)
+#define mln_lang_stack_push(ctx,node); mln_lang_stack_node_chain_add((ctx)->run_stack_head, (ctx)->run_stack_tail, (node));
+#define mln_lang_stack_pop(ctx,node);  \
+    (node) = (ctx)->run_stack_tail; mln_lang_stack_node_chain_del((ctx)->run_stack_head, (ctx)->run_stack_tail, (node));
+
 #define mln_lang_stack_node_new(ctx,_type,_data) \
 ({\
     mln_lang_stack_node_t *sn;\
     if ((sn = ctx->free_node_head) != NULL) {\
-        mln_lang_stack_node_chain_del(&(ctx->free_node_head), &(ctx->free_node_tail), sn);\
+        mln_lang_stack_node_chain_del(ctx->free_node_head, ctx->free_node_tail, sn);\
     } else {\
         if ((sn = (mln_lang_stack_node_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_stack_node_t))) != NULL) {\
             sn->ctx = ctx;\
@@ -469,12 +495,11 @@ static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *
         }\
         if (__node->ctx != NULL) {\
             __node->prev = __node->next = NULL;\
-            mln_lang_stack_node_chain_add(&(__node->ctx->free_node_head), &(__node->ctx->free_node_tail), __node);\
+            mln_lang_stack_node_chain_add(__node->ctx->free_node_head, __node->ctx->free_node_tail, __node);\
         } else {\
             mln_alloc_free(__node);\
         }\
     }
-
 
 
 mln_lang_method_t *mln_lang_methods[] = {
@@ -934,12 +959,12 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     if (ctx->resource_set != NULL) mln_rbtree_destroy(ctx->resource_set);
     if (ctx->msg_map != NULL) mln_rbtree_destroy(ctx->msg_map);
     while ((sn = ctx->run_stack_head) != NULL) {
-        mln_lang_stack_node_chain_del(&(ctx->run_stack_head), &(ctx->run_stack_tail), sn);
+        mln_lang_stack_node_chain_del(ctx->run_stack_head, ctx->run_stack_tail, sn);
         sn->ctx = NULL;
         mln_lang_stack_node_free(sn);
     }
     while ((sn = ctx->free_node_head) != NULL) {
-        mln_lang_stack_node_chain_del(&(ctx->free_node_head), &(ctx->free_node_tail), sn);
+        mln_lang_stack_node_chain_del(ctx->free_node_head, ctx->free_node_tail, sn);
         sn->ctx = NULL;
         mln_lang_stack_node_free(sn);
     }

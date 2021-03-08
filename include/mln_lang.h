@@ -31,11 +31,6 @@
 #define M_LANG_VAL_TYPE_ARRAY    7
 #define M_LANG_VAL_TYPE_CALL     8
 
-#define mln_lang_stack_top(ctx)       ((ctx)->run_stack_tail)
-#define mln_lang_stack_push(ctx,node) mln_lang_stack_node_chain_add(&((ctx)->run_stack_head), &((ctx)->run_stack_tail), (node))
-#define mln_lang_stack_pop(ctx,node)  \
-    ((node) = (ctx)->run_stack_tail, mln_lang_stack_node_chain_del(&((ctx)->run_stack_head), &((ctx)->run_stack_tail), (node)))
-
 typedef struct mln_lang_funccall_val_s  mln_lang_funccall_val_t;
 typedef struct mln_lang_val_s           mln_lang_val_t;
 typedef struct mln_lang_object_s        mln_lang_object_t;
