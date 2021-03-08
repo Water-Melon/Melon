@@ -115,9 +115,6 @@ mln_lang_ast_cache_free(mln_lang_ast_cache_t *cache);
 static inline mln_lang_ctx_t *
 mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t type, mln_string_t *content);
 static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx);
-static inline void mln_lang_ctx_reset_ret_var(mln_lang_ctx_t *ctx);
-static inline void
-mln_lang_ctx_get_node_ret_val(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node);
 static inline mln_lang_set_detail_t *
 mln_lang_ctx_getClass(mln_lang_ctx_t *ctx);
 static inline mln_lang_var_t *
@@ -501,6 +498,26 @@ static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *
         }\
     }
 
+#define mln_lang_ctx_reset_ret_var(ctx) \
+({\
+    if ((ctx)->ret_var != NULL) {\
+        __mln_lang_var_free((ctx)->ret_var);\
+        (ctx)->ret_var = NULL;\
+    }\
+})
+#define mln_lang_ctx_get_node_ret_val(ctx,node) \
+({\
+    if ((ctx)->ret_var != NULL) {\
+        __mln_lang_var_free((ctx)->ret_var);\
+    }\
+    (ctx)->ret_var = (node)->ret_var;\
+    (node)->ret_var = NULL;\
+})
+#define __mln_lang_ctx_set_ret_var(ctx,var) \
+({\
+    mln_lang_ctx_reset_ret_var((ctx));\
+    (ctx)->ret_var = (var);\
+})
 
 mln_lang_method_t *mln_lang_methods[] = {
 &mln_lang_nil_oprs,
@@ -994,6 +1011,11 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     mln_alloc_free(ctx);
 }
 
+void mln_lang_ctx_set_ret_var(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
+{
+    __mln_lang_ctx_set_ret_var(ctx, var);
+}
+
 void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx)
 {
     ++(ctx->ref);
@@ -1017,27 +1039,6 @@ void mln_lang_ctx_continue(mln_lang_ctx_t *ctx)
     } else {
         mln_event_set_fd(ctx->lang->ev, ctx->lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     }
-}
-
-static inline void mln_lang_ctx_reset_ret_var(mln_lang_ctx_t *ctx)
-{
-    if (ctx->ret_var == NULL) return;
-    __mln_lang_var_free(ctx->ret_var);
-    ctx->ret_var = NULL;
-}
-
-void mln_lang_ctx_set_ret_var(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
-{
-    mln_lang_ctx_reset_ret_var(ctx);
-    ctx->ret_var = var;
-}
-
-static inline void
-mln_lang_ctx_get_node_ret_val(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node)
-{
-    if (ctx->ret_var != NULL) __mln_lang_var_free(ctx->ret_var);
-    ctx->ret_var = node->ret_var;
-    node->ret_var = NULL;
 }
 
 static inline mln_lang_set_detail_t *
@@ -3482,14 +3483,14 @@ static inline int mln_lang_metReturn(mln_lang_ctx_t *ctx)
             __mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
-        mln_lang_ctx_set_ret_var(ctx, ret_var);
+        __mln_lang_ctx_set_ret_var(ctx, ret_var);
     } else {
         mln_lang_var_t *var;
         if ((var = __mln_lang_var_dup(ctx, ctx->ret_var)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
-        mln_lang_ctx_set_ret_var(ctx, var);
+        __mln_lang_ctx_set_ret_var(ctx, var);
     }
     return 0;
 }
@@ -3548,7 +3549,7 @@ static inline int mln_lang_stack_handler_block_return(mln_lang_ctx_t *ctx, mln_l
             __mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
-        mln_lang_ctx_set_ret_var(ctx, ret_var);
+        __mln_lang_ctx_set_ret_var(ctx, ret_var);
         return 0;
     }
     mln_lang_stack_node_t *node;
@@ -3681,7 +3682,7 @@ static inline int mln_lang_withdrawUntilFunc(mln_lang_ctx_t *ctx)
             __mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
-        mln_lang_ctx_set_ret_var(ctx, ret_var);
+        __mln_lang_ctx_set_ret_var(ctx, ret_var);
     }
     return 0;
 }
@@ -3699,7 +3700,7 @@ static void mln_lang_stack_handler_while(mln_lang_ctx_t *ctx)
                 mln_lang_job_free(ctx);
                 return;
             }
-            mln_lang_ctx_set_ret_var(ctx, ret_var);
+            __mln_lang_ctx_set_ret_var(ctx, ret_var);
             goto goon1;
         } else {
             if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, w->condition)) == NULL) {
@@ -3782,7 +3783,7 @@ static void mln_lang_stack_handler_switch(mln_lang_ctx_t *ctx)
     if (node->step == 0) {
         node->step = sw->switchstm == NULL? 2: 1;
         if (sw->condition == NULL) {
-            mln_lang_ctx_set_ret_var(ctx, NULL);
+            __mln_lang_ctx_set_ret_var(ctx, NULL);
         } else {
             if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, sw->condition)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
@@ -3861,7 +3862,7 @@ static void mln_lang_stack_handler_switchstm(mln_lang_ctx_t *ctx)
             mln_lang_job_free(ctx);
             return;
         }
-        mln_lang_ctx_set_ret_var(ctx, res);
+        __mln_lang_ctx_set_ret_var(ctx, res);
         if (res->val->type == M_LANG_VAL_TYPE_CALL) {
             node->call = 1;
 again:
@@ -4332,7 +4333,7 @@ static void mln_lang_stack_handler_assign(mln_lang_ctx_t *ctx)
                 mln_lang_job_free(ctx);
                 return;
             }
-            mln_lang_ctx_set_ret_var(ctx, res);
+            __mln_lang_ctx_set_ret_var(ctx, res);
             if (res->val->type == M_LANG_VAL_TYPE_CALL) {
                 node->call = 1;
 again:
@@ -5145,7 +5146,7 @@ static void mln_lang_stack_handler_suffix(mln_lang_ctx_t *ctx)
                 return;
             }
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
-            mln_lang_ctx_set_ret_var(ctx, res);
+            __mln_lang_ctx_set_ret_var(ctx, res);
             if (res->val->type == M_LANG_VAL_TYPE_CALL) {
                 node->call = 1;
 again:
@@ -5241,7 +5242,7 @@ static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx)
                 mln_lang_job_free(ctx);
                 return;
             }
-            mln_lang_ctx_set_ret_var(ctx, ret_var);
+            __mln_lang_ctx_set_ret_var(ctx, ret_var);
         } else {
             if ((node = mln_lang_stack_node_new(ctx, M_LSNT_EXP, locate->right.exp)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
@@ -5269,7 +5270,7 @@ static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx)
             mln_lang_job_free(ctx);
             return;
         }
-        mln_lang_ctx_set_ret_var(ctx, res);
+        __mln_lang_ctx_set_ret_var(ctx, res);
         if (res->val->type == M_LANG_VAL_TYPE_CALL) {
 again_index:
             node->call = 1;
@@ -5326,7 +5327,7 @@ goon3:
         }
         __mln_lang_var_free(var);
         ctx->ret_var = NULL;
-        mln_lang_ctx_set_ret_var(ctx, res);
+        __mln_lang_ctx_set_ret_var(ctx, res);
         if (res->val->type == M_LANG_VAL_TYPE_CALL) {
 again_property:
             res = ctx->ret_var;
@@ -5605,7 +5606,7 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
         if ((ret_var = prototype->data.process(ctx)) == NULL) {
             return -1;
         }
-        mln_lang_ctx_set_ret_var(ctx, ret_var);
+        __mln_lang_ctx_set_ret_var(ctx, ret_var);
     } else {
         if (prototype->data.stm != NULL) {
             scope->entry = prototype->data.stm;
@@ -5779,7 +5780,7 @@ again:
                     return;
                 }
                 mln_lang_stack_node_get_ctx_ret_var(node, ctx);
-                mln_lang_ctx_set_ret_var(ctx, ret_var);
+                __mln_lang_ctx_set_ret_var(ctx, ret_var);
                 if (ret_var->val->type == M_LANG_VAL_TYPE_CALL) {
                     goto again;
                 } else {
@@ -5889,7 +5890,7 @@ goon:
         __mln_lang_val_free(val);
         return -1;
     }
-    mln_lang_ctx_set_ret_var(ctx, var);
+    __mln_lang_ctx_set_ret_var(ctx, var);
     return 0;
 }
 
@@ -5971,7 +5972,7 @@ mln_lang_stack_handler_factor_bool(mln_lang_ctx_t *ctx, mln_lang_factor_t *facto
         __mln_lang_val_free(val);
         return -1;
     }
-    mln_lang_ctx_set_ret_var(ctx, var);
+    __mln_lang_ctx_set_ret_var(ctx, var);
     return 0;
 }
 
@@ -5993,7 +5994,7 @@ mln_lang_stack_handler_factor_string(mln_lang_ctx_t *ctx, mln_lang_factor_t *fac
         __mln_lang_val_free(val);
         return -1;
     }
-    mln_lang_ctx_set_ret_var(ctx, var);
+    __mln_lang_ctx_set_ret_var(ctx, var);
     return 0;
 }
 
@@ -6012,7 +6013,7 @@ mln_lang_stack_handler_factor_int(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor
         __mln_lang_val_free(val);
         return -1;
     }
-    mln_lang_ctx_set_ret_var(ctx, var);
+    __mln_lang_ctx_set_ret_var(ctx, var);
     return 0;
 }
 
@@ -6031,7 +6032,7 @@ mln_lang_stack_handler_factor_real(mln_lang_ctx_t *ctx, mln_lang_factor_t *facto
         __mln_lang_val_free(val);
         return -1;
     }
-    mln_lang_ctx_set_ret_var(ctx, var);
+    __mln_lang_ctx_set_ret_var(ctx, var);
     return 0;
 }
 
@@ -6085,7 +6086,7 @@ mln_lang_stack_handler_factor_id(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor)
             __mln_lang_errmsg(ctx, "Invalid token. Token is a SET name, not a value or function.");
             return -1;
         }
-        mln_lang_ctx_set_ret_var(ctx, var);
+        __mln_lang_ctx_set_ret_var(ctx, var);
         return 0;
     }
 
@@ -6107,7 +6108,7 @@ mln_lang_stack_handler_factor_id(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor)
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    mln_lang_ctx_set_ret_var(ctx, var);
+    __mln_lang_ctx_set_ret_var(ctx, var);
     return 0;
 }
 
@@ -6119,7 +6120,7 @@ mln_lang_stack_handler_factor_nil(mln_lang_ctx_t *ctx, mln_lang_factor_t *factor
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    mln_lang_ctx_set_ret_var(ctx, ret_var);
+    __mln_lang_ctx_set_ret_var(ctx, ret_var);
     return 0;
 }
 
@@ -6547,7 +6548,7 @@ static void mln_lang_msg_scriptRecver(mln_event_t *ev, int fd, void *data)
         __mln_lang_val_free(val);
         return;
     }
-    mln_lang_ctx_set_ret_var(ctx, var);
+    __mln_lang_ctx_set_ret_var(ctx, var);
     lm->script_read = 1;
     mln_lang_ctx_continue(ctx);
 }
