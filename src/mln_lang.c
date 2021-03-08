@@ -271,7 +271,7 @@ static void mln_lang_stack_handler_addsub(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_muldiv(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_suffix(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx);
-static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
+static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
                                                mln_lang_stack_node_t *node, \
                                                mln_lang_funccall_val_t *funccall);
 static inline int mln_lang_funcall_run_add_args(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *arg);
@@ -4185,9 +4185,9 @@ static void mln_lang_stack_handler_exp(mln_lang_ctx_t *ctx)
     mln_lang_stack_node_t *node = mln_lang_stack_top(ctx);
     mln_lang_exp_t *exp = node->data.exp;
     if (node->step == 0) {
+        node->step = 1;
 again:
         mln_lang_ctx_reset_ret_var(ctx);
-        node->step = 1;
         if (exp->jump == NULL)
             mln_lang_generate_jump_ptr(exp, M_LSNT_EXP);
         if (exp->type == M_LSNT_FACTOR && exp->next == NULL) {
@@ -4204,7 +4204,6 @@ again:
     } else {
         if (exp->next != NULL) {
             node->data.exp = exp->next;
-            node->step = 0;
             exp = exp->next;
             goto again;
         } else {
@@ -5449,7 +5448,7 @@ goon7:
     __mln_lang_run(ctx->lang);
 }
 
-static int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
+static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
                                                mln_lang_stack_node_t *node, \
                                                mln_lang_funccall_val_t *funccall)
 {
