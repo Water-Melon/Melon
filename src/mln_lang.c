@@ -5491,40 +5491,34 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
     mln_s32_t type;
     mln_string_t *funcname = funccall->name;
     mln_lang_array_t *args_array;
+    mln_lang_symbolNode_t *sym;
 
     if (prototype == NULL) {
-        mln_lang_symbolNode_t *sym;
         if (funccall->object == NULL) {
             while (1) {
-                if ((sym = __mln_lang_symbolNode_search(ctx, funcname, 0)) == NULL) {
+                sym = __mln_lang_symbolNode_search(ctx, funcname, 0);
+                if (sym == NULL || sym->type != M_LANG_SYMBOL_VAR) {
                     __mln_lang_errmsg(ctx, "Invalid function, No such prototype.");
                     return -1;
                 }
-                if (sym->type != M_LANG_SYMBOL_VAR) {
-                    __mln_lang_errmsg(ctx, "Invalid function, No such prototype.");
-                    return -1;
-                }
+                var = sym->data.var;
                 ASSERT(sym->data.var != NULL);
-                if ((type = __mln_lang_var_getValType(sym->data.var)) == M_LANG_VAL_TYPE_FUNC) {
-                    prototype = funccall->prototype = sym->data.var->val->data.func;
+                if ((type = __mln_lang_var_getValType(var)) == M_LANG_VAL_TYPE_FUNC) {
+                    prototype = funccall->prototype = var->val->data.func;
                     break;
-                }
-                if (type != M_LANG_VAL_TYPE_STRING) {
+                } else if (type != M_LANG_VAL_TYPE_STRING) {
                     __mln_lang_errmsg(ctx, "Invalid function, No such prototype.");
                     return -1;
                 }
-                funcname = sym->data.var->val->data.s;
+                funcname = var->val->data.s;
             }
         } else {/*maybe never get in, not support b.a="foo";b.a() to call b.foo*/
             while (1) {
                 if ((var = __mln_lang_set_member_search(funccall->object->data.obj->members, \
                                                         funcname)) == NULL)
                 {
-                    if ((sym = __mln_lang_symbolNode_search(ctx, funcname, 0)) == NULL) {
-                        __mln_lang_errmsg(ctx, "Invalid function, No such prototype.");
-                        return -1;
-                    }
-                    if (sym->type != M_LANG_SYMBOL_VAR) {
+                    sym = __mln_lang_symbolNode_search(ctx, funcname, 0);
+                    if (sym == NULL || sym->type != M_LANG_SYMBOL_VAR) {
                         __mln_lang_errmsg(ctx, "Invalid function, No such prototype.");
                         return -1;
                     }
@@ -5539,8 +5533,7 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
                 if ((type = __mln_lang_var_getValType(var)) == M_LANG_VAL_TYPE_FUNC) {
                     prototype = funccall->prototype = var->val->data.func;
                     break;
-                }
-                if (type != M_LANG_VAL_TYPE_STRING) {
+                } else if (type != M_LANG_VAL_TYPE_STRING) {
                     __mln_lang_errmsg(ctx, "Invalid function, No such prototype.");
                     return -1;
                 }
@@ -5549,11 +5542,7 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
         }
     }
 
-    if ((scope = mln_lang_scope_new(ctx, \
-                                    NULL, \
-                                    M_LANG_SCOPE_TYPE_FUNC, \
-                                    node, NULL)) == NULL)
-    {
+    if ((scope = mln_lang_scope_new(ctx, NULL, M_LANG_SCOPE_TYPE_FUNC, node, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -5604,15 +5593,14 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
     }
     mln_lang_ctx_reset_ret_var(ctx);
     if (prototype->type == M_FUNC_INTERNAL) {
-        mln_lang_var_t *ret_var = NULL;
         if (prototype->data.process == NULL) {
             __mln_lang_errmsg(ctx, "Not implemented.");
             return -1;
         }
-        if ((ret_var = prototype->data.process(ctx)) == NULL) {
+        if ((var = prototype->data.process(ctx)) == NULL) {
             return -1;
         }
-        __mln_lang_ctx_set_ret_var(ctx, ret_var);
+        __mln_lang_ctx_set_ret_var(ctx, var);
     } else {
         if (prototype->data.stm != NULL) {
             scope->entry = prototype->data.stm;
@@ -5907,6 +5895,18 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
     if (node->step == 0) {
         node->step = 1;
         switch (factor->type) {
+            case M_FACTOR_ID:
+                if (mln_lang_stack_handler_factor_id(ctx, factor) < 0) {
+                    mln_lang_job_free(ctx);
+                    return;
+                }
+                break;
+            case M_FACTOR_INT:
+                if (mln_lang_stack_handler_factor_int(ctx, factor) < 0) {
+                    mln_lang_job_free(ctx);
+                    return;
+                }
+                break;
             case M_FACTOR_BOOL:
                 if (mln_lang_stack_handler_factor_bool(ctx, factor) < 0) {
                     mln_lang_job_free(ctx);
@@ -5915,12 +5915,6 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                 break;
             case M_FACTOR_STRING:
                 if (mln_lang_stack_handler_factor_string(ctx, factor) < 0) {
-                    mln_lang_job_free(ctx);
-                    return;
-                }
-                break;
-            case M_FACTOR_INT:
-                if (mln_lang_stack_handler_factor_int(ctx, factor) < 0) {
                     mln_lang_job_free(ctx);
                     return;
                 }
@@ -5937,12 +5931,6 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                     return;
                 }
                 break;
-            case M_FACTOR_ID:
-                if (mln_lang_stack_handler_factor_id(ctx, factor) < 0) {
-                    mln_lang_job_free(ctx);
-                    return;
-                }
-                break;
             default:
                 if (mln_lang_stack_handler_factor_nil(ctx, factor) < 0) {
                     mln_lang_job_free(ctx);
@@ -5950,9 +5938,11 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                 }
                 break;
         }
-        if (factor->type != M_FACTOR_ARRAY) goto goon;
+        if (factor->type != M_FACTOR_ARRAY) {
+            mln_lang_stack_pop(ctx, node);
+            mln_lang_stack_node_free(node);
+        }
     } else {
-goon:
         if (factor->type == M_FACTOR_ARRAY) {
             mln_lang_ctx_get_node_ret_val(ctx, node);
         }
