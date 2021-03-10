@@ -173,7 +173,7 @@ static inline mln_lang_object_t *
 mln_lang_object_dup(mln_lang_ctx_t *ctx, mln_lang_object_t *src);
 static inline mln_lang_val_t *
 __mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data);
-static void __mln_lang_val_free(void *data);
+static inline void __mln_lang_val_free(void *data);
 static inline void mln_lang_val_freeData(mln_lang_val_t *val);
 static inline mln_lang_val_t *
 mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val);
@@ -2555,13 +2555,13 @@ void mln_lang_val_free(mln_lang_val_t *val)
     return __mln_lang_val_free(val);
 }
 
-static void __mln_lang_val_free(void *data)
+static inline void __mln_lang_val_free(void *data)
 {
     if (data == NULL) return;
     mln_lang_val_t *val = (mln_lang_val_t *)data;
     if (val->ref-- > 1) return;
     if (val->udata != NULL && val->udata != val) {
-        __mln_lang_val_free(val->udata);
+        mln_lang_val_free(val->udata);
         val->udata = NULL;
     }
     if (val->func != NULL) {
