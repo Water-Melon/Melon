@@ -44,9 +44,7 @@ typedef struct {
 #define mln_string_free(pstr) \
 ({\
     if ((pstr) != NULL) {\
-        if ((pstr)->ref > 1) {\
-            --(pstr)->ref;\
-        } else {\
+        if ((pstr)->ref-- <= 1) {\
             if (!(pstr)->is_referred && (pstr)->data != NULL) {\
                 if ((pstr)->pool) mln_alloc_free((pstr)->data);\
                 else free((pstr)->data);\

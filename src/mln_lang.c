@@ -1405,7 +1405,10 @@ static inline void mln_lang_scope_free(mln_lang_scope_t *scope)
     if (scope == NULL) return;
     mln_lang_symbolNode_t *sym;
 
-    if (scope->name != NULL) mln_string_free(scope->name);
+    if (scope->name != NULL) {
+        mln_string_free(scope->name);
+        scope->name = NULL;
+    }
     while ((sym = scope->sym_head) != NULL) {
         mln_lang_sym_scope_chain_del(&scope->sym_head, &scope->sym_tail, sym);
         mln_lang_sym_chain_del(&sym->bucket->head, &sym->bucket->tail, sym);
@@ -5526,7 +5529,7 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
                         return -1;
                     }
                     ASSERT(sym->data.var != NULL);
-                    if (type != M_LANG_VAL_TYPE_STRING) {
+                    if (__mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
                         __mln_lang_errmsg(ctx, "Invalid function, No such prototype.");
                         return -1;
                     }
