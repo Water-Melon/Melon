@@ -16,6 +16,7 @@
 
 #define M_LANG_CACHE_COUNT       200
 #define M_LANG_SYMBOL_TABLE_LEN  371
+#define M_LANG_STEP_OUT          -1
 
 #define M_LANG_MAX_OPENFILE      67
 #define M_LANG_DEFAULT_STEP      20000
