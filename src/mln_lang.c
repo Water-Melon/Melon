@@ -4210,11 +4210,14 @@ again:
         mln_lang_ctx_reset_ret_var(ctx);
         if (exp->jump == NULL)
             mln_lang_generate_jump_ptr(exp, M_LSNT_EXP);
-        if (exp->type == M_LSNT_FACTOR && exp->next == NULL) {
-            mln_lang_stack_pop(ctx, node);
-            mln_lang_stack_node_free(node);
+        if (exp->next == NULL) {
+            if (exp->type == M_LSNT_FACTOR) {
+                mln_lang_stack_pop(ctx, node);
+                mln_lang_stack_node_free(node);
+            } else {
+                node->step = M_LANG_STEP_OUT;
+            }
         }
-        if (exp->next == NULL) node->step = M_LANG_STEP_OUT;
         if ((node = mln_lang_stack_node_new(ctx, exp->type, exp->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -5261,10 +5264,20 @@ static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx)
     if (node->step == 0) {
         mln_lang_stack_node_reset_ret_val(node);
         mln_lang_ctx_reset_ret_var(ctx);
-        if (locate->op == M_LOCATE_NONE) node->step = M_LANG_STEP_OUT;
-        else if (locate->op == M_LOCATE_PROPERTY) node->step = 4;
-        else if (locate->op == M_LOCATE_INDEX) node->step = 1;
-        else node->step = 5;
+        switch (locate->op) {
+            case M_LOCATE_NONE:
+                node->step = M_LANG_STEP_OUT;
+                break;
+            case M_LOCATE_PROPERTY:
+                node->step = 4;
+                break;
+            case M_LOCATE_INDEX:
+                node->step = 1;
+                break;
+            default:
+                node->step = 5;
+                break;
+        }
         if (locate->jump == NULL)
             mln_lang_generate_jump_ptr(locate, M_LSNT_LOCATE);
         if (locate->type == M_LSNT_FACTOR && locate->op == M_LOCATE_NONE) {
@@ -5808,28 +5821,27 @@ again:
                     ASSERT(0);
                     break;
             }
-            if (handler != NULL) {
-                ret_var = NULL;
-                if ((spec->op == M_SPEC_INC || spec->op == M_SPEC_DEC) && mln_lang_val_issetNotModify(ctx->ret_var->val)) {
-                    __mln_lang_errmsg(ctx, "Operand cannot be changed.");
-                    mln_lang_job_free(ctx);
-                    return;
-                }
-                if (handler(ctx, &ret_var, ctx->ret_var, NULL) < 0) {
-                    mln_lang_job_free(ctx);
-                    return;
-                }
-                mln_lang_stack_node_get_ctx_ret_var(node, ctx);
-                __mln_lang_ctx_set_ret_var(ctx, ret_var);
-                if (ret_var->val->type == M_LANG_VAL_TYPE_CALL) {
-                    goto again;
-                } else {
-                    goto goon2;
-                }
-            } else {
+            if (handler == NULL) {
                 __mln_lang_errmsg(ctx, "Operation NOT support.");
                 mln_lang_job_free(ctx);
                 return;
+            }
+            ret_var = NULL;
+            if ((spec->op == M_SPEC_INC || spec->op == M_SPEC_DEC) && mln_lang_val_issetNotModify(ctx->ret_var->val)) {
+                __mln_lang_errmsg(ctx, "Operand cannot be changed.");
+                mln_lang_job_free(ctx);
+                return;
+            }
+            if (handler(ctx, &ret_var, ctx->ret_var, NULL) < 0) {
+                mln_lang_job_free(ctx);
+                return;
+            }
+            mln_lang_stack_node_get_ctx_ret_var(node, ctx);
+            __mln_lang_ctx_set_ret_var(ctx, ret_var);
+            if (ret_var->val->type == M_LANG_VAL_TYPE_CALL) {
+                goto again;
+            } else {
+                goto goon2;
             }
         }
     } else if (node->step == 2) {
