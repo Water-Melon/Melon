@@ -3475,13 +3475,6 @@ static inline int mln_lang_metReturn(mln_lang_ctx_t *ctx)
             return -1;
         }
         __mln_lang_ctx_set_ret_var(ctx, ret_var);
-    } else {
-        mln_lang_var_t *var;
-        if ((var = __mln_lang_var_dup(ctx, ctx->ret_var)) == NULL) {
-            __mln_lang_errmsg(ctx, "No memory.");
-            return -1;
-        }
-        __mln_lang_ctx_set_ret_var(ctx, var);
     }
     return 0;
 }
@@ -5956,7 +5949,7 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                 mln_lang_symbolNode_t *sym;
                 if ((sym = mln_lang_symbolNode_idSearch(ctx, factor->data.s_id)) != NULL) {
                     if (sym->type == M_LANG_SYMBOL_VAR) {
-                        var = mln_lang_var_ref(sym->data.var);
+                        __mln_lang_ctx_set_ret_var(ctx, mln_lang_var_ref(sym->data.var));
                     } else {/*M_LANG_SYMBOL_SET*/
                         __mln_lang_errmsg(ctx, "Invalid token. Token is a SET name, not a value or function.");
                         mln_lang_job_free(ctx);
@@ -5974,9 +5967,8 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                         mln_lang_job_free(ctx);
                         return;
                     }
-                    var = mln_lang_var_ref(var);
+                    __mln_lang_ctx_set_ret_var(ctx, mln_lang_var_ref(var));
                 }
-                __mln_lang_ctx_set_ret_var(ctx, var);
                 break;
             }
             case M_FACTOR_INT:
