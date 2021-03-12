@@ -1776,14 +1776,11 @@ mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_va
         var->cache_prev = var->cache_next = NULL;
     }
     var->type = defvar->type;
-    if (defvar->name != NULL) {
-        var->name = mln_string_ref_dup(defvar->name);
-    } else {
-        var->name = NULL;
-    }
+    ASSERT(defvar->name != NULL);
+    var->name = mln_string_ref_dup(defvar->name);
     if (var->type == M_LANG_VAR_NORMAL) {
         if ((var->val = mln_lang_val_dup(ctx, realvar->val)) == NULL) {
-            if (var->name != NULL) mln_string_free(var->name);
+            mln_string_free(var->name);
             mln_alloc_free(var);
             return NULL;
         }
@@ -3216,12 +3213,12 @@ again:
         return mln_lang_stack_map[node->type](ctx);
     } else {
 goon1:
-       if (ctx->ret_var == NULL && stm->next != NULL) {
-           stm = stm->next;
-           node->data.stm = stm;
-           goto again;
-       }
-       mln_lang_stack_pop(ctx, node);
+        if (ctx->ret_var == NULL && stm->next != NULL) {
+            stm = stm->next;
+            node->data.stm = stm;
+            goto again;
+        }
+        mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
     }
     __mln_lang_run(ctx->lang);
