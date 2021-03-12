@@ -71,10 +71,7 @@ mln_lang_bool_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 

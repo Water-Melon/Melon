@@ -1934,7 +1934,6 @@ static int mln_lang_sys_getproperty_handler(mln_lang_ctx_t *ctx)
 
 static mln_lang_var_t *mln_lang_sys_getproperty_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("obj");
     mln_string_t v2 = mln_string("prop");
     mln_lang_symbolNode_t *sym, *sym2;
@@ -1972,11 +1971,7 @@ static mln_lang_var_t *mln_lang_sys_getproperty_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No such property in object.");
         return NULL;
     }
-    if ((ret_var = mln_lang_var_convert(ctx, var)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return NULL;
-    }
-    return ret_var;
+    return mln_lang_var_ref(var);
 }
 
 static int mln_lang_sys_setproperty_handler(mln_lang_ctx_t *ctx)
@@ -2051,7 +2046,6 @@ static int mln_lang_sys_setproperty_handler(mln_lang_ctx_t *ctx)
 
 static mln_lang_var_t *mln_lang_sys_setproperty_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("obj");
     mln_string_t v2 = mln_string("prop");
     mln_string_t v3 = mln_string("val");
@@ -2127,11 +2121,7 @@ static mln_lang_var_t *mln_lang_sys_setproperty_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    if ((ret_var = mln_lang_var_convert(ctx, var)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return NULL;
-    }
-    return ret_var;
+    return mln_lang_var_ref(var);
 }
 
 static int mln_lang_sys_eval_handler(mln_lang_ctx_t *ctx)

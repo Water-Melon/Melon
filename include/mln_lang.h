@@ -281,6 +281,7 @@ struct mln_lang_var_s {
     mln_lang_var_t                  *next;
     mln_lang_var_t                  *cache_prev;
     mln_lang_var_t                  *cache_next;
+    mln_uauto_t                      ref;
 };
 
 typedef enum {
@@ -449,6 +450,7 @@ extern mln_lang_var_t *mln_lang_var_new(mln_lang_ctx_t *ctx, \
                                         mln_lang_val_t *val, \
                                         mln_lang_set_detail_t *inSet) __NONNULL1(1);
 extern void mln_lang_var_free(void *data);
+#define mln_lang_var_ref(var) (++(var)->ref, (var))
 #define mln_lang_var_setType(var,t) ((var)->type = (t))
 #define mln_lang_var_getType(var,t) ((var)->type)
 #define mln_lang_var_getVal(var) ((var)->val)
@@ -462,7 +464,6 @@ extern mln_s64_t mln_lang_var_toInt(mln_lang_var_t *var) __NONNULL1(1);
 extern double mln_lang_var_toReal(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var) __NONNULL2(1,2);
 extern mln_lang_var_t *mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var) __NONNULL2(1,2);
-extern mln_lang_var_t *mln_lang_var_convert(mln_lang_ctx_t *ctx, mln_lang_var_t *var) __NONNULL2(1,2);
 extern void mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val) __NONNULL2(1,2);
 extern int mln_lang_var_setValue(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
 extern int mln_lang_var_setValue_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);

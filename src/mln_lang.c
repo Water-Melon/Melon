@@ -173,8 +173,6 @@ static int mln_lang_var_cmpForElemCmp(const void *data1, const void *data2);
 static int mln_lang_var_cmpName(const void *data1, const void *data2);
 static inline mln_lang_var_t *
 mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_var_t *defvar);
-static inline mln_lang_var_t *
-__mln_lang_var_convert(mln_lang_ctx_t *ctx, mln_lang_var_t *var);
 static inline void __mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val);
 static inline mln_s32_t __mln_lang_var_getValType(mln_lang_var_t *var);
 static inline int
@@ -1726,6 +1724,7 @@ __mln_lang_var_new(mln_lang_ctx_t *ctx, \
     var->inSet = inSet;
     if (inSet != NULL) ++(inSet->ref);
     var->prev = var->next = NULL;
+    var->ref = 0;
     return var;
 }
 
@@ -1758,6 +1757,7 @@ __mln_lang_var_new_ref_string(mln_lang_ctx_t *ctx, \
     var->inSet = inSet;
     if (inSet != NULL) ++(inSet->ref);
     var->prev = var->next = NULL;
+    var->ref = 0;
     return var;
 }
 
@@ -1795,36 +1795,8 @@ mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_va
     var->inSet = defvar->inSet;
     if (var->inSet != NULL) ++(var->inSet->ref);
     var->prev = var->next = NULL;
+    var->ref = 0;
     return var;
-}
-
-mln_lang_var_t *mln_lang_var_convert(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
-{
-    return __mln_lang_var_convert(ctx, var);
-}
-
-static inline mln_lang_var_t *
-__mln_lang_var_convert(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
-{
-    mln_lang_var_t *ret;
-    if ((ret = ctx->var_head) != NULL) {
-        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), ret);
-        --(ctx->var_count);
-    } else {
-        if ((ret = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
-            return NULL;
-        }
-        ret->ctx = ctx;
-        ret->cache_prev = ret->cache_next = NULL;
-    }
-    ret->type = M_LANG_VAR_NORMAL;
-    ret->name = var->name != NULL? mln_string_ref_dup(var->name): NULL;
-    ret->val = var->val;
-    ++(ret->val->ref);
-    ret->inSet = var->inSet;
-    ret->prev = ret->next = NULL;
-    if (ret->inSet != NULL) ++(ret->inSet->ref);
-    return ret;
 }
 
 void mln_lang_var_free(void *data)
@@ -1836,6 +1808,7 @@ static inline void __mln_lang_var_free(void *data)
 {
     if (data == NULL) return;
     mln_lang_var_t *var = (mln_lang_var_t *)data;
+    if (var->ref-- > 0) return;
     if (var->name != NULL) {
         mln_string_free(var->name);
         var->name = NULL;
@@ -5475,13 +5448,7 @@ again_property:
         node->step = 8;
     } else if (node->step == 8) {
         if (ctx->ret_var != NULL) {
-            mln_lang_var_t *var;
-            if ((var = __mln_lang_var_convert(ctx, ctx->ret_var)) == NULL) {
-                __mln_lang_errmsg(ctx, "No memory.");
-                mln_lang_job_free(ctx);
-                return;
-            }
-            mln_lang_funccall_val_addArg(node->ret_var->val->data.call, var);
+            mln_lang_funccall_val_addArg(node->ret_var->val->data.call, mln_lang_var_ref(ctx->ret_var));
             mln_lang_ctx_reset_ret_var(ctx);
         }
         ASSERT(ctx->ret_var == NULL);
@@ -5641,9 +5608,14 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
                 return -1;
             }
         } else {
-            if ((newvar = mln_lang_var_transform(ctx, var, scan)) == NULL) {
-                __mln_lang_errmsg(ctx, "No memory.");
-                return -1;
+            if (!var->ref) {/* name must be NULL*/
+                newvar = mln_lang_var_ref(var);
+                newvar->name = mln_string_ref_dup(scan->name);
+            } else {
+                if ((newvar = mln_lang_var_transform(ctx, var, scan)) == NULL) {
+                    __mln_lang_errmsg(ctx, "No memory.");
+                    return -1;
+                }
             }
             var = var->next;
         }
@@ -5980,11 +5952,7 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                 mln_lang_symbolNode_t *sym;
                 if ((sym = mln_lang_symbolNode_idSearch(ctx, factor->data.s_id)) != NULL) {
                     if (sym->type == M_LANG_SYMBOL_VAR) {
-                        if ((var = __mln_lang_var_convert(ctx, sym->data.var)) == NULL) {
-                            __mln_lang_errmsg(ctx, "No memory.");
-                            mln_lang_job_free(ctx);
-                            return;
-                        }
+                        var = mln_lang_var_ref(sym->data.var);
                     } else {/*M_LANG_SYMBOL_SET*/
                         __mln_lang_errmsg(ctx, "Invalid token. Token is a SET name, not a value or function.");
                         mln_lang_job_free(ctx);
@@ -6002,11 +5970,7 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                         mln_lang_job_free(ctx);
                         return;
                     }
-                    if ((var = __mln_lang_var_convert(ctx, var)) == NULL) {
-                        __mln_lang_errmsg(ctx, "No memory.");
-                        mln_lang_job_free(ctx);
-                        return;
-                    }
+                    var = mln_lang_var_ref(var);
                 }
                 __mln_lang_ctx_set_ret_var(ctx, var);
                 break;
@@ -6182,12 +6146,7 @@ static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx)
 goon1:
         if (ctx->ret_var != NULL) {
             ASSERT(node->ret_var != NULL && node->ret_var->val->type == M_LANG_VAL_TYPE_CALL);
-            if ((var = __mln_lang_var_convert(ctx, ctx->ret_var)) == NULL) {
-                __mln_lang_errmsg(ctx, "No memory.");
-                mln_lang_job_free(ctx);
-                return;
-            }
-            mln_lang_funccall_val_addArg(node->ret_var->val->data.call, var);
+            mln_lang_funccall_val_addArg(node->ret_var->val->data.call, mln_lang_var_ref(ctx->ret_var));
             mln_lang_ctx_reset_ret_var(ctx);
         }
         ASSERT(ctx->ret_var == NULL);

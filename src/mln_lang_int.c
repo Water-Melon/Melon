@@ -128,10 +128,7 @@ mln_lang_int_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -170,10 +167,7 @@ mln_lang_int_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
                             mln_lang_var_toInt(op1) + \
                                 mln_lang_var_toInt(op2));
     }
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -200,10 +194,7 @@ mln_lang_int_subeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
                             mln_lang_var_toInt(op1) - \
                                 mln_lang_var_toInt(op2));
     }
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -224,10 +215,7 @@ mln_lang_int_lmoveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
     mln_lang_var_setInt(op1, \
                         mln_lang_var_toInt(op1) << \
                             mln_lang_var_toInt(op2));
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -248,10 +236,7 @@ mln_lang_int_rmoveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
     mln_lang_var_setInt(op1, \
                         mln_lang_var_toInt(op1) >> \
                             mln_lang_var_toInt(op2));
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -278,10 +263,7 @@ mln_lang_int_muleq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
                             mln_lang_var_toInt(op1) * \
                                 mln_lang_var_toInt(op2));
     }
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -315,10 +297,7 @@ mln_lang_int_diveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
         }
         mln_lang_var_setInt(op1, mln_lang_var_toInt(op1) / i);
     }
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -339,10 +318,7 @@ mln_lang_int_oreq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
     mln_lang_var_setInt(op1, \
                         mln_lang_var_toInt(op1) | \
                             mln_lang_var_toInt(op2));
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -363,10 +339,7 @@ mln_lang_int_andeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
     mln_lang_var_setInt(op1, \
                         mln_lang_var_toInt(op1) & \
                             mln_lang_var_toInt(op2));
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -387,10 +360,7 @@ mln_lang_int_xoreq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
     mln_lang_var_setInt(op1, \
                         mln_lang_var_toInt(op1) ^ \
                             mln_lang_var_toInt(op2));
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
@@ -414,10 +384,7 @@ mln_lang_int_modeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
         return -1;
     }
     mln_lang_var_setInt(op1, mln_lang_var_toInt(op1) % i);
-    if ((*ret = mln_lang_var_convert(ctx, op1)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
+    *ret = mln_lang_var_ref(op1);
     return 0;
 }
 
