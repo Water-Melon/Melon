@@ -4341,7 +4341,6 @@ again:
             goto goon3;
         }
     } else if (node->step == 3) {
-goon3:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -4350,6 +4349,7 @@ goon3:
             res = ctx->ret_var;
             if (ctx->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
+goon3:
         node->step = 4;
         if (node->ret_var != NULL && node->ret_var->val->func != NULL) {
             if (mln_lang_watch_funcBuild(ctx, \
@@ -4364,12 +4364,9 @@ goon3:
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
             mln_lang_ctx_reset_ret_var(ctx);
         } else {
-            mln_lang_stack_node_get_ctx_ret_var(node, ctx);
-            mln_lang_ctx_reset_ret_var(ctx);
             goto goon4;
         }
     } else if (node->step == 4) {
-goon4:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -4378,6 +4375,7 @@ goon4:
             node->call = 0;
         }
         mln_lang_ctx_get_node_ret_val(ctx, node);
+goon4:
         mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
@@ -4530,7 +4528,6 @@ again:
             goto goon4;
         }
     } else if (node->step == 4) {
-goon4:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -4541,6 +4538,7 @@ goon4:
             res = node->ret_var;
             if (node->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
+goon4:
         node->pos = logicHigh->right;
         if (node->pos != NULL && logicHigh->right->op != M_LOGICHIGH_NONE) {
             node->step = 2;
@@ -4641,7 +4639,6 @@ again:
             goto goon4;
         }
     } else if (node->step == 4) {
-goon4:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -4652,6 +4649,7 @@ goon4:
             res = node->ret_var;
             if (node->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
+goon4:
         node->pos = relativeLow->right;
         if (node->pos != NULL && relativeLow->right->op != M_RELATIVELOW_NONE) {
             node->step = 2;
@@ -4758,7 +4756,6 @@ again:
             goto goon4;
         }
     } else if (node->step == 4) {
-goon4:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -4769,6 +4766,7 @@ goon4:
             res = node->ret_var;
             if (node->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
+goon4:
         node->pos = relativeHigh->right;
         if (node->pos != NULL && relativeHigh->right->op != M_RELATIVEHIGH_NONE) {
             node->step = 2;
@@ -4869,7 +4867,6 @@ again:
             goto goon4;
         }
     } else if (node->step == 4) {
-goon4:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -4880,6 +4877,7 @@ goon4:
             res = node->ret_var;
             if (node->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
+goon4:
         node->pos = move->right;
         if (node->pos != NULL && move->right->op != M_MOVE_NONE) {
             node->step = 2;
@@ -4980,7 +4978,6 @@ again:
             goto goon4;
         }
     } else if (node->step == 4) {
-goon4:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -4991,6 +4988,7 @@ goon4:
             res = node->ret_var;
             if (node->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
+goon4:
         node->pos = addsub->right;
         if (node->pos != NULL && addsub->right->op != M_ADDSUB_NONE) {
             node->step = 2;
@@ -5094,7 +5092,6 @@ again:
             goto goon4;
         }
     } else if (node->step == 4) {
-goon4:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -5105,6 +5102,7 @@ goon4:
             res = node->ret_var;
             if (node->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
+goon4:
         node->pos = muldiv->right;
         if (node->pos != NULL && muldiv->right->op != M_MULDIV_NONE) {
             node->step = 2;
@@ -5193,7 +5191,6 @@ again:
             return;
         }
     } else if (node->step == 2) {
-goon2:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -5202,6 +5199,7 @@ goon2:
             res = ctx->ret_var;
             if (ctx->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
+goon2:
         node->step = 3;
         if (node->ret_var != NULL && node->ret_var->val->func != NULL) {
             if (mln_lang_watch_funcBuild(ctx, \
@@ -5216,12 +5214,9 @@ goon2:
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
             mln_lang_ctx_reset_ret_var(ctx);
         } else {
-            mln_lang_stack_node_get_ctx_ret_var(node, ctx);
-            mln_lang_ctx_reset_ret_var(ctx);
             goto goon3;
         }
     } else if (node->step == 3) {
-goon3:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -5230,6 +5225,7 @@ goon3:
             node->call = 0;
         }
         mln_lang_ctx_get_node_ret_val(ctx, node);
+goon3:
         mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
@@ -5326,11 +5322,10 @@ again_index:
                 return;
             }
         } else {
-            node->step = 3;
-            goto goon3;
+            node->step = 7;
+            goto goon7;
         }
     } else if (node->step == 3) {
-goon3:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -5384,8 +5379,8 @@ again_property:
                 return;
             }
         } else {
-            node->step = 6;
-            goto goon6;
+            node->step = 7;
+            goto goon7;
         }
     } else if (node->step == 5) {
         mln_lang_var_t *ret_var;
@@ -5471,7 +5466,6 @@ again_property:
             node->ret_var2 = NULL;
         }
     } else if (node->step == 6) {
-goon6:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -5830,7 +5824,6 @@ again:
             }
         }
     } else if (node->step == 2) {
-goon2:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -5840,6 +5833,7 @@ goon2:
             ret_var = ctx->ret_var;
             if (ctx->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
+goon2:
         node->step = 3;
         if ((spec->op == M_SPEC_INC || spec->op == M_SPEC_DEC) && \
             node->ret_var != NULL && \
@@ -5857,12 +5851,9 @@ goon2:
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
             mln_lang_ctx_reset_ret_var(ctx);
         } else {
-            mln_lang_stack_node_get_ctx_ret_var(node, ctx);
-            mln_lang_ctx_reset_ret_var(ctx);
-            goto goon3;
+            goto out;
         }
     } else if (node->step == 3) {
-goon3:
         if (node->call) {
             if (mln_lang_withdrawUntilFunc(ctx) < 0) {
                 mln_lang_job_free(ctx);
@@ -5875,6 +5866,7 @@ goon3:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     } else {
+out:
         mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
@@ -6139,12 +6131,12 @@ static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx)
         mln_lang_ctx_reset_ret_var(ctx);
         goto goon1;
     } else {
-goon1:
         if (ctx->ret_var != NULL) {
             ASSERT(node->ret_var != NULL && node->ret_var->val->type == M_LANG_VAL_TYPE_CALL);
             mln_lang_funccall_val_addArg(node->ret_var->val->data.call, mln_lang_var_ref(ctx->ret_var));
             mln_lang_ctx_reset_ret_var(ctx);
         }
+goon1:
         ASSERT(ctx->ret_var == NULL);
         if (node->pos != NULL) {
             mln_lang_exp_t *exp = (mln_lang_exp_t *)(node->pos);
