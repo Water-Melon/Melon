@@ -851,6 +851,17 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
 
+    ctx->ret_var = NULL;
+    ctx->return_handler = NULL;
+    ctx->prev = ctx->next = NULL;
+    ctx->free_node_head = ctx->free_node_tail = NULL;
+    ctx->var_head = ctx->var_tail = NULL;
+    ctx->val_head = ctx->val_tail = NULL;
+    ctx->sym_head = ctx->sym_tail = NULL;
+    ctx->scope_cache_head = ctx->scope_cache_tail = NULL;
+    ctx->var_count = ctx->val_count = ctx->sym_count = ctx->scope_count = 0;
+    ctx->ret_flag = 0;
+
     gcattr.pool = ctx->pool;
     gcattr.itemGetter = (gcItemGetter)mln_lang_gc_item_getter;
     gcattr.itemSetter = (gcItemSetter)mln_lang_gc_item_setter;
@@ -869,16 +880,6 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         mln_lang_ctx_free(ctx);
         return NULL;
     }
-
-    ctx->ret_var = NULL;
-    ctx->return_handler = NULL;
-    ctx->prev = ctx->next = NULL;
-    ctx->free_node_head = ctx->free_node_tail = NULL;
-    ctx->var_head = ctx->var_tail = NULL;
-    ctx->val_head = ctx->val_tail = NULL;
-    ctx->sym_head = ctx->sym_tail = NULL;
-    ctx->scope_cache_head = ctx->scope_cache_tail = NULL;
-    ctx->var_count = ctx->val_count = ctx->sym_count = ctx->scope_count = 0;
 
     mln_lang_stack_node_t *node = mln_lang_stack_node_new(ctx, M_LSNT_STM, ctx->stm);
     if (node == NULL) {
@@ -3213,11 +3214,13 @@ again:
         return mln_lang_stack_map[node->type](ctx);
     } else {
 goon1:
-        if (ctx->ret_var == NULL && stm->next != NULL) {
+        if (!ctx->ret_flag && stm->next != NULL) {
             stm = stm->next;
             node->data.stm = stm;
             goto again;
         }
+        if (ctx->ret_flag) ctx->ret_flag = 0;
+        else mln_lang_ctx_reset_ret_var(ctx);
         mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
     }
@@ -3387,7 +3390,7 @@ static void mln_lang_stack_handler_block(mln_lang_ctx_t *ctx)
     mln_lang_block_t *block = node->data.block;
     if (node->step == 0) {
         mln_lang_ctx_reset_ret_var(ctx);
-        ++(node->step);
+        node->step = block->type!=M_BLOCK_RETURN? M_LANG_STEP_OUT: 1;
         switch (block->type) {
             case M_BLOCK_EXP:
                 if (block->data.exp == NULL) goto nil;
@@ -3476,6 +3479,7 @@ static inline int mln_lang_metReturn(mln_lang_ctx_t *ctx)
         }
         __mln_lang_ctx_set_ret_var(ctx, ret_var);
     }
+    ctx->ret_flag = 1;
     return 0;
 }
 

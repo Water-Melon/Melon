@@ -129,7 +129,8 @@ struct mln_lang_ctx_s {
     mln_lang_symbolNode_t           *sym_tail;
     mln_lang_scope_t                *scope_cache_head;
     mln_lang_scope_t                *scope_cache_tail;
-    mln_u32_t                        var_count:8;
+    mln_u32_t                        ret_flag:1;
+    mln_u32_t                        var_count:7;
     mln_u32_t                        val_count:8;
     mln_u32_t                        sym_count:8;
     mln_u32_t                        scope_count:8;
