@@ -2544,7 +2544,6 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
             break;
         case M_LANG_VAL_TYPE_OBJECT:
             data = (mln_u8ptr_t)(val->data.obj);
-            ++(val->data.obj->ref);
             break;
         case M_LANG_VAL_TYPE_FUNC:
             if ((data = (mln_u8ptr_t)mln_lang_func_detail_dup(ctx, val->data.func)) == NULL) {
@@ -2553,7 +2552,6 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
             break;
         case M_LANG_VAL_TYPE_ARRAY:
             data = (mln_u8ptr_t)(val->data.array);
-            ++(val->data.array->ref);
             break;
         default:
             return NULL;
@@ -2564,14 +2562,8 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
             case M_LANG_VAL_TYPE_STRING:
                 mln_string_free((mln_string_t *)data);
                 break;
-            case M_LANG_VAL_TYPE_OBJECT:
-                --(val->data.obj->ref);
-                break;
             case M_LANG_VAL_TYPE_FUNC:
                 __mln_lang_func_detail_free((mln_lang_func_detail_t *)data);
-                break;
-            case M_LANG_VAL_TYPE_ARRAY:
-                --(val->data.array->ref);
                 break;
             default:
                 break;
