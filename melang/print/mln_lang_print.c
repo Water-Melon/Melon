@@ -14,7 +14,8 @@
 #endif
 
 static mln_lang_var_t *mln_lang_print_process(mln_lang_ctx_t *ctx);
-static void mln_lang_print_array(mln_lang_array_t *arr);
+static int mln_lang_print_array_cmp(const void *addr1, const void *addr2);
+static void mln_lang_print_array(mln_lang_array_t *arr, mln_rbtree_t *check);
 static int mln_lang_print_array_elem(mln_rbtree_node_t *node, void *rn_data, void *udata);
 
 int mln_lang_print(mln_lang_ctx_t *ctx)
@@ -98,9 +99,22 @@ static mln_lang_var_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
             mln_log(none, "FUNCTION\n");
             break;
         case M_LANG_VAL_TYPE_ARRAY:
-            mln_lang_print_array(val->data.array);
+        {
+            struct mln_rbtree_attr rbattr;
+            mln_rbtree_t *check;
+            rbattr.pool = ctx->pool;
+            rbattr.cmp = mln_lang_print_array_cmp;
+            rbattr.data_free = NULL;
+            rbattr.cache = 0;
+            if ((check = mln_rbtree_init(&rbattr)) == NULL) {
+                mln_lang_errmsg(ctx, "No memory.\n");
+                return NULL;
+            }
+            mln_lang_print_array(val->data.array, check);
             mln_log(none, "\n");
+            mln_rbtree_destroy(check);
             break;
+        }
         default:
             mln_log(none, "<type error>\n");
             break;
@@ -113,16 +127,30 @@ static mln_lang_var_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static void mln_lang_print_array(mln_lang_array_t *arr)
+static int mln_lang_print_array_cmp(const void *addr1, const void *addr2)
 {
+    return (mln_s8ptr_t)addr1 - (mln_s8ptr_t)addr2;
+}
+
+static void mln_lang_print_array(mln_lang_array_t *arr, mln_rbtree_t *check)
+{
+    mln_rbtree_node_t *rn = mln_rbtree_search(check, check->root, arr);
+    if (!mln_rbtree_null(rn, check)) {
+        mln_log(none, "[...]");
+        return;
+    }
+    rn = mln_rbtree_node_new(check, arr);
+    if (rn == NULL) return;
+    mln_rbtree_insert(check, rn);
     mln_log(none, "[");
-    mln_rbtree_scan_all(arr->elems_index, mln_lang_print_array_elem, NULL);
+    mln_rbtree_scan_all(arr->elems_index, mln_lang_print_array_elem, check);
     mln_log(none, "]");
 }
 
 static int mln_lang_print_array_elem(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
+    mln_rbtree_t *check = (mln_rbtree_t *)udata;
     mln_lang_var_t *var = elem->value;
     mln_lang_val_t *val = var->val;
     mln_s32_t type = mln_lang_var_getValType(var);
@@ -149,7 +177,7 @@ static int mln_lang_print_array_elem(mln_rbtree_node_t *node, void *rn_data, voi
             mln_log(none, "FUNCTION, ");
             break;
         case M_LANG_VAL_TYPE_ARRAY:
-            mln_lang_print_array(val->data.array);
+            mln_lang_print_array(val->data.array, check);
             mln_log(none, ", ");
             break;
         default:
