@@ -194,8 +194,6 @@ mln_lang_func_detail_dup(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *func);
 static inline mln_lang_object_t *
 mln_lang_object_new(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet);
 static inline void mln_lang_object_free(mln_lang_object_t *obj);
-static inline mln_lang_object_t *
-mln_lang_object_dup(mln_lang_ctx_t *ctx, mln_lang_object_t *src);
 static inline mln_lang_val_t *
 __mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data);
 static inline void __mln_lang_val_free(void *data);
@@ -205,16 +203,11 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val);
 static int mln_lang_val_cmp(const void *data1, const void *data2);
 static inline mln_lang_array_t *__mln_lang_array_new(mln_lang_ctx_t *ctx);
 static inline void __mln_lang_array_free(mln_lang_array_t *array);
-static inline mln_lang_array_t *
-mln_lang_array_dup(mln_lang_ctx_t *ctx, mln_lang_array_t *array);
-static int mln_lang_array_scan_dup(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int mln_lang_array_elem_indexCmp(const void *data1, const void *data2);
 static int mln_lang_array_elem_keyCmp(const void *data1, const void *data2);
 static inline mln_lang_array_elem_t *
 mln_lang_array_elem_new(mln_alloc_t *pool, mln_lang_var_t *key, mln_lang_var_t *val, mln_u64_t index);
 static inline void mln_lang_array_elem_free(void *data);
-static inline mln_lang_array_elem_t *
-mln_lang_array_elem_dup(mln_lang_ctx_t *ctx, mln_lang_array_elem_t *lae);
 static inline mln_lang_var_t *
 __mln_lang_array_getAndNew(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *key);
 static inline mln_lang_var_t *
@@ -618,12 +611,13 @@ void mln_lang_free(mln_lang_t *lang)
             mln_lang_ctx_free((lang)->ctx_cur);\
             (lang)->ctx_cur = NULL;\
         } else {\
-            if ((lang)->ctx_cur->ref || (lang)->ctx_cur->step <= 0) {\
+            if ((lang)->ctx_cur->ref) {\
                 (lang)->ctx_cur = NULL;\
             } else {\
                 if (--((lang)->ctx_cur->step) > 0) {\
                     goto ok;\
                 }\
+                mln_gc_collect(lang->ctx_cur->gc, lang->ctx_cur);\
                 mln_lang_ctx_chain_del(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);\
                 (lang)->ctx_cur->step = M_LANG_DEFAULT_STEP;\
                 mln_lang_ctx_chain_add(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);\
@@ -632,10 +626,6 @@ void mln_lang_free(mln_lang_t *lang)
         }\
     }\
     (lang)->ctx_cur = (lang)->run_head;\
-\
-    if ((lang)->ctx_cur != NULL) {\
-        mln_gc_collect(lang->ctx_cur->gc, lang->ctx_cur);\
-    }\
 ok:
 
 void mln_lang_run(mln_lang_t *lang)
@@ -2400,45 +2390,6 @@ static inline void mln_lang_object_free(mln_lang_object_t *obj)
     mln_alloc_free(obj);
 }
 
-static inline mln_lang_object_t *
-mln_lang_object_dup(mln_lang_ctx_t *ctx, mln_lang_object_t *src)
-{
-    struct mln_rbtree_attr rbattr;
-    mln_lang_object_t *obj;
-    if ((obj = (mln_lang_object_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_object_t))) == NULL) {
-        return NULL;
-    }
-    obj->inSet = src->inSet;
-    if (obj->inSet != NULL) ++(obj->inSet->ref);
-    rbattr.pool = ctx->pool;
-    rbattr.cmp = mln_lang_var_cmpName;
-    rbattr.data_free = mln_lang_var_free;
-    rbattr.cache = 0;
-    if ((obj->members = mln_rbtree_init(&rbattr)) == NULL) {
-        mln_alloc_free(obj);
-        return NULL;
-    }
-    obj->ref = 0;
-
-    struct mln_lang_scan_s ls;
-    ls.tree = obj->members;
-    ls.tree2 = NULL;
-    ls.ctx = ctx;
-    if (mln_rbtree_scan_all(src->members, mln_lang_set_member_scan, &ls) < 0) {
-        mln_lang_object_free(obj);
-        return NULL;
-    }
-    obj->gcItem = NULL;
-    obj->ctx = ctx;
-
-    if (mln_lang_gc_item_new(ctx->pool, ctx->gc, M_GC_OBJ, obj) < 0) {
-        mln_lang_object_free(obj);
-        obj = NULL;
-    }
-    return obj;
-}
-
-
 mln_lang_val_t *mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data)
 {
     return __mln_lang_val_new(ctx, type, data);
@@ -2589,10 +2540,8 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
             data = (mln_u8ptr_t)mln_string_ref_dup(val->data.s);
             break;
         case M_LANG_VAL_TYPE_OBJECT:
-            if ((data = (mln_u8ptr_t)mln_lang_object_dup(ctx, val->data.obj)) == NULL) {
-                return NULL;
-            }
-            ++(((mln_lang_object_t *)data)->ref);
+            data = (mln_u8ptr_t)(val->data.obj);
+            ++(val->data.obj->ref);
             break;
         case M_LANG_VAL_TYPE_FUNC:
             if ((data = (mln_u8ptr_t)mln_lang_func_detail_dup(ctx, val->data.func)) == NULL) {
@@ -2600,10 +2549,8 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
             }
             break;
         case M_LANG_VAL_TYPE_ARRAY:
-            if ((data = (mln_u8ptr_t)mln_lang_array_dup(ctx, val->data.array)) == NULL) {
-                return NULL;
-            }
-            ++(((mln_lang_array_t *)data)->ref);
+            data = (mln_u8ptr_t)(val->data.array);
+            ++(val->data.array->ref);
             break;
         default:
             return NULL;
@@ -2615,15 +2562,13 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
                 mln_string_free((mln_string_t *)data);
                 break;
             case M_LANG_VAL_TYPE_OBJECT:
-                --(((mln_lang_object_t *)data)->ref);
-                mln_lang_object_free((mln_lang_object_t *)data);
+                --(val->data.obj->ref);
                 break;
             case M_LANG_VAL_TYPE_FUNC:
                 __mln_lang_func_detail_free((mln_lang_func_detail_t *)data);
                 break;
             case M_LANG_VAL_TYPE_ARRAY:
-                --(((mln_lang_array_t *)data)->ref);
-                __mln_lang_array_free((mln_lang_array_t *)data);
+                --(val->data.array->ref);
                 break;
             default:
                 break;
@@ -2767,45 +2712,6 @@ static inline void __mln_lang_array_free(mln_lang_array_t *array)
     mln_alloc_free(array);
 }
 
-static inline mln_lang_array_t *
-mln_lang_array_dup(mln_lang_ctx_t *ctx, mln_lang_array_t *array)
-{
-    mln_lang_array_t *ret;
-    struct mln_lang_scan_s ls;
-    if ((ret = __mln_lang_array_new(ctx)) == NULL) return NULL;
-    ls.tree = ret->elems_index;
-    ls.tree2 = ret->elems_key;
-    ls.ctx = ctx;
-    if (mln_rbtree_scan_all(array->elems_index, mln_lang_array_scan_dup, &ls) < 0) {
-        __mln_lang_array_free(ret);
-        return NULL;
-    }
-    ret->index = array->index;
-    return ret;
-}
-
-static int mln_lang_array_scan_dup(mln_rbtree_node_t *node, void *rn_data, void *udata)
-{
-    mln_rbtree_node_t *rn;
-    struct mln_lang_scan_s *ls = (struct mln_lang_scan_s *)udata;
-    mln_lang_array_elem_t *lae = (mln_lang_array_elem_t *)rn_data;
-    mln_lang_array_elem_t *newlae = mln_lang_array_elem_dup(ls->ctx, lae);
-    if (newlae == NULL) return -1;
-    if ((rn = mln_rbtree_node_new(ls->tree, newlae)) == NULL) {
-        mln_lang_array_elem_free(newlae);
-        return -1;
-    }
-    mln_rbtree_insert(ls->tree, rn);
-    if (newlae->key != NULL) {
-        if ((rn = mln_rbtree_node_new(ls->tree2, newlae)) == NULL) {
-            return -1;
-        }
-        mln_rbtree_insert(ls->tree2, rn);
-    }
-    return 0;
-}
-
-
 static int mln_lang_array_elem_indexCmp(const void *data1, const void *data2)
 {
     mln_lang_array_elem_t *elem1 = (mln_lang_array_elem_t *)data1;
@@ -2842,26 +2748,6 @@ static inline void mln_lang_array_elem_free(void *data)
     if (elem->key != NULL) __mln_lang_var_free(elem->key);
     if (elem->value != NULL) __mln_lang_var_free(elem->value);
     mln_alloc_free(elem);
-}
-
-static inline mln_lang_array_elem_t *
-mln_lang_array_elem_dup(mln_lang_ctx_t *ctx, mln_lang_array_elem_t *lae)
-{
-    mln_lang_array_elem_t *dup;
-    mln_lang_var_t *key = NULL, *val;
-    if (lae->key != NULL) {
-        if ((key = mln_lang_var_dupWithVal(ctx, lae->key)) == NULL) return NULL;
-    }
-    if ((val = __mln_lang_var_dup(ctx, lae->value)) == NULL) {
-        if (key != NULL) __mln_lang_var_free(key);
-        return NULL;
-    }
-    if ((dup = mln_lang_array_elem_new(ctx->pool, key, val, lae->index)) == NULL) {
-        __mln_lang_var_free(val);
-        if (key != NULL) __mln_lang_var_free(key);
-        return NULL;
-    }
-    return dup;
 }
 
 mln_lang_var_t *
