@@ -30,6 +30,7 @@
 #endif
 
 struct mln_lang_scan_s {
+    int              *cnt;
     mln_rbtree_t     *tree;
     mln_rbtree_t     *tree2;
     mln_lang_ctx_t   *ctx;
@@ -265,13 +266,14 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_elemlist(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx);
 
-static int mln_lang_dump_symbol(void *key, void *val, void *udata);
-static void mln_lang_dump_var(mln_lang_var_t *var, int cnt);
+static int mln_lang_dump_symbol(mln_lang_ctx_t *ctx, void *key, void *val, void *udata);
+static int mln_lang_dump_check_cmp(const void *addr1, const void *addr2);
+static void mln_lang_dump_var(mln_lang_var_t *var, int cnt, mln_rbtree_t *check);
 static void mln_lang_dump_set(mln_lang_set_detail_t *set);
-static void mln_lang_dump_object(mln_lang_object_t *obj, int cnt);
+static void mln_lang_dump_object(mln_lang_object_t *obj, int cnt, mln_rbtree_t *check);
 static int mln_lang_dump_var_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static void mln_lang_dump_function(mln_lang_func_detail_t *func, int cnt);
-static void mln_lang_dump_array(mln_lang_array_t *array, int cnt);
+static void mln_lang_dump_array(mln_lang_array_t *array, int cnt, mln_rbtree_t *check);
 static int mln_lang_dump_array_elem(mln_rbtree_node_t *node, void *rn_data, void *udata);
 
 static int mln_lang_msg_cmp(const void *data1, const void *data2);
@@ -2350,6 +2352,7 @@ mln_lang_object_new(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet)
 
     if (inSet != NULL) {
         struct mln_lang_scan_s ls;
+        ls.cnt = NULL;
         ls.tree = obj->members;
         ls.tree2 = NULL;
         ls.ctx = ctx;
@@ -6044,10 +6047,21 @@ goon1:
     __mln_lang_run(ctx->lang);
 }
 
-static int mln_lang_dump_symbol(void *key, void *val, void *udata)
+static int mln_lang_dump_symbol(mln_lang_ctx_t *ctx, void *key, void *val, void *udata)
 {
-    mln_lang_symbolNode_t *sym = (mln_lang_symbolNode_t *)val;
     char *title = NULL;
+    mln_lang_symbolNode_t *sym = (mln_lang_symbolNode_t *)val;
+    struct mln_rbtree_attr rbattr;
+    mln_rbtree_t *check;
+
+    rbattr.pool = ctx->pool;
+    rbattr.cmp = mln_lang_dump_check_cmp;
+    rbattr.data_free = NULL;
+    rbattr.cache = 0;
+    if ((check = mln_rbtree_init(&rbattr)) == NULL) {
+        return -1;
+    }
+
     switch (sym->type) {
         case M_LANG_SYMBOL_VAR:
             title = "Var";
@@ -6062,17 +6076,23 @@ static int mln_lang_dump_symbol(void *key, void *val, void *udata)
     mln_log(none, "  %S <%s>", sym->symbol, title);
     switch (sym->type) {
         case M_LANG_SYMBOL_VAR:
-            mln_lang_dump_var(sym->data.var, 4);
+            mln_lang_dump_var(sym->data.var, 4, check);
             break;
         default: /*M_LANG_SYMBOL_SET*/
             mln_lang_dump_set(sym->data.set);
             break;
     }
+    mln_rbtree_destroy(check);
     return 0;
 }
 
+static int mln_lang_dump_check_cmp(const void *addr1, const void *addr2)
+{
+    return (mln_s8ptr_t)addr1 - (mln_s8ptr_t)addr2;
+}
+
 #define blank(); {int tmpi; for (tmpi = 0; tmpi < cnt; tmpi++) mln_log(none, " ");}
-static void mln_lang_dump_var(mln_lang_var_t *var, int cnt)
+static void mln_lang_dump_var(mln_lang_var_t *var, int cnt, mln_rbtree_t *check)
 {
     blank();
     mln_log(none, "%s", var->type == M_LANG_VAR_NORMAL?"Normal":"Refer");
@@ -6114,13 +6134,13 @@ static void mln_lang_dump_var(mln_lang_var_t *var, int cnt)
             mln_log(none, "<STRING> '%S'\n", var->val->data.s);
             break;
         case M_LANG_VAL_TYPE_OBJECT:
-            mln_lang_dump_object(var->val->data.obj, cnt);
+            mln_lang_dump_object(var->val->data.obj, cnt, check);
             break;
         case M_LANG_VAL_TYPE_FUNC:
             mln_lang_dump_function(var->val->data.func, cnt);
             break;
         case M_LANG_VAL_TYPE_ARRAY:
-            mln_lang_dump_array(var->val->data.array, cnt);
+            mln_lang_dump_array(var->val->data.array, cnt, check);
             break;
         default: /*M_LANG_VAL_TYPE_CALL:*/
             blank();
@@ -6129,21 +6149,38 @@ static void mln_lang_dump_var(mln_lang_var_t *var, int cnt)
     }
 }
 
-static void mln_lang_dump_object(mln_lang_object_t *obj, int cnt)
+static void mln_lang_dump_object(mln_lang_object_t *obj, int cnt, mln_rbtree_t *check)
 {
+    mln_rbtree_node_t *rn;
+    struct mln_lang_scan_s ls;
+    ls.cnt = &cnt;
+    ls.tree = check;
+    ls.tree2 = NULL;
+    ls.ctx = NULL;
+
     blank();
     if (obj->inSet != NULL) {
-        mln_log(none, "<OBJECT> In Set '%S'  setRef: %I objRef: %I\n", \
-                obj->inSet->name, obj->inSet->ref, obj->ref);
+        mln_log(none, "<OBJECT><%X> In Set '%S'  setRef: %I objRef: %I\n", \
+                obj, obj->inSet->name, obj->inSet->ref, obj->ref);
     } else {
-        mln_log(none, "<OBJECT> In Set '<anonymous>'  setRef: <unknown> objRef: %I\n", obj->ref);
+        mln_log(none, "<OBJECT><%X> In Set '<anonymous>'  setRef: <unknown> objRef: %I\n", obj, obj->ref);
     }
-    mln_rbtree_scan_all(obj->members, mln_lang_dump_var_scan, &cnt);
+
+    if (check != NULL) {
+        rn = mln_rbtree_search(check, check->root, obj);
+        if (!mln_rbtree_null(rn, check)) {
+            return;
+        }
+        if ((rn = mln_rbtree_node_new(check, obj)) == NULL) return;
+        mln_rbtree_insert(check, rn);
+    }
+    mln_rbtree_scan_all(obj->members, mln_lang_dump_var_scan, &ls);
 }
 
 static int mln_lang_dump_var_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
-    mln_lang_dump_var((mln_lang_var_t *)rn_data, *(int *)udata+2);
+    struct mln_lang_scan_s *ls = (struct mln_lang_scan_s *)udata;
+    mln_lang_dump_var((mln_lang_var_t *)rn_data, *(ls->cnt)+2, ls->tree);
     return 0;
 }
 
@@ -6153,7 +6190,7 @@ static void mln_lang_dump_function(mln_lang_func_detail_t *func, int cnt)
     blank();
     mln_log(none, "<FUNCTION> NARGS:%I\n", (mln_u64_t)func->nargs);
     for (var = func->args_head; var != NULL; var = var->next) {
-        mln_lang_dump_var(var, cnt+2);
+        mln_lang_dump_var(var, cnt+2, NULL);
     }
 }
 
@@ -6164,17 +6201,31 @@ static void mln_lang_dump_set(mln_lang_set_detail_t *set)
     mln_rbtree_scan_all(set->members, mln_lang_dump_var_scan, &cnt);
 }
 
-static void mln_lang_dump_array(mln_lang_array_t *array, int cnt)
+static void mln_lang_dump_array(mln_lang_array_t *array, int cnt, mln_rbtree_t *check)
 {
+    mln_rbtree_node_t *rn;
     int tmp = cnt + 2;
+    struct mln_lang_scan_s ls;
+    ls.cnt = &tmp;
+    ls.tree = check;
+    ls.tree2 = NULL;
+    ls.ctx = NULL;
     blank();
-    mln_log(none, "<ARRAY>\n");
+    mln_log(none, "<ARRAY><%X>\n", array);
+    if (check != NULL) {
+        rn = mln_rbtree_search(check, check->root, array);
+        if (!mln_rbtree_null(rn, check)) {
+            return;
+        }
+        if ((rn = mln_rbtree_node_new(check, array)) == NULL) return;
+        mln_rbtree_insert(check, rn);
+    }
     blank();
     mln_log(none, "ALL ELEMENTS:\n");
-    mln_rbtree_scan_all(array->elems_index, mln_lang_dump_array_elem, &tmp);
+    mln_rbtree_scan_all(array->elems_index, mln_lang_dump_array_elem, &ls);
     blank();
     mln_log(none, "KEY ELEMENTS:\n");
-    mln_rbtree_scan_all(array->elems_key, mln_lang_dump_array_elem, &tmp);
+    mln_rbtree_scan_all(array->elems_key, mln_lang_dump_array_elem, &ls);
     blank();
     mln_log(none, "Refs: %I\n", array->ref);
 }
@@ -6182,17 +6233,18 @@ static void mln_lang_dump_array(mln_lang_array_t *array, int cnt)
 static int mln_lang_dump_array_elem(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
-    int cnt = *(int *)udata;
+    struct mln_lang_scan_s *ls = (struct mln_lang_scan_s *)udata;
+    int cnt = *(ls->cnt);
     blank();
     mln_log(none, "Index: %I\n", elem->index);
     if (elem->key != NULL) {
         blank();
         mln_log(none, "Key:\n");
-        mln_lang_dump_var(elem->key, cnt+2);
+        mln_lang_dump_var(elem->key, cnt+2, ls->tree);
     }
     blank();
     mln_log(none, "Value:\n");
-    mln_lang_dump_var(elem->value, cnt+2);
+    mln_lang_dump_var(elem->value, cnt+2, ls->tree);
     return 0;
 }
 
@@ -6970,7 +7022,7 @@ static mln_lang_var_t *mln_lang_msg_func_dump_process(mln_lang_ctx_t *ctx)
         __mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
-    (void)mln_lang_dump_symbol(NULL, sym, NULL);
+    (void)mln_lang_dump_symbol(ctx, NULL, sym, NULL);
     if ((var = mln_lang_var_createTmpNil(ctx, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return NULL;
