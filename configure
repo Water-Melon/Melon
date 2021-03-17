@@ -3,9 +3,17 @@
 # Copyright (C) Niklaus F.Schen.
 #
 
+#  test system type
+sysname=`uname -s`
+
 #installation path
-install_path=`echo "/usr/local/melon"`
-cc="cc"
+if ! case $sysname in MINGW*) false;; esac; then
+	install_path=$HOME/melon
+	cc="gcc"
+else
+	install_path=`echo "/usr/local/melon"`
+	cc="cc"
+fi
 mysql_lib=""
 
 #get all parameters
@@ -43,15 +51,6 @@ echo -e "\nchar install_path[] = \"$install_path\";" >> src/mln_path.c
 echo -e "\nchar *mln_path(void)\n{" >> src/mln_path.c
 echo "    return install_path;" >> src/mln_path.c
 echo "}" >> src/mln_path.c
-
-#build Makefile
-#  test system type
-is_linux=0
-sysname=`uname -s`
-test $sysname = "Linux"
-if [ $? -eq 0 ]; then
-	is_linux=1
-fi
 
 # build mln_ipc.c & h
 #    write header file
@@ -281,14 +280,21 @@ do
 	cp -f melang/$tmpdir/*.h .tmpSubIncs/$tmpdir/ 2> /dev/null
 done
 
+
+
 #  build makefile content
 echo "# " > Makefile
 echo "# Copyright (C) Niklaus F.Schen." >> Makefile
 echo "# " >> Makefile
 echo -e "CC\t\t= $cc" >> Makefile
 echo -e "FLAGS\t\t= -Iinclude -Imelang -c -Wall -ggdb -Werror -O3 -fPIC" >> Makefile
-echo -e "MELONSO\t\t= libmelon.so" >> Makefile
-echo -e "MELONA\t\t= libmelon.a" >> Makefile
+if ! case $sysname in MINGW*) false;; esac; then
+	echo -e "MELONSO\t\t= libmelon.dll" >> Makefile
+	echo -e "MELONA\t\t= libmelon.lib" >> Makefile
+else
+	echo -e "MELONSO\t\t= libmelon.so" >> Makefile
+	echo -e "MELONA\t\t= libmelon.a" >> Makefile
+fi
 echo -e "OBJS\t\t= \\" >> Makefile
 hasDot=`ls -l src/|grep "\.\."`
 cnt=2
@@ -336,7 +342,7 @@ fi
 rm -fr mysql_test mysql_test.c
 #test MySQL Asynchronous end------#
 
-if [ $is_linux -eq 1 ]; then
+if [ $sysname = 'Linux' ]; then
 	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl $mysql_lib -shared -fPIC" >> Makefile
 else
 	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc $mysql_lib -shared -fPIC" >> Makefile
