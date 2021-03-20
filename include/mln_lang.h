@@ -5,14 +5,14 @@
 #ifndef __MLN_LANG_H
 #define __MLN_LANG_H
 #include "mln_types.h"
-#include "mln_alloc.h"
+#include "mln_event.h"
+#include "mln_connection.h"
 #include "mln_file.h"
 #include "mln_rbtree.h"
-#include "mln_event.h"
 #include "mln_lang_ast.h"
 #include "mln_defs.h"
 #include "mln_gc.h"
-#include "mln_connection.h"
+#include "mln_alloc.h"
 
 #define M_LANG_CACHE_COUNT       200
 #define M_LANG_SYMBOL_TABLE_LEN  371

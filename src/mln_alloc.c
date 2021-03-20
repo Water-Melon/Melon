@@ -3,11 +3,6 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <pthread.h>
 #include "mln_alloc.h"
 #include "mln_defs.h"
 #include "mln_log.h"
@@ -93,13 +88,37 @@ mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
 {
     pthread_rwlockattr_t attr;
     mln_alloc_t *pool;
+    HANDLE handle;
 
     if (size < M_ALLOC_SHM_DEFAULT_SIZE+1024) {
         return NULL;
     }
 
+#if defined(WINNT)
+    if ((handle = CreateFileMapping(INVALID_HANDLE_VALUE,
+                                    NULL,
+                                    PAGE_READWRITE,
+#if defined(__x86_64)
+                                    (u_long) (size >> 32),
+#else
+                                    0,
+#endif
+                                    (u_long) (size & 0xffffffff),
+                                    NULL)) == NULL)
+    {
+        return NULL;
+    }
+    pool = (mln_alloc_t *)MapViewOfFile(handle, FILE_MAP_WRITE, 0, 0, 0);
+    if (pool == NULL) {
+        CloseHandle(handle);
+        return NULL;
+    }
+    pool->map_handle = handle;
+#else
+
     pool = (mln_alloc_t *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0);
     if (pool == NULL) return NULL;
+#endif
     pool->large_used_head = pool->large_used_tail = NULL;
     pool->shm_head = pool->shm_tail = NULL;
     pool->mem = pool;
@@ -169,7 +188,13 @@ void mln_alloc_destroy(mln_alloc_t *pool)
         }
         free(pool);
     } else {
+#if defined(WINNT)
+        HANDLE handle = pool->map_handle;
+        UnmapViewOfFile(pool->mem);
+        CloseHandle(handle);
+#else
         munmap(pool->mem, pool->shm_size);
+#endif
     }
 }
 

@@ -6,12 +6,6 @@
 #ifndef __MLN_EVENT_H
 #define __MLN_EVENT_H
 
-#include <sys/types.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <signal.h>
-#include "mln_rbtree.h"
-#include "mln_fheap.h"
 #if defined(MLN_EPOLL)
 #include <sys/epoll.h>
 #elif defined(MLN_KQUEUE)
@@ -23,6 +17,12 @@
 #include <sys/select.h>
 #endif
 #endif
+#include <sys/types.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <signal.h>
+#include "mln_rbtree.h"
+#include "mln_fheap.h"
 
 /*common*/
 #define M_EV_HASH_LEN 64

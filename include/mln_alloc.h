@@ -6,6 +6,16 @@
 #ifndef __MLN_ALLOC_H
 #define __MLN_ALLOC_H
 
+#if defined(WINNT)
+#include <windows.h>
+#include <winbase.h>
+#else
+#include <sys/mman.h>
+#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
 #include "mln_types.h"
 
 #define M_ALLOC_BEGIN_OFF        ((mln_size_t)4)
@@ -83,6 +93,9 @@ struct mln_alloc_s {
     void                     *mem;
     mln_size_t                shm_size;
     pthread_rwlock_t          rwlock;
+#if defined(WINNT)
+    HANDLE                    map_handle;
+#endif
 };
 
 
