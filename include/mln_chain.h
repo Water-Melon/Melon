@@ -6,7 +6,6 @@
 #ifndef __MLN_CHAIN_H
 #define __MLN_CHAIN_H
 
-#include <sys/mman.h>
 #include "mln_types.h"
 #include "mln_string.h"
 #include "mln_alloc.h"

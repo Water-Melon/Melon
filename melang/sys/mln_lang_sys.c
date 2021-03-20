@@ -542,7 +542,9 @@ static mln_lang_var_t *mln_lang_sys_str_process(mln_lang_ctx_t *ctx)
         mln_string_t s;
         switch (type) {
             case M_LANG_VAL_TYPE_INT:
-#if defined(i386) || defined(__arm__)
+#if defined(WINNT)
+                n = snprintf(buf, sizeof(buf)-1, "%I64d", val->data.i);
+#elif defined(i386) || defined(__arm__)
                 n = snprintf(buf, sizeof(buf)-1, "%lld", val->data.i);
 #else
                 n = snprintf(buf, sizeof(buf)-1, "%ld", val->data.i);
@@ -2515,7 +2517,11 @@ static mln_lang_var_t *mln_lang_sys_mkdir_process(mln_lang_ctx_t *ctx)
 
     mln_lang_sys_mkdir_getPrio(prio, &mode);
 
+#if defined(WINNT)
+	if (mkdir((char *)val1->data.s->data)) {
+#else
     if (mkdir((char *)val1->data.s->data, mode)) {
+#endif
         ret_var = mln_lang_var_createTmpFalse(ctx, NULL);
     } else {
         ret_var = mln_lang_var_createTmpTrue(ctx, NULL);

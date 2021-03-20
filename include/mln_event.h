@@ -15,9 +15,13 @@
 #if defined(MLN_EPOLL)
 #include <sys/epoll.h>
 #elif defined(MLN_KQUEUE)
-#include<sys/event.h>
+#include <sys/event.h>
+#else
+#if defined(WINNT)
+#include <winsock2.h>
 #else
 #include <sys/select.h>
+#endif
 #endif
 
 /*common*/

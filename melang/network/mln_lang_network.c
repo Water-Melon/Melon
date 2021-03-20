@@ -2,12 +2,17 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#if defined(WINNT)
+#include <ws2tcpip.h>
+#include <winsock.h>
+#else
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#endif
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <errno.h>
 #include <signal.h>
 #include "network/mln_lang_network.h"
@@ -81,6 +86,113 @@ static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx);
 static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_network_udp_timeout_handler(mln_event_t *ev, int fd, void *data);
 
+#if defined(WINNT)
+/*
+ * Note
+ * code in this if is copied and modified from webrtc
+ */
+
+char* inet_ntop_v4(const void* src, char* dst, socklen_t size) {
+  if (size < INET_ADDRSTRLEN) {
+    return NULL;
+  }
+  const struct in_addr* as_in_addr = (const struct in_addr *)src;
+  snprintf(dst, size, "%d.%d.%d.%d",
+                      as_in_addr->S_un.S_un_b.s_b1,
+                      as_in_addr->S_un.S_un_b.s_b2,
+                      as_in_addr->S_un.S_un_b.s_b3,
+                      as_in_addr->S_un.S_un_b.s_b4);
+  return dst;
+}
+// Helper function for inet_ntop for IPv6 addresses.
+char* inet_ntop_v6(const void* src, char* dst, socklen_t size) {
+  if (size < INET6_ADDRSTRLEN) {
+    return NULL;
+  }
+  const mln_u16_t * as_shorts = (const mln_u16_t *)src;
+  int runpos[8];
+  int current = 1;
+  int max = 0;
+  int maxpos = -1;
+  int run_array_size = sizeof(runpos)/sizeof(int);
+  // Run over the address marking runs of 0s.
+  for (int i = 0; i < run_array_size; ++i) {
+    if (as_shorts[i] == 0) {
+      runpos[i] = current;
+      if (current > max) {
+        maxpos = i;
+        max = current;
+      }
+      ++current;
+    } else {
+      runpos[i] = -1;
+      current = 1;
+    }
+  }
+
+  if (max > 0) {
+    int tmpmax = maxpos;
+    // Run back through, setting -1 for all but the longest run.
+    for (int i = run_array_size - 1; i >= 0; i--) {
+      if (i > tmpmax) {
+        runpos[i] = -1;
+      } else if (runpos[i] == -1) {
+        // We're less than maxpos, we hit a -1, so the 'good' run is done.
+        // Setting tmpmax -1 means all remaining positions get set to -1.
+        tmpmax = -1;
+      }
+    }
+  }
+
+  char* cursor = dst;
+  // Print IPv4 compatible and IPv4 mapped addresses using the IPv4 helper.
+  // These addresses have an initial run of either eight zero-bytes followed
+  // by 0xFFFF, or an initial run of ten zero-bytes.
+  if (runpos[0] == 1 && (maxpos == 5 ||
+                         (maxpos == 4 && as_shorts[5] == 0xFFFF))) {
+    *cursor++ = ':';
+    *cursor++ = ':';
+    if (maxpos == 4) {
+      cursor += snprintf(cursor, INET6_ADDRSTRLEN - 2, "ffff:");
+    }
+    const struct in_addr* as_v4 = (const struct in_addr *)(&as_shorts[6]);
+    inet_ntop_v4(as_v4, cursor, INET6_ADDRSTRLEN - (cursor - dst));
+  } else {
+    for (int i = 0; i < run_array_size; ++i) {
+      if (runpos[i] == -1) {
+        cursor += snprintf(cursor,
+                           INET6_ADDRSTRLEN - (cursor - dst),
+                           "%x", ntohs(as_shorts[i]));
+        if (i != 7 && runpos[i + 1] != 1) {
+          *cursor++ = ':';
+        }
+      } else if (runpos[i] == 1) {
+        // Entered the run; print the colons and skip the run.
+        *cursor++ = ':';
+        *cursor++ = ':';
+        i += (max - 1);
+      }
+    }
+  }
+  return dst;
+}
+
+char *inet_ntop(int af, const void *src, char* dst, socklen_t size){
+  if (!src || !dst) {
+    return NULL;
+  }
+  switch (af) {
+    case AF_INET: {
+      return inet_ntop_v4(src, dst, size);
+    }
+    case AF_INET6: {
+      return inet_ntop_v6(src, dst, size);
+    }
+  }
+  return NULL;
+}
+#endif
+
 int mln_lang_network(mln_lang_ctx_t *ctx)
 {
     if (mln_lang_network_resource_register(ctx) < 0) {
@@ -137,7 +249,9 @@ static int mln_lang_network_resource_register(mln_lang_ctx_t *ctx)
 {
     mln_rbtree_t *tcp_set, *udp_set;
     if ((tcp_set = mln_lang_resource_fetch(ctx->lang, "tcp")) == NULL) {
+#if !defined(WINNT)
         signal(SIGPIPE, SIG_IGN);
+#endif
         struct mln_rbtree_attr rbattr;
         rbattr.pool = ctx->pool;
         rbattr.cmp = (rbtree_cmp)mln_lang_tcp_cmp;
@@ -388,7 +502,11 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
+#if defined(WINNT)
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)(&opt), sizeof(opt)) < 0) {
+#else
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+#endif
         mln_lang_tcp_free(tcp);
         freeaddrinfo(res);
         if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
@@ -1193,7 +1311,11 @@ static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx
             } else {
                 tcp->send_closed = 1;
             }
+#if defined (WINNT)
+            shutdown(fd, SD_SEND);
+#else
             shutdown(fd, SHUT_WR);
+#endif
         }
     } else if (!mln_string_strcasecmp(val->data.s, &recv_mode)) {
         if (tcp->send_closed) {
@@ -1212,7 +1334,11 @@ static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx
             } else {
                 tcp->recv_closed = 1;
             }
+#if defined (WINNT)
+            shutdown(fd, SD_RECEIVE);
+#else
             shutdown(fd, SHUT_RD);
+#endif
         }
     } else {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
@@ -1300,7 +1426,11 @@ static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *
     socklen_t len = sizeof(err);
     mln_lang_var_t *ret_var;
 
+#if defined (WINNT)
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len) >= 0) {
+#else
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) >= 0) {
+#endif
         if (err) {
             if (err == EINPROGRESS && (++tcp->retry <= MLN_LANG_NETWORK_TCP_CONNECT_RETRY)) {
                 mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_ERROR|M_EV_NONBLOCK|M_EV_ONESHOT, tcp->connect_timeout, tcp, mln_lang_network_tcp_connect_handler);
@@ -1755,13 +1885,23 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
             }
             return ret_var;
         }
+#if defined (WINNT)
+        {
+            u_long opt = 1;
+            ioctlsocket(fd, FIONBIO, &opt);
+        }
+#endif
         if ((udp = mln_lang_udp_new(ctx->lang, fd)) == NULL) {
             close(fd);
             freeaddrinfo(res);
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
+#if defined (WINNT)
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0) {
+#else
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+#endif
             mln_lang_udp_free(udp);
             freeaddrinfo(res);
             if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
@@ -2062,7 +2202,11 @@ static mln_lang_var_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
 static void mln_lang_network_udp_send_handler(mln_event_t *ev, int fd, void *data)
 {
     mln_lang_udp_t *udp = (mln_lang_udp_t *)data;
+#if defined(WINNT)
+    int rc = sendto(fd, (char *)(udp->data->data), udp->data->len, 0, &(udp->addr), udp->len);
+#else
     int rc = sendto(fd, udp->data->data, udp->data->len, MSG_DONTWAIT, &(udp->addr), udp->len);
+#endif
     int err = errno;
     mln_string_free(udp->data);
     udp->data = NULL;
@@ -2306,7 +2450,11 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
         return;
     }
 
+#if defined(WINNT)
+    rc = recvfrom(fd, (char *)buf, udp->bufsize, 0, &addr, &len);
+#else
     rc = recvfrom(fd, buf, udp->bufsize, MSG_DONTWAIT, &addr, &len);
+#endif
     if (rc < 0) {
         free(buf);
         if (errno == EINTR) {

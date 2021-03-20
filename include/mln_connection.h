@@ -6,7 +6,11 @@
 #define __MLN_CONNECTION_H
 
 #include <sys/types.h>
+#if defined(WINNT)
+#include <winsock.h>
+#else
 #include <sys/socket.h>
+#endif
 #include "mln_types.h"
 #include "mln_chain.h"
 #include "mln_alloc.h"
