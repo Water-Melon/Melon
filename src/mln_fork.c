@@ -7,14 +7,15 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
-#if !defined(WINNT)
-#include <sys/ioctl.h>
-#endif
 #include "mln_fork.h"
 #include "mln_rbtree.h"
 #include "mln_log.h"
 #include "mln_global.h"
+#if defined(WINNT)
 #include <windows.h>
+#else
+#include <sys/ioctl.h>
+#endif
 
 mln_tcp_conn_t master_conn;
 mln_size_t child_error_bytes;

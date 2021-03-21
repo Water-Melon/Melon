@@ -88,7 +88,9 @@ mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
 {
     pthread_rwlockattr_t attr;
     mln_alloc_t *pool;
+#if defined(WINNT)
     HANDLE handle;
+#endif
 
     if (size < M_ALLOC_SHM_DEFAULT_SIZE+1024) {
         return NULL;
