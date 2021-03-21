@@ -2,6 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+#include "mln_fork.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,15 +14,16 @@
 #include "mln_log.h"
 #include "mln_string.h"
 #include "mln_conf.h"
-#include "mln_fork.h"
 #include "mln_thread.h"
 #include "mln_core.h"
 
 static int mln_getFrameworkStatus(void);
 static void mln_master_routine(void);
 static void mln_worker_routine(struct mln_core_attr *attr);
+#if !defined(WINNT)
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data);
 static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data);
+#endif
 
 int mln_core_init(struct mln_core_attr *attr)
 {
@@ -103,10 +105,12 @@ static void mln_master_routine(void)
     mln_event_t *ev = mln_event_init(1);
     if (ev == NULL) exit(1);
     mln_fork_master_set_events(ev);
+#if !defined(WINNT)
     if (mln_event_set_signal(ev, M_EV_SET, SIGUSR2, NULL, mln_sig_conf_reload) < 0) {
         mln_log(error, "mln_event_set_signal() failed.\n");
         exit(1);
     }
+#endif
     mln_event_dispatch(ev);
     mln_event_destroy(ev);
 }
@@ -150,6 +154,7 @@ static void mln_worker_routine(struct mln_core_attr *attr)
     }
 }
 
+#if !defined(WINNT)
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data)
 {
     if (mln_fork_scan_all(ev, mln_conf_reload_scan_handler, NULL) < 0) {
@@ -168,6 +173,7 @@ static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *da
 
     return mln_ipc_master_send_prepare(ev, M_IPC_CONF_RELOAD, msg, sizeof(msg)-1, f);
 }
+#endif
 
 static int mln_getFrameworkStatus(void)
 {

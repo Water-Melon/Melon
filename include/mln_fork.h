@@ -6,9 +6,9 @@
 #define __MLN_FORK_H
 #include <sys/types.h>
 #include "mln_types.h"
+#include "mln_event.h"
 #include "mln_connection.h"
 #include "mln_ipc.h"
-#include "mln_event.h"
 
 #define STATE_IDLE    0
 #define STATE_LENGTH  1
