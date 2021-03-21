@@ -26,8 +26,10 @@ MLN_CHAIN_FUNC_DECLARE(event, \
 MLN_CHAIN_FUNC_DECLARE(ev_sig, \
                        mln_event_desc_t, \
                        static inline void,);
+#if !defined(WINNT)
 static void mln_event_atfork_lock(void);
 static void mln_event_atfork_unlock(void);
+#endif
 static inline void
 mln_event_desc_free(void *data);
 static int
@@ -186,7 +188,11 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
     ev->is_break = 0;
     ev->in_main_thread = is_main;
     int fds[2];
+#if defined(WINNT)
+    if (_pipe(fds, 1024, O_BINARY) < 0) {
+#else
     if (pipe(fds) < 0) {
+#endif
         mln_log(error, "pipe error. %s\n", strerror(errno));
         goto err5;
     }
@@ -256,6 +262,7 @@ err1:
     return NULL;
 }
 
+#if !defined(WINNT)
 static void mln_event_atfork_lock(void)
 {
     MLN_LOCK(&event_lock);
@@ -265,6 +272,7 @@ static void mln_event_atfork_unlock(void)
 {
     MLN_UNLOCK(&event_lock);
 }
+#endif
 
 static void
 mln_event_signal_fd_handler(mln_event_t *ev, int fd, void *data)
@@ -460,6 +468,14 @@ mln_event_set_signal_set(mln_event_t *event, \
     }
     esrp = (mln_event_sig_refer_t *)(rn->data);
     if (esrp->refer_cnt++ == 0) {
+#if defined(WINNT)
+        signal(SIGABRT, mln_event_signal_handler);
+        signal(SIGFPE, mln_event_signal_handler);
+        signal(SIGILL, mln_event_signal_handler);
+        signal(SIGINT, mln_event_signal_handler);
+        signal(SIGSEGV, mln_event_signal_handler);
+        signal(SIGTERM, mln_event_signal_handler);
+#else
         struct sigaction act;
         memset(&act, 0, sizeof(act));
         act.sa_handler = mln_event_signal_handler;
@@ -470,6 +486,7 @@ mln_event_set_signal_set(mln_event_t *event, \
                     signo, strerror(errno));
             abort();
         }
+#endif
     }
     return 0;
 }
@@ -1044,6 +1061,10 @@ void mln_event_set_callback(mln_event_t *ev, \
 static inline void
 mln_event_set_fd_nonblock(int fd)
 {
+#if defined(WINNT)
+    u_long opt = 1;
+    ioctlsocket(fd, FIONBIO, &opt);
+#else
     int flg;
     flg = fcntl(fd, F_GETFL, NULL);
     if (flg < 0) {
@@ -1054,11 +1075,16 @@ mln_event_set_fd_nonblock(int fd)
         mln_log(error, "fcntl F_SETFL failed. %s\n", strerror(errno));
         abort();
     }
+#endif
 }
 
 static inline void
 mln_event_set_fd_block(int fd)
 {
+#if defined(WINNT)
+    u_long opt = 0;
+    ioctlsocket(fd, FIONBIO, &opt);
+#else
     int flg;
     flg = fcntl(fd, F_GETFL, NULL);
     if (flg < 0) {
@@ -1069,6 +1095,7 @@ mln_event_set_fd_block(int fd)
         mln_log(error, "fcntl F_SETFL failed. %s\n", strerror(errno));
         abort();
     }
+#endif
 }
 
 /*
@@ -1494,6 +1521,9 @@ mln_event_rbtree_refer_free(void *data)
 {
     if (data == NULL) return ;
     mln_event_sig_refer_t *esr = (mln_event_sig_refer_t *)data;
+#if defined(WINNT)
+    signal(esr->signo, SIG_DFL);
+#else
     struct sigaction act;
     memset(&act, 0, sizeof(act));
     act.sa_handler = SIG_DFL;
@@ -1501,6 +1531,7 @@ mln_event_rbtree_refer_free(void *data)
         mln_log(error, "sigaction error. %s\n", strerror(errno));
         abort();
     }
+#endif
     free(data);
 }
 
