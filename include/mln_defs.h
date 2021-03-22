@@ -130,5 +130,11 @@ extern int spin_trylock(void *lock);
     }\
 }
 
+#if defined(WINNT)
+extern int socketpair(int d, int type, int protocol, int *sv);
+#endif
+extern int mln_socketpair_read(int fd, void *buf, size_t len);
+extern int mln_socketpair_write(int fd, void *buf, size_t len);
+extern int mln_socketpair_close(int fd);
 #endif
 

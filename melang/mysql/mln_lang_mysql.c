@@ -23,7 +23,11 @@ static mln_lang_mysql_t *mln_lang_mysql_new(mln_lang_ctx_t *ctx, mln_string_t *d
     mln_lang_mysql_t *lm;
     int fds[2];
 
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
+#if defined(WINNT)
+    if (_pipe(fds, 256, O_BINARY) < 0) {
+#else
+    if (pipe(fds) < 0) {
+#endif
         return NULL;
     }
     if ((lm = (mln_lang_mysql_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_mysql_t))) == NULL) {
@@ -69,8 +73,8 @@ static mln_lang_mysql_t *mln_lang_mysql_new(mln_lang_ctx_t *ctx, mln_string_t *d
     }
     lm->sql = NULL;
     lm->port = port;
-    lm->fd_signal = fds[0];
-    lm->fd_useless = fds[1];
+    lm->fd_signal = fds[1];
+    lm->fd_useless = fds[0];
     lm->prev = lm->next = NULL;
     return lm;
 }

@@ -548,7 +548,11 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
     lang->wait = 0;
     lang->quit = 0;
     lang->cache = 0;
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
+#if defined(WINNT)
+    if (_pipe(fds, 256, O_BINARY) < 0) {
+#else
+    if (pipe(fds) < 0) {
+#endif
         mln_alloc_free(lang);
         return NULL;
     }

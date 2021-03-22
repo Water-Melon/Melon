@@ -189,7 +189,7 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
     ev->in_main_thread = is_main;
     int fds[2];
 #if defined(WINNT)
-    if (_pipe(fds, 1024, O_BINARY) < 0) {
+    if (_pipe(fds, 256, O_BINARY) < 0) {
 #else
     if (pipe(fds) < 0) {
 #endif
