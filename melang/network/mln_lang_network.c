@@ -4,7 +4,7 @@
  */
 #if defined(WINNT)
 #include <ws2tcpip.h>
-#include <winsock.h>
+#include <winsock2.h>
 #else
 #include <sys/socket.h>
 #include <arpa/inet.h>

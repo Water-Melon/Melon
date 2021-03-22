@@ -7,7 +7,7 @@
 
 #include <sys/types.h>
 #if defined(WINNT)
-#include <winsock.h>
+#include <winsock2.h>
 #else
 #include <sys/socket.h>
 #endif

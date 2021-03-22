@@ -5,7 +5,7 @@
 #include "mln_types.h"
 #if defined(WINNT)
 #include <stdio.h>
-#include <winsock.h>
+#include <winsock2.h>
 #include <windows.h>
 int pipe(int fds[2])
 {
@@ -40,7 +40,7 @@ clean:
 
 int socketpair(int domain, int type, int protocol, int sv[2])
 {
-    return pipe(fds);
+    return pipe(sv);
 }
 #endif
 
