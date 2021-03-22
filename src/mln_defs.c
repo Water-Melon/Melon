@@ -4,65 +4,45 @@
  */
 #include "mln_types.h"
 #if defined(WINNT)
-#include <windows.h>
 #include <stdio.h>
-
-int socketpair(int d, int type, int protocol, int *sv)
+#include <winsock2.h>
+#include <windows.h>
+int pipe(int fds[2])
 {
-    static int count;
-    char buf[64];
-    HANDLE fd;
-    DWORD dwMode;
-    (void)d; (void)type; (void)protocol;
-    sprintf(buf, "\\\\.\\pipe\\levent-%d", count++);
-    /* Create a duplex pipe which will behave like a socket pair */
-    fd = CreateNamedPipe(buf, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_NOWAIT,
-        PIPE_UNLIMITED_INSTANCES, 4096, 4096, 0, NULL);
-    if (fd == INVALID_HANDLE_VALUE)
-        return (-1);
-    sv[0] = (int)fd;
+    int namelen, fd, fd1, fd2;
+    struct sockaddr_in name;
+    memset(&name, 0, sizeof(name));
+    name.sin_family = AF_INET;
+    name.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    namelen = sizeof(name);
+    fd1 = fd2 = -1;
+    fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) goto clean;
+    if (bind(fd, (struct sockaddr *)&name, namelen) < 0) goto clean;
+    if (listen(fd, 5) < 0) goto clean;
+    if (getsockname(fd, (struct sockaddr *)&name, &namelen) < 0) goto clean;
+    fd1 = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd1 < 0) goto clean;
+    if (connect(fd1, (struct sockaddr *)&name, namelen) < 0) goto clean;
+    fd2 = accept(fd, (struct sockaddr *)&name, &namelen);
+    if (fd2 < 0) goto clean;
+    if (closesocket(fd) < 0) goto clean;
+    fds[0] = fd1;
+    fds[1] = fd2;
+    return 0;
 
-    fd = CreateFile(buf, GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (fd == INVALID_HANDLE_VALUE)
-        return (-1);
-    dwMode = PIPE_NOWAIT;
-    SetNamedPipeHandleState(fd, &dwMode, NULL, NULL);
-    sv[1] = (int)fd;
-
-    return (0);
-}
-#endif
-
-int mln_socketpair_read(int fd, void *buf, size_t len)
-{
-#if defined(WINNT)
-    DWORD n;
-    int rc = ReadFile((HANDLE)fd, buf, len, &n, NULL);
-    return rc? -1: n;
-#else
-    return read(fd, buf, len);
-#endif
+clean:
+    if (fd >= 0) closesocket(fd);
+    if (fd1 >= 0) closesocket(fd1);
+    if (fd2 >= 0) closesocket(fd2);
+    return -1;
 }
 
-int mln_socketpair_write(int fd, void *buf, size_t len)
+int socketpair(int domain, int type, int protocol, int sv[2])
 {
-#if defined(WINNT)
-    DWORD n;
-    int rc = WriteFile((HANDLE)fd, buf, len, &n, NULL);
-    return rc? -1: n;
-#else
-    return write(fd, buf, len);
-#endif
+    return pipe(fds);
 }
-
-int mln_socketpair_close(int fd)
-{
-#if defined(WINNT)
-    return CloseHandle((HANDLE)fd);
-#else
-    return close(fd);
 #endif
-}
 
 
 #if defined(i386) || defined(__x86_64)
