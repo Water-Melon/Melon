@@ -5,7 +5,7 @@
 #include "mln_types.h"
 #if defined(WINNT)
 #include <stdio.h>
-#include <winsock2.h>
+#include <winsock.h>
 #include <windows.h>
 int pipe(int fds[2])
 {

@@ -345,7 +345,7 @@ rm -fr mysql_test mysql_test.c
 if [ $sysname = 'Linux' ]; then
 	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl $mysql_lib -shared -fPIC" >> Makefile
 elif ! case $sysname in MINGW*) false;; esac; then
-	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -lWs2_32 -Llib/ -ldl $mysql_lib -shared -fPIC" >> Makefile
+	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -lwsock32 -Llib/ -ldl $mysql_lib -shared -fPIC" >> Makefile
 else
 	echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc $mysql_lib -shared -fPIC" >> Makefile
 fi
