@@ -5,12 +5,12 @@
 #ifndef __MLN_CONNECTION_H
 #define __MLN_CONNECTION_H
 
-#include <sys/types.h>
 #if defined(WINNT)
 #include <winsock2.h>
 #else
 #include <sys/socket.h>
 #endif
+#include <sys/types.h>
 #include "mln_types.h"
 #include "mln_chain.h"
 #include "mln_alloc.h"

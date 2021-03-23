@@ -5,10 +5,10 @@
 #ifndef __MLN_HTTP_H
 #define __MLN_HTTP_H
 
+#include "mln_connection.h"
 #include "mln_hash.h"
 #include "mln_string.h"
 #include "mln_alloc.h"
-#include "mln_connection.h"
 
 #define M_HTTP_HASH_LEN                        31
 #define M_HTTP_GENERATE_ALLOC_SIZE             1024

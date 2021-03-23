@@ -4,9 +4,9 @@
  */
 #ifndef __MLN_THREAD_H
 #define __MLN_THREAD_H
+#include "mln_connection.h"
 #include "mln_types.h"
 #include "mln_string.h"
-#include "mln_connection.h"
 #include "mln_event.h"
 #include "mln_rbtree.h"
 

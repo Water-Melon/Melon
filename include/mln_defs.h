@@ -133,7 +133,6 @@ extern int spin_trylock(void *lock);
 #if defined(WINNT)
 extern int pipe(int fds[2]);
 extern int socketpair(int domain, int type, int protocol, int sv[2]);
-extern pid_t fork(void);
 #define mln_socket_close closesocket
 #else
 #define mln_socket_close close

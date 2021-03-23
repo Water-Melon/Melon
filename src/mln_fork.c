@@ -2,6 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+#if !defined(WINNT)
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -11,11 +12,7 @@
 #include "mln_rbtree.h"
 #include "mln_log.h"
 #include "mln_global.h"
-#if defined(WINNT)
-#include <windows.h>
-#else
 #include <sys/ioctl.h>
-#endif
 
 mln_tcp_conn_t master_conn;
 mln_size_t child_error_bytes;
@@ -29,10 +26,8 @@ mln_rbtree_t *master_ipc_tree = NULL;
 mln_rbtree_t *worker_ipc_tree = NULL;
 clr_handler rs_clr_handler = NULL;
 void *rs_clr_data = NULL;
-#if !defined(WINNT)
 volatile mln_u32_t child_startup = 0;
 int wait_signo = SIGUSR1;
-#endif
 
 MLN_CHAIN_FUNC_DECLARE(worker_list, \
                        mln_fork_t, \
@@ -41,10 +36,8 @@ static int
 mln_fork_rbtree_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
 static int
 do_fork_worker_process(mln_sauto_t n_worker_proc);
-#if !defined(WINNT)
 static void
 do_fork_sig_handler(int signo);
-#endif
 static int
 do_fork_core(enum proc_exec_type etype, \
              enum proc_state_type stype, \
@@ -77,7 +70,6 @@ int mln_pre_fork(void)
         mln_log(error, "signal() to ignore SIGCHLD failed, %s\n", strerror(errno));
         return -1;
     }
-#if !defined(WINNT)
     if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
         mln_log(error, "signal() to ignore SIGPIPE failed, %s\n", strerror(errno));
         return -1;
@@ -92,7 +84,6 @@ int mln_pre_fork(void)
                 wait_signo, strerror(errno));
         return -1;
     }
-#endif
     if (mln_tcp_conn_init(&master_conn, -1) < 0) {
         mln_log(error, "No memory.\n");
         return -1;
@@ -333,13 +324,11 @@ void mln_set_resource_clear_handler(clr_handler handler, void *data)
     rs_clr_data = data;
 }
 
-#if !defined(WINNT)
 static void
 do_fork_sig_handler(int signo)
 {
     child_startup = 1;
 }
-#endif
 
 static int
 do_fork_core(enum proc_exec_type etype, \
@@ -370,13 +359,9 @@ do_fork_core(enum proc_exec_type etype, \
          * And then, child process built, that would make the event
          * which is triggered in parent process to be a lie.
          */
-#if defined(WINNT)
-        usleep(200000);
-#else
         while (child_startup == 0)
             ;
         child_startup = 0;
-#endif
         struct mln_fork_attr fattr;
         fattr.args = args;
         fattr.n_args = n_args;
@@ -411,13 +396,11 @@ do_fork_core(enum proc_exec_type etype, \
         master_ipc_tree = NULL;
         mln_tcp_conn_set_fd(&master_conn, fds[1]);
         signal(SIGCHLD, SIG_DFL);
-#if !defined(WINNT)
         signal(wait_signo, SIG_DFL);
         if (kill(getppid(), wait_signo) < 0) {
             mln_log(error, "kill() error. %s\n", strerror(errno));
             abort();
         }
-#endif
         return 0;
     }
     mln_log(error, "fork() error. %s\n", strerror(errno));
@@ -965,4 +948,5 @@ MLN_CHAIN_FUNC_DEFINE(worker_list, \
                       static inline void, \
                       prev, \
                       next);
+#endif
 

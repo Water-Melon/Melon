@@ -4,6 +4,7 @@
  */
 #ifndef __MLN_FORK_H
 #define __MLN_FORK_H
+#if !defined(WINNT)
 #include <sys/types.h>
 #include "mln_types.h"
 #include "mln_event.h"
@@ -112,5 +113,6 @@ mln_ipc_worker_send_prepare(mln_event_t *ev, \
                             void *msg, \
                             mln_size_t len) __NONNULL2(1,3);
 
+#endif
 #endif
 
