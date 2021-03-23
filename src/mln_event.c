@@ -279,10 +279,14 @@ mln_event_signal_fd_handler(mln_event_t *ev, int fd, void *data)
 {
     int signo = 0, n;
 lp:
-    n = read(fd, &signo, sizeof(signo));
+#if defined(WINNT)
+    n = recv(fd, (char *)(&signo), sizeof(signo), 0);
+#else
+    n = recv(fd, &signo, sizeof(signo), 0);
+#endif
     if (n < 0) {
         if (errno == EINTR) goto lp;
-        mln_log(error, "pipe read error, fd:%d. %s\n", fd, strerror(errno));
+        mln_log(error, "pipe recv error, fd:%d. %s\n", fd, strerror(errno));
         abort();
     } else if (n == 0) {
         mln_log(error, "pipe closed, fd:%d.\n", fd);
@@ -498,20 +502,28 @@ mln_event_signal_handler(int signo)
     if (!main_thread_freeing) {
         MLN_LOCK(&event_lock);
 lp1:
-        n = write(main_thread_event->wr_fd, &signo, sizeof(signo));
+#if defined(WINNT)
+        n = send(main_thread_event->wr_fd, (char *)(&signo), sizeof(signo), 0);
+#else
+        n = send(main_thread_event->wr_fd, &signo, sizeof(signo), 0);
+#endif
         if (n < 0) {
             if (errno == EINTR) goto lp1;
-            mln_log(error, "write error. %s\n", strerror(errno));
+            mln_log(error, "send error. %s\n", strerror(errno));
             abort();
         }
     }
     mln_event_t *ev;
     for (ev = event_chain_head; ev != NULL; ev = ev->next) {
 lp2:
-        n = write(ev->wr_fd, &signo, sizeof(signo));
+#if defined(WINNT)
+        n = send(ev->wr_fd, (char *)(&signo), sizeof(signo), 0);
+#else
+        n = send(ev->wr_fd, &signo, sizeof(signo), 0);
+#endif
         if (n < 0) {
             if (errno == EINTR) goto lp2;
-            mln_log(error, "write error. %s\n", strerror(errno));
+            mln_log(error, "send error. %s\n", strerror(errno));
             abort();
         }
     }

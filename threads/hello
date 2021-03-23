@@ -19,9 +19,9 @@ int hello_main(int argc, char **argv)
         msg.c = 'N';
         msg.type = ITC_REQUEST;
         msg.need_clear = 1;
-        int n = write(fd, &msg, sizeof(msg));
+        int n = send(fd, &msg, sizeof(msg), 0);
         if (n != sizeof(msg)) {
-            mln_log(debug, "write error. n=%d. %s\n", n, strerror(errno));
+            mln_log(debug, "send error. n=%d. %s\n", n, strerror(errno));
             mln_string_free(msg.dest);
             return -1;
         }

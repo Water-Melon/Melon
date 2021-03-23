@@ -14,9 +14,9 @@ int haha_main(int argc, char **argv)
             return -1;
         }
         memset(&msg, 0, sizeof(msg));
-        int n = read(fd, &msg, sizeof(msg));
+        int n = recv(fd, &msg, sizeof(msg), 0);
         if (n != sizeof(msg)) {
-            mln_log(debug, "write error. n=%d. %s\n", n, strerror(errno));
+            mln_log(debug, "recv error. n=%d. %s\n", n, strerror(errno));
             return -1;
         }
         mln_log(debug, "!!!src:%S auto:%l char:%c\n", msg.src, msg.sauto, msg.c);
