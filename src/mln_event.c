@@ -12,6 +12,9 @@
 #include "mln_event.h"
 #include "mln_log.h"
 #include "mln_global.h"
+#if !defined(WINNT)
+#include <sys/socket.h>
+#endif
 
 /*declarations*/
 MLN_CHAIN_FUNC_DECLARE(ev_fd_wait, \
