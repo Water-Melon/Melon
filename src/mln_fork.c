@@ -110,7 +110,7 @@ int mln_pre_fork(void)
     if ((master_ipc_tree = mln_rbtree_init(&rbattr)) < 0) {
         mln_log(error, "No memory.\n");
         if (mln_tcp_conn_get_fd(&master_conn) >= 0)
-            close(mln_tcp_conn_get_fd(&master_conn));
+            mln_socket_close(mln_tcp_conn_get_fd(&master_conn));
         mln_tcp_conn_destroy(&master_conn);
         return -1;
     }
@@ -119,7 +119,7 @@ int mln_pre_fork(void)
         mln_rbtree_destroy(master_ipc_tree);
         master_ipc_tree = NULL;
         if (mln_tcp_conn_get_fd(&master_conn) >= 0)
-            close(mln_tcp_conn_get_fd(&master_conn));
+            mln_socket_close(mln_tcp_conn_get_fd(&master_conn));
         mln_tcp_conn_destroy(&master_conn);
         return -1;
     }
@@ -175,7 +175,7 @@ mln_fork_destroy(mln_fork_t *f, int free_args)
         free(f->msg_content);
     }
     if (mln_tcp_conn_get_fd(&(f->conn)) >= 0)
-        close(mln_tcp_conn_get_fd(&(f->conn)));
+        mln_socket_close(mln_tcp_conn_get_fd(&(f->conn)));
     mln_tcp_conn_destroy(&(f->conn));
     worker_list_chain_del(&worker_list_head, &worker_list_tail, f);
     free(f);
@@ -355,7 +355,7 @@ do_fork_core(enum proc_exec_type etype, \
     }
     pid_t pid = fork();
     if (pid > 0) {
-        close(fds[1]);
+        mln_socket_close(fds[1]);
         /*
          * In linux 2.6.32-279, there is a loophole in process restart.
          * If you use select() or kqueue(), you wouldn't get this problem.
@@ -403,7 +403,7 @@ do_fork_core(enum proc_exec_type etype, \
         }
         return 1;
     } else if (pid == 0) {
-        close(fds[0]);
+        mln_socket_close(fds[0]);
         mln_fork_destroy_all();
         mln_rbtree_destroy(master_ipc_tree);
         if (rs_clr_handler != NULL)

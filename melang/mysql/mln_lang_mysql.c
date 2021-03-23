@@ -31,8 +31,8 @@ static mln_lang_mysql_t *mln_lang_mysql_new(mln_lang_ctx_t *ctx, mln_string_t *d
         return NULL;
     }
     if ((lm = (mln_lang_mysql_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_mysql_t))) == NULL) {
-        close(fds[0]);
-        close(fds[1]);
+        mln_socket_close(fds[0]);
+        mln_socket_close(fds[1]);
         return NULL;
     }
     lm->ctx = ctx;
@@ -43,23 +43,23 @@ static mln_lang_mysql_t *mln_lang_mysql_new(mln_lang_ctx_t *ctx, mln_string_t *d
     lm->row = NULL;
     if ((lm->db = mln_string_pool_dup(ctx->pool, db)) == NULL) {
         mln_alloc_free(lm);
-        close(fds[0]);
-        close(fds[1]);
+        mln_socket_close(fds[0]);
+        mln_socket_close(fds[1]);
         return NULL;
     }
     if ((lm->username = mln_string_pool_dup(ctx->pool, username)) == NULL) {
         mln_string_free(lm->db);
         mln_alloc_free(lm);
-        close(fds[0]);
-        close(fds[1]);
+        mln_socket_close(fds[0]);
+        mln_socket_close(fds[1]);
         return NULL;
     }
     if ((lm->password = mln_string_pool_dup(ctx->pool, password)) == NULL) {
         mln_string_free(lm->username);
         mln_string_free(lm->db);
         mln_alloc_free(lm);
-        close(fds[0]);
-        close(fds[1]);
+        mln_socket_close(fds[0]);
+        mln_socket_close(fds[1]);
         return NULL;
     }
     if ((lm->host = mln_string_pool_dup(ctx->pool, host)) == NULL) {
@@ -67,8 +67,8 @@ static mln_lang_mysql_t *mln_lang_mysql_new(mln_lang_ctx_t *ctx, mln_string_t *d
         mln_string_free(lm->username);
         mln_string_free(lm->db);
         mln_alloc_free(lm);
-        close(fds[0]);
-        close(fds[1]);
+        mln_socket_close(fds[0]);
+        mln_socket_close(fds[1]);
         return NULL;
     }
     lm->sql = NULL;
@@ -90,8 +90,8 @@ static void mln_lang_mysql_free(mln_lang_mysql_t *lm)
     if (lm->password != NULL) mln_string_free(lm->password);
     if (lm->host != NULL) mln_string_free(lm->host);
     if (lm->sql != NULL) mln_string_free(lm->sql);
-    close(lm->fd_signal);
-    close(lm->fd_useless);
+    mln_socket_close(lm->fd_signal);
+    mln_socket_close(lm->fd_useless);
     mln_alloc_free(lm);
 }
 

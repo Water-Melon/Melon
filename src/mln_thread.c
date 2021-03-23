@@ -117,7 +117,7 @@ mln_thread_destroy(mln_event_t *ev, mln_thread_t *t)
             free(t->argv[t->argc-1]);
         free(t->argv);
     }
-    if (t->peerfd >= 0) close(t->peerfd);
+    if (t->peerfd >= 0) mln_socket_close(t->peerfd);
     if (t->is_created) {
         void *tret = NULL;
         int err = pthread_join(t->tid, &tret);
@@ -128,7 +128,7 @@ mln_thread_destroy(mln_event_t *ev, mln_thread_t *t)
         mln_log(report, "child thread pthread_join's exit code: %l\n", (intptr_t)tret);
     }
     if (mln_tcp_conn_get_fd(&(t->conn)) >= 0)
-        close(mln_tcp_conn_get_fd(&(t->conn)));
+        mln_socket_close(mln_tcp_conn_get_fd(&(t->conn)));
     c = mln_tcp_conn_get_head(&(t->conn), M_C_SEND);
     mln_thread_itc_chain_release_msg(c);
     c = mln_tcp_conn_get_head(&(t->conn), M_C_RECV);
@@ -268,7 +268,7 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
     t = mln_thread_init(&thattr);
     if (t == NULL) {
         mln_log(error, "No memory.\n");
-        close(fds[0]); close(fds[1]);
+        mln_socket_close(fds[0]); mln_socket_close(fds[1]);
         free(thattr.argv);
         return;
     }
@@ -582,7 +582,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
         t->argv[t->argc-1] = NULL;
     }
 
-    close(mln_tcp_conn_get_fd(&(t->conn)));
+    mln_socket_close(mln_tcp_conn_get_fd(&(t->conn)));
     c = mln_tcp_conn_remove(&(t->conn), M_C_SEND);
     mln_thread_itc_chain_release_msg(c);
     mln_chain_pool_release_all(c);
@@ -620,7 +620,7 @@ mln_thread_launcher(void *args)
     if (thread_cleanup != NULL)
         thread_cleanup(thread_data);
     mln_log(report, "Thread '%s' return %d.\n", t->argv[0], ret);
-    close(t->peerfd);
+    mln_socket_close(t->peerfd);
     t->peerfd = -1;
     return NULL;
 }
@@ -655,7 +655,7 @@ mln_thread_rbtree_cmp(const void *data1, const void *data2)
  */
 void mln_thread_exit(int exit_code)
 {
-    close(mThread->peerfd);
+    mln_socket_close(mThread->peerfd);
     mThread->peerfd = -1;
     intptr_t ec = exit_code;
     pthread_exit((void *)ec);
@@ -669,7 +669,7 @@ void mln_thread_kill(mln_string_t *alias)
     rn = mln_rbtree_search(thread_tree, thread_tree->root, &tmp);
     if (mln_rbtree_null(rn, thread_tree)) return;
     t = (mln_thread_t *)(rn->data);
-    close(t->peerfd);
+    mln_socket_close(t->peerfd);
     t->peerfd = -1;
     pthread_cancel(t->tid);
 }

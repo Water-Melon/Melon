@@ -247,8 +247,8 @@ err6:
 #else
     /*do nothing*/
 #endif    
-    close(ev->rd_fd);
-    close(ev->wr_fd);
+    mln_socket_close(ev->rd_fd);
+    mln_socket_close(ev->wr_fd);
 err5:
     mln_rbtree_destroy(ev->ev_signal_tree);
 err4:
@@ -328,8 +328,8 @@ void mln_event_destroy(mln_event_t *ev)
     }
     mln_fheap_destroy(ev->ev_timer_heap);
     mln_rbtree_destroy(ev->ev_signal_tree);
-    close(ev->rd_fd);
-    close(ev->wr_fd);
+    mln_socket_close(ev->rd_fd);
+    mln_socket_close(ev->wr_fd);
 #if defined(MLN_EPOLL)
     close(ev->epollfd);
 #elif defined(MLN_KQUEUE)

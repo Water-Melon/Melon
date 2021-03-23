@@ -592,8 +592,8 @@ void mln_lang_free(mln_lang_t *lang)
         mln_lang_ctx_free(ctx);
     }
     mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-    if (lang->fd_notInUsed >= 0) close(lang->fd_notInUsed);
-    if (lang->fd_signal >= 0) close(lang->fd_signal);
+    if (lang->fd_notInUsed >= 0) mln_socket_close(lang->fd_notInUsed);
+    if (lang->fd_signal >= 0) mln_socket_close(lang->fd_signal);
     if (lang->resource_set != NULL) mln_rbtree_destroy(lang->resource_set);
     if (lang->shift_table != NULL) mln_lang_parserDestroy(lang->shift_table);
     while ((cache = lang->cache_head) != NULL) {
@@ -6303,8 +6303,8 @@ static void __mln_lang_msg_free(void *data)
     if (lm->c_val != NULL) __mln_lang_val_free(lm->c_val);
     mln_event_set_fd(lm->ctx->lang->ev, lm->script_fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     mln_event_set_fd(lm->ctx->lang->ev, lm->c_fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-    if (lm->script_fd >= 0) close(lm->script_fd);
-    if (lm->c_fd >= 0) close(lm->c_fd);
+    if (lm->script_fd >= 0) mln_socket_close(lm->script_fd);
+    if (lm->c_fd >= 0) mln_socket_close(lm->c_fd);
     mln_alloc_free(lm);
 }
 
