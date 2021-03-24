@@ -299,7 +299,7 @@ static inline mln_conf_t *mln_conf_init(void)
     mln_rbtree_node_t *rn;
     cf = (mln_conf_t *)malloc(sizeof(mln_conf_t));
     if (cf == NULL) {
-        fprintf(stderr, "No memory.\n");
+        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         return NULL;
     }
     cf->search = mln_conf_search_domain;
@@ -310,7 +310,7 @@ static inline mln_conf_t *mln_conf_init(void)
     rbattr.data_free = mln_conf_domain_destroy;
     rbattr.cache = 0;
     if ((cf->domain = mln_rbtree_init(&rbattr)) == NULL) {
-        fprintf(stderr, "No memory.\n");
+        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         free(cf);
         return NULL;
     }
@@ -323,13 +323,13 @@ static inline mln_conf_t *mln_conf_init(void)
     struct mln_lex_attr lattr;
 
     if ((pool = mln_alloc_init()) == NULL) {
-        fprintf(stderr, "No memory.\n");
+        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_rbtree_destroy(cf->domain);
         free(cf);
         return NULL;
     }
     if ((conf_file_path = (char *)mln_alloc_m(pool, path_len + sizeof(conf_filename) + 1)) == NULL) {
-        fprintf(stderr, "No memory.\n");
+        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_alloc_destroy(pool);
         mln_rbtree_destroy(cf->domain);
         free(cf);
@@ -353,7 +353,7 @@ static inline mln_conf_t *mln_conf_init(void)
     mln_lex_initWithHooks(mln_conf_lex, cf->lex, &lattr);
     mln_alloc_free(conf_file_path);
     if (cf->lex == NULL) {
-        fprintf(stderr, "No memory.\n");
+        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_alloc_destroy(pool);
         mln_rbtree_destroy(cf->domain);
         free(cf);
@@ -361,12 +361,12 @@ static inline mln_conf_t *mln_conf_init(void)
     }
     mln_conf_domain_t *cd = mln_conf_domain_init(cf, &default_domain);
     if (cd == NULL) {
-        fprintf(stderr, "No memory.\n");
+        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_conf_destroy(cf);
         return NULL;
     }
     if ((rn = mln_rbtree_node_new(cf->domain, cd)) == NULL) {
-        fprintf(stderr, "No memory.\n");
+        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_conf_domain_destroy((void *)cd);
         mln_conf_destroy(cf);
         return NULL;
@@ -565,7 +565,7 @@ mln_conf_item_init(mln_conf_t *cf, mln_conf_lex_struct_t *cls, mln_conf_item_t *
             ci->type = CONF_STR;
             ci->val.s = mln_string_dup(cls->text);
             if (ci->val.s == NULL) {
-                fprintf(stderr, "No memory.\n");
+                fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
                 return -1;
             }
             break;
@@ -582,7 +582,7 @@ mln_conf_item_init(mln_conf_t *cf, mln_conf_lex_struct_t *cls, mln_conf_item_t *
             ci->val.c = (mln_s8_t)(cls->text->data[0]);
             break;
         default:
-            fprintf(stderr, "No such token type.\n");
+            fprintf(stderr, "%s:%d: No such token type.\n", __FUNCTION__, __LINE__);
             abort();
     }
     return 0;
@@ -605,7 +605,7 @@ mln_conf_item_recursive(mln_conf_t *cf, \
                         mln_u32_t cnt)
 {
     if (cls == NULL) {
-        fprintf(stderr, "Get token error. %s\n", mln_lex_strerror(cf->lex));
+        fprintf(stderr, "%s:%d: Get token error. %s\n", __FUNCTION__, __LINE__, mln_lex_strerror(cf->lex));
         return -1;
     }
     if (cls->type == CONF_TK_EOF) {
@@ -620,7 +620,7 @@ mln_conf_item_recursive(mln_conf_t *cf, \
         }
         cc->arg_tbl = (mln_conf_item_t *)calloc(cnt, sizeof(mln_conf_item_t));
         if (cc->arg_tbl == NULL) {
-            fprintf(stderr, "No memory.\n");
+            fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
             mln_conf_lex_free(cls);
             return -1;
         }
@@ -649,7 +649,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
     while ( 1 ) {
         fir = mln_conf_token(cf->lex);
         if (fir == NULL) {
-            fprintf(stderr, "Get token error. %s\n", mln_lex_strerror(cf->lex));
+            fprintf(stderr, "%s:%d: Get token error. %s\n", __FUNCTION__, __LINE__, mln_lex_strerror(cf->lex));
             return -1;
         } else if (fir->type == CONF_TK_EOF) {
             mln_conf_lex_free(fir);
@@ -670,7 +670,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
         next = mln_conf_token(cf->lex);
         if (next == NULL) {
             mln_conf_lex_free(fir);
-            fprintf(stderr, "Get token error. %s\n", mln_lex_strerror(cf->lex));
+            fprintf(stderr, "%s:%d: Get token error. %s\n", __FUNCTION__, __LINE__, mln_lex_strerror(cf->lex));
             return -1;
         }
         else if (next->type == CONF_TK_EOF) {
@@ -691,11 +691,11 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
             cd = mln_conf_domain_init(cf, fir->text);
             mln_conf_lex_free(fir);
             if (cd == NULL) {
-                fprintf(stderr, "No memory.\n");
+                fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
                 return -1;
             }
             if ((rn = mln_rbtree_node_new(cf->domain, cd)) == NULL) {
-                fprintf(stderr, "No memory.\n");
+                fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
                 mln_conf_domain_destroy(cd);
                 return -1;
             }
@@ -708,12 +708,12 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
         cmd = mln_conf_cmd_init(fir->text);
         mln_conf_lex_free(fir);
         if (cmd == NULL) {
-            fprintf(stderr, "No memory.\n");
+            fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
             mln_conf_lex_free(next);
             return -1;
         }
         if ((rn = mln_rbtree_node_new(current->cmd, cmd)) == NULL) {
-            fprintf(stderr, "No memory.\n");
+            fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
             mln_conf_cmd_destroy(cmd);
             mln_conf_lex_free(next);
             return -1;
