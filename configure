@@ -39,6 +39,10 @@ done
 
 #output installation path
 echo -e "Installation Path \t[$install_path]"
+echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", argv[1]);return 0;}" > .path_generater.c
+$cc -o path_generater .path_generater.c
+realpath=`./path_generater $install_path`
+rm -f path_generater .path_generater.c
 #build path.c & h
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
 echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
@@ -47,7 +51,7 @@ echo -e "\n#endif\n" >> include/mln_path.h
 
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > src/mln_path.c
 echo "#include \"mln_path.h\"" >> src/mln_path.c
-echo -e "\nchar install_path[] = \"$install_path\";" >> src/mln_path.c
+echo -e "\nchar install_path[] = \"$realpath\";" >> src/mln_path.c
 echo -e "\nchar *mln_path(void)\n{" >> src/mln_path.c
 echo "    return install_path;" >> src/mln_path.c
 echo "}" >> src/mln_path.c
