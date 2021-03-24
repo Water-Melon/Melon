@@ -468,6 +468,7 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     }
     memcpy(service, val2->data.s->data, val2->data.s->len);
 
+    memset(&addr, 0, sizeof(addr));
     addr.ai_flags = AI_PASSIVE;
     addr.ai_family = AF_UNSPEC;
     addr.ai_socktype = SOCK_STREAM;
@@ -1155,7 +1156,11 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
+#if defined(WINNT)
+    if (connect(fd, res->ai_addr, res->ai_addrlen) == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK) {
+#else
     if (connect(fd, res->ai_addr, res->ai_addrlen) < 0 && errno != EINPROGRESS) {
+#endif
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_lang_tcp_free(tcp);
         freeaddrinfo(res);
@@ -1866,6 +1871,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
             return NULL;
         }
     } else {
+        memset(&addr, 0, sizeof(addr));
         addr.ai_flags = AI_PASSIVE;
         addr.ai_family = AF_UNSPEC;
         addr.ai_socktype = SOCK_DGRAM;
@@ -2172,6 +2178,7 @@ static mln_lang_var_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Socket used in other script task.");
         return ret_var;
     }
+    memset(&addr, 0, sizeof(addr));
     addr.ai_flags = AI_PASSIVE;
     addr.ai_family = AF_UNSPEC;
     addr.ai_socktype = SOCK_DGRAM;
