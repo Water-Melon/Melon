@@ -191,11 +191,7 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
     ev->is_break = 0;
     ev->in_main_thread = is_main;
     int fds[2];
-#if defined(WINNT)
-    if (_pipe(fds, 256, O_BINARY) < 0) {
-#else
     if (pipe(fds) < 0) {
-#endif
         mln_log(error, "pipe error. %s\n", strerror(errno));
         goto err5;
     }
