@@ -3,13 +3,15 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_lang.h"
-#include <sys/stat.h>
-#include <sys/types.h>
+#if !defined(WINNT)
 #include <sys/socket.h>
-#include <sys/time.h>
-#include <fcntl.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#endif
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <fcntl.h>
 #include "mln_lex.h"
 #include "mln_log.h"
 #include "mln_lang_int.h"
@@ -1933,7 +1935,9 @@ mln_s64_t mln_lang_var_toInt(mln_lang_var_t *var)
             if (buf == NULL) break;
             memcpy(buf, s->data, s->len);
             buf[s->len] = 0;
-#if defined(i386) || defined(__arm__)
+#if defined(WINNT)
+            sscanf((char *)buf, "%I64d", &i);
+#elif defined(i386) || defined(__arm__)
             sscanf((char *)buf, "%lld", &i);
 #else
             sscanf((char *)buf, "%ld", &i);
@@ -2007,7 +2011,9 @@ mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var)
             n = snprintf(buf, sizeof(buf)-1, "Array");
             break;
         case M_LANG_VAL_TYPE_INT:
-#if defined(i386) || defined(__arm__)
+#if defined(WINNT)
+            n = snprintf(buf, sizeof(buf)-1, "%I64d", val->data.i);
+#elif defined(i386) || defined(__arm__)
             n = snprintf(buf, sizeof(buf)-1, "%lld", val->data.i);
 #else
             n = snprintf(buf, sizeof(buf)-1, "%ld", val->data.i);

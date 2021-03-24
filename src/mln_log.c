@@ -30,12 +30,14 @@ _mln_sys_log_process(mln_log_t *log, \
                      int line, \
                      char *msg, \
                      va_list arg);
-static void mln_file_lock(int fd);
-static void mln_file_unlock(int fd);
+static inline void mln_file_lock(int fd);
+static inline void mln_file_unlock(int fd);
 static int mln_log_set_level(mln_log_t *log, int is_init);
 static ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
+#if !defined(WINNT)
 static void mln_log_atfork_lock(void);
 static void mln_log_atfork_unlock(void);
+#endif
 static int mln_log_get_log(mln_log_t *log, int is_init);
 
 /*
@@ -49,8 +51,9 @@ mln_log_t gLog = {{0},{0},{0},STDERR_FILENO,0,none,(mln_lock_t)0};
 /*
  * file lock
  */
-static void mln_file_lock(int fd)
+static inline void mln_file_lock(int fd)
 {
+#if !defined(WINNT)
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
     fl.l_type = F_WRLCK;
@@ -58,10 +61,12 @@ static void mln_file_lock(int fd)
     fl.l_whence = SEEK_SET;
     fl.l_len = 0;
     fcntl(fd, F_SETLKW, &fl);
+#endif
 }
 
-static void mln_file_unlock(int fd)
+static inline void mln_file_unlock(int fd)
 {
+#if !defined(WINNT)
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
     fl.l_type = F_UNLCK;
@@ -69,6 +74,7 @@ static void mln_file_unlock(int fd)
     fl.l_whence = SEEK_SET;
     fl.l_len = 0;
     fcntl(fd, F_SETLKW, &fl); 
+#endif
 }
 
 
@@ -152,7 +158,11 @@ mln_log_get_log(mln_log_t *log, int is_init)
         ;
     memcpy(log->dir_path, path_str, p - path_str);
     log->dir_path[p - path_str] = 0;
+#if defined(WINNT)
+    if (mkdir(log->dir_path) < 0) {
+#else
     if (mkdir(log->dir_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) < 0) {
+#endif
         if (errno != EEXIST) {
             fprintf(stderr, "mkdir '%s' failed. %s\n", log->dir_path, strerror(errno));
             return -1;
@@ -195,6 +205,7 @@ mln_log_get_log(mln_log_t *log, int is_init)
     return 0;
 }
 
+#if !defined(WINNT)
 static void mln_log_atfork_lock(void)
 {
     MLN_LOCK(&(gLog.thread_lock));
@@ -204,6 +215,7 @@ static void mln_log_atfork_unlock(void)
 {
     MLN_UNLOCK(&(gLog.thread_lock));
 }
+#endif
 
 void mln_log_destroy(void)
 {
@@ -462,7 +474,10 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'i':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(i386) || defined(__arm__)
+#if defined(WINNT)
+                long long num = va_arg(arg, long long);
+                int n = snprintf(line_str, sizeof(line_str)-1, "%I64d", num);
+#elif defined(i386) || defined(__arm__)
                 long long num = va_arg(arg, long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%lld", num);
 #else
@@ -475,7 +490,10 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'I':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(i386) || defined(__arm__)
+#if defined(WINNT)
+                unsigned long long num = va_arg(arg, unsigned long long);
+                int n = snprintf(line_str, sizeof(line_str)-1, "%I64u", num);
+#elif defined(i386) || defined(__arm__)
                 unsigned long long num = va_arg(arg, unsigned long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%llu", num);
 #else

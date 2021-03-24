@@ -2,6 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+#include <time.h>
 #include <stdlib.h>
 #include "mln_thread_pool.h"
 #include <string.h>
@@ -115,6 +116,7 @@ static void mln_thread_pool_member_exit(void *arg)
 /*
  * thread_pool
  */
+#if !defined(WINNT)
 static void mln_thread_pool_prepare(void)
 {
     if (mThreadPoolSelf == NULL) return;
@@ -144,6 +146,7 @@ static void mln_thread_pool_child(void)
         mln_thread_pool_member_exit(fr);
     }
 }
+#endif
 
 static mln_thread_pool_t *
 mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
@@ -192,6 +195,7 @@ mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
 #ifdef MLN_USE_UNIX98
     if (tpattr->concurrency) pthread_setconcurrency(tpattr->concurrency);
 #endif
+#if !defined(WINNT)
     if ((rc = pthread_atfork(mln_thread_pool_prepare, \
                              mln_thread_pool_parent, \
                              mln_thread_pool_child)) != 0)
@@ -203,6 +207,7 @@ mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
         *err = rc;
         return NULL;
     }
+#endif
     if ((mThreadPoolSelf = mln_thread_pool_member_join(tp, 0)) == NULL) {
         pthread_attr_destroy(&(tp->attr));
         pthread_cond_destroy(&(tp->cond));

@@ -32,7 +32,9 @@ struct UTCTime_s {
 
 
 extern int mln_sys_limit_modify(void);
+#if !defined(WINNT)
 extern int mln_daemon(void);
+#endif
 extern int mln_boot_params(int argc, char *argv[]);
 extern void mln_UTCTime(time_t tm, struct UTCTime_s *uc) __NONNULL1(2);
 extern int mln_s2Time(time_t *tm, mln_string_t *s, int type) __NONNULL2(1,2);

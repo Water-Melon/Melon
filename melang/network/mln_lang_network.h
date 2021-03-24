@@ -7,6 +7,9 @@
 
 #include "mln_lang.h"
 #include "mln_connection.h"
+#if defined(WINNT)
+#include <ws2tcpip.h>
+#endif
 
 #define MLN_LANG_NETWORK_TCP_CONNECT_RETRY 64
 

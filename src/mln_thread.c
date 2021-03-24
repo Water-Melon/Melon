@@ -5,10 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#if !defined(WINNT)
 #include <sys/socket.h>
+#include <dlfcn.h>
+#endif
 #include <errno.h>
 #include <unistd.h>
-#include <dlfcn.h>
 #include <pthread.h>
 #include "mln_thread.h"
 #include "mln_rbtree.h"

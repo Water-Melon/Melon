@@ -861,10 +861,17 @@ void mln_pg_output_state(mln_pg_state_t *s)
     mln_u32_t i;
     printf("STATES:\n");
     for (; s != NULL; s = s->next) {
+#if defined(WINNT)
+        printf("State %ld: input: [%s] nr_item:%I64u\n", \
+               s->id, \
+               s->input==NULL?"(null)":(char *)(s->input->token->data), \
+               (unsigned long long)(s->nr_item));
+#else
         printf("State %ld: input: [%s] nr_item:%llu\n", \
                s->id, \
                s->input==NULL?"(null)":(char *)(s->input->token->data), \
                (unsigned long long)(s->nr_item));
+#endif
         printf("Items:\n");
         for (it = s->head; it != NULL; it = it->next) {
             printf("rule: %s->", (char *)(it->rule->left->token->data));

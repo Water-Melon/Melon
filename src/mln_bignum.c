@@ -978,7 +978,7 @@ mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
 
     for (i = 0; i < times; ++i) {
 #if defined(WINNT)
-        val = (mln_u32_t)rand_s(&val);
+        rand_s(&val);
 #else
         val = (mln_u32_t)rand_r(&val);
 #endif
@@ -987,7 +987,8 @@ mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
 
     if ((off = bitwidth % 32)) {
 #if defined(WINNT)
-        data[i] = (((mln_u64_t)rand_s(&val) * 0xfdfd) & 0xffffffff);
+        rand_s(&val);
+        data[i] = ((mln_u64_t)val * 0xfdfd) & 0xffffffff;
 #else
         data[i] = (((mln_u64_t)rand_r(&val) * 0xfdfd) & 0xffffffff);
 #endif
@@ -1004,7 +1005,8 @@ mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
                 gettimeofday(&tv, NULL);
                 val = tv.tv_sec*1000000+tv.tv_usec;
 #if defined(WINNT)
-                data[i-1] = (mln_u32_t)rand_s(&val);
+                rand_s(&val);
+                data[i-1] = (mln_u32_t)val;
 #else
                 data[i-1] = (mln_u32_t)rand_r(&val);
 #endif
@@ -1027,7 +1029,8 @@ lp:
     gettimeofday(&tv, NULL);
     val = tv.tv_sec*1000000+tv.tv_usec;
 #if defined(WINNT)
-    width = (mln_u32_t)rand_s(&val) % bitwidth;
+    rand_s(&val);
+    width = val % bitwidth;
 #else
     width = (mln_u32_t)rand_r(&val) % bitwidth;
 #endif

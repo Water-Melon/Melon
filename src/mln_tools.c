@@ -3,7 +3,10 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
+#if !defined(WINNT)
 #include <sys/resource.h>
+#include <pwd.h>
+#endif
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -11,7 +14,6 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <signal.h>
-#include <pwd.h>
 #include "mln_tools.h"
 #include "mln_global.h"
 #include "mln_log.h"
@@ -20,11 +22,13 @@ static int
 mln_boot_help(const char *boot_str, const char *alias);
 static int
 mln_boot_version(const char *boot_str, const char *alias);
+#if !defined(WINNT)
+static int mln_set_id(void);
 static int
 mln_boot_reload(const char *boot_str, const char *alias);
 static int
 mln_boot_stop(const char *boot_str, const char *alias);
-static int mln_set_id(void);
+#endif
 static int mln_sys_core_modify(void);
 static int mln_sys_nofile_modify(void);
 
@@ -35,8 +39,10 @@ long mon_days[2][12] = {
 mln_boot_t boot_params[] = {
 {"--help", "-h", mln_boot_help, 0},
 {"--version", "-v", mln_boot_version, 0},
+#if !defined(WINNT)
 {"--reload", "-r", mln_boot_reload, 0},
 {"--stop", "-s", mln_boot_stop, 0}
+#endif
 };
 char mln_core_file_cmd[] = "core_file_size";
 char mln_nofile_cmd[] = "max_nofile";
@@ -136,6 +142,7 @@ static int mln_sys_nofile_modify(void)
     return 0;
 }
 
+#if !defined(WINNT)
 int mln_daemon(void)
 {
     int ret;
@@ -273,6 +280,7 @@ static int mln_set_id(void)
 
     return 0;
 }
+#endif
 
 int mln_boot_params(int argc, char *argv[])
 {
@@ -319,6 +327,7 @@ mln_boot_version(const char *boot_str, const char *alias)
     return 0;
 }
 
+#if !defined(WINNT)
 static int
 mln_boot_reload(const char *boot_str, const char *alias)
 {
@@ -367,6 +376,7 @@ mln_boot_stop(const char *boot_str, const char *alias)
 
     exit(0);
 }
+#endif
 
 /*
  * time

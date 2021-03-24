@@ -5,12 +5,12 @@
 #ifndef __MLN_WEBSOCKET_H
 #define __MLN_WEBSOCKET_H
 
+#include "mln_connection.h"
 #include "mln_string.h"
 #include "mln_http.h"
 #include "mln_chain.h"
 #include "mln_alloc.h"
 #include "mln_hash.h"
-#include "mln_connection.h"
 
 /*
  * return value
