@@ -4,12 +4,12 @@
  */
  
 Melon Developer Guide
-A C framework library for simplifying development on UNIX
+A C framework library for simplifying development
 Melon Version 2.1.0
 E-Mail: Melon-c@hotmail.com
 
 1.Preface
-Melon is a C framework library for simplifying development on UNIX.
+Melon is a C framework library for simplifying development.
 Why is a library? Because it includes many implementations about data structures, algorithms, architectures and
 many other useful components that you can choose that only use these APIs or whole framework (especially
 architectures) based on your demand.

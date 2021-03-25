@@ -4,13 +4,16 @@
 
 
 
-
-Melon is a C framework library for simplifying-development on UNIX. 
+Melon is a C framework library for simplifying-development. 
 It includes many data structures, algorithms, architectures and many other useful components.
 You can pick some components or whole framework based on your demand.
 Melon supports both multi-process and multi-thread models with module development.
 
+On Windows, framework can NOT be activated, but other components still working.
+
 ### Installation
+
+On Windows, please install `mingw` and `git bash` at first. Then execute these shell commands on git bash or terminal (on UNIX).
 
 ```
 git clone https://github.com/Water-Melon/Melon.git
