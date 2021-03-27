@@ -1,4 +1,4 @@
-<p align="center"><img width="108" src="https://github.com/Water-Melon/Melon/blob/master/doc/logo.png?raw=true" alt="Melon logo"></p>
+<p align="center"><img width="108" src="https://github.com/Water-Melon/Melon/blob/master/docs/logo.png?raw=true" alt="Melon logo"></p>
 <p align="center"><img src="https://img.shields.io/github/license/Water-Melon/Melang" /></p>
 <h1 align="center">Melon</h1>
 
@@ -33,7 +33,7 @@ Copyright (c) 2014-present, Niklaus F. Schen
 
 ### Document
 
-Please visit [Melon Developer Guide](https://github.com/Water-Melon/Melon/blob/master/doc/Melon%20Developer%20Guide.txt) for more details.
+Please visit [Melon Developer Guide](https://github.com/Water-Melon/Melon/blob/master/docs/Melon%20Developer%20Guide.txt) for more details.
 
 
 
