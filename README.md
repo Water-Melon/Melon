@@ -13,7 +13,7 @@ On Windows, framework can NOT be activated, but other components still working.
 
 ### Installation
 
-On Windows, please install `mingw` and `git bash` at first. Then execute these shell commands on git bash or terminal (on UNIX).
+On Windows, please install `mingw`, `git bash` and `make` at first. Then execute these shell commands on git bash or terminal (on UNIX).
 
 ```
 git clone https://github.com/Water-Melon/Melon.git
