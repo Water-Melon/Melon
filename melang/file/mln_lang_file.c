@@ -519,11 +519,11 @@ static mln_lang_var_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
     }
-    if (!mln_string_constStrcmp(tmp, "begin")) {
+    if (!mln_string_const_strcmp(tmp, "begin")) {
         whence = SEEK_SET;
-    } else if (!mln_string_constStrcmp(tmp, "current")) {
+    } else if (!mln_string_const_strcmp(tmp, "current")) {
         whence = SEEK_CUR;
-    } else if (!mln_string_constStrcmp(tmp, "end")) {
+    } else if (!mln_string_const_strcmp(tmp, "end")) {
         whence = SEEK_END;
     } else {
         mln_lang_errmsg(ctx, "Invalid argument 'whence'.");

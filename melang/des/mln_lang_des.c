@@ -123,9 +123,9 @@ static mln_lang_var_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument 3.");
         return NULL;
     }
-    if (!mln_string_constStrcmp(tmp, "encode")) {
+    if (!mln_string_const_strcmp(tmp, "encode")) {
         encode = 1;
-    } else if (!mln_string_constStrcmp(tmp, "decode")) {
+    } else if (!mln_string_const_strcmp(tmp, "decode")) {
         /*do nothing, encode = 0*/
     } else {
         mln_lang_errmsg(ctx, "Invalid argument 3.");
@@ -295,9 +295,9 @@ static mln_lang_var_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument 4.");
         return NULL;
     }
-    if (!mln_string_constStrcmp(tmp, "encode")) {
+    if (!mln_string_const_strcmp(tmp, "encode")) {
         encode = 1;
-    } else if (!mln_string_constStrcmp(tmp, "decode")) {
+    } else if (!mln_string_const_strcmp(tmp, "decode")) {
         /*do nothing, encode = 0*/
     } else {
         mln_lang_errmsg(ctx, "Invalid argument 4.");

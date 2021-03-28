@@ -81,50 +81,50 @@ Their definitions can be found in melon/include/mln_types.h.
        It duplicates the argument and returns a new object.
        The new object is allocated by malloc().
 
-    c) mln_string_t *mln_string_nDup(mln_string_t *str, mln_s32_t size);
+    c) mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size);
        It is the same as mln_string_dup(), but the second argument indicates the length of the duplication.
 
-    d) mln_string_t *mln_string_nConstDup(char *str, mln_s32_t size);
-       It is the same as mln_string_nDup(), but the type of the first argument is char *.
+    d) mln_string_t *mln_string_nconstdup(char *str, mln_s32_t size);
+       It is the same as mln_string_ndup(), but the type of the first argument is char *.
 
-    e) mln_string_t *mln_string_refDup(mln_string_t *str);
+    e) mln_string_t *mln_string_ref_dup(mln_string_t *str);
        This interface creates a new pointer which points to the same string contents that pointed by the argument.
        It won't free the string contents when mln_string_free() is called.
 
-    f) mln_string_t *mln_string_refConstDup(char *s);
-       It is the same as mln_string_refDup() but the argument type.
+    f) mln_string_t *mln_string_ref_constdup(char *s);
+       It is the same as mln_string_ref_dup() but the argument type.
 
     g) void mln_string_free(mln_string_t *str);
        It is used to free mln_string_t.
-       If 'str' is initialized by mln_string_refDup() or mln_string_refConstDup(), the string contents will be freed
+       If 'str' is initialized by mln_string_ref_dup() or mln_string_ref_constdup(), the string contents will be freed
        at the same time.
 
-    h) int mln_string_strcmpSeq(mln_string_t *s1, mln_string_t *s2);
+    h) int mln_string_strseqcmp(mln_string_t *s1, mln_string_t *s2);
        e.g.
            mln_string_t a = mln_string("abcd");
            mln_string_t b = mln_string("abcedasd");
-           int ret = mln_string_strcmpSeq(&a, &b);
+           int ret = mln_string_strseqcmp(&a, &b);
        'ret' will be -1.
 
     i) int mln_string_strcmp(mln_string_t *s1, mln_string_t *s2);
        It is the same as strcmp() but the arguments' type.
 
-    j) int mln_string_constStrcmp(mln_string_t *s1, const char *s2);
+    j) int mln_string_const_strcmp(mln_string_t *s1, const char *s2);
        This interface is the same as mln_string_strcmp() but the type of the second argument.
 
     k) int mln_string_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
        It is the same as strncmp().
 
-    l) int mln_string_constStrncmp(mln_string_t *s1, const char *s2, mln_u32_t n);
+    l) int mln_string_const_strncmp(mln_string_t *s1, const char *s2, mln_u32_t n);
        It is the same as mln_string_strncmp() but the type of the second argument.
 
     m) int mln_string_strcasecmp(mln_string_t *s1, mln_string_t *s2);
        It is the same as strcasecmp().
 
-    n) int mln_string_constStrcasecmp(mln_string_t *s1, const char *s2);
+    n) int mln_string_const_strcasecmp(mln_string_t *s1, const char *s2);
        It is the same as mln_string_strcasecmp() but the type of the second argument.
 
-    o) int mln_string_constStrncasecmp(mln_string_t *s1, const char *s2, mln_u32_t n); 
+    o) int mln_string_const_strncasecmp(mln_string_t *s1, const char *s2, mln_u32_t n); 
        It is the same as strncasecmp().
 
     p) int mln_string_strncasecmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
@@ -133,27 +133,27 @@ Their definitions can be found in melon/include/mln_types.h.
     q) char *mln_string_strstr(mln_string_t *text, mln_string_t *pattern);
        It is the same as strstr().
 
-    r) char *mln_string_constStrstr(mln_string_t *text, const char *pattern);
+    r) char *mln_string_const_strstr(mln_string_t *text, const char *pattern);
        It is the same as mln_string_strstr() but the type of the second argument.
 
-    s) mln_string_t *mln_string_S_strstr(mln_string_t *text, mln_string_t *pattern);
+    s) mln_string_t *mln_string_new_strstr(mln_string_t *text, mln_string_t *pattern);
        It is used to get a string which starts from the position that is matched with 'pattern'.
 
-    t) mln_string_t *mln_string_S_constStrstr(mln_string_t *text, const char *pattern);
-       The same as mln_string_S_strstr() but the type of the second argument.
+    t) mln_string_t *mln_string_new_const_strstr(mln_string_t *text, const char *pattern);
+       The same as mln_string_new_strstr() but the type of the second argument.
 
-    u) char *mln_string_KMPStrstr(mln_string_t *text, mln_string_t *pattern);
-    v) char *mln_string_KMPConstStrstr(mln_string_t *text, const char *pattern);
-    w) mln_string_t *mln_string_S_KMPStrstr(mln_string_t *text, mln_string_t *pattern);
-    x) mln_string_t *mln_string_S_KMPConstStrstr(mln_string_t *text, const char *pattern);
-       These four interfaces are the same as mln_string_strstr(), mln_string_constStrstr(), mln_string_S_strstr() and
-       mln_string_S_constStrstr(), but implemented by KMP algorithm.
+    u) char *mln_string_kmp(mln_string_t *text, mln_string_t *pattern);
+    v) char *mln_string_const_kmp(mln_string_t *text, const char *pattern);
+    w) mln_string_t *mln_string_new_kmp(mln_string_t *text, mln_string_t *pattern);
+    x) mln_string_t *mln_string_new_const_kmp(mln_string_t *text, const char *pattern);
+       These four interfaces are the same as mln_string_strstr(), mln_string_const_strstr(), mln_string_new_strstr() and
+       mln_string_new_const_strstr(), but implemented by KMP algorithm.
 
     y) mln_string_t *mln_string_slice(mln_string_t *s, const char *sep_array /*ended by \0*/);
        Slice string into several pieces.
        Slicing characters can be given by the second argument.
        This interface has a side-effect that the string buffer will be destroyed. So you can call mln_string_dup() or
-       mln_string_nDup() at first.
+       mln_string_ndup() at first.
        The return value is a vector, and its last element is NULL.
 
     z) void mln_string_slice_free(mln_string_t *array);
@@ -3344,7 +3344,7 @@ Their definitions can be found in melon/include/mln_types.h.
           h. FUNCTION
       If it succeed, 'true' will be returned. Otherwise, 'false' will be returned.
 
-      <6> mln_strcmpseq(s1, s2);
+      <6> mln_strseqcmp(s1, s2);
       Its functionality is the same as 'strcmp()' in C.
       This function will check every byte strictly.
       Both of arguments must be 'string'.

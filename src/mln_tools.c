@@ -78,7 +78,7 @@ static int mln_sys_core_modify(void)
     if (ci->type == CONF_INT) {
         core_file_size = (rlim_t)ci->val.i;
     } else if (ci->type == CONF_STR) {
-        if (mln_string_constStrcmp(ci->val.s, mln_limit_unlimited)) {
+        if (mln_string_const_strcmp(ci->val.s, mln_limit_unlimited)) {
             fprintf(stderr, "Invalid argument of %s.\n", mln_core_file_cmd);
             return -1;
         }
@@ -121,7 +121,7 @@ static int mln_sys_nofile_modify(void)
     if (ci->type == CONF_INT) {
         nofile = (rlim_t)ci->val.i;
     } else if (ci->type == CONF_STR) {
-        if (mln_string_constStrcmp(ci->val.s, mln_limit_unlimited)) {
+        if (mln_string_const_strcmp(ci->val.s, mln_limit_unlimited)) {
             fprintf(stderr, "Invalid argument of %s.\n", mln_nofile_cmd);
             return -1;
         }

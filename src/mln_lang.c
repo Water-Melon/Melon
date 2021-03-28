@@ -1274,7 +1274,7 @@ static inline mln_lang_var_t *__mln_lang_var_createTmpString_ref(mln_lang_ctx_t 
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
-    if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_STRING, mln_string_ref_dup(s))) == NULL) {
+    if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_STRING, mln_string_ref(s))) == NULL) {
         mln_string_free(s);
         return NULL;
     }
@@ -1395,7 +1395,7 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
     }
     scope->type = type;
     if (name != NULL) {
-        scope->name = mln_string_ref_dup(name);
+        scope->name = mln_string_ref(name);
     } else {
         scope->name = NULL;
     }
@@ -1743,7 +1743,7 @@ __mln_lang_var_new_ref_string(mln_lang_ctx_t *ctx, \
     }
     var->type = type;
     if (name != NULL) {
-        var->name = mln_string_ref_dup(name);
+        var->name = mln_string_ref(name);
     } else {
         var->name = NULL;
     }
@@ -1772,7 +1772,7 @@ mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_va
     }
     var->type = defvar->type;
     ASSERT(defvar->name != NULL);
-    var->name = mln_string_ref_dup(defvar->name);
+    var->name = mln_string_ref(defvar->name);
     if (var->type == M_LANG_VAR_NORMAL) {
         if ((var->val = mln_lang_val_dup(ctx, realvar->val)) == NULL) {
             mln_string_free(var->name);
@@ -2023,7 +2023,7 @@ mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var)
             break;
         case M_LANG_VAL_TYPE_STRING:
         {
-            mln_string_t *s = mln_string_ref_dup(val->data.s);
+            mln_string_t *s = mln_string_ref(val->data.s);
             return s;
         }
         default:
@@ -2122,7 +2122,7 @@ int mln_lang_var_setValue_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, 
             break;
         case M_LANG_VAL_TYPE_STRING:
             val1->type = M_LANG_VAL_TYPE_STRING;
-            val1->data.s = mln_string_ref_dup(val2->data.s);
+            val1->data.s = mln_string_ref(val2->data.s);
             break;
         case M_LANG_VAL_TYPE_OBJECT:
             val1->type = M_LANG_VAL_TYPE_OBJECT;
@@ -2546,7 +2546,7 @@ mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
             data = (mln_u8ptr_t)&(val->data.f);
             break;
         case M_LANG_VAL_TYPE_STRING:
-            data = (mln_u8ptr_t)mln_string_ref_dup(val->data.s);
+            data = (mln_u8ptr_t)mln_string_ref(val->data.s);
             break;
         case M_LANG_VAL_TYPE_OBJECT:
             data = (mln_u8ptr_t)(val->data.obj);
@@ -2937,7 +2937,7 @@ static inline mln_lang_funccall_val_t *__mln_lang_funccall_val_new(mln_alloc_t *
         return NULL;
     }
     if (name != NULL) {
-        func->name = mln_string_ref_dup(name);
+        func->name = mln_string_ref(name);
     } else {
         func->name = NULL;
     }
@@ -5489,7 +5489,7 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
         } else {
             if (!var->ref) {/* name must be NULL*/
                 newvar = mln_lang_var_ref(var);
-                newvar->name = mln_string_ref_dup(scan->name);
+                newvar->name = mln_string_ref(scan->name);
             } else {
                 if ((newvar = mln_lang_var_transform(ctx, var, scan)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");

@@ -224,9 +224,9 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
     mln_conf_item_t *ci;
     int fds[2];
     struct mln_thread_attr thattr;
-    if (!mln_string_constStrcmp(cc->cmd_name, thread_s_restart)) {
+    if (!mln_string_const_strcmp(cc->cmd_name, thread_s_restart)) {
         thattr.stype = THREAD_RESTART;
-    } else if (!mln_string_constStrcmp(cc->cmd_name, thread_s_default)) {
+    } else if (!mln_string_const_strcmp(cc->cmd_name, thread_s_default)) {
         thattr.stype = THREAD_DEFAULT;
     } else {
         mln_log(error, "No such command '%s' in domain '%s'.\n", \

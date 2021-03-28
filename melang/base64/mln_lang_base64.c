@@ -97,9 +97,9 @@ static mln_lang_var_t *mln_lang_base64_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument 2.");
         return NULL;
     }
-    if (!mln_string_constStrcmp(tmp, "encode")) {
+    if (!mln_string_const_strcmp(tmp, "encode")) {
         encode = 1;
-    } else if (!mln_string_constStrcmp(tmp, "decode")) {
+    } else if (!mln_string_const_strcmp(tmp, "decode")) {
         /*do nothing, encode = 0*/
     } else {
         mln_lang_errmsg(ctx, "Invalid argument 2.");

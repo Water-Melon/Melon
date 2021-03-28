@@ -252,9 +252,9 @@ int do_fork(void)
             }
             v_args[i] = (char *)(arg_ci->val.s->data);
         }
-        if (!mln_string_constStrcmp((*cc)->cmd_name, "keepalive")) {
+        if (!mln_string_const_strcmp((*cc)->cmd_name, "keepalive")) {
             mln_fork_spawn(M_PST_SUP, v_args, n_args, NULL);
-        } else if (!mln_string_constStrcmp((*cc)->cmd_name, "default")) {
+        } else if (!mln_string_const_strcmp((*cc)->cmd_name, "default")) {
             mln_fork_spawn(M_PST_DFL, v_args, n_args, NULL);
         } else {
             mln_log(error, "Invalid command '%S' in 'exec_proc'.\n", (*cc)->cmd_name);

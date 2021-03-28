@@ -200,7 +200,7 @@ mln_lang_str_less(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
         mln_string_free(tmp1);
         return -1;
     }
-    rv = mln_string_strcmpSeq(tmp1, tmp2);
+    rv = mln_string_strseqcmp(tmp1, tmp2);
     mln_string_free(tmp1);
     mln_string_free(tmp2);
     if (rv < 0) {
@@ -237,7 +237,7 @@ mln_lang_str_lesseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
         mln_string_free(tmp1);
         return -1;
     }
-    rv = mln_string_strcmpSeq(tmp1, tmp2);
+    rv = mln_string_strseqcmp(tmp1, tmp2);
     mln_string_free(tmp1);
     mln_string_free(tmp2);
     if (rv <= 0) {
@@ -274,7 +274,7 @@ mln_lang_str_grea(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
         mln_string_free(tmp1);
         return -1;
     }
-    rv = mln_string_strcmpSeq(tmp1, tmp2);
+    rv = mln_string_strseqcmp(tmp1, tmp2);
     mln_string_free(tmp1);
     mln_string_free(tmp2);
     if (rv > 0) {
@@ -311,7 +311,7 @@ mln_lang_str_greale(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
         mln_string_free(tmp1);
         return -1;
     }
-    rv = mln_string_strcmpSeq(tmp1, tmp2);
+    rv = mln_string_strseqcmp(tmp1, tmp2);
     mln_string_free(tmp1);
     mln_string_free(tmp2);
     if (rv >= 0) {

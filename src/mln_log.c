@@ -262,15 +262,15 @@ static int mln_log_set_level(mln_log_t *log, int is_init)
             mln_log(error, "Parameter type of command 'log_level' error.\n");
         return -1;
     }
-    if (!mln_string_constStrcmp(ci->val.s, "none")) {
+    if (!mln_string_const_strcmp(ci->val.s, "none")) {
         log->level = none;
-    } else if (!mln_string_constStrcmp(ci->val.s, "report")) {
+    } else if (!mln_string_const_strcmp(ci->val.s, "report")) {
         log->level = report;
-    } else if (!mln_string_constStrcmp(ci->val.s, "debug")) {
+    } else if (!mln_string_const_strcmp(ci->val.s, "debug")) {
         log->level = debug;
-    } else if (!mln_string_constStrcmp(ci->val.s, "warn")) {
+    } else if (!mln_string_const_strcmp(ci->val.s, "warn")) {
         log->level = warn;
-    } else if (!mln_string_constStrcmp(ci->val.s, "error")) {
+    } else if (!mln_string_const_strcmp(ci->val.s, "error")) {
         log->level = error;
     } else {
         if (is_init)

@@ -24,7 +24,7 @@ static int mln_lang_string_s2b_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_strlen_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_split_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_strncmp_handler(mln_lang_ctx_t *ctx);
-static mln_lang_var_t *mln_strcmpseq_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_strseqcmp_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_strcmp_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_strncmp_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_strstr_process(mln_lang_ctx_t *ctx);
@@ -51,7 +51,7 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2");
     mln_string_t funcname;
     mln_s8ptr_t funcs[] = {
-        "mln_strcmpseq",
+        "mln_strseqcmp",
         "mln_strcmp",
         "mln_strstr",
         "mln_kmp",
@@ -60,7 +60,7 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
         "mln_reg_match"
     };
     mln_lang_internal handlers[] = {
-        mln_strcmpseq_process,
+        mln_strseqcmp_process,
         mln_strcmp_process,
         mln_strstr_process,
         mln_kmp_process,
@@ -157,7 +157,7 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_var_t *mln_strcmpseq_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_strseqcmp_process(mln_lang_ctx_t *ctx)
 {
     int ret;
     mln_lang_val_t *val1, *val2;
@@ -198,7 +198,7 @@ static mln_lang_var_t *mln_strcmpseq_process(mln_lang_ctx_t *ctx)
         if (val2->data.s == NULL) {
             ret_var = mln_lang_var_createTmpInt(ctx, 1, NULL);
         } else {
-            ret = mln_string_strcmpSeq(val1->data.s, val2->data.s);
+            ret = mln_string_strseqcmp(val1->data.s, val2->data.s);
             ret_var = mln_lang_var_createTmpInt(ctx, ret, NULL);
         }
     }
@@ -433,7 +433,7 @@ static mln_lang_var_t *mln_strstr_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((ret = mln_string_S_strstr(val1->data.s, val2->data.s)) == NULL) {
+    if ((ret = mln_string_new_strstr(val1->data.s, val2->data.s)) == NULL) {
         ret_var = mln_lang_var_createTmpNil(ctx, NULL);
     } else {
         ret_var = mln_lang_var_createTmpInt(ctx, \
@@ -483,7 +483,7 @@ static mln_lang_var_t *mln_kmp_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((ret = mln_string_S_KMPStrstr(val1->data.s, val2->data.s)) == NULL) {
+    if ((ret = mln_string_new_kmp(val1->data.s, val2->data.s)) == NULL) {
         ret_var = mln_lang_var_createTmpNil(ctx, NULL);
     } else {
         ret_var = mln_lang_var_createTmpInt(ctx, \
@@ -1093,19 +1093,19 @@ static mln_lang_var_t *mln_s2b_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
     }
-    if (!mln_string_constStrcmp(val2->data.s, "int")) {
+    if (!mln_string_const_strcmp(val2->data.s, "int")) {
         mln_s64_t i = 0;
         memcpy(&i, val1->data.s->data, \
                val1->data.s->len>sizeof(mln_s64_t)? \
                    sizeof(mln_s64_t): val1->data.s->len);
         ret_var = mln_lang_var_createTmpInt(ctx, i, NULL);
-    } else if (!mln_string_constStrcmp(val2->data.s, "real")) {
+    } else if (!mln_string_const_strcmp(val2->data.s, "real")) {
         double f = 0;
         memcpy(&f, val1->data.s->data, \
                val1->data.s->len>sizeof(double)? \
                    sizeof(double): val1->data.s->len);
         ret_var = mln_lang_var_createTmpReal(ctx, f, NULL);
-    } else if (!mln_string_constStrcmp(val2->data.s, "bool")) {
+    } else if (!mln_string_const_strcmp(val2->data.s, "bool")) {
         ret_var = mln_lang_var_createTmpBool(ctx, val1->data.s->data[0], NULL);
     } else {
         mln_lang_errmsg(ctx, "Invalid argument 2.");

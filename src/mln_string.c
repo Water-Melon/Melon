@@ -112,7 +112,7 @@ mln_string_t *mln_string_pool_dup(mln_alloc_t *pool, mln_string_t *str)
     return s;
 }
 
-mln_string_t *mln_string_nDup(mln_string_t *str, mln_s32_t size)
+mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size)
 {
     if (size <= 0) return NULL;
     mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
@@ -131,7 +131,7 @@ mln_string_t *mln_string_nDup(mln_string_t *str, mln_s32_t size)
     return s;
 }
 
-mln_string_t *mln_string_nConstDup(char *str, mln_s32_t size)
+mln_string_t *mln_string_nconstdup(char *str, mln_s32_t size)
 {
     if (size <= 0) return NULL;
     mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
@@ -149,7 +149,7 @@ mln_string_t *mln_string_nConstDup(char *str, mln_s32_t size)
     return s;
 }
 
-mln_string_t *mln_string_refDup(mln_string_t *str)
+mln_string_t *mln_string_ref_dup(mln_string_t *str)
 {
     mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
     if (s == NULL) return NULL;
@@ -161,7 +161,7 @@ mln_string_t *mln_string_refDup(mln_string_t *str)
     return s;
 }
 
-mln_string_t *mln_string_refConstDup(char *s)
+mln_string_t *mln_string_ref_constdup(char *s)
 {
     mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t));
     if (s == NULL) return NULL;
@@ -173,7 +173,7 @@ mln_string_t *mln_string_refConstDup(char *s)
     return str;
 }
 
-int mln_string_strcmpSeq(mln_string_t *s1, mln_string_t *s2)
+int mln_string_strseqcmp(mln_string_t *s1, mln_string_t *s2)
 {
     int ret;
     if (s1->len > s2->len) {
@@ -206,7 +206,7 @@ int mln_string_strcmp(mln_string_t *s1, mln_string_t *s2)
     return 0;
 }
 
-int mln_string_constStrcmp(mln_string_t *s1, char *s2)
+int mln_string_const_strcmp(mln_string_t *s1, char *s2)
 {
     if (s1->data == (mln_u8ptr_t)s2) return 0;
     mln_u32_t len = strlen(s2);
@@ -242,7 +242,7 @@ int mln_string_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n)
     return 0;
 }
 
-int mln_string_constStrncmp(mln_string_t *s1, char *s2, mln_u32_t n)
+int mln_string_const_strncmp(mln_string_t *s1, char *s2, mln_u32_t n)
 {
     if (s1->data == (mln_u8ptr_t)s2) return 0;
     if (s1->len < n || strlen(s2) < n) return -1;
@@ -274,7 +274,7 @@ int mln_string_strncasecmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n)
     return strncasecmp((char *)(s1->data), (char *)(s2->data), n);
 }
 
-int mln_string_constStrcasecmp(mln_string_t *s1, char *s2)
+int mln_string_const_strcasecmp(mln_string_t *s1, char *s2)
 {
     if (s1->data == (mln_u8ptr_t)s2) return 0;
     mln_u32_t len = strlen(s2);
@@ -283,7 +283,7 @@ int mln_string_constStrcasecmp(mln_string_t *s1, char *s2)
     return strncasecmp((char *)(s1->data), s2, len);
 }
 
-int mln_string_constStrncasecmp(mln_string_t *s1, char *s2, mln_u32_t n)
+int mln_string_const_strncasecmp(mln_string_t *s1, char *s2, mln_u32_t n)
 {
     if (s1->data == (mln_u8ptr_t)s2) return 0;
     mln_u32_t len = strlen(s2);
@@ -298,51 +298,51 @@ char *mln_string_strstr(mln_string_t *text, mln_string_t *pattern)
     return strstr((char *)(text->data), (char *)(pattern->data));
 }
 
-char *mln_string_constStrstr(mln_string_t *text, char *pattern)
+char *mln_string_const_strstr(mln_string_t *text, char *pattern)
 {
     if (text->data == (mln_u8ptr_t)pattern)
         return (char *)(text->data);
     return strstr((char *)(text->data), pattern);
 }
 
-mln_string_t *mln_string_S_strstr(mln_string_t *text, mln_string_t *pattern)
+mln_string_t *mln_string_new_strstr(mln_string_t *text, mln_string_t *pattern)
 {
     char *p = mln_string_strstr(text, pattern);
     if (p == NULL) return NULL;
     return mln_assign_string(p, text->len - (p - (char *)(text->data)));
 }
 
-mln_string_t *mln_string_S_constStrstr(mln_string_t *text, char *pattern)
+mln_string_t *mln_string_new_const_strstr(mln_string_t *text, char *pattern)
 {
-    char *p = mln_string_constStrstr(text, pattern);
+    char *p = mln_string_const_strstr(text, pattern);
     if (p == NULL) return NULL;
     return mln_assign_string(p, text->len - (p - (char *)(text->data)));
 }
 
-char *mln_string_KMPStrstr(mln_string_t *text, mln_string_t *pattern)
+char *mln_string_kmp(mln_string_t *text, mln_string_t *pattern)
 {
     if (text == pattern || text->data == pattern->data)
         return (char *)(text->data);
     return kmp_string_match((char *)(text->data), (char *)(pattern->data), text->len, pattern->len);
 }
 
-char *mln_string_KMPConstStrstr(mln_string_t *text, char *pattern)
+char *mln_string_const_kmp(mln_string_t *text, char *pattern)
 {
     if (text->data == (mln_u8ptr_t)pattern)
         return (char *)(text->data);
     return kmp_string_match((char *)(text->data), pattern, text->len, strlen(pattern));
 }
 
-mln_string_t *mln_string_S_KMPStrstr(mln_string_t *text, mln_string_t *pattern)
+mln_string_t *mln_string_new_kmp(mln_string_t *text, mln_string_t *pattern)
 {
-    char *p = mln_string_KMPStrstr(text, pattern);
+    char *p = mln_string_kmp(text, pattern);
     if (p == NULL) return NULL;
     return mln_assign_string(p, text->len - (p - (char *)(text->data)));
 }
 
-mln_string_t *mln_string_S_KMPConstStrstr(mln_string_t *text, char *pattern)
+mln_string_t *mln_string_new_const_kmp(mln_string_t *text, char *pattern)
 {
-    char *p = mln_string_KMPConstStrstr(text, pattern);
+    char *p = mln_string_const_kmp(text, pattern);
     if (p == NULL) return NULL;
     return mln_assign_string(p, text->len - (p - (char *)(text->data)));
 }

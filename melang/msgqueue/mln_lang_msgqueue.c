@@ -925,7 +925,7 @@ static mln_lang_mq_msg_t *mln_lang_mq_msg_new(mln_lang_t *lang, int type, void *
             msg->data.f = *(double *)data;
             break;
         case M_LANG_VAL_TYPE_STRING:
-            msg->data.s = mln_string_ref_dup((mln_string_t *)data);
+            msg->data.s = mln_string_ref((mln_string_t *)data);
             break;
         default:
             ASSERT(0);

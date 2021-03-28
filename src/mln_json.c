@@ -356,7 +356,7 @@ mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
         return -1;
     }
 
-    str = mln_string_nConstDup((char *)buf, count);
+    str = mln_string_nconstdup((char *)buf, count);
     free(buf);
     if (str == NULL) {
         return -1;
@@ -652,7 +652,7 @@ mln_string_t *mln_json_generate(mln_json_t *j)
     n = mln_json_write_content(j, buf);
     buf[n] = 0;
 
-    s = mln_string_nConstDup(buf, n);
+    s = mln_string_nconstdup(buf, n);
     free(buf);
     if (s == NULL) return NULL;
 
