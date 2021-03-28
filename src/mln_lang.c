@@ -2031,7 +2031,7 @@ mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var)
             break;
     }
     mln_string_t tmp;
-    mln_string_nSet(&tmp, buf, n);
+    mln_string_nset(&tmp, buf, n);
     return mln_string_pool_dup(pool, &tmp);
 }
 

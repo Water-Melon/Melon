@@ -198,7 +198,7 @@ static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey)
     mln_uauto_t len = 0;
     mln_sha1_toBytes(&s, tmp, sizeof(tmp));
     if (mln_base64_pool_encode(pool, tmp, sizeof(tmp), &buf, &len) < 0) return -1;
-    mln_string_nSet(&key, buf, len);
+    mln_string_nset(&key, buf, len);
     int ret = mln_string_strcasecmp(&key, val);
     mln_base64_pool_free(buf);
     return ret? M_WS_RET_ERROR: M_WS_RET_OK;
@@ -354,7 +354,7 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
     mln_string_free(tmp);
 
     mln_string_t t;
-    mln_string_nSet(&t, buf, size);
+    mln_string_nset(&t, buf, size);
     tmp = mln_string_pool_dup(pool, &t);
     mln_alloc_free(buf);
     return tmp;
@@ -385,7 +385,7 @@ static mln_string_t *mln_websocket_accept_field(mln_http_t *http)
     mln_uauto_t len = 0;
     mln_sha1_toBytes(&s, tmp, sizeof(tmp));
     if (mln_base64_pool_encode(pool, tmp, sizeof(tmp), &buf, &len) < 0) return NULL;
-    mln_string_nSet(&key, buf, len);
+    mln_string_nset(&key, buf, len);
     val = mln_string_pool_dup(pool, &key);
     mln_base64_pool_free(buf);
     return val;
@@ -466,7 +466,7 @@ static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *po
     }
 
     if (mln_base64_pool_encode(pool, buf, sizeof(buf), &out, &outlen) < 0) return NULL;
-    mln_string_nSet(&s, out, outlen);
+    mln_string_nset(&s, out, outlen);
     sdup = mln_string_pool_dup(pool, &s);
     mln_base64_pool_free(out);
     return sdup;

@@ -133,7 +133,7 @@ static mln_lang_var_t *mln_lang_base64_process(mln_lang_ctx_t *ctx)
             return NULL;
         }
     }
-    mln_string_nSet(&t, outbuf, outlen);
+    mln_string_nset(&t, outbuf, outlen);
 
     if ((ret_var = mln_lang_var_createTmpString(ctx, &t, NULL)) == NULL) {
         mln_base64_free(outbuf);

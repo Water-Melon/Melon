@@ -71,7 +71,7 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
     mln_size_t n = sizeof(funcs)/sizeof(mln_u8ptr_t), i;
 
     for (i = 0; i < n; ++i) {
-        mln_string_nSet(&funcname, funcs[i], strlen(funcs[i]));
+        mln_string_nset(&funcname, funcs[i], strlen(funcs[i]));
 
         if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, handlers[i], NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
@@ -629,13 +629,13 @@ static mln_lang_var_t *mln_split_process(mln_lang_ctx_t *ctx)
         mln_s64_t off = -(val2->data.i);
         p = val1->data.s->data + (val1->data.s->len - (mln_u64_t)off);
         if (len >= 0 && len < off) off = len;
-        mln_string_nSet(&ret, p, (mln_u64_t)off);
+        mln_string_nset(&ret, p, (mln_u64_t)off);
     } else {
         p = val1->data.s->data + val2->data.i;
         if (len >= 0 && len < val1->data.s->len-val2->data.i) {
-            mln_string_nSet(&ret, p, len);
+            mln_string_nset(&ret, p, len);
         } else {
-            mln_string_nSet(&ret, p, val1->data.s->len - val2->data.i);
+            mln_string_nset(&ret, p, val1->data.s->len - val2->data.i);
         }
     }
     if ((ret_var = mln_lang_var_createTmpString(ctx, &ret, NULL)) == NULL) {
@@ -981,13 +981,13 @@ static mln_lang_var_t *mln_b2s_process(mln_lang_ctx_t *ctx)
     val1 = sym->data.var->val;
     if (t == M_LANG_VAL_TYPE_INT) {
         memcpy(data, &(val1->data.i), sizeof(mln_s64_t));
-        mln_string_nSet(&tmp, data, sizeof(mln_s64_t));
+        mln_string_nset(&tmp, data, sizeof(mln_s64_t));
     } else if (t == M_LANG_VAL_TYPE_REAL) {
         memcpy(data, &(val1->data.f), sizeof(double));
-        mln_string_nSet(&tmp, data, sizeof(double));
+        mln_string_nset(&tmp, data, sizeof(double));
     } else if (t == M_LANG_VAL_TYPE_BOOL) {
         data[0] = val1->data.b;
-        mln_string_nSet(&tmp, data, 1);
+        mln_string_nset(&tmp, data, 1);
     } else {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
@@ -1212,7 +1212,7 @@ static mln_lang_var_t *mln_hex2bin_process(mln_lang_ctx_t *ctx)
         }
     }
     buf[val1->data.s->len / 2] = 0;
-    mln_string_nSet(&tmp, buf, val1->data.s->len / 2);
+    mln_string_nset(&tmp, buf, val1->data.s->len / 2);
 
     if ((ret_var = mln_lang_var_createTmpString(ctx, &tmp, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1311,7 +1311,7 @@ static mln_lang_var_t *mln_bin2hex_process(mln_lang_ctx_t *ctx)
         }
     }
     buf[val1->data.s->len * 2] = 0;
-    mln_string_nSet(&tmp, buf, val1->data.s->len * 2);
+    mln_string_nset(&tmp, buf, val1->data.s->len * 2);
 
     if ((ret_var = mln_lang_var_createTmpString(ctx, &tmp, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -1474,7 +1474,7 @@ static mln_lang_var_t *mln_int2bin_process(mln_lang_ctx_t *ctx)
     for (t = 0; t < sizeof(buf); ++t) {
         buf[sizeof(buf)-1-t] = (val1->data.i >> (t << 3)) & 0xff;
     }
-    mln_string_nSet(&tmp, buf, sizeof(buf));
+    mln_string_nset(&tmp, buf, sizeof(buf));
     if ((ret_var = mln_lang_var_createTmpString(ctx, &tmp, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
@@ -1634,7 +1634,7 @@ static mln_lang_var_t *mln_real2bin_process(mln_lang_ctx_t *ctx)
     }
 
     memcpy(buf, &(val1->data.f), sizeof(double));
-    mln_string_nSet(&tmp, buf, sizeof(double));
+    mln_string_nset(&tmp, buf, sizeof(double));
     if ((ret_var = mln_lang_var_createTmpString(ctx, &tmp, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;

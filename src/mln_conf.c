@@ -338,7 +338,7 @@ static inline mln_conf_t *mln_conf_init(void)
     memcpy(conf_file_path, mln_path(), path_len);
     conf_file_path[path_len] = '/';
     memcpy(conf_file_path+path_len+1, conf_filename, sizeof(conf_filename)-1);
-    mln_string_nSet(&path, conf_file_path, path_len + sizeof(conf_filename));
+    mln_string_nset(&path, conf_file_path, path_len + sizeof(conf_filename));
 
     lattr.pool = pool;
     lattr.keywords = conf_keywords;

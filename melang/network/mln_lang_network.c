@@ -1557,7 +1557,7 @@ static void mln_lang_network_tcp_recv_handler(mln_event_t *ev, int fd, void *dat
             memcpy(p, c->buf->left_pos, mln_buf_left_size(c->buf));
             p += mln_buf_left_size(c->buf);
         }
-        mln_string_nSet(&tmp, buf, size);
+        mln_string_nset(&tmp, buf, size);
         mln_lang_var_t *ret_var = mln_lang_var_createTmpString(tcp->ctx, &tmp, NULL);
         free(buf);
         if (ret_var == NULL) {
@@ -2506,7 +2506,7 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
     }
     /*data*/
     if (rc > 0) {
-        mln_string_nSet(&tmp, buf, rc);
+        mln_string_nset(&tmp, buf, rc);
         ret_var = mln_lang_var_createTmpString(udp->ctx, &tmp, NULL);
         free(buf);
         if (ret_var != NULL) mln_lang_ctx_set_ret_var(udp->ctx, ret_var);

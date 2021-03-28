@@ -398,7 +398,7 @@ mln_lang_str_index(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
         mln_lang_errmsg(ctx, "Invalid offset.");
         return -1;
     }
-    mln_string_nSet(&c, &(s->data[offset]), 1);
+    mln_string_nset(&c, &(s->data[offset]), 1);
     if ((*ret = mln_lang_var_createTmpString(ctx, &c, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;

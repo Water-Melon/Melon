@@ -23,7 +23,7 @@ static inline mln_string_t *mln_assign_string(char *s, mln_u32_t len)
     str->data = (mln_u8ptr_t)s;
     str->len = len;
     str->pool = 0;
-    str->is_referred = 1;
+    str->data_ref = 1;
     str->ref = 1;
     return str;
 }
@@ -35,7 +35,7 @@ mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s)
     if (s == NULL) {
         str->data = NULL;
         str->len = 0;
-        str->is_referred = 0;
+        str->data_ref = 0;
         str->pool = 1;
         return str;
     }
@@ -47,7 +47,7 @@ mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s)
     memcpy(str->data, s, len);
     str->data[len] = 0;
     str->len = len;
-    str->is_referred = 0;
+    str->data_ref = 0;
     str->pool = 1;
     str->ref = 1;
     return str;
@@ -60,7 +60,7 @@ mln_string_t *mln_string_new(const char *s)
     if (s == NULL) {
         str->data = NULL;
         str->len = 0;
-        str->is_referred = 0;
+        str->data_ref = 0;
         str->pool = 0;
         return str;
     }
@@ -72,7 +72,7 @@ mln_string_t *mln_string_new(const char *s)
     memcpy(str->data, s, len);
     str->data[len] = 0;
     str->len = len;
-    str->is_referred = 0;
+    str->data_ref = 0;
     str->pool = 0;
     str->ref = 1;
     return str;
@@ -89,7 +89,7 @@ mln_string_t *mln_string_dup(mln_string_t *str)
     memcpy(s->data, str->data, str->len);
     s->data[str->len] = 0;
     s->len = str->len;
-    s->is_referred = 0;
+    s->data_ref = 0;
     s->pool = 0;
     s->ref = 1;
     return s;
@@ -106,7 +106,7 @@ mln_string_t *mln_string_pool_dup(mln_alloc_t *pool, mln_string_t *str)
     memcpy(s->data, str->data, str->len);
     s->data[str->len] = 0;
     s->len = str->len;
-    s->is_referred = 0;
+    s->data_ref = 0;
     s->pool = 1;
     s->ref = 1;
     return s;
@@ -125,7 +125,7 @@ mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size)
     memcpy(s->data, str->data, min);
     s->data[min] = 0;
     s->len = min;
-    s->is_referred = 0;
+    s->data_ref = 0;
     s->pool = 0;
     s->ref = 1;
     return s;
@@ -143,7 +143,7 @@ mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size)
     memcpy(s->data, str, size);
     s->data[size] = 0;
     s->len = size;
-    s->is_referred = 0;
+    s->data_ref = 0;
     s->pool = 0;
     s->ref = 1;
     return s;
@@ -155,7 +155,7 @@ mln_string_t *mln_string_ref_dup(mln_string_t *str)
     if (s == NULL) return NULL;
     s->data = str->data;
     s->len = str->len;
-    s->is_referred = 1;
+    s->data_ref = 1;
     s->pool = 0;
     s->ref = 1;
     return s;
@@ -167,7 +167,7 @@ mln_string_t *mln_string_const_ref_dup(char *s)
     if (s == NULL) return NULL;
     str->data = (mln_u8ptr_t)s;
     str->len = strlen(s);
-    str->is_referred = 1;
+    str->data_ref = 1;
     str->pool = 0;
     str->ref = 1;
     return str;
@@ -416,7 +416,7 @@ static mln_string_t *mln_string_slice_recursive(char *s, mln_u64_t len, mln_u8pt
         if (ret == NULL) return NULL;
         ret[cnt-1].data = NULL;
         ret[cnt-1].len = 0;
-        ret[cnt-1].is_referred = 0;
+        ret[cnt-1].data_ref = 0;
         ret[cnt-1].pool = 0;
         ret[cnt-1].ref = 1;
         return ret;
@@ -430,7 +430,7 @@ static mln_string_t *mln_string_slice_recursive(char *s, mln_u64_t len, mln_u8pt
     if (array == NULL) return NULL;
     array[cnt-2].data = (mln_u8ptr_t)jmp_ascii;
     array[cnt-2].len = jmp_valid - jmp_ascii;
-    array[cnt-2].is_referred = 1;
+    array[cnt-2].data_ref = 1;
     array[cnt-2].pool = 0;
     array[cnt-2].ref = 1;
     return array;
@@ -449,7 +449,7 @@ mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2)
     if (len == 0) {
         ret->data = NULL;
         ret->len = 0;
-        ret->is_referred = 0;
+        ret->data_ref = 0;
         ret->pool = 0;
         ret->ref = 1;
         return ret;
@@ -462,7 +462,7 @@ mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2)
     if (s2->len > 0) memcpy(ret->data+s1->len, s2->data, s2->len);
     ret->data[len] = 0;
     ret->len = len;
-    ret->is_referred = 0;
+    ret->data_ref = 0;
     ret->pool = 0;
     ret->ref = 1;
     return ret;
@@ -476,7 +476,7 @@ mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_st
     if (len == 0) {
         ret->data = NULL;
         ret->len = 0;
-        ret->is_referred = 0;
+        ret->data_ref = 0;
         ret->pool = 1;
         ret->ref = 1;
         return ret;
@@ -489,7 +489,7 @@ mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_st
     if (s2->len > 0) memcpy(ret->data+s1->len, s2->data, s2->len);
     ret->data[len] = 0;
     ret->len = len;
-    ret->is_referred = 0;
+    ret->data_ref = 0;
     ret->pool = 1;
     ret->ref = 1;
     return ret;

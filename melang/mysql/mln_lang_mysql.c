@@ -874,7 +874,7 @@ static int mln_lang_mysql_build_return_value(mln_lang_mysql_t *mysql)
     }
     length = mysql_fetch_lengths(mysql->result);
     for (i = 0; i < mysql->nfield; ++i) {
-        mln_string_nSet(&tmp, mysql->row[i], length[i]);
+        mln_string_nset(&tmp, mysql->row[i], length[i]);
         if ((array_val = mln_lang_array_getAndNew(ctx, newarr, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;

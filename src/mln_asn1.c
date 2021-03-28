@@ -361,7 +361,7 @@ static int mln_asn1_encode_addContent(mln_asn1_enResult_t *res, mln_u8ptr_t buf,
     mln_string_t *s = &res->contents[res->pos++];
     s->data = buf;
     s->len = len;
-    s->is_referred = 0;
+    s->data_ref = 0;
     s->pool = 1;
     s->ref = 1;
     return 0;

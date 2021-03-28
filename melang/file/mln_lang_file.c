@@ -676,7 +676,7 @@ static mln_lang_var_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
         free(buf);
         ret_var = mln_lang_var_createTmpFalse(ctx, NULL);
     } else {
-        mln_string_nSet(&tmp, buf, n);
+        mln_string_nset(&tmp, buf, n);
         ret_var = mln_lang_var_createTmpString(ctx, &tmp, NULL);
         free(buf);
     }
@@ -973,7 +973,7 @@ static mln_lang_var_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx)
 
     t = snprintf(msg, sizeof(msg)-1, "%s", strerror(val->data.i));
     msg[t] = 0;
-    mln_string_nSet(&tmp, msg, t);
+    mln_string_nset(&tmp, msg, t);
     if ((ret_var = mln_lang_var_createTmpString(ctx, &tmp, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;

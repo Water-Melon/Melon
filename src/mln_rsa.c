@@ -258,7 +258,7 @@ mln_string_t *mln_RSAESPKCS1V15PubEncrypt(mln_rsa_key_t *pub, mln_string_t *text
         p += nlen;
     }
 
-    mln_string_nSet(&tmp, buf, sum);
+    mln_string_nset(&tmp, buf, sum);
     ret = mln_string_dup(&tmp);
     free(buf);
     return ret;
@@ -312,7 +312,7 @@ mln_string_t *mln_RSAESPKCS1V15PubDecrypt(mln_rsa_key_t *pub, mln_string_t *ciph
         len -= nlen;
     }
 
-    mln_string_nSet(&tmp, buf, sum);
+    mln_string_nset(&tmp, buf, sum);
     ret = mln_string_dup(&tmp);
     free(buf);
     return ret;
@@ -354,7 +354,7 @@ mln_string_t *mln_RSAESPKCS1V15PriEncrypt(mln_rsa_key_t *pri, mln_string_t *text
         in += i;
     }
 
-    mln_string_nSet(&tmp, buf, sum);
+    mln_string_nset(&tmp, buf, sum);
     ret = mln_string_dup(&tmp);
     free(buf);
     return ret;
@@ -405,7 +405,7 @@ mln_string_t *mln_RSAESPKCS1V15PriDecrypt(mln_rsa_key_t *pri, mln_string_t *ciph
         len -= nlen;
     }
 
-    mln_string_nSet(&tmp, buf, sum);
+    mln_string_nset(&tmp, buf, sum);
     ret = mln_string_dup(&tmp);
     free(buf);
     return ret;
@@ -529,7 +529,7 @@ err:
     while (left > 0) {
         n = left>k? k: left; /*30 see rfc2312 - page 8 - Notes 1.*/
         left -= n;
-        mln_string_nSet(&tmp, q, n);
+        mln_string_nset(&tmp, q, n);
         q += n;
         if ((ret = mln_RSAESPKCS1V15PriEncrypt(pri, &tmp)) == NULL) {
             free(buf);
@@ -551,7 +551,7 @@ err:
         mln_string_free(ret);
     }
     mln_string_free(em);
-    mln_string_nSet(&tmp, buf, p-buf);
+    mln_string_nset(&tmp, buf, p-buf);
     if ((ret = mln_string_dup(&tmp)) == NULL) {
         free(buf);
         goto err;
@@ -583,7 +583,7 @@ int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t
     end = s->data + s->len;
 
     while (q < end) {
-        mln_string_nSet(&tmp, q, n);
+        mln_string_nset(&tmp, q, n);
         if ((ret = mln_RSAESPKCS1V15PubDecrypt(pub, &tmp)) == NULL) {
             free(buf);
             return -1;
@@ -606,7 +606,7 @@ int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t
         q += n;
         mln_string_free(ret);
     }
-    mln_string_nSet(&tmp, buf, p - buf);
+    mln_string_nset(&tmp, buf, p - buf);
 
     if ((ret = mln_EMSAPKCS1V15_decode(pool, &tmp, &hashType)) == NULL) {
         free(buf);
@@ -692,11 +692,11 @@ err:
     }
     codeBuf = mln_asn1_deResult_getCode(ssubRes);
     codeLen = mln_asn1_deResult_getCodeLength(ssubRes);
-    mln_string_nSet(&tmp, codeBuf, codeLen);
+    mln_string_nset(&tmp, codeBuf, codeLen);
     p = EMSAPKCS1V15_HASH;
     end = EMSAPKCS1V15_HASH + sizeof(EMSAPKCS1V15_HASH)/sizeof(struct mln_EMSAPKCS1V15_HASH_s);
     for (; p < end; ++p) {
-        mln_string_nSet(&t, p->digestAlgorithm, p->len);
+        mln_string_nset(&t, p->digestAlgorithm, p->len);
         if (!mln_string_strcmp(&tmp, &t)) break;
     }
     if (p >= end) goto err;
@@ -721,7 +721,7 @@ err:
         goto err;
     }
     subRes = mln_asn1_deResult_getContent(subRes, 0);
-    mln_string_nSet(&tmp, mln_asn1_deResult_getCode(subRes), mln_asn1_deResult_getCodeLength(subRes));
+    mln_string_nset(&tmp, mln_asn1_deResult_getCode(subRes), mln_asn1_deResult_getCodeLength(subRes));
     ret = mln_string_dup(&tmp);
     mln_asn1_deResult_free(res);
 

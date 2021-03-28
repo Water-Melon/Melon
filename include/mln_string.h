@@ -13,9 +13,9 @@
 typedef struct {
     mln_u8ptr_t  data;
     mln_u64_t    len;
-    mln_uauto_t  is_referred:1;
+    mln_uauto_t  data_ref:1;
     mln_uauto_t  pool:1;
-    mln_uauto_t  ref:31;
+    mln_uauto_t  ref:30;
 } mln_string_t;
 
 /*
@@ -26,15 +26,15 @@ typedef struct {
     {\
         (pstring)->data = (mln_u8ptr_t)(s);\
         (pstring)->len = strlen(s);\
-        (pstring)->is_referred = 1;\
+        (pstring)->data_ref = 1;\
         (pstring)->pool = 0;\
         (pstring)->ref = 1;\
     }
-#define mln_string_nSet(pstring,s,n); \
+#define mln_string_nset(pstring,s,n); \
     {\
         (pstring)->data = (mln_u8ptr_t)(s);\
         (pstring)->len = (n);\
-        (pstring)->is_referred = 1;\
+        (pstring)->data_ref = 1;\
         (pstring)->pool = 0;\
         (pstring)->ref = 1;\
     }
@@ -45,7 +45,7 @@ typedef struct {
 ({\
     if ((pstr) != NULL) {\
         if ((pstr)->ref-- <= 1) {\
-            if (!(pstr)->is_referred && (pstr)->data != NULL) {\
+            if (!(pstr)->data_ref && (pstr)->data != NULL) {\
                 if ((pstr)->pool) mln_alloc_free((pstr)->data);\
                 else free((pstr)->data);\
             }\

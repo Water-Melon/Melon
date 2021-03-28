@@ -112,7 +112,7 @@ mln_fec_generateFECPacket_FECHeader(mln_fec_t *fec, \
 
     sn[0] = packets[0][2];
     sn[1] = packets[0][3];
-    mln_string_nSet(&tmp, header, sizeof(header));
+    mln_string_nset(&tmp, header, sizeof(header));
     if ((ret = mln_string_dup(&tmp)) == NULL) {
         errno = ENOMEM;
         return -1;
@@ -124,7 +124,7 @@ mln_fec_generateFECPacket_FECHeader(mln_fec_t *fec, \
         memcpy(header, *packets, 8);
         p = header + 8;
         mln_bigendian_encode(tmp16, p, 2);
-        mln_string_nSet(&tmp, header, sizeof(header));
+        mln_string_nset(&tmp, header, sizeof(header));
         ret = mln_fec_xor(&tmp, t);
         mln_string_free(t);
         if (ret == NULL) {
@@ -169,7 +169,7 @@ mln_fec_generateFECPacket_FECBody(mln_fec_t *fec, \
     mln_bigendian_decode(tmpSn, ptr, 2);
 
     /*calc ulp level 0 body*/
-    mln_string_nSet(&tmp, &c, 1);
+    mln_string_nset(&tmp, &c, 1);
     if ((ret = mln_string_dup(&tmp)) == NULL) {
         errno = ENOMEM;
         return -1;
@@ -177,7 +177,7 @@ mln_fec_generateFECPacket_FECBody(mln_fec_t *fec, \
     end = packets + n;
     for (p = packets, pl = packLen; p < end; ++p, ++pl) {
         t = ret;
-        mln_string_nSet(&tmp, *p, *pl);
+        mln_string_nset(&tmp, *p, *pl);
         ret = mln_fec_xor(&tmp, t);
         mln_string_free(t);
         if (ret == NULL) {
@@ -255,7 +255,7 @@ mln_fec_generateFECPacket(mln_fec_t *fec, \
     mln_bigendian_encode(fec->seqNo, p, 2);
     ++fec->seqNo;
     memcpy(p, &(packets[n-1])[4], 8);/*TS and SSRC*/
-    mln_string_nSet(&tmp, buf, len);
+    mln_string_nset(&tmp, buf, len);
     if ((ret = mln_string_dup(&tmp)) == NULL) {
         errno = ENOMEM;
         return NULL;
@@ -369,7 +369,7 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
     p = packets;
     pend = packets + n;
     pl = packLen;
-    mln_string_nSet(&tmp, bitString, sizeof(bitString));
+    mln_string_nset(&tmp, bitString, sizeof(bitString));
     if ((res = mln_string_dup(&tmp)) == NULL) {
         errno = ENOMEM;
         return -1;
@@ -396,7 +396,7 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
         ptr = bitString + 8;
         *bodyLen = *pl - M_FEC_RTP_FIXEDLEN;
         mln_bigendian_encode(*bodyLen, ptr, 2);
-        mln_string_nSet(&tmp, bitString, sizeof(bitString));
+        mln_string_nset(&tmp, bitString, sizeof(bitString));
         res = mln_fec_xor(t, &tmp);
         mln_string_free(t);
         if (res == NULL) {
@@ -425,7 +425,7 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
     }
 
     memcpy(bitString, fecPacket->data+M_FEC_RTP_FIXEDLEN, sizeof(bitString));
-    mln_string_nSet(&tmp, bitString, sizeof(bitString));
+    mln_string_nset(&tmp, bitString, sizeof(bitString));
     t = res;
     res = mln_fec_xor(t, &tmp);
     mln_string_free(t);
@@ -471,7 +471,7 @@ static int mln_fec_decode_body(mln_fec_t *fec, \
     ptr = isLong? ptr+6: ptr+2;
     if (ptr - fecPacket->data < fecPacket->len)
         memcpy(body+M_FEC_RTP_FIXEDLEN, ptr, protectLen-M_FEC_RTP_FIXEDLEN);
-    mln_string_nSet(&tmp, body, protectLen);
+    mln_string_nset(&tmp, body, protectLen);
     if ((res = mln_string_dup(&tmp)) == NULL) {
         errno = ENOMEM;
         return -1;
@@ -495,7 +495,7 @@ static int mln_fec_decode_body(mln_fec_t *fec, \
         }
 
         t = res;
-        mln_string_nSet(&tmp, *p, *pl>protectLen? protectLen: *pl);
+        mln_string_nset(&tmp, *p, *pl>protectLen? protectLen: *pl);
         res = mln_fec_xor(t, &tmp);
         mln_string_free(t);
         if (res == NULL) {
@@ -535,7 +535,7 @@ mln_fec_result_t *mln_fec_decode(mln_fec_t *fec, uint8_t *packets[], uint16_t *p
                 errno = EINVAL;
                 return NULL;
             }
-            mln_string_nSet(&fecPacket, *p, *pl);
+            mln_string_nset(&fecPacket, *p, *pl);
             ++fecCnt;
             continue;
         }
@@ -583,7 +583,7 @@ noRecover:
         errno = ENOMEM;
         return NULL;
     }
-    mln_string_nSet(&tmp, buf, blen);
+    mln_string_nset(&tmp, buf, blen);
     if ((*vec = mln_string_dup(&tmp)) == NULL) {
         mln_stringVector_free(vec);
         errno = ENOMEM;

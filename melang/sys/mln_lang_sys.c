@@ -549,7 +549,7 @@ static mln_lang_var_t *mln_lang_sys_str_process(mln_lang_ctx_t *ctx)
 #else
                 n = snprintf(buf, sizeof(buf)-1, "%ld", val->data.i);
 #endif
-                mln_string_nSet(&s, buf, n);
+                mln_string_nset(&s, buf, n);
                 if ((ret_var = mln_lang_var_createTmpString(ctx, &s, NULL)) == NULL) {
                     mln_lang_errmsg(ctx, "No memory.");
                     return NULL;
@@ -558,14 +558,14 @@ static mln_lang_var_t *mln_lang_sys_str_process(mln_lang_ctx_t *ctx)
             case M_LANG_VAL_TYPE_BOOL:
                 if (mln_lang_condition_isTrue(sym->data.var)) {
                     n = snprintf(buf, sizeof(buf)-1, "true");
-                    mln_string_nSet(&s, buf, n);
+                    mln_string_nset(&s, buf, n);
                     if ((ret_var = mln_lang_var_createTmpString(ctx, &s, NULL)) == NULL) {
                         mln_lang_errmsg(ctx, "No memory.");
                         return NULL;
                     }
                 } else {
                     n = snprintf(buf, sizeof(buf)-1, "false");
-                    mln_string_nSet(&s, buf, n);
+                    mln_string_nset(&s, buf, n);
                     if ((ret_var = mln_lang_var_createTmpString(ctx, &s, NULL)) == NULL) {
                         mln_lang_errmsg(ctx, "No memory.");
                         return NULL;
@@ -574,7 +574,7 @@ static mln_lang_var_t *mln_lang_sys_str_process(mln_lang_ctx_t *ctx)
                 break;
             case M_LANG_VAL_TYPE_REAL:
                 n = snprintf(buf, sizeof(buf)-1, "%lf", val->data.f);
-                mln_string_nSet(&s, buf, n);
+                mln_string_nset(&s, buf, n);
                 if ((ret_var = mln_lang_var_createTmpString(ctx, &s, NULL)) == NULL) {
                     mln_lang_errmsg(ctx, "No memory.");
                     return NULL;
@@ -1815,7 +1815,7 @@ static mln_lang_var_t *mln_lang_sys_type_process(mln_lang_ctx_t *ctx)
                 if (val->data.obj->inSet == NULL || val->data.obj->inSet->name == NULL) {
                     mln_string_set(&tmp, "object");
                 } else {
-                    mln_string_nSet(&tmp, val->data.obj->inSet->name->data, val->data.obj->inSet->name->len);
+                    mln_string_nset(&tmp, val->data.obj->inSet->name->data, val->data.obj->inSet->name->len);
                 }
                 break;
             case M_LANG_VAL_TYPE_FUNC:

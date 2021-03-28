@@ -248,7 +248,7 @@ static inline int mln_http_parse_headline(mln_http_t *http, mln_u8ptr_t buf, mln
         if (*p == (mln_u8_t)' ' || *p == (mln_u8_t)'\t')
             break;
     }
-    mln_string_nSet(&tmp, buf, p-buf);
+    mln_string_nset(&tmp, buf, p-buf);
     send = http_version + sizeof(http_version)/sizeof(mln_string_t);
     for (scan = http_version; scan < send; ++scan) {
         if (!mln_string_strcasecmp(&tmp, scan)) break;
@@ -293,7 +293,7 @@ static inline int mln_http_parse_headline(mln_http_t *http, mln_u8ptr_t buf, mln
                 break;
         }
         if (ques == NULL || ques+1 >= p) {
-            mln_string_nSet(&tmp, buf, (ques == NULL)? p-buf: ques-buf);
+            mln_string_nset(&tmp, buf, (ques == NULL)? p-buf: ques-buf);
             s = mln_string_pool_dup(pool, &tmp);
             if (s == NULL) {
                 mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
@@ -302,14 +302,14 @@ static inline int mln_http_parse_headline(mln_http_t *http, mln_u8ptr_t buf, mln
             mln_http_set_uri(http, s);
             mln_http_set_args(http, NULL);
         } else {
-            mln_string_nSet(&tmp, buf, ques-buf);
+            mln_string_nset(&tmp, buf, ques-buf);
             s = mln_string_pool_dup(pool, &tmp);
             if (s == NULL) {
                 mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
                 return M_HTTP_RET_ERROR;
             }
             mln_http_set_uri(http, s);
-            mln_string_nSet(&tmp, ++ques, p - ques);
+            mln_string_nset(&tmp, ++ques, p - ques);
             s = mln_string_pool_dup(pool, &tmp);
             if (s == NULL) {
                 mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
@@ -322,7 +322,7 @@ static inline int mln_http_parse_headline(mln_http_t *http, mln_u8ptr_t buf, mln
             if (*p == (mln_u8_t)' ' || *p == (mln_u8_t)'\t')
                 break;
         }
-        mln_string_nSet(&tmp, buf, p-buf);
+        mln_string_nset(&tmp, buf, p-buf);
         if (mln_http_atou(&tmp, &status) == M_HTTP_RET_ERROR) {
             mln_http_set_error(http, M_HTTP_UNPARSEABLE_RESPONSE_HEADERS);
             return M_HTTP_RET_ERROR;
@@ -346,7 +346,7 @@ static inline int mln_http_parse_headline(mln_http_t *http, mln_u8ptr_t buf, mln
     }
 
     if (type == M_HTTP_REQUEST) {
-        mln_string_nSet(&tmp, buf, end-buf);
+        mln_string_nset(&tmp, buf, end-buf);
         send = http_version + sizeof(http_version)/sizeof(mln_string_t);
         for (scan = http_version; scan < send; ++scan) {
             if (!mln_string_strcasecmp(&tmp, scan))
@@ -359,7 +359,7 @@ static inline int mln_http_parse_headline(mln_http_t *http, mln_u8ptr_t buf, mln
         mln_http_set_version(http, scan - http_version);
         return M_HTTP_RET_OK;
     }
-    mln_string_nSet(&tmp, buf, end-buf);
+    mln_string_nset(&tmp, buf, end-buf);
     s = mln_string_pool_dup(pool, &tmp);
     if (s == NULL) {
         mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
@@ -398,7 +398,7 @@ static inline int mln_http_parse_field(mln_http_t *http, mln_u8ptr_t buf, mln_si
         }
         return M_HTTP_RET_ERROR;
     }
-    mln_string_nSet(&tmp, buf, p-buf);
+    mln_string_nset(&tmp, buf, p-buf);
     s = mln_string_pool_dup(pool, &tmp);
     if (s == NULL) {
         mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
@@ -443,7 +443,7 @@ static inline int mln_http_parse_field(mln_http_t *http, mln_u8ptr_t buf, mln_si
         }
         return M_HTTP_RET_OK;
     }
-    mln_string_nSet(&tmp, buf, end-buf);
+    mln_string_nset(&tmp, buf, end-buf);
     v = mln_string_pool_dup(pool, &tmp);
     if (v == NULL) {
         mln_string_free(s);
@@ -833,7 +833,7 @@ mln_string_t *mln_http_field_iterator(mln_http_t *http, mln_string_t *key)
     } while (ctx != NULL);
 
     mln_string_t tmp;
-    mln_string_nSet(&tmp, buf, size);
+    mln_string_nset(&tmp, buf, size);
     val = mln_string_pool_dup(pool, &tmp);
     mln_alloc_free(buf);
 

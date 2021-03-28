@@ -206,7 +206,7 @@ extern void mln_lex_input_free(void *in);
 #define mln_lex_cleanResult(lex) ((lex)->result_pos = (lex)->result_buf)
 #define mln_lex_getCurFilename(lex) \
     ((lex)->cur==NULL? NULL: ((lex)->cur->type==M_INPUT_T_BUF?NULL: ((lex)->cur->data)))
-#define mln_lex_getResult(lex,res_pstr) mln_string_nSet((res_pstr), lex->result_buf, lex->result_pos-lex->result_buf)
+#define mln_lex_getResult(lex,res_pstr) mln_string_nset((res_pstr), lex->result_buf, lex->result_pos-lex->result_buf)
 #define mln_lex_setError(lex,err) ((lex)->error = (err))
 static inline void mln_lex_stepBack(mln_lex_t *lex, char c)
 {
@@ -635,9 +635,9 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
             return NULL;\
         }\
         if (type != TK_PREFIX##_TK_EOF) {\
-            mln_string_nSet(&tmp, lex->result_buf, lex->result_pos - lex->result_buf);\
+            mln_string_nset(&tmp, lex->result_buf, lex->result_pos - lex->result_buf);\
         } else {\
-            mln_string_nSet(&tmp, MLN_EOF_TEXT, sizeof(MLN_EOF_TEXT)-1);\
+            mln_string_nset(&tmp, MLN_EOF_TEXT, sizeof(MLN_EOF_TEXT)-1);\
         }\
         if ((ptr->text = mln_string_pool_dup(lex->pool, &tmp)) == NULL) {\
             mln_alloc_free(ptr);\
@@ -666,7 +666,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         mln_u8ptr_t p = lex->result_buf;\
         mln_lex_keyword_t lk, *plk;\
         mln_rbtree_node_t *rn;\
-        mln_string_nSet(&tmp, p, diff);\
+        mln_string_nset(&tmp, p, diff);\
         lk.keyword = &tmp;\
         rn = mln_rbtree_search(lex->keywords, lex->keywords->root, &lk);\
         if (!mln_rbtree_null(rn, lex->keywords)) {\

@@ -577,7 +577,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
         goto err2;\
     }\
     for (; prod < prodend; ++prod) {\
-        mln_string_nSet(&tmp, prod->production, strlen(prod->production));\
+        mln_string_nset(&tmp, prod->production, strlen(prod->production));\
         lattr.pool = pool;\
         lattr.keywords = NULL;\
         lattr.hooks = NULL;\
