@@ -62,3 +62,4 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 
 - [安装](https://water-melon.github.io/Melon/install.html)
 - [快速入门](https://water-melon.github.io/Melon/quickstart.html)
+- [字符串](https://water-melon.github.io/Melon/string.html)
