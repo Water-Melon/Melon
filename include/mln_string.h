@@ -67,11 +67,11 @@ mln_string_pool_dup(mln_alloc_t *pool, mln_string_t *str) __NONNULL2(1,2);
 extern mln_string_t *
 mln_string_ndup(mln_string_t *str, mln_s32_t size) __NONNULL1(1);
 extern mln_string_t *
-mln_string_nconstdup(char *str, mln_s32_t size) __NONNULL1(1);
+mln_string_const_ndup(char *str, mln_s32_t size) __NONNULL1(1);
 extern mln_string_t *
 mln_string_ref_dup(mln_string_t *str) __NONNULL1(1);
 extern mln_string_t *
-mln_string_ref_constdup(char *s);
+mln_string_const_ref_dup(char *s);
 
 /*
  * tool functions

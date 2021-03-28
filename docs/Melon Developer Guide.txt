@@ -84,19 +84,19 @@ Their definitions can be found in melon/include/mln_types.h.
     c) mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size);
        It is the same as mln_string_dup(), but the second argument indicates the length of the duplication.
 
-    d) mln_string_t *mln_string_nconstdup(char *str, mln_s32_t size);
+    d) mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size);
        It is the same as mln_string_ndup(), but the type of the first argument is char *.
 
     e) mln_string_t *mln_string_ref_dup(mln_string_t *str);
        This interface creates a new pointer which points to the same string contents that pointed by the argument.
        It won't free the string contents when mln_string_free() is called.
 
-    f) mln_string_t *mln_string_ref_constdup(char *s);
+    f) mln_string_t *mln_string_const_ref_dup(char *s);
        It is the same as mln_string_ref_dup() but the argument type.
 
     g) void mln_string_free(mln_string_t *str);
        It is used to free mln_string_t.
-       If 'str' is initialized by mln_string_ref_dup() or mln_string_ref_constdup(), the string contents will be freed
+       If 'str' is initialized by mln_string_ref_dup() or mln_string_const_ref_dup(), the string contents will be freed
        at the same time.
 
     h) int mln_string_strseqcmp(mln_string_t *s1, mln_string_t *s2);

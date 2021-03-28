@@ -131,7 +131,7 @@ mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size)
     return s;
 }
 
-mln_string_t *mln_string_nconstdup(char *str, mln_s32_t size)
+mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size)
 {
     if (size <= 0) return NULL;
     mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
@@ -161,7 +161,7 @@ mln_string_t *mln_string_ref_dup(mln_string_t *str)
     return s;
 }
 
-mln_string_t *mln_string_ref_constdup(char *s)
+mln_string_t *mln_string_const_ref_dup(char *s)
 {
     mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t));
     if (s == NULL) return NULL;
