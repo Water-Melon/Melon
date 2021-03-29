@@ -41,8 +41,8 @@ extern void _mln_sys_log(enum log_level level, \
 #define mln_log(err_lv,msg,...) \
     _mln_sys_log(err_lv, __FILE__, __FUNCTION__, __LINE__, msg, ## __VA_ARGS__)
 extern int mln_log_get_fd(void);
-extern char *mln_log_getDirPath(void);
-extern char *mln_log_getLogPath(void);
-extern char *mln_log_getPidPath(void);
+extern char *mln_log_get_dir_path(void);
+extern char *mln_log_get_log_path(void);
+extern char *mln_log_get_pid_path(void);
 #endif
 

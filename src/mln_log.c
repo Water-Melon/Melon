@@ -522,17 +522,17 @@ int mln_log_get_fd(void)
     return gLog.fd;
 }
 
-char *mln_log_getDirPath(void)
+char *mln_log_get_dir_path(void)
 {
     return gLog.dir_path;
 }
 
-char *mln_log_getLogPath(void)
+char *mln_log_get_log_path(void)
 {
     return gLog.log_path;
 }
 
-char *mln_log_getPidPath(void)
+char *mln_log_get_pid_path(void)
 {
     return gLog.pid_path;
 }

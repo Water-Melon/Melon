@@ -252,13 +252,13 @@ static int mln_set_id(void)
 
     /*set log files' uid & gid*/
     int rc = 1;
-    char *path = mln_log_getDirPath();
+    char *path = mln_log_get_dir_path();
     if (!access(path, F_OK))
         rc = chown(path, uid, gid);
-    path = mln_log_getLogPath();
+    path = mln_log_get_log_path();
     if (!access(path, F_OK))
         rc = chown(path, uid, gid);
-    path = mln_log_getPidPath();
+    path = mln_log_get_pid_path();
     if (!access(path, F_OK))
         rc = chown(path, uid, gid);
     if (rc < 0) rc = 1;/*do nothing*/
@@ -334,7 +334,7 @@ mln_boot_reload(const char *boot_str, const char *alias)
     char buf[1024] = {0};
     int fd, n, pid;
 
-    fd = open(mln_log_getPidPath(), O_RDONLY);
+    fd = open(mln_log_get_pid_path(), O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "'melon.pid' not existent.\n");
         exit(1);

@@ -430,13 +430,13 @@ Their definitions can be found in melon/include/mln_types.h.
            %ld in 64-bit) and %I (=%llu in 32-bit or =%lu in 64-bit).
        Depending on the format control characters in msg, the rest arguments can be none or even more than one.
 
-    b) char *mln_log_getDirPath(void);
+    b) char *mln_log_get_dir_path(void);
        It returns the path of log files' directory.
 
-    c) char *mln_log_getLogPath(void);
+    c) char *mln_log_get_log_path(void);
        It returns the path of a log file.
 
-    d) char *mln_log_getPidPath(void);
+    d) char *mln_log_get_pid_path(void);
        It returns the path of a pid file.
        The pid of the parent process is recorded in this file.
 
