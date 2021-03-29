@@ -199,7 +199,7 @@ int do_fork(void)
     mln_sauto_t n_worker_proc = 0;
     mln_conf_cmd_t *cmd = cd->search(cd, "worker_proc");
     if (cmd != NULL) {
-        if (mln_conf_get_argNum(cmd) > 1) {
+        if (mln_conf_get_narg(cmd) > 1) {
             mln_log(error, "Too many arguments follow 'worker_proc'.\n");
             exit(1);
         }
@@ -224,7 +224,7 @@ int do_fork(void)
     mln_u32_t i, n_args;
     mln_conf_item_t *arg_ci;
     mln_s8ptr_t *v_args;
-    mln_u32_t n = mln_conf_get_cmdNum(cf, "exec_proc");
+    mln_u32_t n = mln_conf_get_ncmd(cf, "exec_proc");
     if (n == 0) return 1;
 
     v = (mln_conf_cmd_t **)calloc(n+1, sizeof(mln_conf_cmd_t *));
@@ -234,7 +234,7 @@ int do_fork(void)
     }
     mln_conf_get_cmds(cf, "exec_proc", v);
     for (cc = v; *cc != NULL; ++cc) {
-        n_args = mln_conf_get_argNum(*cc);
+        n_args = mln_conf_get_narg(*cc);
         if (n_args == 0) {
             mln_log(error, "Demand arguments in 'exec_proc'.\n");
             exit(1);

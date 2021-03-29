@@ -716,7 +716,7 @@ Their definitions can be found in melon/include/mln_types.h.
         Then we can use its 'search' to find out the domain that we need.
         The return value won't be NULL until Melon crashed.
 
-     b) mln_u32_t mln_conf_get_cmdNum(mln_conf_t *cf, char *domain);
+     b) mln_u32_t mln_conf_get_ncmd(mln_conf_t *cf, char *domain);
         It returns the number of commands in the domain.
         If domain is not existent, NULL will be returned.
 
@@ -724,7 +724,7 @@ Their definitions can be found in melon/include/mln_types.h.
         It puts all commands in the domain into the third argument.
         Vector should be allocated before calling.
 
-     d) mln_u32_t mln_conf_get_argNum(mln_conf_cmd_t *cc);
+     d) mln_u32_t mln_conf_get_narg(mln_conf_cmd_t *cc);
         It returns the number of items which belong to 'cc'.
 
      e) mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data);

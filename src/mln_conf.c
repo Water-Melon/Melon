@@ -824,7 +824,7 @@ mln_conf_t *mln_get_conf(void)
     return gConf;
 }
 
-mln_u32_t mln_conf_get_cmdNum(mln_conf_t *cf, char *domain)
+mln_u32_t mln_conf_get_ncmd(mln_conf_t *cf, char *domain)
 {
     mln_conf_domain_t *cd = cf->search(cf, domain);
     if (cd == NULL) return 0;
@@ -856,7 +856,7 @@ static int mln_conf_get_cmds_scan(mln_rbtree_node_t *node, void *rn_data, void *
     return 0;
 }
 
-mln_u32_t mln_conf_get_argNum(mln_conf_cmd_t *cc)
+mln_u32_t mln_conf_get_narg(mln_conf_cmd_t *cc)
 {
     return cc->n_args;
 }

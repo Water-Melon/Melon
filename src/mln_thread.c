@@ -196,7 +196,7 @@ int mln_load_thread(mln_event_t *ev)
         abort();
     }
 
-    mln_u32_t nr_cmds = mln_conf_get_cmdNum(cf, thread_domain);
+    mln_u32_t nr_cmds = mln_conf_get_ncmd(cf, thread_domain);
     if (nr_cmds == 0) return 0;
 
     mln_conf_cmd_t **v = (mln_conf_cmd_t **)calloc(nr_cmds, sizeof(mln_conf_cmd_t *));;
@@ -233,7 +233,7 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
                 cc->cmd_name, thread_domain);
         return;
     }
-    nr_args = mln_conf_get_argNum(cc);
+    nr_args = mln_conf_get_narg(cc);
     if (nr_args < 1) {
         mln_log(error, "Invalid arguments in domain '%s'.\n", thread_domain);
         return;

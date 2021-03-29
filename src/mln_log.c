@@ -135,7 +135,7 @@ mln_log_get_log(mln_log_t *log, int is_init)
                             mln_path(), default_dir, default_file);
         path_str = buf;
     } else {
-        if (mln_conf_get_argNum(cc) != 1) {
+        if (mln_conf_get_narg(cc) != 1) {
             fprintf(stderr, "%s(): Invalid command '%s' in domain 'main'.\n", \
                     __FUNCTION__, log_path_cmd);
             return -1;

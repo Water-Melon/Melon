@@ -79,11 +79,11 @@ extern void mln_conf_unset_hook(mln_conf_hook_t *hook);
 extern void mln_conf_free_hook(void);
 
 extern mln_u32_t
-mln_conf_get_cmdNum(mln_conf_t *cf, char *domain) __NONNULL2(1,2);
+mln_conf_get_ncmd(mln_conf_t *cf, char *domain) __NONNULL2(1,2);
 extern void
 mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **vector) __NONNULL3(1,2,3);
 extern mln_u32_t
-mln_conf_get_argNum(mln_conf_cmd_t *cc) __NONNULL1(1);
+mln_conf_get_narg(mln_conf_cmd_t *cc) __NONNULL1(1);
 
 #endif
 

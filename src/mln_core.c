@@ -89,7 +89,7 @@ chl:
             fprintf(stderr, "No such command named 'daemon'.\n");
             return -1;
         }
-        if (mln_conf_get_argNum(cc) != 1) {
+        if (mln_conf_get_narg(cc) != 1) {
             fprintf(stderr, "Invalid command 'daemon'.\n");
             return -1;
         }
