@@ -21,14 +21,14 @@ typedef struct mln_lang_if_s               mln_lang_if_t;
 typedef struct mln_lang_exp_s              mln_lang_exp_t;
 typedef struct mln_lang_assign_s           mln_lang_assign_t;
 typedef struct mln_lang_assign_tmp_s       mln_lang_assign_tmp_t;
-typedef struct mln_lang_logicLow_s         mln_lang_logicLow_t;
-typedef struct mln_lang_logicLow_tmp_s     mln_lang_logicLow_tmp_t;
-typedef struct mln_lang_logicHigh_s        mln_lang_logicHigh_t;
-typedef struct mln_lang_logicHigh_tmp_s    mln_lang_logicHigh_tmp_t;
-typedef struct mln_lang_relativeLow_s      mln_lang_relativeLow_t;
-typedef struct mln_lang_relativeLow_tmp_s  mln_lang_relativeLow_tmp_t;
-typedef struct mln_lang_relativeHigh_s     mln_lang_relativeHigh_t;
-typedef struct mln_lang_relativeHigh_tmp_s mln_lang_relativeHigh_tmp_t;
+typedef struct mln_lang_logiclow_s         mln_lang_logiclow_t;
+typedef struct mln_lang_logiclow_tmp_s     mln_lang_logiclow_tmp_t;
+typedef struct mln_lang_logichigh_s        mln_lang_logichigh_t;
+typedef struct mln_lang_logichigh_tmp_s    mln_lang_logichigh_tmp_t;
+typedef struct mln_lang_relativelow_s      mln_lang_relativelow_t;
+typedef struct mln_lang_relativelow_tmp_s  mln_lang_relativelow_tmp_t;
+typedef struct mln_lang_relativehigh_s     mln_lang_relativehigh_t;
+typedef struct mln_lang_relativehigh_tmp_s mln_lang_relativehigh_tmp_t;
 typedef struct mln_lang_move_s             mln_lang_move_t;
 typedef struct mln_lang_move_tmp_s         mln_lang_move_tmp_t;
 typedef struct mln_lang_addsub_s           mln_lang_addsub_t;
@@ -177,7 +177,7 @@ typedef enum mln_lang_assign_op_e {
 
 struct mln_lang_assign_s {
     mln_u64_t                        line;
-    mln_lang_logicLow_t             *left;
+    mln_lang_logiclow_t             *left;
     mln_lang_assign_op_t             op;
     mln_lang_assign_t               *right;
     void                            *jump;
@@ -189,87 +189,87 @@ struct mln_lang_assign_tmp_s {
     mln_lang_assign_t               *assign;
 };
 
-typedef enum mln_lang_logicLow_op_e {
+typedef enum mln_lang_logiclow_op_e {
     M_LOGICLOW_NONE = 0,
     M_LOGICLOW_OR,
     M_LOGICLOW_AND
-}mln_lang_logicLow_op_t;
+}mln_lang_logiclow_op_t;
 
-struct mln_lang_logicLow_s {
+struct mln_lang_logiclow_s {
     mln_u64_t                        line;
-    mln_lang_logicHigh_t            *left;
-    mln_lang_logicLow_op_t           op;
-    mln_lang_logicLow_t             *right;
+    mln_lang_logichigh_t            *left;
+    mln_lang_logiclow_op_t           op;
+    mln_lang_logiclow_t             *right;
     void                            *jump;
     int                              type;
 };
 
-struct mln_lang_logicLow_tmp_s {
-    mln_lang_logicLow_op_t           op;
-    mln_lang_logicLow_t             *logicLow;
+struct mln_lang_logiclow_tmp_s {
+    mln_lang_logiclow_op_t           op;
+    mln_lang_logiclow_t             *logiclow;
 };
 
-typedef enum mln_lang_logicHigh_op_e {
+typedef enum mln_lang_logichigh_op_e {
     M_LOGICHIGH_NONE = 0,
     M_LOGICHIGH_OR,
     M_LOGICHIGH_AND,
     M_LOGICHIGH_XOR
-} mln_lang_logicHigh_op_t;
+} mln_lang_logichigh_op_t;
 
-struct mln_lang_logicHigh_s {
+struct mln_lang_logichigh_s {
     mln_u64_t                        line;
-    mln_lang_relativeLow_t          *left;
-    mln_lang_logicHigh_op_t          op;
-    mln_lang_logicHigh_t            *right;
+    mln_lang_relativelow_t          *left;
+    mln_lang_logichigh_op_t          op;
+    mln_lang_logichigh_t            *right;
     void                            *jump;
     int                              type;
 };
 
-struct mln_lang_logicHigh_tmp_s {
-    mln_lang_logicHigh_op_t          op;
-    mln_lang_logicHigh_t            *logicHigh;
+struct mln_lang_logichigh_tmp_s {
+    mln_lang_logichigh_op_t          op;
+    mln_lang_logichigh_t            *logichigh;
 };
 
-typedef enum mln_lang_relativeLow_op_e {
+typedef enum mln_lang_relativelow_op_e {
     M_RELATIVELOW_NONE = 0,
     M_RELATIVELOW_EQUAL,
     M_RELATIVELOW_NEQUAL
-} mln_lang_relativeLow_op_t;
+} mln_lang_relativelow_op_t;
 
-struct mln_lang_relativeLow_s {
+struct mln_lang_relativelow_s {
     mln_u64_t                        line;
-    mln_lang_relativeHigh_t         *left;
-    mln_lang_relativeLow_op_t        op;
-    mln_lang_relativeLow_t          *right;
+    mln_lang_relativehigh_t         *left;
+    mln_lang_relativelow_op_t        op;
+    mln_lang_relativelow_t          *right;
     void                            *jump;
     int                              type;
 };
 
-struct mln_lang_relativeLow_tmp_s {
-    mln_lang_relativeLow_op_t        op;
-    mln_lang_relativeLow_t          *relativeLow;
+struct mln_lang_relativelow_tmp_s {
+    mln_lang_relativelow_op_t        op;
+    mln_lang_relativelow_t          *relativelow;
 };
 
-typedef enum mln_lang_relativeHigh_op_e {
+typedef enum mln_lang_relativehigh_op_e {
     M_RELATIVEHIGH_NONE = 0,
     M_RELATIVEHIGH_LESS,
     M_RELATIVEHIGH_LESSEQ,
     M_RELATIVEHIGH_GREATER,
     M_RELATIVEHIGH_GREATEREQ
-} mln_lang_relativeHigh_op_t;
+} mln_lang_relativehigh_op_t;
 
-struct mln_lang_relativeHigh_s {
+struct mln_lang_relativehigh_s {
     mln_u64_t                        line;
     mln_lang_move_t                 *left;
-    mln_lang_relativeHigh_op_t       op;
-    mln_lang_relativeHigh_t         *right;
+    mln_lang_relativehigh_op_t       op;
+    mln_lang_relativehigh_t         *right;
     void                            *jump;
     int                              type;
 };
 
-struct mln_lang_relativeHigh_tmp_s {
-    mln_lang_relativeHigh_op_t       op;
-    mln_lang_relativeHigh_t         *relativeHigh;
+struct mln_lang_relativehigh_tmp_s {
+    mln_lang_relativehigh_op_t       op;
+    mln_lang_relativehigh_t         *relativehigh;
 };
 
 typedef enum mln_lang_move_op_e {
@@ -441,8 +441,8 @@ struct mln_lang_elemlist_s {
     mln_lang_elemlist_t             *next;
 };
 
-extern void *mln_lang_parserGenerate(void);
-extern void mln_lang_parserDestroy(void *data);
+extern void *mln_lang_ast_parser_generate(void);
+extern void mln_lang_ast_parser_destroy(void *data);
 extern void *
 mln_lang_ast_generate(mln_alloc_t *pool, void *state_tbl, mln_string_t *data, mln_u32_t data_type) __NONNULL3(1,2,3);
 extern void mln_lang_ast_free(void *ast);

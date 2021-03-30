@@ -201,10 +201,10 @@ struct mln_lang_stack_node_s {
         mln_lang_if_t           *i;
         mln_lang_exp_t          *exp;
         mln_lang_assign_t       *assign;
-        mln_lang_logicLow_t     *logicLow;
-        mln_lang_logicHigh_t    *logicHigh;
-        mln_lang_relativeLow_t  *relativeLow;
-        mln_lang_relativeHigh_t *relativeHigh;
+        mln_lang_logiclow_t     *logiclow;
+        mln_lang_logichigh_t    *logichigh;
+        mln_lang_relativelow_t  *relativelow;
+        mln_lang_relativehigh_t *relativehigh;
         mln_lang_move_t         *move;
         mln_lang_addsub_t       *addsub;
         mln_lang_muldiv_t       *muldiv;

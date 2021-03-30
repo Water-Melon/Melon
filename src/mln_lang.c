@@ -248,10 +248,10 @@ static void mln_lang_stack_handler_for(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_if(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_exp(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_assign(mln_lang_ctx_t *ctx);
-static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx);
-static void mln_lang_stack_handler_logicHigh(mln_lang_ctx_t *ctx);
-static void mln_lang_stack_handler_relativeLow(mln_lang_ctx_t *ctx);
-static void mln_lang_stack_handler_relativeHigh(mln_lang_ctx_t *ctx);
+static void mln_lang_stack_handler_logiclow(mln_lang_ctx_t *ctx);
+static void mln_lang_stack_handler_logichigh(mln_lang_ctx_t *ctx);
+static void mln_lang_stack_handler_relativelow(mln_lang_ctx_t *ctx);
+static void mln_lang_stack_handler_relativehigh(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_move(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_addsub(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_muldiv(mln_lang_ctx_t *ctx);
@@ -415,19 +415,19 @@ static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *
                 sn->data.assign = (mln_lang_assign_t *)(_data);\
                 break;\
             case M_LSNT_LOGICLOW:\
-                sn->data.logicLow = (mln_lang_logicLow_t *)(_data);\
+                sn->data.logiclow = (mln_lang_logiclow_t *)(_data);\
                 break;\
             case M_LSNT_LOGICHIGH:\
-                sn->data.logicHigh = (mln_lang_logicHigh_t *)(_data);\
-                sn->pos = sn->data.logicHigh;\
+                sn->data.logichigh = (mln_lang_logichigh_t *)(_data);\
+                sn->pos = sn->data.logichigh;\
                 break;\
             case M_LSNT_RELATIVELOW:\
-                sn->data.relativeLow = (mln_lang_relativeLow_t *)(_data);\
-                sn->pos = sn->data.relativeLow;\
+                sn->data.relativelow = (mln_lang_relativelow_t *)(_data);\
+                sn->pos = sn->data.relativelow;\
                 break;\
             case M_LSNT_RELATIVEHIGH:\
-                sn->data.relativeHigh = (mln_lang_relativeHigh_t *)(_data);\
-                sn->pos = sn->data.relativeHigh;\
+                sn->data.relativehigh = (mln_lang_relativehigh_t *)(_data);\
+                sn->pos = sn->data.relativehigh;\
                 break;\
             case M_LSNT_MOVE:\
                 sn->data.move = (mln_lang_move_t *)(_data);\
@@ -514,10 +514,10 @@ mln_lang_stack_handler mln_lang_stack_map[] = {
     mln_lang_stack_handler_if,
     mln_lang_stack_handler_exp,
     mln_lang_stack_handler_assign,
-    mln_lang_stack_handler_logicLow,
-    mln_lang_stack_handler_logicHigh,
-    mln_lang_stack_handler_relativeLow,
-    mln_lang_stack_handler_relativeHigh,
+    mln_lang_stack_handler_logiclow,
+    mln_lang_stack_handler_logichigh,
+    mln_lang_stack_handler_relativelow,
+    mln_lang_stack_handler_relativehigh,
     mln_lang_stack_handler_move,
     mln_lang_stack_handler_addsub,
     mln_lang_stack_handler_muldiv,
@@ -565,7 +565,7 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
         mln_lang_free(lang);
         return NULL;
     }
-    if ((lang->shift_table = mln_lang_parserGenerate()) == NULL) {
+    if ((lang->shift_table = mln_lang_ast_parser_generate()) == NULL) {
         mln_lang_free(lang);
         return NULL;
     }
@@ -593,7 +593,7 @@ void mln_lang_free(mln_lang_t *lang)
     if (lang->fd_notInUsed >= 0) mln_socket_close(lang->fd_notInUsed);
     if (lang->fd_signal >= 0) mln_socket_close(lang->fd_signal);
     if (lang->resource_set != NULL) mln_rbtree_destroy(lang->resource_set);
-    if (lang->shift_table != NULL) mln_lang_parserDestroy(lang->shift_table);
+    if (lang->shift_table != NULL) mln_lang_ast_parser_destroy(lang->shift_table);
     while ((cache = lang->cache_head) != NULL) {
         mln_lang_ast_cache_chain_del(&(lang->cache_head), &(lang->cache_tail), cache);
         mln_lang_ast_cache_free(cache);
@@ -2186,10 +2186,10 @@ mln_lang_funcdef_getArgs(mln_lang_ctx_t *ctx, \
     mln_lang_exp_t *scan;
     mln_lang_var_t *var;
     mln_lang_assign_t *assign;
-    mln_lang_logicLow_t *logicLow;
-    mln_lang_logicHigh_t *logicHigh;
-    mln_lang_relativeLow_t *relativeLow;
-    mln_lang_relativeHigh_t *relativeHigh;
+    mln_lang_logiclow_t *logiclow;
+    mln_lang_logichigh_t *logichigh;
+    mln_lang_relativelow_t *relativelow;
+    mln_lang_relativehigh_t *relativehigh;
     mln_lang_move_t *move;
     mln_lang_addsub_t *addsub;
     mln_lang_muldiv_t *muldiv;
@@ -2201,15 +2201,15 @@ mln_lang_funcdef_getArgs(mln_lang_ctx_t *ctx, \
     for (scan = exp; scan != NULL; ++n, scan = scan->next) {
         assign = scan->assign;
         if (assign->op != M_ASSIGN_NONE) goto err;
-        logicLow = assign->left;
-        if (logicLow->op != M_LOGICLOW_NONE) goto err;
-        logicHigh = logicLow->left;
-        if (logicHigh->op != M_LOGICHIGH_NONE) goto err;
-        relativeLow = logicHigh->left;
-        if (relativeLow->op != M_RELATIVELOW_NONE) goto err;
-        relativeHigh = relativeLow->left;
-        if (relativeHigh->op != M_RELATIVEHIGH_NONE) goto err;
-        move = relativeHigh->left;
+        logiclow = assign->left;
+        if (logiclow->op != M_LOGICLOW_NONE) goto err;
+        logichigh = logiclow->left;
+        if (logichigh->op != M_LOGICHIGH_NONE) goto err;
+        relativelow = logichigh->left;
+        if (relativelow->op != M_RELATIVELOW_NONE) goto err;
+        relativehigh = relativelow->left;
+        if (relativehigh->op != M_RELATIVEHIGH_NONE) goto err;
+        move = relativehigh->left;
         if (move->op != M_MOVE_NONE) goto err;
         addsub = move->left;
         if (addsub->op != M_ADDSUB_NONE) goto err;
@@ -3019,13 +3019,13 @@ static void __mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg)
             case M_LSNT_ASSIGN:
                 line = node->data.assign->line; break;
             case M_LSNT_LOGICLOW:
-                line = node->data.logicLow->line; break;
+                line = node->data.logiclow->line; break;
             case M_LSNT_LOGICHIGH:
-                line = node->data.logicHigh->line; break;
+                line = node->data.logichigh->line; break;
             case M_LSNT_RELATIVELOW:
-                line = node->data.relativeLow->line; break;
+                line = node->data.relativelow->line; break;
             case M_LSNT_RELATIVEHIGH:
-                line = node->data.relativeHigh->line; break;
+                line = node->data.relativehigh->line; break;
             case M_LSNT_MOVE:
                 line = node->data.move->line; break;
             case M_LSNT_ADDSUB:
@@ -3945,7 +3945,7 @@ static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_typ
         }
         case M_LSNT_LOGICLOW:
         {
-            mln_lang_logicLow_t *l = (mln_lang_logicLow_t *)ptr;
+            mln_lang_logiclow_t *l = (mln_lang_logiclow_t *)ptr;
             if (l->left->op != M_LOGICHIGH_NONE) {
                 l->jump = l->left;
                 l->type = M_LSNT_LOGICHIGH;
@@ -3959,7 +3959,7 @@ static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_typ
         }
         case M_LSNT_LOGICHIGH:
         {
-            mln_lang_logicHigh_t *l = (mln_lang_logicHigh_t *)ptr;
+            mln_lang_logichigh_t *l = (mln_lang_logichigh_t *)ptr;
             if (l->left->op != M_RELATIVELOW_NONE) {
                 l->jump = l->left;
                 l->type = M_LSNT_RELATIVELOW;
@@ -3973,7 +3973,7 @@ static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_typ
         }
         case M_LSNT_RELATIVELOW:
         {
-            mln_lang_relativeLow_t *r = (mln_lang_relativeLow_t *)ptr;
+            mln_lang_relativelow_t *r = (mln_lang_relativelow_t *)ptr;
             if (r->left->op != M_RELATIVEHIGH_NONE) {
                 r->jump = r->left;
                 r->type = M_LSNT_RELATIVEHIGH;
@@ -3987,7 +3987,7 @@ static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_typ
         }
         case M_LSNT_RELATIVEHIGH:
         {
-            mln_lang_relativeHigh_t *r = (mln_lang_relativeHigh_t *)ptr;
+            mln_lang_relativehigh_t *r = (mln_lang_relativehigh_t *)ptr;
             if (r->left->op != M_MOVE_NONE) {
                 r->jump = r->left;
                 r->type = M_LSNT_MOVE;
@@ -4274,23 +4274,23 @@ goon4:
     __mln_lang_run(ctx->lang);
 }
 
-static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx)
+static void mln_lang_stack_handler_logiclow(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node = mln_lang_stack_top(ctx);
-    mln_lang_logicLow_t *logicLow = node->data.logicLow;
+    mln_lang_logiclow_t *logiclow = node->data.logiclow;
     if (node->step == 0) {
         mln_lang_stack_node_reset_ret_val(node);
         mln_lang_ctx_reset_ret_var(ctx);
-        if (logicLow->op == M_LOGICLOW_NONE) node->step = M_LANG_STEP_OUT;
+        if (logiclow->op == M_LOGICLOW_NONE) node->step = M_LANG_STEP_OUT;
         else node->step = 1;
-        if (logicLow->jump == NULL)
-            mln_lang_generate_jump_ptr(logicLow, M_LSNT_LOGICLOW);
-        if (logicLow->type == M_LSNT_FACTOR && logicLow->op == M_LOGICLOW_NONE) {
+        if (logiclow->jump == NULL)
+            mln_lang_generate_jump_ptr(logiclow, M_LSNT_LOGICLOW);
+        if (logiclow->type == M_LSNT_FACTOR && logiclow->op == M_LOGICLOW_NONE) {
             mln_lang_stack_pop(ctx, node);
             mln_lang_stack_node_free(node);
             mln_lang_stack_popuntil(ctx, node);
         }
-        if ((node = mln_lang_stack_node_new(ctx, logicLow->type, logicLow->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, logiclow->type, logiclow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4299,10 +4299,10 @@ static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx)
         return mln_lang_stack_map[node->type](ctx);
     } else if (node->step == 1) {
         node->step = 2;
-        ASSERT(logicLow->right != NULL);
+        ASSERT(logiclow->right != NULL);
         if (__mln_lang_condition_isTrue(ctx->ret_var)) {
-            if (logicLow->op == M_LOGICLOW_AND) {
-                if ((node = mln_lang_stack_node_new(ctx, M_LSNT_LOGICLOW, logicLow->right)) == NULL) {
+            if (logiclow->op == M_LOGICLOW_AND) {
+                if ((node = mln_lang_stack_node_new(ctx, M_LSNT_LOGICLOW, logiclow->right)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     mln_lang_job_free(ctx);
                     return;
@@ -4311,8 +4311,8 @@ static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx)
                 return mln_lang_stack_map[node->type](ctx);
             }
         } else {
-            if (logicLow->op == M_LOGICLOW_OR) {
-                if ((node = mln_lang_stack_node_new(ctx, M_LSNT_LOGICLOW, logicLow->right)) == NULL) {
+            if (logiclow->op == M_LOGICLOW_OR) {
+                if ((node = mln_lang_stack_node_new(ctx, M_LSNT_LOGICLOW, logiclow->right)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     mln_lang_job_free(ctx);
                     return;
@@ -4329,24 +4329,24 @@ static void mln_lang_stack_handler_logicLow(mln_lang_ctx_t *ctx)
     __mln_lang_run(ctx->lang);
 }
 
-static void mln_lang_stack_handler_logicHigh(mln_lang_ctx_t *ctx)
+static void mln_lang_stack_handler_logichigh(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node = mln_lang_stack_top(ctx);
-    mln_lang_logicHigh_t *ll, *logicHigh = (mln_lang_logicHigh_t *)(node->pos);
+    mln_lang_logichigh_t *ll, *logichigh = (mln_lang_logichigh_t *)(node->pos);
     mln_lang_var_t *res = NULL;
     if (node->step == 0) {
         mln_lang_stack_node_reset_ret_val(node);
         mln_lang_ctx_reset_ret_var(ctx);
-        if (logicHigh->op == M_LOGICHIGH_NONE) node->step = M_LANG_STEP_OUT;
+        if (logichigh->op == M_LOGICHIGH_NONE) node->step = M_LANG_STEP_OUT;
         else node->step = 1;
-        if (logicHigh->jump == NULL)
-            mln_lang_generate_jump_ptr(logicHigh, M_LSNT_LOGICHIGH);
-        if (logicHigh->type == M_LSNT_FACTOR && logicHigh->op == M_LOGICHIGH_NONE) {
+        if (logichigh->jump == NULL)
+            mln_lang_generate_jump_ptr(logichigh, M_LSNT_LOGICHIGH);
+        if (logichigh->type == M_LSNT_FACTOR && logichigh->op == M_LOGICHIGH_NONE) {
             mln_lang_stack_pop(ctx, node);
             mln_lang_stack_node_free(node);
             mln_lang_stack_popuntil(ctx, node);
         }
-        if ((node = mln_lang_stack_node_new(ctx, logicHigh->type, logicHigh->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, logichigh->type, logichigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4355,14 +4355,14 @@ static void mln_lang_stack_handler_logicHigh(mln_lang_ctx_t *ctx)
         return mln_lang_stack_map[node->type](ctx);
     } else if (node->step == 1) {
         node->step = 2;
-        ASSERT(logicHigh->right != NULL);
+        ASSERT(logichigh->right != NULL);
         ASSERT(node->pos != NULL);
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
         goto goon2;
     } else if (node->step == 2) {
 goon2:
         node->step = 3;
-        ll = logicHigh->right;
+        ll = logichigh->right;
         if ((node = mln_lang_stack_node_new(ctx, M_LSNT_RELATIVELOW, ll->left)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4380,7 +4380,7 @@ goon2:
             mln_lang_job_free(ctx);
             return;
         }
-        switch (logicHigh->op) {
+        switch (logichigh->op) {
             case M_LOGICHIGH_OR:
                 handler = method->cor_handler;
                 break;
@@ -4426,8 +4426,8 @@ again:
             if (node->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
 goon4:
-        node->pos = logicHigh->right;
-        if (node->pos != NULL && logicHigh->right->op != M_LOGICHIGH_NONE) {
+        node->pos = logichigh->right;
+        if (node->pos != NULL && logichigh->right->op != M_LOGICHIGH_NONE) {
             node->step = 2;
         } else {
             if (node->ret_var != NULL) mln_lang_ctx_get_node_ret_val(ctx, node);
@@ -4443,24 +4443,24 @@ goon4:
     __mln_lang_run(ctx->lang);
 }
 
-static void mln_lang_stack_handler_relativeLow(mln_lang_ctx_t *ctx)
+static void mln_lang_stack_handler_relativelow(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node = mln_lang_stack_top(ctx);
-    mln_lang_relativeLow_t *tmp, *relativeLow = (mln_lang_relativeLow_t *)(node->pos);
+    mln_lang_relativelow_t *tmp, *relativelow = (mln_lang_relativelow_t *)(node->pos);
     mln_lang_var_t *res = NULL;
     if (node->step == 0) {
         mln_lang_stack_node_reset_ret_val(node);
         mln_lang_ctx_reset_ret_var(ctx);
-        if (relativeLow->op == M_RELATIVELOW_NONE) node->step = M_LANG_STEP_OUT;
+        if (relativelow->op == M_RELATIVELOW_NONE) node->step = M_LANG_STEP_OUT;
         else node->step = 1;
-        if (relativeLow->jump == NULL)
-            mln_lang_generate_jump_ptr(relativeLow, M_LSNT_RELATIVELOW);
-        if (relativeLow->type == M_LSNT_FACTOR && relativeLow->op == M_RELATIVELOW_NONE) {
+        if (relativelow->jump == NULL)
+            mln_lang_generate_jump_ptr(relativelow, M_LSNT_RELATIVELOW);
+        if (relativelow->type == M_LSNT_FACTOR && relativelow->op == M_RELATIVELOW_NONE) {
             mln_lang_stack_pop(ctx, node);
             mln_lang_stack_node_free(node);
             mln_lang_stack_popuntil(ctx, node);
         }
-        if ((node = mln_lang_stack_node_new(ctx, relativeLow->type, relativeLow->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, relativelow->type, relativelow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4469,14 +4469,14 @@ static void mln_lang_stack_handler_relativeLow(mln_lang_ctx_t *ctx)
         return mln_lang_stack_map[node->type](ctx);
     } else if (node->step == 1) {
         node->step = 2;
-        ASSERT(relativeLow->right != NULL);
+        ASSERT(relativelow->right != NULL);
         ASSERT(node->pos != NULL);
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
         goto goon2;
     } else if (node->step == 2) {
 goon2:
         node->step = 3;
-        tmp = relativeLow->right;
+        tmp = relativelow->right;
         if ((node = mln_lang_stack_node_new(ctx, M_LSNT_RELATIVEHIGH, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4494,7 +4494,7 @@ goon2:
             mln_lang_job_free(ctx);
             return;
         }
-        switch (relativeLow->op) {
+        switch (relativelow->op) {
             case M_RELATIVELOW_EQUAL:
                 handler = method->equal_handler;
                 break;
@@ -4537,8 +4537,8 @@ again:
             if (node->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
 goon4:
-        node->pos = relativeLow->right;
-        if (node->pos != NULL && relativeLow->right->op != M_RELATIVELOW_NONE) {
+        node->pos = relativelow->right;
+        if (node->pos != NULL && relativelow->right->op != M_RELATIVELOW_NONE) {
             node->step = 2;
         } else {
             if (node->ret_var != NULL) mln_lang_ctx_get_node_ret_val(ctx, node);
@@ -4554,24 +4554,24 @@ goon4:
     __mln_lang_run(ctx->lang);
 }
 
-static void mln_lang_stack_handler_relativeHigh(mln_lang_ctx_t *ctx)
+static void mln_lang_stack_handler_relativehigh(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node = mln_lang_stack_top(ctx);
-    mln_lang_relativeHigh_t *tmp, *relativeHigh = (mln_lang_relativeHigh_t *)(node->pos);
+    mln_lang_relativehigh_t *tmp, *relativehigh = (mln_lang_relativehigh_t *)(node->pos);
     mln_lang_var_t *res = NULL;
     if (node->step == 0) {
         mln_lang_stack_node_reset_ret_val(node);
         mln_lang_ctx_reset_ret_var(ctx);
-        if (relativeHigh->op == M_RELATIVEHIGH_NONE) node->step = M_LANG_STEP_OUT;
+        if (relativehigh->op == M_RELATIVEHIGH_NONE) node->step = M_LANG_STEP_OUT;
         else node->step = 1;
-        if (relativeHigh->jump == NULL)
-            mln_lang_generate_jump_ptr(relativeHigh, M_LSNT_RELATIVEHIGH);
-        if (relativeHigh->type == M_LSNT_FACTOR && relativeHigh->op == M_RELATIVEHIGH_NONE) {
+        if (relativehigh->jump == NULL)
+            mln_lang_generate_jump_ptr(relativehigh, M_LSNT_RELATIVEHIGH);
+        if (relativehigh->type == M_LSNT_FACTOR && relativehigh->op == M_RELATIVEHIGH_NONE) {
             mln_lang_stack_pop(ctx, node);
             mln_lang_stack_node_free(node);
             mln_lang_stack_popuntil(ctx, node);
         }
-        if ((node = mln_lang_stack_node_new(ctx, relativeHigh->type, relativeHigh->jump)) == NULL) {
+        if ((node = mln_lang_stack_node_new(ctx, relativehigh->type, relativehigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
             return;
@@ -4580,14 +4580,14 @@ static void mln_lang_stack_handler_relativeHigh(mln_lang_ctx_t *ctx)
         return mln_lang_stack_map[node->type](ctx);
     } else if (node->step == 1) {
         node->step = 2;
-        ASSERT(relativeHigh->right != NULL);
+        ASSERT(relativehigh->right != NULL);
         ASSERT(node->pos != NULL);
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
         goto goon2;
     } else if (node->step == 2) {
 goon2:
         node->step = 3;
-        tmp = relativeHigh->right;
+        tmp = relativehigh->right;
         if ((node = mln_lang_stack_node_new(ctx, M_LSNT_MOVE, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             mln_lang_job_free(ctx);
@@ -4605,7 +4605,7 @@ goon2:
             mln_lang_job_free(ctx);
             return;
         }
-        switch (relativeHigh->op) {
+        switch (relativehigh->op) {
             case M_RELATIVEHIGH_LESS:
                 handler = method->less_handler;
                 break;
@@ -4654,8 +4654,8 @@ again:
             if (node->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
         }
 goon4:
-        node->pos = relativeHigh->right;
-        if (node->pos != NULL && relativeHigh->right->op != M_RELATIVEHIGH_NONE) {
+        node->pos = relativehigh->right;
+        if (node->pos != NULL && relativehigh->right->op != M_RELATIVEHIGH_NONE) {
             node->step = 2;
         } else {
             if (node->ret_var != NULL) mln_lang_ctx_get_node_ret_val(ctx, node);
