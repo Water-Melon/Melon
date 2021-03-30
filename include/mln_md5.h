@@ -36,8 +36,8 @@ extern mln_md5_t *mln_md5_pool_new(mln_alloc_t *pool) __NONNULL1(1);
 extern void mln_md5_free(mln_md5_t *m);
 extern void mln_md5_pool_free(mln_md5_t *m);
 extern void mln_md5_calc(mln_md5_t *m, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last) __NONNULL1(1);
-extern void mln_md5_toBytes(mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len) __NONNULL1(1);
-extern void mln_md5_toString(mln_md5_t *m, mln_s8ptr_t buf, mln_u32_t len) __NONNULL1(1);
+extern void mln_md5_tobytes(mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len) __NONNULL1(1);
+extern void mln_md5_tostring(mln_md5_t *m, mln_s8ptr_t buf, mln_u32_t len) __NONNULL1(1);
 extern void mln_md5_dump(mln_md5_t *m) __NONNULL1(1);
 #endif
 

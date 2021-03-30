@@ -39,36 +39,36 @@ struct mln_thread_pool_s {
     pthread_mutex_t                    mutex;
     pthread_cond_t                     cond;
     pthread_attr_t                     attr;
-    mln_thread_pool_resource_t        *resChainHead;
-    mln_thread_pool_resource_t        *resChainTail;
-    mln_thread_pool_member_t          *childHead;
-    mln_thread_pool_member_t          *childTail;
+    mln_thread_pool_resource_t        *res_chain_head;
+    mln_thread_pool_resource_t        *res_chain_tail;
+    mln_thread_pool_member_t          *child_head;
+    mln_thread_pool_member_t          *child_tail;
     mln_u32_t                          max;
     mln_u32_t                          idle;
     mln_u32_t                          counter;
     mln_u32_t                          quit:1;
     mln_u32_t                          padding:31;
-    mln_u64_t                          condTimeout;/*ms*/
+    mln_u64_t                          cond_timeout;/*ms*/
     mln_size_t                         nRes;
     mln_thread_process                 process_handler;
     mln_thread_dataFree                free_handler;
 };
 
 struct mln_thread_pool_attr {
-    void                              *dataForMain;
+    void                              *main_data;
     mln_thread_process                 child_process_handler;
     mln_thread_process                 main_process_handler;
     mln_thread_dataFree                free_handler;
-    mln_u64_t                          condTimeout; /*ms*/
+    mln_u64_t                          cond_timeout; /*ms*/
     mln_u32_t                          max;
     mln_u32_t                          concurrency;
 };
 
 struct mln_thread_pool_info {
-    mln_u32_t                          maxNum;
-    mln_u32_t                          idleNum;
-    mln_u32_t                          curNum;
-    mln_size_t                         resNum;
+    mln_u32_t                          max_num;
+    mln_u32_t                          idle_num;
+    mln_u32_t                          cur_num;
+    mln_size_t                         res_num;
 };
 
 extern int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr) __NONNULL1(1);

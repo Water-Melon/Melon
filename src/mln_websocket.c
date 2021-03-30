@@ -196,7 +196,7 @@ static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey)
     buf = NULL;
     mln_u8_t tmp[20];
     mln_uauto_t len = 0;
-    mln_sha1_toBytes(&s, tmp, sizeof(tmp));
+    mln_sha1_tobytes(&s, tmp, sizeof(tmp));
     if (mln_base64_pool_encode(pool, tmp, sizeof(tmp), &buf, &len) < 0) return -1;
     mln_string_nset(&key, buf, len);
     int ret = mln_string_strcasecmp(&key, val);
@@ -383,7 +383,7 @@ static mln_string_t *mln_websocket_accept_field(mln_http_t *http)
     buf = NULL;
     mln_u8_t tmp[20];
     mln_uauto_t len = 0;
-    mln_sha1_toBytes(&s, tmp, sizeof(tmp));
+    mln_sha1_tobytes(&s, tmp, sizeof(tmp));
     if (mln_base64_pool_encode(pool, tmp, sizeof(tmp), &buf, &len) < 0) return NULL;
     mln_string_nset(&key, buf, len);
     val = mln_string_pool_dup(pool, &key);

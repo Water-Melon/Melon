@@ -340,7 +340,7 @@ _mln_sys_log_process(mln_log_t *log, \
     struct timeval tv;
     struct UTCTime_s uc;
     gettimeofday(&tv, NULL);
-    mln_UTCTime(tv.tv_sec, &uc);
+    mln_utctime(tv.tv_sec, &uc);
     char line_str[256] = {0};
     if (level > none) {
         n = snprintf(line_str, sizeof(line_str)-1, \

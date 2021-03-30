@@ -7,7 +7,7 @@ static void hello_cleanup(void *data)
 
 int hello_main(int argc, char **argv)
 {
-    mln_thread_setCleanup(hello_cleanup, NULL);
+    mln_thread_cleanup_set(hello_cleanup, NULL);
     int i;
     for (i = 0; i < 1; ++i)  {
         int fd = atoi(argv[argc-1]);

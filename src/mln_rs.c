@@ -112,7 +112,7 @@ mln_rs_calcPower(mln_size_t base, mln_size_t exp)
 
 /*matrix*/
 static mln_rs_matrix_t *
-mln_rs_matrix_new(mln_size_t row, mln_size_t col, mln_u8ptr_t data, mln_u32_t isRef)
+mln_rs_matrix_new(mln_size_t row, mln_size_t col, mln_u8ptr_t data, mln_u32_t is_ref)
 {
     mln_rs_matrix_t *rm;
     if ((rm = (mln_rs_matrix_t *)malloc(sizeof(mln_rs_matrix_t))) == NULL) {
@@ -121,14 +121,14 @@ mln_rs_matrix_new(mln_size_t row, mln_size_t col, mln_u8ptr_t data, mln_u32_t is
     rm->row = row;
     rm->col = col;
     rm->data = data;
-    rm->isRef = isRef;
+    rm->is_ref = is_ref;
     return rm;
 }
 
 static void mln_rs_matrix_free(mln_rs_matrix_t *matrix)
 {
     if (matrix == NULL) return;
-    if (matrix->data != NULL && !matrix->isRef)
+    if (matrix->data != NULL && !matrix->is_ref)
         free(matrix->data);
     free(matrix);
 }
@@ -431,7 +431,7 @@ mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k)
         errno = ENOMEM;
         return NULL;
     }
-    resMatrix->isRef = 1;
+    resMatrix->is_ref = 1;
     mln_rs_matrix_free(resMatrix);
     return result;
 }

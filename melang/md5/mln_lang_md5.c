@@ -83,7 +83,7 @@ static mln_lang_var_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
         }
         mln_md5_init(&md5);
         mln_md5_calc(&md5, val->data.s->data, val->data.s->len, 1);
-        mln_md5_toString(&md5, res, sizeof(res));
+        mln_md5_tostring(&md5, res, sizeof(res));
     } else if (type == M_LANG_VAL_TYPE_OBJECT && \
                !mln_string_const_strcmp(val->data.obj->inSet->name, "File"))
     {
@@ -114,7 +114,7 @@ static mln_lang_var_t *mln_lang_md5_process(mln_lang_ctx_t *ctx)
             return ret_var;
         }
         mln_md5_calc(&md5, NULL, 0, 1);
-        mln_md5_toString(&md5, res, sizeof(res));
+        mln_md5_tostring(&md5, res, sizeof(res));
     } else {
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;

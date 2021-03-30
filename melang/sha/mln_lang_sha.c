@@ -93,7 +93,7 @@ static mln_lang_var_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
         }
         mln_sha1_init(&sha1);
         mln_sha1_calc(&sha1, val->data.s->data, val->data.s->len, 1);
-        mln_sha1_toString(&sha1, res, sizeof(res));
+        mln_sha1_tostring(&sha1, res, sizeof(res));
     } else if (type == M_LANG_VAL_TYPE_OBJECT && \
                !mln_string_const_strcmp(val->data.obj->inSet->name, "File"))
     {
@@ -124,7 +124,7 @@ static mln_lang_var_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
             return ret_var;
         }
         mln_sha1_calc(&sha1, NULL, 0, 1);
-        mln_sha1_toString(&sha1, res, sizeof(res));
+        mln_sha1_tostring(&sha1, res, sizeof(res));
     } else {
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
@@ -206,7 +206,7 @@ static mln_lang_var_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
         }
         mln_sha256_init(&sha256);
         mln_sha256_calc(&sha256, val->data.s->data, val->data.s->len, 1);
-        mln_sha256_toString(&sha256, res, sizeof(res));
+        mln_sha256_tostring(&sha256, res, sizeof(res));
     } else if (type == M_LANG_VAL_TYPE_OBJECT && \
                !mln_string_const_strcmp(val->data.obj->inSet->name, "File"))
     {
@@ -237,7 +237,7 @@ static mln_lang_var_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
             return ret_var;
         }
         mln_sha256_calc(&sha256, NULL, 0, 1);
-        mln_sha256_toString(&sha256, res, sizeof(res));
+        mln_sha256_tostring(&sha256, res, sizeof(res));
     } else {
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;

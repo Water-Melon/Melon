@@ -73,12 +73,9 @@ struct mln_thread_s {
     mln_rbtree_node_t         *node;
 };
 
-extern void
-mln_thread_clearMsg(mln_thread_msg_t *msg);
-extern int
-mln_load_thread(mln_event_t *ev) __NONNULL1(1);
-extern int
-mln_thread_create(mln_thread_t *t, mln_event_t *ev) __NONNULL2(1,2);
+extern void mln_thread_clearMsg(mln_thread_msg_t *msg);
+extern int mln_load_thread(mln_event_t *ev) __NONNULL1(1);
+extern int mln_thread_create(mln_thread_t *t, mln_event_t *ev) __NONNULL2(1,2);
 /*
  * mln_thread_exit() called by child thread only.
  */
@@ -87,6 +84,6 @@ extern void mln_thread_exit(int exit_code);
  * mln_thread_kill() called by main thread only.
  */
 extern void mln_thread_kill(mln_string_t *alias);
-extern void mln_thread_setCleanup(void (*tcleanup)(void *), void *data);
+extern void mln_thread_cleanup_set(void (*tcleanup)(void *), void *data);
 #endif
 

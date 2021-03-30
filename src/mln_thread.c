@@ -676,7 +676,7 @@ void mln_thread_kill(mln_string_t *alias)
     pthread_cancel(t->tid);
 }
 
-void mln_thread_setCleanup(void (*tcleanup)(void *), void *data)
+void mln_thread_cleanup_set(void (*tcleanup)(void *), void *data)
 {
     thread_cleanup = tcleanup;
     thread_data = data;

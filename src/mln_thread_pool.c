@@ -86,7 +86,7 @@ mln_thread_pool_member_join(mln_thread_pool_t *tp, mln_u32_t child)
     }
     ++(tp->counter);
     ++(tp->idle);
-    mln_child_chain_add(&(tp->childHead), &(tp->childTail), tpm);
+    mln_child_chain_add(&(tp->child_head), &(tp->child_tail), tpm);
     return tpm;
 }
 
@@ -103,7 +103,7 @@ static void mln_thread_pool_member_exit(void *arg)
         tpm->locked = 1;
         pthread_mutex_lock(&(tpool->mutex));
     }
-    mln_child_chain_del(&(tpool->childHead), &(tpool->childTail), tpm);
+    mln_child_chain_del(&(tpool->child_head), &(tpool->child_tail), tpm);
     --(tpool->counter);
     if (tpm->idle) --(tpool->idle);
     pthread_mutex_unlock(&(tpool->mutex));
@@ -138,7 +138,7 @@ static void mln_thread_pool_child(void)
     if (!mThreadPoolSelf->locked)
         pthread_mutex_unlock(&(tpool->mutex));
     mThreadPoolSelf->forked = 1;
-    mln_thread_pool_member_t *tpm = tpool->childHead, *fr;
+    mln_thread_pool_member_t *tpm = tpool->child_head, *fr;
     while (tpm != NULL) {
         fr = tpm;
         tpm = tpm->next;
@@ -183,11 +183,11 @@ mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
         *err = rc;
         return NULL;
     }
-    tp->resChainHead = tp->resChainTail = NULL;
-    tp->childHead = tp->childTail = NULL;
+    tp->res_chain_head = tp->res_chain_tail = NULL;
+    tp->child_head = tp->child_tail = NULL;
     tp->idle = tp->counter = 0;
     tp->quit = 0;
-    tp->condTimeout = tpattr->condTimeout;
+    tp->cond_timeout = tpattr->cond_timeout;
     tp->nRes = 0;
     tp->process_handler = tpattr->child_process_handler;
     tp->free_handler = tpattr->free_handler;
@@ -224,12 +224,12 @@ static void mln_thread_pool_free(mln_thread_pool_t *tp)
     if (tp == NULL) return;
     mThreadPoolSelf = NULL;
     mln_thread_pool_resource_t *tpr;
-    while ((tpr = tp->resChainHead) != NULL) {
-        tp->resChainHead = tp->resChainHead->next;
+    while ((tpr = tp->res_chain_head) != NULL) {
+        tp->res_chain_head = tp->res_chain_head->next;
         if (tp->free_handler != NULL) tp->free_handler(tpr->data);
         free(tpr);
     }
-    if (tp->childHead != NULL || tp->counter || tp->idle) {
+    if (tp->child_head != NULL || tp->counter || tp->idle) {
         mln_log(error, "fatal error, thread pool messed up.\n");
         abort();
     }
@@ -264,11 +264,11 @@ int mln_thread_pool_addResource(void *data)
     mThreadPoolSelf->locked = 1;
     pthread_mutex_lock(&(tpool->mutex));
 
-    if (tpool->resChainHead == NULL) {
-        tpool->resChainHead = tpool->resChainTail = tpr;
+    if (tpool->res_chain_head == NULL) {
+        tpool->res_chain_head = tpool->res_chain_tail = tpr;
     } else {
-        tpool->resChainTail->next = tpr;
-        tpool->resChainTail = tpr;
+        tpool->res_chain_tail->next = tpr;
+        tpool->res_chain_tail = tpr;
     }
     ++(tpool->nRes);
 
@@ -307,9 +307,9 @@ static void *mln_thread_pool_removeResource(void)
     mln_thread_pool_resource_t *tpr;
     mln_thread_pool_t *tpool = mThreadPoolSelf->pool;
 again:
-    if ((tpr = tpool->resChainHead) == NULL) return NULL;
-    tpool->resChainHead = tpool->resChainHead->next;
-    if (tpool->resChainHead == NULL) tpool->resChainTail = NULL;
+    if ((tpr = tpool->res_chain_head) == NULL) return NULL;
+    tpool->res_chain_head = tpool->res_chain_head->next;
+    if (tpool->res_chain_head == NULL) tpool->res_chain_tail = NULL;
     --(tpool->nRes);
     mThreadPoolSelf->data = tpr->data;
     free(tpr);
@@ -337,7 +337,7 @@ int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr)
     if ((tpool = mln_thread_pool_new(tpattr, &rc)) == NULL) {
         return rc;
     }
-    rc = tpattr->main_process_handler(tpattr->dataForMain);
+    rc = tpattr->main_process_handler(tpattr->main_data);
     tpool->quit = 1;
     while (1) {
         mThreadPoolSelf->locked = 1;
@@ -385,8 +385,8 @@ again:
         if (mln_thread_pool_removeResource() == NULL) {
             if (timeout) break;
 
-            ts.tv_sec = time(NULL) + tpool->condTimeout / 1000;
-            ts.tv_nsec = (tpool->condTimeout % 1000) * 1000000;
+            ts.tv_sec = time(NULL) + tpool->cond_timeout / 1000;
+            ts.tv_nsec = (tpool->cond_timeout % 1000) * 1000000;
             if ((rc = pthread_cond_timedwait(&(tpool->cond), &(tpool->mutex), &ts)) != 0) {
                 if (rc == ETIMEDOUT) {
                     timeout = 1;
@@ -439,10 +439,10 @@ void mln_thread_ResourceInfo(struct mln_thread_pool_info *info)
     mln_thread_pool_t *tpool = mThreadPoolSelf->pool;
     mThreadPoolSelf->locked = 1;
     pthread_mutex_lock(&(tpool->mutex));
-    info->maxNum = tpool->max;
-    info->idleNum = tpool->idle;
-    info->curNum = tpool->counter;
-    info->resNum = tpool->nRes;
+    info->max_num = tpool->max;
+    info->idle_num = tpool->idle;
+    info->cur_num = tpool->counter;
+    info->res_num = tpool->nRes;
     pthread_mutex_unlock(&(tpool->mutex));
     mThreadPoolSelf->locked = 0;
 }

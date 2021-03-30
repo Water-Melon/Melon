@@ -389,7 +389,7 @@ mln_is_leap(long year)
     return 0;
 }
 
-void mln_UTCTime(time_t tm, struct UTCTime_s *uc)
+void mln_utctime(time_t tm, struct UTCTime_s *uc)
 {
     long days = tm / 86400;
     long subsec = tm % 86400;
@@ -415,7 +415,7 @@ void mln_UTCTime(time_t tm, struct UTCTime_s *uc)
     uc->second = (subsec % 3600) % 60;
 }
 
-int mln_s2Time(time_t *tm, mln_string_t *s, int type)
+int mln_s2time(time_t *tm, mln_string_t *s, int type)
 {
     mln_u8ptr_t p, end;
     time_t year = 0, month = 0, day = 0;

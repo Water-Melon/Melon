@@ -435,7 +435,7 @@ static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_strin
             mln_md5_init(&md5);
             mln_md5_calc(&md5, m->data, m->len, 1);
             hlen = 16;
-            mln_md5_toBytes(&md5, hashval, hlen);
+            mln_md5_tobytes(&md5, hashval, hlen);
             break;
         }
         case M_EMSAPKCS1V15_HASH_SHA1:
@@ -444,7 +444,7 @@ static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_strin
             mln_sha1_init(&sha1);
             mln_sha1_calc(&sha1, m->data, m->len, 1);
             hlen = 20;
-            mln_sha1_toBytes(&sha1, hashval, hlen);
+            mln_sha1_tobytes(&sha1, hashval, hlen);
             break;
         }
         case M_EMSAPKCS1V15_HASH_SHA256:
@@ -453,7 +453,7 @@ static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_strin
             mln_sha256_init(&sha256);
             mln_sha256_calc(&sha256, m->data, m->len, 1);
             hlen = 32;
-            mln_sha256_toBytes(&sha256, hashval, hlen);
+            mln_sha256_tobytes(&sha256, hashval, hlen);
             break;
         }
         default: return NULL;
@@ -621,7 +621,7 @@ int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t
             mln_md5_init(&md5);
             mln_md5_calc(&md5, m->data, m->len, 1);
             hlen = 16;
-            mln_md5_toBytes(&md5, hashval, hlen);
+            mln_md5_tobytes(&md5, hashval, hlen);
             break;
         }
         case M_EMSAPKCS1V15_HASH_SHA1:
@@ -630,7 +630,7 @@ int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t
             mln_sha1_init(&sha1);
             mln_sha1_calc(&sha1, m->data, m->len, 1);
             hlen = 20;
-            mln_sha1_toBytes(&sha1, hashval, hlen);
+            mln_sha1_tobytes(&sha1, hashval, hlen);
             break;
         }
         case M_EMSAPKCS1V15_HASH_SHA256:
@@ -639,7 +639,7 @@ int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t
             mln_sha256_init(&sha256);
             mln_sha256_calc(&sha256, m->data, m->len, 1);
             hlen = 32;
-            mln_sha256_toBytes(&sha256, hashval, hlen);
+            mln_sha256_tobytes(&sha256, hashval, hlen);
             break;
         }
         default:

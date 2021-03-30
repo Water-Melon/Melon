@@ -213,7 +213,7 @@ static inline void mln_md5_calc_block(mln_md5_t *m)
     m->D &= 0xffffffff;
 }
 
-void mln_md5_toBytes(mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len)
+void mln_md5_tobytes(mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len)
 {
     if (len == 0 || buf == NULL) return;
     mln_u32_t i = 0;
@@ -254,13 +254,13 @@ void mln_md5_toBytes(mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len)
     buf[i++] = (m->D >> 24) & 0xff;
 }
 
-void mln_md5_toString(mln_md5_t *m, mln_s8ptr_t buf, mln_u32_t len)
+void mln_md5_tostring(mln_md5_t *m, mln_s8ptr_t buf, mln_u32_t len)
 {
     if (buf == NULL || len == 0) return;
     mln_u32_t i, n = 0;
     mln_u8_t bytes[16] = {0};
 
-    mln_md5_toBytes(m, bytes, sizeof(bytes));
+    mln_md5_tobytes(m, bytes, sizeof(bytes));
     for (i = 0; i < sizeof(bytes); ++i) {
         if (n >= len) break;
         n += snprintf(buf + n, len - n, "%02x", bytes[i]);

@@ -8,7 +8,7 @@
 #include <math.h>
 #include "mln_matrix.h"
 
-mln_matrix_t *mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u32_t isRef)
+mln_matrix_t *mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u32_t is_ref)
 {
     mln_matrix_t *matrix;
     if ((matrix = (mln_matrix_t *)malloc(sizeof(mln_matrix_t))) == NULL) {
@@ -17,14 +17,14 @@ mln_matrix_t *mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u
     matrix->row = row;
     matrix->col = col;
     matrix->data = data;
-    matrix->isRef = isRef;
+    matrix->is_ref = is_ref;
     return matrix;
 }
 
 void mln_matrix_free(mln_matrix_t *matrix)
 {
     if (matrix == NULL) return;
-    if (matrix->data != NULL && !matrix->isRef)
+    if (matrix->data != NULL && !matrix->is_ref)
         free(matrix->data);
     free(matrix);
 }

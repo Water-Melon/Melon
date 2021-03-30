@@ -11,11 +11,11 @@ typedef struct {
     mln_size_t  row;
     mln_size_t  col;
     double     *data;
-    mln_u32_t   isRef:1;
+    mln_u32_t   is_ref:1;
 } mln_matrix_t;
 
 extern mln_matrix_t *
-mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u32_t isRef) __NONNULL1(3);
+mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u32_t is_ref) __NONNULL1(3);
 extern void mln_matrix_free(mln_matrix_t *matrix);
 extern mln_matrix_t *
 mln_matrix_mul(mln_matrix_t *m1, mln_matrix_t *m2) __NONNULL2(1,2);

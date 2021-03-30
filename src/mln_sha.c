@@ -240,7 +240,7 @@ static inline void mln_sha1_calc_block(mln_sha1_t *s)
     s->H4 += e;
 }
 
-void mln_sha1_toBytes(mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len)
+void mln_sha1_tobytes(mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len)
 {
     if (len == 0 || buf == NULL) return;
     mln_u32_t i = 0;
@@ -290,13 +290,13 @@ void mln_sha1_toBytes(mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len)
     buf[i++] = (s->H4) & 0xff;
 }
 
-void mln_sha1_toString(mln_sha1_t *s, mln_s8ptr_t buf, mln_u32_t len)
+void mln_sha1_tostring(mln_sha1_t *s, mln_s8ptr_t buf, mln_u32_t len)
 {
     if (buf == NULL || len == 0) return;
     mln_u32_t i, n = 0;
     mln_u8_t bytes[20] = {0};
 
-    mln_sha1_toBytes(s, bytes, sizeof(bytes));
+    mln_sha1_tobytes(s, bytes, sizeof(bytes));
     for (i = 0; i < sizeof(bytes); ++i) {
         if (n >= len) break;
         n += snprintf(buf + n, len - n, "%02x", bytes[i]);
@@ -504,7 +504,7 @@ static inline void mln_sha256_calc_block(mln_sha256_t *s)
     s->H7 = mln_sha256_safe_add(h7, s->H7);
 }
 
-void mln_sha256_toBytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len)
+void mln_sha256_tobytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len)
 {
     if (len == 0 || buf == NULL) return;
     mln_u32_t i = 0;
@@ -579,13 +579,13 @@ void mln_sha256_toBytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len)
 
 }
 
-void mln_sha256_toString(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len)
+void mln_sha256_tostring(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len)
 {
     if (buf == NULL || len == 0) return;
     mln_u32_t i, n = 0;
     mln_u8_t bytes[32] = {0};
 
-    mln_sha256_toBytes(s, bytes, sizeof(bytes));
+    mln_sha256_tobytes(s, bytes, sizeof(bytes));
     for (i = 0; i < sizeof(bytes); ++i) {
         if (n >= len) break;
         n += snprintf(buf + n, len - n, "%02x", bytes[i]);

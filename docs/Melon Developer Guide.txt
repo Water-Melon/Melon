@@ -1729,12 +1729,12 @@ Their definitions can be found in melon/include/mln_types.h.
          'len' is the length of 'input'.
          'is_last' is a flag to indicate whether 'input' is the last content or not.
 
-      g) void mln_md5_toBytes(mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len);
+      g) void mln_md5_tobytes(mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len);
          Put MD5 result into 'buf'.
          'len' is the length of 'buf'.
          The data filled in 'buf' is binary.
 
-      h) void mln_md5_toString(mln_md5_t *m, mln_s8ptr_t buf, mln_u32_t len);
+      h) void mln_md5_tostring(mln_md5_t *m, mln_s8ptr_t buf, mln_u32_t len);
          Put MD5 result into 'buf'.
          'len' is the length of 'buf'.
          The data filled in 'buf' is a hex string.
@@ -1764,12 +1764,12 @@ Their definitions can be found in melon/include/mln_types.h.
          'is_last' is a flag to indicate whether the 'input'
          is the last content or not.
 
-      g) void mln_sha1_toBytes(mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len);
+      g) void mln_sha1_tobytes(mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len);
          Put SHA1 result into 'buf'.
          'len' is the length of 'buf'.
          The data filled in 'buf' is binary.
 
-      h) void mln_sha1_toString(mln_sha1_t *s, mln_s8ptr_t buf, mln_u32_t len);
+      h) void mln_sha1_tostring(mln_sha1_t *s, mln_s8ptr_t buf, mln_u32_t len);
          Put SHA1 result into 'buf'.
          'len' is the length of 'buf'.
          The data filled in 'buf' is a hex string.
@@ -1794,11 +1794,11 @@ Their definitions can be found in melon/include/mln_types.h.
          SHA256 calculation.
          All arguments are the same as 'mln_sha1_calc()'.
 
-      o) void mln_sha256_toBytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len);
-         The same as 'mln_sha1_toBytes()', but the first argument.
+      o) void mln_sha256_tobytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len);
+         The same as 'mln_sha1_tobytes()', but the first argument.
 
-      p) void mln_sha256_toString(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len);
-         The same as 'mln_sha1_toString()', but the first argument.
+      p) void mln_sha256_tostring(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len);
+         The same as 'mln_sha1_tostring()', but the first argument.
 
   26) DES
       a) void mln_des_init(mln_des_t *d, mln_u64_t key);
@@ -2245,7 +2245,7 @@ Their definitions can be found in melon/include/mln_types.h.
          Get masking key from 'ws'.
 
   32) Tools
-      a) void mln_UTCTime(time_t tm, struct UTCTime_s *uc);
+      a) void mln_utctime(time_t tm, struct UTCTime_s *uc);
          Parse 'tm' into structure UTCTime.
          The definition of structure UTCTime_s is
              struct UTCTime_s {
@@ -2257,7 +2257,7 @@ Their definitions can be found in melon/include/mln_types.h.
                  long        second;
              };
 
-      b) int mln_s2Time(time_t *tm, mln_string_t *s, int type)
+      b) int mln_s2time(time_t *tm, mln_string_t *s, int type)
          Parse 's' into 'tm'.
          The type of 's' is indicated by 'type', its value are:
              I.  M_TOOLS_TIME_UTC
@@ -2429,15 +2429,15 @@ Their definitions can be found in melon/include/mln_types.h.
          This function is used to run (NOT only initialize) a thread pool.
          The definition of 'tpattr' is,
              struct mln_thread_pool_attr {
-                 void                              *dataForMain;
+                 void                              *main_data;
                  mln_thread_process                 child_process_handler;
                  mln_thread_process                 main_process_handler;
                  mln_thread_dataFree                free_handler;
-                 mln_u64_t                          condTimeout; /*ms*/
+                 mln_u64_t                          cond_timeout; /*ms*/
                  mln_u32_t                          max;
                  mln_u32_t                          concurrency;
              };
-         'dataForMain' -- this variable is only provided for main thread. It will be passed into the main thread
+         'main_data' -- this variable is only provided for main thread. It will be passed into the main thread
                           callback function 'main_process_handler'.
          'child_process_handler' -- this callback function is provided for child thread(s). It will be called after
                                     the main thread dilivered a resource to child thread(s). Its prototype is,
@@ -2445,7 +2445,7 @@ Their definitions can be found in melon/include/mln_types.h.
                                     the argument is a resource structure pointer which is defined by user.
                                     And user must release it in this callback function.
          'main_process_handler' -- this callback function is provided for main thread. Its prototype is the same as
-                                   'child_process_handler''s. The argument is 'dataForMain', not resource.
+                                   'child_process_handler''s. The argument is 'main_data', not resource.
                                    When this thread pool running, the main thread is just simply to run this function.
                                    If your routine in this function returned, the thread pool would be cleaned and
                                    released.
@@ -2453,7 +2453,7 @@ Their definitions can be found in melon/include/mln_types.h.
                            quit. Its prototype is,
                                typedef void (*mln_thread_dataFree)(void *);
                            the argument is a resource structure pointer which thread pool wanna free.
-         'condTimeout' -- this variable indicates a millisecond timeout timer for child thread(s). when someone child
+         'cond_timeout' -- this variable indicates a millisecond timeout timer for child thread(s). when someone child
                           thread's timer expired and there was no resource can be processed, this child thread would
                           quit.
          'max' -- the maximum number of child thread.
@@ -2472,15 +2472,15 @@ Their definitions can be found in melon/include/mln_types.h.
          Get the information of thread pool.
          The prototype of 'struct mln_thread_pool_info' is
              struct mln_thread_pool_info {
-                 mln_u32_t         maxNum;
-                 mln_u32_t         idleNum;
-                 mln_u32_t         curNum;
-                 mln_size_t        resNum;
+                 mln_u32_t         max_num;
+                 mln_u32_t         idle_num;
+                 mln_u32_t         cur_num;
+                 mln_size_t        res_num;
              };
-         'maxNum' -- The allowed maximum number of child thread.
-         'idleNum' -- The number of idle child thread.
-         'curNum' -- The number of existed child thread.
-         'resNum' -- The number of unhandled resource.
+         'max_num' -- The allowed maximum number of child thread.
+         'idle_num' -- The number of idle child thread.
+         'cur_num' -- The number of existed child thread.
+         'res_num' -- The number of unhandled resource.
 
   34) AST
       This component aims to operate an AST, and it also includes the operations of state-shift table.
@@ -2615,10 +2615,10 @@ Their definitions can be found in melon/include/mln_types.h.
          Get number of data that stored in fec result. 
 
   37) Matrix
-      a) mln_matrix_t *mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u32_t isRef);
+      a) mln_matrix_t *mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u32_t is_ref);
          Create matrix instance.
          'data' is an array.
-         'isRef' indicates whether the 'data' should be freed or not while trying to free it.
+         'is_ref' indicates whether the 'data' should be freed or not while trying to free it.
 
       b) void mln_matrix_free(mln_matrix_t *matrix);
          Free matrix instance.
@@ -2649,10 +2649,10 @@ Their definitions can be found in melon/include/mln_types.h.
          If someone lost, the corresponing element in 'dataVector' should be NULL, but
          the number of 'dataVector''s element must be 'n+k'.
 
-      d) mln_rs_result_getNum(_presult);
+      d) mln_rs_result_get_num(_presult);
          Return how many pieces of data stored in '_presult' (mln_rs_result_t).
 
-      e) mln_rs_result_getIndexData(_presult,index);
+      e) mln_rs_result_get_data_by_index(_presult,index);
          Returned one piece of data that is indicated by 'index' stored in '_presult'.
 
   39) Garbage Collector
@@ -2977,7 +2977,7 @@ Their definitions can be found in melon/include/mln_types.h.
    b) void mln_thread_exit(int exit_code);
       Exit the thread.
 
-   c) void mln_thread_setCleanup(void (*tcleanup)(void *), void *data);
+   c) void mln_thread_cleanup_set(void (*tcleanup)(void *), void *data);
       Set a cleanup function that will be called after the thread exited.
 
 8. Script language

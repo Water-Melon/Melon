@@ -27,8 +27,8 @@ extern mln_sha1_t *mln_sha1_pool_new(mln_alloc_t *pool) __NONNULL1(1);
 extern void mln_sha1_free(mln_sha1_t *s);
 extern void mln_sha1_pool_free(mln_sha1_t *s);
 extern void mln_sha1_calc(mln_sha1_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last) __NONNULL1(1);
-extern void mln_sha1_toBytes(mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len) __NONNULL1(1);
-extern void mln_sha1_toString(mln_sha1_t *s, mln_s8ptr_t buf, mln_u32_t len) __NONNULL1(1);
+extern void mln_sha1_tobytes(mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len) __NONNULL1(1);
+extern void mln_sha1_tostring(mln_sha1_t *s, mln_s8ptr_t buf, mln_u32_t len) __NONNULL1(1);
 extern void mln_sha1_dump(mln_sha1_t *s) __NONNULL1(1);
 
 
@@ -52,8 +52,8 @@ extern mln_sha256_t *mln_sha256_pool_new(mln_alloc_t *pool) __NONNULL1(1);
 extern void mln_sha256_free(mln_sha256_t *s);
 extern void mln_sha256_pool_free(mln_sha256_t *s);
 extern void mln_sha256_calc(mln_sha256_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last) __NONNULL1(1);
-extern void mln_sha256_toBytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len) __NONNULL1(1);
-extern void mln_sha256_toString(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len) __NONNULL1(1);
+extern void mln_sha256_tobytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len) __NONNULL1(1);
+extern void mln_sha256_tostring(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len) __NONNULL1(1);
 extern void mln_sha256_dump(mln_sha256_t *s) __NONNULL1(1);
 
 #endif
