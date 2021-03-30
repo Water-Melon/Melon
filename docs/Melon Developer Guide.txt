@@ -2266,145 +2266,145 @@ Their definitions can be found in melon/include/mln_types.h.
   33) ASN.1
       There are two parts, one is about decode, the other one is about encode.
       I. decode
-      a) mln_asn1_deResult_getClass(pres);
+      a) mln_asn1_deresult_get_class(pres);
          Get the class of decoded ASN.1 string.
 
-      b) mln_asn1_deResult_getIdent(pres);
+      b) mln_asn1_deresult_get_ident(pres);
          Get the identifier of decoded ASN1.1 string.
 
-      c) mln_asn1_deResult_setIdent(pres,id);
+      c) mln_asn1_deresult_set_ident(pres,id);
          Set the identifier.
 
-      d) mln_asn1_deResult_isStructure(pres);
+      d) mln_asn1_deresult_get_isstruct(pres);
          Test whether the decoded result is a structure or not.
 
-      e) mln_asn1_deResult_getCode(pres);
+      e) mln_asn1_deresult_get_code(pres);
          Get the ASN.1 code which is relative to the decoded result.
 
-      f) mln_asn1_deResult_getCodeLength(pres);
+      f) mln_asn1_deresult_get_code_length(pres);
          Get the length of ASN.1 code which is relative to the decoded result.
 
-      g) mln_asn1_deResult_getNContent(pres);
+      g) mln_asn1_deresult_content_num(pres);
          Get the number of sub-result.
 
-      h) mln_asn1_deResult_t *mln_asn1_decodeChain(mln_chain_t *in, int *err, mln_alloc_t *pool);
+      h) mln_asn1_deresult_t *mln_asn1_decodeChain(mln_chain_t *in, int *err, mln_alloc_t *pool);
          Decode ASN.1 string from chain 'in'.
 
-      i) mln_asn1_deResult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_alloc_t *pool);
+      i) mln_asn1_deresult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_alloc_t *pool);
          Decode ASN.1 string from 'data'.
-         'data' do not need to free. It will be freed while the function 'mln_asn1_deResult_free' called.
+         'data' do not need to free. It will be freed while the function 'mln_asn1_deresult_free' called.
 
-      j) mln_asn1_deResult_t *mln_asn1_decodeRef(void *data, mln_u64_t len, int *err, mln_alloc_t *pool);
+      j) mln_asn1_deresult_t *mln_asn1_decodeRef(void *data, mln_u64_t len, int *err, mln_alloc_t *pool);
          Decode ASN.1 string from 'data'.
-         'data' should be free explicitly. It won't be freed while the function 'mln_asn1_deResult_free' called.
+         'data' should be free explicitly. It won't be freed while the function 'mln_asn1_deresult_free' called.
 
-      k) void mln_asn1_deResult_free(mln_asn1_deResult_t *res);
-         Free 'mln_asn1_deResult_t' data.
+      k) void mln_asn1_deresult_free(mln_asn1_deresult_t *res);
+         Free 'mln_asn1_deresult_t' data.
 
-      l) mln_asn1_deResult_t *mln_asn1_deResult_getContent(mln_asn1_deResult_t *res, mln_u32_t index);
+      l) mln_asn1_deresult_t *mln_asn1_deresult_get_content(mln_asn1_deresult_t *res, mln_u32_t index);
          Get the sub-result which is indicated by 'index' from 'res'.
 
-      m) void mln_asn1_deResult_dump(mln_asn1_deResult_t *res);
+      m) void mln_asn1_deresult_dump(mln_asn1_deresult_t *res);
          Dump decoded result and its sub-results.
 
       II. encode
-      a) mln_asn1_enResult_setPool(pres,p);
+      a) mln_asn1_enresult_set_pool(pres,p);
          Set a memory pool into a encode-result object.
 
-      b) mln_asn1_enResult_getPool(pres);
+      b) mln_asn1_enresult_get_pool(pres);
          Get the memory from 'pres'.
 
-      c) mln_asn1_enResult_setClass(pres,c);
+      c) mln_asn1_enresult_set_class(pres,c);
          Set a class into 'pres'.
 
-      d) mln_asn1_enResult_getClass(pres);
+      d) mln_asn1_enresult_get_class(pres);
          Get the class from 'pres'.
 
-      e) mln_asn1_enResult_setIsStruct(pres);
+      e) mln_asn1_enresult_set_isstruct(pres);
          Set 'pres' to be a structure.
 
-      f) mln_asn1_enResult_resetIsStruct(pres);
+      f) mln_asn1_enresult_reset_isstruct(pres);
          Set 'pres' to be a non-structure.
 
-      g) mln_asn1_enResult_getIsStruct(pres);
-         Get the flag of 'isStruct' for testing whether 'pres' is structure or not.
+      g) mln_asn1_enresult_get_isstruct(pres);
+         Get the flag of 'is_struct' for testing whether 'pres' is structure or not.
 
-      h) mln_asn1_enResult_setIdent(pres,id);
+      h) mln_asn1_enresult_set_ident(pres,id);
          Set an identifier into 'pres'.
 
-      i) mln_asn1_enResult_getIdent(pres);
+      i) mln_asn1_enresult_get_ident(pres);
          Get the identifier of 'pres'.
 
-      j) int mln_asn1_enResult_init(mln_asn1_enResult_t *res, mln_alloc_t *pool);
+      j) int mln_asn1_enresult_init(mln_asn1_enresult_t *res, mln_alloc_t *pool);
          Initialize an encode-result structure.
 
-      k) void mln_asn1_enResult_destroy(mln_asn1_enResult_t *res);
+      k) void mln_asn1_enresult_destroy(mln_asn1_enresult_t *res);
          Destroy an encode-result structure.
 
-      l) mln_asn1_enResult_t *mln_asn1_enResult_new(mln_alloc_t *pool);
+      l) mln_asn1_enresult_t *mln_asn1_enresult_new(mln_alloc_t *pool);
          Create and initialize an encode-result structure.
 
-      m) void mln_asn1_enResult_free(mln_asn1_enResult_t *res);
+      m) void mln_asn1_enresult_free(mln_asn1_enresult_t *res);
          Destroy and free an encode-result structure.
 
-      n) int mln_asn1_encode_boolean(mln_asn1_enResult_t *res, mln_u8_t val);
+      n) int mln_asn1_encode_boolean(mln_asn1_enresult_t *res, mln_u8_t val);
          Encode 'res' into an ASN.1 string of boolean.
 
-      o) int mln_asn1_encode_integer(mln_asn1_enResult_t *res, mln_u8ptr_t ints, mln_u64_t nints);
+      o) int mln_asn1_encode_integer(mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_t nints);
          Encode 'res' into an ASN.1 string of integer.
 
-      p) int mln_asn1_encode_bitString(mln_asn1_enResult_t *res, mln_u8ptr_t bits, mln_u64_t nbits);
+      p) int mln_asn1_encode_bitstring(mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u64_t nbits);
          Encode 'res' into an ASN.1 string of bit string.
 
-      q) int mln_asn1_encode_octetString(mln_asn1_enResult_t *res, mln_u8ptr_t octets, mln_u64_t n);
+      q) int mln_asn1_encode_octetstring(mln_asn1_enresult_t *res, mln_u8ptr_t octets, mln_u64_t n);
          Encode 'res' into an ASN.1 string of octet string.
 
-      r) int mln_asn1_encode_null(mln_asn1_enResult_t *res);
+      r) int mln_asn1_encode_null(mln_asn1_enresult_t *res);
          Encode 'res' into an ASN.1 string of null.
 
-      s) int mln_asn1_encode_objectIdentifier(mln_asn1_enResult_t *res, mln_u8ptr_t oid, mln_u64_t n);
+      s) int mln_asn1_encode_object_identifier(mln_asn1_enresult_t *res, mln_u8ptr_t oid, mln_u64_t n);
          Encode 'res' into an ASN.1 string of object identifier.
 
-      t) int mln_asn1_encode_utf8String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_t slen);
+      t) int mln_asn1_encode_utf8string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen);
          Encode 'res' into an ASN.1 string of UTF8string.
 
-      u) int mln_asn1_encode_printableString(mln_asn1_enResult_t *res, mln_s8ptr_t s, mln_u64_t slen);
+      u) int mln_asn1_encode_printablestring(mln_asn1_enresult_t *res, mln_s8ptr_t s, mln_u64_t slen);
          Encode 'res' into an ASN.1 string of printableString.
 
-      v) int mln_asn1_encode_t61String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_t slen);
+      v) int mln_asn1_encode_t61string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen);
          Encode 'res' into an ASN.1 string of T61String.
 
-      w) int mln_asn1_encode_ia5String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_t slen);
+      w) int mln_asn1_encode_ia5string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen);
          Encode 'res' into an ASN.1 string of IA5String.
 
-      x) int mln_asn1_encode_utctime(mln_asn1_enResult_t *res, time_t time);
+      x) int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time);
          Encode 'res' into an ASN.1 string of UTC time.
 
-      y) int mln_asn1_encode_generalizedTime(mln_asn1_enResult_t *res, time_t time);
+      y) int mln_asn1_encode_generalized_time(mln_asn1_enresult_t *res, time_t time);
          Encode 'res' into an ASN.1 string of Generalized time.
 
-      z) int mln_asn1_encode_sequence(mln_asn1_enResult_t *res);
+      z) int mln_asn1_encode_sequence(mln_asn1_enresult_t *res);
          Encode all sub-contents of 'res' into an ASN.1 string of Sequence.
 
-      aa) mln_asn1_encode_sequenceOf(res);
+      aa) mln_asn1_encode_sequenceof(res);
          Encode all sub-contents of 'res' into an ASN.1 string of Sequence of.
 
-      ab) int mln_asn1_encode_set(mln_asn1_enResult_t *res);
+      ab) int mln_asn1_encode_set(mln_asn1_enresult_t *res);
          Encode all sub-contents of 'res' into an ASN.1 string of Set.
 
-      ac) int mln_asn1_encode_setOf(mln_asn1_enResult_t *res);
+      ac) int mln_asn1_encode_setof(mln_asn1_enresult_t *res);
          Encode all sub-contents of 'res' into an ASN.1 string of Set of.
 
-      ad) int mln_asn1_encode_merge(mln_asn1_enResult_t *dest, mln_asn1_enResult_t *src);
+      ad) int mln_asn1_encode_merge(mln_asn1_enresult_t *dest, mln_asn1_enresult_t *src);
          Merge all sub-contents of 'dest' and 'src' into 'dest'.
 
-      ae) int mln_asn1_encode_transChainOnce(mln_asn1_enResult_t *res, mln_chain_t **head, mln_chain_t **tail);
+      ae) int mln_asn1_encode_trans_chain_once(mln_asn1_enresult_t *res, mln_chain_t **head, mln_chain_t **tail);
          Transform 'res' into an ASN.1 string stored in a chain.
 
-      af) int mln_asn1_enResult_getContent(mln_asn1_enResult_t *res, mln_u32_t index, mln_u8ptr_t *buf, mln_u64_t *len);
+      af) int mln_asn1_enresult_get_content(mln_asn1_enresult_t *res, mln_u32_t index, mln_u8ptr_t *buf, mln_u64_t *len);
          Get the sub-content which is indicated by 'index' from 'res'.
 
-      ag) int mln_asn1_encode_implicit(mln_asn1_enResult_t *res, mln_u32_t ident, mln_u32_t index);
+      ag) int mln_asn1_encode_implicit(mln_asn1_enresult_t *res, mln_u32_t ident, mln_u32_t index);
          Transform the content which is indicated by 'index' into Implicit type whose class will be set
          'M_ASN1_CLASS_CONTEXT_SPECIFIC' and identifier will be replaced by 'ident'.
 

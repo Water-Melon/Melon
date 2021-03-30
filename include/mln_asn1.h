@@ -43,38 +43,38 @@
 #define M_ASN1_ID_IA5STRING         22
 #define M_ASN1_ID_UTCTIME           23
 #define M_ASN1_ID_GENERALIZEDTIME   24
-#define mln_asn1_isSingleID(id,idmacro) ((id) == (idmacro))
+#define mln_asn1_is_single_id(id,idmacro) ((id) == (idmacro))
 
-typedef struct mln_asn1_deResult_s mln_asn1_deResult_t;
+typedef struct mln_asn1_deresult_s mln_asn1_deresult_t;
 
-struct mln_asn1_deResult_s {
+struct mln_asn1_deresult_s {
     mln_alloc_t                *pool;
-    mln_u8ptr_t                 codeBuf;
-    mln_u64_t                   codeLen;
-    mln_asn1_deResult_t       **contents;
+    mln_u8ptr_t                 code_buf;
+    mln_u64_t                   code_len;
+    mln_asn1_deresult_t       **contents;
     mln_u32_t                   max;
     mln_u32_t                   pos;
     mln_u32_t                   _class:2;
-    mln_u32_t                   isStruct:1;
+    mln_u32_t                   is_struct:1;
     mln_u32_t                   ident:28;
     mln_u32_t                   free:1;
 };
 
-#define mln_asn1_deResult_getPool(pres)         ((pres)->pool)
-#define mln_asn1_deResult_getClass(pres)        ((pres)->_class)
-#define mln_asn1_deResult_getIdent(pres)        ((pres)->ident)
-#define mln_asn1_deResult_setIdent(pres,id)     ((pres)->ident = (id))
-#define mln_asn1_deResult_isStructure(pres)     ((pres)->isStruct)
-#define mln_asn1_deResult_getCode(pres)         ((pres)->codeBuf)
-#define mln_asn1_deResult_getCodeLength(pres)   ((pres)->codeLen)
-#define mln_asn1_deResult_getNContent(pres)     ((pres)->pos)
+#define mln_asn1_deresult_get_pool(pres)         ((pres)->pool)
+#define mln_asn1_deresult_get_class(pres)        ((pres)->_class)
+#define mln_asn1_deresult_get_ident(pres)        ((pres)->ident)
+#define mln_asn1_deresult_set_ident(pres,id)     ((pres)->ident = (id))
+#define mln_asn1_deresult_get_isstruct(pres)     ((pres)->is_struct)
+#define mln_asn1_deresult_get_code(pres)         ((pres)->code_buf)
+#define mln_asn1_deresult_get_code_length(pres)  ((pres)->code_len)
+#define mln_asn1_deresult_content_num(pres)      ((pres)->pos)
 
-extern mln_asn1_deResult_t *mln_asn1_decodeChain(mln_chain_t *in, int *err, mln_alloc_t *pool) __NONNULL3(1,2,3);
-extern mln_asn1_deResult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_alloc_t *pool) __NONNULL3(1,3,4);
-extern mln_asn1_deResult_t *mln_asn1_decodeRef(void *data, mln_u64_t len, int *err, mln_alloc_t *pool) __NONNULL3(1,3,4);
-extern void mln_asn1_deResult_free(mln_asn1_deResult_t *res);
-extern mln_asn1_deResult_t *mln_asn1_deResult_getContent(mln_asn1_deResult_t *res, mln_u32_t index) __NONNULL1(1);
-extern void mln_asn1_deResult_dump(mln_asn1_deResult_t *res);
+extern mln_asn1_deresult_t *mln_asn1_decodeChain(mln_chain_t *in, int *err, mln_alloc_t *pool) __NONNULL3(1,2,3);
+extern mln_asn1_deresult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_alloc_t *pool) __NONNULL3(1,3,4);
+extern mln_asn1_deresult_t *mln_asn1_decodeRef(void *data, mln_u64_t len, int *err, mln_alloc_t *pool) __NONNULL3(1,3,4);
+extern void mln_asn1_deresult_free(mln_asn1_deresult_t *res);
+extern mln_asn1_deresult_t *mln_asn1_deresult_get_content(mln_asn1_deresult_t *res, mln_u32_t index) __NONNULL1(1);
+extern void mln_asn1_deresult_dump(mln_asn1_deresult_t *res);
 
 
 typedef struct {
@@ -84,43 +84,43 @@ typedef struct {
     mln_u32_t                max;
     mln_u32_t                pos;
     mln_u32_t                _class:2;
-    mln_u32_t                isStruct:1;
+    mln_u32_t                is_struct:1;
     mln_u32_t                ident:29;
-} mln_asn1_enResult_t;
+} mln_asn1_enresult_t;
 
-#define mln_asn1_enResult_setPool(pres,p)             ((pres)->pool = (p))
-#define mln_asn1_enResult_getPool(pres)               ((pres)->pool)
-#define mln_asn1_enResult_setClass(pres,c)            ((pres)->_class = (c))
-#define mln_asn1_enResult_getClass(pres)              ((pres)->_class)
-#define mln_asn1_enResult_setIsStruct(pres)           ((pres)->isStruct = 1)
-#define mln_asn1_enResult_resetIsStruct(pres)         ((pres)->isStruct = 0)
-#define mln_asn1_enResult_getIsStruct(pres)           ((pres)->isStruct)
-#define mln_asn1_enResult_setIdent(pres,id)           ((pres)->ident = (id))
-#define mln_asn1_enResult_getIdent(pres)              ((pres)->ident)
+#define mln_asn1_enresult_set_pool(pres,p)             ((pres)->pool = (p))
+#define mln_asn1_enresult_get_pool(pres)               ((pres)->pool)
+#define mln_asn1_enresult_set_class(pres,c)            ((pres)->_class = (c))
+#define mln_asn1_enresult_get_class(pres)              ((pres)->_class)
+#define mln_asn1_enresult_set_isstruct(pres)           ((pres)->is_struct = 1)
+#define mln_asn1_enresult_reset_isstruct(pres)         ((pres)->is_struct = 0)
+#define mln_asn1_enresult_get_isstruct(pres)           ((pres)->is_struct)
+#define mln_asn1_enresult_set_ident(pres,id)           ((pres)->ident = (id))
+#define mln_asn1_enresult_get_ident(pres)              ((pres)->ident)
 
-extern int mln_asn1_enResult_init(mln_asn1_enResult_t *res, mln_alloc_t *pool) __NONNULL2(1,2);
-extern void mln_asn1_enResult_destroy(mln_asn1_enResult_t *res);
-extern mln_asn1_enResult_t *mln_asn1_enResult_new(mln_alloc_t *pool) __NONNULL1(1);
-extern void mln_asn1_enResult_free(mln_asn1_enResult_t *res);
-extern int mln_asn1_encode_boolean(mln_asn1_enResult_t *res, mln_u8_t val) __NONNULL1(1);
-extern int mln_asn1_encode_integer(mln_asn1_enResult_t *res, mln_u8ptr_t ints, mln_u64_t nints) __NONNULL2(1,2);
-extern int mln_asn1_encode_bitString(mln_asn1_enResult_t *res, mln_u8ptr_t bits, mln_u64_t nbits) __NONNULL2(1,2);
-extern int mln_asn1_encode_octetString(mln_asn1_enResult_t *res, mln_u8ptr_t octets, mln_u64_t n) __NONNULL2(1,2);
-extern int mln_asn1_encode_null(mln_asn1_enResult_t *res) __NONNULL1(1);
-extern int mln_asn1_encode_objectIdentifier(mln_asn1_enResult_t *res, mln_u8ptr_t oid, mln_u64_t n) __NONNULL2(1,2);
-extern int mln_asn1_encode_utf8String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
-extern int mln_asn1_encode_printableString(mln_asn1_enResult_t *res, mln_s8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
-extern int mln_asn1_encode_t61String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
-extern int mln_asn1_encode_ia5String(mln_asn1_enResult_t *res, mln_u8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
-extern int mln_asn1_encode_utctime(mln_asn1_enResult_t *res, time_t time) __NONNULL1(1);
-extern int mln_asn1_encode_generalizedTime(mln_asn1_enResult_t *res, time_t time) __NONNULL1(1);
-extern int mln_asn1_encode_sequence(mln_asn1_enResult_t *res) __NONNULL1(1);
-#define mln_asn1_encode_sequenceOf(res) mln_asn1_encode_sequence(res)
-extern int mln_asn1_encode_set(mln_asn1_enResult_t *res) __NONNULL1(1);
-extern int mln_asn1_encode_setOf(mln_asn1_enResult_t *res) __NONNULL1(1);
-extern int mln_asn1_encode_merge(mln_asn1_enResult_t *dest, mln_asn1_enResult_t *src) __NONNULL2(1,2);
-extern int mln_asn1_encode_transChainOnce(mln_asn1_enResult_t *res, mln_chain_t **head, mln_chain_t **tail) __NONNULL3(1,2,3);
-extern int mln_asn1_enResult_getContent(mln_asn1_enResult_t *res, mln_u32_t index, mln_u8ptr_t *buf, mln_u64_t *len) __NONNULL3(1,3,4);
-extern int mln_asn1_encode_implicit(mln_asn1_enResult_t *res, mln_u32_t ident, mln_u32_t index) __NONNULL1(1);
+extern int mln_asn1_enresult_init(mln_asn1_enresult_t *res, mln_alloc_t *pool) __NONNULL2(1,2);
+extern void mln_asn1_enresult_destroy(mln_asn1_enresult_t *res);
+extern mln_asn1_enresult_t *mln_asn1_enresult_new(mln_alloc_t *pool) __NONNULL1(1);
+extern void mln_asn1_enresult_free(mln_asn1_enresult_t *res);
+extern int mln_asn1_encode_boolean(mln_asn1_enresult_t *res, mln_u8_t val) __NONNULL1(1);
+extern int mln_asn1_encode_integer(mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_t nints) __NONNULL2(1,2);
+extern int mln_asn1_encode_bitstring(mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u64_t nbits) __NONNULL2(1,2);
+extern int mln_asn1_encode_octetstring(mln_asn1_enresult_t *res, mln_u8ptr_t octets, mln_u64_t n) __NONNULL2(1,2);
+extern int mln_asn1_encode_null(mln_asn1_enresult_t *res) __NONNULL1(1);
+extern int mln_asn1_encode_object_identifier(mln_asn1_enresult_t *res, mln_u8ptr_t oid, mln_u64_t n) __NONNULL2(1,2);
+extern int mln_asn1_encode_utf8string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
+extern int mln_asn1_encode_printablestring(mln_asn1_enresult_t *res, mln_s8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
+extern int mln_asn1_encode_t61string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
+extern int mln_asn1_encode_ia5string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
+extern int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time) __NONNULL1(1);
+extern int mln_asn1_encode_generalized_time(mln_asn1_enresult_t *res, time_t time) __NONNULL1(1);
+extern int mln_asn1_encode_sequence(mln_asn1_enresult_t *res) __NONNULL1(1);
+#define mln_asn1_encode_sequenceof(res) mln_asn1_encode_sequence(res)
+extern int mln_asn1_encode_set(mln_asn1_enresult_t *res) __NONNULL1(1);
+extern int mln_asn1_encode_setof(mln_asn1_enresult_t *res) __NONNULL1(1);
+extern int mln_asn1_encode_merge(mln_asn1_enresult_t *dest, mln_asn1_enresult_t *src) __NONNULL2(1,2);
+extern int mln_asn1_encode_trans_chain_once(mln_asn1_enresult_t *res, mln_chain_t **head, mln_chain_t **tail) __NONNULL3(1,2,3);
+extern int mln_asn1_enresult_get_content(mln_asn1_enresult_t *res, mln_u32_t index, mln_u8ptr_t *buf, mln_u64_t *len) __NONNULL3(1,3,4);
+extern int mln_asn1_encode_implicit(mln_asn1_enresult_t *res, mln_u32_t ident, mln_u32_t index) __NONNULL1(1);
 #endif
 
