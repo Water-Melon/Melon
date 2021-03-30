@@ -2513,7 +2513,7 @@ Their definitions can be found in melon/include/mln_types.h.
       b) void mln_lang_free(mln_lang_t *lang);
          Destroy the 'lang' object.
 
-      c) mln_lang_setCache(lang);
+      c) mln_lang_cache_set(lang);
          If this function called, 'lang' will try to cache AST structures until no script context refer to it.
 
       d) mln_lang_ctx_t *mln_lang_job_new(mln_lang_t *lang,
@@ -2544,10 +2544,10 @@ Their definitions can be found in melon/include/mln_types.h.
       g) void mln_lang_msg_free(mln_lang_ctx_t *ctx, mln_string_t *name);
          Unregister a message communication item via the argument.
 
-      h) void mln_lang_msg_setHandler(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler);
+      h) void mln_lang_msg_handler_set(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler);
          Set receiving handler for C-side code.
 
-      i) int mln_lang_msg_sendMsg(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC);
+      i) int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC);
          Send the data to the script-side(isC must be 1) via the message communication item which is
          located by 'name'.
 

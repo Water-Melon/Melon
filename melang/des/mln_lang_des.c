@@ -87,7 +87,7 @@ static int mln_lang_des_handler(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -108,14 +108,14 @@ static mln_lang_var_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
     mln_u8ptr_t outbuf;
     mln_des_t des;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v3, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v3, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     val = sym->data.var->val;
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid argument 3.");
         return NULL;
     }
@@ -132,14 +132,14 @@ static mln_lang_var_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     val = sym->data.var->val;
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid argument 1.");
         return NULL;
     }
@@ -152,13 +152,13 @@ static mln_lang_var_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid argument 2.");
         return NULL;
     }
@@ -172,7 +172,7 @@ static mln_lang_var_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
     mln_des_buf(&des, tmp->data, tmp->len, outbuf, tmp->len, 0, encode);
     mln_string_nset(&t, outbuf, tmp->len);
 
-    ret_var = mln_lang_var_createTmpString(ctx, &t, NULL);
+    ret_var = mln_lang_var_create_string(ctx, &t, NULL);
     free(outbuf);
     if (ret_var == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -257,7 +257,7 @@ static int mln_lang_3des_handler(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -280,14 +280,14 @@ static mln_lang_var_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
     mln_u8ptr_t outbuf;
     mln_3des_t _3des;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v4, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v4, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     val = sym->data.var->val;
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid argument 4.");
         return NULL;
     }
@@ -304,39 +304,39 @@ static mln_lang_var_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     val = sym->data.var->val;
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid argument 2.");
         return NULL;
     }
     k1 = (mln_u64_t)(val->data.i);
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v3, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v3, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     val = sym->data.var->val;
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid argument 3.");
         return NULL;
     }
     k2 = (mln_u64_t)(val->data.i);
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid argument 1.");
         return NULL;
     }
@@ -358,7 +358,7 @@ static mln_lang_var_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
     mln_3des_buf(&_3des, tmp->data, tmp->len, outbuf, tmp->len, 0, encode);
     mln_string_nset(&t, outbuf, tmp->len);
 
-    ret_var = mln_lang_var_createTmpString(ctx, &t, NULL);
+    ret_var = mln_lang_var_create_string(ctx, &t, NULL);
     free(outbuf);
     if (ret_var == NULL) {
         mln_lang_errmsg(ctx, "No memory.");

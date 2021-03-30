@@ -86,7 +86,7 @@ struct mln_lang_s {
     mln_lang_ctx_t                  *wait_head;
     mln_lang_ctx_t                  *wait_tail;
     mln_lang_ctx_t                  *ctx_cur;
-    int                              fd_notInUsed;
+    int                              fd_not_used;
     int                              fd_signal;
     mln_rbtree_t                    *resource_set;
     mln_u64_t                        wait:62;
@@ -277,7 +277,7 @@ struct mln_lang_var_s {
     mln_lang_var_type_t              type;
     mln_string_t                    *name;
     mln_lang_val_t                  *val;
-    mln_lang_set_detail_t           *inSet;
+    mln_lang_set_detail_t           *in_set;
     mln_lang_var_t                  *prev;
     mln_lang_var_t                  *next;
     mln_lang_var_t                  *cache_prev;
@@ -314,14 +314,14 @@ typedef struct {
         mln_lang_object_t       *obj;
         mln_lang_array_t        *array;
     } data;
-    void                            *gcData;
+    void                            *gc_data;
 } mln_lang_gc_item_t;
 
 struct mln_lang_object_s {
-    mln_lang_set_detail_t           *inSet;
+    mln_lang_set_detail_t           *in_set;
     mln_rbtree_t                    *members;
     mln_u64_t                        ref;
-    mln_lang_gc_item_t              *gcItem;
+    mln_lang_gc_item_t              *gc_item;
     mln_lang_ctx_t                  *ctx;
 };
 
@@ -343,7 +343,7 @@ struct mln_lang_val_s {
     mln_u32_t                        ref;
     mln_lang_val_t                  *udata;
     mln_lang_func_detail_t          *func;
-    mln_u32_t                        notModify:1;
+    mln_u32_t                        not_modify:1;
 };
 
 struct mln_lang_funccall_val_s {
@@ -360,7 +360,7 @@ struct mln_lang_array_s {
     mln_rbtree_t                    *elems_key;
     mln_u64_t                        index;
     mln_u64_t                        ref;
-    mln_lang_gc_item_t              *gcItem;
+    mln_lang_gc_item_t              *gc_item;
     mln_lang_ctx_t                  *ctx;
 };
 
@@ -412,7 +412,7 @@ struct mln_lang_methods_s {
 extern mln_lang_method_t *mln_lang_methods[];
 
 
-#define mln_lang_setCache(lang) ((lang)->cache = 1)
+#define mln_lang_cache_set(lang) ((lang)->cache = 1)
 extern void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg) __NONNULL2(1,2);
 extern mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev) __NONNULL2(1,2);
 extern void mln_lang_free(mln_lang_t *lang);
@@ -424,51 +424,48 @@ mln_lang_job_new(mln_lang_t *lang, \
                  void *udata, \
                  mln_lang_return_handler handler) __NONNULL2(1,3);
 extern void mln_lang_job_free(mln_lang_ctx_t *ctx);
-extern void mln_lang_funccall_val_addObject(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val) __NONNULL2(1,2);
+extern void mln_lang_funccall_val_object_add(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val) __NONNULL2(1,2);
 /*
  * Note:
  * 'name' must be in heap or global memory. It will be crashed in stack.
  */
-extern int mln_lang_ctx_addGlobalVar(mln_lang_ctx_t *ctx, mln_string_t *name, void *val, mln_u32_t type) __NONNULL2(1,2);
-extern mln_lang_var_t *mln_lang_var_createTmpCall(mln_lang_ctx_t *ctx, mln_lang_funccall_val_t *call);
-extern mln_lang_var_t *mln_lang_var_createTmpNil(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_var_t *
-mln_lang_var_createTmpObj(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *inSet, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_var_t *mln_lang_var_createTmpTrue(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_var_t *mln_lang_var_createTmpFalse(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_var_t *mln_lang_var_createTmpInt(mln_lang_ctx_t *ctx, mln_s64_t off, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_var_t *mln_lang_var_createTmpReal(mln_lang_ctx_t *ctx, double f, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_var_t *mln_lang_var_createTmpBool(mln_lang_ctx_t *ctx, mln_u8_t b, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_var_t *mln_lang_var_createTmpString_ref(mln_lang_ctx_t *ctx, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
-extern mln_lang_var_t *mln_lang_var_createTmpString(mln_lang_ctx_t *ctx, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
-extern mln_lang_var_t *mln_lang_var_createTmpArray(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_symbolNode_t *mln_lang_symbolNode_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
+extern int mln_lang_ctx_global_var_add(mln_lang_ctx_t *ctx, mln_string_t *name, void *val, mln_u32_t type) __NONNULL2(1,2);
+extern mln_lang_var_t *mln_lang_var_create_call(mln_lang_ctx_t *ctx, mln_lang_funccall_val_t *call);
+extern mln_lang_var_t *mln_lang_var_create_nil(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_var_t *mln_lang_var_create_obj(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *in_set, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_var_t *mln_lang_var_create_true(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_var_t *mln_lang_var_create_false(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_var_t *mln_lang_var_create_int(mln_lang_ctx_t *ctx, mln_s64_t off, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_var_t *mln_lang_var_create_real(mln_lang_ctx_t *ctx, double f, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_var_t *mln_lang_var_create_bool(mln_lang_ctx_t *ctx, mln_u8_t b, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_var_t *mln_lang_var_create_ref_string(mln_lang_ctx_t *ctx, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
+extern mln_lang_var_t *mln_lang_var_create_string(mln_lang_ctx_t *ctx, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
+extern mln_lang_var_t *mln_lang_var_create_array(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
+extern mln_lang_symbolNode_t *mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
 /* Note end*/
-extern int mln_lang_symbolNode_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data) __NONNULL2(1,3);
+extern int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data) __NONNULL2(1,3);
 extern mln_lang_var_t *mln_lang_var_new(mln_lang_ctx_t *ctx, \
                                         mln_string_t *name, \
                                         mln_lang_var_type_t type, \
                                         mln_lang_val_t *val, \
-                                        mln_lang_set_detail_t *inSet) __NONNULL1(1);
+                                        mln_lang_set_detail_t *in_set) __NONNULL1(1);
 extern void mln_lang_var_free(void *data);
 #define mln_lang_var_ref(var) (++(var)->ref, (var))
-#define mln_lang_var_setType(var,t) ((var)->type = (t))
-#define mln_lang_var_getType(var,t) ((var)->type)
-#define mln_lang_var_getVal(var) ((var)->val)
-#define mln_lang_val_setNotModify(val) ((val)->notModify = 1)
-#define mln_lang_val_issetNotModify(val) ((val)->notModify)
-#define mln_lang_val_resetNotModify(val) ((val)->notModify = 0)
-extern void mln_lang_var_setInt(mln_lang_var_t *var, mln_s64_t i) __NONNULL1(1);
-extern void mln_lang_var_setReal(mln_lang_var_t *var, double r) __NONNULL1(1);
-extern void mln_lang_var_setString(mln_lang_var_t *var, mln_string_t *s) __NONNULL2(1,2);
-extern mln_s64_t mln_lang_var_toInt(mln_lang_var_t *var) __NONNULL1(1);
-extern double mln_lang_var_toReal(mln_lang_var_t *var) __NONNULL1(1);
-extern mln_string_t *mln_lang_var_toString(mln_alloc_t *pool, mln_lang_var_t *var) __NONNULL2(1,2);
+#define mln_lang_var_val_get(var) ((var)->val)
+#define mln_lang_val_not_modify_set(val) ((val)->not_modify = 1)
+#define mln_lang_val_not_modify_isset(val) ((val)->not_modify)
+#define mln_lang_val_not_modify_reset(val) ((val)->not_modify = 0)
+extern void mln_lang_var_set_int(mln_lang_var_t *var, mln_s64_t i) __NONNULL1(1);
+extern void mln_lang_var_set_real(mln_lang_var_t *var, double r) __NONNULL1(1);
+extern void mln_lang_var_set_string(mln_lang_var_t *var, mln_string_t *s) __NONNULL2(1,2);
+extern mln_s64_t mln_lang_var_toint(mln_lang_var_t *var) __NONNULL1(1);
+extern double mln_lang_var_toreal(mln_lang_var_t *var) __NONNULL1(1);
+extern mln_string_t *mln_lang_var_tostring(mln_alloc_t *pool, mln_lang_var_t *var) __NONNULL2(1,2);
 extern mln_lang_var_t *mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var) __NONNULL2(1,2);
 extern void mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val) __NONNULL2(1,2);
-extern int mln_lang_var_setValue(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
-extern int mln_lang_var_setValue_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
-extern mln_s32_t mln_lang_var_getValType(mln_lang_var_t *var) __NONNULL1(1);
+extern int mln_lang_var_value_set(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
+extern int mln_lang_var_value_set_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
+extern mln_s32_t mln_lang_var_val_type_get(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_lang_func_detail_t *
 mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                          mln_lang_funcType_t type, \
@@ -477,19 +474,19 @@ mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
 extern void mln_lang_func_detail_free(mln_lang_func_detail_t *lfd);
 extern mln_lang_val_t *mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data) __NONNULL1(1);
 extern void mln_lang_val_free(mln_lang_val_t *val);
-extern int mln_lang_condition_isTrue(mln_lang_var_t *var) __NONNULL1(1);
+extern int mln_lang_condition_is_true(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_lang_var_t *mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_funccall_val_free(mln_lang_funccall_val_t *func);
 extern mln_lang_var_t *
-mln_lang_array_getAndNew(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
+mln_lang_array_get(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
 extern int mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_msg_free(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);
-extern void mln_lang_msg_setHandler(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler) __NONNULL2(1,2);
-extern int mln_lang_msg_sendMsg(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC) __NONNULL3(1,2,3);
+extern void mln_lang_msg_handler_set(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler) __NONNULL2(1,2);
+extern int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC) __NONNULL3(1,2,3);
 extern mln_lang_set_detail_t *
 mln_lang_set_detail_new(mln_alloc_t *pool, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_set_detail_free(mln_lang_set_detail_t *c);
-extern void mln_lang_set_detail_freeSelf(mln_lang_set_detail_t *c);
+extern void mln_lang_set_detail_self_free(mln_lang_set_detail_t *c);
 extern int
 mln_lang_set_member_add(mln_alloc_t *pool, mln_rbtree_t *members, mln_lang_var_t *var) __NONNULL3(1,2,3);
 extern int

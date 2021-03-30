@@ -77,7 +77,7 @@ static int mln_lang_matrix_mul_handler(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -95,13 +95,13 @@ static mln_lang_var_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
     mln_lang_array_t *a1, *a2;
     mln_matrix_t *m1, *m2, *mres;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     if (sym->type != M_LANG_SYMBOL_VAR || \
-        mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_ARRAY)
+        mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_ARRAY)
     {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
@@ -112,13 +112,13 @@ static mln_lang_var_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     if (sym->type != M_LANG_SYMBOL_VAR || \
-        mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_ARRAY)
+        mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_ARRAY)
     {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
@@ -142,7 +142,7 @@ static mln_lang_var_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
     mln_matrix_free(m2);
     if (mres == NULL) {
         if (err == EINVAL) {
-            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -191,7 +191,7 @@ static int mln_lang_matrix_inv_handler(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -209,13 +209,13 @@ static mln_lang_var_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx)
     mln_lang_array_t *a;
     mln_matrix_t *m, *mres;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     if (sym->type != M_LANG_SYMBOL_VAR || \
-        mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_ARRAY)
+        mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_ARRAY)
     {
         mln_lang_errmsg(ctx, "Invalid type of argument.");
         return NULL;
@@ -234,7 +234,7 @@ static mln_lang_var_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx)
     mln_matrix_free(m);
     if (mres == NULL) {
         if (err == EINVAL) {
-            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -270,15 +270,15 @@ mln_lang_array2matrix(mln_lang_ctx_t *ctx, mln_lang_array_t *array)
     kvar.type = M_LANG_VAR_NORMAL;
     kvar.name = NULL;
     kvar.val = &kval;
-    kvar.inSet = NULL;
+    kvar.in_set = NULL;
     kvar.prev = kvar.next = NULL;
     kval.data.s = &r;
     kval.type = M_LANG_VAL_TYPE_STRING;
     kval.ref = 1;
-    if ((array_val = mln_lang_array_getAndNew(ctx, array, &kvar)) == NULL) {
+    if ((array_val = mln_lang_array_get(ctx, array, &kvar)) == NULL) {
         return NULL;
     }
-    if (mln_lang_var_getValType(array_val) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(array_val) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
     }
@@ -287,15 +287,15 @@ mln_lang_array2matrix(mln_lang_ctx_t *ctx, mln_lang_array_t *array)
     kvar.type = M_LANG_VAR_NORMAL;
     kvar.name = NULL;
     kvar.val = &kval;
-    kvar.inSet = NULL;
+    kvar.in_set = NULL;
     kvar.prev = kvar.next = NULL;
     kval.data.s = &c;
     kval.type = M_LANG_VAL_TYPE_STRING;
     kval.ref = 1;
-    if ((array_val = mln_lang_array_getAndNew(ctx, array, &kvar)) == NULL) {
+    if ((array_val = mln_lang_array_get(ctx, array, &kvar)) == NULL) {
         return NULL;
     }
-    if (mln_lang_var_getValType(array_val) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(array_val) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
     }
@@ -304,15 +304,15 @@ mln_lang_array2matrix(mln_lang_ctx_t *ctx, mln_lang_array_t *array)
     kvar.type = M_LANG_VAR_NORMAL;
     kvar.name = NULL;
     kvar.val = &kval;
-    kvar.inSet = NULL;
+    kvar.in_set = NULL;
     kvar.prev = kvar.next = NULL;
     kval.data.s = &d;
     kval.type = M_LANG_VAL_TYPE_STRING;
     kval.ref = 1;
-    if ((array_val = mln_lang_array_getAndNew(ctx, array, &kvar)) == NULL) {
+    if ((array_val = mln_lang_array_get(ctx, array, &kvar)) == NULL) {
         return NULL;
     }
-    if (mln_lang_var_getValType(array_val) != M_LANG_VAL_TYPE_ARRAY) {
+    if (mln_lang_var_val_type_get(array_val) != M_LANG_VAL_TYPE_ARRAY) {
         mln_lang_errmsg(ctx, "Invalid argument.");
         return NULL;
     }
@@ -332,16 +332,16 @@ mln_lang_array2matrix(mln_lang_ctx_t *ctx, mln_lang_array_t *array)
         kvar.type = M_LANG_VAR_NORMAL;
         kvar.name = NULL;
         kvar.val = &kval;
-        kvar.inSet = NULL;
+        kvar.in_set = NULL;
         kvar.prev = kvar.next = NULL;
         kval.data.i = i;
         kval.type = M_LANG_VAL_TYPE_INT;
         kval.ref = 1;
-        if ((array_val = mln_lang_array_getAndNew(ctx, darray, &kvar)) == NULL) {
+        if ((array_val = mln_lang_array_get(ctx, darray, &kvar)) == NULL) {
             free(data);
             return NULL;
         }
-        type = mln_lang_var_getValType(array_val);
+        type = mln_lang_var_val_type_get(array_val);
         if (type == M_LANG_VAL_TYPE_INT) {
             *p++ = array_val->val->data.i;
         } else if (type == M_LANG_VAL_TYPE_REAL) {
@@ -371,7 +371,7 @@ static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_
     mln_string_t c = mln_string("col");
     mln_string_t d = mln_string("data");
 
-    if ((ret_var = mln_lang_var_createTmpArray(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_array(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -380,24 +380,24 @@ static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_
     var.type = M_LANG_VAR_NORMAL;
     var.name = NULL;
     var.val = &val;
-    var.inSet = NULL;
+    var.in_set = NULL;
     var.prev = var.next = NULL;
     val.data.s = &r;
     val.type = M_LANG_VAL_TYPE_STRING;
     val.ref = 1;
-    if ((array_val = mln_lang_array_getAndNew(ctx, array, &var)) == NULL) {
+    if ((array_val = mln_lang_array_get(ctx, array, &var)) == NULL) {
         mln_lang_var_free(ret_var);
         return NULL;
     }
     var.type = M_LANG_VAR_NORMAL;
     var.name = NULL;
     var.val = &val;
-    var.inSet = NULL;
+    var.in_set = NULL;
     var.prev = var.next = NULL;
     val.data.i = m->row;
     val.type = M_LANG_VAL_TYPE_INT;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
+    if (mln_lang_var_value_set(ctx, array_val, &var) < 0) {
         mln_lang_var_free(ret_var);
         return NULL;
     }
@@ -405,24 +405,24 @@ static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_
     var.type = M_LANG_VAR_NORMAL;
     var.name = NULL;
     var.val = &val;
-    var.inSet = NULL;
+    var.in_set = NULL;
     var.prev = var.next = NULL;
     val.data.s = &c;
     val.type = M_LANG_VAL_TYPE_STRING;
     val.ref = 1;
-    if ((array_val = mln_lang_array_getAndNew(ctx, array, &var)) == NULL) {
+    if ((array_val = mln_lang_array_get(ctx, array, &var)) == NULL) {
         mln_lang_var_free(ret_var);
         return NULL;
     }
     var.type = M_LANG_VAR_NORMAL;
     var.name = NULL;
     var.val = &val;
-    var.inSet = NULL;
+    var.in_set = NULL;
     var.prev = var.next = NULL;
     val.data.i = m->col;
     val.type = M_LANG_VAL_TYPE_INT;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
+    if (mln_lang_var_value_set(ctx, array_val, &var) < 0) {
         mln_lang_var_free(ret_var);
         return NULL;
     }
@@ -434,7 +434,7 @@ static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_
     }
 
     for (p = m->data, pend = m->data+m->row*m->col; p < pend; ++p) {
-        if ((array_val = mln_lang_array_getAndNew(ctx, darray, NULL)) == NULL) {
+        if ((array_val = mln_lang_array_get(ctx, darray, NULL)) == NULL) {
             mln_lang_array_free(darray);
             mln_lang_var_free(ret_var);
             return NULL;
@@ -442,12 +442,12 @@ static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_
         var.type = M_LANG_VAR_NORMAL;
         var.name = NULL;
         var.val = &val;
-        var.inSet = NULL;
+        var.in_set = NULL;
         var.prev = var.next = NULL;
         val.data.f = *p;
         val.type = M_LANG_VAL_TYPE_REAL;
         val.ref = 1;
-        if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
+        if (mln_lang_var_value_set(ctx, array_val, &var) < 0) {
             mln_lang_array_free(darray);
             mln_lang_var_free(ret_var);
             return NULL;
@@ -457,12 +457,12 @@ static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_
     var.type = M_LANG_VAR_NORMAL;
     var.name = NULL;
     var.val = &val;
-    var.inSet = NULL;
+    var.in_set = NULL;
     var.prev = var.next = NULL;
     val.data.s = &d;
     val.type = M_LANG_VAL_TYPE_STRING;
     val.ref = 1;
-    if ((array_val = mln_lang_array_getAndNew(ctx, array, &var)) == NULL) {
+    if ((array_val = mln_lang_array_get(ctx, array, &var)) == NULL) {
         mln_lang_array_free(darray);
         mln_lang_var_free(ret_var);
         return NULL;
@@ -470,12 +470,12 @@ static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_
     var.type = M_LANG_VAR_NORMAL;
     var.name = NULL;
     var.val = &val;
-    var.inSet = NULL;
+    var.in_set = NULL;
     var.prev = var.next = NULL;
     val.data.array = darray;
     val.type = M_LANG_VAL_TYPE_ARRAY;
     val.ref = 1;
-    if (mln_lang_var_setValue(ctx, array_val, &var) < 0) {
+    if (mln_lang_var_value_set(ctx, array_val, &var) < 0) {
         mln_lang_array_free(darray);
         mln_lang_var_free(ret_var);
         return NULL;

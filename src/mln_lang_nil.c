@@ -67,7 +67,7 @@ mln_lang_method_t mln_lang_nil_oprs = {
 static int
 mln_lang_nil_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    if (mln_lang_var_setValue(ctx, op1, op2) < 0) {
+    if (mln_lang_var_value_set(ctx, op1, op2) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -78,7 +78,7 @@ mln_lang_nil_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
 static int
 mln_lang_nil_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    mln_s32_t type = mln_lang_var_getValType(op1);
+    mln_s32_t type = mln_lang_var_val_type_get(op1);
     if (type != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
@@ -99,13 +99,13 @@ mln_lang_nil_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
 static int
 mln_lang_nil_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    if (mln_lang_var_getValType(op1) != mln_lang_var_getValType(op2)) {
-        if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+    if (mln_lang_var_val_type_get(op1) != mln_lang_var_val_type_get(op2)) {
+        if ((*ret = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
     } else {
-        if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_create_true(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
@@ -116,13 +116,13 @@ mln_lang_nil_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
 static int
 mln_lang_nil_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    if (mln_lang_var_getValType(op1) != mln_lang_var_getValType(op2)) {
-        if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
+    if (mln_lang_var_val_type_get(op1) != mln_lang_var_val_type_get(op2)) {
+        if ((*ret = mln_lang_var_create_true(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
     } else {
-        if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
@@ -133,7 +133,7 @@ mln_lang_nil_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t 
 static int
 mln_lang_nil_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    mln_s32_t type = mln_lang_var_getValType(op2);
+    mln_s32_t type = mln_lang_var_val_type_get(op2);
     if (type != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
@@ -154,7 +154,7 @@ mln_lang_nil_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
 static int
 mln_lang_nil_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
+    if ((*ret = mln_lang_var_create_true(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }

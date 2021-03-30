@@ -413,7 +413,7 @@ static int mln_lang_network_tcp_listen(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -434,13 +434,13 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     char ip[128] = {0}, host[128] = {0}, service[64] = {0};
     mln_lang_tcp_t *tcp;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument1 missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
@@ -451,13 +451,13 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     }
     memcpy(host, val1->data.s->data, val1->data.s->len);
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument2 missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
@@ -474,7 +474,7 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     addr.ai_socktype = SOCK_STREAM;
     addr.ai_protocol = IPPROTO_IP;
     if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -482,7 +482,7 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     }
     if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
         freeaddrinfo(res);
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -491,7 +491,7 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     if (mln_lang_network_get_addr(res->ai_addr, ip, &port) < 0) {
         mln_socket_close(fd);
         freeaddrinfo(res);
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -510,7 +510,7 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
 #endif
         mln_lang_tcp_free(tcp);
         freeaddrinfo(res);
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -519,7 +519,7 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     if (bind(fd, res->ai_addr, res->ai_addrlen) < 0) {
         mln_lang_tcp_free(tcp);
         freeaddrinfo(res);
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -528,13 +528,13 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     freeaddrinfo(res);
     if (listen(fd, 32767) < 0) {
         mln_lang_tcp_free(tcp);
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
         return ret_var;
     }
-    if ((ret_var = mln_lang_var_createTmpInt(ctx, fd, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_int(ctx, fd, NULL)) == NULL) {
         mln_lang_tcp_free(tcp);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
@@ -617,7 +617,7 @@ static int mln_lang_network_tcp_accept(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -634,25 +634,25 @@ static mln_lang_var_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ctx)
     mln_lang_tcp_t *tcp;
     int fd, timeout, type;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
     fd = sym->data.var->val->data.i;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    type = mln_lang_var_getValType(sym->data.var);
+    type = mln_lang_var_val_type_get(sym->data.var);
     if (type == M_LANG_VAL_TYPE_NIL) {
         timeout = M_EV_UNLIMITED;
     } else if (type == M_LANG_VAL_TYPE_INT && sym->data.var->val->data.i >= 0) {
@@ -662,7 +662,7 @@ static mln_lang_var_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -747,7 +747,7 @@ static int mln_lang_network_tcp_recv(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -764,25 +764,25 @@ static mln_lang_var_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx)
     mln_lang_tcp_t *tcp;
     int fd, timeout, type;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
     fd = sym->data.var->val->data.i;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    type = mln_lang_var_getValType(sym->data.var);
+    type = mln_lang_var_val_type_get(sym->data.var);
     if (type == M_LANG_VAL_TYPE_NIL) {
         timeout = M_EV_UNLIMITED;
     } else if (type == M_LANG_VAL_TYPE_INT && sym->data.var->val->data.i >= 0) {
@@ -792,7 +792,7 @@ static mln_lang_var_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -871,7 +871,7 @@ static int mln_lang_network_tcp_send(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -892,31 +892,31 @@ static mln_lang_var_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx)
     mln_buf_t *b;
     mln_u8ptr_t buf;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
     fd = sym->data.var->val->data.i;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
     data = sym->data.var->val->data.s;
 
-    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -1033,7 +1033,7 @@ static int mln_lang_network_tcp_connect(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -1054,13 +1054,13 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
     mln_u16_t port;
     char host[128] = {0}, service[32] = {0}, ip[128] = {0};
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v3, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v3, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    type = mln_lang_var_getValType(sym->data.var);
+    type = mln_lang_var_val_type_get(sym->data.var);
     if (type == M_LANG_VAL_TYPE_NIL) {
         timeout = M_EV_UNLIMITED;
     } else if (type == M_LANG_VAL_TYPE_INT && sym->data.var->val->data.i >= 0) {
@@ -1070,13 +1070,13 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
@@ -1087,13 +1087,13 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
     }
     memcpy(host, val->data.s->data, val->data.s->len);
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
@@ -1110,7 +1110,7 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
     addr.ai_socktype = SOCK_STREAM;
     addr.ai_protocol = IPPROTO_IP;
     if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -1118,7 +1118,7 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
     }
     if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
         freeaddrinfo(res);
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -1127,7 +1127,7 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
     if (mln_lang_network_get_addr(res->ai_addr, ip, &port) < 0) {
         mln_socket_close(fd);
         freeaddrinfo(res);
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
@@ -1164,14 +1164,14 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_lang_tcp_free(tcp);
         freeaddrinfo(res);
-        if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
         return ret_var;
     }
     freeaddrinfo(res);
-    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
         mln_event_set_fd(ctx->lang->ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
         mln_lang_tcp_free(tcp);
         mln_lang_errmsg(ctx, "No memory.");
@@ -1243,7 +1243,7 @@ static int mln_lang_network_tcp_shutdown(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -1263,13 +1263,13 @@ static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx
     mln_string_t recv_mode = mln_string("recv");
     int fd;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
@@ -1280,19 +1280,19 @@ static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx
         return NULL;
     }
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
     val = sym->data.var->val;
 
-    if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_nil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -1390,7 +1390,7 @@ static int mln_lang_network_tcp_close(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -1405,17 +1405,17 @@ static mln_lang_var_t *mln_lang_network_tcp_close_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("fd");
     mln_lang_symbolNode_t *sym;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
-    if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_nil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -1447,7 +1447,7 @@ static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *
                 failed = 1;
             }
         } else {
-            if ((ret_var = mln_lang_var_createTmpInt(tcp->ctx, fd, NULL)) != NULL) {
+            if ((ret_var = mln_lang_var_create_int(tcp->ctx, fd, NULL)) != NULL) {
                 mln_lang_ctx_set_ret_var(tcp->ctx, ret_var);
             } else {
                 failed = 1;
@@ -1474,7 +1474,7 @@ static void mln_lang_network_tcp_connect_timeout_handler(mln_event_t *ev, int fd
     tcp->timeout = M_EV_UNLIMITED;
     mln_lang_ctx_tcp_resource_remove(tcp);
     mln_lang_network_tcp_resource_remove(ctx->lang, fd);
-    if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) != NULL) {
+    if ((ret_var = mln_lang_var_create_nil(ctx, NULL)) != NULL) {
         mln_lang_ctx_set_ret_var(ctx, ret_var);
     }
     mln_lang_ctx_continue(ctx);
@@ -1506,7 +1506,7 @@ static void mln_lang_network_tcp_accept_handler(mln_event_t *ev, int fd, void *d
             if ((newtcp = mln_lang_tcp_new(tcp->lang, connfd, ip, port)) == NULL) {
                 mln_socket_close(connfd);
             } else {
-                if ((ret_var = mln_lang_var_createTmpInt(tcp->ctx, connfd, NULL)) == NULL) {
+                if ((ret_var = mln_lang_var_create_int(tcp->ctx, connfd, NULL)) == NULL) {
                     mln_lang_tcp_free(newtcp);
                 } else {
                     if (mln_lang_network_tcp_resource_add(tcp->lang, newtcp) < 0) {
@@ -1536,7 +1536,7 @@ static void mln_lang_network_tcp_recv_handler(mln_event_t *ev, int fd, void *dat
     if (rc == M_C_ERROR) {
         /* do nothing */
     } else if (rc == M_C_CLOSED && mln_tcp_conn_get_head(&(tcp->conn), M_C_RECV) == NULL) {
-        mln_lang_var_t *ret_var = mln_lang_var_createTmpTrue(tcp->ctx, NULL);
+        mln_lang_var_t *ret_var = mln_lang_var_create_true(tcp->ctx, NULL);
         if (ret_var == NULL) {
             mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, tcp, mln_lang_network_tcp_recv_handler);
             return;
@@ -1558,7 +1558,7 @@ static void mln_lang_network_tcp_recv_handler(mln_event_t *ev, int fd, void *dat
             p += mln_buf_left_size(c->buf);
         }
         mln_string_nset(&tmp, buf, size);
-        mln_lang_var_t *ret_var = mln_lang_var_createTmpString(tcp->ctx, &tmp, NULL);
+        mln_lang_var_t *ret_var = mln_lang_var_create_string(tcp->ctx, &tmp, NULL);
         free(buf);
         if (ret_var == NULL) {
             mln_event_set_fd(ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, tcp, mln_lang_network_tcp_recv_handler);
@@ -1584,7 +1584,7 @@ static void mln_lang_network_tcp_send_handler(mln_event_t *ev, int fd, void *dat
             mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, tcp, mln_lang_network_tcp_send_handler);
             return;
         } else {
-            mln_lang_var_t *ret_var = mln_lang_var_createTmpTrue(tcp->ctx, NULL);
+            mln_lang_var_t *ret_var = mln_lang_var_create_true(tcp->ctx, NULL);
             if (ret_var != NULL) mln_lang_ctx_set_ret_var(tcp->ctx, ret_var);
         }
     }
@@ -1599,7 +1599,7 @@ static void mln_lang_network_tcp_timeout_handler(mln_event_t *ev, int fd, void *
     mln_lang_tcp_t *tcp = (mln_lang_tcp_t *)data;
     mln_lang_var_t *ret_var;
     mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-    ret_var = mln_lang_var_createTmpNil(tcp->ctx, NULL);
+    ret_var = mln_lang_var_create_nil(tcp->ctx, NULL);
     tcp->recving = 0;
     ASSERT(!tcp->sending);
     if (ret_var != NULL) {
@@ -1788,7 +1788,7 @@ static int mln_lang_network_udp_create(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -1808,13 +1808,13 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
     char host[128] = {0}, service[64] = {0};
     mln_lang_udp_t *udp;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    type = mln_lang_var_getValType(sym->data.var);
+    type = mln_lang_var_val_type_get(sym->data.var);
     if (type == M_LANG_VAL_TYPE_STRING) {
         val1 = sym->data.var->val;
         if (val1->data.s->len > sizeof(host)-1) {
@@ -1829,13 +1829,13 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    type = mln_lang_var_getValType(sym->data.var);
+    type = mln_lang_var_val_type_get(sym->data.var);
     if (type == M_LANG_VAL_TYPE_STRING) {
         if (notbind) {
             mln_lang_errmsg(ctx, "host cannot be nil.");
@@ -1859,7 +1859,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
 
     if (notbind) {
         if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -1877,7 +1877,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
         addr.ai_socktype = SOCK_DGRAM;
         addr.ai_protocol = IPPROTO_IP;
         if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
-            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -1885,7 +1885,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
         }
         if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
             freeaddrinfo(res);
-            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -1910,7 +1910,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
 #endif
             mln_lang_udp_free(udp);
             freeaddrinfo(res);
-            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -1919,7 +1919,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
         if (bind(fd, res->ai_addr, res->ai_addrlen) < 0) {
             mln_lang_udp_free(udp);
             freeaddrinfo(res);
-            if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+            if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
                 mln_lang_errmsg(ctx, "No memory.");
                 return NULL;
             }
@@ -1927,7 +1927,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
         }
         freeaddrinfo(res);
     }
-    if ((ret_var = mln_lang_var_createTmpInt(ctx, fd, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_int(ctx, fd, NULL)) == NULL) {
         mln_lang_udp_free(udp);
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
@@ -1977,7 +1977,7 @@ static int mln_lang_network_udp_close(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -1992,17 +1992,17 @@ static mln_lang_var_t *mln_lang_network_udp_close_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("fd");
     mln_lang_symbolNode_t *sym;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
-    if ((ret_var = mln_lang_var_createTmpNil(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_nil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -2085,7 +2085,7 @@ static int mln_lang_network_udp_send(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -2106,37 +2106,37 @@ static mln_lang_var_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
     char host[128] = {0}, service[64] = {0};
     mln_lang_udp_t *udp;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
     fd = sym->data.var->val->data.i;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
     data = sym->data.var->val->data.s;
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v3, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v3, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 3.");
         return NULL;
     }
@@ -2147,13 +2147,13 @@ static mln_lang_var_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
     }
     memcpy(host, val->data.s->data, val->data.s->len);
 
-    if ((sym = mln_lang_symbolNode_search(ctx, &v4, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v4, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 4.");
         return NULL;
     }
@@ -2164,7 +2164,7 @@ static mln_lang_var_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
     }
     memcpy(service, val->data.s->data, val->data.s->len);
 
-    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -2222,7 +2222,7 @@ static void mln_lang_network_udp_send_handler(mln_event_t *ev, int fd, void *dat
         return;
     }
     if (rc >= 0) {
-        mln_lang_var_t *ret_var = mln_lang_var_createTmpTrue(udp->ctx, NULL);
+        mln_lang_var_t *ret_var = mln_lang_var_create_true(udp->ctx, NULL);
         if (ret_var != NULL) mln_lang_ctx_set_ret_var(udp->ctx, ret_var);
     }
     mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
@@ -2323,7 +2323,7 @@ static int mln_lang_network_udp_recv(mln_lang_ctx_t *ctx)
         mln_lang_val_free(val);
         return -1;
     }
-    if (mln_lang_symbolNode_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_var_free(var);
         return -1;
@@ -2342,25 +2342,25 @@ static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
     mln_lang_udp_t *udp;
     mln_lang_var_t *var1, *var2;
     /*arg1*/
-    if ((sym = mln_lang_symbolNode_search(ctx, &v1, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
     fd = sym->data.var->val->data.i;
     /*arg2*/
-    if ((sym = mln_lang_symbolNode_search(ctx, &v2, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if (mln_lang_var_getValType(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
         mln_lang_errmsg(ctx, "Invalid type of argument 2.");
         return NULL;
     }
@@ -2370,7 +2370,7 @@ static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     /*arg3*/
-    if ((sym = mln_lang_symbolNode_search(ctx, &v3, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v3, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
@@ -2378,7 +2378,7 @@ static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     var1 = sym->data.var;
     /*arg4*/
-    if ((sym = mln_lang_symbolNode_search(ctx, &v4, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v4, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
@@ -2386,13 +2386,13 @@ static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
     var2 = sym->data.var;
     /*arg5*/
-    if ((sym = mln_lang_symbolNode_search(ctx, &v5, 1)) == NULL) {
+    if ((sym = mln_lang_symbol_node_search(ctx, &v5, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
     ASSERT(sym->type == M_LANG_SYMBOL_VAR);
-    if ((type = mln_lang_var_getValType(sym->data.var)) == M_LANG_VAL_TYPE_NIL) {
+    if ((type = mln_lang_var_val_type_get(sym->data.var)) == M_LANG_VAL_TYPE_NIL) {
         timeout = M_EV_UNLIMITED;
     } else if (type == M_LANG_VAL_TYPE_INT && (timeout = sym->data.var->val->data.i) >= 0) {
         /*do nothing*/
@@ -2401,7 +2401,7 @@ static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    if ((ret_var = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
@@ -2481,13 +2481,13 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
     var.type = M_LANG_VAR_NORMAL;
     var.name = NULL;
     var.val = &val;
-    var.inSet = NULL;
+    var.in_set = NULL;
     var.prev = var.next = NULL;
     val.type = M_LANG_VAL_TYPE_STRING;
     val.ref = 1;
     mln_string_set(&tmp, ip);
     val.data.s = &tmp;
-    if (mln_lang_var_setValue(udp->ctx, udp->ip, &var) < 0) {
+    if (mln_lang_var_value_set(udp->ctx, udp->ip, &var) < 0) {
         if (rc > 0) free(buf);
         goto out;
     }
@@ -2495,19 +2495,19 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
     var.type = M_LANG_VAR_NORMAL;
     var.name = NULL;
     var.val = &val;
-    var.inSet = NULL;
+    var.in_set = NULL;
     var.prev = var.next = NULL;
     val.data.i = port;
     val.type = M_LANG_VAL_TYPE_INT;
     val.ref = 1;
-    if (mln_lang_var_setValue(udp->ctx, udp->port, &var) < 0) {
+    if (mln_lang_var_value_set(udp->ctx, udp->port, &var) < 0) {
         if (rc > 0) free(buf);
         goto out;
     }
     /*data*/
     if (rc > 0) {
         mln_string_nset(&tmp, buf, rc);
-        ret_var = mln_lang_var_createTmpString(udp->ctx, &tmp, NULL);
+        ret_var = mln_lang_var_create_string(udp->ctx, &tmp, NULL);
         free(buf);
         if (ret_var != NULL) mln_lang_ctx_set_ret_var(udp->ctx, ret_var);
     }
@@ -2523,7 +2523,7 @@ static void mln_lang_network_udp_timeout_handler(mln_event_t *ev, int fd, void *
     mln_lang_udp_t *udp = (mln_lang_udp_t *)data;
     mln_lang_var_t *ret_var;
     mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-    ret_var = mln_lang_var_createTmpNil(udp->ctx, NULL);
+    ret_var = mln_lang_var_create_nil(udp->ctx, NULL);
     udp->recving = 0;
     ASSERT(!udp->sending);
     if (ret_var != NULL) {

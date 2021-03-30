@@ -67,7 +67,7 @@ mln_lang_method_t mln_lang_func_oprs = {
 static int
 mln_lang_func_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    if (mln_lang_var_setValue(ctx, op1, op2) < 0) {
+    if (mln_lang_var_value_set(ctx, op1, op2) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -80,21 +80,21 @@ mln_lang_func_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
 {
     mln_u8ptr_t data1, data2;
     mln_lang_func_detail_t *f1, *f2;
-    if (mln_lang_var_getValType(op1) != mln_lang_var_getValType(op2)) {
+    if (mln_lang_var_val_type_get(op1) != mln_lang_var_val_type_get(op2)) {
 f:
-        if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
         return 0;
     }
-    f1 = mln_lang_var_getVal(op1)->data.func;
-    f2 = mln_lang_var_getVal(op2)->data.func;
+    f1 = mln_lang_var_val_get(op1)->data.func;
+    f2 = mln_lang_var_val_get(op2)->data.func;
     if (f1->type != f2->type) goto f;
     data1 = f1->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f1->data.process: (mln_u8ptr_t)f1->data.stm;
     data2 = f2->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f2->data.process: (mln_u8ptr_t)f2->data.stm;
     if (data1 != data2) goto f;
-    if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
+    if ((*ret = mln_lang_var_create_true(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -104,7 +104,7 @@ f:
 static int
 mln_lang_func_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    mln_s32_t type = mln_lang_var_getValType(op1);
+    mln_s32_t type = mln_lang_var_val_type_get(op1);
     if (type != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
@@ -127,21 +127,21 @@ mln_lang_func_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t
 {
     mln_u8ptr_t data1, data2;
     mln_lang_func_detail_t *f1, *f2;
-    if (mln_lang_var_getValType(op1) != mln_lang_var_getValType(op2)) {
+    if (mln_lang_var_val_type_get(op1) != mln_lang_var_val_type_get(op2)) {
 t:
-        if ((*ret = mln_lang_var_createTmpTrue(ctx, NULL)) == NULL) {
+        if ((*ret = mln_lang_var_create_true(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
         return 0;
     }
-    f1 = mln_lang_var_getVal(op1)->data.func;
-    f2 = mln_lang_var_getVal(op2)->data.func;
+    f1 = mln_lang_var_val_get(op1)->data.func;
+    f2 = mln_lang_var_val_get(op2)->data.func;
     if (f1->type != f2->type) goto t;
     data1 = f1->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f1->data.process: (mln_u8ptr_t)f1->data.stm;
     data2 = f2->type == M_FUNC_INTERNAL? (mln_u8ptr_t)f2->data.process: (mln_u8ptr_t)f2->data.stm;
     if (data1 != data2) goto t;
-    if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((*ret = mln_lang_var_create_false(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -151,7 +151,7 @@ t:
 static int
 mln_lang_func_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    if (mln_lang_var_getValType(op2) != M_LANG_VAL_TYPE_STRING) {
+    if (mln_lang_var_val_type_get(op2) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Operation Not support.");
         return -1;
     }
@@ -177,7 +177,7 @@ mln_lang_func_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
     else
         ASSERT(op1->val->data.func->data.stm);
 #endif
-    if ((*ret = mln_lang_var_createTmpFalse(ctx, NULL)) == NULL) {
+    if ((*ret = mln_lang_var_create_false(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
