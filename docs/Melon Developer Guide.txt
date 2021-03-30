@@ -1657,19 +1657,19 @@ Their definitions can be found in melon/include/mln_types.h.
             0 -- 'bn1' == 'bn2'
             1 -- 'bn1' > 'bn2'.
 
-      p) int mln_bignum_absCompare(mln_bignum_t *bn1, mln_bignum_t *bn2);
+      p) int mln_bignum_abs_compare(mln_bignum_t *bn1, mln_bignum_t *bn2);
          Same as 'mln_bignum_compare', but ignore the negative sign.
 
-      q) int mln_bignum_testBit(mln_bignum_t *bn, mln_u32_t index);
+      q) int mln_bignum_bit_test(mln_bignum_t *bn, mln_u32_t index);
          Test the bit that is specified by 'index' is 0 or 1.
          'index' starts from 0.
          Return value: 0 -- bit is 0, 1 -- bit is 1.
 
-      r) void mln_bignum_leftShift(mln_bignum_t *bn, mln_u32_t n);
+      r) void mln_bignum_left_shift(mln_bignum_t *bn, mln_u32_t n);
          Left shift.
          'n' starts from 0.
 
-      s) void mln_bignum_rightShift(mln_bignum_t *bn, mln_u32_t n);
+      s) void mln_bignum_right_shift(mln_bignum_t *bn, mln_u32_t n);
          Right shift.
          'n' starts from 0.
 
@@ -1679,22 +1679,22 @@ Their definitions can be found in melon/include/mln_types.h.
          'bitwidth' indicates the number of big number's bit.
          If 'bitwidth' is invalid, -1 will be returned.
 
-      u) int mln_bignum_extendEulid(mln_bignum_t *a,
-                                    mln_bignum_t *b,
-                                    mln_bignum_t *x,
-                                    mln_bignum_t *y,
-                                    mln_bignum_t *gcd);
+      u) int mln_bignum_extend_eulid(mln_bignum_t *a,
+                                     mln_bignum_t *b,
+                                     mln_bignum_t *x,
+                                     mln_bignum_t *y,
+                                     mln_bignum_t *gcd);
          Extend Eulid calculation.
 
-      v) mln_bignum_isPositive(pbn);
+      v) mln_bignum_is_positive(pbn);
          Test whether 'pbn' is positive or not.
 
-      w) mln_bignum_isNegative(pbn);
+      w) mln_bignum_is_negative(pbn);
          Test whether 'pbn' is negative or not.
 
-      x) mln_bignum_getLength(pbn);
+      x) mln_bignum_get_length(pbn);
          Get the number of 4-octet data;
-         So if we want to get the number of bytes, we can 'mln_bignum_getLength(pbn) * 4'.
+         So if we want to get the number of bytes, we can 'mln_bignum_get_length(pbn) * 4'.
 
       y) mln_bignum_zero();
          Initialize a big number to be zero.
@@ -2605,13 +2605,13 @@ Their definitions can be found in melon/include/mln_types.h.
          Recovery RTP packet.
          If there is only one RTP packet lost, it can be recovered through this function.
 
-      f) mln_fec_setPT(fec,_pt);
+      f) mln_fec_set_pt(fec,_pt);
          Set PT field in RTP header.
 
-      g) mln_fec_getResult(_result,index,_len);
+      g) mln_fec_get_result(_result,index,_len);
          Get fec result data.
 
-      h) mln_fec_getResultNum(_result);
+      h) mln_fec_get_result_num(_result);
          Get number of data that stored in fec result. 
 
   37) Matrix
@@ -2661,89 +2661,89 @@ Their definitions can be found in melon/include/mln_types.h.
       a) mln_gc_t *mln_gc_new(struct mln_gc_attr *attr);
          Create a new gc object. Definition of argument 'attr' is given below:
          struct mln_gc_attr {
-             mln_alloc_t          *pool;
-             gcItemGetter          itemGetter;
-             gcItemSetter          itemSetter;
-             gcItemFreer           itemFreer;
-             gcMemberSetter        memberSetter;
-             gcMoveHandler         moveHandler;
-             gcRootSetter          rootSetter;
-             gcCleanSearcher       cleanSearcher;
-             gcFreeHandler         freeHandler;
+             mln_alloc_t            *pool;
+             gc_item_getter          item_getter;
+             gc_item_setter          item_setter;
+             gc_item_freer           item_freer;
+             gc_member_setter        member_setter;
+             gc_move_handler         move_handler;
+             gc_root_setter          root_setter;
+             gc_clean_searcher       clean_searcher;
+             gc_free_handler         free_handler;
          };
          pool is a memory pool. The prototypes of rest function pointers are shown below:
 
-         <I>    typedef void *(*gcItemGetter)   (void *data);
+         <I>    typedef void *(*gc_item_getter)   (void *data);
                 This function will be called in many interfaces for getting the a gc-data that
                 is created by 'mln_gc_add()'. Argument is a user data that should be managed by
                 garbage collector.
 
-         <II>   typedef void  (*gcItemSetter)   (void *data, void *item);
+         <II>   typedef void  (*gc_item_setter)   (void *data, void *item);
                 This function is used to set 'item' into 'data'.
                 'item' is a gc-data. 'data' is an user data.
 
-         <III>  typedef void  (*gcItemFreer)    (void *data);
+         <III>  typedef void  (*gc_item_freer)    (void *data);
                 Free user data 'data'.
 
-         <IV>   typedef void  (*gcMemberSetter) (mln_gc_t *gc, void *data);
+         <IV>   typedef void  (*gc_member_setter) (mln_gc_t *gc, void *data);
                 Gather every related data from 'data' and add in 'gc' to participate the calculation
                 of garbage collection.
 
-         <V>    typedef void  (*gcMoveHandler)  (mln_gc_t *destGC, void *data);
+         <V>    typedef void  (*gc_move_handler)  (mln_gc_t *destGC, void *data);
                 Change something about garbage collector in user data 'data' to be related with
                 'destGC'.
 
-         <VI>   typedef void  (*gcRootSetter)   (mln_gc_t *gc, void *data);
+         <VI>   typedef void  (*gc_root_setter)   (mln_gc_t *gc, void *data);
                 Gather every related data from 'data' and add in 'gc' to participate the calculation
                 of root collection in garbage collection.
                 'data' may not be the same as 'data' in other callback functions. It is identical to
                 the second argument of 'mln_gc_collect()'.
 
-         <VII>  typedef void  (*gcCleanSearcher)(mln_gc_t *gc, void *data);
+         <VII>  typedef void  (*gc_clean_searcher)(mln_gc_t *gc, void *data);
                 Gather every related data from 'data' and add in 'gc' to participate 'sweep'.
-                'data' is an user data that is the same type as in 'gcMemberSetter'.
+                'data' is an user data that is the same type as in 'gc_member_setter'.
 
-         <VIII> typedef void  (*gcFreeHandler)  (void *data);
+         <VIII> typedef void  (*gc_free_handler)  (void *data);
                 Clean all about garbage collector (gc-data) from user data 'data'.
 
       b) void mln_gc_free(mln_gc_t *gc);
          Free a 'gc'.
-         In this function, callback function 'freeHandler' will be called to clean gc-data from
+         In this function, callback function 'free_handler' will be called to clean gc-data from
          every user data left in 'gc'.
 
       c) int mln_gc_add(mln_gc_t *gc, void *data);
          Add user data 'data' in 'gc'. This function is only add the user data that should be
          managed in 'gc'.
-         In this function, callback function 'itemSetter' will be called to set a new gc-data
+         In this function, callback function 'item_setter' will be called to set a new gc-data
          into user data 'data.
 
       d) void mln_gc_suspect(mln_gc_t *gc, void *data);
          Mark user data 'data' as a suspected memory block.
-         In this function, callback function 'itemGetter' will be called to get gc-data from
+         In this function, callback function 'item_getter' will be called to get gc-data from
          'data'.
 
       e) void mln_gc_merge(mln_gc_t *dest, mln_gc_t *src);
-         Merge 'src' into 'dest'. In this function, callback function 'moveHandler' will be
+         Merge 'src' into 'dest'. In this function, callback function 'move_handler' will be
          called to modifiy something about new collector in user data.
 
-      f) void mln_gc_addForCollect(mln_gc_t *gc, void *data);
+      f) void mln_gc_collect_add(mln_gc_t *gc, void *data);
          This function is used to add 'data' into 'gc' while collecting garbages (in
          'mln_gc_collect()'). You should call this function in callback function
-         'memberSetter'.
+         'member_setter'.
          'data' is an user data that you want to add in 'gc'.
 
-      g) int mln_gc_addForClean(mln_gc_t *gc, void *data);
+      g) int mln_gc_clean_add(mln_gc_t *gc, void *data);
          This function is used to add 'data' into 'gc' while collecting garbages (in
          'mln_gc_collect()'). You should call this function in callback function
-         'cleanSearcher'.
+         'clean_searcher'.
          'data' is an user data that you want to add in 'gc'.
 
       h) void mln_gc_collect(mln_gc_t *gc, void *rootData);
          This function is used to collect garbage.
-         'rootData' indicates a data that will be used in callback function 'rootSetter' to gather
+         'rootData' indicates a data that will be used in callback function 'root_setter' to gather
          root memory blocks those are reachable and can be tracked.
-         In this function, callback functions -- 'gcItemFreer', 'gcMemberSetter', 'gcRootSetter',
-         'gcCleanSearcher' will be called.
+         In this function, callback functions -- 'gc_item_freer', 'gc_member_setter', 'gc_root_setter',
+         'gc_clean_searcher' will be called.
 
       i) void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *procGC);
          Remove 'data' from 'gc'.

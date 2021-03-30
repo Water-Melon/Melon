@@ -59,13 +59,13 @@ mln_fec_xor(mln_string_t *data1, mln_string_t *data2)
 
 /*mln_fec_result_t*/
 static mln_fec_result_t *
-mln_fec_result_new(mln_string_t **packets, mln_size_t nrPackets)
+mln_fec_result_new(mln_string_t **packets, mln_size_t nr_packets)
 {
     mln_fec_result_t *fr;
     if ((fr = (mln_fec_result_t *)malloc(sizeof(mln_fec_result_t))) == NULL)
         return NULL;
     fr->packets = packets;
-    fr->nrPackets = nrPackets;
+    fr->nr_packets = nr_packets;
     return fr;
 }
 
@@ -85,7 +85,7 @@ mln_fec_t *mln_fec_new(void)
 
     if ((fec = (mln_fec_t *)malloc(sizeof(mln_fec_t))) == NULL)
         return NULL;
-    fec->seqNo = 0;
+    fec->seq_no = 0;
     fec->pt = 0;
     return fec;
 }
@@ -252,8 +252,8 @@ mln_fec_generateFECPacket(mln_fec_t *fec, \
     }
     buf[1] = fec->pt;
     p = buf + 2;
-    mln_bigendian_encode(fec->seqNo, p, 2);
-    ++fec->seqNo;
+    mln_bigendian_encode(fec->seq_no, p, 2);
+    ++fec->seq_no;
     memcpy(p, &(packets[n-1])[4], 8);/*TS and SSRC*/
     mln_string_nset(&tmp, buf, len);
     if ((ret = mln_string_dup(&tmp)) == NULL) {
@@ -361,7 +361,7 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
     mln_u32_t ssrc = 0;
     mln_string_t tmp, *t, *res;
     mln_u8ptr_t *p, *pend;
-    mln_u16_t *pl, seqNo, isLong = 0;
+    mln_u16_t *pl, seq_no, isLong = 0;
     mln_u16_t snBase = 0;
     mln_u8_t bitString[10] = {0};
 
@@ -378,17 +378,17 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
         if (((*p)[1] & 0x7f) == fec->pt)
             continue;
         ptr = (*p) + 2;
-        mln_bigendian_decode(seqNo, ptr, 2);
-        if (seqNo < snBase)
+        mln_bigendian_decode(seq_no, ptr, 2);
+        if (seq_no < snBase)
             continue;
         if (isLong) {
-            if (!(mask & ((mln_u64_t)1 << (47 - (seqNo - snBase)))))
+            if (!(mask & ((mln_u64_t)1 << (47 - (seq_no - snBase)))))
                 continue;
-            mask &= (~((mln_u64_t)1 << (47 - (seqNo - snBase))));
+            mask &= (~((mln_u64_t)1 << (47 - (seq_no - snBase))));
         } else {
-            if (!(mask & ((mln_u64_t)1 << (15 - (seqNo - snBase)))))
+            if (!(mask & ((mln_u64_t)1 << (15 - (seq_no - snBase)))))
                 continue;
-            mask &= (~((mln_u64_t)1 << (15 - (seqNo - snBase))));
+            mask &= (~((mln_u64_t)1 << (15 - (seq_no - snBase))));
         }
 
         t = res;
@@ -409,11 +409,11 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
         *blen = 0;
         return 0;
     }
-    for (seqNo = 0; mask; mask >>= 1, ++seqNo) {
+    for (seq_no = 0; mask; mask >>= 1, ++seq_no) {
         if (mask & 0x1) {
-            if (isLong) seqNo = 47 - seqNo;
-            else seqNo = 15 - seqNo;
-            seqNo += snBase;
+            if (isLong) seq_no = 47 - seq_no;
+            else seq_no = 15 - seq_no;
+            seq_no += snBase;
             mask >>= 1;
             break;
         }
@@ -436,7 +436,7 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
     ptr = res->data;
     *buf++ = ((*ptr++) & 0x3f) | 0x80;
     *buf++ = *ptr++;
-    mln_bigendian_encode(seqNo, buf, 2);
+    mln_bigendian_encode(seq_no, buf, 2);
     ptr += 2;
     *buf++ = *ptr++;
     *buf++ = *ptr++;
@@ -459,7 +459,7 @@ static int mln_fec_decode_body(mln_fec_t *fec, \
                                mln_u16_t bodyLen)
 {
     mln_u64_t mask = 0;
-    mln_u16_t seqNo, snBase, protectLen = 0;
+    mln_u16_t seq_no, snBase, protectLen = 0;
     mln_u16_t *pl, isLong = 0;
     mln_u8ptr_t ptr, *p, *pend;
     mln_string_t *t, *res, tmp;
@@ -482,16 +482,16 @@ static int mln_fec_decode_body(mln_fec_t *fec, \
     for (; p < pend; ++p, ++pl) {
         if (((*p)[1] & 0x7f) == fec->pt) continue;
         ptr = (*p) + 2;
-        mln_bigendian_decode(seqNo, ptr, 2);
-        if (seqNo < snBase) continue;
+        mln_bigendian_decode(seq_no, ptr, 2);
+        if (seq_no < snBase) continue;
         if (isLong) {
-            if (!(mask & ((mln_u64_t)1 << (47 - (seqNo - snBase)))))
+            if (!(mask & ((mln_u64_t)1 << (47 - (seq_no - snBase)))))
                 continue;
-            mask &= (~((mln_u64_t)1 << (47 - (seqNo - snBase))));
+            mask &= (~((mln_u64_t)1 << (47 - (seq_no - snBase))));
         } else {
-            if (!(mask & ((mln_u64_t)1 << (15 - (seqNo - snBase)))))
+            if (!(mask & ((mln_u64_t)1 << (15 - (seq_no - snBase)))))
                 continue;
-            mask &= (~((mln_u64_t)1 << (15 - (seqNo - snBase))));
+            mask &= (~((mln_u64_t)1 << (15 - (seq_no - snBase))));
         }
 
         t = res;

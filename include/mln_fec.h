@@ -20,20 +20,20 @@
 
 typedef struct {
     mln_string_t          **packets;
-    mln_size_t              nrPackets;
+    mln_size_t              nr_packets;
 } mln_fec_result_t;
 
 typedef struct {
-    mln_u16_t               seqNo;  /*fec seqNo*/
-    mln_u16_t               pt:7;   /*fec's rtp pt field*/
+    mln_u16_t               seq_no;  /*fec seq_no*/
+    mln_u16_t               pt:7;    /*fec's rtp pt field*/
 } mln_fec_t;
 
-#define mln_fec_setPT(fec,_pt)        ((fec)->pt = (_pt))
-#define mln_fec_getResult(_result,index,_len)   \
-  ((_result)->nrPackets<=(index)? \
+#define mln_fec_set_pt(fec,_pt)        ((fec)->pt = (_pt))
+#define mln_fec_get_result(_result,index,_len)   \
+  ((_result)->nr_packets<=(index)? \
     NULL: \
     ((_len)=(_result)->packets[(index)]->len, (uint8_t *)((_result)->packets[(index)]->data)))
-#define mln_fec_getResultNum(_result) ((_result)->nrPackets)
+#define mln_fec_get_result_num(_result) ((_result)->nr_packets)
 
 #ifdef __cplusplus
 extern "C" mln_fec_t *mln_fec_new(void);

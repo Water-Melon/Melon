@@ -78,18 +78,18 @@ lp:
 
     mln_bignum_mul(&n, &q);
 
-    if (!mln_bignum_testBit(&n, bits-1)) goto lp;
+    if (!mln_bignum_bit_test(&n, bits-1)) goto lp;
 
     if (pub != NULL) {
         pub->p = p;
         pub->q = q;
-        if (mln_bignum_extendEulid(&q, &p, &(pub->qinv), NULL) < 0) goto lp;
+        if (mln_bignum_extend_eulid(&q, &p, &(pub->qinv), NULL) < 0) goto lp;
         if (mln_bignum_compare(&(pub->qinv), &one) < 0) goto lp;
     }
     if (pri != NULL) {
         pri->p = p;
         pri->q = q;
-        if (mln_bignum_extendEulid(&q, &p, &(pri->qinv), NULL) < 0) goto lp;
+        if (mln_bignum_extend_eulid(&q, &p, &(pri->qinv), NULL) < 0) goto lp;
         if (mln_bignum_compare(&(pri->qinv), &one) < 0) goto lp;
     }
     mln_bignum_sub(&p, &one);
@@ -101,7 +101,7 @@ lp:
 
     mln_bignum_assign(&e, "0x10001", 7);
 
-    if (mln_bignum_extendEulid(&e, &phiN, &d, NULL) < 0) goto lp;
+    if (mln_bignum_extend_eulid(&e, &phiN, &d, NULL) < 0) goto lp;
     if (mln_bignum_compare(&d, &e) <= 0) goto lp;
 
     if (pub != NULL) {
@@ -126,7 +126,7 @@ lp:
 
 static inline int mln_rsa_rsaep_rsadp(mln_rsa_key_t *key, mln_bignum_t *in, mln_bignum_t *out)
 {
-    if (key->pwr || mln_bignum_absCompare(&(key->ed), &(key->p)) <= 0) {
+    if (key->pwr || mln_bignum_abs_compare(&(key->ed), &(key->p)) <= 0) {
 in:
         if (mln_bignum_pwr(in, &(key->ed), &(key->n)) < 0) return -1;
         *out = *in;
@@ -136,7 +136,7 @@ in:
         mln_bignum_pwr(&m1, &(key->dp), &(key->p));
         mln_bignum_pwr(&m2, &(key->dq), &(key->q));
         mln_bignum_sub(&m1, &m2);
-        if (mln_bignum_isNegative(&m1)) goto in;
+        if (mln_bignum_is_negative(&m1)) goto in;
         mln_bignum_mul(&m1, &(key->qinv));
         mln_bignum_div(&m1, &(key->p), NULL);
         mln_bignum_mul(&m1, &(key->q));
@@ -222,7 +222,7 @@ static inline mln_u8ptr_t mln_rsa_antiPaddingPrivate(mln_u8ptr_t in, mln_size_t 
 
 mln_string_t *mln_RSAESPKCS1V15PubEncrypt(mln_rsa_key_t *pub, mln_string_t *text)
 {
-    mln_size_t nlen = mln_bignum_getLength(&(pub->n)) << 2;
+    mln_size_t nlen = mln_bignum_get_length(&(pub->n)) << 2;
     mln_u8ptr_t buf, p;
     mln_u8ptr_t in = text->data;
     mln_string_t *ret = NULL, tmp;
@@ -266,7 +266,7 @@ mln_string_t *mln_RSAESPKCS1V15PubEncrypt(mln_rsa_key_t *pub, mln_string_t *text
 
 mln_string_t *mln_RSAESPKCS1V15PubDecrypt(mln_rsa_key_t *pub, mln_string_t *cipher)
 {
-    mln_size_t nlen = mln_bignum_getLength(&(pub->n)) << 2;
+    mln_size_t nlen = mln_bignum_get_length(&(pub->n)) << 2;
     mln_u8ptr_t buf, p, pos;
     mln_u8ptr_t in = cipher->data;
     mln_string_t *ret = NULL, tmp;
@@ -320,7 +320,7 @@ mln_string_t *mln_RSAESPKCS1V15PubDecrypt(mln_rsa_key_t *pub, mln_string_t *ciph
 
 mln_string_t *mln_RSAESPKCS1V15PriEncrypt(mln_rsa_key_t *pri, mln_string_t *text)
 {
-    mln_size_t nlen = mln_bignum_getLength(&(pri->n)) << 2;
+    mln_size_t nlen = mln_bignum_get_length(&(pri->n)) << 2;
     mln_u8ptr_t buf, p;
     mln_u8ptr_t in = text->data;
     mln_string_t *ret = NULL, tmp;
@@ -362,7 +362,7 @@ mln_string_t *mln_RSAESPKCS1V15PriEncrypt(mln_rsa_key_t *pri, mln_string_t *text
 
 mln_string_t *mln_RSAESPKCS1V15PriDecrypt(mln_rsa_key_t *pri, mln_string_t *cipher)
 {
-    mln_size_t nlen = mln_bignum_getLength(&(pri->n)) << 2;
+    mln_size_t nlen = mln_bignum_get_length(&(pri->n)) << 2;
     mln_u8ptr_t buf, p, pos;
     mln_u8ptr_t in = cipher->data;
     mln_string_t *ret = NULL, tmp;
@@ -511,7 +511,7 @@ mln_string_t *mln_RSASSAPKCS1V15SIGN(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_
     mln_string_t *ret = NULL, tmp, *em;
     mln_u8ptr_t buf, p, q;
     mln_u64_t len = 4096, left, n, k;
-    k = (mln_bignum_getLength(&(pri->n)) << 2) - 11;
+    k = (mln_bignum_get_length(&(pri->n)) << 2) - 11;
 
     if (k < 1) return NULL;
 
@@ -565,7 +565,7 @@ int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t
     mln_string_t tmp, *ret;
     mln_u8ptr_t buf, p, q, end;
     mln_u64_t len = 4096;
-    mln_size_t n = mln_bignum_getLength(&(pub->n)) << 2;
+    mln_size_t n = mln_bignum_get_length(&(pub->n)) << 2;
     mln_u8_t hashval[32] = {0};
     mln_size_t hlen;
     mln_u32_t hashType;

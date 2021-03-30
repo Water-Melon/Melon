@@ -52,13 +52,13 @@ static inline void mln_gc_item_free(mln_gc_item_t *item)
  */
 mln_gc_t *mln_gc_new(struct mln_gc_attr *attr)
 {
-    if (attr->itemGetter == NULL || \
-        attr->itemSetter == NULL || \
-        attr->itemFreer == NULL || \
-        attr->memberSetter == NULL || \
-        attr->moveHandler == NULL || \
-        attr->cleanSearcher == NULL || \
-        attr->freeHandler == NULL)
+    if (attr->item_getter == NULL || \
+        attr->item_setter == NULL || \
+        attr->item_freer == NULL || \
+        attr->member_setter == NULL || \
+        attr->move_handler == NULL || \
+        attr->clean_searcher == NULL || \
+        attr->free_handler == NULL)
     {
         mln_log(error, "Invalid arguments.\n");
         abort();
@@ -72,14 +72,14 @@ mln_gc_t *mln_gc_new(struct mln_gc_attr *attr)
     gc->item_head = gc->item_tail = NULL;
     gc->proc_head = gc->proc_tail = NULL;
     gc->iter = NULL;
-    gc->itemGetter = attr->itemGetter;
-    gc->itemSetter = attr->itemSetter;
-    gc->itemFreer = attr->itemFreer;
-    gc->memberSetter = attr->memberSetter;
-    gc->moveHandler = attr->moveHandler;
-    gc->rootSetter = attr->rootSetter;
-    gc->cleanSearcher = attr->cleanSearcher;
-    gc->freeHandler = attr->freeHandler;
+    gc->item_getter = attr->item_getter;
+    gc->item_setter = attr->item_setter;
+    gc->item_freer = attr->item_freer;
+    gc->member_setter = attr->member_setter;
+    gc->move_handler = attr->move_handler;
+    gc->root_setter = attr->root_setter;
+    gc->clean_searcher = attr->clean_searcher;
+    gc->free_handler = attr->free_handler;
     gc->del = 0;
     return gc;
 }
@@ -93,7 +93,7 @@ void mln_gc_free(mln_gc_t *gc)
     }
     while ((item = gc->item_head) != NULL) {
         mln_gc_item_chain_del(&(gc->item_head), &(gc->item_tail), item);
-        gc->freeHandler(item->data);
+        gc->free_handler(item->data);
         mln_gc_item_free(item);
     }
     mln_alloc_free(gc);
@@ -105,14 +105,14 @@ int mln_gc_add(mln_gc_t *gc, void *data)
     if ((item = mln_gc_item_new(gc, data)) == NULL) {
         return -1;
     }
-    gc->itemSetter(data, item);
+    gc->item_setter(data, item);
     mln_gc_item_chain_add(&(gc->item_head), &(gc->item_tail), item);
     return 0;
 }
 
 void mln_gc_suspect(mln_gc_t *gc, void *data)
 {
-    mln_gc_item_t *item = (mln_gc_item_t *)(gc->itemGetter(data));
+    mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
     item->suspected = 1;
 }
 
@@ -129,16 +129,16 @@ void mln_gc_merge(mln_gc_t *dest, mln_gc_t *src)
     mln_gc_item_t *item;
     while ((item = src->item_head) != NULL) {
         mln_gc_item_chain_del(&(src->item_head), &(src->item_tail), item);
-        src->moveHandler(dest, item->data);
+        src->move_handler(dest, item->data);
         item->gc = dest;
         mln_gc_item_chain_add(&(dest->item_head), &(dest->item_tail), item);
     }
 }
 
-void mln_gc_addForCollect(mln_gc_t *gc, void *data)
+void mln_gc_collect_add(mln_gc_t *gc, void *data)
 {
     if (data == NULL) return;
-    mln_gc_item_t *item = (mln_gc_item_t *)(gc->itemGetter(data));
+    mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
     if (item == NULL) {
         mln_log(error, "'data' has NOT been added.\n");
         abort();
@@ -154,9 +154,9 @@ void mln_gc_addForCollect(mln_gc_t *gc, void *data)
     }
 }
 
-int mln_gc_addForClean(mln_gc_t *gc, void *data)
+int mln_gc_clean_add(mln_gc_t *gc, void *data)
 {
-    mln_gc_item_t *item = (mln_gc_item_t *)(gc->itemGetter(data));
+    mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
     if (item == NULL) {
         mln_log(error, "'data' has NOT been added.\n");
         abort();
@@ -182,15 +182,15 @@ void mln_gc_collect(mln_gc_t *gc, void *rootData)
             gc->proc_head != item)
             mln_gc_item_proc_chain_add(&(gc->proc_head), &(gc->proc_tail), item);
     }
-    if (rootData != NULL && gc->rootSetter != NULL)
-        gc->rootSetter(gc, rootData);
+    if (rootData != NULL && gc->root_setter != NULL)
+        gc->root_setter(gc, rootData);
     while (!done) {
         done = 1;
         for (item = gc->proc_head; item != NULL; item = item->proc_next) {
             if ((item->suspected && !item->credit) || item->visited) {
                 continue;
             }
-            gc->memberSetter(gc, item->data);
+            gc->member_setter(gc, item->data);
             item->visited = 1;
             if (done) done = 0;
         }
@@ -224,7 +224,7 @@ void mln_gc_collect(mln_gc_t *gc, void *rootData)
             gc->iter = gc->iter->next;
             continue;
         }
-        gc->cleanSearcher(gc, gc->iter->data);
+        gc->clean_searcher(gc, gc->iter->data);
         if (gc->del) {
             gc->del = 0;
             continue;
@@ -240,14 +240,14 @@ void mln_gc_collect(mln_gc_t *gc, void *rootData)
             continue;
         }
         mln_gc_item_chain_del(&(gc->item_head), &(gc->item_tail), item);
-        gc->itemFreer(item->data);
+        gc->item_freer(item->data);
         mln_gc_item_free(item);
     }
 }
 
 void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *procGC)
 {
-    mln_gc_item_t *item = (mln_gc_item_t *)(gc->itemGetter(data));
+    mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
     if (item == NULL) {
         mln_log(error, "'data' has NOT been added.\n");
         abort();
