@@ -60,7 +60,7 @@ void mln_rsa_key_pool_free(mln_rsa_key_t *key)
     mln_alloc_free(key);
 }
 
-int mln_rsa_keyGenerate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits)
+int mln_rsa_key_generate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits)
 {
     if (bits <= 88 || bits > M_BIGNUM_BITS) return -1;
 
@@ -220,7 +220,7 @@ static inline mln_u8ptr_t mln_rsa_antiPaddingPrivate(mln_u8ptr_t in, mln_size_t 
     return p;
 }
 
-mln_string_t *mln_RSAESPKCS1V15PubEncrypt(mln_rsa_key_t *pub, mln_string_t *text)
+mln_string_t *mln_RSAESPKCS1V15_public_encrypt(mln_rsa_key_t *pub, mln_string_t *text)
 {
     mln_size_t nlen = mln_bignum_get_length(&(pub->n)) << 2;
     mln_u8ptr_t buf, p;
@@ -264,7 +264,7 @@ mln_string_t *mln_RSAESPKCS1V15PubEncrypt(mln_rsa_key_t *pub, mln_string_t *text
     return ret;
 }
 
-mln_string_t *mln_RSAESPKCS1V15PubDecrypt(mln_rsa_key_t *pub, mln_string_t *cipher)
+mln_string_t *mln_RSAESPKCS1V15_public_decrypt(mln_rsa_key_t *pub, mln_string_t *cipher)
 {
     mln_size_t nlen = mln_bignum_get_length(&(pub->n)) << 2;
     mln_u8ptr_t buf, p, pos;
@@ -318,7 +318,7 @@ mln_string_t *mln_RSAESPKCS1V15PubDecrypt(mln_rsa_key_t *pub, mln_string_t *ciph
     return ret;
 }
 
-mln_string_t *mln_RSAESPKCS1V15PriEncrypt(mln_rsa_key_t *pri, mln_string_t *text)
+mln_string_t *mln_RSAESPKCS1V15_private_encrypt(mln_rsa_key_t *pri, mln_string_t *text)
 {
     mln_size_t nlen = mln_bignum_get_length(&(pri->n)) << 2;
     mln_u8ptr_t buf, p;
@@ -360,7 +360,7 @@ mln_string_t *mln_RSAESPKCS1V15PriEncrypt(mln_rsa_key_t *pri, mln_string_t *text
     return ret;
 }
 
-mln_string_t *mln_RSAESPKCS1V15PriDecrypt(mln_rsa_key_t *pri, mln_string_t *cipher)
+mln_string_t *mln_RSAESPKCS1V15_private_decrypt(mln_rsa_key_t *pri, mln_string_t *cipher)
 {
     mln_size_t nlen = mln_bignum_get_length(&(pri->n)) << 2;
     mln_u8ptr_t buf, p, pos;
@@ -411,7 +411,7 @@ mln_string_t *mln_RSAESPKCS1V15PriDecrypt(mln_rsa_key_t *pri, mln_string_t *ciph
     return ret;
 }
 
-void mln_RSAESPKCS1V15Free(mln_string_t *s)
+void mln_RSAESPKCS1V15_free(mln_string_t *s)
 {
     if (s == NULL) return;
     mln_string_free(s);
@@ -506,7 +506,7 @@ err:
     return ret;
 }
 
-mln_string_t *mln_RSASSAPKCS1V15SIGN(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType)
+mln_string_t *mln_RSASSAPKCS1V15_sign(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType)
 {
     mln_string_t *ret = NULL, tmp, *em;
     mln_u8ptr_t buf, p, q;
@@ -531,7 +531,7 @@ err:
         left -= n;
         mln_string_nset(&tmp, q, n);
         q += n;
-        if ((ret = mln_RSAESPKCS1V15PriEncrypt(pri, &tmp)) == NULL) {
+        if ((ret = mln_RSAESPKCS1V15_private_encrypt(pri, &tmp)) == NULL) {
             free(buf);
             goto err;
         }
@@ -560,7 +560,7 @@ err:
     return ret;
 }
 
-int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s)
+int mln_RSASSAPKCS1V15_verify(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s)
 {
     mln_string_t tmp, *ret;
     mln_u8ptr_t buf, p, q, end;
@@ -584,7 +584,7 @@ int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t
 
     while (q < end) {
         mln_string_nset(&tmp, q, n);
-        if ((ret = mln_RSAESPKCS1V15PubDecrypt(pub, &tmp)) == NULL) {
+        if ((ret = mln_RSAESPKCS1V15_public_decrypt(pub, &tmp)) == NULL) {
             free(buf);
             return -1;
         }

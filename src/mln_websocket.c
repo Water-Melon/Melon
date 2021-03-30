@@ -21,7 +21,7 @@ static mln_string_t *mln_websocket_accept_field(mln_http_t *http);
 static int mln_websocket_scan_set_fields(void *key, void *val, void *data);
 static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *pool);
 static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_string_t *in);
-static mln_u32_t mln_websocket_maskingKey_generate(void);
+static mln_u32_t mln_websocket_masking_key_generate(void);
 
 int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
 {
@@ -45,14 +45,14 @@ int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
     ws->data = NULL;
     ws->content = NULL;
     ws->extension_handler = NULL;
-    ws->contentLen = 0;
-    ws->contentFree = 0;
+    ws->content_len = 0;
+    ws->content_free = 0;
     ws->fin = 0;
     ws->rsv1 = ws->rsv2 = ws->rsv3 = 0;
     ws->opcode = 0;
     ws->mask = 0;
     ws->status = 0;
-    ws->maskingKey = 0;
+    ws->masking_key = 0;
 
     return 0;
 }
@@ -99,7 +99,7 @@ void mln_websocket_destroy(mln_websocket_t *ws)
     if (ws->uri != NULL) mln_string_free(ws->uri);
     if (ws->args != NULL) mln_string_free(ws->args);
     if (ws->key != NULL) mln_string_free(ws->key);
-    if (ws->contentFree) mln_alloc_free(ws->content);
+    if (ws->content_free) mln_alloc_free(ws->content);
 }
 
 void mln_websocket_free(mln_websocket_t *ws)
@@ -128,25 +128,25 @@ void mln_websocket_reset(mln_websocket_t *ws)
     }
 
     ws->data = NULL;
-    if (ws->contentFree) {
-        ws->contentFree = 0;
+    if (ws->content_free) {
+        ws->content_free = 0;
         mln_alloc_free(ws->content);
         ws->content = NULL;
     } else {
         ws->content = NULL;
     }
     ws->extension_handler = NULL;
-    ws->contentLen = 0;
+    ws->content_len = 0;
     ws->fin = 0;
     ws->rsv1 = ws->rsv2 = ws->rsv3 = 0;
     ws->opcode = 0;
     ws->mask = 0;
     ws->status = 0;
-    ws->maskingKey = 0;
+    ws->masking_key = 0;
 }
 
 
-int mln_websocket_isWebsocket(mln_http_t *http)
+int mln_websocket_is_websocket(mln_http_t *http)
 {
     mln_string_t key = mln_string("Upgrade");
     mln_string_t val = mln_string("websocket");
@@ -481,25 +481,25 @@ int mln_websocket_text_generate(mln_websocket_t *ws, \
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
-    if (mln_websocket_get_contentFree(ws)) {
+    if (mln_websocket_get_content_free(ws)) {
         mln_alloc_free(mln_websocket_get_content(ws));
-        mln_websocket_reset_contentFree(ws);
+        mln_websocket_reset_content_free(ws);
     }
     mln_websocket_set_content(ws, buf);
-    mln_websocket_set_contentLen(ws, len);
-    mln_websocket_reset_contentFree(ws);
+    mln_websocket_set_content_len(ws, len);
+    mln_websocket_reset_content_free(ws);
     if (flags & M_WS_FLAG_END) mln_websocket_set_fin(ws);
     else mln_websocket_reset_fin(ws);
-    mln_websocket_reset_rsv1Bit(ws);
-    mln_websocket_reset_rsv2Bit(ws);
-    mln_websocket_reset_rsv3Bit(ws);
+    mln_websocket_reset_rsv1(ws);
+    mln_websocket_reset_rsv2(ws);
+    mln_websocket_reset_rsv3(ws);
     if (flags & M_WS_FLAG_NEW) mln_websocket_set_opcode(ws, M_WS_OPCODE_TEXT);
     else mln_websocket_set_opcode(ws, M_WS_OPCODE_CONTINUE);
     if (flags & M_WS_FLAG_CLIENT) {
-        mln_websocket_set_maskBit(ws);
-        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+        mln_websocket_set_maskbit(ws);
+        mln_websocket_set_masking_key(ws, mln_websocket_masking_key_generate());
     } else {
-        mln_websocket_reset_maskBit(ws);
+        mln_websocket_reset_maskbit(ws);
     }
 
     return mln_websocket_generate(ws, out_cnode);
@@ -513,25 +513,25 @@ int mln_websocket_binary_generate(mln_websocket_t *ws, \
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
-    if (mln_websocket_get_contentFree(ws)) {
+    if (mln_websocket_get_content_free(ws)) {
         mln_alloc_free(mln_websocket_get_content(ws));
-        mln_websocket_reset_contentFree(ws);
+        mln_websocket_reset_content_free(ws);
     }
     mln_websocket_set_content(ws, buf);
-    mln_websocket_set_contentLen(ws, len);
-    mln_websocket_reset_contentFree(ws);
+    mln_websocket_set_content_len(ws, len);
+    mln_websocket_reset_content_free(ws);
     if (flags & M_WS_FLAG_END) mln_websocket_set_fin(ws);
     else mln_websocket_reset_fin(ws);
-    mln_websocket_reset_rsv1Bit(ws);
-    mln_websocket_reset_rsv2Bit(ws);
-    mln_websocket_reset_rsv3Bit(ws);
+    mln_websocket_reset_rsv1(ws);
+    mln_websocket_reset_rsv2(ws);
+    mln_websocket_reset_rsv3(ws);
     if (flags & M_WS_FLAG_NEW) mln_websocket_set_opcode(ws, M_WS_OPCODE_BINARY);
     else mln_websocket_set_opcode(ws, M_WS_OPCODE_CONTINUE);
     if (flags & M_WS_FLAG_CLIENT) {
-        mln_websocket_set_maskBit(ws);
-        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+        mln_websocket_set_maskbit(ws);
+        mln_websocket_set_masking_key(ws, mln_websocket_masking_key_generate());
     } else {
-        mln_websocket_reset_maskBit(ws);
+        mln_websocket_reset_maskbit(ws);
     }
 
     return mln_websocket_generate(ws, out_cnode);
@@ -545,24 +545,24 @@ int mln_websocket_close_generate(mln_websocket_t *ws, \
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
-    if (mln_websocket_get_contentFree(ws)) {
+    if (mln_websocket_get_content_free(ws)) {
         mln_alloc_free(mln_websocket_get_content(ws));
-        mln_websocket_reset_contentFree(ws);
+        mln_websocket_reset_content_free(ws);
     }
     mln_websocket_set_content(ws, reason);
-    if (reason == NULL) mln_websocket_set_contentLen(ws, 0);
-    else mln_websocket_set_contentLen(ws, strlen(reason));
+    if (reason == NULL) mln_websocket_set_content_len(ws, 0);
+    else mln_websocket_set_content_len(ws, strlen(reason));
     mln_websocket_set_fin(ws);
-    mln_websocket_reset_rsv1Bit(ws);
-    mln_websocket_reset_rsv2Bit(ws);
-    mln_websocket_reset_rsv3Bit(ws);
+    mln_websocket_reset_rsv1(ws);
+    mln_websocket_reset_rsv2(ws);
+    mln_websocket_reset_rsv3(ws);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_CLOSE);
 
     if (flags & M_WS_FLAG_CLIENT) {
-        mln_websocket_set_maskBit(ws);
-        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+        mln_websocket_set_maskbit(ws);
+        mln_websocket_set_masking_key(ws, mln_websocket_masking_key_generate());
     } else {
-        mln_websocket_reset_maskBit(ws);
+        mln_websocket_reset_maskbit(ws);
     }
 
     return mln_websocket_generate(ws, out_cnode);
@@ -572,23 +572,23 @@ int mln_websocket_ping_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, ml
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
-    if (mln_websocket_get_contentFree(ws)) {
+    if (mln_websocket_get_content_free(ws)) {
         mln_alloc_free(mln_websocket_get_content(ws));
     }
     mln_websocket_set_content(ws, NULL);
-    mln_websocket_set_contentLen(ws, 0);
-    mln_websocket_reset_contentFree(ws);
+    mln_websocket_set_content_len(ws, 0);
+    mln_websocket_reset_content_free(ws);
     mln_websocket_set_fin(ws);
-    mln_websocket_reset_rsv1Bit(ws);
-    mln_websocket_reset_rsv2Bit(ws);
-    mln_websocket_reset_rsv3Bit(ws);
+    mln_websocket_reset_rsv1(ws);
+    mln_websocket_reset_rsv2(ws);
+    mln_websocket_reset_rsv3(ws);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_PING);
 
     if (flags & M_WS_FLAG_CLIENT) {
-        mln_websocket_set_maskBit(ws);
-        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+        mln_websocket_set_maskbit(ws);
+        mln_websocket_set_masking_key(ws, mln_websocket_masking_key_generate());
     } else {
-        mln_websocket_reset_maskBit(ws);
+        mln_websocket_reset_maskbit(ws);
     }
 
     return mln_websocket_generate(ws, out_cnode);
@@ -598,29 +598,29 @@ int mln_websocket_pong_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, ml
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
-    if (mln_websocket_get_contentFree(ws)) {
+    if (mln_websocket_get_content_free(ws)) {
         mln_alloc_free(mln_websocket_get_content(ws));
     }
     mln_websocket_set_content(ws, NULL);
-    mln_websocket_set_contentLen(ws, 0);
-    mln_websocket_reset_contentFree(ws);
+    mln_websocket_set_content_len(ws, 0);
+    mln_websocket_reset_content_free(ws);
     mln_websocket_set_fin(ws);
-    mln_websocket_reset_rsv1Bit(ws);
-    mln_websocket_reset_rsv2Bit(ws);
-    mln_websocket_reset_rsv3Bit(ws);
+    mln_websocket_reset_rsv1(ws);
+    mln_websocket_reset_rsv2(ws);
+    mln_websocket_reset_rsv3(ws);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_PONG);
 
     if (flags & M_WS_FLAG_CLIENT) {
-        mln_websocket_set_maskBit(ws);
-        mln_websocket_set_maskingKey(ws, mln_websocket_maskingKey_generate());
+        mln_websocket_set_maskbit(ws);
+        mln_websocket_set_masking_key(ws, mln_websocket_masking_key_generate());
     } else {
-        mln_websocket_reset_maskBit(ws);
+        mln_websocket_reset_maskbit(ws);
     }
 
     return mln_websocket_generate(ws, out_cnode);
 }
 
-static mln_u32_t mln_websocket_maskingKey_generate(void)
+static mln_u32_t mln_websocket_masking_key_generate(void)
 {
     struct timeval tv;
     mln_uauto_t tmp = (mln_uauto_t)&tv;
@@ -641,13 +641,13 @@ int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode)
     mln_u64_t clen = 0;
     mln_u32_t opcode = mln_websocket_get_opcode(ws);
 
-    if (mln_websocket_get_extHandler(ws) != NULL) {
-        int ret = mln_websocket_get_extHandler(ws)(ws);
+    if (mln_websocket_get_ext_handler(ws) != NULL) {
+        int ret = mln_websocket_get_ext_handler(ws)(ws);
         if (ret != M_WS_RET_OK) return ret;
     }
 
     content = (mln_u8ptr_t)mln_websocket_get_content(ws);
-    clen = mln_websocket_get_contentLen(ws);
+    clen = mln_websocket_get_content_len(ws);
     if (content == NULL && clen) return M_WS_RET_ERROR;
 
     if (opcode == M_WS_OPCODE_CLOSE) {
@@ -672,7 +672,7 @@ int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode)
     }
     size += clen;
 
-    if (mln_websocket_get_maskBit(ws)) size += 4;
+    if (mln_websocket_get_maskbit(ws)) size += 4;
 
     c = mln_chain_new(pool);
     if (c == NULL) return M_WS_RET_FAILED;
@@ -697,13 +697,13 @@ int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode)
     p = buf;
     *p = 0;
     if (mln_websocket_get_fin(ws)) *p |= 0x80;
-    if (mln_websocket_get_rsv1Bit(ws)) *p |= 0x40;
-    if (mln_websocket_get_rsv2Bit(ws)) *p |= 0x20;
-    if (mln_websocket_get_rsv3Bit(ws)) *p |= 0x10;
+    if (mln_websocket_get_rsv1(ws)) *p |= 0x40;
+    if (mln_websocket_get_rsv2(ws)) *p |= 0x20;
+    if (mln_websocket_get_rsv3(ws)) *p |= 0x10;
     *p++ |= (opcode & 0xf);
 
     *p = 0;
-    if (mln_websocket_get_maskBit(ws)) *p |= 0x80;
+    if (mln_websocket_get_maskbit(ws)) *p |= 0x80;
     *p++ |= (payload_length & 0x7f);
 
     if (payload_length == 126) {
@@ -720,9 +720,9 @@ int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode)
         *p++ = (clen & 0xff);
     }
 
-    if (mln_websocket_get_maskBit(ws)) {
+    if (mln_websocket_get_maskbit(ws)) {
         mln_u8_t tmpkey[4];
-        mln_u32_t i, j, m = mln_websocket_get_maskingKey(ws);
+        mln_u32_t i, j, m = mln_websocket_get_masking_key(ws);
         mln_u8ptr_t pc = (mln_u8ptr_t)content;
         *p++ = tmpkey[0] = ((m >> 24) & 0xff);
         *p++ = tmpkey[1] = ((m >> 16) & 0xff);
@@ -754,7 +754,7 @@ int mln_websocket_parse(mln_websocket_t *ws, mln_chain_t **in)
     mln_chain_t *c = *in;
     mln_u8ptr_t p = NULL, end = NULL, content = NULL;
     mln_u64_t len, i, tmp;
-    mln_u32_t maskingKey = 0;
+    mln_u32_t masking_key = 0;
     mln_u8_t b1 = 0, b2 = 0;
 
     for (i = 0; c != NULL; c = c->next) {
@@ -823,7 +823,7 @@ again126:
         i = 0;
 againm:
         for (; i < tmp; ++i) {
-            maskingKey |= ((*p++) << ((3 - i) << 3));
+            masking_key |= ((*p++) << ((3 - i) << 3));
         }
         if (tmp < 4) {
             for (c = c->next; c != NULL; c = c->next) {
@@ -891,34 +891,34 @@ againc:
         }
     }
 
-    if (mln_websocket_get_contentFree(ws)) {
+    if (mln_websocket_get_content_free(ws)) {
         mln_alloc_free(mln_websocket_get_content(ws));
-        mln_websocket_reset_contentFree(ws);
+        mln_websocket_reset_content_free(ws);
     }
     mln_websocket_set_content(ws, content);
-    if (content != NULL) mln_websocket_set_contentFree(ws);
-    mln_websocket_set_contentLen(ws, len);
+    if (content != NULL) mln_websocket_set_content_free(ws);
+    mln_websocket_set_content_len(ws, len);
     if (b1 & 0x80) mln_websocket_set_fin(ws);
     else mln_websocket_reset_fin(ws);
-    if (b1 & 0x40) mln_websocket_set_rsv1Bit(ws);
-    else mln_websocket_reset_rsv1Bit(ws);
-    if (b1 & 0x20) mln_websocket_set_rsv2Bit(ws);
-    else mln_websocket_reset_rsv2Bit(ws);
-    if (b1 & 0x10) mln_websocket_set_rsv3Bit(ws);
-    else mln_websocket_reset_rsv3Bit(ws);
+    if (b1 & 0x40) mln_websocket_set_rsv1(ws);
+    else mln_websocket_reset_rsv1(ws);
+    if (b1 & 0x20) mln_websocket_set_rsv2(ws);
+    else mln_websocket_reset_rsv2(ws);
+    if (b1 & 0x10) mln_websocket_set_rsv3(ws);
+    else mln_websocket_reset_rsv3(ws);
     mln_websocket_set_opcode(ws, b1&0xf);
-    if (b2 & 0x80) mln_websocket_set_maskBit(ws);
-    else mln_websocket_reset_maskBit(ws);
-    if (b2 & 0x80) mln_websocket_set_maskingKey(ws, maskingKey);
-    else mln_websocket_set_maskingKey(ws, 0);
+    if (b2 & 0x80) mln_websocket_set_maskbit(ws);
+    else mln_websocket_reset_maskbit(ws);
+    if (b2 & 0x80) mln_websocket_set_masking_key(ws, masking_key);
+    else mln_websocket_set_masking_key(ws, 0);
 
-    if (mln_websocket_get_maskBit(ws)) {
+    if (mln_websocket_get_maskbit(ws)) {
         mln_u8_t tmpkey[4];
         mln_u16_t status = mln_websocket_get_status(ws);
-        tmpkey[0] = (maskingKey >> 24) & 0xff;
-        tmpkey[1] = (maskingKey >> 16) & 0xff;
-        tmpkey[2] = (maskingKey >> 8) & 0xff;
-        tmpkey[3] = maskingKey & 0xff;
+        tmpkey[0] = (masking_key >> 24) & 0xff;
+        tmpkey[1] = (masking_key >> 16) & 0xff;
+        tmpkey[2] = (masking_key >> 8) & 0xff;
+        tmpkey[3] = masking_key & 0xff;
         i = 0;
         if (mln_websocket_get_opcode(ws) == M_WS_OPCODE_CLOSE && status != 0) {
             status = ((((status >> 8) & 0xff) ^ tmpkey[i++%4]) << 8) | (status & 0xff);
@@ -932,8 +932,8 @@ againc:
         }
     }
 
-    if (mln_websocket_get_extHandler(ws) != NULL) {
-        int ret = mln_websocket_get_extHandler(ws)(ws);
+    if (mln_websocket_get_ext_handler(ws) != NULL) {
+        int ret = mln_websocket_get_ext_handler(ws)(ws);
         if (ret != M_WS_RET_OK) return ret;
     }
 

@@ -69,8 +69,8 @@ struct mln_websocket_s {
     void                    *data;
     void                    *content;
     mln_ws_extension_handle  extension_handler;
-    mln_u64_t                contentLen;
-    mln_u16_t                contentFree:1;
+    mln_u64_t                content_len;
+    mln_u16_t                content_free:1;
     mln_u16_t                fin:1;
     mln_u16_t                rsv1:1;
     mln_u16_t                rsv2:1;
@@ -79,7 +79,7 @@ struct mln_websocket_s {
     mln_u16_t                mask:1;
     mln_u16_t                padding:6;
     mln_u16_t                status;
-    mln_u32_t                maskingKey;
+    mln_u32_t                masking_key;
 };
 
 #define mln_websocket_get_http(ws)             ((ws)->http)
@@ -96,41 +96,41 @@ struct mln_websocket_s {
 #define mln_websocket_get_data(ws)             ((ws)->data)
 #define mln_websocket_set_content(ws,c)        ((ws)->content = (c))
 #define mln_websocket_get_content(ws)          ((ws)->content)
-#define mln_websocket_set_extHandler(ws,h)     ((ws)->extension_handler = (h))
-#define mln_websocket_get_extHandler(ws)       ((ws)->extension_handler)
-#define mln_websocket_set_rsv1Bit(ws)          ((ws)->rsv1 = 1)
-#define mln_websocket_reset_rsv1Bit(ws)        ((ws)->rsv1 = 0)
-#define mln_websocket_get_rsv1Bit(ws)          ((ws)->rsv1)
-#define mln_websocket_set_rsv2Bit(ws)          ((ws)->rsv2 = 1)
-#define mln_websocket_reset_rsv2Bit(ws)        ((ws)->rsv2 = 0)
-#define mln_websocket_get_rsv2Bit(ws)          ((ws)->rsv2)
-#define mln_websocket_set_rsv3Bit(ws)          ((ws)->rsv3 = 1)
-#define mln_websocket_reset_rsv3Bit(ws)        ((ws)->rsv3 = 0)
-#define mln_websocket_get_rsv3Bit(ws)          ((ws)->rsv3)
+#define mln_websocket_set_ext_handler(ws,h)    ((ws)->extension_handler = (h))
+#define mln_websocket_get_ext_handler(ws)      ((ws)->extension_handler)
+#define mln_websocket_set_rsv1(ws)             ((ws)->rsv1 = 1)
+#define mln_websocket_reset_rsv1(ws)           ((ws)->rsv1 = 0)
+#define mln_websocket_get_rsv1(ws)             ((ws)->rsv1)
+#define mln_websocket_set_rsv2(ws)             ((ws)->rsv2 = 1)
+#define mln_websocket_reset_rsv2(ws)           ((ws)->rsv2 = 0)
+#define mln_websocket_get_rsv2(ws)             ((ws)->rsv2)
+#define mln_websocket_set_rsv3(ws)             ((ws)->rsv3 = 1)
+#define mln_websocket_reset_rsv3(ws)           ((ws)->rsv3 = 0)
+#define mln_websocket_get_rsv3(ws)             ((ws)->rsv3)
 #define mln_websocket_set_opcode(ws,op)        ((ws)->opcode = (op))
 #define mln_websocket_get_opcode(ws)           ((ws)->opcode)
 #define mln_websocket_set_status(ws,s)         ((ws)->status = (s))
 #define mln_websocket_get_status(ws)           ((ws)->status)
-#define mln_websocket_set_contentLen(ws,l)     ((ws)->contentLen = (l))
-#define mln_websocket_get_contentLen(ws)       ((ws)->contentLen)
-#define mln_websocket_set_contentFree(ws)      ((ws)->contentFree = 1)
-#define mln_websocket_reset_contentFree(ws)    ((ws)->contentFree = 0)
-#define mln_websocket_get_contentFree(ws)      ((ws)->contentFree)
+#define mln_websocket_set_content_len(ws,l)    ((ws)->content_len = (l))
+#define mln_websocket_get_content_len(ws)      ((ws)->content_len)
+#define mln_websocket_set_content_free(ws)     ((ws)->content_free = 1)
+#define mln_websocket_reset_content_free(ws)   ((ws)->content_free = 0)
+#define mln_websocket_get_content_free(ws)     ((ws)->content_free)
 #define mln_websocket_set_fin(ws)              ((ws)->fin = 1)
 #define mln_websocket_reset_fin(ws)            ((ws)->fin = 0)
 #define mln_websocket_get_fin(ws)              ((ws)->fin)
-#define mln_websocket_set_maskBit(ws)          ((ws)->mask = 1)
-#define mln_websocket_reset_maskBit(ws)        ((ws)->mask = 0)
-#define mln_websocket_get_maskBit(ws)          ((ws)->mask)
-#define mln_websocket_set_maskingKey(ws,k)     ((ws)->maskingKey = (k))
-#define mln_websocket_get_maskingKey(ws)       ((ws)->maskingKey)
+#define mln_websocket_set_maskbit(ws)          ((ws)->mask = 1)
+#define mln_websocket_reset_maskbit(ws)        ((ws)->mask = 0)
+#define mln_websocket_get_maskbit(ws)          ((ws)->mask)
+#define mln_websocket_set_masking_key(ws,k)    ((ws)->masking_key = (k))
+#define mln_websocket_get_masking_key(ws)      ((ws)->masking_key)
 
 extern int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http) __NONNULL2(1,2);
 extern mln_websocket_t *mln_websocket_new(mln_http_t *http) __NONNULL1(1);
 extern void mln_websocket_destroy(mln_websocket_t *ws);
 extern void mln_websocket_free(mln_websocket_t *ws);
 extern void mln_websocket_reset(mln_websocket_t *ws) __NONNULL1(1);
-extern int mln_websocket_isWebsocket(mln_http_t *http) __NONNULL1(1);
+extern int mln_websocket_is_websocket(mln_http_t *http) __NONNULL1(1);
 extern int mln_websocket_validate(mln_websocket_t *ws) __NONNULL1(1);
 extern int mln_websocket_set_field(mln_websocket_t *ws, mln_string_t *key, mln_string_t *val) __NONNULL2(1,2);
 extern mln_string_t *mln_websocket_get_field(mln_websocket_t *ws, mln_string_t *key) __NONNULL2(1,2);

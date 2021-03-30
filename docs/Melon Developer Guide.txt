@@ -1957,38 +1957,38 @@ Their definitions can be found in melon/include/mln_types.h.
       d) void mln_rsa_key_pool_free(mln_rsa_key_t *key);
          Free RSA key instance to the memory pool.
 
-      e) int mln_rsa_keyGenerate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits);
+      e) int mln_rsa_key_generate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits);
          Generate a couple of RSA keys.
 
-      f) mln_string_t *mln_RSAESPKCS1V15PubEncrypt(mln_rsa_key_t *pub, mln_string_t *text);
+      f) mln_string_t *mln_RSAESPKCS1V15_public_encrypt(mln_rsa_key_t *pub, mln_string_t *text);
          RSAAES-PKCS1-V1.5 public key encryption.
 
-      g) mln_string_t *mln_RSAESPKCS1V15PubDecrypt(mln_rsa_key_t *pub, mln_string_t *cipher);
+      g) mln_string_t *mln_RSAESPKCS1V15_public_decrypt(mln_rsa_key_t *pub, mln_string_t *cipher);
          RSAAES-PKCS1-V1.5 public key decryption.
 
-      h) mln_string_t *mln_RSAESPKCS1V15PriEncrypt(mln_rsa_key_t *pri, mln_string_t *text);
+      h) mln_string_t *mln_RSAESPKCS1V15_private_encrypt(mln_rsa_key_t *pri, mln_string_t *text);
          RSAAES-PKCS1-V1.5 private key encryption.
 
-      i) mln_string_t *mln_RSAESPKCS1V15PriDecrypt(mln_rsa_key_t *pri, mln_string_t *cipher);
+      i) mln_string_t *mln_RSAESPKCS1V15_private_decrypt(mln_rsa_key_t *pri, mln_string_t *cipher);
          RSAAES-PKCS1-V1.5 private key decryption.
 
-      j) void mln_RSAESPKCS1V15Free(mln_string_t *s);
-         Free the return value of 'mln_RSAESPKCS1V15PubEncrypt()', 'mln_RSAESPKCS1V15PubDecrypt()',
-         'mln_RSAESPKCS1V15PriEncrypt()', 'mln_RSAESPKCS1V15PriDecrypt()', 'mln_RSASSAPKCS1V15SIGN()'.
+      j) void mln_RSAESPKCS1V15_free(mln_string_t *s);
+         Free the return value of 'mln_RSAESPKCS1V15_public_encrypt()', 'mln_RSAESPKCS1V15_public_decrypt()',
+         'mln_RSAESPKCS1V15_private_encrypt()', 'mln_RSAESPKCS1V15_private_decrypt()', 'mln_RSASSAPKCS1V15_sign()'.
 
-      k) mln_string_t *mln_RSASSAPKCS1V15SIGN(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType);
+      k) mln_string_t *mln_RSASSAPKCS1V15_sign(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType);
          RSASSA-PKCS1-V1.5 signature.
 
-      l) int mln_RSASSAPKCS1V15VERIFY(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s, mln_u32_t hashType);
+      l) int mln_RSASSAPKCS1V15_verify(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s, mln_u32_t hashType);
          RSASSA-PKCS1-V1.5 verification.
 
-      m) mln_RSAPublicKey_getValue(pkey,modulus,exponent);
+      m) mln_RSA_public_value_get(pkey,modulus,exponent);
          Get modulus and exponent from 'pkey'.
 
-      n) mln_RSAPublicKey_getValueRef(pkey,pmodulus,pexponent);
+      n) mln_RSA_public_value_ref_get(pkey,pmodulus,pexponent);
          Get the pointers of modulus and exponent from 'pkey'.
 
-      o) mln_RSAPublicKey_setValue(pkey,modulus,exponent);
+      o) mln_RSA_public_value_set(pkey,modulus,exponent);
          Set modulus and exponent into 'pkey'.
 
   31) Websocket
@@ -2020,7 +2020,7 @@ Their definitions can be found in melon/include/mln_types.h.
       e) void mln_websocket_reset(mln_websocket_t *ws);
          Reset a websocket instance.
 
-      f) int mln_websocket_isWebsocket(mln_http_t *http);
+      f) int mln_websocket_is_websocket(mln_http_t *http);
          Test whether the 'http' is a websocket handshake request or not.
 
       g) int mln_websocket_validate(mln_websocket_t *ws);
@@ -2144,37 +2144,37 @@ Their definitions can be found in melon/include/mln_types.h.
       af) mln_websocket_get_content(ws);
          Get the content of data frame from 'ws'.
 
-      ag) mln_websocket_set_extHandler(ws,h);
+      ag) mln_websocket_set_ext_handler(ws,h);
          Set the extension handler 'h' into 'ws'.
 
-      ah) mln_websocket_get_extHandler(ws);
+      ah) mln_websocket_get_ext_handler(ws);
          Get the extension handler from 'ws'.
 
-      ai) mln_websocket_set_rsv1Bit(ws);
+      ai) mln_websocket_set_rsv1(ws);
          Set rsv1 bit.
 
-      aj) mln_websocket_reset_rsv1Bit(ws);
+      aj) mln_websocket_reset_rsv1(ws);
          Reset rsv1 bit.
 
-      ak) mln_websocket_get_rsv1Bit(ws);
+      ak) mln_websocket_get_rsv1(ws);
          Get rsv1 bit value.
 
-      al) mln_websocket_set_rsv2Bit(ws);
+      al) mln_websocket_set_rsv2(ws);
          Set rsv2 bit.
 
-      am) mln_websocket_reset_rsv2Bit(ws);
+      am) mln_websocket_reset_rsv2(ws);
          Reset rsv2 bit.
 
-      an) mln_websocket_get_rsv2Bit(ws);
+      an) mln_websocket_get_rsv2(ws);
          Get rsv2 bit value.
 
-      ao) mln_websocket_set_rsv3Bit(ws);
+      ao) mln_websocket_set_rsv3(ws);
          Set rsv3 bit.
 
-      ap) mln_websocket_reset_rsv3Bit(ws);
+      ap) mln_websocket_reset_rsv3(ws);
          Reset rsv3 bit.
 
-      aq) mln_websocket_get_rsv3Bit(ws);
+      aq) mln_websocket_get_rsv3(ws);
          Get rsv3 bit value.
 
       ar) mln_websocket_set_opcode(ws,op);
@@ -2203,21 +2203,21 @@ Their definitions can be found in melon/include/mln_types.h.
       au) mln_websocket_get_status(ws);
          Get status from 'ws'.
 
-      av) mln_websocket_set_contentLen(ws,l);
+      av) mln_websocket_set_content_len(ws,l);
          Set content length 'l' into 'ws'.
 
-      aw) mln_websocket_get_contentLen(ws);
+      aw) mln_websocket_get_content_len(ws);
          Get content length from 'ws'.
 
-      ax) mln_websocket_set_contentFree(ws);
-         Set contentFree bit. This bit indicates whether the content in 'ws' should be free when
+      ax) mln_websocket_set_content_free(ws);
+         Set content_free bit. This bit indicates whether the content in 'ws' should be free when
          'mln_websocket_destroy()' or 'mln_websocket_free()' is called.
 
-      ay) mln_websocket_reset_contentFree(ws);
-         Reset contentFree bit.
+      ay) mln_websocket_reset_content_free(ws);
+         Reset content_free bit.
 
-      az) mln_websocket_get_contentFree(ws);
-         Get contentFree bit value.
+      az) mln_websocket_get_content_free(ws);
+         Get content_free bit value.
 
       ba) mln_websocket_set_fin(ws);
          Set 'fin'.
@@ -2228,20 +2228,20 @@ Their definitions can be found in melon/include/mln_types.h.
       bc) mln_websocket_get_fin(ws);
          Get value of 'fin'.
 
-      bd) mln_websocket_set_maskBit(ws);
+      bd) mln_websocket_set_maskbit(ws);
          Set bit 'mask'.
 
-      be) mln_websocket_reset_maskBit(ws);
+      be) mln_websocket_reset_maskbit(ws);
          Reset bit 'mask'.
 
-      bf) mln_websocket_get_maskBit(ws);
+      bf) mln_websocket_get_maskbit(ws);
          Get the value of bit 'mask'.
 
-      bg) mln_websocket_set_maskingKey(ws,k);
+      bg) mln_websocket_set_masking_key(ws,k);
          Set masking key 'k' into 'ws'.
          This value must be a 32-bit integer.
 
-      bh) mln_websocket_get_maskingKey(ws);
+      bh) mln_websocket_get_masking_key(ws);
          Get masking key from 'ws'.
 
   32) Tools
