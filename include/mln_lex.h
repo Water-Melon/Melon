@@ -185,30 +185,30 @@ typedef struct {
 typedef struct {
     mln_u64_t           if_level;
     mln_u64_t           if_matched;
-} mln_lex_preprocessData_t;
+} mln_lex_preprocess_data_t;
 
 extern mln_lex_t *mln_lex_init(struct mln_lex_attr *attr) __NONNULL1(1);
 extern void mln_lex_destroy(mln_lex_t *lex);
 extern char *mln_lex_strerror(mln_lex_t *lex) __NONNULL1(1);
-extern int mln_lex_push_InputFileStream(mln_lex_t *lex, mln_string_t *path) __NONNULL2(1,2);
-extern int mln_lex_push_InputBufStream(mln_lex_t *lex, mln_string_t *buf) __NONNULL2(1,2);
-extern int mln_lex_checkFileLoop(mln_lex_t *lex, mln_string_t *path) __NONNULL2(1,2);
+extern int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path) __NONNULL2(1,2);
+extern int mln_lex_push_input_buf_stream(mln_lex_t *lex, mln_string_t *buf) __NONNULL2(1,2);
+extern int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path) __NONNULL2(1,2);
 extern mln_lex_macro_t *
 mln_lex_macro_new(mln_alloc_t *pool, mln_string_t *key, mln_string_t *val) __NONNULL2(1,2);
 extern void mln_lex_macro_free(void *data);
-extern mln_lex_preprocessData_t *mln_lex_preprocessData_new(mln_alloc_t *pool) __NONNULL1(1);
-extern void mln_lex_preprocessData_free(mln_lex_preprocessData_t *lpd);
-extern int mln_lex_conditionTest(mln_lex_t *lex) __NONNULL1(1);
+extern mln_lex_preprocess_data_t *mln_lex_preprocess_data_new(mln_alloc_t *pool) __NONNULL1(1);
+extern void mln_lex_preprocess_data_free(mln_lex_preprocess_data_t *lpd);
+extern int mln_lex_condition_test(mln_lex_t *lex) __NONNULL1(1);
 extern mln_lex_input_t *
 mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line) __NONNULL3(1,3,4);
 extern void mln_lex_input_free(void *in);
-#define mln_lex_getPool(lex) ((lex)->pool)
-#define mln_lex_cleanResult(lex) ((lex)->result_pos = (lex)->result_buf)
-#define mln_lex_getCurFilename(lex) \
+#define mln_lex_get_pool(lex) ((lex)->pool)
+#define mln_lex_result_clean(lex) ((lex)->result_pos = (lex)->result_buf)
+#define mln_lex_get_cur_filename(lex) \
     ((lex)->cur==NULL? NULL: ((lex)->cur->type==M_INPUT_T_BUF?NULL: ((lex)->cur->data)))
-#define mln_lex_getResult(lex,res_pstr) mln_string_nset((res_pstr), lex->result_buf, lex->result_pos-lex->result_buf)
-#define mln_lex_setError(lex,err) ((lex)->error = (err))
-static inline void mln_lex_stepBack(mln_lex_t *lex, char c)
+#define mln_lex_result_get(lex,res_pstr) mln_string_nset((res_pstr), lex->result_buf, lex->result_pos-lex->result_buf)
+#define mln_lex_error_set(lex,err) ((lex)->error = (err))
+static inline void mln_lex_stepback(mln_lex_t *lex, char c)
 {
     if (c == MLN_EOF) return;
     if (lex->cur == NULL || lex->cur->pos <= lex->cur->buf) {
@@ -217,7 +217,7 @@ static inline void mln_lex_stepBack(mln_lex_t *lex, char c)
     }
     --(lex->cur->pos);
 }
-static inline int mln_lex_putAChar(mln_lex_t *lex, char c)
+static inline int mln_lex_putchar(mln_lex_t *lex, char c)
 {
     if (lex->result_buf == NULL) {
         if ((lex->result_buf = (mln_u8ptr_t)mln_alloc_m(lex->pool, lex->result_buf_len)) == NULL) {
@@ -242,7 +242,7 @@ static inline int mln_lex_putAChar(mln_lex_t *lex, char c)
     return 0;
 }
 
-static inline char mln_lex_getAChar(mln_lex_t *lex)
+static inline char mln_lex_getchar(mln_lex_t *lex)
 {
     int n;
     mln_lex_input_t *in;
@@ -288,21 +288,21 @@ again:
     return (char)(*(in->pos)++);
 }
 
-static inline int mln_lex_isLetter(char c)
+static inline int mln_lex_is_letter(char c)
 {
     if (c == '_' || isalpha(c))
         return 1;
     return 0;
 }
 
-static inline int mln_lex_isOct(char c)
+static inline int mln_lex_is_oct(char c)
 {
     if (c >= '0' && c < '8')
         return 1;
     return 0;
 }
 
-static inline int mln_lex_isHex(char c)
+static inline int mln_lex_is_hex(char c)
 {
     if (isdigit(c) || \
         (c >= 'a' && c <= 'f') || \
@@ -631,7 +631,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         mln_string_t tmp;\
         PREFIX_NAME##_struct_t *ptr;\
         if ((ptr = (PREFIX_NAME##_struct_t *)mln_alloc_m(lex->pool, sizeof(PREFIX_NAME##_struct_t))) == NULL) {\
-            mln_lex_setError(lex, MLN_LEX_ENMEM);\
+            mln_lex_error_set(lex, MLN_LEX_ENMEM);\
             return NULL;\
         }\
         if (type != TK_PREFIX##_TK_EOF) {\
@@ -641,12 +641,12 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         }\
         if ((ptr->text = mln_string_pool_dup(lex->pool, &tmp)) == NULL) {\
             mln_alloc_free(ptr);\
-            mln_lex_setError(lex, MLN_LEX_ENMEM);\
+            mln_lex_error_set(lex, MLN_LEX_ENMEM);\
             return NULL;\
         }\
         ptr->line = lex->line;\
         ptr->type = type;\
-        mln_lex_setError(lex, MLN_LEX_SUCCEED);\
+        mln_lex_error_set(lex, MLN_LEX_SUCCEED);\
         lex->result_pos = lex->result_buf;\
         return ptr;\
     }\
@@ -685,7 +685,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
                 return (PREFIX_NAME##_struct_t *)PREFIX_NAME##_handlers[i].handler(lex, PREFIX_NAME##_handlers[i].data);\
             }\
         }\
-        mln_lex_setError(lex, MLN_LEX_EINVCHAR);\
+        mln_lex_error_set(lex, MLN_LEX_EINVCHAR);\
         return NULL;\
     }\
     \
@@ -694,7 +694,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         char c;\
         PREFIX_NAME##_struct_t *sret;\
 beg:\
-        if ((c = mln_lex_getAChar(lex)) == MLN_ERR) return NULL;\
+        if ((c = mln_lex_getchar(lex)) == MLN_ERR) return NULL;\
 lp:\
         switch (c) {\
             case (char)MLN_EOF:\
@@ -703,7 +703,7 @@ lp:\
                  {\
                      while (c == '\n') {\
                          ++(lex->line);\
-                         c = mln_lex_getAChar(lex);\
+                         c = mln_lex_getchar(lex);\
                          if (c == MLN_ERR) return NULL;\
                      };\
                      goto lp;\
@@ -712,20 +712,20 @@ lp:\
             case ' ':\
                  {\
                      while (c == ' ' || c == '\t') {\
-                         c = mln_lex_getAChar(lex);\
+                         c = mln_lex_getchar(lex);\
                          if (c == MLN_ERR) return NULL;\
                      }\
                      goto lp;\
                  }\
             default:\
                 {\
-                    if (mln_lex_isLetter(c)) {\
-                        while (mln_lex_isLetter(c) || isdigit(c)) {\
-                            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
-                            c = mln_lex_getAChar(lex);\
+                    if (mln_lex_is_letter(c)) {\
+                        while (mln_lex_is_letter(c) || isdigit(c)) {\
+                            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
+                            c = mln_lex_getchar(lex);\
                             if (c == MLN_ERR) return NULL;\
                         }\
-                        mln_lex_stepBack(lex, c);\
+                        mln_lex_stepback(lex, c);\
                         if (lex->result_buf[0] == (mln_u8_t)'_' && lex->result_pos == lex->result_buf+1) {\
                             sret = PREFIX_NAME##_process_spec_char(lex, '_');\
                             if (sret == NULL || !lex->ignore) return sret;\
@@ -736,11 +736,11 @@ lp:\
                         goto beg;\
                     } else if (isdigit(c)) {\
                         while ( 1 ) {\
-                            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
-                            c = mln_lex_getAChar(lex);\
+                            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
+                            c = mln_lex_getchar(lex);\
                             if (c == MLN_ERR) return NULL;\
                             if (!isdigit(c) && !isalpha(c) && c != '.') {\
-                                mln_lex_stepBack(lex, c);\
+                                mln_lex_stepback(lex, c);\
                                 break;\
                             }\
                         }\
@@ -749,12 +749,12 @@ lp:\
                         if (*chk == (mln_u8_t)'0' && lex->result_pos-lex->result_buf > 1) {\
                             if (*(chk+1) == (mln_u8_t)'x') {\
                                 if (lex->result_pos-lex->result_buf == 2) {\
-                                    mln_lex_setError(lex, MLN_LEX_EINVHEX);\
+                                    mln_lex_error_set(lex, MLN_LEX_EINVHEX);\
                                     return NULL;\
                                 }\
                                 for (chk += 2; chk < lex->result_pos; ++chk) {\
-                                    if (!mln_lex_isHex((char)(*chk))) {\
-                                        mln_lex_setError(lex, MLN_LEX_EINVHEX);\
+                                    if (!mln_lex_is_hex((char)(*chk))) {\
+                                        mln_lex_error_set(lex, MLN_LEX_EINVHEX);\
                                         return NULL;\
                                     }\
                                 }\
@@ -763,19 +763,19 @@ lp:\
                                 goto beg;\
                             } else {\
                                 for (++chk; chk < lex->result_pos; ++chk) {\
-                                    if (!mln_lex_isOct((char)(*chk))) {\
+                                    if (!mln_lex_is_oct((char)(*chk))) {\
                                         mln_s32_t dot_cnt = 0;\
                                         for (; chk < lex->result_pos; ++chk) {\
                                             if (*chk == (mln_u8_t)'.') ++dot_cnt;\
                                             if (!isdigit((char)(*chk)) && *chk != (mln_u8_t)'.') {\
-                                                mln_lex_setError(lex, MLN_LEX_EINVOCT);\
+                                                mln_lex_error_set(lex, MLN_LEX_EINVOCT);\
                                                 return NULL;\
                                             }\
                                         }\
                                         if (dot_cnt > 1) {\
-                                            mln_lex_setError(lex, MLN_LEX_EINVREAL);\
+                                            mln_lex_error_set(lex, MLN_LEX_EINVREAL);\
                                         } else if (dot_cnt == 0) {\
-                                            mln_lex_setError(lex, MLN_LEX_EINVOCT);\
+                                            mln_lex_error_set(lex, MLN_LEX_EINVOCT);\
                                         } else {\
                                             sret = PREFIX_NAME##_new(lex, TK_PREFIX##_TK_REAL);\
                                             if (sret == NULL || !lex->ignore) return sret;\
@@ -794,7 +794,7 @@ lp:\
                                 if (*chk == (mln_u8_t)'.') {\
                                     for (++chk; chk < lex->result_pos; ++chk) {\
                                         if (!isdigit((char)(*chk))) {\
-                                            mln_lex_setError(lex, MLN_LEX_EINVREAL);\
+                                            mln_lex_error_set(lex, MLN_LEX_EINVREAL);\
                                             return NULL;\
                                         }\
                                     }\
@@ -802,7 +802,7 @@ lp:\
                                     if (sret == NULL || !lex->ignore) return sret;\
                                     goto beg;\
                                 }\
-                                mln_lex_setError(lex, MLN_LEX_EINVDEC);\
+                                mln_lex_error_set(lex, MLN_LEX_EINVDEC);\
                                 return NULL;\
                             }\
                             sret = PREFIX_NAME##_new(lex, TK_PREFIX##_TK_DEC);\
@@ -810,7 +810,7 @@ lp:\
                             goto beg;\
                         }\
                     } else {\
-                        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
+                        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
                         sret = PREFIX_NAME##_process_spec_char(lex, c);\
                         if (sret == NULL) break; \
                         if (!lex->ignore) return sret;\
@@ -842,48 +842,48 @@ lp:\
         char c;\
         mln_string_t path;\
         while (1) {\
-            if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {\
+            if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
                 return NULL;\
             }\
             if (c == ' ' || c == '\t') continue;\
             if (c == MLN_EOF) {\
-                mln_lex_setError(lex, MLN_LEX_EINVEOF);\
+                mln_lex_error_set(lex, MLN_LEX_EINVEOF);\
                 return NULL;\
             }\
             if (c == '\n') {\
-                mln_lex_setError(lex, MLN_LEX_EINVEOL);\
+                mln_lex_error_set(lex, MLN_LEX_EINVEOL);\
                 return NULL;\
             }\
             if (c != '\"') {\
-                mln_lex_setError(lex, MLN_LEX_EINVCHAR);\
+                mln_lex_error_set(lex, MLN_LEX_EINVCHAR);\
                 return NULL;\
             }\
             break;\
         }\
-        mln_lex_cleanResult(lex);\
+        mln_lex_result_clean(lex);\
         while (1) {\
-            if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {\
+            if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
                 return NULL;\
             }\
             if (c == MLN_EOF) {\
-                mln_lex_setError(lex, MLN_LEX_EINVEOF);\
+                mln_lex_error_set(lex, MLN_LEX_EINVEOF);\
                 return NULL;\
             }\
             if (c == '\"') break;\
-            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
+            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
         }\
-        mln_lex_getResult(lex, &path);\
+        mln_lex_result_get(lex, &path);\
         if (path.len == 0) {\
-            mln_lex_setError(lex, MLN_LEX_EFPATH);\
+            mln_lex_error_set(lex, MLN_LEX_EFPATH);\
             return NULL;\
         }\
-        if (mln_lex_checkFileLoop(lex, &path) < 0) {\
+        if (mln_lex_check_file_loop(lex, &path) < 0) {\
             return NULL;\
         }\
-        if (mln_lex_push_InputFileStream(lex, &path) < 0) {\
+        if (mln_lex_push_input_file_stream(lex, &path) < 0) {\
             return NULL;\
         }\
-        mln_lex_cleanResult(lex);\
+        mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     }\
     static PREFIX_NAME##_struct_t *PREFIX_NAME##_lex_preprocess_define(mln_lex_t *lex, void *data)\
@@ -893,36 +893,36 @@ lp:\
         mln_lex_macro_t *lm, tmp;\
         mln_rbtree_node_t *rn;\
         while (1) {\
-            if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {\
+            if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
                 return NULL;\
             }\
             if (c == ' ' || c == '\t') continue;\
             if (c == MLN_EOF) {\
-                mln_lex_setError(lex, MLN_LEX_EINVEOF);\
+                mln_lex_error_set(lex, MLN_LEX_EINVEOF);\
                 return NULL;\
             }\
             if (c == '\n') {\
-                mln_lex_setError(lex, MLN_LEX_EINVEOL);\
+                mln_lex_error_set(lex, MLN_LEX_EINVEOL);\
                 return NULL;\
             }\
-            if (!mln_lex_isLetter(c) && !isdigit(c)) {\
-                mln_lex_setError(lex, MLN_LEX_EINVCHAR);\
+            if (!mln_lex_is_letter(c) && !isdigit(c)) {\
+                mln_lex_error_set(lex, MLN_LEX_EINVCHAR);\
                 return NULL;\
             }\
-            mln_lex_stepBack(lex, c);\
+            mln_lex_stepback(lex, c);\
             break;\
         }\
-        mln_lex_cleanResult(lex);\
+        mln_lex_result_clean(lex);\
         while (1) {\
-            if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {\
+            if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
                 return NULL;\
             }\
             if (c == ' ' || c == '\t' || c == '\n') break;\
-            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
+            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
         }\
-        mln_lex_getResult(lex, &str);\
+        mln_lex_result_get(lex, &str);\
         if ((k = mln_string_pool_dup(lex->pool, &str)) == NULL) {\
-            mln_lex_setError(lex, MLN_LEX_ENMEM);\
+            mln_lex_error_set(lex, MLN_LEX_ENMEM);\
             return NULL;\
         }\
         tmp.key = k;\
@@ -933,77 +933,77 @@ lp:\
             return NULL;\
         }\
         if (c != '\n') {\
-            mln_lex_cleanResult(lex);\
+            mln_lex_result_clean(lex);\
             while (1) {\
-                if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {\
+                if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
                     return NULL;\
                 }\
                 if (c == ' ' || c == '\t') continue;\
                 if (c == MLN_EOF || c == '\n') {\
                     goto goon;\
                 }\
-                mln_lex_stepBack(lex, c);\
+                mln_lex_stepback(lex, c);\
                 break;\
             }\
 again:\
             while (1) {\
-                if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {\
+                if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
                     return NULL;\
                 }\
                 if (c == MLN_EOF || c == '\n') break;\
-                if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
+                if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
             }\
             if (lex->result_pos > lex->result_buf) {\
                 if (lex->result_pos != NULL && *(lex->result_pos-1) == (mln_u8_t)'\\') {\
                     --(lex->result_pos);\
                     goto again;\
                 }\
-                mln_lex_getResult(lex, &str);\
+                mln_lex_result_get(lex, &str);\
                 v = &str;\
             }\
         }\
 goon:\
         if ((lm = mln_lex_macro_new(lex->pool, k, v)) == NULL) {\
             mln_string_free(k);\
-            mln_lex_setError(lex, MLN_LEX_ENMEM);\
+            mln_lex_error_set(lex, MLN_LEX_ENMEM);\
             return NULL;\
         }\
         mln_string_free(k);\
         if ((rn = mln_rbtree_node_new(lex->macros, lm)) == NULL) {\
-            mln_lex_setError(lex, MLN_LEX_ENMEM);\
+            mln_lex_error_set(lex, MLN_LEX_ENMEM);\
             return NULL;\
         }\
         mln_rbtree_insert(lex->macros, rn);\
-        mln_lex_cleanResult(lex);\
+        mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     }\
     static PREFIX_NAME##_struct_t *PREFIX_NAME##_lex_preprocess_if(mln_lex_t *lex, void *data)\
     {\
         int ret;\
-        mln_lex_preprocessData_t *lpd = (mln_lex_preprocessData_t *)data;\
-        mln_lex_cleanResult(lex);\
+        mln_lex_preprocess_data_t *lpd = (mln_lex_preprocess_data_t *)data;\
+        mln_lex_result_clean(lex);\
         ++(lpd->if_level);\
         if (lex->ignore) {\
             return PREFIX_NAME##_token(lex);\
         }\
-        if ((ret = mln_lex_conditionTest(lex)) < 0) return NULL;\
+        if ((ret = mln_lex_condition_test(lex)) < 0) return NULL;\
         if (ret) {\
             ++(lpd->if_matched);\
             lex->ignore = 0;\
         } else {\
             lex->ignore = 1;\
         }\
-        mln_lex_cleanResult(lex);\
+        mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     }\
     static PREFIX_NAME##_struct_t *PREFIX_NAME##_lex_preprocess_else(mln_lex_t *lex, void *data)\
     {\
-        mln_lex_preprocessData_t *lpd = (mln_lex_preprocessData_t *)data;\
+        mln_lex_preprocess_data_t *lpd = (mln_lex_preprocess_data_t *)data;\
         if (lpd->if_level == 0) {\
-            mln_lex_setError(lex, MLN_LEX_EINVMACRO);\
+            mln_lex_error_set(lex, MLN_LEX_EINVMACRO);\
             return NULL;\
         }\
-        mln_lex_cleanResult(lex);\
+        mln_lex_result_clean(lex);\
         if (lpd->if_level <= lpd->if_matched) {\
             lex->ignore = 1;\
             --(lpd->if_matched);\
@@ -1015,16 +1015,16 @@ goon:\
     }\
     static PREFIX_NAME##_struct_t *PREFIX_NAME##_lex_preprocess_endif(mln_lex_t *lex, void *data)\
     {\
-        mln_lex_preprocessData_t *lpd = (mln_lex_preprocessData_t *)data;\
+        mln_lex_preprocess_data_t *lpd = (mln_lex_preprocess_data_t *)data;\
         if (lpd->if_level == 0) {\
-            mln_lex_setError(lex, MLN_LEX_EINVMACRO);\
+            mln_lex_error_set(lex, MLN_LEX_EINVMACRO);\
             return NULL;\
         }\
         if (lpd->if_matched == lpd->if_level--) {\
             --(lpd->if_matched);\
         }\
         lex->ignore = !(lpd->if_matched == lpd->if_level);\
-        mln_lex_cleanResult(lex);\
+        mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     }\
     static PREFIX_NAME##_struct_t *PREFIX_NAME##_lex_preprocess_undef(mln_lex_t *lex, void *data)\
@@ -1034,34 +1034,34 @@ goon:\
         mln_lex_macro_t tmp;\
         mln_rbtree_node_t *rn;\
         while (1) {\
-            if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {\
+            if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
                 return NULL;\
             }\
             if (c == ' ' || c == '\t') continue;\
             if (c == MLN_EOF) {\
-                mln_lex_setError(lex, MLN_LEX_EINVEOF);\
+                mln_lex_error_set(lex, MLN_LEX_EINVEOF);\
                 return NULL;\
             }\
             if (c == '\n') {\
-                mln_lex_setError(lex, MLN_LEX_EINVEOL);\
+                mln_lex_error_set(lex, MLN_LEX_EINVEOL);\
                 return NULL;\
             }\
-            if (!mln_lex_isLetter(c) && !isdigit(c)) {\
-                mln_lex_setError(lex, MLN_LEX_EINVCHAR);\
+            if (!mln_lex_is_letter(c) && !isdigit(c)) {\
+                mln_lex_error_set(lex, MLN_LEX_EINVCHAR);\
                 return NULL;\
             }\
-            mln_lex_stepBack(lex, c);\
+            mln_lex_stepback(lex, c);\
             break;\
         }\
-        mln_lex_cleanResult(lex);\
+        mln_lex_result_clean(lex);\
         while (1) {\
-            if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {\
+            if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
                 return NULL;\
             }\
             if (c == ' ' || c == '\t' || c == '\n') break;\
-            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
+            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
         }\
-        mln_lex_getResult(lex, &str);\
+        mln_lex_result_get(lex, &str);\
         tmp.key = &str;\
         tmp.val = NULL;\
         rn = mln_rbtree_search(lex->macros, lex->macros->root, &tmp);\
@@ -1069,7 +1069,7 @@ goon:\
             mln_rbtree_delete(lex->macros, rn);\
             mln_rbtree_node_free(lex->macros, rn);\
         }\
-        mln_lex_cleanResult(lex);\
+        mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     }\
     mln_preprocess_handler_t PREFIX_NAME##_preprocess_handlers[] = {\
@@ -1086,48 +1086,48 @@ goon:\
         mln_string_t tmp;\
         mln_rbtree_node_t *rn;\
         mln_lex_macro_t lm;\
-        char c = mln_lex_getAChar(lex);\
+        char c = mln_lex_getchar(lex);\
         if (c == MLN_ERR) return NULL;\
-        if (!mln_lex_isLetter(c) && !isdigit(c)) {\
-            mln_lex_stepBack(lex, c);\
+        if (!mln_lex_is_letter(c) && !isdigit(c)) {\
+            mln_lex_stepback(lex, c);\
             return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_AT);\
         }\
-        mln_lex_cleanResult(lex);\
-        while (mln_lex_isLetter(c) || isdigit(c)) {\
-            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;\
-            if ((c = mln_lex_getAChar(lex)) == MLN_ERR) return NULL;\
+        mln_lex_result_clean(lex);\
+        while (mln_lex_is_letter(c) || isdigit(c)) {\
+            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
+            if ((c = mln_lex_getchar(lex)) == MLN_ERR) return NULL;\
         }\
-        mln_lex_stepBack(lex, c);\
-        mln_lex_getResult(lex, &tmp);\
+        mln_lex_stepback(lex, c);\
+        mln_lex_result_get(lex, &tmp);\
         phend = PREFIX_NAME##_preprocess_handlers + \
                   sizeof(PREFIX_NAME##_preprocess_handlers) / \
                     sizeof(mln_preprocess_handler_t);\
         for (ph = PREFIX_NAME##_preprocess_handlers; ph < phend; ++ph) {\
             if (!mln_string_strcmp(&(ph->command), &tmp)) {\
-                mln_lex_cleanResult(lex);\
+                mln_lex_result_clean(lex);\
                 return (PREFIX_NAME##_struct_t *)ph->handler(lex, data);\
             }\
         }\
-        mln_lex_getResult(lex, &tmp);\
+        mln_lex_result_get(lex, &tmp);\
         lm.key = &tmp;\
         lm.val = NULL;\
         rn = mln_rbtree_search(lex->macros, lex->macros->root, &lm);\
         if (!mln_rbtree_null(rn, lex->macros)) {\
             mln_lex_macro_t *ltmp = (mln_lex_macro_t *)(rn->data);\
-            if (ltmp->val != NULL && mln_lex_push_InputBufStream(lex, ltmp->val) < 0) {\
-                mln_lex_setError(lex, MLN_LEX_ENMEM);\
+            if (ltmp->val != NULL && mln_lex_push_input_buf_stream(lex, ltmp->val) < 0) {\
+                mln_lex_error_set(lex, MLN_LEX_ENMEM);\
                 return NULL;\
             }\
-            mln_lex_cleanResult(lex);\
+            mln_lex_result_clean(lex);\
             return PREFIX_NAME##_token(lex);\
         }\
-        mln_lex_setError(lex, MLN_LEX_EUNKNOWNMACRO);\
+        mln_lex_error_set(lex, MLN_LEX_EUNKNOWNMACRO);\
         return NULL;\
     }
 
-#define mln_lex_initWithHooks(PREFIX_NAME,lex_ptr,attr_ptr) \
+#define mln_lex_init_with_hooks(PREFIX_NAME,lex_ptr,attr_ptr) \
     if ((attr_ptr)->preprocess) {\
-        mln_lex_preprocessData_t *lpd = mln_lex_preprocessData_new((attr_ptr)->pool);\
+        mln_lex_preprocess_data_t *lpd = mln_lex_preprocess_data_new((attr_ptr)->pool);\
         if (lpd == NULL) {\
             (lex_ptr) = NULL;\
         } else {\
@@ -1162,7 +1162,7 @@ goon:\
  *     struct mln_lex_attr attr;
  *     ...//set some hooks or clear hooks with NULL.
  *     mln_lex_t *lex;
- *     mln_lex_initWithHooks(mln_test_lex, lex, &attr);
+ *     mln_lex_init_with_hooks(mln_test_lex, lex, &attr);
  *
  * After these steps, we have already defined some functions which name are:
  *     mln_test_lex_token

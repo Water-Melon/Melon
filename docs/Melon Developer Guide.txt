@@ -481,7 +481,7 @@ Their definitions can be found in melon/include/mln_types.h.
              struct mln_lex_attr attr;
              ... //Set some special characters' processing hooks.
              mln_lex_t *lex = NULL;
-             mln_lex_initWithHooks(mln_test_lex, lex, &attr);
+             mln_lex_init_with_hooks(mln_test_lex, lex, &attr);
 
          Now a lexer has been created. The structure of attr is defined as
              struct mln_lex_attr {
@@ -558,50 +558,50 @@ Their definitions can be found in melon/include/mln_types.h.
      b) char *mln_lex_strerror(mln_lex_t *lex);
         As strerror(), this function will return an error message.
 
-     c) char mln_lex_getAChar(mln_lex_t *lex);
+     c) char mln_lex_getchar(mln_lex_t *lex);
         Get the next character from a file or a string buffer.
         If lexer encounters EOF, MLN_EOF will be returned.
         If it encounters an error, MLN_ERR will be returned and error number will be set.
 
-     d) int mln_lex_putAChar(mln_lex_t *lex, char c);
+     d) int mln_lex_putchar(mln_lex_t *lex, char c);
         It puts a character into the result buffer which is a string that xxx_token() returned.
         If it encounters an error, MLN_ERR will be returned and the error number will be set.
 
-     e) void mln_lex_stepBack(mln_lex_t *lex);
+     e) void mln_lex_stepback(mln_lex_t *lex);
         It steps back a character.
-        If this interface is called between calling mln_lex_getAChar() twice, the returned characters via calling
-        mln_lex_getAChar() twice are the same.
+        If this interface is called between calling mln_lex_getchar() twice, the returned characters via calling
+        mln_lex_getchar() twice are the same.
 
-     f) int mln_lex_isLetter(char c);
+     f) int mln_lex_is_letter(char c);
         This interface is equivalent to
         if (c == '_' || isalpha(c)).
 
-     g) int mln_lex_isOct(char c);
+     g) int mln_lex_is_oct(char c);
         This interface is equivalent to
         if (c >= '0' && c < '8').
 
-     h) int mln_lex_isHex(char c);
+     h) int mln_lex_is_hex(char c);
         This interface is equivalent to
         if (isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')).
 
-     i) int mln_lex_push_InputFileStream(mln_lex_t *lex, mln_string_t *path);
+     i) int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path);
         This interface is push a new file stream into 'lex'.
         Then if we call PREFIX_NAME##_token(), it will return the token that came from the new file stream.
 
-     j) int mln_lex_push_InputBufStream(mln_lex_t *lex, mln_string_t *buf);
+     j) int mln_lex_push_input_buf_stream(mln_lex_t *lex, mln_string_t *buf);
         This interface is push a new buffer stream into 'lex'.
         Then if we call PREFIX_NAME##_token(), it will return the token that came from the new buffer stream.
 
-     k) mln_lex_getPool(lex);
+     k) mln_lex_get_pool(lex);
         Get the memory pool from 'lex'.
 
-     l) mln_lex_cleanResult(lex);
+     l) mln_lex_result_clean(lex);
         Clean the result buf in 'lex'.
 
-     m) mln_lex_getCurFilename(lex);
+     m) mln_lex_get_cur_filename(lex);
         Get the name of current file stream in 'lex'.
 
-     n) mln_lex_getResult(lex,res_pstr);
+     n) mln_lex_result_get(lex,res_pstr);
         Get the result buf in 'lex' into 'res_pstr'.
         The type of 'res_pstr' is 'mln_string_t *'.
 

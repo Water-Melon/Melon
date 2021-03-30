@@ -10,7 +10,7 @@
 #define CONF_ERR(lex,TK,MSG); \
 {\
     int rc = 1;\
-    mln_string_t *path = mln_lex_getCurFilename(lex);\
+    mln_string_t *path = mln_lex_get_cur_filename(lex);\
     fprintf(stderr, "Configuration error. ");\
     if (path != NULL) {\
         rc = write(STDERR_FILENO, path->data, path->len);\
@@ -101,17 +101,17 @@ static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
 static mln_conf_lex_struct_t *
 mln_conf_lex_sglq_handler(mln_lex_t *lex, void *data)
 {
-    mln_lex_cleanResult(lex);
-    char c = mln_lex_getAChar(lex);
+    mln_lex_result_clean(lex);
+    char c = mln_lex_getchar(lex);
     if (c == MLN_ERR) return NULL;
     if (!isascii(c) || c == '\'') {
-        mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+        mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
         return NULL;
     }
     if (mln_get_char(lex, c) < 0) return NULL;
-    if ((c = mln_lex_getAChar(lex)) == MLN_ERR) return NULL;
+    if ((c = mln_lex_getchar(lex)) == MLN_ERR) return NULL;
     if (c != '\'') {
-        mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+        mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
         return NULL;
     }
     return mln_conf_lex_new(lex, CONF_TK_CHAR);
@@ -122,44 +122,44 @@ mln_get_char(mln_lex_t *lex, char c)
 {
     if (c == '\\') {
         char n;
-        if ((n = mln_lex_getAChar(lex)) == MLN_ERR) return -1;
+        if ((n = mln_lex_getchar(lex)) == MLN_ERR) return -1;
         switch ( n ) {
             case '\"':
-                if (mln_lex_putAChar(lex, n) == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, n) == MLN_ERR) return -1;
                 break;
             case '\'':
-                if (mln_lex_putAChar(lex, n) == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, n) == MLN_ERR) return -1;
                 break;
             case 'n':
-                if (mln_lex_putAChar(lex, '\n') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\n') == MLN_ERR) return -1;
                 break;
             case 't':
-                if (mln_lex_putAChar(lex, '\t') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\t') == MLN_ERR) return -1;
                 break;
             case 'b':
-                if (mln_lex_putAChar(lex, '\b') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\b') == MLN_ERR) return -1;
                 break;
             case 'a':
-                if (mln_lex_putAChar(lex, '\a') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\a') == MLN_ERR) return -1;
                 break;
             case 'f':
-                if (mln_lex_putAChar(lex, '\f') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\f') == MLN_ERR) return -1;
                 break;
             case 'r':
-                if (mln_lex_putAChar(lex, '\r') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\r') == MLN_ERR) return -1;
                 break;
             case 'v':
-                if (mln_lex_putAChar(lex, '\v') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\v') == MLN_ERR) return -1;
                 break;
             case '\\':
-                if (mln_lex_putAChar(lex, '\\') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\\') == MLN_ERR) return -1;
                 break;
             default:
-                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+                mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
                 return -1;
         }
     } else {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return -1;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return -1;
     }
     return 0;
 }
@@ -167,13 +167,13 @@ mln_get_char(mln_lex_t *lex, char c)
 static mln_conf_lex_struct_t *
 mln_conf_lex_dblq_handler(mln_lex_t *lex, void *data)
 {
-    mln_lex_cleanResult(lex);
+    mln_lex_result_clean(lex);
     char c;
     while ( 1 ) {
-        c = mln_lex_getAChar(lex);
+        c = mln_lex_getchar(lex);
         if (c == MLN_ERR) return NULL;
         if (c == MLN_EOF) {
-            mln_lex_setError(lex, MLN_LEX_EINVEOF);
+            mln_lex_error_set(lex, MLN_LEX_EINVEOF);
             return NULL;
         }
         if (c == '\"') break;
@@ -185,51 +185,51 @@ mln_conf_lex_dblq_handler(mln_lex_t *lex, void *data)
 static mln_conf_lex_struct_t *
 mln_conf_lex_slash_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == MLN_ERR) return NULL;
     if (c == '*') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         while ( 1 ) {
-            c = mln_lex_getAChar(lex);
+            c = mln_lex_getchar(lex);
             if (c == MLN_ERR) return NULL;
             if (c == MLN_EOF) {
-                mln_lex_stepBack(lex, c);
+                mln_lex_stepback(lex, c);
                 break;
             }
             if (c == '\n') ++(lex->line);
             if (c == '*') {
-                if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
-                c = mln_lex_getAChar(lex);
+                if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
+                c = mln_lex_getchar(lex);
                 if (c == MLN_ERR) return NULL;
                 if (c == MLN_EOF) {
-                    mln_lex_stepBack(lex, c);
+                    mln_lex_stepback(lex, c);
                     break;
                 }
                 if (c == '\n') ++(lex->line);
                 if (c == '/') {
-                    if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+                    if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
                     break;
                 }
             }
-            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         }
     } else if (c == '/') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         while ( 1 ) {
-            c = mln_lex_getAChar(lex);
+            c = mln_lex_getchar(lex);
             if (c == MLN_ERR) return NULL;
             if (c == MLN_EOF) {
-                mln_lex_stepBack(lex, c);
+                mln_lex_stepback(lex, c);
                 break;
             }
             if (c == '\n') {
-                mln_lex_stepBack(lex, c);
+                mln_lex_stepback(lex, c);
                 break;
             }
-            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         }
     } else {
-        mln_lex_stepBack(lex, c);
+        mln_lex_stepback(lex, c);
         return mln_conf_lex_new(lex, CONF_TK_SLASH);
     }
     return mln_conf_lex_new(lex, CONF_TK_COMMENT);
@@ -243,7 +243,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
         clst = mln_conf_lex_token(lex);
         if (clst == NULL) {
             if (sub_mark) {
-                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+                mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
                 return NULL;
             }
             break;
@@ -251,7 +251,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
         if (clst->type == CONF_TK_COMMENT) {
             mln_conf_lex_free(clst);
             if (sub_mark) {
-                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+                mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
                 return NULL;
             }
             continue;
@@ -259,7 +259,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
         if (clst->type == CONF_TK_SUB) {
             mln_conf_lex_free(clst);
             if (sub_mark) {
-                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+                mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
                 return NULL;
             }
             sub_mark = 1;
@@ -270,7 +270,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
             mln_u64_t len = clst->text->len + 2;
             mln_u8ptr_t s = (mln_u8ptr_t)mln_alloc_m(lex->pool, len);
             if (s == NULL) {
-                mln_lex_setError(lex, MLN_LEX_ENMEM);
+                mln_lex_error_set(lex, MLN_LEX_ENMEM);
                 mln_conf_lex_free(clst);
                 return NULL;
             }
@@ -282,7 +282,7 @@ static mln_conf_lex_struct_t *mln_conf_token(mln_lex_t *lex)
             break;
         } else {
             if (!sub_mark) break;
-            mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+            mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
             mln_conf_lex_free(clst);
             return NULL;
         }
@@ -350,7 +350,7 @@ static inline mln_conf_t *mln_conf_init(void)
     lattr.preprocess = 1;
     lattr.type = M_INPUT_T_FILE;
     lattr.data = &path;
-    mln_lex_initWithHooks(mln_conf_lex, cf->lex, &lattr);
+    mln_lex_init_with_hooks(mln_conf_lex, cf->lex, &lattr);
     mln_alloc_free(conf_file_path);
     if (cf->lex == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
@@ -392,7 +392,7 @@ mln_conf_destroy_lex(mln_conf_t *cf)
 {
     if (cf == NULL) return;
     if (cf->lex != NULL) {
-        mln_alloc_t *pool = mln_lex_getPool(cf->lex);
+        mln_alloc_t *pool = mln_lex_get_pool(cf->lex);
         mln_lex_destroy(cf->lex);
         mln_alloc_destroy(pool);
         cf->lex = NULL;

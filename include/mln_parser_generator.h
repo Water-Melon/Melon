@@ -584,7 +584,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
         lattr.preprocess = 0;\
         lattr.type = M_INPUT_T_BUF;\
         lattr.data = &tmp;\
-        mln_lex_initWithHooks(PREFIX_NAME, lex, &lattr);\
+        mln_lex_init_with_hooks(PREFIX_NAME, lex, &lattr);\
         if (lex == NULL) {\
             mln_log(error, "No memory.\n");\
             goto err3;\
@@ -926,7 +926,7 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
                 mln_string_t *filename;\
                 if ((*la)->token_type != TK_PREFIX##_TK_EOF && (*la)->data != NULL) \
                     name = (mln_s8ptr_t)(((PREFIX_NAME##_struct_t *)((*la)->data))->text->data);\
-                if ((filename = mln_lex_getCurFilename(spattr->lex)) == NULL) {\
+                if ((filename = mln_lex_get_cur_filename(spattr->lex)) == NULL) {\
                     mln_log(none, "line %d: Parse Error: Illegal token%s%s%s\n", \
                             *is_reduce?top->line:(*la)->line, \
                             name==NULL? ".": " nearby '", \

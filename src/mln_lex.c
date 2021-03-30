@@ -38,16 +38,16 @@ char mln_lex_errmsg[][MLN_LEX_ERRMSG_LEN] = {
 };
 char error_msg_err[] = "No memory to store error message.";
 
-mln_lex_preprocessData_t *mln_lex_preprocessData_new(mln_alloc_t *pool)
+mln_lex_preprocess_data_t *mln_lex_preprocess_data_new(mln_alloc_t *pool)
 {
-    mln_lex_preprocessData_t *lpd = (mln_lex_preprocessData_t *)mln_alloc_m(pool, sizeof(mln_lex_preprocessData_t));
+    mln_lex_preprocess_data_t *lpd = (mln_lex_preprocess_data_t *)mln_alloc_m(pool, sizeof(mln_lex_preprocess_data_t));
     if (lpd == NULL) return NULL;
     lpd->if_level = 0;
     lpd->if_matched = 0;
     return lpd;
 }
 
-void mln_lex_preprocessData_free(mln_lex_preprocessData_t *lpd)
+void mln_lex_preprocess_data_free(mln_lex_preprocess_data_t *lpd)
 {
     if (lpd == NULL) return;
     mln_alloc_free(lpd);
@@ -300,12 +300,12 @@ err:
 
     if (attr->data != NULL) {
         if (attr->type == M_INPUT_T_BUF) {
-            if (mln_lex_push_InputBufStream(lex, attr->data) < 0) {
+            if (mln_lex_push_input_buf_stream(lex, attr->data) < 0) {
                 mln_lex_destroy(lex);
                 return NULL;
             }
         } else if (attr->type == M_INPUT_T_FILE) {
-            if (mln_lex_push_InputFileStream(lex, attr->data) < 0) {
+            if (mln_lex_push_input_file_stream(lex, attr->data) < 0) {
                 mln_lex_destroy(lex);
                 return NULL;
             }
@@ -322,7 +322,7 @@ void mln_lex_destroy(mln_lex_t *lex)
 {
     if (lex == NULL) return;
     if (lex->preprocess) {
-        mln_lex_preprocessData_free((mln_lex_preprocessData_t *)(lex->hooks.at_data));
+        mln_lex_preprocess_data_free((mln_lex_preprocess_data_t *)(lex->hooks.at_data));
         lex->hooks.at_data = NULL;
     }
     if (lex->macros != NULL) mln_rbtree_destroy(lex->macros);
@@ -373,7 +373,7 @@ char *mln_lex_strerror(mln_lex_t *lex)
     return lex->err_msg;
 }
 
-int mln_lex_push_InputFileStream(mln_lex_t *lex, mln_string_t *path)
+int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
 {
     int err = MLN_LEX_SUCCEED;
     mln_lex_input_t *in = mln_lex_input_new(lex->pool, M_INPUT_T_FILE, path, &err, lex->line);
@@ -396,7 +396,7 @@ int mln_lex_push_InputFileStream(mln_lex_t *lex, mln_string_t *path)
     return 0;
 }
 
-int mln_lex_push_InputBufStream(mln_lex_t *lex, mln_string_t *buf)
+int mln_lex_push_input_buf_stream(mln_lex_t *lex, mln_string_t *buf)
 {
     int err = MLN_LEX_SUCCEED;
     mln_lex_input_t *in = mln_lex_input_new(lex->pool, M_INPUT_T_BUF, buf, &err, lex->line);
@@ -419,7 +419,7 @@ int mln_lex_push_InputBufStream(mln_lex_t *lex, mln_string_t *buf)
     return 0;
 }
 
-static int mln_lex_checkFileLoop_scanner(void *st_data, void *data)
+static int mln_lex_check_file_loop_scanner(void *st_data, void *data)
 {
     mln_string_t *path = (mln_string_t *)data;
     mln_lex_input_t *in = (mln_lex_input_t *)st_data;
@@ -428,22 +428,22 @@ static int mln_lex_checkFileLoop_scanner(void *st_data, void *data)
     return 0;
 }
 
-int mln_lex_checkFileLoop(mln_lex_t *lex, mln_string_t *path)
+int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path)
 {
     if (lex->cur != NULL && !mln_string_strcmp(path, lex->cur->data)) {
-        mln_lex_setError(lex, MLN_LEX_EINCLUDELOOP);
+        mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
         return -1;
     }
-    if (mln_stack_scan_all(lex->stack, mln_lex_checkFileLoop_scanner, path) < 0) {
-        mln_lex_setError(lex, MLN_LEX_EINCLUDELOOP);
+    if (mln_stack_scan_all(lex->stack, mln_lex_check_file_loop_scanner, path) < 0) {
+        mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
         return -1;
     }
     return 0;
 }
 
-int mln_lex_conditionTest(mln_lex_t *lex)
+int mln_lex_condition_test(mln_lex_t *lex)
 {
-    mln_lex_cleanResult(lex);
+    mln_lex_result_clean(lex);
 
     char c;
     int reverse = 0;
@@ -452,49 +452,49 @@ int mln_lex_conditionTest(mln_lex_t *lex)
     mln_string_t tmp;
 
     while (1) {
-        if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {
+        if ((c = mln_lex_getchar(lex)) == MLN_ERR) {
             return -1;
         }
         if (c == ' ' || c == '\t') continue;
         if (c == '\n') {
-            mln_lex_setError(lex, MLN_LEX_EINVEOL);
+            mln_lex_error_set(lex, MLN_LEX_EINVEOL);
             return -1;
         }
         if (c == MLN_EOF) {
-            mln_lex_setError(lex, MLN_LEX_EINVEOF);
+            mln_lex_error_set(lex, MLN_LEX_EINVEOF);
             return -1;
         }
-        mln_lex_stepBack(lex, c);
+        mln_lex_stepback(lex, c);
         break;
     }
 
-    if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {
+    if ((c = mln_lex_getchar(lex)) == MLN_ERR) {
         return -1;
     }
     if (c == '!') reverse = 1;
-    else mln_lex_stepBack(lex, c);
+    else mln_lex_stepback(lex, c);
 
     while (1) {
-        if ((c = mln_lex_getAChar(lex)) == MLN_ERR) {
+        if ((c = mln_lex_getchar(lex)) == MLN_ERR) {
             return -1;
         }
         if (c == ' ' || c == '\t' || c == '\n' || c == MLN_EOF) {
             break;
         }
-        if (!mln_lex_isLetter(c) && !isdigit(c)) {
-            mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+        if (!mln_lex_is_letter(c) && !isdigit(c)) {
+            mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
             return -1;
         }
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) {
+        if (mln_lex_putchar(lex, c) == MLN_ERR) {
             return -1;
         }
     }
 
-    mln_lex_getResult(lex, &tmp);
+    mln_lex_result_get(lex, &tmp);
     lm.key = &tmp;
     lm.val = NULL;
     rn = mln_rbtree_search(lex->macros, lex->macros->root, &lm);
-    mln_lex_cleanResult(lex);
+    mln_lex_result_clean(lex);
     if (mln_rbtree_null(rn, lex->macros)) {
         return reverse? 1: 0;
     }

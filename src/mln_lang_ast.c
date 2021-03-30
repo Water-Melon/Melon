@@ -508,195 +508,195 @@ mln_get_char(mln_lex_t *lex, char c);
 static mln_lang_struct_t *
 mln_lang_sub_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '-') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_DECR);
     }
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_SUBEQ);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_SUB);
 }
 
 static mln_lang_struct_t *
 mln_lang_plus_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '+') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_INC);
     }
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_PLUSEQ);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_PLUS);
 }
 
 static mln_lang_struct_t *
 mln_lang_ast_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_MULEQ);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_AST);
 }
 
 static mln_lang_struct_t *
 mln_lang_lagl_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '<') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
-        if ((c = mln_lex_getAChar(lex)) != '=') {
-            mln_lex_stepBack(lex, c);
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
+        if ((c = mln_lex_getchar(lex)) != '=') {
+            mln_lex_stepback(lex, c);
             return mln_lang_new(lex, LANG_TK_LMOVE);
         }
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_LMOVEQ);
     }
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_LESSEQ);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_LAGL);
 }
 
 static mln_lang_struct_t *
 mln_lang_ragl_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '>') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
-        if ((c = mln_lex_getAChar(lex)) != '=') {
-            mln_lex_stepBack(lex, c);
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
+        if ((c = mln_lex_getchar(lex)) != '=') {
+            mln_lex_stepback(lex, c);
             return mln_lang_new(lex, LANG_TK_RMOVE);
         }
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_RMOVEQ);
     }
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_GREATEREQ);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_RAGL);
 }
 
 static mln_lang_struct_t *
 mln_lang_vertl_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_OREQ);
     }
     if (c == '|') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_LOWOR);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_VERTL);
 }
 
 static mln_lang_struct_t *
 mln_lang_amp_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_ANDEQ);
     }
     if (c == '&') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_LOWAND);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_AMP);
 }
 
 static mln_lang_struct_t *
 mln_lang_dash_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_ANTIEQ);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_DASH);
 }
 
 static mln_lang_struct_t *
 mln_lang_xor_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_XOREQ);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_XOR);
 }
 
 static mln_lang_struct_t *
 mln_lang_perc_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_MODEQ);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_PERC);
 }
 
 static mln_lang_struct_t *
 mln_lang_equal_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_DEQUAL);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_EQUAL);
 }
 
 static mln_lang_struct_t *
 mln_lang_excl_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_NONEQUAL);
     }
-    mln_lex_stepBack(lex, c);
+    mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_EXCL);
 }
 
 static mln_lang_struct_t *
 mln_lang_sglq_handler(mln_lex_t *lex, void *data)
 {
-    mln_lex_cleanResult(lex);
+    mln_lex_result_clean(lex);
     char c;
     while ( 1 ) {
-        if ((c = mln_lex_getAChar(lex)) == MLN_ERR) return NULL;
+        if ((c = mln_lex_getchar(lex)) == MLN_ERR) return NULL;
         if (c == MLN_EOF) {
-            mln_lex_setError(lex, MLN_LEX_EINVEOF);
+            mln_lex_error_set(lex, MLN_LEX_EINVEOF);
             return NULL;
         }
         if (c == '\'') break;
         if (c == '\n') ++lex->line;
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
     }
     return mln_lang_new(lex, LANG_TK_STRING);
 }
@@ -706,44 +706,44 @@ mln_get_char(mln_lex_t *lex, char c)
 {
     if (c == '\\') {
         char n;
-        if ((n = mln_lex_getAChar(lex)) == MLN_ERR) return -1;
+        if ((n = mln_lex_getchar(lex)) == MLN_ERR) return -1;
         switch ( n ) {
             case '\"':
-                if (mln_lex_putAChar(lex, n) == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, n) == MLN_ERR) return -1;
                 break;
             case '\'':
-                if (mln_lex_putAChar(lex, n) == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, n) == MLN_ERR) return -1;
                 break;
             case 'n':
-                if (mln_lex_putAChar(lex, '\n') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\n') == MLN_ERR) return -1;
                 break;
             case 't':
-                if (mln_lex_putAChar(lex, '\t') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\t') == MLN_ERR) return -1;
                 break;
             case 'b':
-                if (mln_lex_putAChar(lex, '\b') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\b') == MLN_ERR) return -1;
                 break;
             case 'a':
-                if (mln_lex_putAChar(lex, '\a') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\a') == MLN_ERR) return -1;
                 break;
             case 'f':
-                if (mln_lex_putAChar(lex, '\f') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\f') == MLN_ERR) return -1;
                 break;
             case 'r':
-                if (mln_lex_putAChar(lex, '\r') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\r') == MLN_ERR) return -1;
                 break;
             case 'v':
-                if (mln_lex_putAChar(lex, '\v') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\v') == MLN_ERR) return -1;
                 break;
             case '\\':
-                if (mln_lex_putAChar(lex, '\\') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\\') == MLN_ERR) return -1;
                 break;
             default:
-                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+                mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
                 return -1;
         }
     } else {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return -1;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return -1;
     }
     return 0;
 }
@@ -751,13 +751,13 @@ mln_get_char(mln_lex_t *lex, char c)
 static mln_lang_struct_t *
 mln_lang_dblq_handler(mln_lex_t *lex, void *data)
 {
-    mln_lex_cleanResult(lex);
+    mln_lex_result_clean(lex);
     char c;
     while ( 1 ) {
-        c = mln_lex_getAChar(lex);
+        c = mln_lex_getchar(lex);
         if (c == MLN_ERR) return NULL;
         if (c == MLN_EOF) {
-            mln_lex_setError(lex, MLN_LEX_EINVEOF);
+            mln_lex_error_set(lex, MLN_LEX_EINVEOF);
             return NULL;
         }
         if (c == '\"') break;
@@ -770,57 +770,57 @@ mln_lang_dblq_handler(mln_lex_t *lex, void *data)
 static mln_lang_struct_t *
 mln_lang_slash_handler(mln_lex_t *lex, void *data)
 {
-    char c = mln_lex_getAChar(lex);
+    char c = mln_lex_getchar(lex);
     if (c == MLN_ERR) return NULL;
     if (c == '*') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         while ( 1 ) {
-            c = mln_lex_getAChar(lex);
+            c = mln_lex_getchar(lex);
             if (c == MLN_ERR) return NULL;
             if (c == MLN_EOF) {
-                mln_lex_stepBack(lex, c);
+                mln_lex_stepback(lex, c);
                 break;
             }
             if (c == '\n') ++(lex->line);
             if (c == '*') {
-                if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
-                c = mln_lex_getAChar(lex);
+                if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
+                c = mln_lex_getchar(lex);
                 if (c == MLN_ERR) return NULL;
                 if (c == MLN_EOF) {
-                    mln_lex_stepBack(lex, c);
+                    mln_lex_stepback(lex, c);
                     break;
                 }
                 if (c == '\n') ++(lex->line);
                 if (c == '/') {
-                    if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+                    if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
                     break;
                 }
             }
-            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         }
     } else if (c == '/') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         while ( 1 ) {
-            c = mln_lex_getAChar(lex);
+            c = mln_lex_getchar(lex);
             if (c == MLN_ERR) return NULL;
             if (c == MLN_EOF) {
-                mln_lex_stepBack(lex, c);
+                mln_lex_stepback(lex, c);
                 break;
             }
             if (c == '\n') {
-                mln_lex_stepBack(lex, c);
+                mln_lex_stepback(lex, c);
                 break;
             }
-            if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+            if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         }
     } else if (c == '=') {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return NULL;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
         return mln_lang_new(lex, LANG_TK_DIVEQ);
     } else {
-        mln_lex_stepBack(lex, c);
+        mln_lex_stepback(lex, c);
         return mln_lang_new(lex, LANG_TK_SLASH);
     }
-    mln_lex_cleanResult(lex);
+    mln_lex_result_clean(lex);
     return mln_lang_token(lex);
 }
 
@@ -3409,7 +3409,7 @@ void *mln_lang_ast_generate(mln_alloc_t *pool, void *state_tbl, mln_string_t *da
     lattr.preprocess = 1;
     lattr.type = data_type;
     lattr.data = data;
-    mln_lex_initWithHooks(mln_lang, lex, &lattr);
+    mln_lex_init_with_hooks(mln_lang, lex, &lattr);
     if (lex == NULL) {
         mln_alloc_destroy(internal_pool);
         return NULL;
