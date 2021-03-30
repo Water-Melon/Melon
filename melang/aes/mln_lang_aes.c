@@ -109,7 +109,7 @@ static mln_lang_var_t *mln_lang_aes_process(mln_lang_ctx_t *ctx)
     mln_string_t v2 = mln_string("key");
     mln_string_t v3 = mln_string("bits");
     mln_string_t v4 = mln_string("op");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_aes_t aes;
     mln_u8ptr_t p, pend;
 

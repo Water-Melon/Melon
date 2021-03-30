@@ -63,7 +63,7 @@ static mln_lang_var_t *mln_lang_prime_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *ret_var;
     mln_string_t var = mln_string("base");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     if ((sym = mln_lang_symbol_node_search(ctx, &var, 1)) == NULL) {
         ASSERT(0);
         mln_lang_errmsg(ctx, "Argument missing.");

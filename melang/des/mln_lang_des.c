@@ -104,7 +104,7 @@ static mln_lang_var_t *mln_lang_des_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("key");
     mln_string_t v3 = mln_string("op");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8ptr_t outbuf;
     mln_des_t des;
 
@@ -276,7 +276,7 @@ static mln_lang_var_t *mln_lang_3des_process(mln_lang_ctx_t *ctx)
     mln_string_t v2 = mln_string("key1");
     mln_string_t v3 = mln_string("key2");
     mln_string_t v4 = mln_string("op");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8ptr_t outbuf;
     mln_3des_t _3des;
 

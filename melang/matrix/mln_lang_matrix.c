@@ -91,7 +91,7 @@ static mln_lang_var_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("a1"), v2 = mln_string("a2");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_array_t *a1, *a2;
     mln_matrix_t *m1, *m2, *mres;
 
@@ -205,7 +205,7 @@ static mln_lang_var_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("array");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_array_t *a;
     mln_matrix_t *m, *mres;
 

@@ -169,7 +169,7 @@ static void mln_lang_mysql_connect_test(mln_event_t *ev, int fd, void *data)
         mln_lang_mysql_chain_del(&(lmt->head), &(lmt->tail), mysql);
         if ((ret_var = mln_lang_var_create_true(ctx, NULL)) != NULL) {
             mln_s32_t type;
-            mln_lang_symbolNode_t *sym;
+            mln_lang_symbol_node_t *sym;
             mln_string_t _this = mln_string("this");
             mln_string_t v = mln_string("fd");
             mln_lang_val_t *val;
@@ -227,7 +227,7 @@ static mln_lang_var_t *mln_lang_mysql_connect_process(mln_lang_ctx_t *ctx)
     mln_string_t v5 = mln_string("password");
     mln_string_t v = mln_string("fd");
     mln_string_t typename = mln_string("Mysql");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
@@ -410,7 +410,7 @@ static mln_lang_var_t *mln_lang_mysql_close_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
@@ -486,7 +486,7 @@ static mln_lang_var_t *mln_lang_mysql_commit_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
@@ -567,7 +567,7 @@ static mln_lang_var_t *mln_lang_mysql_rollback_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
@@ -648,7 +648,7 @@ static mln_lang_var_t *mln_lang_mysql_error_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql"), tmp;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
@@ -732,7 +732,7 @@ static mln_lang_var_t *mln_lang_mysql_errno_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd"), typename = mln_string("Mysql");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
@@ -992,7 +992,7 @@ static mln_lang_var_t *mln_lang_mysql_execute_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("sql");
     mln_string_t v = mln_string("fd");
     mln_string_t typename = mln_string("Mysql");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;
@@ -1123,7 +1123,7 @@ static mln_lang_var_t *mln_lang_mysql_autocommit_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("mode");
     mln_string_t v = mln_string("fd");
     mln_string_t typename = mln_string("Mysql");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_lang_mysql_t *mysql;

@@ -76,7 +76,7 @@ static mln_lang_var_t *mln_lang_sha1_process(mln_lang_ctx_t *ctx)
     mln_string_t *tmp, t;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -189,7 +189,7 @@ static mln_lang_var_t *mln_lang_sha256_process(mln_lang_ctx_t *ctx)
     mln_string_t *tmp, t;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);

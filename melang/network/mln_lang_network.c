@@ -427,7 +427,7 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("host"), v2 = mln_string("service");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     struct addrinfo addr, *res = NULL;
     int fd, opt = 1;
     mln_u16_t port;
@@ -630,7 +630,7 @@ static mln_lang_var_t *mln_lang_network_tcp_accept_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("timeout");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_tcp_t *tcp;
     int fd, timeout, type;
 
@@ -760,7 +760,7 @@ static mln_lang_var_t *mln_lang_network_tcp_recv_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("timeout");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_tcp_t *tcp;
     int fd, timeout, type;
 
@@ -884,7 +884,7 @@ static mln_lang_var_t *mln_lang_network_tcp_send_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("data");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_tcp_t *tcp;
     int fd;
     mln_string_t *data;
@@ -1047,7 +1047,7 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("host"), v2 = mln_string("service"), v3 = mln_string("timeout");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_tcp_t *tcp;
     struct addrinfo addr, *res = NULL;
     int fd, type, timeout;
@@ -1257,7 +1257,7 @@ static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx
     mln_lang_val_t *val;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("mode");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_tcp_t *tcp;
     mln_string_t send_mode = mln_string("send");
     mln_string_t recv_mode = mln_string("recv");
@@ -1403,7 +1403,7 @@ static mln_lang_var_t *mln_lang_network_tcp_close_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1802,7 +1802,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("host"), v2 = mln_string("service");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     struct addrinfo addr, *res = NULL;
     int fd, opt = 1, type, notbind = 0;
     char host[128] = {0}, service[64] = {0};
@@ -1990,7 +1990,7 @@ static mln_lang_var_t *mln_lang_network_udp_close_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -2099,7 +2099,7 @@ static mln_lang_var_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("data"), v3 = mln_string("host"), v4 = mln_string("service");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     struct addrinfo addr, *res = NULL;
     int fd;
     mln_string_t *data;
@@ -2336,7 +2336,7 @@ static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("fd"), v2 = mln_string("bufsize"), v3 = mln_string("ip"), v4 = mln_string("port"), v5 = mln_string("timeout");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     int fd, timeout, type;
     mln_s64_t size;
     mln_lang_udp_t *udp;

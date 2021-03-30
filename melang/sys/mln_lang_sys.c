@@ -157,7 +157,7 @@ static mln_lang_var_t *mln_lang_sys_array_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -424,7 +424,7 @@ static mln_lang_var_t *mln_lang_sys_obj_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -527,7 +527,7 @@ static mln_lang_var_t *mln_lang_sys_str_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -642,7 +642,7 @@ static mln_lang_var_t *mln_lang_sys_real_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -732,7 +732,7 @@ static mln_lang_var_t *mln_lang_sys_bool_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -801,7 +801,7 @@ static mln_lang_var_t *mln_lang_sys_int_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -895,7 +895,7 @@ static mln_lang_var_t *mln_lang_sys_isInt_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -962,7 +962,7 @@ static mln_lang_var_t *mln_lang_sys_isReal_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1029,7 +1029,7 @@ static mln_lang_var_t *mln_lang_sys_isStr_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1096,7 +1096,7 @@ static mln_lang_var_t *mln_lang_sys_isNil_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1163,7 +1163,7 @@ static mln_lang_var_t *mln_lang_sys_isBool_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1230,7 +1230,7 @@ static mln_lang_var_t *mln_lang_sys_isObj_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1297,7 +1297,7 @@ static mln_lang_var_t *mln_lang_sys_isFunc_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1364,7 +1364,7 @@ static mln_lang_var_t *mln_lang_sys_isArray_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1431,7 +1431,7 @@ static mln_lang_var_t *mln_lang_sys_size_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("array");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1515,7 +1515,7 @@ static mln_lang_var_t *mln_lang_sys_has_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("owner");
     mln_string_t v2 = mln_string("thing");
-    mln_lang_symbolNode_t *sym, *sym2;
+    mln_lang_symbol_node_t *sym, *sym2;
     mln_s32_t type;
 
     if ((sym2 = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
@@ -1612,7 +1612,7 @@ static mln_lang_var_t *mln_lang_sys_keys_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("array");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_array_t *array, *arr;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
@@ -1714,7 +1714,7 @@ static mln_lang_var_t *mln_lang_sys_merge_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("array1");
     mln_string_t v2 = mln_string("array2");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_array_t *array, *arr;
 
     if ((ret_var = mln_lang_var_create_array(ctx, NULL)) == NULL) {
@@ -1780,7 +1780,7 @@ static mln_lang_var_t *mln_lang_sys_type_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_s32_t type;
     mln_string_t tmp;
     mln_lang_val_t *val;
@@ -1938,7 +1938,7 @@ static mln_lang_var_t *mln_lang_sys_getproperty_process(mln_lang_ctx_t *ctx)
 {
     mln_string_t v1 = mln_string("obj");
     mln_string_t v2 = mln_string("prop");
-    mln_lang_symbolNode_t *sym, *sym2;
+    mln_lang_symbol_node_t *sym, *sym2;
     mln_lang_var_t *var;
 
     if ((sym2 = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
@@ -2051,7 +2051,7 @@ static mln_lang_var_t *mln_lang_sys_setproperty_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("obj");
     mln_string_t v2 = mln_string("prop");
     mln_string_t v3 = mln_string("val");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_val_t *val1, *val2;
 
@@ -2203,7 +2203,7 @@ static mln_lang_var_t *mln_lang_sys_eval_process(mln_lang_ctx_t *ctx)
     mln_string_t v2 = mln_string("data");
     mln_string_t v3 = mln_string("in_string");
     mln_string_t data_name = mln_string("EVAL_DATA"), *dup;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val1, *val2;
     mln_s32_t type, type3;
     mln_u32_t job_type;
@@ -2352,7 +2352,7 @@ static mln_lang_var_t *mln_lang_sys_remove_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("path");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
@@ -2478,7 +2478,7 @@ static mln_lang_var_t *mln_lang_sys_mkdir_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("path"), v2 = mln_string("mode");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val1, *val2;
     mln_s32_t type;
     mode_t mode;
@@ -2594,7 +2594,7 @@ static mln_lang_var_t *mln_lang_sys_exist_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("path");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {

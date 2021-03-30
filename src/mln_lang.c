@@ -49,18 +49,18 @@ struct mln_lang_gc_setter_s {
 };
 
 MLN_CHAIN_FUNC_DECLARE(mln_lang_sym_scope, \
-                       mln_lang_symbolNode_t, \
+                       mln_lang_symbol_node_t, \
                        static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_sym_scope, \
-                      mln_lang_symbolNode_t, \
+                      mln_lang_symbol_node_t, \
                       static inline void, \
                       scope_prev, \
                       scope_next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_sym, \
-                       mln_lang_symbolNode_t, \
+                       mln_lang_symbol_node_t, \
                        static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_lang_sym, \
-                      mln_lang_symbolNode_t, \
+                      mln_lang_symbol_node_t, \
                       static inline void, \
                       prev, \
                       next);
@@ -144,14 +144,14 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
                    mln_lang_stack_node_t *cur_stack, \
                    mln_lang_stm_t *entry_stm);
 static inline void mln_lang_scope_free(mln_lang_scope_t *scope);
-static inline mln_lang_symbolNode_t *
-mln_lang_symbolNode_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbolType_t type, void *data);
-static void mln_lang_symbolNode_free(void *data);
+static inline mln_lang_symbol_node_t *
+mln_lang_symbol_node_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbolType_t type, void *data);
+static void mln_lang_symbol_node_free(void *data);
 static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data);
-static inline mln_lang_symbolNode_t *
+static inline mln_lang_symbol_node_t *
 __mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local);
-static inline mln_lang_symbolNode_t *
-mln_lang_symbolNode_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name);
+static inline mln_lang_symbol_node_t *
+mln_lang_symbol_node_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name);
 static inline mln_lang_var_t *
 __mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name);
 static int mln_lang_set_member_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
@@ -322,7 +322,7 @@ static int mln_lang_resource_cmp(const mln_lang_resource_t *lr1, const mln_lang_
 static void mln_lang_resource_free_handler(mln_lang_resource_t *lr);
 static inline mln_lang_hash_t *mln_lang_hash_new(mln_lang_ctx_t *ctx);
 static inline void mln_lang_hash_free(mln_lang_hash_t *h);
-static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *h, mln_lang_symbolNode_t *sym);
+static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *h, mln_lang_symbol_node_t *sym);
 
 #define mln_lang_stack_node_chain_add(_head, _tail, _node); \
         (_node)->prev = (_node)->next = NULL;\
@@ -917,7 +917,7 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     mln_lang_stack_node_t *sn;
     mln_lang_var_t *var;
     mln_lang_val_t *val;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     while ((scope = ctx->scope_cache_head) != NULL) {
         mln_lang_scope_chain_del(&(ctx->scope_cache_head), &(ctx->scope_cache_tail), scope);
@@ -927,7 +927,7 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     while ((sym = ctx->sym_head) != NULL) {
         mln_lang_sym_chain_del(&ctx->sym_head, &ctx->sym_tail, sym);
         sym->ctx = NULL;
-        mln_lang_symbolNode_free(sym);
+        mln_lang_symbol_node_free(sym);
     }
     while ((val = ctx->val_head) != NULL) {
         mln_lang_val_chain_del(&(ctx->val_head), &(ctx->val_tail), val);
@@ -1009,7 +1009,7 @@ mln_lang_ctx_getClass(mln_lang_ctx_t *ctx)
 {
     mln_lang_hash_bucket_t *hb;
     mln_string_t *s, *name = NULL;
-    mln_lang_symbolNode_t tmp, *sym;
+    mln_lang_symbol_node_t tmp, *sym;
 
     ASSERT(ctx->scope_tail != NULL);
     if (ctx->scope_tail->type != M_LANG_SCOPE_TYPE_SET) return NULL;
@@ -1411,7 +1411,7 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
 static inline void mln_lang_scope_free(mln_lang_scope_t *scope)
 {
     if (scope == NULL) return;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if (scope->name != NULL) {
         mln_string_free(scope->name);
@@ -1420,7 +1420,7 @@ static inline void mln_lang_scope_free(mln_lang_scope_t *scope)
     while ((sym = scope->sym_head) != NULL) {
         mln_lang_sym_scope_chain_del(&scope->sym_head, &scope->sym_tail, sym);
         mln_lang_sym_chain_del(&sym->bucket->head, &sym->bucket->tail, sym);
-        mln_lang_symbolNode_free(sym);
+        mln_lang_symbol_node_free(sym);
     }
     if (scope->ctx != NULL && scope->ctx->scope_count < M_LANG_CACHE_COUNT) {
         mln_lang_scope_chain_add(&(scope->ctx->scope_cache_head), &(scope->ctx->scope_cache_tail), scope);
@@ -1430,15 +1430,15 @@ static inline void mln_lang_scope_free(mln_lang_scope_t *scope)
     }
 }
 
-static inline mln_lang_symbolNode_t *
-mln_lang_symbolNode_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbolType_t type, void *data)
+static inline mln_lang_symbol_node_t *
+mln_lang_symbol_node_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbolType_t type, void *data)
 {
-    mln_lang_symbolNode_t *ls;
+    mln_lang_symbol_node_t *ls;
     if ((ls = ctx->sym_head) != NULL) {
         mln_lang_sym_chain_del(&(ctx->sym_head), &(ctx->sym_tail), ls);
         --(ctx->sym_count);
     } else {
-        if ((ls = (mln_lang_symbolNode_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_symbolNode_t))) == NULL) {
+        if ((ls = (mln_lang_symbol_node_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_symbol_node_t))) == NULL) {
             return NULL;
         }
         ls->ctx = ctx;
@@ -1460,10 +1460,10 @@ mln_lang_symbolNode_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symb
     return ls;
 }
 
-static void mln_lang_symbolNode_free(void *data)
+static void mln_lang_symbol_node_free(void *data)
 {
     if (data == NULL) return;
-    mln_lang_symbolNode_t *ls = (mln_lang_symbolNode_t *)data;
+    mln_lang_symbol_node_t *ls = (mln_lang_symbol_node_t *)data;
     switch (ls->type) {
         case M_LANG_SYMBOL_VAR:
             if (ls->data.var != NULL) {
@@ -1493,10 +1493,10 @@ int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, v
 
 static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data)
 {
-    mln_lang_symbolNode_t *symbol, *tmp;
+    mln_lang_symbol_node_t *symbol, *tmp;
     mln_string_t *name = type == M_LANG_SYMBOL_VAR? ((mln_lang_var_t *)data)->name: ((mln_lang_set_detail_t *)data)->name;
 
-    if ((symbol = mln_lang_symbolNode_new(ctx, name, type, data)) == NULL) {
+    if ((symbol = mln_lang_symbol_node_new(ctx, name, type, data)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -1506,7 +1506,7 @@ static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symb
          if (!memcmp(tmp->symbol->data, name->data, name->len)) {
              mln_lang_sym_chain_del(&(tmp->bucket->head), &(tmp->bucket->tail), tmp);
              mln_lang_sym_scope_chain_del(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), tmp);
-             mln_lang_symbolNode_free(tmp);
+             mln_lang_symbol_node_free(tmp);
              break;
          }
     }
@@ -1516,15 +1516,15 @@ static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symb
     return 0;
 }
 
-mln_lang_symbolNode_t *mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
+mln_lang_symbol_node_t *mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
 {
     return __mln_lang_symbol_node_search(ctx, name, local);
 }
 
-static inline mln_lang_symbolNode_t *
+static inline mln_lang_symbol_node_t *
 __mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
 {
-    mln_lang_symbolNode_t *sym, tmp;
+    mln_lang_symbol_node_t *sym, tmp;
     mln_lang_hash_bucket_t *hb;
     mln_lang_scope_t *scope = ctx->scope_tail;
 
@@ -1543,8 +1543,8 @@ __mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local
     return NULL;
 }
 
-static inline mln_lang_symbolNode_t *
-mln_lang_symbolNode_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name)
+static inline mln_lang_symbol_node_t *
+mln_lang_symbol_node_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name)
 {
     mln_string_t n = *name;
     if (name->len > 1 && name->data[0] == '_') {
@@ -5410,7 +5410,7 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
     mln_s32_t type;
     mln_string_t *funcname = funccall->name;
     mln_lang_array_t *args_array;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if (prototype == NULL) {
         if (funccall->object == NULL) {
@@ -5766,7 +5766,7 @@ static inline int mln_lang_stack_handler_spec_new(mln_lang_ctx_t *ctx, mln_strin
     mln_lang_var_t *var;
     mln_lang_val_t *val;
     mln_lang_object_t *obj;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     char tmp[512] = {0};
     char msg[1024] = {0};
     mln_size_t len;
@@ -5774,7 +5774,7 @@ static inline int mln_lang_stack_handler_spec_new(mln_lang_ctx_t *ctx, mln_strin
 again:
     sym = __mln_lang_symbol_node_search(ctx, name, 0);
     if (sym == NULL) {
-        sym = mln_lang_symbolNode_idSearch(ctx, name);
+        sym = mln_lang_symbol_node_idSearch(ctx, name);
         if (sym == NULL) goto err;
         if (sym->type != M_LANG_SYMBOL_VAR) goto err;
         if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) goto err;
@@ -5788,7 +5788,7 @@ err:
         return -1;
     } else {
         if (sym->type == M_LANG_SYMBOL_SET) goto goon;
-        sym = mln_lang_symbolNode_idSearch(ctx, name);
+        sym = mln_lang_symbol_node_idSearch(ctx, name);
         if (sym == NULL) goto err;
         if (sym->type != M_LANG_SYMBOL_VAR) goto err;
         if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) goto err;
@@ -5825,8 +5825,8 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
         switch (factor->type) {
             case M_FACTOR_ID:
             {
-                mln_lang_symbolNode_t *sym;
-                if ((sym = mln_lang_symbolNode_idSearch(ctx, factor->data.s_id)) != NULL) {
+                mln_lang_symbol_node_t *sym;
+                if ((sym = mln_lang_symbol_node_idSearch(ctx, factor->data.s_id)) != NULL) {
                     if (sym->type == M_LANG_SYMBOL_VAR) {
                         __mln_lang_ctx_set_ret_var(ctx, mln_lang_var_ref(sym->data.var));
                     } else {/*M_LANG_SYMBOL_SET*/
@@ -6048,7 +6048,7 @@ goon1:
 static int mln_lang_dump_symbol(mln_lang_ctx_t *ctx, void *key, void *val, void *udata)
 {
     char *title = NULL;
-    mln_lang_symbolNode_t *sym = (mln_lang_symbolNode_t *)val;
+    mln_lang_symbol_node_t *sym = (mln_lang_symbol_node_t *)val;
     struct mln_rbtree_attr rbattr;
     mln_rbtree_t *check;
 
@@ -6453,7 +6453,7 @@ static mln_lang_var_t *mln_lang_msg_func_new_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *var;
     mln_string_t name = mln_string("name");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     if ((sym = __mln_lang_symbol_node_search(ctx, &name, 1)) == NULL) {
         ASSERT(0);
         __mln_lang_errmsg(ctx, "Argument missing.");
@@ -6525,7 +6525,7 @@ static mln_lang_var_t *mln_lang_msg_func_free_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *var;
     mln_string_t name = mln_string("name");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     if ((sym = __mln_lang_symbol_node_search(ctx, &name, 1)) == NULL) {
         ASSERT(0);
         __mln_lang_errmsg(ctx, "Argument missing.");
@@ -6594,7 +6594,7 @@ static mln_lang_var_t *mln_lang_msg_func_recv_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_msg_t *lm, tmp;
     mln_rbtree_node_t *rn;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     if ((sym = __mln_lang_symbol_node_search(ctx, &name, 1)) == NULL) {
         ASSERT(0);
         __mln_lang_errmsg(ctx, "Argument missing.");
@@ -6702,7 +6702,7 @@ static mln_lang_var_t *mln_lang_msg_func_send_process(mln_lang_ctx_t *ctx)
     mln_string_t name = mln_string("name");
     mln_string_t data = mln_string("var");
     mln_string_t *s;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     if ((sym = __mln_lang_symbol_node_search(ctx, &name, 1)) == NULL) {
         ASSERT(0);
         __mln_lang_errmsg(ctx, "Argument missing.");
@@ -6814,7 +6814,7 @@ static mln_lang_var_t *mln_lang_func_watch_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("var");
     mln_string_t v2 = mln_string("func");
     mln_string_t v3 = mln_string("data");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val1;
     mln_lang_func_detail_t *func, *dup;
     if ((sym = __mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
@@ -6913,7 +6913,7 @@ static mln_lang_var_t *mln_lang_func_unwatch_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val1;
     if ((sym = __mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -7014,7 +7014,7 @@ static mln_lang_var_t *mln_lang_msg_func_dump_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *var;
     mln_string_t v1 = mln_string("var");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     if ((sym = __mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
         __mln_lang_errmsg(ctx, "Argument missing.");
@@ -7214,7 +7214,7 @@ static void mln_lang_gc_item_root_setter(mln_gc_t *gc, mln_lang_ctx_t *ctx)
     mln_s32_t type;
     mln_lang_val_t *val;
     mln_lang_hash_bucket_t *hb, *end;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     for (hb = ctx->symbols->bucket, end = ctx->symbols->bucket+ctx->symbols->len; hb < end; ++hb) {
         for (sym = hb->tail; sym != NULL; sym = sym->prev) {
@@ -7464,20 +7464,20 @@ static inline mln_lang_hash_t *mln_lang_hash_new(mln_lang_ctx_t *ctx)
 static inline void mln_lang_hash_free(mln_lang_hash_t *h)
 {
     mln_lang_hash_bucket_t *hb, *end;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     for (hb = h->bucket, end = h->bucket+h->len; hb < end; ++hb) {
         while ((sym = hb->tail) != NULL) {
             mln_lang_sym_chain_del(&hb->head, &hb->tail, sym);
             sym->ctx = NULL;
-            mln_lang_symbolNode_free(sym);
+            mln_lang_symbol_node_free(sym);
         }
     }
     mln_alloc_free(h->bucket);
     mln_alloc_free(h);
 }
 
-static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *h, mln_lang_symbolNode_t *sym)
+static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *h, mln_lang_symbol_node_t *sym)
 {
     mln_u64_t idx = 0, i, n = sym->symbol->len;
     mln_u8ptr_t p = sym->symbol->data;

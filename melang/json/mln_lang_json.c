@@ -103,7 +103,7 @@ static mln_lang_var_t *mln_lang_json_encode_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("array");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_array_t *array;
     mln_json_t *json;
 
@@ -432,7 +432,7 @@ static mln_lang_var_t *mln_lang_json_decode_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_array_t *array;
     mln_json_t *json;
 

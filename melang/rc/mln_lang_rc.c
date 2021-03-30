@@ -77,7 +77,7 @@ static mln_lang_var_t *mln_lang_rc4_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("key");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8_t s[256];
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {

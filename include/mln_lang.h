@@ -38,7 +38,7 @@ typedef struct mln_lang_object_s        mln_lang_object_t;
 typedef struct mln_lang_func_detail_s   mln_lang_func_detail_t;
 typedef struct mln_lang_var_s           mln_lang_var_t;
 typedef struct mln_lang_set_detail_s    mln_lang_set_detail_t;
-typedef struct mln_lang_symbolNode_s    mln_lang_symbolNode_t;
+typedef struct mln_lang_symbol_node_s   mln_lang_symbol_node_t;
 typedef struct mln_lang_scope_s         mln_lang_scope_t;
 typedef struct mln_lang_stack_node_s    mln_lang_stack_node_t;
 typedef struct mln_lang_msg_s           mln_lang_msg_t;
@@ -66,8 +66,8 @@ struct mln_lang_hash_s {
 };
 
 struct mln_lang_hash_bucket_s {
-    mln_lang_symbolNode_t           *head;
-    mln_lang_symbolNode_t           *tail;
+    mln_lang_symbol_node_t          *head;
+    mln_lang_symbol_node_t          *tail;
 };
 
 struct mln_lang_ast_cache_s {
@@ -125,8 +125,8 @@ struct mln_lang_ctx_s {
     mln_lang_var_t                  *var_tail;
     mln_lang_val_t                  *val_head;
     mln_lang_val_t                  *val_tail;
-    mln_lang_symbolNode_t           *sym_head;
-    mln_lang_symbolNode_t           *sym_tail;
+    mln_lang_symbol_node_t          *sym_head;
+    mln_lang_symbol_node_t          *sym_tail;
     mln_lang_scope_t                *scope_cache_head;
     mln_lang_scope_t                *scope_cache_tail;
     mln_u32_t                        ret_flag:1;
@@ -234,8 +234,8 @@ struct mln_lang_scope_s {
     mln_lang_stack_node_t           *cur_stack;
     mln_lang_stm_t                  *entry;
     mln_uauto_t                      layer;
-    mln_lang_symbolNode_t           *sym_head;
-    mln_lang_symbolNode_t           *sym_tail;
+    mln_lang_symbol_node_t          *sym_head;
+    mln_lang_symbol_node_t          *sym_tail;
     mln_lang_scope_t                *prev;
     mln_lang_scope_t                *next;
 };
@@ -245,7 +245,7 @@ typedef enum {
     M_LANG_SYMBOL_SET
 } mln_lang_symbolType_t;
 
-struct mln_lang_symbolNode_s {
+struct mln_lang_symbol_node_s {
     mln_string_t                    *symbol;
     mln_lang_ctx_t                  *ctx;
     mln_lang_symbolType_t            type;
@@ -255,10 +255,10 @@ struct mln_lang_symbolNode_s {
     } data;
     mln_uauto_t                      layer;
     mln_lang_hash_bucket_t          *bucket;
-    struct mln_lang_symbolNode_s    *prev;
-    struct mln_lang_symbolNode_s    *next;
-    struct mln_lang_symbolNode_s    *scope_prev;
-    struct mln_lang_symbolNode_s    *scope_next;
+    struct mln_lang_symbol_node_s   *prev;
+    struct mln_lang_symbol_node_s   *next;
+    struct mln_lang_symbol_node_s   *scope_prev;
+    struct mln_lang_symbol_node_s   *scope_next;
 };
 
 struct mln_lang_set_detail_s {
@@ -441,7 +441,7 @@ extern mln_lang_var_t *mln_lang_var_create_bool(mln_lang_ctx_t *ctx, mln_u8_t b,
 extern mln_lang_var_t *mln_lang_var_create_ref_string(mln_lang_ctx_t *ctx, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
 extern mln_lang_var_t *mln_lang_var_create_string(mln_lang_ctx_t *ctx, mln_string_t *s, mln_string_t *name) __NONNULL2(1,2);
 extern mln_lang_var_t *mln_lang_var_create_array(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
-extern mln_lang_symbolNode_t *mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
+extern mln_lang_symbol_node_t *mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
 /* Note end*/
 extern int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data) __NONNULL2(1,3);
 extern mln_lang_var_t *mln_lang_var_new(mln_lang_ctx_t *ctx, \

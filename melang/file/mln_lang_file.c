@@ -211,7 +211,7 @@ static mln_lang_var_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     mln_string_t v3 = mln_string("prio");
     mln_string_t v = mln_string("fd");
     mln_string_t typename = mln_string("File");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_s8ptr_t path;
     mln_lang_var_t *ret_var;
@@ -447,7 +447,7 @@ static mln_lang_var_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
     mln_string_t v = mln_string("fd");
     mln_string_t typename = mln_string("File");
     mln_string_t *tmp;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
 
@@ -601,7 +601,7 @@ static mln_lang_var_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
     mln_string_t v = mln_string("fd");
     mln_string_t typename = mln_string("File");
     mln_string_t tmp;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_u8ptr_t buf;
@@ -741,7 +741,7 @@ static mln_lang_var_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("buf");
     mln_string_t v = mln_string("fd");
     mln_string_t typename = mln_string("File");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
 
@@ -852,7 +852,7 @@ static mln_lang_var_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd");
     mln_string_t typename = mln_string("File");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
 
@@ -942,7 +942,7 @@ static mln_lang_var_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx)
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("errno");
     mln_string_t typename = mln_string("File");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     mln_string_t tmp;
@@ -987,7 +987,7 @@ static int mln_lang_file_setErrno(mln_lang_ctx_t *ctx, int err)
     mln_lang_val_t *val;
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("errno");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &_this, 1)) == NULL) {
@@ -1052,7 +1052,7 @@ static mln_lang_var_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
     mln_string_t _this = mln_string("this");
     mln_string_t v = mln_string("fd");
     mln_string_t typename = mln_string("File");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
     struct stat st;

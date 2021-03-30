@@ -163,7 +163,7 @@ static mln_lang_var_t *mln_strseqcmp_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -214,7 +214,7 @@ static mln_lang_var_t *mln_strcmp_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -267,7 +267,7 @@ static mln_lang_var_t *mln_strncmp_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2, *val3;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2"), v3 = mln_string("n");;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -404,7 +404,7 @@ static mln_lang_var_t *mln_strstr_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2"), *ret;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -454,7 +454,7 @@ static mln_lang_var_t *mln_kmp_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2"), *ret;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -577,7 +577,7 @@ static mln_lang_var_t *mln_split_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s"), v2 = mln_string("offset");
     mln_string_t v3 = mln_string("len"), ret;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8ptr_t p;
     mln_s64_t len;
 
@@ -650,7 +650,7 @@ static mln_lang_var_t *mln_reg_equal_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -693,7 +693,7 @@ static mln_lang_var_t *mln_reg_match_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_array_t *array;
     mln_lang_var_t *array_val;
     mln_lang_var_t var;
@@ -769,7 +769,7 @@ static mln_lang_var_t *mln_slice_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *ret_var;
     mln_s8ptr_t seps;
     mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2"), *ret;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_array_t *array;
     mln_string_t *scan;
     mln_lang_var_t *array_val;
@@ -893,7 +893,7 @@ static mln_lang_var_t *mln_strlen_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -969,7 +969,7 @@ static mln_lang_var_t *mln_b2s_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("bin"), tmp;
     mln_u8_t data[16];
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1063,7 +1063,7 @@ static mln_lang_var_t *mln_s2b_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1, *val2;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("s"), v2 = mln_string("type");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -1171,7 +1171,7 @@ static mln_lang_var_t *mln_hex2bin_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("hex"), tmp;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8ptr_t buf, p;
     mln_u8_t v;
 
@@ -1275,7 +1275,7 @@ static mln_lang_var_t *mln_bin2hex_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("bin"), tmp;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8ptr_t buf, p, end;
     mln_u8_t v;
 
@@ -1373,7 +1373,7 @@ static mln_lang_var_t *mln_bin2int_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("bin");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8ptr_t p, end;
     mln_s64_t i = 0, j;
 
@@ -1455,7 +1455,7 @@ static mln_lang_var_t *mln_int2bin_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("i"), tmp;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8_t buf[sizeof(mln_s64_t)];
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
@@ -1533,7 +1533,7 @@ static mln_lang_var_t *mln_bin2real_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("bin");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8ptr_t p, end;
     mln_u8_t buf[sizeof(double)];
     double f;
@@ -1617,7 +1617,7 @@ static mln_lang_var_t *mln_real2bin_process(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val1;
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("r"), tmp;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8ptr_t buf[sizeof(double)];
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {

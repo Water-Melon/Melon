@@ -225,7 +225,7 @@ static mln_lang_var_t *mln_lang_msgqueue_mq_send_process(mln_lang_ctx_t *ctx)
     mln_string_t v2 = mln_string("msg");
     mln_string_t v3 = mln_string("asTopic");
     mln_string_t *qname;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val;
     mln_s32_t type, type2;
     mln_u8ptr_t data;
@@ -361,7 +361,7 @@ static mln_lang_var_t *mln_lang_msgqueue_mq_recv_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("qname");
     mln_string_t v2 = mln_string("timeout");
     mln_string_t *qname;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val;
     mln_s32_t type;
     mln_s64_t timeout;
@@ -779,7 +779,7 @@ static mln_lang_var_t *mln_lang_msgqueue_topic_subscribe_process(mln_lang_ctx_t 
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("qname");
     mln_string_t *qname;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_rbtree_node_t *rn;
     mln_lang_ctx_mq_topic_t tmp, *topic;
 
@@ -871,7 +871,7 @@ static mln_lang_var_t *mln_lang_msgqueue_topic_unsubscribe_process(mln_lang_ctx_
     mln_lang_var_t *ret_var = NULL;
     mln_string_t v1 = mln_string("qname");
     mln_string_t *qname;
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_rbtree_node_t *rn;
     mln_lang_ctx_mq_topic_t tmp;
 

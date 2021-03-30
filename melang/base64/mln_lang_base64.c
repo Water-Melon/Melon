@@ -78,7 +78,7 @@ static mln_lang_var_t *mln_lang_base64_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("op");
-    mln_lang_symbolNode_t *sym;
+    mln_lang_symbol_node_t *sym;
     mln_u8ptr_t outbuf;
     mln_uauto_t outlen;
 
