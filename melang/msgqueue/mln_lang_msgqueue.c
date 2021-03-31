@@ -452,7 +452,7 @@ static int mln_lang_mq_msg_subscribe_get(mln_lang_ctx_t *ctx, mln_string_t *qnam
 
 static mln_lang_var_t *mln_lang_mq_msg_get(mln_lang_ctx_t *ctx, mln_string_t *qname, mln_s64_t timeout)
 {
-    mln_rbtree_node_t *rn;
+    mln_rbtree_node_t *rn = NULL;
     mln_lang_t *lang = ctx->lang;
     mln_rbtree_t *mq_set = mln_lang_resource_fetch(lang, "mq");
     ASSERT(mq_set != NULL);
@@ -510,6 +510,16 @@ static mln_lang_var_t *mln_lang_mq_msg_get(mln_lang_ctx_t *ctx, mln_string_t *qn
         }
         mln_lang_mq_msg_chain_del(&(mq->msg_head), &(mq->msg_tail), msg);
         mln_lang_mq_msg_free(msg);
+        if (mq->msg_head == NULL && mq->wait_head == NULL) {
+            if (rn == NULL) {
+                rn = mln_rbtree_search(mq_set, mq_set->root, mq);
+                if (mln_rbtree_null(rn, mq_set)) {
+                    goto out;
+                }
+            }
+            mln_rbtree_delete(mq_set, rn);
+            mln_rbtree_node_free(mq_set, rn);
+        }
     } else {
         if (timeout > 0) {
             struct timeval now;
@@ -534,6 +544,7 @@ static mln_lang_var_t *mln_lang_mq_msg_get(mln_lang_ctx_t *ctx, mln_string_t *qn
         mln_lang_ctx_suspend(ctx);
     }
 
+out:
     return ret_var;
 }
 
@@ -546,6 +557,9 @@ static void mln_lang_msgqueue_timeout_handler(mln_event_t *ev, void *data)
     struct timeval tv;
     mln_u64_t now;
     mln_lang_mq_wait_t *wait;
+    mln_rbtree_t *mq_set = mln_lang_resource_fetch(lang, "mq");
+    ASSERT(mq_set != NULL);
+    mln_lang_mq_t *mq;
 
     --(lang->wait);
     if (lang->quit) {
@@ -565,10 +579,19 @@ static void mln_lang_msgqueue_timeout_handler(mln_event_t *ev, void *data)
         fn = mln_fheap_extract_min(mq_timeout_set);
         wait = (mln_lang_mq_wait_t *)(fn->key);
         wait->in_heap = 0;
-        mln_lang_mq_wait_chain_del(&(wait->mq->wait_head), &(wait->mq->wait_tail), wait);
+        mq = wait->mq;
+        mln_lang_mq_wait_chain_del(&(mq->wait_head), &(mq->wait_tail), wait);
         mln_lang_ctx_mq_remove(wait->ctx);
         mln_lang_ctx_continue(wait->ctx);
         mln_lang_mq_wait_free(wait);
+
+        if (mq->msg_head == NULL && mq->wait_head == NULL) {
+            mln_rbtree_node_t *rn = mln_rbtree_search(mq_set, mq_set->root, mq);
+            if (!mln_rbtree_null(rn, mq_set)) {
+                mln_rbtree_delete(mq_set, rn);
+                mln_rbtree_node_free(mq_set, rn);
+            }
+        }
     }
 }
 
