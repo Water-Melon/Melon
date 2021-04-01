@@ -69,7 +69,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [素数生成器](https://water-melon.github.io/Melon/prime.html)
 - [哈希表](https://water-melon.github.io/Melon/hash.html)
 - [红黑树](https://water-melon.github.io/Melon/rbtree.html)
-- 双向链表
+- [双向链表](https://water-melon.github.io/Melon/double_linked_list.html)
 - 栈
 - 队列
 - 斐波那契堆
