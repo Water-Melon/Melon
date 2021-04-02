@@ -39,21 +39,37 @@ done
 
 #output installation path
 echo -e "Installation Path \t[$install_path]"
-echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", argv[1]);return 0;}" > .path_generater.c
-$cc -o path_generater .path_generater.c
-realpath=`./path_generater $install_path`
-rm -f path_generater .path_generater.c
+echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", argv[1]);return 0;}" > .path_generator.c
+$cc -o path_generator .path_generator.c
+realpath=`./path_generator $install_path`
+nullpath=`./path_generator /dev/null`
+if ! case $sysname in MINGW*) false;; esac; then
+    melanglibpath=`./path_generator $HOME/lib/melang`
+else
+    melanglibpath=`./path_generator /usr/lib/melang`
+fi
+rm -f path_generator .path_generator.c
 #build path.c & h
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
 echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
 echo -e "\nextern char *mln_path(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_null_path(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_melang_lib_path(void);" >> include/mln_path.h
 echo -e "\n#endif\n" >> include/mln_path.h
 
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > src/mln_path.c
 echo "#include \"mln_path.h\"" >> src/mln_path.c
-echo -e "\nchar install_path[] = \"$realpath\";" >> src/mln_path.c
+echo -e "\nstatic char install_path[] = \"$realpath\";" >> src/mln_path.c
+echo -e "\nstatic char null_path[] = \"$nullpath\";" >> src/mln_path.c
+echo -e "\nstatic char melang_lib_path[] = \"$melanglibpath\";" >> src/mln_path.c
 echo -e "\nchar *mln_path(void)\n{" >> src/mln_path.c
 echo "    return install_path;" >> src/mln_path.c
+echo "}" >> src/mln_path.c
+echo -e "\nchar *mln_null_path(void)\n{" >> src/mln_path.c
+echo "    return null_path;" >> src/mln_path.c
+echo "}" >> src/mln_path.c
+echo -e "\nchar *mln_melang_lib_path(void)\n{" >> src/mln_path.c
+echo "    return melang_lib_path;" >> src/mln_path.c
 echo "}" >> src/mln_path.c
 
 # build mln_ipc.c & h
@@ -330,6 +346,7 @@ echo -e "\trm -fr objs lib .tmpSubIncs Makefile" >> Makefile
 echo "MKDIR :" >> Makefile
 echo -e "\ttest -d objs || mkdir objs" >> Makefile
 echo -e "\ttest -d lib || mkdir lib" >> Makefile
+echo -e "\ttest -d $melanglibpath || mkdir $melanglibpath" >> Makefile
 
 echo "\$(MELONA) : \$(OBJS)" >> Makefile
 echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile

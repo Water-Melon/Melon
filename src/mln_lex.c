@@ -79,7 +79,11 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
         mln_u32_t len = data->len >= 1024? 1023: data->len;
         memcpy(path, data->data, len);
         path[len] = 0;
+#if defined(WINNT)
+        if (len > 1 && path[1] == ':') {
+#else
         if (path[0] == '/') {
+#endif
             li->fd = open(path, O_RDONLY);
         } else {
             if (!access(path, F_OK)) {
@@ -111,7 +115,7 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
                 }
             } else {
                 char tmp_path[1024];
-                n = snprintf(tmp_path, sizeof(tmp_path)-1, "/usr/lib/melang/%s", path);
+                n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_melang_lib_path(), path);
                 tmp_path[n] = 0;
                 li->fd = open(tmp_path, O_RDONLY);
             }

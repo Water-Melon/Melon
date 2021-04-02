@@ -187,7 +187,7 @@ out:
     close(fd0);
     close(fd1);
     close(fd2);
-    fd0 = open("/dev/null", O_RDWR);
+    fd0 = open(mln_null_path(), O_RDWR);
     fd1 = dup(fd0);
     fd2 = dup(fd0);
     if (fd0 != STDIN_FILENO || \

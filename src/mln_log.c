@@ -146,7 +146,11 @@ mln_log_get_log(mln_log_t *log, int is_init)
                     __FUNCTION__, log_path_cmd);
             return -1;
         }
+#if defined(WINNT)
+        if (ci->val.s->len <= 1 || (ci->val.s->data)[1] != ':') {
+#else
         if ((ci->val.s->data)[0] != '/') {
+#endif
             path_len = snprintf(buf, sizeof(buf)-1, "%s/%s", mln_path(), (char *)(ci->val.s->data));
             path_str = buf;
         } else {
