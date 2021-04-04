@@ -70,7 +70,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [哈希表](https://water-melon.github.io/Melon/hash.html)
 - [红黑树](https://water-melon.github.io/Melon/rbtree.html)
 - [双向链表](https://water-melon.github.io/Melon/double_linked_list.html)
-- 栈
+- [栈](https://water-melon.github.io/Melon/stack.html)
 - 队列
 - 斐波那契堆
 - 事件
