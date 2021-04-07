@@ -37,10 +37,3 @@ Please visit [Melon Developer Guide](https://github.com/Water-Melon/Melon/blob/m
 
 更为详细的中文文档请参考：[中文指南](https://water-melon.github.io/Melon/)  (尚未更新完)
 
-
-
-### Contact
-
-Official Telegram group: [https://t.me/joinchat/GcQ8JRBqT7CLF8o-](https://t.me/joinchat/GcQ8JRBqT7CLF8o-)
-
-中文QQ官方群号: 756582294
