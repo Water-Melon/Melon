@@ -1,0 +1,257 @@
+## 事件
+
+Melon中的事件**不支持**跨线程使用，原因有两点：
+
+1. 常规多线程模型一般以线程池为主，线程池模型下主线程做事件触发然后下方任务，子线程则同步模式处理任务
+2. 常规多进程模型下一般多为单线程，如：Nginx
+
+故此，事件结构仅可在单线程下使用。但**允许**各个线程创建自己的事件结构。
+
+事件所用系统调用根据不同操作系统平台有所不同，现支持：
+
+- epoll
+- kqueue
+- select
+
+
+
+### 头文件
+
+```c
+#include "mln_event.h"
+```
+
+
+
+### 函数
+
+
+
+#### mln_event_init
+
+```c
+mln_event_t *mln_event_init(mln_u32_t is_main);
+```
+
+描述：创建事件结构。`is_main`表达含义为：是否为主线程。主线程初始化则为`1`，否则为`0`，单线程情况下即为主线程。
+
+返回值：成功则返回事件结构指针，否则返回`NULL`
+
+
+
+#### mln_event_destroy
+
+```c
+void mln_event_destroy(mln_event_t *ev);
+```
+
+描述：销毁事件结构。
+
+返回值：无
+
+
+
+#### mln_event_dispatch
+
+```c
+void mln_event_dispatch(mln_event_t *event);
+```
+
+描述：调度事件集`event`上的事件。当有事件触发时，则会调用相应的回调函数进行处理。
+
+**注意**：本函数在不调用`mln_event_set_break`的情况下是不会返回的。
+
+返回值：无
+
+
+
+#### mln_event_set_fd
+
+```c
+int mln_event_set_fd(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms, void *data, ev_fd_handler fd_handler);
+
+typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);s
+```
+
+描述：设置文件描述符事件，其中：
+
+- `fd`为事件关注的文件描述符。
+
+- `flag`分为如下几类：
+
+  - `M_EV_RECV` 读事件
+  - `M_EV_SEND` 写事件
+  - `M_EV_ERROR` 错误事件
+  - `M_EV_ONESHOT `仅触发一次
+  - `M_EV_NONBLOCK` 非阻塞模式
+  - `M_EV_BLOCK `阻塞模式
+  - `M_EV_APPEND` 追加事件，即原本已设置了某个事件，如读事件，此时想再追加监听一类事件，如写事件，则可以使用该flag
+  - `M_EV_CLR` 清除所有事件
+
+  这些flag之间可以使用或运算符进行同时设置。
+
+- `timeout_ms`事件超时时间，毫秒级，该字段值为：
+
+  - `M_EV_UNLIMITED` 永不超时
+  - `M_EV_UNMODIFIED` 保留之前的超时设置
+  - `毫秒值` 超时时长
+
+- `data` 为事件处理相关的用户数据结构，可自行定义。
+
+- `ev_fd_handler`为事件处理函数，函数有三个参数分别为：事件结构、文件描述符以及自定义的用户数据结构。
+
+返回值：成功则返回`0`，否则返回`-1`
+
+
+
+#### mln_event_set_fd_timeout_handler
+
+```c
+void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
+```
+
+描述：设置描述符事件超时处理函数，其中：
+
+- `fd`为文件描述符。
+- `data`为超时时间处理相关的用户数据结构，可自行定义。
+- `timeout_handler`与`mln_event_set_fd`函数的回调函数类型一致，用于处理超时事件。
+
+该函数需要与`mln_event_set_fd`函数配合使用，先使用`mln_event_set_fd`设置事件，后使用本函数设置超时处理函数。
+
+之所以这样做，是因为有些事件超时后可能不需要特殊函数进行处理，而如果全部放在`mln_event_set_fd`函数中设置，会导致参数过多过于繁杂。
+
+返回值：无
+
+
+
+#### mln_event_set_timer
+
+```c
+int mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
+
+typedef void (*ev_tm_handler)  (mln_event_t *, void *);
+```
+
+描述：设置定时器事件，其中：
+
+- `msec`为定时毫秒值
+- `data` 为定时事件用户自定义数据结构
+- `tm_handler` 定时事件处理函数，其参数依次为：事件结构和用户自定义数据
+
+定时事件每一次出发后，会自动从事件集中删除。若需要一直触发定时事件，则需要在处理函数内自行调用本函数进行设置。
+
+返回值：成功则返回`0`，否则返回`-1`
+
+
+
+#### mln_event_set_signal
+
+```c
+int mln_event_set_signal(mln_event_t *event, mln_u32_t flag, int signo, void *data, ev_sig_handler sg_handler);
+
+typedef void (*ev_sig_handler) (mln_event_t *, int, void *);
+```
+
+描述：设置信号事件处理函数，其中：
+
+- `flag`分为两个值，只可二选一设置：
+  - `M_EV_SET` 设置信号事件
+  - `M_EV_UNSET` 卸载信号事件
+- `signo`为信号值。
+- `data`为自定义用户数据结构。
+- `ev_sig_handler`为信号处理函数，该函数的参数依次为：事件结构、信号值、自定义用户数据
+
+由于一个信号允许设置多个处理函数，因此信号卸载时具体卸载哪个处理函数是由`data`和`ev_sig_handler`指针值共同进行匹配的。
+
+返回值：成功则返回`0`，否则返回`-1`
+
+
+
+#### mln_event_set_break
+
+```c
+void mln_event_set_break(mln_event_t *ev);
+```
+
+描述：中断事件处理，即使得`mln_event_dispatch`函数返回。
+
+返回值：无
+
+
+
+#### mln_event_set_callback
+
+```c
+void (mln_event_t *ev, dispatch_callback dc, void *dc_data);
+
+typedef void (*dispatch_callback) (mln_event_t *, void *);
+```
+
+描述：设置事件处理回调函数，该函数会在每次时间循环的最开始被调用一次。目前主要用于处理配置热重载。
+
+`dc_data`为用户自定义数据结构。
+
+`dc`为回调函数，其参数依次为：事件结构和用户自定义数据结构。
+
+返回值：无
+
+
+
+### 示例
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include "mln_core.h"
+#include "mln_log.h"
+#include "mln_event.h"
+
+static void timer_handler(mln_event_t *ev, void *data)
+{
+    mln_log(debug, "timer\n");
+    mln_event_set_timer(ev, 1000, NULL, timer_handler);
+}
+
+static void mln_fd_write(mln_event_t *ev, int fd, void *data)
+{
+    mln_log(debug, "write handler\n");
+    write(fd, "hello\n", 6);
+    mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+}
+
+int main(int argc, char *argv[])
+{
+    mln_event_t *ev;
+    struct mln_core_attr cattr;
+
+    cattr.argc = argc;
+    cattr.argv = argv;
+    cattr.global_init = NULL;
+    cattr.worker_process = NULL;
+    if (mln_core_init(&cattr) < 0) {
+        fprintf(stderr, "init failed\n");
+        return -1;
+    }
+
+    ev = mln_event_init(1);
+    if (ev == NULL) {
+        mln_log(error, "event init failed.\n");
+        return -1;
+    }
+
+    if (mln_event_set_timer(ev, 1000, NULL, timer_handler) < 0) {
+        mln_log(error, "timer set failed.\n");
+        return -1;
+    }
+
+    if (mln_event_set_fd(ev, STDOUT_FILENO, M_EV_SEND, M_EV_UNLIMITED, NULL, mln_fd_write) < 0) {
+        mln_log(error, "fd handler set failed.\n");
+        return -1;
+    }
+
+    mln_event_dispatch(ev);
+
+    return 0;
+}
+```
+
