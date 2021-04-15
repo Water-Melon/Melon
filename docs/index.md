@@ -5,9 +5,6 @@
 
 欢迎使用Melon C语言库，本库包含了诸多算法、数据结构、功能组件、脚本语言以及实用框架，可便于开发人员依此快速开发应用功能，避免了重复造轮子的窘境。
 
-我们的官方QQ群为：756582294
-
-
 
 ### 功能
 
@@ -71,7 +68,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [红黑树](https://water-melon.github.io/Melon/rbtree.html)
 - [双向链表](https://water-melon.github.io/Melon/double_linked_list.html)
 - [栈](https://water-melon.github.io/Melon/stack.html)
-- 队列
+- [队列](https://water-melon.github.io/Melon/queue.html)
 - 斐波那契堆
 - 事件
 - 内存池
