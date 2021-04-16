@@ -1532,7 +1532,7 @@ static void mln_lang_network_tcp_recv_handler(mln_event_t *ev, int fd, void *dat
     mln_u8ptr_t buf, p;
     mln_string_t tmp;
     mln_chain_t *c;
-    int rc = mln_tcp_conn_recv(&(tcp->conn), M_C_TYPE_MEMORY);;
+    int rc = mln_tcp_conn_recv(&(tcp->conn), M_C_TYPE_MEMORY);
     if (rc == M_C_ERROR) {
         /* do nothing */
     } else if (rc == M_C_CLOSED && mln_tcp_conn_get_head(&(tcp->conn), M_C_RECV) == NULL) {

@@ -346,7 +346,6 @@ echo -e "\trm -fr objs lib .tmpSubIncs Makefile" >> Makefile
 echo "MKDIR :" >> Makefile
 echo -e "\ttest -d objs || mkdir objs" >> Makefile
 echo -e "\ttest -d lib || mkdir lib" >> Makefile
-echo -e "\ttest -d $melanglibpath || mkdir $melanglibpath" >> Makefile
 
 echo "\$(MELONA) : \$(OBJS)" >> Makefile
 echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile
@@ -375,6 +374,7 @@ else
     echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc $mysql_lib -shared -fPIC" >> Makefile
 fi
 echo "install:" >> Makefile
+echo -e "\ttest -d $melanglibpath || mkdir $melanglibpath" >> Makefile
 echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
 echo -e "\tcp -fr lib $install_path" >> Makefile
 echo -e "\tcp -fr include $install_path" >> Makefile
