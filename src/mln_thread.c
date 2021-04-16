@@ -199,7 +199,7 @@ int mln_load_thread(mln_event_t *ev)
     mln_u32_t nr_cmds = mln_conf_get_ncmd(cf, thread_domain);
     if (nr_cmds == 0) return 0;
 
-    mln_conf_cmd_t **v = (mln_conf_cmd_t **)calloc(nr_cmds, sizeof(mln_conf_cmd_t *));;
+    mln_conf_cmd_t **v = (mln_conf_cmd_t **)calloc(nr_cmds, sizeof(mln_conf_cmd_t *));
     if (v == NULL) {
         mln_log(error, "No memory.\n");
         mln_rbtree_destroy(thread_tree);

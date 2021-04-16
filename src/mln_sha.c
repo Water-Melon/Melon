@@ -124,12 +124,12 @@ void mln_sha1_calc(mln_sha1_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t 
         }
         s->length <<= 3;
         s->buf[56] = (s->length >> 56) & 0xff;
-        s->buf[57] = (s->length >> 48) & 0xff;;
-        s->buf[58] = (s->length >> 40) & 0xff;;
-        s->buf[59] = (s->length >> 32) & 0xff;;
-        s->buf[60] = (s->length >> 24) & 0xff;;
-        s->buf[61] = (s->length >> 16) & 0xff;;
-        s->buf[62] = (s->length >> 8) & 0xff;;
+        s->buf[57] = (s->length >> 48) & 0xff;
+        s->buf[58] = (s->length >> 40) & 0xff;
+        s->buf[59] = (s->length >> 32) & 0xff;
+        s->buf[60] = (s->length >> 24) & 0xff;
+        s->buf[61] = (s->length >> 16) & 0xff;
+        s->buf[62] = (s->length >> 8) & 0xff;
         s->buf[63] = (s->length) & 0xff;
         mln_sha1_calc_block(s);
         s->pos = 0;
@@ -420,12 +420,12 @@ void mln_sha256_calc(mln_sha256_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u3
         }
         s->length <<= 3;
         s->buf[56] = (s->length >> 56) & 0xff;
-        s->buf[57] = (s->length >> 48) & 0xff;;
-        s->buf[58] = (s->length >> 40) & 0xff;;
-        s->buf[59] = (s->length >> 32) & 0xff;;
-        s->buf[60] = (s->length >> 24) & 0xff;;
-        s->buf[61] = (s->length >> 16) & 0xff;;
-        s->buf[62] = (s->length >> 8) & 0xff;;
+        s->buf[57] = (s->length >> 48) & 0xff;
+        s->buf[58] = (s->length >> 40) & 0xff;
+        s->buf[59] = (s->length >> 32) & 0xff;
+        s->buf[60] = (s->length >> 24) & 0xff;
+        s->buf[61] = (s->length >> 16) & 0xff;
+        s->buf[62] = (s->length >> 8) & 0xff;
         s->buf[63] = (s->length) & 0xff;
         mln_sha256_calc_block(s);
         s->pos = 0;

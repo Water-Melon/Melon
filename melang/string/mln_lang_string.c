@@ -266,7 +266,7 @@ static mln_lang_var_t *mln_strncmp_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val1, *val2, *val3;
     mln_lang_var_t *ret_var;
-    mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2"), v3 = mln_string("n");;
+    mln_string_t v1 = mln_string("s1"), v2 = mln_string("s2"), v3 = mln_string("n");
     mln_lang_symbol_node_t *sym;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {

@@ -715,7 +715,7 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
             *buf++ = '\"'; ++length;
             break;
         case M_JSON_NUM:
-            n = snprintf(buf, 512, "%f", j->data.m_j_number);;
+            n = snprintf(buf, 512, "%f", j->data.m_j_number);
             buf += n;
             length += n;
             break;
@@ -817,7 +817,7 @@ static inline mln_size_t mln_json_get_length(mln_json_t *j)
                 length += j->data.m_j_string->len;
             break;
         case M_JSON_NUM:
-            length += snprintf(num_str, sizeof(num_str), "%f", j->data.m_j_number);;
+            length += snprintf(num_str, sizeof(num_str), "%f", j->data.m_j_number);
             break;
         case M_JSON_TRUE:
             length += 4;

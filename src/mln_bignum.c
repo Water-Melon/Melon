@@ -1092,7 +1092,7 @@ int mln_bignum_extend_eulid(mln_bignum_t *a, mln_bignum_t *b, mln_bignum_t *x, m
 {
     mln_bignum_t m = *a, n = *b;
     mln_bignum_t r, q, tmp;
-    mln_bignum_t tmpx, tmpy, zero = mln_bignum_zero();;
+    mln_bignum_t tmpx, tmpy, zero = mln_bignum_zero();
     mln_bignum_t x0 = {M_BIGNUM_POSITIVE, 1, {0}};
     x0.data[0] = 1;
     mln_bignum_t y0 = zero;

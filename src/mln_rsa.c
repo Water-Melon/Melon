@@ -71,7 +71,7 @@ int mln_rsa_key_generate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits)
 lp:
     while (1) {
         if (mln_bignum_prime(&p, (bits>>1)+1) < 0) return -1;
-        if (mln_bignum_prime(&q, (bits>>1)) < 0) return -1;;
+        if (mln_bignum_prime(&q, (bits>>1)) < 0) return -1;
         if (mln_bignum_compare(&p, &q)) break;
     }
     n = p;

@@ -110,12 +110,12 @@ void mln_md5_calc(mln_md5_t *m, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is
         }
         m->length <<= 3;
         m->buf[56] = m->length & 0xff;
-        m->buf[57] = (m->length >> 8) & 0xff;;
-        m->buf[58] = (m->length >> 16) & 0xff;;
-        m->buf[59] = (m->length >> 24) & 0xff;;
-        m->buf[60] = (m->length >> 32) & 0xff;;
-        m->buf[61] = (m->length >> 40) & 0xff;;
-        m->buf[62] = (m->length >> 48) & 0xff;;
+        m->buf[57] = (m->length >> 8) & 0xff;
+        m->buf[58] = (m->length >> 16) & 0xff;
+        m->buf[59] = (m->length >> 24) & 0xff;
+        m->buf[60] = (m->length >> 32) & 0xff;
+        m->buf[61] = (m->length >> 40) & 0xff;
+        m->buf[62] = (m->length >> 48) & 0xff;
         m->buf[63] = (m->length >> 56) & 0xff;
         mln_md5_calc_block(m);
         m->pos = 0;
