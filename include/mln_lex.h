@@ -365,9 +365,10 @@ enum PREFIX_NAME##_enum { \
 };\
 \
 typedef struct {\
-    mln_string_t              *text;\
+    mln_string_t              *text; \
     mln_u32_t                  line; \
     enum PREFIX_NAME##_enum    type; \
+    mln_string_t              *file; \
 } PREFIX_NAME##_struct_t;            \
 \
 typedef struct {\
@@ -646,6 +647,10 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         }\
         ptr->line = lex->line;\
         ptr->type = type;\
+        ptr->file = NULL;\
+        if (lex->cur != NULL && lex->cur->type == M_INPUT_T_FILE) {\
+            ptr->file = mln_string_ref(lex->cur->data);\
+        }\
         mln_lex_error_set(lex, MLN_LEX_SUCCEED);\
         lex->result_pos = lex->result_buf;\
         return ptr;\
@@ -655,6 +660,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
     {\
         if (ptr == NULL) return ;\
         if (ptr->text != NULL) mln_string_free(ptr->text);\
+        if (ptr->file != NULL) mln_string_free(ptr->file);\
         mln_alloc_free(ptr);\
     }\
     \
@@ -834,6 +840,11 @@ lp:\
         }\
         dest->line = src->line;\
         dest->type = src->type;\
+        if (src->file == NULL) {\
+            dest->file = NULL;\
+        } else {\
+            dest->file = mln_string_ref(src->file);\
+        }\
         return (void *)dest;\
     }\
     \

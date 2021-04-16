@@ -116,6 +116,7 @@ struct mln_factor_s {
     mln_sauto_t               cur_state;
     int                       token_type;
     mln_u32_t                 line;
+    mln_string_t             *file;
 };
 
 typedef struct {
@@ -222,8 +223,12 @@ PREFIX_NAME##_pg_process_token(struct PREFIX_NAME##_preprocess_attr *attr, mln_l
 SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr);\
 SCOPE void PREFIX_NAME##_preprocess_attr_free(struct PREFIX_NAME##_preprocess_attr *attr);\
 SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t nr_prod);\
-SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, enum factor_data_type data_type, \
-                                              int token_type, mln_sauto_t cur_state, mln_u32_t line);\
+SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, \
+                                              enum factor_data_type data_type, \
+                                              int token_type, \
+                                              mln_sauto_t cur_state, \
+                                              mln_u32_t line, \
+                                              mln_string_t *file);\
 SCOPE void PREFIX_NAME##_factor_destroy(void *ptr);\
 SCOPE void *PREFIX_NAME##_factor_copy(void *ptr, void *data);\
 SCOPE mln_parser_t *PREFIX_NAME##_parser_init(void);\
@@ -685,8 +690,12 @@ SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t 
     return (void *)shift_tbl;\
 }\
 \
-SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, enum factor_data_type data_type, \
-                                              int token_type, mln_sauto_t cur_state, mln_u32_t line)\
+SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, \
+                                              enum factor_data_type data_type, \
+                                              int token_type, \
+                                              mln_sauto_t cur_state, \
+                                              mln_u32_t line, \
+                                              mln_string_t *file)\
 {\
     mln_factor_t *f = (mln_factor_t *)malloc(sizeof(mln_factor_t));\
     if (f == NULL) return NULL;\
@@ -696,6 +705,11 @@ SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, enum factor_data_type 
     f->cur_state = cur_state;\
     f->token_type = token_type;\
     f->line = line;\
+    if (file == NULL) {\
+        f->file = NULL;\
+    } else {\
+        f->file = mln_string_ref(file);\
+    }\
     return f;\
 }\
 \
@@ -710,6 +724,7 @@ SCOPE void PREFIX_NAME##_factor_destroy(void *ptr)\
         if (f->data != NULL && f->nonterm_free_handler != NULL) \
             f->nonterm_free_handler(f->data);\
     }\
+    if (f->file != NULL) mln_string_free(f->file);\
     free(f);\
 }\
 \
@@ -735,6 +750,11 @@ SCOPE void *PREFIX_NAME##_factor_copy(void *ptr, void *data)\
     dest->token_type = src->token_type;\
     dest->cur_state = src->cur_state;\
     dest->line = src->line;\
+    if (src->file == NULL) {\
+        dest->file = NULL;\
+    } else {\
+        dest->file = mln_string_ref(src->file);\
+    }\
     return (void *)dest;\
 }\
 \
@@ -868,7 +888,7 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
                 mln_log(error, "Get token error. %s\n", mln_lex_strerror(spattr->lex));\
                 return -1;\
             }\
-            *la = PREFIX_NAME##_factor_init(token, M_P_TERM, token->type, *state, token->line);\
+            *la = PREFIX_NAME##_factor_init(token, M_P_TERM, token->type, *state, token->line, token->file);\
             if (*la == NULL) {\
                 mln_log(error, "No memory.\n");\
                 PREFIX_NAME##_free(token);\
@@ -923,22 +943,17 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
                 failedType = (*la)->token_type;\
                 failedline = (*la)->line;\
                 mln_s8ptr_t name = NULL;\
-                mln_string_t *filename;\
                 if ((*la)->token_type != TK_PREFIX##_TK_EOF && (*la)->data != NULL) \
                     name = (mln_s8ptr_t)(((PREFIX_NAME##_struct_t *)((*la)->data))->text->data);\
-                if ((filename = mln_lex_get_cur_filename(spattr->lex)) == NULL) {\
+                if ((*la)->file == NULL) {\
                     mln_log(none, "line %d: Parse Error: Illegal token%s%s%s\n", \
                             *is_reduce?top->line:(*la)->line, \
                             name==NULL? ".": " nearby '", \
                             name==NULL? " ": name, \
                             name==NULL? " ": "'.");\
                 } else {\
-                    char fname[1024];\
-                    memcpy(fname, filename->data, filename->len>1023?1023:filename->len);\
-                    fname[filename->len>1023?1023:filename->len] = 0;\
-                    mln_log(none, "%s%s%d: Parse Error: Illegal token%s%s%s\n", \
-                            filename!=NULL? fname: " ", \
-                            filename!=NULL? ":": " ",\
+                    mln_log(none, "%s:%d: Parse Error: Illegal token%s%s%s\n", \
+                            (char *)((*la)->file->data), \
                             *is_reduce?top->line:(*la)->line, \
                             name==NULL? ".": " nearby '", \
                             name==NULL? " ": name, \
@@ -1028,7 +1043,7 @@ SCOPE int PREFIX_NAME##_err_recover(struct mln_sys_parse_attr *spattr, mln_uauto
             mln_log(error, "Get token error. %s\n", mln_lex_strerror(spattr->lex));\
             return -1;\
         }\
-        p->cur_la = PREFIX_NAME##_factor_init(token, M_P_TERM, token->type, p->cur_state, token->line);\
+        p->cur_la = PREFIX_NAME##_factor_init(token, M_P_TERM, token->type, p->cur_state, token->line, token->file);\
         if (p->cur_la == NULL) {\
             mln_log(error, "No memory.\n");\
             PREFIX_NAME##_free(token);\
@@ -1150,7 +1165,7 @@ SCOPE int PREFIX_NAME##_reduce_launcher(mln_stack_t *st, \
         mln_log(error, "No memory.\n");\
         return -1;\
     }\
-    mln_factor_t *left = PREFIX_NAME##_factor_init(NULL, M_P_NONTERM, sh->left_type, *state, 0);\
+    mln_factor_t *left = PREFIX_NAME##_factor_init(NULL, M_P_NONTERM, sh->left_type, *state, 0, NULL);\
     if (left == NULL) {\
         mln_log(error, "No memory.\n");\
         free(rights);\
@@ -1158,6 +1173,7 @@ SCOPE int PREFIX_NAME##_reduce_launcher(mln_stack_t *st, \
     }\
 \
     mln_u32_t i, line = 0;\
+    mln_string_t *file = NULL;\
     mln_factor_t *right;\
     for (i = 0; i < sh->nr_args; ++i) {\
         right = (mln_factor_t *)mln_stack_pop(st);\
@@ -1166,12 +1182,17 @@ SCOPE int PREFIX_NAME##_reduce_launcher(mln_stack_t *st, \
             abort();\
         }\
         rights[sh->nr_args-1-i] = right;\
-        if (right->line > line) \
+        if (right->line > line) {\
             line = right->line;\
+            file = right->file;\
+        }\
         *state = right->cur_state;\
     }\
     left->line = line;\
     left->cur_state = *state;\
+    if (file != NULL) {\
+        left->file = mln_string_ref(file);\
+    }\
 \
     mln_production_t *pp = &prod_tbl[sh->rule_index];\
     int ret = 0;\
@@ -1227,7 +1248,7 @@ SCOPE int PREFIX_NAME##_shift(struct mln_sys_parse_attr *spattr, \
                 mln_log(error, "Get token error. %s\n", mln_lex_strerror(spattr->lex));\
                 return -1;\
             }\
-            *la = PREFIX_NAME##_factor_init(token, M_P_TERM, token->type, *state, token->line);\
+            *la = PREFIX_NAME##_factor_init(token, M_P_TERM, token->type, *state, token->line, token->file);\
             if (*la == NULL) {\
                 mln_log(error, "No memory.\n");\
                 PREFIX_NAME##_free(token);\
