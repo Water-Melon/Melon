@@ -46,7 +46,7 @@ nullpath=`./path_generator /dev/null`
 if ! case $sysname in MINGW*) false;; esac; then
     melanglibpath=`./path_generator $HOME/lib/melang`
 else
-    melanglibpath=`./path_generator /usr/lib/melang`
+    melanglibpath=`./path_generator /usr/local/lib/melang`
 fi
 rm -f path_generator .path_generator.c
 #build path.c & h

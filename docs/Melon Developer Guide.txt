@@ -1246,7 +1246,7 @@ Their definitions can be found in melon/include/mln_types.h.
         Open a file. And this file must be opened with read-only.
         This file object will be cached in 'fset'.
 
-     d) void mln_file_close(void *pfile);
+     d) void mln_file_close(mln_file_t *pfile);
         Close a file. If 'pfile' is a regular file, it will be cached in its file set. Otherwise, it will be freed.
 
      e) mln_file_t *mln_file_open_tmp(mln_alloc_t *pool);

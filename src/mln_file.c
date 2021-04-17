@@ -128,32 +128,31 @@ mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
     return f;
 }
 
-void mln_file_close(void *pfile)
+void mln_file_close(mln_file_t *pfile)
 {
     if (pfile == NULL) return;
 
-    mln_file_t *f = (mln_file_t *)pfile;
     mln_fileset_t *fs;
 
-    if (f->is_tmp) {
-        if (f->fd >= 0)
-            close(f->fd);
-        mln_alloc_free(f);
+    if (pfile->is_tmp) {
+        if (pfile->fd >= 0)
+            close(pfile->fd);
+        mln_alloc_free(pfile);
         return;
     }
 
-    if (--(f->refer_cnt) > 0) {
+    if (--(pfile->refer_cnt) > 0) {
         return;
     }
 
-    fs = f->fset;
-    reg_file_chain_add(&(fs->reg_free_head), &(fs->reg_free_tail), f);
+    fs = pfile->fset;
+    reg_file_chain_add(&(fs->reg_free_head), &(fs->reg_free_tail), pfile);
 
     if (fs->reg_file_tree->nr_node > fs->max_file) {
-        f = fs->reg_free_head;
-        reg_file_chain_del(&(fs->reg_free_head), &(fs->reg_free_tail), f);
-        mln_rbtree_delete(fs->reg_file_tree, f->node);
-        mln_rbtree_node_free(fs->reg_file_tree, f->node);
+        pfile = fs->reg_free_head;
+        reg_file_chain_del(&(fs->reg_free_head), &(fs->reg_free_tail), pfile);
+        mln_rbtree_delete(fs->reg_file_tree, pfile->node);
+        mln_rbtree_node_free(fs->reg_file_tree, pfile->node);
     }
 }
 
