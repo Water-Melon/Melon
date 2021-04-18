@@ -77,7 +77,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [自旋锁](https://water-melon.github.io/Melon/spinlock.html)
 - [线程池](https://water-melon.github.io/Melon/threadpool.html)
 - [正则表达式](https://water-melon.github.io/Melon/regex.html)
-- Base64
+- [Base64](https://water-melon.github.io/Melon/base64.html)
 - JSON
 - AES
 - DES
