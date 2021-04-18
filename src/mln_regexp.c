@@ -872,26 +872,29 @@ static inline void mln_reg_match_free(mln_reg_match_t *match)
 int mln_reg_match(mln_string_t *exp, mln_string_t *text, mln_reg_match_t **head, mln_reg_match_t **tail)
 {
     int ret;
-    mln_reg_match_t *match;
+    mln_reg_match_t *match, *h = NULL, *t = NULL;
 
-    if (head != NULL && tail != NULL)
-        *head = *tail = NULL;
-    ret = mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len, head, tail);
-    if (head  != NULL && tail != NULL) {
-        if (ret < 0) {
-            mln_reg_match_result_free(*head);
-            *head = *tail = NULL;
-        } else {
-            if ((match = mln_reg_match_new(text->data, text->len-ret)) == NULL) {
-                mln_reg_match_result_free(*head);
-                *head = *tail = NULL;
-                ret = -1;
-            } else {
-                mln_reg_match_chain_add(head, tail, match);
-            }
-        }
+    ret = mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len, &h, &t);
+    if (ret < 0) {
+        mln_reg_match_result_free(h);
+        return -1;
     }
-    return ret;
+    if (text->len - ret > 0) {
+        if ((match = mln_reg_match_new(text->data, text->len-ret)) == NULL) {
+            mln_reg_match_result_free(h);
+            return -1;
+        }
+        mln_reg_match_chain_add(&h, &t, match);
+        for (ret = 0, match = h; match != NULL; match = match->next, ++ret)
+            ;
+        if (head != NULL) *head = h;
+        if (tail != NULL) *tail = t;
+        if (head == NULL && tail == NULL) {
+            mln_reg_match_result_free(h);
+        }
+        return ret;
+    }
+    return 0;
 }
 
 int mln_reg_equal(mln_string_t *exp, mln_string_t *text)

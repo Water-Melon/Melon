@@ -236,7 +236,7 @@ static int mln_websocket_match_scan(void *key, void *val, void *data)
 {
     mln_string_t *tmp = mln_http_get_field((mln_http_t *)data, (mln_string_t *)key);
     if (tmp == NULL) return -1;
-    if (val != NULL && mln_reg_match(val, tmp, NULL, NULL) < 0) return -1;
+    if (val != NULL && mln_reg_match(val, tmp, NULL, NULL) <= 0) return -1;
     return 0;
 }
 

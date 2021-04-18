@@ -1402,8 +1402,10 @@ Their definitions can be found in melon/include/mln_types.h.
         'exp' is the regular expression that user provided.
         'text' is the string that will be matched by 'exp'.
         'head' and 'tail' are the chain to store matched string. If you don't need matched result, just set them NULL.
-        This function will return a length that indicates how many bytes left in 'text' (which are not matched).
-        If not matched, -1 will be returned.
+        Return value:
+            0 - no matched result
+           >0 - the number of matched result
+           <0 - match failed, error encountered
 
      b) int mln_reg_equal(mln_string_t *exp, mln_string_t *text);
         This function will return a non-zero if 'text' is completely matched by 'exp'. Otherwise, zero will be

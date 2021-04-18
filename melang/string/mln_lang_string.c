@@ -723,7 +723,7 @@ static mln_lang_var_t *mln_reg_match_process(mln_lang_ctx_t *ctx)
     }
     val2 = sym->data.var->val;
 
-    if (mln_reg_match(val1->data.s, val2->data.s, &head, &tail) < 0) {
+    if (mln_reg_match(val1->data.s, val2->data.s, &head, &tail) <= 0) {
         if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
