@@ -35,7 +35,7 @@ extern mln_string_t *mln_RSAESPKCS1V15_private_encrypt(mln_rsa_key_t *pri, mln_s
 extern mln_string_t *mln_RSAESPKCS1V15_private_decrypt(mln_rsa_key_t *pri, mln_string_t *cipher) __NONNULL2(1,2);
 extern void mln_RSAESPKCS1V15_free(mln_string_t *s);
 extern mln_string_t *
-mln_RSASSAPKCS1V15_sign(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType) __NONNULL3(1,2,3);
+mln_RSASSAPKCS1V15_sign(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hash_type) __NONNULL3(1,2,3);
 extern int
 mln_RSASSAPKCS1V15_verify(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s) __NONNULL4(1,2,3,4);
 #define mln_RSA_public_pwr_set(pkey)   ((pkey)->pwr = 1)

@@ -1978,10 +1978,10 @@ Their definitions can be found in melon/include/mln_types.h.
          Free the return value of 'mln_RSAESPKCS1V15_public_encrypt()', 'mln_RSAESPKCS1V15_public_decrypt()',
          'mln_RSAESPKCS1V15_private_encrypt()', 'mln_RSAESPKCS1V15_private_decrypt()', 'mln_RSASSAPKCS1V15_sign()'.
 
-      k) mln_string_t *mln_RSASSAPKCS1V15_sign(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType);
+      k) mln_string_t *mln_RSASSAPKCS1V15_sign(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hash_type);
          RSASSA-PKCS1-V1.5 signature.
 
-      l) int mln_RSASSAPKCS1V15_verify(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s, mln_u32_t hashType);
+      l) int mln_RSASSAPKCS1V15_verify(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_t *m, mln_string_t *s, mln_u32_t hash_type);
          RSASSA-PKCS1-V1.5 verification.
 
       m) mln_RSA_public_value_get(pkey,modulus,exponent);

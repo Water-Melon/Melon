@@ -20,8 +20,8 @@ static inline void mln_rsa_pub_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8p
 static inline void mln_rsa_pri_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen);
 static inline mln_u8ptr_t mln_rsa_antiPaddingPublic(mln_u8ptr_t in, mln_size_t len);
 static inline mln_u8ptr_t mln_rsa_antiPaddingPrivate(mln_u8ptr_t in, mln_size_t len);
-static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_string_t *m, mln_u32_t hashType);
-static inline mln_string_t *mln_EMSAPKCS1V15_decode(mln_alloc_t *pool, mln_string_t *e, mln_u32_t *hashType);
+static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_string_t *m, mln_u32_t hash_type);
+static inline mln_string_t *mln_EMSAPKCS1V15_decode(mln_alloc_t *pool, mln_string_t *e, mln_u32_t *hash_type);
 
 static mln_u8_t EMSAPKCS1V15_HASH_MD5[] = \
 {0x2a, 0x86, 0x48, 0x86, 0xf7, 0xd, 0x2, 0x5};
@@ -421,14 +421,14 @@ void mln_RSAESPKCS1V15_free(mln_string_t *s)
 /*
  * Sign & verify
  */
-static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_string_t *m, mln_u32_t hashType)
+static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_string_t *m, mln_u32_t hash_type)
 {
     mln_u8_t hashval[32] = {0};
     mln_u64_t hlen = 0;
     mln_asn1_enresult_t res, dres;
     mln_string_t *ret, tmp;
 
-    switch (hashType) {
+    switch (hash_type) {
         case M_EMSAPKCS1V15_HASH_MD5:
         {
             mln_md5_t md5;
@@ -463,8 +463,8 @@ static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_strin
         return NULL;
     }
     if (mln_asn1_encode_object_identifier(&res, \
-                                          EMSAPKCS1V15_HASH[hashType].digestAlgorithm, \
-                                          EMSAPKCS1V15_HASH[hashType].len) != M_ASN1_RET_OK)
+                                          EMSAPKCS1V15_HASH[hash_type].digestAlgorithm, \
+                                          EMSAPKCS1V15_HASH[hash_type].len) != M_ASN1_RET_OK)
     {
 err:
         mln_asn1_enresult_destroy(&res);
@@ -506,7 +506,7 @@ err:
     return ret;
 }
 
-mln_string_t *mln_RSASSAPKCS1V15_sign(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hashType)
+mln_string_t *mln_RSASSAPKCS1V15_sign(mln_alloc_t *pool, mln_rsa_key_t *pri, mln_string_t *m, mln_u32_t hash_type)
 {
     mln_string_t *ret = NULL, tmp, *em;
     mln_u8ptr_t buf, p, q;
@@ -515,7 +515,7 @@ mln_string_t *mln_RSASSAPKCS1V15_sign(mln_alloc_t *pool, mln_rsa_key_t *pri, mln
 
     if (k < 1) return NULL;
 
-    if ((em = mln_EMSAPKCS1V15_encode(pool, m, hashType)) == NULL) return NULL;
+    if ((em = mln_EMSAPKCS1V15_encode(pool, m, hash_type)) == NULL) return NULL;
 
     if ((buf = (mln_u8ptr_t)malloc(len)) == NULL) {
 err:
@@ -568,7 +568,7 @@ int mln_RSASSAPKCS1V15_verify(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_
     mln_size_t n = mln_bignum_get_length(&(pub->n)) << 2;
     mln_u8_t hashval[32] = {0};
     mln_size_t hlen;
-    mln_u32_t hashType;
+    mln_u32_t hash_type;
 
     if (s->len % n) {
         return -1;
@@ -608,13 +608,13 @@ int mln_RSASSAPKCS1V15_verify(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_
     }
     mln_string_nset(&tmp, buf, p - buf);
 
-    if ((ret = mln_EMSAPKCS1V15_decode(pool, &tmp, &hashType)) == NULL) {
+    if ((ret = mln_EMSAPKCS1V15_decode(pool, &tmp, &hash_type)) == NULL) {
         free(buf);
         return -1;
     }
     free(buf);
 
-    switch (hashType) {
+    switch (hash_type) {
         case M_EMSAPKCS1V15_HASH_MD5:
         {
             mln_md5_t md5;
@@ -655,7 +655,7 @@ int mln_RSASSAPKCS1V15_verify(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_
     return 0;
 }
 
-static inline mln_string_t *mln_EMSAPKCS1V15_decode(mln_alloc_t *pool, mln_string_t *e, mln_u32_t *hashType)
+static inline mln_string_t *mln_EMSAPKCS1V15_decode(mln_alloc_t *pool, mln_string_t *e, mln_u32_t *hash_type)
 {
     mln_asn1_deresult_t *res, *subRes, *ssubRes;
     int err = M_ASN1_RET_OK;
@@ -700,7 +700,7 @@ err:
         if (!mln_string_strcmp(&tmp, &t)) break;
     }
     if (p >= end) goto err;
-    *hashType = p - EMSAPKCS1V15_HASH;
+    *hash_type = p - EMSAPKCS1V15_HASH;
 
     ssubRes = mln_asn1_deresult_get_content(subRes, 1);
     if (mln_asn1_deresult_get_ident(ssubRes) != M_ASN1_ID_NULL || \
