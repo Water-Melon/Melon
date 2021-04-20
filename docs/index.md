@@ -81,7 +81,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [JSON](https://water-melon.github.io/Melon/json.html)
 - [AES](https://water-melon.github.io/Melon/aes.html)
 - [DES](https://water-melon.github.io/Melon/des.html)
-- RC4
+- [RC4](https://water-melon.github.io/Melon/rc4.html)
 - RSA
 - MD5
 - SHA
