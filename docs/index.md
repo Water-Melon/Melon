@@ -91,7 +91,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - 里德所罗门纠错码
 - 矩阵计算
 - 大数计算
-- 词法分析器
+- [词法分析器](https://water-melon.github.io/Melon/lex.html)
 - 脚本任务
 - 多进程框架
 - IPC模块开发
