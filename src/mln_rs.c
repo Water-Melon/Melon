@@ -282,7 +282,7 @@ mln_rs_matrix_coMatrix(mln_size_t row, mln_size_t additionRow)
 }
 
 static mln_rs_matrix_t *
-mln_rs_matrix_coInverseMatrix(uint8_t **dataVector, size_t len, size_t n, size_t k)
+mln_rs_matrix_coInverseMatrix(uint8_t **data_vector, size_t len, size_t n, size_t k)
 {
     mln_size_t i, j, row = 0;
     mln_rs_matrix_t *matrix, *inverse;
@@ -294,17 +294,17 @@ mln_rs_matrix_coInverseMatrix(uint8_t **dataVector, size_t len, size_t n, size_t
     }
 
     p = data;
-    pend = dataVector + n;
-    for (i = 0; dataVector < pend; ++dataVector, ++i) {
-        if (*dataVector == NULL) continue;
+    pend = data_vector + n;
+    for (i = 0; data_vector < pend; ++data_vector, ++i) {
+        if (*data_vector == NULL) continue;
         for (j = 0; j < n; ++j) {
             *p++ = (i==j)? 1: 0;
         }
         ++row;
     }
-    pend = dataVector + n + k;
-    for (i = 1; row < n && dataVector < pend; ++dataVector, ++i) {
-        if (*dataVector == NULL) continue;
+    pend = data_vector + n + k;
+    for (i = 1; row < n && data_vector < pend; ++data_vector, ++i) {
+        if (*data_vector == NULL) continue;
         for (j = 1; j <= n; ++j) {
             *p++ = (mln_u8_t)mln_rs_calcPower(j, i-1);
         }
@@ -327,7 +327,7 @@ mln_rs_matrix_coInverseMatrix(uint8_t **dataVector, size_t len, size_t n, size_t
 }
 
 static mln_rs_matrix_t *
-mln_rs_matrix_dataMatrix(uint8_t **dataVector, size_t len, size_t n, size_t k)
+mln_rs_matrix_dataMatrix(uint8_t **data_vector, size_t len, size_t n, size_t k)
 {
     mln_size_t row = 0;
     mln_u8ptr_t data, p, *pend;
@@ -338,10 +338,10 @@ mln_rs_matrix_dataMatrix(uint8_t **dataVector, size_t len, size_t n, size_t k)
         return NULL;
     }
     p = data;
-    pend = dataVector + n + k;
-    for (; row < n && dataVector < pend; ++dataVector) {
-        if (*dataVector == NULL) continue;
-        memcpy(p, *dataVector, len);
+    pend = data_vector + n + k;
+    for (; row < n && data_vector < pend; ++data_vector) {
+        if (*data_vector == NULL) continue;
+        memcpy(p, *data_vector, len);
         p += len;
         ++row;
     }
@@ -399,17 +399,17 @@ void mln_rs_result_free(mln_rs_result_t *result)
  * Reed-Solomon operations
  */
 mln_rs_result_t *
-mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k)
+mln_rs_encode(uint8_t *data_vector, size_t len, size_t n, size_t k)
 {
     mln_rs_result_t *result;
     mln_rs_matrix_t *matrix, *coMatrix, *resMatrix;
 
-    if (dataVector == NULL || !len || !n || !k || mln_rs_calcPower(n, k-1) > 255) {
+    if (data_vector == NULL || !len || !n || !k || mln_rs_calcPower(n, k-1) > 255) {
         errno = EINVAL;
         return NULL;
     }
 
-    if ((matrix = mln_rs_matrix_new(n, len, dataVector, 1)) == NULL) {
+    if ((matrix = mln_rs_matrix_new(n, len, data_vector, 1)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
@@ -437,7 +437,7 @@ mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k)
 }
 
 mln_rs_result_t *
-mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, size_t k)
+mln_rs_decode(uint8_t **data_vector, size_t len, size_t n, size_t k)
 {
     mln_u8ptr_t data, p, *pp, *pend;
     mln_rs_result_t *result;
@@ -452,7 +452,7 @@ mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, size_t k)
             return NULL;
         }
         p = data;
-        for (pp = dataVector, pend = dataVector+n; pp < pend; ++pp) {
+        for (pp = data_vector, pend = data_vector+n; pp < pend; ++pp) {
             memcpy(p, *pp, len);
             p += len;
         }
@@ -464,10 +464,10 @@ mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, size_t k)
         return result;
     }
 
-    if ((coMatrix = mln_rs_matrix_coInverseMatrix(dataVector, len, n, k)) == NULL) {
+    if ((coMatrix = mln_rs_matrix_coInverseMatrix(data_vector, len, n, k)) == NULL) {
         return NULL;
     }
-    if ((dataMatrix = mln_rs_matrix_dataMatrix(dataVector, len, n, k)) == NULL) {
+    if ((dataMatrix = mln_rs_matrix_dataMatrix(data_vector, len, n, k)) == NULL) {
         int err = errno;
         mln_rs_matrix_free(coMatrix);
         errno = err;

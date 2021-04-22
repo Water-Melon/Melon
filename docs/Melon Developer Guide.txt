@@ -2632,24 +2632,24 @@ Their definitions can be found in melon/include/mln_types.h.
          Matrix inversion.
 
   38) Reed-Solomon Code
-      a) mln_rs_result_t *mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k);
-         Encode pieces of data in vector 'dataVector' and return 'n+k' pieces of data.
-         And the type of 'dataVector' is 'uint8_t *' not 'uint8_t **'.
-         'len' indicates the length of every element in 'dataVector'.
-         'n' indicates how many elements placed in 'dataVector'.
+      a) mln_rs_result_t *mln_rs_encode(uint8_t *data_vector, size_t len, size_t n, size_t k);
+         Encode pieces of data in vector 'data_vector' and return 'n+k' pieces of data.
+         And the type of 'data_vector' is 'uint8_t *' not 'uint8_t **'.
+         'len' indicates the length of every element in 'data_vector'.
+         'n' indicates how many elements placed in 'data_vector'.
          'k' indicates how many pieces of recovery data would be generated.
 
       b) void mln_rs_result_free(mln_rs_result_t *result);
          Free rs result that returned by 'mln_rs_encode()' or 'mln_rs_decode()'.
 
-      c) mln_rs_result_t *mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, size_t k);
+      c) mln_rs_result_t *mln_rs_decode(uint8_t **data_vector, size_t len, size_t n, size_t k);
          Recover lost data.
-         'dataVector' is a vector stored some or all original data.
-         'len' indicates the length of every element in 'dataVector'.
+         'data_vector' is a vector stored some or all original data.
+         'len' indicates the length of every element in 'data_vector'.
          'n' indicates the number of original data elements.
          'k' indicates the number of check elements generated from 'mln_rs_encode()'.
-         If someone lost, the corresponing element in 'dataVector' should be NULL, but
-         the number of 'dataVector''s element must be 'n+k'.
+         If someone lost, the corresponing element in 'data_vector' should be NULL, but
+         the number of 'data_vector''s element must be 'n+k'.
 
       d) mln_rs_result_get_num(_presult);
          Return how many pieces of data stored in '_presult' (mln_rs_result_t).

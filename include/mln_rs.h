@@ -33,9 +33,9 @@ typedef struct {
       ((_presult)->num <= (index)? NULL: \
         (&((_presult)->data[(index)*((_presult)->len/(_presult)->num)]) )))
 
-extern mln_rs_result_t *mln_rs_encode(uint8_t *dataVector, size_t len, size_t n, size_t k);
+extern mln_rs_result_t *mln_rs_encode(uint8_t *data_vector, size_t len, size_t n, size_t k);
 extern void mln_rs_result_free(mln_rs_result_t *result);
-extern mln_rs_result_t *mln_rs_decode(uint8_t **dataVector, size_t len, size_t n, size_t k);
+extern mln_rs_result_t *mln_rs_decode(uint8_t **data_vector, size_t len, size_t n, size_t k);
 extern void mln_rs_matrix_dump(mln_rs_matrix_t *matrix);
 #endif
 

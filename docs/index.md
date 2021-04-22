@@ -88,7 +88,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - HTTP
 - Websocket
 - [FEC](https://water-melon.github.io/Melon/fec.html)
-- 里德所罗门纠错码
+- [里德所罗门纠错码](https://water-melon.github.io/Melon/reedsolomon.html)
 - 矩阵计算
 - 大数计算
 - [词法分析器](https://water-melon.github.io/Melon/lex.html)
