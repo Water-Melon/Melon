@@ -90,7 +90,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [FEC](https://water-melon.github.io/Melon/fec.html)
 - [里德所罗门纠错码](https://water-melon.github.io/Melon/reedsolomon.html)
 - [矩阵计算](https://water-melon.github.io/Melon/matrix.html)
-- 大数计算
+- [大数计算](https://water-melon.github.io/Melon/bignum.html)
 - [词法分析器](https://water-melon.github.io/Melon/lex.html)
 - 脚本任务
 - [多进程框架](https://water-melon.github.io/Melon/multithread.html)
