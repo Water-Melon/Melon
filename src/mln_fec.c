@@ -101,7 +101,7 @@ static int
 mln_fec_generateFECPacket_FECHeader(mln_fec_t *fec, \
                                     mln_size_t n, \
                                     mln_u8ptr_t *packets, \
-                                    mln_u16_t *packLen, \
+                                    mln_u16_t *packlen, \
                                     mln_u8ptr_t buf, \
                                     mln_size_t *len)
 {
@@ -118,9 +118,9 @@ mln_fec_generateFECPacket_FECHeader(mln_fec_t *fec, \
         return -1;
     }
 
-    for (; packets < end; ++packets, ++packLen) {
+    for (; packets < end; ++packets, ++packlen) {
         t = ret;
-        tmp16 = *packLen - M_FEC_RTP_FIXEDLEN;
+        tmp16 = *packlen - M_FEC_RTP_FIXEDLEN;
         memcpy(header, *packets, 8);
         p = header + 8;
         mln_bigendian_encode(tmp16, p, 2);
@@ -153,7 +153,7 @@ static int
 mln_fec_generateFECPacket_FECBody(mln_fec_t *fec, \
                                   mln_size_t n, \
                                   mln_u8ptr_t *packets, \
-                                  mln_u16_t *packLen, \
+                                  mln_u16_t *packlen, \
                                   mln_u8ptr_t buf, \
                                   mln_size_t *len)
 {
@@ -175,7 +175,7 @@ mln_fec_generateFECPacket_FECBody(mln_fec_t *fec, \
         return -1;
     }
     end = packets + n;
-    for (p = packets, pl = packLen; p < end; ++p, ++pl) {
+    for (p = packets, pl = packlen; p < end; ++p, ++pl) {
         t = ret;
         mln_string_nset(&tmp, *p, *pl);
         ret = mln_fec_xor(&tmp, t);
@@ -219,7 +219,7 @@ static mln_string_t *
 mln_fec_generateFECPacket(mln_fec_t *fec, \
                           mln_size_t n, \
                           mln_u8ptr_t *packets, \
-                          mln_u16_t *packLen)
+                          mln_u16_t *packlen)
 {
     mln_string_t tmp, *ret;
     mln_size_t len = 0, mod;
@@ -228,7 +228,7 @@ mln_fec_generateFECPacket(mln_fec_t *fec, \
     if (mln_fec_generateFECPacket_FECHeader(fec, \
                                             n, \
                                             packets, \
-                                            packLen, \
+                                            packlen, \
                                             buf+M_FEC_RTP_FIXEDLEN, \
                                             &len) < 0)
     {
@@ -237,7 +237,7 @@ mln_fec_generateFECPacket(mln_fec_t *fec, \
     if (mln_fec_generateFECPacket_FECBody(fec, \
                                           n, \
                                           packets, \
-                                          packLen, \
+                                          packlen, \
                                           buf+M_FEC_RTP_FIXEDLEN+M_FEC_FECHEADER_LEN, \
                                           &len) < 0)
     {
@@ -264,7 +264,7 @@ mln_fec_generateFECPacket(mln_fec_t *fec, \
 }
 
 mln_fec_result_t *
-mln_fec_encode(mln_fec_t *fec, uint8_t *packets[], uint16_t packLen[], size_t n, uint16_t groupSize)
+mln_fec_encode(mln_fec_t *fec, uint8_t *packets[], uint16_t packlen[], size_t n, uint16_t group_size)
 {
     uint16_t *pl, *plend;
     mln_u8ptr_t *p, *pend;
@@ -273,22 +273,22 @@ mln_fec_encode(mln_fec_t *fec, uint8_t *packets[], uint16_t packLen[], size_t n,
 
     if (fec == NULL || \
         packets == NULL || \
-        packLen == NULL || \
+        packlen == NULL || \
         !n || \
-        groupSize > 48 || \
-        !groupSize)
+        group_size > 48 || \
+        !group_size)
     {
         errno = EINVAL;
         return NULL;
     }
-    for (pl = packLen, plend = packLen+n; pl < plend; ++pl) {
+    for (pl = packlen, plend = packlen+n; pl < plend; ++pl) {
         if (*pl < M_FEC_RTP_FIXEDLEN || *pl > M_FEC_G_MAXLEN) {
             errno = EINVAL;
             return NULL;
         }
     }
 
-    if ((vec = mln_stringVector_new(n/groupSize)) == NULL) {
+    if ((vec = mln_stringVector_new(n/group_size)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
@@ -296,16 +296,16 @@ mln_fec_encode(mln_fec_t *fec, uint8_t *packets[], uint16_t packLen[], size_t n,
 
     p = (mln_u8ptr_t *)packets;
     pend = (mln_u8ptr_t *)packets+n;
-    pl = packLen;
-    plend = packLen+n;
-    for (; p < pend; p+=groupSize, pl+=groupSize, ++next) {
-        if ((*next = mln_fec_generateFECPacket(fec, groupSize, p, pl)) == NULL) {
+    pl = packlen;
+    plend = packlen+n;
+    for (; p < pend; p+=group_size, pl+=group_size, ++next) {
+        if ((*next = mln_fec_generateFECPacket(fec, group_size, p, pl)) == NULL) {
             mln_stringVector_free(vec);
             errno = ENOMEM;
             return NULL;
         }
     }
-    if ((result = mln_fec_result_new(vec, n/groupSize)) == NULL) {
+    if ((result = mln_fec_result_new(vec, n/group_size)) == NULL) {
         mln_stringVector_free(vec);
         errno = ENOMEM;
         return NULL;
@@ -352,7 +352,7 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
                                  mln_u8ptr_t buf, \
                                  mln_size_t *blen, \
                                  mln_u8ptr_t *packets, \
-                                 mln_u16_t *packLen, \
+                                 mln_u16_t *packlen, \
                                  mln_size_t n, \
                                  mln_u16_t *bodyLen)
 {
@@ -368,7 +368,7 @@ static int mln_fec_decode_header(mln_fec_t *fec, \
     mln_fec_recover_getHeaderInfo(fecPacket, &snBase, &ssrc, &mask, &isLong);
     p = packets;
     pend = packets + n;
-    pl = packLen;
+    pl = packlen;
     mln_string_nset(&tmp, bitString, sizeof(bitString));
     if ((res = mln_string_dup(&tmp)) == NULL) {
         errno = ENOMEM;
@@ -454,7 +454,7 @@ static int mln_fec_decode_body(mln_fec_t *fec, \
                                mln_u8ptr_t buf, \
                                mln_size_t *blen, \
                                mln_u8ptr_t *packets, \
-                               mln_u16_t *packLen, \
+                               mln_u16_t *packlen, \
                                mln_size_t n, \
                                mln_u16_t bodyLen)
 {
@@ -478,7 +478,7 @@ static int mln_fec_decode_body(mln_fec_t *fec, \
     }
     p = (mln_u8ptr_t *)packets;
     pend = (mln_u8ptr_t *)packets + n;
-    pl = packLen;
+    pl = packlen;
     for (; p < pend; ++p, ++pl) {
         if (((*p)[1] & 0x7f) == fec->pt) continue;
         ptr = (*p) + 2;
@@ -509,7 +509,7 @@ static int mln_fec_decode_body(mln_fec_t *fec, \
     return 0;
 }
 
-mln_fec_result_t *mln_fec_decode(mln_fec_t *fec, uint8_t *packets[], uint16_t *packLen, size_t n)
+mln_fec_result_t *mln_fec_decode(mln_fec_t *fec, uint8_t *packets[], uint16_t *packlen, size_t n)
 {
     mln_fec_result_t *res;
     mln_u8ptr_t *p;
@@ -518,13 +518,13 @@ mln_fec_result_t *mln_fec_decode(mln_fec_t *fec, uint8_t *packets[], uint16_t *p
     mln_u8_t buf[M_FEC_R_MAXLEN] = {0};
     mln_size_t blen = 0;
 
-    if (fec == NULL || packets == NULL || packLen == NULL || !n) {
+    if (fec == NULL || packets == NULL || packlen == NULL || !n) {
         errno = EINVAL;
         return NULL;
     }
     p = (mln_u8ptr_t *)packets;
-    pl = packLen;
-    plend = packLen + n;
+    pl = packlen;
+    plend = packlen + n;
     for (; pl < plend; ++pl, ++p) {
         if (*pl < M_FEC_RTP_FIXEDLEN || *pl > M_FEC_R_MAXLEN) {
             errno = EINVAL;
@@ -558,7 +558,7 @@ noRecover:
                               buf, \
                               &blen, \
                               (mln_u8ptr_t *)packets, \
-                              packLen, \
+                              packlen, \
                               n, \
                               &bodyLen) < 0)
     {
@@ -572,7 +572,7 @@ noRecover:
                             buf+blen, \
                             &blen, \
                             (mln_u8ptr_t *)packets, \
-                            packLen, \
+                            packlen, \
                             n, \
                             bodyLen) < 0)
     {

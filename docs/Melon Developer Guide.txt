@@ -2588,21 +2588,21 @@ Their definitions can be found in melon/include/mln_types.h.
 
       c) mln_fec_result_t *mln_fec_encode(mln_fec_t *fec,
                                           uint8_t *packets[],
-                                          uint16_t packLen[],
+                                          uint16_t packlen[],
                                           size_t n,
-                                          uint16_t groupSize);
+                                          uint16_t group_size);
          Encode RTP packets and generate some fec packets.
          'packets' is a vector of RTP packet.
-         'packLen' is a vector of RTP packet length.
+         'packlen' is a vector of RTP packet length.
          'n' is the number of RTP packets.
-         'groupSize' indicates how many RTP packets can be a group to generate an FEC packet.
+         'group_size' indicates how many RTP packets can be a group to generate an FEC packet.
 
       d) void mln_fec_result_free(mln_fec_result_t *fr);
          Destroy fec result instance that 'mln_fec_encode()' or 'mln_fec_decode()' returned.
 
       e) mln_fec_result_t *mln_fec_decode(mln_fec_t *fec,
                                           uint8_t *packets[],
-                                          uint16_t *packLen,
+                                          uint16_t *packlen,
                                           size_t n);
          Recovery RTP packet.
          If there is only one RTP packet lost, it can be recovered through this function.
