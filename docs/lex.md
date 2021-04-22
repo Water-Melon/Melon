@@ -413,6 +413,36 @@ mln_lex_init_with_hooks(PREFIX_NAME,lex_ptr,attr_ptr)
 
 ```c
 #include <stdio.h>
+#include <stdlib.h>
+#include "mln_core.h"
+#include "mln_log.h"
+#include "mln_md5.h"
+
+int main(int argc, char *argv[])
+{
+    mln_md5_t m;
+    char text[] = "Hello";
+    char output[33] = {0};
+    struct mln_core_attr cattr;
+
+    cattr.argc = argc;
+    cattr.argv = argv;
+    cattr.global_init = NULL;
+    cattr.worker_process = NULL;
+    if (mln_core_init(&cattr) < 0) {
+        fprintf(stderr, "init failed\n");
+        return -1;
+    }
+
+    mln_md5_init(&m);
+    mln_md5_calc(&m, (mln_u8ptr_t)text, sizeof(text)-1, 1);
+    mln_md5_tostring(&m, output, sizeof(output));
+    mln_log(debug, "%s\n", output);
+
+    return 0;
+}
+nik@MacBook-Pro-4 ~ % cat b.c
+#include <stdio.h>
 #include "mln_lex.h"
 
 mln_string_t keywords[] = {
@@ -429,44 +459,44 @@ mln_get_char(mln_lex_t *lex, char c)
 {
     if (c == '\\') {
         char n;
-        if ((n = mln_lex_getAChar(lex)) == MLN_ERR) return -1;
+        if ((n = mln_lex_getchar(lex)) == MLN_ERR) return -1;
         switch ( n ) {
             case '\"':
-                if (mln_lex_putAChar(lex, n) == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, n) == MLN_ERR) return -1;
                 break;
             case '\'':
-                if (mln_lex_putAChar(lex, n) == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, n) == MLN_ERR) return -1;
                 break;
             case 'n':
-                if (mln_lex_putAChar(lex, '\n') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\n') == MLN_ERR) return -1;
                 break;
             case 't':
-                if (mln_lex_putAChar(lex, '\t') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\t') == MLN_ERR) return -1;
                 break;
             case 'b':
-                if (mln_lex_putAChar(lex, '\b') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\b') == MLN_ERR) return -1;
                 break;
             case 'a':
-                if (mln_lex_putAChar(lex, '\a') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\a') == MLN_ERR) return -1;
                 break;
             case 'f':
-                if (mln_lex_putAChar(lex, '\f') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\f') == MLN_ERR) return -1;
                 break;
             case 'r':
-                if (mln_lex_putAChar(lex, '\r') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\r') == MLN_ERR) return -1;
                 break;
             case 'v':
-                if (mln_lex_putAChar(lex, '\v') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\v') == MLN_ERR) return -1;
                 break;
             case '\\':
-                if (mln_lex_putAChar(lex, '\\') == MLN_ERR) return -1;
+                if (mln_lex_putchar(lex, '\\') == MLN_ERR) return -1;
                 break;
             default:
-                mln_lex_setError(lex, MLN_LEX_EINVCHAR);
+                mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
                 return -1;
         }
     } else {
-        if (mln_lex_putAChar(lex, c) == MLN_ERR) return -1;
+        if (mln_lex_putchar(lex, c) == MLN_ERR) return -1;
     }
     return 0;
 }
@@ -474,13 +504,13 @@ mln_get_char(mln_lex_t *lex, char c)
 static mln_test_struct_t *
 mln_test_dblq_handler(mln_lex_t *lex, void *data)
 {
-    mln_lex_cleanResult(lex);
+    mln_lex_result_clean(lex);
     char c;
     while ( 1 ) {
-        c = mln_lex_getAChar(lex);
+        c = mln_lex_getchar(lex);
         if (c == MLN_ERR) return NULL;
         if (c == MLN_EOF) {
-            mln_lex_setError(lex, MLN_LEX_EINVEOF);
+            mln_lex_error_set(lex, MLN_LEX_EINVEOF);
             return NULL;
         }
         if (c == '\"') break;
@@ -505,7 +535,7 @@ int main(int argc, char *argv[])
     memset(&hooks, 0, sizeof(hooks));
     hooks.dblq_handler = (lex_hook)mln_test_dblq_handler;
 
-    mln_string_nSet(&path, argv[1], strlen(argv[1]));
+    mln_string_nset(&path, argv[1], strlen(argv[1]));
 
     lattr.pool = mln_alloc_init();
     if (lattr.pool == NULL) {
@@ -519,7 +549,7 @@ int main(int argc, char *argv[])
     lattr.type = M_INPUT_T_FILE;
     lattr.data = &path;
 
-    mln_lex_initWithHooks(mln_test, lex, &lattr);
+    mln_lex_init_with_hooks(mln_test, lex, &lattr);
     if (lex == NULL) {
         fprintf(stderr, "lexer init failed\n");
         return -1;
