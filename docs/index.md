@@ -86,7 +86,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [MD5](https://water-melon.github.io/Melon/md5.html)
 - [SHA](https://water-melon.github.io/Melon/sha.html)
 - [HTTP](https://water-melon.github.io/Melon/http.html)
-- Websocket
+- [Websocket](https://water-melon.github.io/Melon/websocket.html)
 - [FEC](https://water-melon.github.io/Melon/fec.html)
 - [里德所罗门纠错码](https://water-melon.github.io/Melon/reedsolomon.html)
 - [矩阵计算](https://water-melon.github.io/Melon/matrix.html)
