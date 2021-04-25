@@ -93,7 +93,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [大数计算](https://water-melon.github.io/Melon/bignum.html)
 - [词法分析器](https://water-melon.github.io/Melon/lex.html)
 - [脚本任务](https://water-melon.github.io/Melon/melang.html)
-- 脚本开发
+- [脚本开发](https://water-melon.github.io/Melon/melang-dev.html)
 - [多进程框架](https://water-melon.github.io/Melon/multithread.html)
 - [IPC模块开发](https://water-melon.github.io/Melon/ipc.html)
 - [多线程框架](https://water-melon.github.io/Melon/multiprocess.html)
