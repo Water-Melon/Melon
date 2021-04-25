@@ -413,6 +413,7 @@ extern mln_lang_method_t *mln_lang_methods[];
 
 
 #define mln_lang_cache_set(lang) ((lang)->cache = 1)
+#define mln_lang_ctx_data_get(ctx) ((ctx)->data)
 extern void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg) __NONNULL2(1,2);
 extern mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev) __NONNULL2(1,2);
 extern void mln_lang_free(mln_lang_t *lang);
