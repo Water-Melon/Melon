@@ -18,7 +18,7 @@ struct mln_core_attr {
 };
 
 extern int mln_core_init(struct mln_core_attr *attr) __NONNULL1(1);
-#if defined(__GNUC__)
+#if defined(__GNUC__) && defined(MLN_SIMPLE_INIT)
 extern int mln_simple_init;
 extern int __attribute__((constructor)) mln_core_simple_init(void);
 #endif

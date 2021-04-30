@@ -62,9 +62,10 @@ int main(int argc, char *argv[])
 
 ```c
 #include <stdio.h>
-#include "mln_core.h"
 #include "mln_alloc.h"
-#include <mln_log.h>
+#include "mln_log.h"
+#define MLN_SIMPLE_INIT
+#include "mln_core.h"
 
 int main(int argc, char *argv[])
 {
