@@ -10,3 +10,4 @@ src/mln_ipc.c
 src/mln_melang.c
 src/mln_path.c
 src/mln_thread_module.c
+conf/melon.conf

@@ -58,6 +58,36 @@ int main(int argc, char *argv[])
 
 
 
+事实上，在GCC编译器的情况下，上面的代码还可以再简化：
+
+```c
+#include <stdio.h>
+#include "mln_core.h"
+#include "mln_alloc.h"
+#include <mln_log.h>
+
+int main(int argc, char *argv[])
+{
+    char *ptr;
+    mln_alloc_t *pool;
+
+    mln_simple_init = 1;
+
+    pool = mln_alloc_init();
+
+    ptr = mln_alloc_m(pool, 1024);
+    mln_log(debug, "%X\n", ptr);
+    mln_alloc_free(ptr);
+
+    mln_alloc_destroy(pool);
+    return 0;
+}
+```
+
+这里的简化方式是：将`mln_core_init`相关内容去掉，然后换成`mln_simple_init = 1;`。这种方式是利用了GCC的`contructor`特性做到的。事实上，这个特性使用有个前提：代码不需要使用多进程多线程框架的情况下方可使用，因为无法设置`global_init`和`worker_process`回调函数进行处理。
+
+
+
 随后对代码进行编译，这里以UNIX系统为例：
 
 ```bash

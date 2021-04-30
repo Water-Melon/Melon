@@ -510,7 +510,7 @@ do
 done
 
 #generate conf file
-sed -e "s/{{ROOT}}/${install_path//'/'/\/}/g" conf/melon.conf.template > conf/melon.conf
+sed -e "s#{{ROOT}}#${install_path}#g" conf/melon.conf.template > conf/melon.conf
 
 echo "Configure done!"
 
