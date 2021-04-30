@@ -374,7 +374,7 @@ else
     echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc $mysql_lib -shared -fPIC" >> Makefile
 fi
 echo "install:" >> Makefile
-echo -e "\ttest -d $melanglibpath || mkdir $melanglibpath" >> Makefile
+echo -e "\ttest -d $melanglibpath || mkdir -p $melanglibpath" >> Makefile
 echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
 echo -e "\tcp -fr lib $install_path" >> Makefile
 echo -e "\tcp -fr include $install_path" >> Makefile
@@ -510,7 +510,7 @@ do
 done
 
 #generate conf file
-sed -e "s#{{ROOT}}#${install_path}#g" conf/melon.conf.template > conf/melon.conf
+sed -e "s#{{ROOT}}#${realpath}#g" conf/melon.conf.template > conf/melon.conf
 
 echo "Configure done!"
 
