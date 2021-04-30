@@ -508,5 +508,9 @@ do
 
     echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 done
+
+#generate conf file
+sed -e "s/{{ROOT}}/${install_path//'/'/\/}/g" conf/melon.conf.template > conf/melon.conf
+
 echo "Configure done!"
 
