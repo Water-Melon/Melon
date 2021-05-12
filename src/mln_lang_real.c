@@ -116,18 +116,18 @@ mln_lang_real_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *
         type == M_LANG_VAL_TYPE_BOOL || \
         type == M_LANG_VAL_TYPE_NIL)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     if (type == M_LANG_VAL_TYPE_STRING) {
         mln_lang_method_t *method = mln_lang_methods[type];
         if (method == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         mln_lang_op handler = method->pluseq_handler;
         if (handler == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         return handler(ctx, ret, op1, op2);
@@ -150,7 +150,7 @@ mln_lang_real_subeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
         type == M_LANG_VAL_TYPE_NIL || \
         type == M_LANG_VAL_TYPE_STRING)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     mln_lang_var_set_real(op1, \
@@ -171,7 +171,7 @@ mln_lang_real_muleq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
         type == M_LANG_VAL_TYPE_NIL || \
         type == M_LANG_VAL_TYPE_STRING)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     mln_lang_var_set_real(op1, \
@@ -192,7 +192,7 @@ mln_lang_real_diveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
         type == M_LANG_VAL_TYPE_NIL || \
         type == M_LANG_VAL_TYPE_STRING)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     double r = mln_lang_var_toreal(op2);
@@ -278,18 +278,18 @@ mln_lang_real_less(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
         type == M_LANG_VAL_TYPE_BOOL || \
         type == M_LANG_VAL_TYPE_NIL)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     if (type == M_LANG_VAL_TYPE_STRING) {
         mln_lang_method_t *method = mln_lang_methods[type];
         if (method == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         mln_lang_op handler = method->less_handler;
         if (handler == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         return handler(ctx, ret, op1, op2);
@@ -319,18 +319,18 @@ mln_lang_real_lesseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *
         type == M_LANG_VAL_TYPE_BOOL || \
         type == M_LANG_VAL_TYPE_NIL)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     if (type == M_LANG_VAL_TYPE_STRING) {
         mln_lang_method_t *method = mln_lang_methods[type];
         if (method == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         mln_lang_op handler = method->lesseq_handler;
         if (handler == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         return handler(ctx, ret, op1, op2);
@@ -360,18 +360,18 @@ mln_lang_real_grea(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
         type == M_LANG_VAL_TYPE_BOOL || \
         type == M_LANG_VAL_TYPE_NIL)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     if (type == M_LANG_VAL_TYPE_STRING) {
         mln_lang_method_t *method = mln_lang_methods[type];
         if (method == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         mln_lang_op handler = method->grea_handler;
         if (handler == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         return handler(ctx, ret, op1, op2);
@@ -401,18 +401,18 @@ mln_lang_real_greale(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *
         type == M_LANG_VAL_TYPE_BOOL || \
         type == M_LANG_VAL_TYPE_NIL)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     if (type == M_LANG_VAL_TYPE_STRING) {
         mln_lang_method_t *method = mln_lang_methods[type];
         if (method == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         mln_lang_op handler = method->greale_handler;
         if (handler == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         return handler(ctx, ret, op1, op2);
@@ -440,18 +440,18 @@ mln_lang_real_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
         type == M_LANG_VAL_TYPE_BOOL || \
         type == M_LANG_VAL_TYPE_NIL)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     if (type == M_LANG_VAL_TYPE_STRING) {
         mln_lang_method_t *method = mln_lang_methods[type];
         if (method == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         mln_lang_op handler = method->plus_handler;
         if (handler == NULL) {
-            mln_lang_errmsg(ctx, "Operation Not support.");
+            mln_lang_errmsg(ctx, "Operation NOT support.");
             return -1;
         }
         return handler(ctx, ret, op1, op2);
@@ -480,7 +480,7 @@ mln_lang_real_sub(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
         type == M_LANG_VAL_TYPE_BOOL || \
         type == M_LANG_VAL_TYPE_NIL)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     mln_lang_val_t *val;
@@ -507,7 +507,7 @@ mln_lang_real_mul(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
         type == M_LANG_VAL_TYPE_BOOL || \
         type == M_LANG_VAL_TYPE_NIL)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     mln_lang_val_t *val;
@@ -534,7 +534,7 @@ mln_lang_real_div(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
         type == M_LANG_VAL_TYPE_BOOL || \
         type == M_LANG_VAL_TYPE_NIL)
     {
-        mln_lang_errmsg(ctx, "Operation Not support.");
+        mln_lang_errmsg(ctx, "Operation NOT support.");
         return -1;
     }
     mln_lang_val_t *val;
