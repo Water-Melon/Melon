@@ -2967,7 +2967,7 @@ inline void mln_lang_funccall_val_add_arg(mln_lang_funccall_val_t *func, mln_lan
     ++(func->nargs);
 }
 
-void mln_lang_funccall_val_object_add(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val)
+inline void mln_lang_funccall_val_object_add(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val)
 {
     ASSERT(obj_val != NULL && func->object == NULL);
     ++(obj_val->ref);
@@ -2980,6 +2980,59 @@ int mln_lang_funccall_val_operator(mln_lang_ctx_t *ctx, mln_string_t *name, mln_
 
     if (mln_lang_funccall_val_operator_overload_test(ctx, name)) {
         return 0;
+    }
+
+    if ((sym = __mln_lang_symbol_node_search(ctx, name, 0)) != NULL \
+        && sym->type == M_LANG_SYMBOL_VAR \
+        && mln_lang_var_val_type_get(sym->data.var) == M_LANG_VAL_TYPE_FUNC)
+    {
+        mln_lang_funccall_val_t *call = __mln_lang_funccall_val_new(ctx->pool, name);
+        if (call == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+        *ret = mln_lang_var_create_call(ctx, call);
+        if (*ret == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            __mln_lang_funccall_val_free(call);
+            return -1;
+        }
+        mln_lang_funccall_val_add_arg(call, mln_lang_var_ref(op1));
+        if (op2 != NULL) mln_lang_funccall_val_add_arg(call, mln_lang_var_ref(op2));
+        call->prototype = mln_lang_var_val_get(sym->data.var)->data.func;
+        return 1;
+    }
+    return 0;
+}
+
+int mln_lang_funccall_val_obj_operator(mln_lang_ctx_t *ctx, mln_lang_var_t *obj, mln_string_t *name, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    mln_lang_var_t *var;
+    mln_lang_symbol_node_t *sym;
+
+    if (mln_lang_funccall_val_operator_overload_test(ctx, name)) {
+        return 0;
+    }
+
+    if ((var = __mln_lang_set_member_search(mln_lang_var_val_get(obj)->data.obj->members, name)) != NULL \
+        && mln_lang_var_val_type_get(var) == M_LANG_VAL_TYPE_FUNC)
+    {
+        mln_lang_funccall_val_t *call = __mln_lang_funccall_val_new(ctx->pool, name);
+        if (call == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+        *ret = mln_lang_var_create_call(ctx, call);
+        if (*ret == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            __mln_lang_funccall_val_free(call);
+            return -1;
+        }
+        mln_lang_funccall_val_add_arg(call, mln_lang_var_ref(op1));
+        if (op2 != NULL) mln_lang_funccall_val_add_arg(call, mln_lang_var_ref(op2));
+        call->prototype = mln_lang_var_val_get(var)->data.func;
+        mln_lang_funccall_val_object_add(call, obj->val);
+        return 1;
     }
 
     if ((sym = __mln_lang_symbol_node_search(ctx, name, 0)) != NULL \
