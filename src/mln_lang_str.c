@@ -18,6 +18,30 @@ mln_lang_str_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
 static int
 mln_lang_str_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
+mln_lang_str_subeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_lmoveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_rmoveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_muleq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_diveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_oreq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_andeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_xoreq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_modeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_cor(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_cand(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_cxor(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
 mln_lang_str_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
 mln_lang_str_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
@@ -30,54 +54,123 @@ mln_lang_str_grea(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
 static int
 mln_lang_str_greale(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
+mln_lang_str_lmov(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_rmov(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
 mln_lang_str_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_sub(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_mul(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_div(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_mod(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_sdec(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_sinc(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_index(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_property(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_negative(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_reverse(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
 mln_lang_str_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int
-mln_lang_str_index(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+mln_lang_str_pinc(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+static int
+mln_lang_str_pdec(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 
 mln_lang_method_t mln_lang_str_oprs = {
     mln_lang_str_assign,
     mln_lang_str_pluseq,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    mln_lang_str_subeq,
+    mln_lang_str_lmoveq,
+    mln_lang_str_rmoveq,
+    mln_lang_str_muleq,
+    mln_lang_str_diveq,
+    mln_lang_str_oreq,
+    mln_lang_str_andeq,
+    mln_lang_str_xoreq,
+    mln_lang_str_modeq,
+    mln_lang_str_cor,
+    mln_lang_str_cand,
+    mln_lang_str_cxor,
     mln_lang_str_equal,
     mln_lang_str_nonequal,
     mln_lang_str_less,
     mln_lang_str_lesseq,
     mln_lang_str_grea,
     mln_lang_str_greale,
-    NULL,
-    NULL,
+    mln_lang_str_lmov,
+    mln_lang_str_rmov,
     mln_lang_str_plus,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    mln_lang_str_sub,
+    mln_lang_str_mul,
+    mln_lang_str_div,
+    mln_lang_str_mod,
+    mln_lang_str_sdec,
+    mln_lang_str_sinc,
     mln_lang_str_index,
-    NULL,
-    NULL,
-    NULL,
+    mln_lang_str_property,
+    mln_lang_str_negative,
+    mln_lang_str_reverse,
     mln_lang_str_not,
-    NULL,
-    NULL
+    mln_lang_str_pinc,
+    mln_lang_str_pdec
+};
+
+static mln_string_t mln_lang_str_opr_names[] = {
+    mln_string("__str_assign_operator__"),
+    mln_string("__str_pluseq_operator__"),
+    mln_string("__str_subeq_operator__"),
+    mln_string("__str_lmoveq_operator__"),
+    mln_string("__str_rmoveq_operator__"),
+    mln_string("__str_muleq_operator__"),
+    mln_string("__str_diveq_operator__"),
+    mln_string("__str_oreq_operator__"),
+    mln_string("__str_andeq_operator__"),
+    mln_string("__str_xoreq_operator__"),
+    mln_string("__str_modeq_operator__"),
+    mln_string("__str_cor_operator__"),
+    mln_string("__str_cand_operator__"),
+    mln_string("__str_cxor_operator__"),
+    mln_string("__str_equal_operator__"),
+    mln_string("__str_nonequal_operator__"),
+    mln_string("__str_lt_operator__"),
+    mln_string("__str_le_operator__"),
+    mln_string("__str_gt_operator__"),
+    mln_string("__str_ge_operator__"),
+    mln_string("__str_lmov_operator__"),
+    mln_string("__str_rmov_operator__"),
+    mln_string("__str_plus_operator__"),
+    mln_string("__str_sub_operator__"),
+    mln_string("__str_mul_operator__"),
+    mln_string("__str_div_operator__"),
+    mln_string("__str_mod_operator__"),
+    mln_string("__str_sdec_operator__"),
+    mln_string("__str_sinc_operator__"),
+    mln_string("__str_index_operator__"),
+    mln_string("__str_property_operator__"),
+    mln_string("__str_negative_operator__"),
+    mln_string("__str_reverse_operator__"),
+    mln_string("__str_not_operator__"),
+    mln_string("__str_pinc_operator__"),
+    mln_string("__str_pdec_operator__"),
 };
 
 static int
 mln_lang_str_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[0], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     if (mln_lang_var_value_set_string_ref(ctx, op1, op2) < 0) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
@@ -89,6 +182,10 @@ mln_lang_str_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
 static int
 mln_lang_str_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[1], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     mln_string_t *s, *tmp1, *tmp2;
     if ((tmp1 = mln_lang_var_tostring(ctx->pool, op1)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -113,8 +210,132 @@ mln_lang_str_pluseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
 }
 
 static int
+mln_lang_str_subeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[2], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_lmoveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[3], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_rmoveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[4], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_muleq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[5], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_diveq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[6], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_oreq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[7], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_andeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[8], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_xoreq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[9], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_modeq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[10], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_cor(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[11], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_cand(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[12], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_cxor(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[13], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
 mln_lang_str_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[14], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     int rv;
     mln_string_t *tmp;
     mln_s32_t type = mln_lang_var_val_type_get(op2);
@@ -149,6 +370,10 @@ mln_lang_str_equal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
 static int
 mln_lang_str_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[15], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     int rv;
     mln_string_t *tmp;
     mln_s32_t type = mln_lang_var_val_type_get(op2);
@@ -183,6 +408,10 @@ mln_lang_str_nonequal(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t 
 static int
 mln_lang_str_less(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[16], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     int rv;
     mln_string_t *tmp1, *tmp2;
     mln_s32_t type = mln_lang_var_val_type_get(op2);
@@ -220,6 +449,10 @@ mln_lang_str_less(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
 static int
 mln_lang_str_lesseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[17], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     int rv;
     mln_string_t *tmp1, *tmp2;
     mln_s32_t type = mln_lang_var_val_type_get(op2);
@@ -257,6 +490,10 @@ mln_lang_str_lesseq(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
 static int
 mln_lang_str_grea(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[18], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     int rv;
     mln_string_t *tmp1, *tmp2;
     mln_s32_t type = mln_lang_var_val_type_get(op2);
@@ -294,6 +531,10 @@ mln_lang_str_grea(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
 static int
 mln_lang_str_greale(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[19], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     int rv;
     mln_string_t *tmp1, *tmp2;
     mln_s32_t type = mln_lang_var_val_type_get(op2);
@@ -329,8 +570,32 @@ mln_lang_str_greale(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *o
 }
 
 static int
+mln_lang_str_lmov(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[20], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_rmov(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[21], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
 mln_lang_str_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[22], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     mln_string_t *s, *tmp1, *tmp2;
     mln_lang_val_t *val;
     if ((tmp1 = mln_lang_var_tostring(ctx->pool, op1)) == NULL) {
@@ -364,25 +629,72 @@ mln_lang_str_plus(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
 }
 
 static int
-mln_lang_str_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+mln_lang_str_sub(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
-    if (mln_lang_condition_is_true(op1)) {
-        if ((*ret = mln_lang_var_create_false(ctx, NULL)) == NULL) {
-            mln_lang_errmsg(ctx, "No memory.");
-            return -1;
-        }
-    } else {
-        if ((*ret = mln_lang_var_create_true(ctx, NULL)) == NULL) {
-            mln_lang_errmsg(ctx, "No memory.");
-            return -1;
-        }
-    }
-    return 0;
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[23], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_mul(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[24], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_div(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[25], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_mod(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[26], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_sdec(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[27], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_sinc(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[28], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
 }
 
 static int
 mln_lang_str_index(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[29], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
     mln_s64_t offset;
     mln_string_t c;
     mln_string_t *s = mln_lang_var_val_get(op1)->data.s;
@@ -404,5 +716,76 @@ mln_lang_str_index(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op
         return -1;
     }
     return 0;
+}
+
+static int
+mln_lang_str_property(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[30], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_negative(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[31], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_reverse(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[32], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[33], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+
+    if (mln_lang_condition_is_true(op1)) {
+        if ((*ret = mln_lang_var_create_false(ctx, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+    } else {
+        if ((*ret = mln_lang_var_create_true(ctx, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static int
+mln_lang_str_pinc(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[34], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
+}
+
+static int
+mln_lang_str_pdec(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+{
+    int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_str_opr_names[35], ret, op1, op2);
+    if (rc < 0) return rc;
+    if (rc > 0) return 0;
+    mln_lang_errmsg(ctx, "Operation NOT support.");
+    return -1;
 }
 
