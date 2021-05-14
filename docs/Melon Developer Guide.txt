@@ -5,8 +5,6 @@
  
 Melon Developer Guide
 A C framework library for simplifying development
-Melon Version 2.1.0
-E-Mail: Melon-c@hotmail.com
 
 1.Preface
 Melon is a C framework library for simplifying development.
@@ -3316,6 +3314,22 @@ Their definitions can be found in melon/include/mln_types.h.
 
       They are not supported by all data types.
       If encountered unsupported operatior, error message would be logged.
+
+      Operators in Melang support overloading to object type and basic types.
+      Melang provides a set of functions, their name should be like:
+        __<type>_<operatortype>_operator__
+      'type' includes: array, bool, func, int, nil, obj, real, str
+      'operatortype' includes: assign(=), pluseq(+=), subeq(-=), lmoveqi(<<=), rmoveq(>>=),
+      muleq(*=), diveq(/=), oreq(|=), andeq(&=), xoreq(^=), modeq(%=), cor(|), cand(&),
+      cxor(^), equal(==), nonequal(!=), lt(<), le(<=), gt(>), ge(>=), lmov(<<), rmov(>>),
+      plus(+), sub(-), mul(*), div(/), mod(%), sdec(--), sinc(++), index([]), property(.),
+      negative(-), reverse(~), not(!), pinc(++), pdec(--)
+
+      Overloading function's prototype:
+        @__int_assign_operator__(left, right);
+      or
+        @__int_not_operaotr__(operand);
+      and of course, these arguments can be reference.
 
    G. Internal Function
       <1> mln_print(var);

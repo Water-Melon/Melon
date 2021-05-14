@@ -481,7 +481,12 @@ extern mln_lang_funccall_val_t *mln_lang_funccall_val_new(mln_alloc_t *pool, mln
 extern void mln_lang_funccall_val_free(mln_lang_funccall_val_t *func);
 extern void mln_lang_funccall_val_add_arg(mln_lang_funccall_val_t *func, mln_lang_var_t *var);
 extern int mln_lang_funccall_val_operator(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2) __NONNULL4(1,2,3,4);
-extern int mln_lang_funccall_val_obj_operator(mln_lang_ctx_t *ctx, mln_lang_var_t *obj, mln_string_t *name, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
+extern int mln_lang_funccall_val_obj_operator(mln_lang_ctx_t *ctx, \
+                                              mln_lang_var_t *obj, \
+                                              mln_string_t *name, \
+                                              mln_lang_var_t **ret, \
+                                              mln_lang_var_t *op1, \
+                                              mln_lang_var_t *op2) __NONNULL5(1,2,3,4,5);
 extern mln_lang_var_t *
 mln_lang_array_get(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
 extern int mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);

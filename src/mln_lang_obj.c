@@ -625,4 +625,3 @@ mln_lang_obj_pdec(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1
     mln_lang_errmsg(ctx, "Operation NOT support.");
     return -1;
 }
-

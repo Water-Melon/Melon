@@ -17,6 +17,7 @@
 #define __NONNULL2(x,y)   __nonnull((x)) __nonnull((y))
 #define __NONNULL3(x,y,z) __nonnull((x)) __nonnull((y)) __nonnull((z))
 #define __NONNULL4(w,x,y,z) __nonnull((w)) __nonnull((x)) __nonnull((y)) __nonnull((z))
+#define __NONNULL5(v,w,x,y,z) __nonnull((v)) __nonnull((w)) __nonnull((x)) __nonnull((y)) __nonnull((z))
 #endif
 
 #ifdef __GNUC__

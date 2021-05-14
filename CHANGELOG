@@ -1,3 +1,8 @@
+Changes with melon 2.2.0                                          14 May 2021
+    *) Fix bugs
+    *) Add Github Pages docs
+    *) Add operator overloading in melang
+
 Changes with melon 2.1.0                                          02 Feb 2021
     *) Optimized melang performance
     *) Fixed melang bugs

@@ -3005,7 +3005,12 @@ int mln_lang_funccall_val_operator(mln_lang_ctx_t *ctx, mln_string_t *name, mln_
     return 0;
 }
 
-int mln_lang_funccall_val_obj_operator(mln_lang_ctx_t *ctx, mln_lang_var_t *obj, mln_string_t *name, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
+int mln_lang_funccall_val_obj_operator(mln_lang_ctx_t *ctx, \
+                                       mln_lang_var_t *obj, \
+                                       mln_string_t *name, \
+                                       mln_lang_var_t **ret, \
+                                       mln_lang_var_t *op1, \
+                                       mln_lang_var_t *op2)
 {
     mln_lang_var_t *var;
     mln_lang_symbol_node_t *sym;
