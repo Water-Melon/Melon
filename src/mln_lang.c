@@ -853,7 +853,8 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->sym_head = ctx->sym_tail = NULL;
     ctx->scope_cache_head = ctx->scope_cache_tail = NULL;
     ctx->var_count = ctx->val_count = ctx->sym_count = ctx->scope_count = 0;
-    ctx->ret_flag = 0;
+    ctx->ret_flag = ctx->op_array_flag = ctx->op_bool_flag = ctx->op_func_flag = ctx->op_int_flag = \
+    ctx->op_nil_flag = ctx->op_obj_flag = ctx->op_real_flag = ctx->op_str_flag = 0;
 
     gcattr.pool = ctx->pool;
     gcattr.item_getter = (gc_item_getter)mln_lang_gc_item_getter;
@@ -3230,6 +3231,34 @@ static void mln_lang_stack_handler_funcdef(mln_lang_ctx_t *ctx)
         __mln_lang_func_detail_free(func);
         mln_lang_job_free(ctx);
         return;
+    }
+    if (funcdef->name->len > 18 && funcdef->name->data[0] == '_' && funcdef->name->data[1] == '_') {
+        switch (funcdef->name->data[2]) {
+            case 'a':
+                ctx->op_array_flag = 1;
+                break;
+            case 'b':
+                ctx->op_bool_flag = 1;
+                break;
+            case 'f':
+                ctx->op_func_flag = 1;
+                break;
+            case 'i':
+                ctx->op_int_flag = 1;
+                break;
+            case 'n':
+                ctx->op_nil_flag = 1;
+                break;
+            case 'o':
+                ctx->op_obj_flag = 1;
+                break;
+            case 'r':
+                ctx->op_real_flag = 1;
+                break;
+            case 's':
+                ctx->op_str_flag = 1;
+                break;
+        }
     }
     if ((var = __mln_lang_var_new_ref_string(ctx, funcdef->name, M_LANG_VAR_NORMAL, val, in_set)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");

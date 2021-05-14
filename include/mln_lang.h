@@ -14,7 +14,7 @@
 #include "mln_gc.h"
 #include "mln_alloc.h"
 
-#define M_LANG_CACHE_COUNT       200
+#define M_LANG_CACHE_COUNT       125
 #define M_LANG_SYMBOL_TABLE_LEN  371
 #define M_LANG_STEP_OUT          -1
 
@@ -129,11 +129,21 @@ struct mln_lang_ctx_s {
     mln_lang_symbol_node_t          *sym_tail;
     mln_lang_scope_t                *scope_cache_head;
     mln_lang_scope_t                *scope_cache_tail;
-    mln_u32_t                        ret_flag:1;
-    mln_u32_t                        var_count:7;
+    mln_u32_t                        var_count:8;
     mln_u32_t                        val_count:8;
     mln_u32_t                        sym_count:8;
     mln_u32_t                        scope_count:8;
+    mln_u32_t                        ret_flag:1;
+    /*flags for operator overloading*/
+    mln_u32_t                        op_array_flag:1;
+    mln_u32_t                        op_bool_flag:1;
+    mln_u32_t                        op_func_flag:1;
+    mln_u32_t                        op_int_flag:1;
+    mln_u32_t                        op_nil_flag:1;
+    mln_u32_t                        op_obj_flag:1;
+    mln_u32_t                        op_real_flag:1;
+    mln_u32_t                        op_str_flag:1;
+    mln_u32_t                        padding:23;
 };
 
 struct mln_lang_resource_s {
