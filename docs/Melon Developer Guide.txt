@@ -3229,7 +3229,32 @@ Their definitions can be found in melon/include/mln_types.h.
             }
             foo('hello', 1, ['world', 2]); //output [hello, 1, [world, 2, ], ]
 
-   D. Set
+   D. Closure
+      <I> copied argument
+          @foo() {
+              a = 1;
+              @bar() $(b) {     //b is a copy
+                  @mln_print(b);
+              }
+              b = 100;
+              return bar;
+          }
+          b = @foo();
+          b();//the output is 1
+
+      <II> reference
+          @foo() {
+              a = 1;
+              @bar() $(&b) { //b is a reference
+                  @mln_print(b);
+              }
+              b = 100;
+              return bar;
+          }
+          b = @foo();
+          b();//the output is 100
+
+   E. Set
       <I>   Definition
           e.g.
              human {
@@ -3273,7 +3298,7 @@ Their definitions can be found in melon/include/mln_types.h.
       <IV>  add property dynamically in object
           John.parent = ['Jenny', 'Bobby']; //parent not be defined in set.
 
-   E. Reactive Programming
+   F. Reactive Programming
       e.g. normal usage
           @foo (newval, userData)
           {
@@ -3297,7 +3322,7 @@ Their definitions can be found in melon/include/mln_types.h.
           @mln_dump(gender);
 
 
-   F. Operator
+   G. Operator
       Listed by priority from low to high.
       <1> ,
       <2> =  +=  -=  >>=  <<=  *=  /=  |=  &=  ^=  %=
@@ -3331,7 +3356,7 @@ Their definitions can be found in melon/include/mln_types.h.
         @__int_not_operaotr__(operand);
       and of course, these arguments can be reference.
 
-   G. Internal Function
+   H. Internal Function
       <1> mln_print(var);
       Output var's value. But it cannot output the details of object, function and array.
 
@@ -3765,7 +3790,7 @@ Their definitions can be found in melon/include/mln_types.h.
       If not matched, 'false' returned.
 
 
-   H. Function development
+   I. Function development
       Following these steps below:
       1. mkdir 'funcname', such as mkdir print
       2. touch two files, mln_lang_funcname.c and mln_lang_funcname.h, like:

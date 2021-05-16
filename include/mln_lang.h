@@ -305,6 +305,8 @@ struct mln_lang_func_detail_s {
     mln_lang_var_t                  *args_head;
     mln_lang_var_t                  *args_tail;
     mln_size_t                       nargs;
+    mln_lang_var_t                  *closure_head;
+    mln_lang_var_t                  *closure_tail;
     mln_lang_funcType_t              type;
     union {
         mln_lang_internal        process;
@@ -481,7 +483,8 @@ extern mln_lang_func_detail_t *
 mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                          mln_lang_funcType_t type, \
                          void *data, \
-                         mln_lang_exp_t *exp) __NONNULL2(1,3);
+                         mln_lang_exp_t *exp, \
+                         mln_lang_exp_t *closure) __NONNULL2(1,3);
 extern void mln_lang_func_detail_free(mln_lang_func_detail_t *lfd);
 extern mln_lang_val_t *mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data) __NONNULL1(1);
 extern void mln_lang_val_free(mln_lang_val_t *val);

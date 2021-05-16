@@ -25,7 +25,7 @@ int mln_lang_print(mln_lang_ctx_t *ctx)
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_print");
     mln_string_t v = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_print_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_print_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }

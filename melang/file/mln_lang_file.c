@@ -138,7 +138,7 @@ static int mln_lang_file_addOpen(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set
     mln_string_t funcname = mln_string("open");
     mln_string_t v1 = mln_string("path"), v2 = mln_string("op"), v3 = mln_string("prio");
 
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_open_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_open_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -387,7 +387,7 @@ static int mln_lang_file_addLseek(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *se
     mln_string_t funcname = mln_string("lseek");
     mln_string_t v1 = mln_string("offset"), v2 = mln_string("whence");
 
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_lseek_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_lseek_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -554,7 +554,7 @@ static int mln_lang_file_addRead(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set
     mln_string_t funcname = mln_string("read");
     mln_string_t v1 = mln_string("nbytes");
 
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_read_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_read_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -695,7 +695,7 @@ static int mln_lang_file_addWrite(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *se
     mln_string_t funcname = mln_string("write");
     mln_string_t v1 = mln_string("buf");
 
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_write_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_write_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -822,7 +822,7 @@ static int mln_lang_file_addClose(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *se
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("close");
 
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_close_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_close_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -912,7 +912,7 @@ static int mln_lang_file_addErrmsg(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *s
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("errmsg");
 
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_errmsg_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_errmsg_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -1022,7 +1022,7 @@ static int mln_lang_file_addSize(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("size");
 
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_size_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_size_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }

@@ -97,6 +97,7 @@ static inline mln_lang_funcdef_t *
 mln_lang_funcdef_new(mln_alloc_t *pool, \
                      mln_string_t *name, \
                      mln_lang_exp_t *exp, \
+                     mln_lang_exp_t *closure, \
                      mln_lang_stm_t *stm, \
                      mln_u64_t line);
 static void mln_lang_funcdef_free(void *data);
@@ -295,6 +296,7 @@ static int mln_lang_semantic_forstm(mln_factor_t *left, mln_factor_t **right, vo
 static int mln_lang_semantic_ifstm(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_switchstm(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_funcdef(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_funcdef_closure(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_switchstm__(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_switchprefix(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_elsestm(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -402,7 +404,9 @@ static mln_production_t prod_tbl[] = {
 {"setstm: LANG_TK_ID LANG_TK_SEMIC setstm", mln_lang_semantic_setstmVar},
 {"setstm: funcdef setstm", mln_lang_semantic_setstmFunc},
 {"setstm: ", NULL},
-{"funcdef: LANG_TK_AT LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR LANG_TK_LBRACE stm LANG_TK_RBRACE", mln_lang_semantic_funcdef},
+{"funcdef: LANG_TK_AT LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR use LANG_TK_LBRACE stm LANG_TK_RBRACE", mln_lang_semantic_funcdef},
+{"use: LANG_TK_DOLL LANG_TK_LPAR exp LANG_TK_RPAR", mln_lang_semantic_funcdef_closure},
+{"use: ", NULL},
 {"switchstm: switchprefix LANG_TK_COLON stm switchstm", mln_lang_semantic_switchstm__},
 {"switchstm: ", NULL},
 {"switchprefix: LANG_TK_DEFAULT", NULL},
@@ -907,6 +911,7 @@ static inline mln_lang_funcdef_t *
 mln_lang_funcdef_new(mln_alloc_t *pool, \
                      mln_string_t *name, \
                      mln_lang_exp_t *exp, \
+                     mln_lang_exp_t *closure, \
                      mln_lang_stm_t *stm, \
                      mln_u64_t line)
 {
@@ -918,6 +923,7 @@ mln_lang_funcdef_new(mln_alloc_t *pool, \
     lf->name = name;
     lf->args = exp;
     lf->stm = stm;
+    lf->closure = closure;
     return lf;
 }
 
@@ -928,6 +934,7 @@ static void mln_lang_funcdef_free(void *data)
     if (lf->name != NULL) mln_string_free(lf->name);
     if (lf->args != NULL) mln_lang_exp_free(lf->args);
     if (lf->stm != NULL) mln_lang_stm_free(lf->stm);
+    if (lf->closure != NULL) mln_lang_exp_free(lf->closure);
     mln_alloc_free(lf);
 }
 
@@ -2261,7 +2268,8 @@ static int mln_lang_semantic_funcdef(mln_factor_t *left, mln_factor_t **right, v
     mln_lang_funcdef_t *lf = mln_lang_funcdef_new(pool, \
                                                   name, \
                                                   (mln_lang_exp_t *)(right[3]->data), \
-                                                  (mln_lang_stm_t *)(right[6]->data), \
+                                                  (mln_lang_exp_t *)(right[5]->data), \
+                                                  (mln_lang_stm_t *)(right[7]->data), \
                                                   left->line);
     if (lf == NULL) {
         mln_string_free(name);
@@ -2270,7 +2278,16 @@ static int mln_lang_semantic_funcdef(mln_factor_t *left, mln_factor_t **right, v
     left->data = lf;
     left->nonterm_free_handler = mln_lang_funcdef_free;
     right[3]->data = NULL;
-    right[6]->data = NULL;
+    right[5]->data = NULL;
+    right[7]->data = NULL;
+    return 0;
+}
+
+static int mln_lang_semantic_funcdef_closure(mln_factor_t *left, mln_factor_t **right, void *data)
+{
+    left->data = right[2]->data;
+    left->nonterm_free_handler = right[2]->nonterm_free_handler;
+    right[2]->data = NULL;
     return 0;
 }
 

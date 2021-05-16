@@ -482,7 +482,7 @@ int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, v
 #### mln_lang_func_detail_new
 
 ```c
-mln_lang_func_detail_t *mln_lang_func_detail_new(mln_lang_ctx_t *ctx, mln_lang_funcType_t type, void *data, mln_lang_exp_t *exp);
+mln_lang_func_detail_t *mln_lang_func_detail_new(mln_lang_ctx_t *ctx, mln_lang_funcType_t type, void *data, mln_lang_exp_t *exp, mln_lang_exp_t *closure);
 ```
 
 描述：创建函数定义。参数含义：

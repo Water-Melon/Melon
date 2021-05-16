@@ -74,6 +74,7 @@ struct mln_lang_funcdef_s {
     mln_string_t                    *name;
     mln_lang_exp_t                  *args;
     mln_lang_stm_t                  *stm;
+    mln_lang_exp_t                  *closure;
 };
 
 struct mln_lang_set_s {

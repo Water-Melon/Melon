@@ -22,7 +22,7 @@ int mln_lang_rc(mln_lang_ctx_t *ctx)
     mln_string_t funcname = mln_string("mln_rc4");
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("key");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_rc4_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_rc4_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }

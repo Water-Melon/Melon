@@ -34,7 +34,7 @@ static int mln_lang_des_handler(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("data");
     mln_string_t v2 = mln_string("key");
     mln_string_t v3 = mln_string("op");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_des_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_des_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -191,7 +191,7 @@ static int mln_lang_3des_handler(mln_lang_ctx_t *ctx)
     mln_string_t v2 = mln_string("key1");
     mln_string_t v3 = mln_string("key2");
     mln_string_t v4 = mln_string("op");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_3des_process, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_3des_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
