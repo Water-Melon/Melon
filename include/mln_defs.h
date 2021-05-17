@@ -12,6 +12,7 @@
 #define __NONNULL2(x,y)
 #define __NONNULL3(x,y,z)
 #define __NONNULL4(w,x,y,z)
+#define __NONNULL5(v,w,x,y,z)
 #else
 #define __NONNULL1(x)     __nonnull((x))
 #define __NONNULL2(x,y)   __nonnull((x)) __nonnull((y))
