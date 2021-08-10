@@ -3,6 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
+#include <ctype.h>
 #include "mln_cron.h"
 #include "mln_tools.h"
 
@@ -59,13 +60,14 @@ static long mln_cron_parse_minute(mln_string_t *smin, long min)
         return min + 1;
 
     long period = 0, save = 0, tmp;
-    mln_u8ptr_t head = smin->data, p = smin->data, end = smin->data + smin->len;
+    mln_u8ptr_t head = smin->data, p = smin->data, end = smin->data + smin->len - 1;
 
-    for (--end; end >= p; --end) {
+    for (; end >= p; --end) {
         if (*end == '/') {
             period = atol((char *)(end+1));
             if (period < 0 || period >= 60) return -1;
             *end = 0;
+            break;
         }
     }
     if (end < p) end = smin->data + smin->len;
@@ -93,7 +95,7 @@ static long mln_cron_parse_minute(mln_string_t *smin, long min)
                 if (*(++p) == ',') head = ++p;
                 break;
             default:
-                ++p;
+                if (!isdigit(*p++)) return -1;
                 break;
         }
     }
@@ -125,6 +127,7 @@ static long mln_cron_parse_hour(mln_string_t *shour, long hour)
             period = atol((char *)(end+1));
             if (period < 0 || period >= 24) return -1;
             *end = 0;
+            break;
         }
     }
     if (end < p) end = shour->data + shour->len;
@@ -152,6 +155,7 @@ static long mln_cron_parse_hour(mln_string_t *shour, long hour)
                 if (*(++p) == ',') head = ++p;
                 break;
             default:
+                if (!isdigit(*p++)) return -1;
                 ++p;
                 break;
         }
