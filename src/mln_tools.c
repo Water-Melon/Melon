@@ -438,6 +438,68 @@ time_t mln_utc2time(struct utctime *uc)
     return ret;
 }
 
+void mln_utc_adjust(struct utctime *uc)
+{
+    long adj = 0, month, year;
+
+    if (uc->second >= 60) {
+        adj = uc->second / 60;
+        uc->second %= 60;
+    }
+    if (adj) {
+        uc->minute += adj;
+        adj = 0;
+    }
+    if (uc->minute >= 60) {
+        adj = uc->minute / 60;
+        uc->minute %= 60;
+    }
+    if (adj) {
+        uc->hour += adj;
+        adj = 0;
+    }
+    if (uc->hour >= 24) {
+        adj = uc->hour / 24;
+        uc->hour %= 24;
+    }
+    if (adj) {
+        uc->day += adj;
+        adj = 0;
+    }
+    year = uc->year;
+    month = uc->month;
+again:
+    if (uc->day > mon_days[mln_is_leap(year)][month-1]) {
+        adj = 1;
+        uc->day -= mon_days[mln_is_leap(year)][month-1];
+        if (++month > 12) {
+            month = 1;
+            ++year;
+        }
+        goto again;
+    }
+    if (adj) {
+        uc->month = month;
+        uc->year = year;
+        adj = 0;
+    }
+    if (uc->month-1 >= 12) {
+        adj = (uc->month - 1) / 12;
+        uc->month = (uc->month - 1) % 12 + 1;
+    }
+    if (adj) {
+        uc->year += adj;
+    }
+    month = uc->month < 3? uc->month + 12: uc->month;
+    year = uc->month < 3? uc->year - 1: uc->year;
+    uc->week = (uc->day + 1 + 2 * month + 3 * (month + 1) / 5 + year + (year >> 2) - year / 100 + year / 400) % 7;
+}
+
+long mln_month_days(long year, long month)
+{
+    return mon_days[mln_is_leap(year)][month-1];
+}
+
 int mln_s2time(time_t *tm, mln_string_t *s, int type)
 {
     mln_u8ptr_t p, end;

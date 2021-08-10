@@ -39,6 +39,8 @@ extern int mln_daemon(void);
 extern int mln_boot_params(int argc, char *argv[]);
 extern void mln_time2utc(time_t tm, struct utctime *uc) __NONNULL1(2);
 extern time_t mln_utc2time(struct utctime *uc) __NONNULL1(1);
+extern void mln_utc_adjust(struct utctime *uc) __NONNULL1(1);
+extern long mln_month_days(long year, long month);
 extern int mln_s2time(time_t *tm, mln_string_t *s, int type) __NONNULL2(1,2);
 #endif
 
