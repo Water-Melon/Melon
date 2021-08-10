@@ -21,13 +21,14 @@ typedef struct {
 #define M_TOOLS_TIME_UTC             0
 #define M_TOOLS_TIME_GENERALIZEDTIME 1
 
-struct UTCTime_s {
+struct utctime {
     long        year;
     long        month;
     long        day;
     long        hour;
     long        minute;
     long        second;
+    long        week;
 };
 
 
@@ -36,7 +37,8 @@ extern int mln_sys_limit_modify(void);
 extern int mln_daemon(void);
 #endif
 extern int mln_boot_params(int argc, char *argv[]);
-extern void mln_utctime(time_t tm, struct UTCTime_s *uc) __NONNULL1(2);
+extern void mln_time2utc(time_t tm, struct utctime *uc) __NONNULL1(2);
+extern time_t mln_utc2time(struct utctime *uc) __NONNULL1(1);
 extern int mln_s2time(time_t *tm, mln_string_t *s, int type) __NONNULL2(1,2);
 #endif
 

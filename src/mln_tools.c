@@ -389,10 +389,11 @@ mln_is_leap(long year)
     return 0;
 }
 
-void mln_utctime(time_t tm, struct UTCTime_s *uc)
+void mln_time2utc(time_t tm, struct utctime *uc)
 {
     long days = tm / 86400;
     long subsec = tm % 86400;
+    long month, year;
     long cnt = 0;
     uc->year = uc->month = 0;
     while ((mln_is_leap(1970+uc->year)? (cnt+366): (cnt+365)) <= days) {
@@ -413,6 +414,28 @@ void mln_utctime(time_t tm, struct UTCTime_s *uc)
     uc->hour = subsec / 3600;
     uc->minute = (subsec % 3600) / 60;
     uc->second = (subsec % 3600) % 60;
+    month = uc->month < 3? uc->month + 12: uc->month;
+    year = uc->month < 3? uc->year - 1: uc->year;
+    uc->week = (uc->day + 1 + 2 * month + 3 * (month + 1) / 5 + year + (year >> 2) - year / 100 + year / 400) % 7;
+}
+
+time_t mln_utc2time(struct utctime *uc)
+{
+    time_t ret = 0;
+    long year = uc->year - 1, month = uc->month - 2;
+    int is_leap_year = mln_is_leap(uc->year);
+
+    for (; year >= 1970; --year) {
+        ret += (mln_is_leap(year)? 366: 365);
+    }
+    for (; month >= 0; --month) {
+        ret += (mon_days[is_leap_year][month]);
+    }
+    ret += (uc->day - 1);
+    ret *= 86400;
+    ret += (uc->hour * 3600 + uc->minute * 60 + uc->second);
+
+    return ret;
 }
 
 int mln_s2time(time_t *tm, mln_string_t *s, int type)

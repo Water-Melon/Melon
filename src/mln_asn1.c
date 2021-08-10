@@ -781,12 +781,12 @@ int mln_asn1_encode_ia5string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t
 
 int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time)
 {
-    struct UTCTime_s uc;
+    struct utctime uc;
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
 
-    mln_utctime(time, &uc);
+    mln_time2utc(time, &uc);
     if (uc.year > 2000) uc.year -= 2000;
     else uc.year -= 1900;
 
@@ -824,12 +824,12 @@ int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time)
 
 int mln_asn1_encode_generalized_time(mln_asn1_enresult_t *res, time_t time)
 {
-    struct UTCTime_s uc;
+    struct utctime uc;
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
 
-    mln_utctime(time, &uc);
+    mln_time2utc(time, &uc);
 
     mln_asn1_encode_calcLength(15, len);
 

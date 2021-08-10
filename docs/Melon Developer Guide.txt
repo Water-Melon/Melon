@@ -2245,10 +2245,10 @@ Their definitions can be found in melon/include/mln_types.h.
          Get masking key from 'ws'.
 
   32) Tools
-      a) void mln_utctime(time_t tm, struct UTCTime_s *uc);
+      a) void mln_time2utc(time_t tm, struct utctime *uc);
          Parse 'tm' into structure UTCTime.
-         The definition of structure UTCTime_s is
-             struct UTCTime_s {
+         The definition of structure utctime is
+             struct utctime {
                  long        year;
                  long        month;
                  long        day;
@@ -2257,7 +2257,10 @@ Their definitions can be found in melon/include/mln_types.h.
                  long        second;
              };
 
-      b) int mln_s2time(time_t *tm, mln_string_t *s, int type)
+      b) time_t mln_utc2time(struct utctime *uc)
+         Transform 'uc' into time_t.
+
+      c) int mln_s2time(time_t *tm, mln_string_t *s, int type)
          Parse 's' into 'tm'.
          The type of 's' is indicated by 'type', its value are:
              I.  M_TOOLS_TIME_UTC

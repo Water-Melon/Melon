@@ -342,9 +342,9 @@ _mln_sys_log_process(mln_log_t *log, \
     if (level < log->level) return;
     int n;
     struct timeval tv;
-    struct UTCTime_s uc;
+    struct utctime uc;
     gettimeofday(&tv, NULL);
-    mln_utctime(tv.tv_sec, &uc);
+    mln_time2utc(tv.tv_sec, &uc);
     char line_str[256] = {0};
     if (level > none) {
         n = snprintf(line_str, sizeof(line_str)-1, \
