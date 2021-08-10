@@ -3789,6 +3789,17 @@ Their definitions can be found in melon/include/mln_types.h.
       Return value is an array stored every matched pieces of 'text'.
       If not matched, 'false' returned.
 
+      <82> mln_lsdir(path);
+      'path' is the input string of a file or directory path.
+      Return value is an array contained every file and directory under this path.
+
+      <83> mln_isdir(path);
+      'path' is the input string of a file or directory path.
+      If path is a directory, true will be returned. Otherwise false returned.
+
+      <84> mln_time();
+      Return current time seconds.
+
 
    I. Function development
       Following these steps below:
