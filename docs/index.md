@@ -28,6 +28,7 @@ Melon当前提供了如下功能：
   - 里德所罗门编码
   - 正则匹配算法
   - KMP
+  - Cron格式解析器
 - 组件
   - 内存池
   - 线程池
@@ -76,6 +77,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [文件集合](https://water-melon.github.io/Melon/file.html)
 - [自旋锁](https://water-melon.github.io/Melon/spinlock.html)
 - [线程池](https://water-melon.github.io/Melon/threadpool.html)
+- [Cron格式解析器](https://water-melon.github.io/Melon/cron.html)
 - [正则表达式](https://water-melon.github.io/Melon/regex.html)
 - [Base64](https://water-melon.github.io/Melon/base64.html)
 - [JSON](https://water-melon.github.io/Melon/json.html)
