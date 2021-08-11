@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include "mln_lex.h"
+#include "mln_cron.h"
 
 #ifdef __DEBUG__
 #include <assert.h>
@@ -86,6 +87,8 @@ static int mln_lang_sys_isdir_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_isdir_process(mln_lang_ctx_t *ctx);
 static int mln_lang_sys_time_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_time_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_cron_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_cron_process(mln_lang_ctx_t *ctx);
 
 int mln_lang_sys(mln_lang_ctx_t *ctx)
 {
@@ -117,6 +120,7 @@ int mln_lang_sys(mln_lang_ctx_t *ctx)
     if (mln_lang_sys_lsdir_handler(ctx) < 0) return -1;
     if (mln_lang_sys_isdir_handler(ctx) < 0) return -1;
     if (mln_lang_sys_time_handler(ctx) < 0) return -1;
+    if (mln_lang_sys_cron_handler(ctx) < 0) return -1;
     return 0;
 }
 
@@ -2827,6 +2831,110 @@ static mln_lang_var_t *mln_lang_sys_time_process(mln_lang_ctx_t *ctx)
     mln_lang_var_t *ret_var = NULL;
 
     if ((ret_var = mln_lang_var_create_int(ctx, (mln_s64_t)time(NULL), NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return ret_var;
+}
+
+static int mln_lang_sys_cron_handler(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t funcname = mln_string("mln_cron");
+    mln_string_t v1 = mln_string("exp");
+    mln_string_t v2 = mln_string("timestamp");
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_cron_process, NULL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &v2, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+    return 0;
+}
+
+static mln_lang_var_t *mln_lang_sys_cron_process(mln_lang_ctx_t *ctx)
+{
+    mln_lang_var_t *ret_var = NULL;
+    mln_string_t v1 = mln_string("exp"), v2 = mln_string("timestamp");
+    mln_lang_symbol_node_t *sym;
+    mln_lang_val_t *val;
+    time_t next;
+    mln_string_t *dup;
+
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 1 missing.");
+        return NULL;
+    }
+    if (sym->type != M_LANG_SYMBOL_VAR || mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+    val = mln_lang_var_val_get(sym->data.var);
+
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 2 missing.");
+        return NULL;
+    }
+    if (sym->type != M_LANG_SYMBOL_VAR || mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_INT) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 2.");
+        return NULL;
+    }
+
+    if ((dup = mln_string_pool_dup(ctx->pool, val->data.s)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    next = mln_cron_parse(dup, (time_t)(mln_lang_var_val_get(sym->data.var)->data.i));
+    mln_string_free(dup);
+    if (!next) {
+        ret_var = mln_lang_var_create_false(ctx, NULL);
+    } else {
+        ret_var = mln_lang_var_create_int(ctx, (mln_s64_t)next, NULL);
+    }
+    if (ret_var == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }

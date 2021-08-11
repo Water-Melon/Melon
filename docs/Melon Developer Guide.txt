@@ -171,13 +171,10 @@ Their definitions can be found in melon/include/mln_types.h.
     ad) mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s);
        This interface is the same as 'mln_string_new' but allocated from a memory pool.
 
-    ae) void mln_string_pool_free(mln_string_t *str);
-       This interface is the same as 'mln_string_free' but freed to a memory pool.
-
-    af) mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2);
+    ae) mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2);
        It is the same as strcat but the data type is mln_string_t.
 
-    ag) mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2);
+    af) mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2);
        It is the same as 'mln_string_strcat' but allocated by 'pool'.
 
   2) Hash Table
@@ -3807,6 +3804,10 @@ Their definitions can be found in melon/include/mln_types.h.
 
       <84> mln_time();
       Return current time seconds.
+
+      <85> mln_cron(exp, timestamp);
+      Parse cron format expression 'exp' based on timestamp 'timestamp'.
+      If succeed, an integer next timestamp will be returned. Otherwise, false returned.
 
 
    I. Function development
