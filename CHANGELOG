@@ -1,3 +1,8 @@
+Changes with melon 2.2.1                                          11 Aug 2021
+    *) Update and add some time functions
+    *) Add cron format expression parser
+    *) Add functions for operating time, cron and directory in melang
+
 Changes with melon 2.2.0                                          14 May 2021
     *) Fix bugs
     *) Add Github Pages docs
