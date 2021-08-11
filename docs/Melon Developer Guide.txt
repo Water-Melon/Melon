@@ -2754,6 +2754,11 @@ Their definitions can be found in melon/include/mln_types.h.
          If your scenario is multi-level collection, you may need to create more than one collector.
          So 'procGC' stand for the current collector.
 
+  40) Cron format parser
+      a) time_t mln_cron_parse(mln_string_t *exp, time_t base);
+         Parse cron format expression 'exp' based on timestamp 'base'.
+         It will return the next timestamp depending on 'exp'. If failed, 0 will be returned.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.
