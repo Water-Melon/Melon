@@ -3811,6 +3811,7 @@ Their definitions can be found in melon/include/mln_types.h.
 
       <86> mln_diff(&array1, &array2);
       Return an array that contains elements in 'array1' but not in 'array2'.
+      Keys in the 'array1' are preserved.
 
       <87> mln_replace(&dict, &str);
       Replace every specified keys given by 'dict''s keys with 'dict''s values.

@@ -1908,9 +1908,12 @@ static int mln_lang_sys_diff_scanner(mln_rbtree_node_t *node, void *rn_data, voi
     if (mln_rbtree_scan_all(sd->notin->elems_index, mln_lang_sys_diff_check_scanner, elem) < 0)
         return 0;
 
-    if ((var = mln_lang_array_get(sd->dest->ctx, sd->dest, NULL)) == NULL) {
-        return -1;
+    if (elem->key != NULL) {
+        var = mln_lang_array_get(sd->dest->ctx, sd->dest, elem->key);
+    } else {
+        var = mln_lang_array_get(sd->dest->ctx, sd->dest, NULL);
     }
+    if (var == NULL) return -1;
     if (mln_lang_var_value_set(sd->dest->ctx, var, elem->value) < 0) {
         return -1;
     }
