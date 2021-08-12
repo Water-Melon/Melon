@@ -24,6 +24,7 @@ static int mln_lang_string_s2b_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_strlen_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_split_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_strncmp_handler(mln_lang_ctx_t *ctx);
+static int mln_lang_string_replace_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_strseqcmp_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_strcmp_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_strncmp_process(mln_lang_ctx_t *ctx);
@@ -42,6 +43,11 @@ static mln_lang_var_t *mln_int2bin_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_real2bin_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_reg_equal_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_reg_match_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_replace_process(mln_lang_ctx_t *ctx);
+static inline mln_lang_var_t *mln_replace_do(mln_lang_ctx_t *ctx, mln_lang_array_t *arr, mln_string_t *s);
+static int mln_replace_do_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static inline mln_lang_string_pos_t *mln_lang_string_pos_new(mln_lang_ctx_t *ctx, mln_lang_array_elem_t *elem, mln_s64_t off);
+static inline void mln_lang_string_pos_free_all(struct mln_lang_string_replace_s *udata);
 
 int mln_lang_string(mln_lang_ctx_t *ctx)
 {
@@ -152,6 +158,9 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
         return -1;
     }
     if (mln_lang_string_real2bin_handler(ctx) < 0) {
+        return -1;
+    }
+    if (mln_lang_string_replace_handler(ctx) < 0) {
         return -1;
     }
     return 0;
@@ -1640,5 +1649,222 @@ static mln_lang_var_t *mln_real2bin_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     return ret_var;
+}
+
+static int mln_lang_string_replace_handler(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t v1 = mln_string("dict"), v2 = mln_string("str");
+    mln_string_t funcname = mln_string("mln_replace");
+
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_replace_process, NULL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &v1, M_LANG_VAR_REFER, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &v2, M_LANG_VAR_REFER, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+
+    return 0;
+}
+
+static mln_lang_var_t *mln_replace_process(mln_lang_ctx_t *ctx)
+{
+    mln_lang_var_t *ret_var;
+    mln_string_t v1 = mln_string("dict"), v2 = mln_string("str");
+    mln_lang_symbol_node_t *sym;
+    mln_string_t *s;
+    mln_lang_array_t *arr;
+
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 1 missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_ARRAY) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+    arr = mln_lang_var_val_get(sym->data.var)->data.array;
+
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 2 missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 2.");
+        return NULL;
+    }
+    s = mln_lang_var_val_get(sym->data.var)->data.s;
+
+    if ((ret_var = mln_replace_do(ctx, arr, s)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return ret_var;
+}
+
+static inline mln_lang_var_t *mln_replace_do(mln_lang_ctx_t *ctx, mln_lang_array_t *arr, mln_string_t *s)
+{
+    mln_size_t size = 0;
+    mln_s64_t off = 0;
+    mln_u8ptr_t buf, p;
+    mln_string_t str;
+    mln_lang_var_t *ret_var;
+    mln_lang_string_pos_t *pos;
+    struct mln_lang_string_replace_s udata;
+
+    udata.ctx = ctx;
+    udata.s = s;
+    udata.head = udata.tail = NULL;
+    if (mln_rbtree_scan_all(arr->elems_key, mln_replace_do_scanner, &udata) < 0) {
+        mln_lang_string_pos_free_all(&udata);
+        return NULL;
+    }
+    for (pos = udata.head; pos != NULL; pos = pos->next) {
+        if (off < pos->off) {
+            size += (pos->off - off);
+        }
+        size += mln_lang_var_val_get(pos->elem->value)->data.s->len;
+        off = pos->off + mln_lang_var_val_get(pos->elem->key)->data.s->len;
+    }
+    if (off < s->len) size += (s->len - off);
+
+    if ((buf = (mln_u8ptr_t)mln_alloc_m(ctx->pool, size+1)) == NULL) {
+        mln_lang_string_pos_free_all(&udata);
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    for (off = 0, p = buf, pos = udata.head; pos != NULL; pos = pos->next) {
+        if (off < pos->off) {
+            memcpy(p, s->data + off, pos->off - off);
+            p += (pos->off - off);
+        }
+        memcpy(p, mln_lang_var_val_get(pos->elem->value)->data.s->data, mln_lang_var_val_get(pos->elem->value)->data.s->len);
+        p += mln_lang_var_val_get(pos->elem->value)->data.s->len;
+        off = pos->off + mln_lang_var_val_get(pos->elem->key)->data.s->len;
+    }
+    if (off < s->len) {
+        memcpy(p, s->data + off, s->len - off);
+    }
+    buf[size] = 0;
+    mln_lang_string_pos_free_all(&udata);
+    mln_string_nset(&str, buf, size);
+    ret_var = mln_lang_var_create_string(ctx, &str, NULL);
+    mln_alloc_free(buf);
+    if (ret_var == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+    }
+    return ret_var;
+}
+
+static int mln_replace_do_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
+{
+    struct mln_lang_string_replace_s *sr = (struct mln_lang_string_replace_s *)udata;
+    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
+    mln_string_t s = *(sr->s);
+    mln_u8ptr_t p;
+    mln_lang_string_pos_t *pos, *scan;
+
+    if (mln_lang_var_val_type_get(elem->key) != M_LANG_VAL_TYPE_STRING || mln_lang_var_val_type_get(elem->value) != M_LANG_VAL_TYPE_STRING) {
+        return 0;
+    }
+
+    while ((p = (mln_u8ptr_t)mln_string_strstr(&s, mln_lang_var_val_get(elem->key)->data.s)) != NULL) {
+        if ((pos = mln_lang_string_pos_new(sr->ctx, elem, p - sr->s->data)) == NULL) {
+            mln_lang_errmsg(sr->ctx, "No memory.");
+            return -1;
+        }
+        if (sr->head == NULL) {
+            sr->head = sr->tail = pos;
+        } else {
+            for (scan = sr->head; scan != NULL; scan = scan->next) {
+                if (scan->off >= pos->off) break;
+            }
+            if (scan == NULL) {
+                pos->prev = sr->tail;
+                sr->tail->next = pos;
+                sr->tail = pos;
+            } else if (scan == sr->head) {
+                pos->next = sr->head;
+                sr->head->prev = pos;
+                sr->head = pos;
+            } else {
+                scan->prev->next = pos;
+                pos->prev = scan->prev;
+                scan->prev = pos;
+                pos->next = scan;
+            }
+        }
+        s.len -= (p + mln_lang_var_val_get(elem->key)->data.s->len - s.data);
+        s.data = p + mln_lang_var_val_get(elem->key)->data.s->len;
+    }
+    return 0;
+}
+
+static inline mln_lang_string_pos_t *mln_lang_string_pos_new(mln_lang_ctx_t *ctx, mln_lang_array_elem_t *elem, mln_s64_t off)
+{
+    mln_lang_string_pos_t *pos;
+
+    if ((pos = (mln_lang_string_pos_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_string_pos_t))) == NULL)
+        return NULL;
+    pos->prev = pos->next = NULL;
+    pos->elem = elem;
+    pos->off = off;
+    return pos;
+}
+
+static inline void mln_lang_string_pos_free_all(struct mln_lang_string_replace_s *udata)
+{
+    mln_lang_string_pos_t *pos = udata->head, *fr;
+    while (pos) {
+        fr = pos;
+        pos = pos->next;
+        mln_alloc_free(fr);
+    }
 }
 
