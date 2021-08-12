@@ -3809,7 +3809,7 @@ Their definitions can be found in melon/include/mln_types.h.
       Parse cron format expression 'exp' based on timestamp 'timestamp'.
       If succeed, an integer next timestamp will be returned. Otherwise, false returned.
 
-      <86> mln_diff(array1, array2);
+      <86> mln_diff(&array1, &array2);
       Return an array that contains elements in 'array1' but not in 'array2'.
 
       <87> mln_replace(&dict, &str);
