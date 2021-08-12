@@ -172,7 +172,6 @@ static inline mln_lang_var_t *
 __mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var);
 static inline mln_lang_var_t *
 mln_lang_var_dupWithVal(mln_lang_ctx_t *ctx, mln_lang_var_t *var);
-static int mln_lang_var_cmpForElemCmp(const void *data1, const void *data2);
 static int mln_lang_var_cmpName(const void *data1, const void *data2);
 static inline mln_lang_var_t *
 mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_var_t *defvar);
@@ -1862,7 +1861,7 @@ mln_lang_var_dupWithVal(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
     return ret;
 }
 
-static int mln_lang_var_cmpForElemCmp(const void *data1, const void *data2)
+int mln_lang_var_cmp(const void *data1, const void *data2)
 {
     mln_lang_var_t *v1 = (mln_lang_var_t *)data1;
     mln_lang_var_t *v2 = (mln_lang_var_t *)data2;
@@ -2748,7 +2747,7 @@ static int mln_lang_array_elem_keyCmp(const void *data1, const void *data2)
 {
     mln_lang_array_elem_t *elem1 = (mln_lang_array_elem_t *)data1;
     mln_lang_array_elem_t *elem2 = (mln_lang_array_elem_t *)data2;
-    return mln_lang_var_cmpForElemCmp(elem1->key, elem2->key);
+    return mln_lang_var_cmp(elem1->key, elem2->key);
 }
 
 static inline mln_lang_array_elem_t *

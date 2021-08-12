@@ -24,8 +24,12 @@ static mln_lang_var_t *mln_lang_sys_keys_process(mln_lang_ctx_t *ctx);
 static int mln_lang_sys_keys_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int mln_lang_sys_merge_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_merge_process(mln_lang_ctx_t *ctx);
-static int mln_lang_sys_has_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_sys_merge_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_sys_diff_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_diff_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_diff_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_sys_diff_check_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_sys_has_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_has_process(mln_lang_ctx_t *ctx);
 static int mln_lang_sys_isInt_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_isInt_process(mln_lang_ctx_t *ctx);
@@ -95,6 +99,7 @@ int mln_lang_sys(mln_lang_ctx_t *ctx)
     if (mln_lang_sys_size_handler(ctx) < 0) return -1;
     if (mln_lang_sys_keys_handler(ctx) < 0) return -1;
     if (mln_lang_sys_merge_handler(ctx) < 0) return -1;
+    if (mln_lang_sys_diff_handler(ctx) < 0) return -1;
     if (mln_lang_sys_has_handler(ctx) < 0) return -1;
     if (mln_lang_sys_isInt_handler(ctx) < 0) return -1;
     if (mln_lang_sys_isReal_handler(ctx) < 0) return -1;
@@ -1787,6 +1792,137 @@ static int mln_lang_sys_merge_scanner(mln_rbtree_node_t *node, void *rn_data, vo
         return -1;
     }
     return 0;
+}
+
+static int mln_lang_sys_diff_handler(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t funcname = mln_string("mln_diff");
+    mln_string_t v1 = mln_string("arr1");
+    mln_string_t v2 = mln_string("arr2");
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_diff_process, NULL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &v2, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+    return 0;
+}
+
+static mln_lang_var_t *mln_lang_sys_diff_process(mln_lang_ctx_t *ctx)
+{
+    mln_lang_var_t *ret_var = NULL;
+    mln_string_t v1 = mln_string("arr1");
+    mln_string_t v2 = mln_string("arr2");
+    mln_lang_symbol_node_t *sym;
+    struct mln_sys_diff_s udata;
+    mln_lang_array_t *arr;
+
+    if ((ret_var = mln_lang_var_create_array(ctx, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    udata.dest = ret_var->val->data.array;
+
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 1 missing.");
+        mln_lang_var_free(ret_var);
+        return NULL;
+    }
+    if (sym->type != M_LANG_SYMBOL_VAR || mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_ARRAY) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        mln_lang_var_free(ret_var);
+        return NULL;
+    }
+    arr = mln_lang_var_val_get(sym->data.var)->data.array;
+
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 2 missing.");
+        mln_lang_var_free(ret_var);
+        return NULL;
+    }
+    if (sym->type != M_LANG_SYMBOL_VAR || mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_ARRAY) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 2.");
+        mln_lang_var_free(ret_var);
+        return NULL;
+    }
+    udata.notin = mln_lang_var_val_get(sym->data.var)->data.array;
+
+    if (mln_rbtree_scan_all(arr->elems_index, mln_lang_sys_diff_scanner, &udata) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(ret_var);
+        return NULL;
+    }
+    return ret_var;
+}
+
+static int mln_lang_sys_diff_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
+{
+    struct mln_sys_diff_s *sd = (struct mln_sys_diff_s *)udata;
+    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
+    mln_lang_var_t *var;
+
+    if (mln_rbtree_scan_all(sd->notin->elems_index, mln_lang_sys_diff_check_scanner, elem) < 0)
+        return 0;
+
+    if ((var = mln_lang_array_get(sd->dest->ctx, sd->dest, NULL)) == NULL) {
+        return -1;
+    }
+    if (mln_lang_var_value_set(sd->dest->ctx, var, elem->value) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+static int mln_lang_sys_diff_check_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
+{
+    mln_lang_array_elem_t *checked = (mln_lang_array_elem_t *)udata;
+    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
+    if (checked->value == elem->value || checked->value->val == elem->value->val) return -1;
+    return mln_lang_var_cmp(elem->value, checked->value) == 0? -1: 0;
 }
 
 static mln_lang_var_t *mln_lang_sys_type_process(mln_lang_ctx_t *ctx)

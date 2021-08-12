@@ -463,6 +463,7 @@ extern mln_lang_var_t *mln_lang_var_new(mln_lang_ctx_t *ctx, \
                                         mln_lang_val_t *val, \
                                         mln_lang_set_detail_t *in_set) __NONNULL1(1);
 extern void mln_lang_var_free(void *data);
+extern int mln_lang_var_cmp(const void *data1, const void *data2);
 #define mln_lang_var_ref(var) (++(var)->ref, (var))
 #define mln_lang_var_val_get(var) ((var)->val)
 #define mln_lang_var_val_type_get(var) ((var)->val->type)
