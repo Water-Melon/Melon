@@ -3414,13 +3414,17 @@ static mln_lang_var_t *mln_lang_sys_exec_process(mln_lang_ctx_t *ctx)
         mln_rbtree_insert(tree, rn);
         se->rn = rn;
     } else if (pid == 0) {
-        close(0);
+        /*
+         * fds[0] must be closed. If not close, after command execution and the parent process
+         * close and EPOLL_CTL_DEL fds[0], epoll will trigger fds[0] again,
+         * which means a freed memory structure will be visited again.
+         * so segment fault happened.
+         */
+        close(fds[0]);
         close(1);
         close(2);
-        dup(fds[0]);
         dup(fds[1]);
         dup(fds[1]);
-        close(fds[0]);
         close(fds[1]);
         if (execl("/bin/sh", "sh", "-c", (char *)cmd->data, (char *)0) < 0) {
             exit(127);
