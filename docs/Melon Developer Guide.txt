@@ -3821,6 +3821,11 @@ Their definitions can be found in melon/include/mln_types.h.
       Replace every specified keys given by 'dict''s keys with 'dict''s values.
       The return value is the replaced string.
 
+      <89> mln_exec(cmd, bufsize);
+      Execute shell command 'cmd'. The output of command should be less than 'bufsize'.
+      If 'bufsize' less than 0, it means unlimited.
+      The output will be returned.
+
 
    I. Function development
       Following these steps below:

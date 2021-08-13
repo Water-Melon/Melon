@@ -3442,6 +3442,9 @@ static void mln_lang_sys_exec_read_handler(mln_event_t *ev, int fd, void *data)
     mln_chain_t *c, *start, *last = NULL;
     mln_lang_sys_exec_t *se = (mln_lang_sys_exec_t *)data;
     mln_lang_ctx_t *ctx = se->ctx;
+    mln_lang_var_t *ret_var;
+    mln_u8ptr_t p;
+    mln_string_t s;
 
     int rc = mln_tcp_conn_recv(&se->conn, M_C_TYPE_MEMORY);
     if (rc == M_C_FINISH || rc == M_C_NOTYET || rc == M_C_CLOSED) {
@@ -3456,6 +3459,7 @@ static void mln_lang_sys_exec_read_handler(mln_event_t *ev, int fd, void *data)
                     }
                     if (last != NULL) last->next = NULL;
                     mln_chain_pool_release_all(c);
+                    se->cur_size = se->size_limit;
                     break;
                 }
                 last = c;
@@ -3472,8 +3476,17 @@ static void mln_lang_sys_exec_read_handler(mln_event_t *ev, int fd, void *data)
             }
         }
         if (rc == M_C_CLOSED) {
-            for (c = se->head; c != NULL; c = c->next) {
-                mln_log_writen(c->buf->start, mln_buf_size(c->buf));
+            if ((p = (mln_u8ptr_t)mln_alloc_m(ctx->pool, se->cur_size)) != NULL) {
+                mln_string_nset(&s, p, se->cur_size);
+                for (c = se->head; c != NULL; c = c->next) {
+                    memcpy(p, c->buf->pos, mln_buf_size(c->buf));
+                    p += mln_buf_size(c->buf);
+                }
+                ret_var = mln_lang_var_create_string(ctx, &s, NULL);
+                mln_alloc_free(s.data);
+                if (ret_var != NULL) {
+                    mln_lang_ctx_set_ret_var(ctx, ret_var);
+                }
             }
             mln_rbtree_delete(se->tree, se->rn);
             mln_rbtree_node_free(se->tree, se->rn);
