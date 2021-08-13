@@ -33,7 +33,7 @@ _mln_sys_log_process(mln_log_t *log, \
 static inline void mln_file_lock(int fd);
 static inline void mln_file_unlock(int fd);
 static int mln_log_set_level(mln_log_t *log, int is_init);
-static ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
+static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
 #if !defined(WINNT)
 static void mln_log_atfork_lock(void);
 static void mln_log_atfork_unlock(void);
@@ -320,7 +320,7 @@ void _mln_sys_log(enum log_level level, \
     MLN_UNLOCK(&(gLog.thread_lock));
 }
 
-static ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
+static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
 {
     ssize_t ret = write(log->fd, buf, size);
     if (!log->in_daemon) {
@@ -328,6 +328,16 @@ static ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
         if (rc < 0) rc = 1;/*do nothing*/
     }
     return ret;
+}
+
+ssize_t mln_log_writen(void *buf, mln_size_t size)
+{
+    MLN_LOCK(&(gLog.thread_lock));
+    mln_file_lock(gLog.fd);
+    ssize_t n = mln_log_write(&gLog, buf, size);
+    mln_file_unlock(gLog.fd);
+    MLN_UNLOCK(&(gLog.thread_lock));
+    return n;
 }
 
 static void

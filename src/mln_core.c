@@ -202,35 +202,3 @@ static int mln_get_framework_status(void)
 }
 #endif
 
-#if defined(__GNUC__)
-int mln_simple_init;
-
-static int mln_core_simple_global_init(void)
-{
-    mln_conf_t *cf;
-    mln_conf_domain_t *cd;
-    mln_conf_cmd_t *cc;
-    mln_conf_item_t *ci;
-
-    cf = mln_get_conf();
-    cd = cf->search(cf, "main");
-    cc = cd->search(cd, "framework");
-    if (cc != NULL) {
-        ci = cc->search(cc, 1);
-        if (ci != NULL && ci->type == CONF_BOOL && ci->val.b) {
-            ci->val.b = 0;
-        }
-    }
-    return 0;
-}
-
-int __attribute__((constructor)) mln_core_simple_init(void)
-{
-    struct mln_core_attr cattr;
-    cattr.argc = 0;
-    cattr.argv = NULL;
-    cattr.global_init = mln_core_simple_global_init;
-    cattr.worker_process = NULL;
-    return mln_core_init(&cattr);
-}
-#endif
