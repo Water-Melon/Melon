@@ -1,3 +1,7 @@
+Changes with melon 2.2.2                                          14 Aug 2021
+    *) Add array diff and key diff in melang
+    *) Add shell command execution function in melang
+
 Changes with melon 2.2.1                                          11 Aug 2021
     *) Update and add some time functions
     *) Add cron format expression parser
