@@ -121,16 +121,10 @@ struct mln_lang_ctx_s {
     struct mln_lang_ctx_s           *next;
     mln_lang_stack_node_t           *free_node_head;
     mln_lang_stack_node_t           *free_node_tail;
-    mln_lang_var_t                  *var_head;
-    mln_lang_var_t                  *var_tail;
-    mln_lang_val_t                  *val_head;
-    mln_lang_val_t                  *val_tail;
     mln_lang_symbol_node_t          *sym_head;
     mln_lang_symbol_node_t          *sym_tail;
     mln_lang_scope_t                *scope_cache_head;
     mln_lang_scope_t                *scope_cache_tail;
-    mln_u32_t                        var_count:8;
-    mln_u32_t                        val_count:8;
     mln_u32_t                        sym_count:8;
     mln_u32_t                        scope_count:8;
     mln_u32_t                        ret_flag:1;
@@ -143,7 +137,7 @@ struct mln_lang_ctx_s {
     mln_u32_t                        op_obj_flag:1;
     mln_u32_t                        op_real_flag:1;
     mln_u32_t                        op_str_flag:1;
-    mln_u32_t                        padding:23;
+    mln_u32_t                        padding:7;
 };
 
 struct mln_lang_resource_s {
@@ -283,7 +277,6 @@ typedef enum {
 } mln_lang_var_type_t;
 
 struct mln_lang_var_s {
-    mln_lang_ctx_t                  *ctx;
     mln_lang_var_type_t              type;
     mln_string_t                    *name;
     mln_lang_val_t                  *val;
@@ -338,7 +331,6 @@ struct mln_lang_object_s {
 };
 
 struct mln_lang_val_s {
-    mln_lang_ctx_t                  *ctx;
     struct mln_lang_val_s           *prev;
     struct mln_lang_val_s           *next;
     union {

@@ -64,22 +64,6 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_sym, \
                       static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_val, \
-                       mln_lang_val_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_lang_val, \
-                      mln_lang_val_t, \
-                      static inline void, \
-                      prev, \
-                      next);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_var_cache, \
-                       mln_lang_var_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_lang_var_cache, \
-                      mln_lang_var_t, \
-                      static inline void, \
-                      cache_prev, \
-                      cache_next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_ast_cache, \
                        mln_lang_ast_cache_t, \
                        static inline void,);
@@ -773,12 +757,8 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
     ctx->lang = lang;
-    if ((ctx->pool = mln_alloc_init()) == NULL) {
-        mln_alloc_free(ctx);
-        return NULL;
-    }
+    ctx->pool = lang->pool;
     if ((ctx->fset = mln_fileset_init(M_LANG_MAX_OPENFILE)) == NULL) {
-        mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
         return NULL;
     }
@@ -796,7 +776,6 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     }
     if (ctx->stm == NULL) {
         mln_fileset_destroy(ctx->fset);
-        mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
         return NULL;
     }
@@ -820,7 +799,6 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
             mln_lang_ast_free(ctx->stm);
         }
         mln_fileset_destroy(ctx->fset);
-        mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
         return NULL;
     }
@@ -839,7 +817,6 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
             mln_lang_ast_free(ctx->stm);
         }
         mln_fileset_destroy(ctx->fset);
-        mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
         return NULL;
     }
@@ -848,11 +825,9 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->return_handler = NULL;
     ctx->prev = ctx->next = NULL;
     ctx->free_node_head = ctx->free_node_tail = NULL;
-    ctx->var_head = ctx->var_tail = NULL;
-    ctx->val_head = ctx->val_tail = NULL;
     ctx->sym_head = ctx->sym_tail = NULL;
     ctx->scope_cache_head = ctx->scope_cache_tail = NULL;
-    ctx->var_count = ctx->val_count = ctx->sym_count = ctx->scope_count = 0;
+    ctx->sym_count = ctx->scope_count = 0;
     ctx->ret_flag = ctx->op_array_flag = ctx->op_bool_flag = ctx->op_func_flag = ctx->op_int_flag = \
     ctx->op_nil_flag = ctx->op_obj_flag = ctx->op_real_flag = ctx->op_str_flag = 0;
 
@@ -915,8 +890,6 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     if (ctx == NULL) return;
     mln_lang_scope_t *scope;
     mln_lang_stack_node_t *sn;
-    mln_lang_var_t *var;
-    mln_lang_val_t *val;
     mln_lang_symbol_node_t *sym;
 
     while ((scope = ctx->scope_cache_head) != NULL) {
@@ -928,16 +901,6 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
         mln_lang_sym_chain_del(&ctx->sym_head, &ctx->sym_tail, sym);
         sym->ctx = NULL;
         mln_lang_symbol_node_free(sym);
-    }
-    while ((val = ctx->val_head) != NULL) {
-        mln_lang_val_chain_del(&(ctx->val_head), &(ctx->val_tail), val);
-        val->ctx = NULL;
-        __mln_lang_val_free(val);
-    }
-    while ((var = ctx->var_head) != NULL) {
-        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), var);
-        var->ctx = NULL;
-        __mln_lang_var_free(var);
     }
     if (ctx->ret_var != NULL) __mln_lang_var_free(ctx->ret_var);
     if (ctx->filename != NULL) mln_string_free(ctx->filename);
@@ -975,7 +938,6 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
         }
     }
     mln_fileset_destroy(ctx->fset);
-    mln_alloc_destroy(ctx->pool);
     mln_alloc_free(ctx);
 }
 
@@ -1696,16 +1658,10 @@ __mln_lang_var_new(mln_lang_ctx_t *ctx, \
                    mln_lang_set_detail_t *in_set)
 {
     mln_lang_var_t *var;
-    if ((var = ctx->var_head) != NULL) {
-        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), var);
-        --(ctx->var_count);
-    } else {
-        if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
-            return NULL;
-        }
-        var->ctx = ctx;
-        var->cache_prev = var->cache_next = NULL;
+    if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+        return NULL;
     }
+    var->cache_prev = var->cache_next = NULL;
     var->type = type;
     if (name != NULL) {
         if ((var->name = mln_string_pool_dup(ctx->pool, name)) == NULL) {
@@ -1732,16 +1688,10 @@ __mln_lang_var_new_ref_string(mln_lang_ctx_t *ctx, \
                               mln_lang_set_detail_t *in_set)
 {
     mln_lang_var_t *var;
-    if ((var = ctx->var_head) != NULL) {
-        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), var);
-        --(ctx->var_count);
-    } else {
-        if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
-            return NULL;
-        }
-        var->ctx = ctx;
-        var->cache_prev = var->cache_next = NULL;
+    if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+        return NULL;
     }
+    var->cache_prev = var->cache_next = NULL;
     var->type = type;
     if (name != NULL) {
         var->name = mln_string_ref(name);
@@ -1761,16 +1711,10 @@ static inline mln_lang_var_t *
 mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_var_t *defvar)
 {
     mln_lang_var_t *var;
-    if ((var = ctx->var_head) != NULL) {
-        mln_lang_var_cache_chain_del(&(ctx->var_head), &(ctx->var_tail), var);
-        --(ctx->var_count);
-    } else {
-        if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
-            return NULL;
-        }
-        var->ctx = ctx;
-        var->cache_prev = var->cache_next = NULL;
+    if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+        return NULL;
     }
+    var->cache_prev = var->cache_next = NULL;
     var->type = defvar->type;
     ASSERT(defvar->name != NULL);
     var->name = mln_string_ref(defvar->name);
@@ -1814,12 +1758,7 @@ static inline void __mln_lang_var_free(void *data)
         mln_lang_set_detail_free(var->in_set);
         var->in_set = NULL;
     }
-    if (var->ctx != NULL && var->ctx->var_count < M_LANG_CACHE_COUNT) {
-        mln_lang_var_cache_chain_add(&(var->ctx->var_head), &(var->ctx->var_tail), var);
-        ++(var->ctx->var_count);
-    } else {
-        mln_alloc_free(var);
-    }
+    mln_alloc_free(var);
 }
 
 mln_lang_var_t *mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
@@ -2429,16 +2368,10 @@ static inline mln_lang_val_t *
 __mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data)
 {
     mln_lang_val_t *val;
-    if ((val = ctx->val_head) != NULL) {
-        mln_lang_val_chain_del(&(ctx->val_head), &(ctx->val_tail), val);
-        --(ctx->val_count);
-    } else {
-        if ((val = (mln_lang_val_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_val_t))) == NULL) {
-            return NULL;
-        }
-        val->ctx = ctx;
-        val->prev = val->next = NULL;
+    if ((val = (mln_lang_val_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_val_t))) == NULL) {
+        return NULL;
     }
+    val->prev = val->next = NULL;
     switch (type) {
         case M_LANG_VAL_TYPE_NIL:
             break;
@@ -2500,12 +2433,7 @@ static inline void __mln_lang_val_free(void *data)
         val->func = NULL;
     }
     mln_lang_val_freeData(val);
-    if (val->ctx != NULL && val->ctx->val_count < M_LANG_CACHE_COUNT) {
-        mln_lang_val_chain_add(&(val->ctx->val_head), &(val->ctx->val_tail), val);
-        ++(val->ctx->val_count);
-    } else {
-        mln_alloc_free(val);
-    }
+    mln_alloc_free(val);
 }
 
 static inline void mln_lang_val_freeData(mln_lang_val_t *val)
