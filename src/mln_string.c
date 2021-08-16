@@ -114,7 +114,7 @@ mln_string_t *mln_string_pool_dup(mln_alloc_t *pool, mln_string_t *str)
 
 mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size)
 {
-    if (size <= 0) return NULL;
+    if (size < 0) return NULL;
     mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
     if (s == NULL) return NULL;
     mln_s32_t min = size > str->len ? str->len : size;
@@ -133,7 +133,7 @@ mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size)
 
 mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size)
 {
-    if (size <= 0) return NULL;
+    if (size < 0) return NULL;
     mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
     if (s == NULL) return NULL;
     if ((s->data = (mln_u8ptr_t)malloc(size + 1)) == NULL) {

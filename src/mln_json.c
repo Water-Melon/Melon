@@ -250,6 +250,7 @@ again:
     } else if (jstr[0] == '}') {
         ++jstr;
         --len;
+        mln_json_jumpoff_blank(&jstr, &len);
         return len;
     }
 
@@ -322,6 +323,7 @@ again:
     }
     if (jstr[0] == ']') {
         ++jstr; --len;
+        mln_json_jumpoff_blank(&jstr, &len);
         return len;
     }
 
