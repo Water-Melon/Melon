@@ -93,6 +93,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_var, \
                       void, \
                       prev, \
                       next);
+static inline void __mln_lang_run(mln_lang_t *lang);
 static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data);
 static inline mln_lang_ast_cache_t *
 mln_lang_ast_cache_new(mln_lang_t *lang, mln_lang_stm_t *stm, mln_string_t *code);
@@ -584,36 +585,36 @@ void mln_lang_free(mln_lang_t *lang)
     mln_alloc_free(lang);
 }
 
-#define __mln_lang_run(lang) \
-    if ((lang)->ctx_cur != NULL) {\
-        mln_lang_stack_node_t *node;\
-        if ((node = mln_lang_stack_top((lang)->ctx_cur)) == NULL) {\
-            if ((lang)->ctx_cur->ref)\
-                mln_lang_ctx_chain_del(&((lang)->wait_head), &((lang)->wait_tail), (lang)->ctx_cur);\
-            else \
-                mln_lang_ctx_chain_del(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);\
-            if ((lang)->ctx_cur != NULL && (lang)->ctx_cur->return_handler != NULL) {\
-                (lang)->ctx_cur->return_handler((lang)->ctx_cur);\
-            }\
-            mln_lang_ctx_free((lang)->ctx_cur);\
-            (lang)->ctx_cur = NULL;\
-        } else {\
-            if ((lang)->ctx_cur->ref) {\
-                (lang)->ctx_cur = NULL;\
-            } else {\
-                if (--((lang)->ctx_cur->step) > 0) {\
-                    goto ok;\
-                }\
-                mln_gc_collect(lang->ctx_cur->gc, lang->ctx_cur);\
-                mln_lang_ctx_chain_del(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);\
-                (lang)->ctx_cur->step = M_LANG_DEFAULT_STEP;\
-                mln_lang_ctx_chain_add(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);\
-                (lang)->ctx_cur = NULL;\
-            }\
-        }\
-    }\
-    (lang)->ctx_cur = (lang)->run_head;\
-ok:
+static inline void __mln_lang_run(mln_lang_t *lang)
+{
+    if ((lang)->ctx_cur != NULL) {
+        mln_lang_stack_node_t *node;
+        if ((node = mln_lang_stack_top((lang)->ctx_cur)) == NULL) {
+            if ((lang)->ctx_cur->ref)
+                mln_lang_ctx_chain_del(&((lang)->wait_head), &((lang)->wait_tail), (lang)->ctx_cur);
+            else
+                mln_lang_ctx_chain_del(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);
+            if ((lang)->ctx_cur != NULL && (lang)->ctx_cur->return_handler != NULL) {
+                (lang)->ctx_cur->return_handler((lang)->ctx_cur);
+            }
+            mln_lang_ctx_free((lang)->ctx_cur);
+            (lang)->ctx_cur = NULL;
+        } else {
+            if ((lang)->ctx_cur->ref) {
+                (lang)->ctx_cur = NULL;
+            } else {
+                if (--((lang)->ctx_cur->step) > 0) {
+                    return;
+                }
+                mln_lang_ctx_chain_del(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);
+                (lang)->ctx_cur->step = M_LANG_DEFAULT_STEP;
+                mln_lang_ctx_chain_add(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);
+                (lang)->ctx_cur = NULL;
+            }
+        }
+    }
+    (lang)->ctx_cur = (lang)->run_head;
+}
 
 void mln_lang_run(mln_lang_t *lang)
 {
@@ -3165,6 +3166,11 @@ goon1:
         else mln_lang_ctx_reset_ret_var(ctx);
         mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
+
+        if (--(ctx->step) <= 0) {
+            mln_gc_collect(ctx->gc, ctx);
+            ctx->step = M_LANG_DEFAULT_STEP;
+        }
     }
     __mln_lang_run(ctx->lang);
 }
