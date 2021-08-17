@@ -1011,22 +1011,6 @@ mln_event_set_fd_clr(mln_event_t *event, int fd)
         ed->data.fd.timeout_node = NULL;
         ed->data.fd.end_us = 0;
     }
-    if (ed->data.fd.in_process) {
-        ed->data.fd.is_clear = 1;
-        return;
-    }
-    mln_rbtree_delete(event->ev_fd_tree, rn);
-    mln_rbtree_node_free(event->ev_fd_tree, rn);
-    if (ed->data.fd.in_active) {
-        ev_fd_active_chain_del(&(event->ev_fd_active_head), \
-                               &(event->ev_fd_active_tail), \
-                               ed);
-        ed->data.fd.active_flag = 0;
-        ed->data.fd.in_active = 0;
-    }
-    ev_fd_wait_chain_del(&(event->ev_fd_wait_head), \
-                         &(event->ev_fd_wait_tail), \
-                         ed);
 #if defined(MLN_EPOLL)
     struct epoll_event ev;
     memset(&ev, 0, sizeof(ev));
@@ -1044,6 +1028,22 @@ mln_event_set_fd_clr(mln_event_t *event, int fd)
     if (ed->flag & M_EV_ERROR)
         FD_CLR(fd, &(event->err_set));
 #endif
+    if (ed->data.fd.in_process) {
+        ed->data.fd.is_clear = 1;
+        return;
+    }
+    mln_rbtree_delete(event->ev_fd_tree, rn);
+    mln_rbtree_node_free(event->ev_fd_tree, rn);
+    if (ed->data.fd.in_active) {
+        ev_fd_active_chain_del(&(event->ev_fd_active_head), \
+                               &(event->ev_fd_active_tail), \
+                               ed);
+        ed->data.fd.active_flag = 0;
+        ed->data.fd.in_active = 0;
+    }
+    ev_fd_wait_chain_del(&(event->ev_fd_wait_head), \
+                         &(event->ev_fd_wait_tail), \
+                         ed);
     mln_event_desc_free(ed);
 }
 

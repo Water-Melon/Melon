@@ -7,8 +7,6 @@
 
 #include "mln_lang.h"
 
-#define MLN_LANG_SYS_EXEC_CLOSE_RETRY 10
-
 #if !defined(WINNT)
 typedef struct {
     mln_lang_ctx_t    *ctx;
@@ -19,11 +17,6 @@ typedef struct {
     mln_chain_t       *tail;
     mln_rbtree_t      *tree;
     mln_rbtree_node_t *rn;
-    /*
-     * to try to get fucking rid of epoll bug that
-     * after EPOLL_CTL_DEL the same fd still be triggered
-     */
-    mln_u64_t          retry;
 } mln_lang_sys_exec_t;
 #endif
 

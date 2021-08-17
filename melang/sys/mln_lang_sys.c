@@ -3259,7 +3259,6 @@ static mln_lang_sys_exec_t *mln_lang_sys_exec_new(mln_lang_ctx_t *ctx, mln_rbtre
     se->head = se->tail = NULL;
     se->tree = tree;
     se->rn = NULL;
-    se->retry = 0;
     return se;
 }
 
@@ -3481,9 +3480,6 @@ static void mln_lang_sys_exec_read_handler(mln_event_t *ev, int fd, void *data)
             }
         }
         if (rc == M_C_CLOSED) {
-            if (se->retry++ < MLN_LANG_SYS_EXEC_CLOSE_RETRY) {
-                return;
-            }
             if ((p = (mln_u8ptr_t)mln_alloc_m(ctx->pool, se->cur_size)) != NULL) {
                 mln_string_nset(&s, p, se->cur_size);
                 for (c = se->head; c != NULL; c = c->next) {
