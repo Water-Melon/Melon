@@ -3423,8 +3423,9 @@ static mln_lang_var_t *mln_lang_sys_exec_process(mln_lang_ctx_t *ctx)
         close(fds[0]);
         close(1);
         close(2);
-        dup(fds[1]);
-        dup(fds[1]);
+        int rc = dup(fds[1]);
+        rc = dup(fds[1]);
+        if (rc < 0) rc = 0;
         close(fds[1]);
         if (execl("/bin/sh", "sh", "-c", (char *)cmd->data, (char *)0) < 0) {
             exit(127);
