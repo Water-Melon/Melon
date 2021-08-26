@@ -58,7 +58,6 @@ time_t mln_cron_parse(mln_string_t *exp, time_t base)
     mln_utc_adjust(&u);
 
     mln_string_slice_free(arr);
-    u.second = 0;
     /*printf("%lu-%lu-%lu %lu:%lu:%lu %lu\n", u.year, u.month, u.day, u.hour, u.minute, u.second, u.week);*/
     return mln_utc2time(&u);
 }
