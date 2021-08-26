@@ -187,6 +187,7 @@ again:
         mln_json_obj_free(obj);
         return -1;
     }
+    mln_json_jumpoff_blank(&jstr, &len);
     if (jstr[0] != '}') {
         left = mln_json_parse_json(obj->key, jstr, len, 0);
         if (left <= 0) {
