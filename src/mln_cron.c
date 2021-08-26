@@ -102,6 +102,7 @@ static long mln_cron_parse_minute(mln_string_t *smin, long min)
             case '*':
                 save = min + (period? period: 1);
                 if (*(++p) == ',') head = ++p;
+                else head = p;
                 break;
             default:
                 if (!isdigit(*p++)) return -1;
@@ -167,6 +168,7 @@ static long mln_cron_parse_hour(mln_string_t *shour, long hour, int greater)
             case '*':
                 save = greater? hour: (hour + (period? period: 1));
                 if (*(++p) == ',') head = ++p;
+                else head = p;
                 break;
             default:
                 if (!isdigit(*p++)) return -1;
@@ -236,6 +238,7 @@ static long mln_cron_parse_day(mln_string_t *sday, long year, long month, long d
             case '*':
                 save = greater? day: (day + (period? period: 1));
                 if (*(++p) == ',') head = ++p;
+                else head = p;
                 break;
             default:
                 if (!isdigit(*p++)) return -1;
@@ -305,6 +308,7 @@ static long mln_cron_parse_month(mln_string_t *smon, long mon, int greater)
             case '*':
                 save = greater? mon: (mon + (period? period: 1));
                 if (*(++p) == ',') head = ++p;
+                else head = p;
                 break;
             default:
                 if (!isdigit(*p++)) return -1;
@@ -374,6 +378,7 @@ static long mln_cron_parse_week(mln_string_t *sweek, long week, int greater)
             case '*':
                 save = greater? week: (week + (period? period: 1));
                 if (*(++p) == ',') head = ++p;
+                else head = p;
                 break;
             default:
                 if (!isdigit(*p++)) return -1;
