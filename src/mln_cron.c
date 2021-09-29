@@ -64,7 +64,7 @@ time_t mln_cron_parse(mln_string_t *exp, time_t base)
 
 static long mln_cron_parse_minute(mln_string_t *smin, long min)
 {
-    if (smin->data == NULL) return -1;
+    if (!smin->len) return -1;
     if (smin->len == 1 && smin->data[0] == '*')
         return min + 1;
 
@@ -126,7 +126,7 @@ static long mln_cron_parse_minute(mln_string_t *smin, long min)
 
 static long mln_cron_parse_hour(mln_string_t *shour, long hour, int greater)
 {
-    if (shour->data == NULL) return -1;
+    if (!shour->len) return -1;
     if (shour->len == 1 && shour->data[0] == '*')
         return hour;
 
@@ -196,7 +196,7 @@ static long mln_cron_parse_hour(mln_string_t *shour, long hour, int greater)
 
 static long mln_cron_parse_day(mln_string_t *sday, long year, long month, long day, int greater)
 {
-    if (sday->data == NULL) return -1;
+    if (!sday->len) return -1;
     if (sday->len == 1 && sday->data[0] == '*')
         return day;
 
@@ -266,7 +266,7 @@ static long mln_cron_parse_day(mln_string_t *sday, long year, long month, long d
 
 static long mln_cron_parse_month(mln_string_t *smon, long mon, int greater)
 {
-    if (smon->data == NULL) return -1;
+    if (!smon->len) return -1;
     if (smon->len == 1 && smon->data[0] == '*')
         return mon;
 
@@ -336,7 +336,7 @@ static long mln_cron_parse_month(mln_string_t *smon, long mon, int greater)
 
 static long mln_cron_parse_week(mln_string_t *sweek, long week, int greater)
 {
-    if (sweek->data == NULL) return -1;
+    if (!sweek->len) return -1;
     if (sweek->len == 1 && sweek->data[0] == '*')
         return week;
 

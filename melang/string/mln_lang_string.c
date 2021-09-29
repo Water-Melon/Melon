@@ -826,7 +826,7 @@ static mln_lang_var_t *mln_slice_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     array = ret_var->val->data.array;
-    for (scan = ret; scan->data != NULL; ++scan) {
+    for (scan = ret; scan->len; ++scan) {
         if ((array_val = mln_lang_array_get(ctx, array, NULL)) == NULL) {
             mln_lang_var_free(ret_var);
             mln_string_slice_free(ret);

@@ -325,7 +325,7 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
     mln_string_t *p = array;
     mln_s8ptr_t pos, buf;
     mln_uauto_t size = 0;
-    for (; p->data != NULL; ++p) {
+    for (; p->len; ++p) {
         if ((pos = strchr((char *)(p->data), ';')) == NULL) {
             size += (p->len + 1);
         } else {
@@ -339,7 +339,7 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
         mln_string_free(tmp);
         return NULL;
     }
-    for (size = 0, p = array; p->data != NULL; ++p) {
+    for (size = 0, p = array; p->len; ++p) {
         if ((pos = strchr((char *)(p->data), ';')) == NULL) {
             memcpy(buf+size, p->data, p->len);
             size += p->len;

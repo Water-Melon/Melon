@@ -483,7 +483,7 @@ mln_string_t *mln_string_slice(mln_string_t *s, const char *sep_array/*ended by 
 
 描述：`seq_array`是一个字符数组且以0结尾，该数组的每一个字符都是一个分隔标志。函数会扫描`s`的数据部分，当数据中遇到`seq_array`中的任意一个字符时都会被进行分割，连续遇到多个时仅分割一次，且分割后，分隔符不会出现在被分割后的字符串中。
 
-返回值：成功则返回`mln_string_t`数组，否则返回`NULL`。数组的最后一个元素的`len`为`0`，且`data`为`NULL`。
+返回值：成功则返回`mln_string_t`数组，否则返回`NULL`。数组的最后一个元素的`len`为`0`。
 
 举例：
 
@@ -492,7 +492,7 @@ int main(void)
 {
   mln_string_t s = mln_string("abc-def-=ghi");
   mln_string_t *str, *arr = mln_string_slice(&s, "-=");
-  for (str = arr; str->data != NULL; ++str) {
+  for (str = arr; str->len; ++str) {
     mln_log(debug, "%S", str);
   }
   mln_string_slice_free(arr);

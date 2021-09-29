@@ -152,7 +152,7 @@ Their definitions can be found in melon/include/mln_types.h.
        Slicing characters can be given by the second argument.
        This interface has a side-effect that the string buffer will be destroyed. So you can call mln_string_dup() or
        mln_string_ndup() at first.
-       The return value is a vector, and its last element is NULL.
+       The return value is a vector, and its last element length is 0.
 
     z) void mln_string_slice_free(mln_string_t *array);
        This interface frees the vector that mln_string_slice() returned.
