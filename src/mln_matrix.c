@@ -140,7 +140,7 @@ void mln_matrix_dump(mln_matrix_t *matrix)
 {
     if (matrix == NULL) return;
     mln_size_t i, sum = matrix->row * matrix->col;
-#if defined(i386) || defined(__arm__)
+#if defined(i386) || defined(__arm__) || defined(WINNT)
     printf("Matrix row:%u col:%u\n ", matrix->row, matrix->col);
 #else
     printf("Matrix row:%lu col:%lu\n ", matrix->row, matrix->col);

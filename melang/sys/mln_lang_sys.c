@@ -900,7 +900,7 @@ static mln_lang_var_t *mln_lang_sys_int_process(mln_lang_ctx_t *ctx)
             }
             memcpy(buf, val->data.s->data, val->data.s->len);
             buf[val->data.s->len] = 0;
-#if defined(i386) || defined(__arm__)
+#if defined(i386) || defined(__arm__) || defined(WINNT)
             i = atoll(buf);
 #else
             i = atol(buf);
