@@ -46,8 +46,18 @@ typedef unsigned long *       mln_u64ptr_t;
 #endif
 typedef size_t                mln_size_t;
 typedef off_t                 mln_off_t;
+#if defined(WINNT)
+  #if defined(i386) || defined(__arm__)
 typedef long                  mln_sptr_t;
 typedef unsigned long         mln_uptr_t;
+  #else
+typedef long long             mln_sptr_t;
+typedef unsigned long long    mln_uptr_t;
+  #endif
+#else
+typedef long                  mln_sptr_t;
+typedef unsigned long         mln_uptr_t;
+#endif
 typedef long                  mln_sauto_t;
 typedef unsigned long         mln_uauto_t;
 
