@@ -80,7 +80,7 @@ echo "
  */" > include/mln_ipc.h
 echo "#ifndef __MLN_IPC_H" >> include/mln_ipc.h
 echo "#define __MLN_IPC_H" >> include/mln_ipc.h
-echo "#if !defined(WINNT)" >> include/mln_ipc.h
+echo "#if !defined(WIN32)" >> include/mln_ipc.h
 cnt=1
 for macro in `ls ipc_handlers`
 do
@@ -96,7 +96,7 @@ echo "
 /*
  * Copyright (C) Niklaus F.Schen.
  */" > src/mln_ipc.c
-echo "#if !defined(WINNT)" >> src/mln_ipc.c
+echo "#if !defined(WIN32)" >> src/mln_ipc.c
 echo "#include \"mln_connection.h\"" >> src/mln_ipc.c
 echo "#include \"mln_lex.h\"" >> src/mln_ipc.c
 echo "#include \"mln_fork.h\"" >> src/mln_ipc.c

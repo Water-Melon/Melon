@@ -36,7 +36,7 @@ int haha_main(int argc, char **argv)
             return -1;
         }
         memset(&msg, 0, sizeof(msg));
-#if defined(WINNT)
+#if defined(WIN32)
         int n = recv(fd, (char *)&msg, sizeof(msg), 0);
 #else
         int n = recv(fd, &msg, sizeof(msg), 0);
@@ -81,7 +81,7 @@ int hello_main(int argc, char **argv)
         msg.c = 'N';
         msg.type = ITC_REQUEST;
         msg.need_clear = 1;
-#if defined(WINNT)
+#if defined(WIN32)
         int n = send(fd, (char *)&msg, sizeof(msg), 0);
 #else
         int n = send(fd, &msg, sizeof(msg), 0);

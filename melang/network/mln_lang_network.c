@@ -2,7 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#if defined(WINNT)
+#if defined(WIN32)
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #else
@@ -86,7 +86,7 @@ static mln_lang_var_t *mln_lang_network_udp_recv_process(mln_lang_ctx_t *ctx);
 static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *data);
 static void mln_lang_network_udp_timeout_handler(mln_event_t *ev, int fd, void *data);
 
-#if defined(WINNT)
+#if defined(WIN32)
 /*
  * Note
  * code in this if is copied and modified from webrtc
@@ -249,7 +249,7 @@ static int mln_lang_network_resource_register(mln_lang_ctx_t *ctx)
 {
     mln_rbtree_t *tcp_set, *udp_set;
     if ((tcp_set = mln_lang_resource_fetch(ctx->lang, "tcp")) == NULL) {
-#if !defined(WINNT)
+#if !defined(WIN32)
         signal(SIGPIPE, SIG_IGN);
 #endif
         struct mln_rbtree_attr rbattr;
@@ -503,7 +503,7 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-#if defined(WINNT)
+#if defined(WIN32)
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)(&opt), sizeof(opt)) < 0) {
 #else
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
@@ -1156,7 +1156,7 @@ static mln_lang_var_t *mln_lang_network_tcp_connect_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-#if defined(WINNT)
+#if defined(WIN32)
     if (connect(fd, res->ai_addr, res->ai_addrlen) == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK) {
 #else
     if (connect(fd, res->ai_addr, res->ai_addrlen) < 0 && errno != EINPROGRESS) {
@@ -1316,7 +1316,7 @@ static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx
             } else {
                 tcp->send_closed = 1;
             }
-#if defined (WINNT)
+#if defined (WIN32)
             shutdown(fd, SD_SEND);
 #else
             shutdown(fd, SHUT_WR);
@@ -1339,7 +1339,7 @@ static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx
             } else {
                 tcp->recv_closed = 1;
             }
-#if defined (WINNT)
+#if defined (WIN32)
             shutdown(fd, SD_RECEIVE);
 #else
             shutdown(fd, SHUT_RD);
@@ -1431,7 +1431,7 @@ static void mln_lang_network_tcp_connect_handler(mln_event_t *ev, int fd, void *
     socklen_t len = sizeof(err);
     mln_lang_var_t *ret_var;
 
-#if defined (WINNT)
+#if defined (WIN32)
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len) >= 0) {
 #else
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) >= 0) {
@@ -1891,7 +1891,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
             }
             return ret_var;
         }
-#if defined (WINNT)
+#if defined (WIN32)
         {
             u_long opt = 1;
             ioctlsocket(fd, FIONBIO, &opt);
@@ -1903,7 +1903,7 @@ static mln_lang_var_t *mln_lang_network_udp_create_process(mln_lang_ctx_t *ctx)
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
-#if defined (WINNT)
+#if defined (WIN32)
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0) {
 #else
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
@@ -2209,7 +2209,7 @@ static mln_lang_var_t *mln_lang_network_udp_send_process(mln_lang_ctx_t *ctx)
 static void mln_lang_network_udp_send_handler(mln_event_t *ev, int fd, void *data)
 {
     mln_lang_udp_t *udp = (mln_lang_udp_t *)data;
-#if defined(WINNT)
+#if defined(WIN32)
     int rc = sendto(fd, (char *)(udp->data->data), udp->data->len, 0, &(udp->addr), udp->len);
 #else
     int rc = sendto(fd, udp->data->data, udp->data->len, MSG_DONTWAIT, &(udp->addr), udp->len);
@@ -2457,7 +2457,7 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
         return;
     }
 
-#if defined(WINNT)
+#if defined(WIN32)
     rc = recvfrom(fd, (char *)buf, udp->bufsize, 0, &addr, &len);
 #else
     rc = recvfrom(fd, buf, udp->bufsize, MSG_DONTWAIT, &addr, &len);

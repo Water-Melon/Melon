@@ -7,7 +7,7 @@
 
 #include "mln_lang.h"
 #include "mln_connection.h"
-#if defined(WINNT)
+#if defined(WIN32)
 #include <ws2tcpip.h>
 #endif
 

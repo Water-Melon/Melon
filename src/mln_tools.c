@@ -3,7 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
-#if !defined(WINNT)
+#if !defined(WIN32)
 #include <sys/resource.h>
 #include <pwd.h>
 #endif
@@ -22,7 +22,7 @@ static int
 mln_boot_help(const char *boot_str, const char *alias);
 static int
 mln_boot_version(const char *boot_str, const char *alias);
-#if !defined(WINNT)
+#if !defined(WIN32)
 static int mln_set_id(void);
 static int
 mln_boot_reload(const char *boot_str, const char *alias);
@@ -39,7 +39,7 @@ long mon_days[2][12] = {
 mln_boot_t boot_params[] = {
 {"--help", "-h", mln_boot_help, 0},
 {"--version", "-v", mln_boot_version, 0},
-#if !defined(WINNT)
+#if !defined(WIN32)
 {"--reload", "-r", mln_boot_reload, 0},
 {"--stop", "-s", mln_boot_stop, 0}
 #endif
@@ -142,7 +142,7 @@ static int mln_sys_nofile_modify(void)
     return 0;
 }
 
-#if !defined(WINNT)
+#if !defined(WIN32)
 int mln_daemon(void)
 {
     int ret;
@@ -327,7 +327,7 @@ mln_boot_version(const char *boot_str, const char *alias)
     return 0;
 }
 
-#if !defined(WINNT)
+#if !defined(WIN32)
 static int
 mln_boot_reload(const char *boot_str, const char *alias)
 {

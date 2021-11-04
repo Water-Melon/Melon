@@ -176,7 +176,7 @@ mln_file_t *mln_file_open_tmp(mln_alloc_t *pool)
     mln_file_t *f;
 
     snprintf(dir_path, sizeof(dir_path)-1, "%s/%s", mln_path(), mln_file_tmp_dir);
-#if defined(WINNT)
+#if defined(WIN32)
     if (mkdir(dir_path) < 0) {
 #else
     if (mkdir(dir_path, S_IRWXU) < 0) {

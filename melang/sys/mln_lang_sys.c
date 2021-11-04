@@ -98,7 +98,7 @@ static int mln_lang_sys_time_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_time_process(mln_lang_ctx_t *ctx);
 static int mln_lang_sys_cron_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_cron_process(mln_lang_ctx_t *ctx);
-#if !defined(WINNT)
+#if !defined(WIN32)
 static mln_lang_sys_exec_t *mln_lang_sys_exec_new(mln_lang_ctx_t *ctx, mln_rbtree_t *tree, int fd, mln_s64_t size_limit);
 static void mln_lang_sys_exec_free(mln_lang_sys_exec_t *se);
 static int mln_lang_sys_exec_cmp(mln_lang_sys_exec_t *se1, mln_lang_sys_exec_t *se2);
@@ -141,7 +141,7 @@ int mln_lang_sys(mln_lang_ctx_t *ctx)
     if (mln_lang_sys_isdir_handler(ctx) < 0) goto err;
     if (mln_lang_sys_time_handler(ctx) < 0) goto err;
     if (mln_lang_sys_cron_handler(ctx) < 0) goto err;
-#if !defined(WINNT)
+#if !defined(WIN32)
     if (mln_lang_sys_exec_handler(ctx) < 0) goto err;
 #endif
     return 0;
@@ -153,7 +153,7 @@ err:
 
 static int mln_lang_sys_resource_register(mln_lang_ctx_t *ctx)
 {
-#if !defined(WINNT)
+#if !defined(WIN32)
     mln_rbtree_t *exec_set;
     struct mln_rbtree_attr rbattr;
     rbattr.pool = ctx->pool;
@@ -175,7 +175,7 @@ static int mln_lang_sys_resource_register(mln_lang_ctx_t *ctx)
 
 static void mln_lang_sys_resource_unregister(mln_lang_ctx_t *ctx)
 {
-#if !defined(WINNT)
+#if !defined(WIN32)
 #endif
 }
 
@@ -610,7 +610,7 @@ static mln_lang_var_t *mln_lang_sys_str_process(mln_lang_ctx_t *ctx)
         mln_string_t s;
         switch (type) {
             case M_LANG_VAL_TYPE_INT:
-#if defined(WINNT)
+#if defined(WIN32)
                 n = snprintf(buf, sizeof(buf)-1, "%I64d", val->data.i);
 #elif defined(i386) || defined(__arm__)
                 n = snprintf(buf, sizeof(buf)-1, "%lld", val->data.i);
@@ -900,7 +900,7 @@ static mln_lang_var_t *mln_lang_sys_int_process(mln_lang_ctx_t *ctx)
             }
             memcpy(buf, val->data.s->data, val->data.s->len);
             buf[val->data.s->len] = 0;
-#if defined(i386) || defined(__arm__) || defined(WINNT)
+#if defined(i386) || defined(__arm__) || defined(WIN32)
             i = atoll(buf);
 #else
             i = atol(buf);
@@ -2831,7 +2831,7 @@ static mln_lang_var_t *mln_lang_sys_mkdir_process(mln_lang_ctx_t *ctx)
 
     mln_lang_sys_mkdir_getPrio(prio, &mode);
 
-#if defined(WINNT)
+#if defined(WIN32)
     if (mkdir((char *)val1->data.s->data)) {
 #else
     if (mkdir((char *)val1->data.s->data, mode)) {
@@ -3242,7 +3242,7 @@ static mln_lang_var_t *mln_lang_sys_cron_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-#if !defined(WINNT)
+#if !defined(WIN32)
 static mln_lang_sys_exec_t *mln_lang_sys_exec_new(mln_lang_ctx_t *ctx, mln_rbtree_t *tree, int fd, mln_s64_t size_limit)
 {
     mln_lang_sys_exec_t *se;

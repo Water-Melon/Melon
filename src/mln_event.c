@@ -12,7 +12,7 @@
 #include "mln_event.h"
 #include "mln_log.h"
 #include "mln_global.h"
-#if !defined(WINNT)
+#if !defined(WIN32)
 #include <sys/socket.h>
 #endif
 
@@ -29,7 +29,7 @@ MLN_CHAIN_FUNC_DECLARE(event, \
 MLN_CHAIN_FUNC_DECLARE(ev_sig, \
                        mln_event_desc_t, \
                        static inline void,);
-#if !defined(WINNT)
+#if !defined(WIN32)
 static void mln_event_atfork_lock(void);
 static void mln_event_atfork_unlock(void);
 #endif
@@ -261,7 +261,7 @@ err1:
     return NULL;
 }
 
-#if !defined(WINNT)
+#if !defined(WIN32)
 static void mln_event_atfork_lock(void)
 {
     MLN_LOCK(&event_lock);
@@ -278,7 +278,7 @@ mln_event_signal_fd_handler(mln_event_t *ev, int fd, void *data)
 {
     int signo = 0, n;
 lp:
-#if defined(WINNT)
+#if defined(WIN32)
     n = recv(fd, (char *)(&signo), sizeof(signo), 0);
 #else
     n = recv(fd, &signo, sizeof(signo), 0);
@@ -471,7 +471,7 @@ mln_event_set_signal_set(mln_event_t *event, \
     }
     esrp = (mln_event_sig_refer_t *)(rn->data);
     if (esrp->refer_cnt++ == 0) {
-#if defined(WINNT)
+#if defined(WIN32)
         signal(SIGABRT, mln_event_signal_handler);
         signal(SIGFPE, mln_event_signal_handler);
         signal(SIGILL, mln_event_signal_handler);
@@ -501,7 +501,7 @@ mln_event_signal_handler(int signo)
     if (!main_thread_freeing) {
         MLN_LOCK(&event_lock);
 lp1:
-#if defined(WINNT)
+#if defined(WIN32)
         n = send(main_thread_event->wr_fd, (char *)(&signo), sizeof(signo), 0);
 #else
         n = send(main_thread_event->wr_fd, &signo, sizeof(signo), 0);
@@ -515,7 +515,7 @@ lp1:
     mln_event_t *ev;
     for (ev = event_chain_head; ev != NULL; ev = ev->next) {
 lp2:
-#if defined(WINNT)
+#if defined(WIN32)
         n = send(ev->wr_fd, (char *)(&signo), sizeof(signo), 0);
 #else
         n = send(ev->wr_fd, &signo, sizeof(signo), 0);
@@ -1072,7 +1072,7 @@ void mln_event_set_callback(mln_event_t *ev, \
 static inline void
 mln_event_set_fd_nonblock(int fd)
 {
-#if defined(WINNT)
+#if defined(WIN32)
     u_long opt = 1;
     ioctlsocket(fd, FIONBIO, &opt);
 #else
@@ -1092,7 +1092,7 @@ mln_event_set_fd_nonblock(int fd)
 static inline void
 mln_event_set_fd_block(int fd)
 {
-#if defined(WINNT)
+#if defined(WIN32)
     u_long opt = 0;
     ioctlsocket(fd, FIONBIO, &opt);
 #else
@@ -1532,7 +1532,7 @@ mln_event_rbtree_refer_free(void *data)
 {
     if (data == NULL) return ;
     mln_event_sig_refer_t *esr = (mln_event_sig_refer_t *)data;
-#if defined(WINNT)
+#if defined(WIN32)
     signal(esr->signo, SIG_DFL);
 #else
     struct sigaction act;

@@ -861,7 +861,7 @@ void mln_pg_output_state(mln_pg_state_t *s)
     mln_u32_t i;
     printf("STATES:\n");
     for (; s != NULL; s = s->next) {
-#if defined(WINNT)
+#if defined(WIN32)
         printf("State %ld: input: [%s] nr_item:%I64u\n", \
                s->id, \
                s->input==NULL?"(null)":(char *)(s->input->token->data), \

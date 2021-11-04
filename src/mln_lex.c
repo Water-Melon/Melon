@@ -79,7 +79,7 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
         mln_u32_t len = data->len >= 1024? 1023: data->len;
         memcpy(path, data->data, len);
         path[len] = 0;
-#if defined(WINNT)
+#if defined(WIN32)
         if (len > 1 && path[1] == ':') {
 #else
         if (path[0] == '/') {
@@ -356,7 +356,7 @@ char *mln_lex_strerror(mln_lex_t *lex)
     int n = 0;
     if (lex->cur != NULL && lex->cur->fd >= 0)
         n += snprintf(lex->err_msg + n, len - n, "%s:", (char *)(lex->cur->data->data));
-#if defined(WINNT)
+#if defined(WIN32)
     n += snprintf(lex->err_msg + n, len - n, "%I64u: %s", lex->line, mln_lex_errmsg[lex->error]);
 #elif defined(i386) || defined(__arm__)
     n += snprintf(lex->err_msg + n, len - n, "%llu: %s", lex->line, mln_lex_errmsg[lex->error]);

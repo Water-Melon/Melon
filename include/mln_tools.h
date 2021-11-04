@@ -33,7 +33,7 @@ struct utctime {
 
 
 extern int mln_sys_limit_modify(void);
-#if !defined(WINNT)
+#if !defined(WIN32)
 extern int mln_daemon(void);
 #endif
 extern int mln_boot_params(int argc, char *argv[]);

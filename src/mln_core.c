@@ -17,7 +17,7 @@
 #include "mln_conf.h"
 #include "mln_core.h"
 
-#if !defined(WINNT)
+#if !defined(WIN32)
 static void mln_worker_routine(struct mln_core_attr *attr);
 static void mln_master_routine(void);
 static int mln_get_framework_status(void);
@@ -39,7 +39,7 @@ int mln_core_init(struct mln_core_attr *attr)
     if (attr->global_init != NULL && attr->global_init() < 0)
         return -1;
 
-#if !defined(WINNT)
+#if !defined(WIN32)
     if (mln_get_framework_status()) {
         if (mln_boot_params(attr->argc, attr->argv) < 0)
             return -1;
@@ -98,13 +98,13 @@ chl:
             return -1;
         }
         if (mln_log_init(ci->val.b) < 0) return -1;
-#if !defined(WINNT)
+#if !defined(WIN32)
     }
 #endif
     return 0;
 }
 
-#if !defined(WINNT)
+#if !defined(WIN32)
 static void mln_master_routine(void)
 {
     mln_event_t *ev = mln_event_init(1);

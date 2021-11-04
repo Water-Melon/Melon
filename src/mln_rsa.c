@@ -2,7 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#if defined(WINNT)
+#if defined(WIN32)
 #define _CRT_RAND_S
 #endif
 #include <string.h>
@@ -159,7 +159,7 @@ static inline void mln_rsa_pub_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8p
     val = tv.tv_sec*1000000+tv.tv_usec;
     for (j = keylen - inlen - 3; j > 0; --j) {
 lp:
-#if defined(WINNT)
+#if defined(WIN32)
         rand_s(&val);
         *out = val;
 #else

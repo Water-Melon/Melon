@@ -88,7 +88,7 @@ mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
 {
     pthread_rwlockattr_t attr;
     mln_alloc_t *pool;
-#if defined(WINNT)
+#if defined(WIN32)
     HANDLE handle;
 #endif
 
@@ -96,7 +96,7 @@ mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
         return NULL;
     }
 
-#if defined(WINNT)
+#if defined(WIN32)
     if ((handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                     NULL,
                                     PAGE_READWRITE,
@@ -190,7 +190,7 @@ void mln_alloc_destroy(mln_alloc_t *pool)
         }
         free(pool);
     } else {
-#if defined(WINNT)
+#if defined(WIN32)
         HANDLE handle = pool->map_handle;
         UnmapViewOfFile(pool->mem);
         CloseHandle(handle);

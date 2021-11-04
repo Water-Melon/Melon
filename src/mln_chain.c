@@ -14,7 +14,7 @@ mln_buf_t *mln_buf_new(mln_alloc_t *pool)
     b->file_left_pos = b->file_pos = b->file_last = 0;
     b->file = NULL;
     b->temporary = b->in_memory = b->in_file = 0;
-#if !defined(WINNT)
+#if !defined(WIN32)
     b->mmap = 0;
 #endif
     b->flush = b->sync = b->last_buf = b->last_in_chain = 0;
@@ -39,7 +39,7 @@ void mln_buf_pool_release(mln_buf_t *b)
     }
 
     if (b->in_memory) {
-#if !defined(WINNT)
+#if !defined(WIN32)
         if (b->mmap) {
             if (b->start != NULL) {
                 munmap(b->start, b->end - b->start);
@@ -53,7 +53,7 @@ void mln_buf_pool_release(mln_buf_t *b)
             } else {
                 mln_alloc_free(b->pos);
             }
-#if !defined(WINNT)
+#if !defined(WIN32)
         }
 #endif
         mln_alloc_free(b);

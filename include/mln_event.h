@@ -11,7 +11,7 @@
 #elif defined(MLN_KQUEUE)
 #include <sys/event.h>
 #else
-#if defined(WINNT)
+#if defined(WIN32)
 #include <winsock2.h>
 #else
 #include <sys/select.h>

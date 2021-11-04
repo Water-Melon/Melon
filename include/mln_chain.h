@@ -23,7 +23,7 @@ typedef struct mln_buf_s {
     mln_off_t           file_last;
     mln_file_t         *file;
     mln_u32_t           temporary:1;
-#if !defined(WINNT)
+#if !defined(WIN32)
     mln_u32_t           mmap:1;
 #endif
     mln_u32_t           in_memory:1;

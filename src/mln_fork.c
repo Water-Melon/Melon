@@ -2,7 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#if !defined(WINNT)
+#if !defined(WIN32)
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>

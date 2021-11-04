@@ -7,7 +7,7 @@
 
 #include "mln_lang.h"
 
-#if !defined(WINNT)
+#if !defined(WIN32)
 typedef struct {
     mln_lang_ctx_t    *ctx;
     mln_tcp_conn_t     conn;

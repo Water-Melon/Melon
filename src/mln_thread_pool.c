@@ -116,7 +116,7 @@ static void mln_thread_pool_member_exit(void *arg)
 /*
  * thread_pool
  */
-#if !defined(WINNT)
+#if !defined(WIN32)
 static void mln_thread_pool_prepare(void)
 {
     if (mThreadPoolSelf == NULL) return;
@@ -195,7 +195,7 @@ mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
 #ifdef MLN_USE_UNIX98
     if (tpattr->concurrency) pthread_setconcurrency(tpattr->concurrency);
 #endif
-#if !defined(WINNT)
+#if !defined(WIN32)
     if ((rc = pthread_atfork(mln_thread_pool_prepare, \
                              mln_thread_pool_parent, \
                              mln_thread_pool_child)) != 0)

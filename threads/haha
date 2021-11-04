@@ -14,7 +14,7 @@ int haha_main(int argc, char **argv)
             return -1;
         }
         memset(&msg, 0, sizeof(msg));
-#if defined(WINNT)
+#if defined(WIN32)
         int n = recv(fd, (char *)&msg, sizeof(msg), 0);
 #else
         int n = recv(fd, &msg, sizeof(msg), 0);

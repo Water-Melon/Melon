@@ -24,7 +24,7 @@ typedef unsigned short        mln_u16_t;
 typedef short                 mln_s16_t;
 typedef unsigned int          mln_u32_t;
 typedef int                   mln_s32_t;
-#if defined(i386) || defined(__arm__) || defined(WINNT)
+#if defined(i386) || defined(__arm__) || defined(WIN32)
 typedef unsigned long long    mln_u64_t;
 typedef long long             mln_s64_t;
 #else
@@ -37,7 +37,7 @@ typedef short *               mln_s16ptr_t;
 typedef unsigned short *      mln_u16ptr_t;
 typedef int *                 mln_s32ptr_t;
 typedef unsigned int *        mln_u32ptr_t;
-#if defined(i386) || defined(__arm__) || defined(WINNT)
+#if defined(i386) || defined(__arm__) || defined(WIN32)
 typedef long long *           mln_s64ptr_t;
 typedef unsigned long long *  mln_u64ptr_t;
 #else
@@ -46,7 +46,7 @@ typedef unsigned long *       mln_u64ptr_t;
 #endif
 typedef size_t                mln_size_t;
 typedef off_t                 mln_off_t;
-#if defined(WINNT)
+#if defined(WIN32)
   #if defined(i386) || defined(__arm__)
 typedef long                  mln_sptr_t;
 typedef unsigned long         mln_uptr_t;

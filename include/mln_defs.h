@@ -7,7 +7,7 @@
 
 #include <pthread.h>
 
-#if defined(__APPLE__) || defined(WINNT)
+#if defined(__APPLE__) || defined(WIN32)
 #define __NONNULL1(x)
 #define __NONNULL2(x,y)
 #define __NONNULL3(x,y,z)
@@ -132,7 +132,7 @@ extern int spin_trylock(void *lock);
     }\
 }
 
-#if defined(WINNT)
+#if defined(WIN32)
 extern int pipe(int fds[2]);
 extern int socketpair(int domain, int type, int protocol, int sv[2]);
 #define mln_socket_close closesocket

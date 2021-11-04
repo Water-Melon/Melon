@@ -3,7 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_lang.h"
-#if !defined(WINNT)
+#if !defined(WIN32)
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -1860,7 +1860,7 @@ mln_s64_t mln_lang_var_toint(mln_lang_var_t *var)
             if (buf == NULL) break;
             memcpy(buf, s->data, s->len);
             buf[s->len] = 0;
-#if defined(WINNT)
+#if defined(WIN32)
             sscanf((char *)buf, "%I64d", &i);
 #elif defined(i386) || defined(__arm__)
             sscanf((char *)buf, "%lld", &i);
@@ -1936,7 +1936,7 @@ mln_string_t *mln_lang_var_tostring(mln_alloc_t *pool, mln_lang_var_t *var)
             n = snprintf(buf, sizeof(buf)-1, "Array");
             break;
         case M_LANG_VAL_TYPE_INT:
-#if defined(WINNT)
+#if defined(WIN32)
             n = snprintf(buf, sizeof(buf)-1, "%I64d", val->data.i);
 #elif defined(i386) || defined(__arm__)
             n = snprintf(buf, sizeof(buf)-1, "%lld", val->data.i);

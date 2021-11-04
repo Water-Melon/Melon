@@ -34,7 +34,7 @@ static inline void mln_file_lock(int fd);
 static inline void mln_file_unlock(int fd);
 static int mln_log_set_level(mln_log_t *log, int is_init);
 static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
-#if !defined(WINNT)
+#if !defined(WIN32)
 static void mln_log_atfork_lock(void);
 static void mln_log_atfork_unlock(void);
 #endif
@@ -53,7 +53,7 @@ mln_log_t gLog = {{0},{0},{0},STDERR_FILENO,0,none,(mln_lock_t)0};
  */
 static inline void mln_file_lock(int fd)
 {
-#if !defined(WINNT)
+#if !defined(WIN32)
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
     fl.l_type = F_WRLCK;
@@ -66,7 +66,7 @@ static inline void mln_file_lock(int fd)
 
 static inline void mln_file_unlock(int fd)
 {
-#if !defined(WINNT)
+#if !defined(WIN32)
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
     fl.l_type = F_UNLCK;
@@ -146,7 +146,7 @@ mln_log_get_log(mln_log_t *log, int is_init)
                     __FUNCTION__, log_path_cmd);
             return -1;
         }
-#if defined(WINNT)
+#if defined(WIN32)
         if (ci->val.s->len <= 1 || (ci->val.s->data)[1] != ':') {
 #else
         if ((ci->val.s->data)[0] != '/') {
@@ -162,7 +162,7 @@ mln_log_get_log(mln_log_t *log, int is_init)
         ;
     memcpy(log->dir_path, path_str, p - path_str);
     log->dir_path[p - path_str] = 0;
-#if defined(WINNT)
+#if defined(WIN32)
     if (mkdir(log->dir_path) < 0) {
 #else
     if (mkdir(log->dir_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) < 0) {
@@ -209,7 +209,7 @@ mln_log_get_log(mln_log_t *log, int is_init)
     return 0;
 }
 
-#if !defined(WINNT)
+#if !defined(WIN32)
 static void mln_log_atfork_lock(void)
 {
     MLN_LOCK(&(gLog.thread_lock));
@@ -488,7 +488,7 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'i':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(WINNT)
+#if defined(WIN32)
                 long long num = va_arg(arg, long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%I64d", num);
 #elif defined(i386) || defined(__arm__)
@@ -504,7 +504,7 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'I':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(WINNT)
+#if defined(WIN32)
                 unsigned long long num = va_arg(arg, unsigned long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%I64u", num);
 #elif defined(i386) || defined(__arm__)

@@ -3,7 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_types.h"
-#if defined(WINNT)
+#if defined(WIN32)
 #include <stdio.h>
 #include <winsock2.h>
 #include <windows.h>

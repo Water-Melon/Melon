@@ -6,7 +6,7 @@
 #ifndef __MLN_ALLOC_H
 #define __MLN_ALLOC_H
 
-#if defined(WINNT)
+#if defined(WIN32)
 #include <windows.h>
 #include <winbase.h>
 #else
@@ -93,7 +93,7 @@ struct mln_alloc_s {
     void                     *mem;
     mln_size_t                shm_size;
     pthread_rwlock_t          rwlock;
-#if defined(WINNT)
+#if defined(WIN32)
     HANDLE                    map_handle;
 #endif
 };
