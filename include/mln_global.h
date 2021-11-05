@@ -15,7 +15,7 @@
 #define EXTERN
 #endif
 
-EXTERN void *GlobalUnusedVar;
+EXTERN void *global_unused_var;
 
 #endif
 

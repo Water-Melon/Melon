@@ -76,7 +76,7 @@ struct mln_lang_val_s {
 struct mln_lang_symbol_node_s {
     mln_string_t                    *symbol;//符号字符串
     mln_lang_ctx_t                  *ctx;//脚本任务结构
-    mln_lang_symbolType_t            type;//符号类型 类定义（M_LANG_SYMBOL_SET）还是变量（M_LANG_SYMBOL_VAR）
+    mln_lang_symbol_type_t           type;//符号类型 类定义（M_LANG_SYMBOL_SET）还是变量（M_LANG_SYMBOL_VAR）
     union {
         mln_lang_var_t          *var;
         mln_lang_set_detail_t   *set;
@@ -458,7 +458,7 @@ mln_lang_symbol_node_t *mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_str
 #### mln_lang_symbol_node_join
 
 ```c
-int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data);
+int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, void *data);
 ```
 
 描述：将类型为`type`的`data`加入符号表。`type`值为：
@@ -482,7 +482,7 @@ int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, v
 #### mln_lang_func_detail_new
 
 ```c
-mln_lang_func_detail_t *mln_lang_func_detail_new(mln_lang_ctx_t *ctx, mln_lang_funcType_t type, void *data, mln_lang_exp_t *exp, mln_lang_exp_t *closure);
+mln_lang_func_detail_t *mln_lang_func_detail_new(mln_lang_ctx_t *ctx, mln_lang_func_type_t type, void *data, mln_lang_exp_t *exp, mln_lang_exp_t *closure);
 ```
 
 描述：创建函数定义。参数含义：

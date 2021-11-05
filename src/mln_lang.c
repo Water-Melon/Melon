@@ -103,7 +103,7 @@ static inline mln_lang_ctx_t *
 mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t type, mln_string_t *content);
 static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx);
 static inline mln_lang_set_detail_t *
-mln_lang_ctx_getClass(mln_lang_ctx_t *ctx);
+mln_lang_ctx_get_class(mln_lang_ctx_t *ctx);
 static inline mln_lang_var_t *__mln_lang_var_create_nil(mln_lang_ctx_t *ctx, mln_string_t *name);
 static inline mln_lang_var_t *__mln_lang_var_create_call(mln_lang_ctx_t *ctx, mln_lang_funccall_val_t *call);
 static inline mln_lang_var_t *__mln_lang_var_create_obj(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *in_set, mln_string_t *name);
@@ -130,13 +130,13 @@ mln_lang_scope_new(mln_lang_ctx_t *ctx, \
                    mln_lang_stm_t *entry_stm);
 static inline void mln_lang_scope_free(mln_lang_scope_t *scope);
 static inline mln_lang_symbol_node_t *
-mln_lang_symbol_node_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbolType_t type, void *data);
+mln_lang_symbol_node_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbol_type_t type, void *data);
 static void mln_lang_symbol_node_free(void *data);
-static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data);
+static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, void *data);
 static inline mln_lang_symbol_node_t *
 __mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local);
 static inline mln_lang_symbol_node_t *
-mln_lang_symbol_node_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name);
+mln_lang_symbol_node_id_search(mln_lang_ctx_t *ctx, mln_string_t *name);
 static inline mln_lang_var_t *
 __mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name);
 static int mln_lang_set_member_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
@@ -156,22 +156,22 @@ static inline void __mln_lang_var_free(void *data);
 static inline mln_lang_var_t *
 __mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var);
 static inline mln_lang_var_t *
-mln_lang_var_dupWithVal(mln_lang_ctx_t *ctx, mln_lang_var_t *var);
-static int mln_lang_var_cmpName(const void *data1, const void *data2);
+mln_lang_var_dup_with_val(mln_lang_ctx_t *ctx, mln_lang_var_t *var);
+static int mln_lang_var_name_cmp(const void *data1, const void *data2);
 static inline mln_lang_var_t *
 mln_lang_var_transform(mln_lang_ctx_t *ctx, mln_lang_var_t *realvar, mln_lang_var_t *defvar);
 static inline void __mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val);
 static inline int
 __mln_lang_var_value_set(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src);
 static inline int
-mln_lang_funcdef_getArgs(mln_lang_ctx_t *ctx, \
+mln_lang_funcdef_args_get(mln_lang_ctx_t *ctx, \
                          mln_lang_exp_t *exp, \
                          mln_lang_var_t **head, \
                          mln_lang_var_t **tail, \
                          mln_size_t *nargs);
 static inline mln_lang_func_detail_t *
 __mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
-                           mln_lang_funcType_t type, \
+                           mln_lang_func_type_t type, \
                            void *data, \
                            mln_lang_exp_t *exp, \
                            mln_lang_exp_t *closure);
@@ -184,14 +184,14 @@ static inline void mln_lang_object_free(mln_lang_object_t *obj);
 static inline mln_lang_val_t *
 __mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data);
 static inline void __mln_lang_val_free(void *data);
-static inline void mln_lang_val_freeData(mln_lang_val_t *val);
+static inline void mln_lang_val_data_free(mln_lang_val_t *val);
 static inline mln_lang_val_t *
 mln_lang_val_dup(mln_lang_ctx_t *ctx, mln_lang_val_t *val);
 static int mln_lang_val_cmp(const void *data1, const void *data2);
 static inline mln_lang_array_t *__mln_lang_array_new(mln_lang_ctx_t *ctx);
 static inline void __mln_lang_array_free(mln_lang_array_t *array);
-static int mln_lang_array_elem_indexCmp(const void *data1, const void *data2);
-static int mln_lang_array_elem_keyCmp(const void *data1, const void *data2);
+static int mln_lang_array_elem_index_cmp(const void *data1, const void *data2);
+static int mln_lang_array_elem_key_cmp(const void *data1, const void *data2);
 static inline mln_lang_array_elem_t *
 mln_lang_array_elem_new(mln_alloc_t *pool, mln_lang_var_t *key, mln_lang_var_t *val, mln_u64_t index);
 static inline void mln_lang_array_elem_free(void *data);
@@ -213,7 +213,7 @@ static void mln_lang_stack_handler_funcdef(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_set(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_setstm(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_block(mln_lang_ctx_t *ctx);
-static inline int mln_lang_metReturn(mln_lang_ctx_t *ctx);
+static inline int mln_lang_met_return(mln_lang_ctx_t *ctx);
 static inline int mln_lang_stack_handler_block_exp(mln_lang_ctx_t *ctx, mln_lang_block_t *block);
 static inline int mln_lang_stack_handler_block_stm(mln_lang_ctx_t *ctx, mln_lang_block_t *block);
 static inline int mln_lang_stack_handler_block_continue(mln_lang_ctx_t *ctx, mln_lang_block_t *block);
@@ -221,9 +221,9 @@ static inline int mln_lang_stack_handler_block_break(mln_lang_ctx_t *ctx, mln_la
 static inline int mln_lang_stack_handler_block_return(mln_lang_ctx_t *ctx, mln_lang_block_t *block);
 static inline int mln_lang_stack_handler_block_goto(mln_lang_ctx_t *ctx, mln_lang_block_t *block);
 static inline int mln_lang_stack_handler_block_if(mln_lang_ctx_t *ctx, mln_lang_block_t *block);
-static inline mln_lang_stack_node_t *mln_lang_withdrawToLoop(mln_lang_ctx_t *ctx);
-static inline mln_lang_stack_node_t *mln_lang_withdrawBreakLoop(mln_lang_ctx_t *ctx);
-static inline int mln_lang_withdrawUntilFunc(mln_lang_ctx_t *ctx);
+static inline mln_lang_stack_node_t *mln_lang_withdraw_to_loop(mln_lang_ctx_t *ctx);
+static inline mln_lang_stack_node_t *mln_lang_withdraw_break_loop(mln_lang_ctx_t *ctx);
+static inline int mln_lang_withdraw_until_func(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_while(mln_lang_ctx_t *ctx);
 static inline int __mln_lang_condition_is_true(mln_lang_var_t *var);
 static void mln_lang_stack_handler_switch(mln_lang_ctx_t *ctx);
@@ -265,8 +265,8 @@ static int mln_lang_dump_array_elem(mln_rbtree_node_t *node, void *rn_data, void
 static int mln_lang_msg_cmp(const void *data1, const void *data2);
 static mln_lang_msg_t *__mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *name);
 static void __mln_lang_msg_free(void *data);
-static void mln_lang_msg_scriptRecver(mln_event_t *ev, int fd, void *data);
-static void mln_lang_msg_cRecver(mln_event_t *ev, int fd, void *data);
+static void mln_lang_msg_script_recver(mln_event_t *ev, int fd, void *data);
+static void mln_lang_msg_c_recver(mln_event_t *ev, int fd, void *data);
 static int mln_lang_msg_func_new(mln_lang_ctx_t *ctx);
 static int mln_lang_msg_func_free(mln_lang_ctx_t *ctx);
 static int mln_lang_msg_func_recv(mln_lang_ctx_t *ctx);
@@ -283,19 +283,19 @@ static mln_lang_var_t *mln_lang_msg_func_dump_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_watch_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_unwatch_process(mln_lang_ctx_t *ctx);
 static int
-mln_lang_watch_funcBuild(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node, mln_lang_func_detail_t *funcdef, mln_lang_val_t *udata, mln_lang_val_t *new);
+mln_lang_watch_func_build(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node, mln_lang_func_detail_t *funcdef, mln_lang_val_t *udata, mln_lang_val_t *new);
 static inline int
-mln_lang_gc_item_new(mln_alloc_t *pool, mln_gc_t *gc, mln_lang_gcType_t type, void *data);
+mln_lang_gc_item_new(mln_alloc_t *pool, mln_gc_t *gc, mln_lang_gc_type_t type, void *data);
 static void mln_lang_gc_item_free(mln_lang_gc_item_t *gc_item);
-static inline void mln_lang_gc_item_freeImmediatly(mln_lang_gc_item_t *gc_item);
+static inline void mln_lang_gc_item_free_immediatly(mln_lang_gc_item_t *gc_item);
 static void *mln_lang_gc_item_getter(mln_lang_gc_item_t *gc_item);
 static void mln_lang_gc_item_setter(mln_lang_gc_item_t *gc_item, void *gc_data);
 static void mln_lang_gc_item_member_setter(mln_gc_t *gc, mln_lang_gc_item_t *gc_item);
 static int mln_lang_gc_setter_cmp(const void *data1, const void *data2);
 static void mln_lang_gc_item_member_setter_recursive(struct mln_lang_gc_setter_s *lgs, mln_lang_gc_item_t *gc_item);
-static int mln_lang_gc_item_member_setter_objScanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
-static int mln_lang_gc_item_member_setter_arrayScanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
-static void mln_lang_gc_item_move_handler(mln_gc_t *destGC, mln_lang_gc_item_t *gc_item);
+static int mln_lang_gc_item_member_setter_obj_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_gc_item_member_setter_array_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static void mln_lang_gc_item_move_handler(mln_gc_t *dest_gc, mln_lang_gc_item_t *gc_item);
 static void mln_lang_gc_item_root_setter(mln_gc_t *gc, mln_lang_ctx_t *ctx);
 static void mln_lang_gc_item_clean_searcher(mln_gc_t *gc, mln_lang_gc_item_t *gc_item);
 static int mln_lang_gc_item_clean_searcher_obj_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
@@ -968,7 +968,7 @@ void mln_lang_ctx_continue(mln_lang_ctx_t *ctx)
 }
 
 static inline mln_lang_set_detail_t *
-mln_lang_ctx_getClass(mln_lang_ctx_t *ctx)
+mln_lang_ctx_get_class(mln_lang_ctx_t *ctx)
 {
     mln_lang_hash_bucket_t *hb;
     mln_string_t *s, *name = NULL;
@@ -1394,7 +1394,7 @@ static inline void mln_lang_scope_free(mln_lang_scope_t *scope)
 }
 
 static inline mln_lang_symbol_node_t *
-mln_lang_symbol_node_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbolType_t type, void *data)
+mln_lang_symbol_node_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbol_type_t type, void *data)
 {
     mln_lang_symbol_node_t *ls;
     if ((ls = ctx->sym_head) != NULL) {
@@ -1449,12 +1449,12 @@ static void mln_lang_symbol_node_free(void *data)
     }
 }
 
-int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data)
+int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, void *data)
 {
     return __mln_lang_symbol_node_join(ctx, type, data);
 }
 
-static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data)
+static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, void *data)
 {
     mln_lang_symbol_node_t *symbol, *tmp;
     mln_string_t *name = type == M_LANG_SYMBOL_VAR? ((mln_lang_var_t *)data)->name: ((mln_lang_set_detail_t *)data)->name;
@@ -1508,7 +1508,7 @@ __mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local
 }
 
 static inline mln_lang_symbol_node_t *
-mln_lang_symbol_node_idSearch(mln_lang_ctx_t *ctx, mln_string_t *name)
+mln_lang_symbol_node_id_search(mln_lang_ctx_t *ctx, mln_string_t *name)
 {
     mln_string_t n = *name;
     if (name->len > 1 && name->data[0] == '_') {
@@ -1533,7 +1533,7 @@ mln_lang_set_detail_new(mln_alloc_t *pool, mln_string_t *name)
         return NULL;
     }
     rbattr.pool = pool;
-    rbattr.cmp = mln_lang_var_cmpName;
+    rbattr.cmp = mln_lang_var_name_cmp;
     rbattr.data_free = mln_lang_var_free;
     rbattr.cache = 0;
     if ((lcd->members = mln_rbtree_init(&rbattr)) == NULL) {
@@ -1787,7 +1787,7 @@ __mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
 }
 
 static inline mln_lang_var_t *
-mln_lang_var_dupWithVal(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
+mln_lang_var_dup_with_val(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
 {
     mln_lang_var_t *ret;
     mln_lang_val_t *val;
@@ -1812,7 +1812,7 @@ int mln_lang_var_cmp(const void *data1, const void *data2)
     return mln_lang_val_cmp(v1->val, v2->val);
 }
 
-static int mln_lang_var_cmpName(const void *data1, const void *data2)
+static int mln_lang_var_name_cmp(const void *data1, const void *data2)
 {
     mln_lang_var_t *v1 = (mln_lang_var_t *)data1;
     mln_lang_var_t *v2 = (mln_lang_var_t *)data2;
@@ -1975,7 +1975,7 @@ __mln_lang_var_value_set(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var
     ASSERT(dest != NULL && dest->val != NULL && src != NULL && src->val != NULL);
     mln_lang_val_t *val1 = dest->val;
     mln_lang_val_t *val2 = src->val;
-    mln_lang_val_freeData(val1);
+    mln_lang_val_data_free(val1);
     switch (val2->type) {
         case M_LANG_VAL_TYPE_NIL:
             val1->type = M_LANG_VAL_TYPE_NIL;
@@ -2031,7 +2031,7 @@ int mln_lang_var_value_set_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest,
     ASSERT(dest != NULL && dest->val != NULL && src != NULL && src->val != NULL);
     mln_lang_val_t *val1 = dest->val;
     mln_lang_val_t *val2 = src->val;
-    mln_lang_val_freeData(val1);
+    mln_lang_val_data_free(val1);
     switch (val2->type) {
         case M_LANG_VAL_TYPE_NIL:
             val1->type = M_LANG_VAL_TYPE_NIL;
@@ -2080,7 +2080,7 @@ void mln_lang_var_set_int(mln_lang_var_t *var, mln_s64_t i)
 {
     ASSERT(var != NULL && var->val != NULL);
     mln_lang_val_t *val = var->val;
-    mln_lang_val_freeData(val);
+    mln_lang_val_data_free(val);
     val->type = M_LANG_VAL_TYPE_INT;
     val->data.i = i;
 }
@@ -2089,7 +2089,7 @@ void mln_lang_var_set_real(mln_lang_var_t *var, double r)
 {
     ASSERT(var != NULL && var->val != NULL);
     mln_lang_val_t *val = var->val;
-    mln_lang_val_freeData(val);
+    mln_lang_val_data_free(val);
     val->type = M_LANG_VAL_TYPE_REAL;
     val->data.f = r;
 }
@@ -2098,14 +2098,14 @@ void mln_lang_var_set_string(mln_lang_var_t *var, mln_string_t *s)
 {
     ASSERT(var != NULL && var->val != NULL);
     mln_lang_val_t *val = var->val;
-    mln_lang_val_freeData(val);
+    mln_lang_val_data_free(val);
     val->type = M_LANG_VAL_TYPE_STRING;
     val->data.s = s;
 }
 
 
 static inline int
-mln_lang_funcdef_getArgs(mln_lang_ctx_t *ctx, \
+mln_lang_funcdef_args_get(mln_lang_ctx_t *ctx, \
                          mln_lang_exp_t *exp, \
                          mln_lang_var_t **head, \
                          mln_lang_var_t **tail, \
@@ -2162,7 +2162,7 @@ mln_lang_funcdef_getArgs(mln_lang_ctx_t *ctx, \
             return -1;
         }
         if (nargs == NULL) {/*closure args*/
-            sym = mln_lang_symbol_node_idSearch(ctx, factor->data.s_id);
+            sym = mln_lang_symbol_node_id_search(ctx, factor->data.s_id);
             if (sym != NULL) {
                 if (sym->type != M_LANG_SYMBOL_VAR) {
                     __mln_lang_var_free(var);
@@ -2193,7 +2193,7 @@ err:
 
 
 mln_lang_func_detail_t *mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
-                                                 mln_lang_funcType_t type, \
+                                                 mln_lang_func_type_t type, \
                                                  void *data, \
                                                  mln_lang_exp_t *exp, \
                                                  mln_lang_exp_t *closure)
@@ -2203,7 +2203,7 @@ mln_lang_func_detail_t *mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
 
 static inline mln_lang_func_detail_t *
 __mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
-                           mln_lang_funcType_t type, \
+                           mln_lang_func_type_t type, \
                            void *data, \
                            mln_lang_exp_t *exp, \
                            mln_lang_exp_t *closure)
@@ -2228,13 +2228,13 @@ __mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
             break;
     }
     if (exp != NULL) {
-        if (mln_lang_funcdef_getArgs(ctx, exp, &(lfd->args_head), &(lfd->args_tail), &(lfd->nargs)) < 0) {
+        if (mln_lang_funcdef_args_get(ctx, exp, &(lfd->args_head), &(lfd->args_tail), &(lfd->nargs)) < 0) {
             __mln_lang_func_detail_free(lfd);
             return NULL;
         }
     }
     if (closure != NULL) {
-        if (mln_lang_funcdef_getArgs(ctx, closure, &(lfd->closure_head), &(lfd->closure_tail), NULL) < 0) {
+        if (mln_lang_funcdef_args_get(ctx, closure, &(lfd->closure_head), &(lfd->closure_tail), NULL) < 0) {
             __mln_lang_func_detail_free(lfd);
             return NULL;
         }
@@ -2308,7 +2308,7 @@ mln_lang_object_new(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *in_set)
     obj->in_set = in_set;
     if (in_set != NULL) ++(in_set->ref);
     rbattr.pool = ctx->pool;
-    rbattr.cmp = mln_lang_var_cmpName;
+    rbattr.cmp = mln_lang_var_name_cmp;
     rbattr.data_free = mln_lang_var_free;
     rbattr.cache = 0;
     if ((obj->members = mln_rbtree_init(&rbattr)) == NULL) {
@@ -2355,7 +2355,7 @@ static inline void mln_lang_object_free(mln_lang_object_t *obj)
     if (obj->gc_item != NULL) {
         if (obj->gc_item->gc != NULL)
             mln_gc_remove(obj->gc_item->gc, obj->gc_item, obj->ctx->gc);
-        mln_lang_gc_item_freeImmediatly(obj->gc_item);
+        mln_lang_gc_item_free_immediatly(obj->gc_item);
     }
     mln_alloc_free(obj);
 }
@@ -2433,11 +2433,11 @@ static inline void __mln_lang_val_free(void *data)
         __mln_lang_func_detail_free(val->func);
         val->func = NULL;
     }
-    mln_lang_val_freeData(val);
+    mln_lang_val_data_free(val);
     mln_alloc_free(val);
 }
 
-static inline void mln_lang_val_freeData(mln_lang_val_t *val)
+static inline void mln_lang_val_data_free(mln_lang_val_t *val)
 {
     switch (val->type) {
         case M_LANG_VAL_TYPE_OBJECT:
@@ -2568,7 +2568,7 @@ static int mln_lang_val_cmp(const void *data1, const void *data2)
             } else if (val1->data.func->type < val2->data.func->type) {
                 ret = -1;
             } else {
-                mln_lang_funcType_t type = val1->data.func->type;
+                mln_lang_func_type_t type = val1->data.func->type;
                 mln_lang_func_detail_t *f1 = val1->data.func;
                 mln_lang_func_detail_t *f2 = val2->data.func;
                 switch (type) {
@@ -2611,14 +2611,14 @@ static inline mln_lang_array_t *__mln_lang_array_new(mln_lang_ctx_t *ctx)
         return NULL;
     }
     rbattr.pool = ctx->pool;
-    rbattr.cmp = mln_lang_array_elem_indexCmp;
+    rbattr.cmp = mln_lang_array_elem_index_cmp;
     rbattr.data_free = mln_lang_array_elem_free;
     rbattr.cache = 0;
     if ((la->elems_index = mln_rbtree_init(&rbattr)) == NULL) {
         mln_alloc_free(la);
         return NULL;
     }
-    rbattr.cmp = mln_lang_array_elem_keyCmp;
+    rbattr.cmp = mln_lang_array_elem_key_cmp;
     rbattr.data_free = NULL;
     if ((la->elems_key = mln_rbtree_init(&rbattr)) == NULL) {
         mln_rbtree_destroy(la->elems_index);
@@ -2658,12 +2658,12 @@ static inline void __mln_lang_array_free(mln_lang_array_t *array)
     if (array->gc_item != NULL) {
         if (array->gc_item->gc != NULL)
             mln_gc_remove(array->gc_item->gc, array->gc_item, array->ctx->gc);
-        mln_lang_gc_item_freeImmediatly(array->gc_item);
+        mln_lang_gc_item_free_immediatly(array->gc_item);
     }
     mln_alloc_free(array);
 }
 
-static int mln_lang_array_elem_indexCmp(const void *data1, const void *data2)
+static int mln_lang_array_elem_index_cmp(const void *data1, const void *data2)
 {
     mln_lang_array_elem_t *elem1 = (mln_lang_array_elem_t *)data1;
     mln_lang_array_elem_t *elem2 = (mln_lang_array_elem_t *)data2;
@@ -2672,7 +2672,7 @@ static int mln_lang_array_elem_indexCmp(const void *data1, const void *data2)
     return 0;
 }
 
-static int mln_lang_array_elem_keyCmp(const void *data1, const void *data2)
+static int mln_lang_array_elem_key_cmp(const void *data1, const void *data2)
 {
     mln_lang_array_elem_t *elem1 = (mln_lang_array_elem_t *)data1;
     mln_lang_array_elem_t *elem2 = (mln_lang_array_elem_t *)data2;
@@ -2777,7 +2777,7 @@ mln_lang_array_get_other(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_
         __mln_lang_errmsg(ctx, "No memory.");
         return NULL;
     }
-    if ((k = mln_lang_var_dupWithVal(ctx, key)) == NULL) {
+    if ((k = mln_lang_var_dup_with_val(ctx, key)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_var_free(nil);
         return NULL;
@@ -2861,7 +2861,7 @@ int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key)
         }
         return 1;
     }
-    if ((k = mln_lang_var_dupWithVal(ctx, key)) == NULL) {
+    if ((k = mln_lang_var_dup_with_val(ctx, key)) == NULL) {
         __mln_lang_var_free(nil);
         return 0;
     }
@@ -3182,7 +3182,7 @@ static void mln_lang_stack_handler_funcdef(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_lang_set_detail_t *in_set = mln_lang_ctx_getClass(ctx);
+    mln_lang_set_detail_t *in_set = mln_lang_ctx_get_class(ctx);
     if ((func = __mln_lang_func_detail_new(ctx, \
                                          M_FUNC_EXTERNAL, \
                                          funcdef->stm, \
@@ -3311,7 +3311,7 @@ static void mln_lang_stack_handler_setstm(mln_lang_ctx_t *ctx)
         node->step = 1;
 again:
         if (ls->type == M_SETSTM_VAR) {
-            in_set = mln_lang_ctx_getClass(ctx);
+            in_set = mln_lang_ctx_get_class(ctx);
             if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 mln_lang_job_free(ctx);
@@ -3421,7 +3421,7 @@ nil:
             mln_lang_stack_pop(ctx, node);
             mln_lang_stack_node_free(node);
         } else {
-            if (mln_lang_metReturn(ctx) < 0) {
+            if (mln_lang_met_return(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -3430,7 +3430,7 @@ nil:
     __mln_lang_run(ctx->lang);
 }
 
-static inline int mln_lang_metReturn(mln_lang_ctx_t *ctx)
+static inline int mln_lang_met_return(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node, *last;
     ASSERT(ctx->scope_tail->type == M_LANG_SCOPE_TYPE_FUNC);
@@ -3486,7 +3486,7 @@ static inline int mln_lang_stack_handler_block_stm(mln_lang_ctx_t *ctx, mln_lang
 
 static inline int mln_lang_stack_handler_block_continue(mln_lang_ctx_t *ctx, mln_lang_block_t *block)
 {
-    mln_lang_stack_node_t *node = mln_lang_withdrawToLoop(ctx);
+    mln_lang_stack_node_t *node = mln_lang_withdraw_to_loop(ctx);
     if (node == NULL) {
         __mln_lang_errmsg(ctx, "Invalid 'continue' usage.");
         return -1;
@@ -3496,7 +3496,7 @@ static inline int mln_lang_stack_handler_block_continue(mln_lang_ctx_t *ctx, mln
 
 static inline int mln_lang_stack_handler_block_break(mln_lang_ctx_t *ctx, mln_lang_block_t *block)
 {
-    mln_lang_stack_node_t *node = mln_lang_withdrawBreakLoop(ctx);
+    mln_lang_stack_node_t *node = mln_lang_withdraw_break_loop(ctx);
     if (node == NULL) {
         __mln_lang_errmsg(ctx, "Invalid 'break' usage.");
         return -1;
@@ -3576,7 +3576,7 @@ static inline int mln_lang_stack_handler_block_if(mln_lang_ctx_t *ctx, mln_lang_
     return 0;
 }
 
-static inline mln_lang_stack_node_t *mln_lang_withdrawToLoop(mln_lang_ctx_t *ctx)
+static inline mln_lang_stack_node_t *mln_lang_withdraw_to_loop(mln_lang_ctx_t *ctx)
 {
     mln_lang_ctx_reset_ret_var(ctx);
     mln_lang_stack_node_t *node;
@@ -3598,7 +3598,7 @@ static inline mln_lang_stack_node_t *mln_lang_withdrawToLoop(mln_lang_ctx_t *ctx
     return node;
 }
 
-static inline mln_lang_stack_node_t *mln_lang_withdrawBreakLoop(mln_lang_ctx_t *ctx)
+static inline mln_lang_stack_node_t *mln_lang_withdraw_break_loop(mln_lang_ctx_t *ctx)
 {
     mln_lang_ctx_reset_ret_var(ctx);
     mln_lang_stack_node_t *node;
@@ -3625,7 +3625,7 @@ static inline mln_lang_stack_node_t *mln_lang_withdrawBreakLoop(mln_lang_ctx_t *
     return node;
 }
 
-static inline int mln_lang_withdrawUntilFunc(mln_lang_ctx_t *ctx)
+static inline int mln_lang_withdraw_until_func(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node;
     ASSERT(ctx->scope_tail->type == M_LANG_SCOPE_TYPE_FUNC);
@@ -3845,7 +3845,7 @@ goon2:
         mln_lang_stack_node_t *sw_node = mln_lang_stack_top(ctx);
         mln_lang_stack_push(ctx, node);
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4319,7 +4319,7 @@ again:
         }
     } else if (node->step == 3) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4330,7 +4330,7 @@ again:
 goon3:
         node->step = 4;
         if (node->ret_var != NULL && node->ret_var->val->func != NULL) {
-            if (mln_lang_watch_funcBuild(ctx, \
+            if (mln_lang_watch_func_build(ctx, \
                                          node, \
                                          node->ret_var->val->func, \
                                          node->ret_var->val->udata, \
@@ -4346,7 +4346,7 @@ goon3:
         }
     } else if (node->step == 4) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4508,7 +4508,7 @@ again:
         }
     } else if (node->step == 4) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4619,7 +4619,7 @@ again:
         }
     } else if (node->step == 4) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4736,7 +4736,7 @@ again:
         }
     } else if (node->step == 4) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4847,7 +4847,7 @@ again:
         }
     } else if (node->step == 4) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -4958,7 +4958,7 @@ again:
         }
     } else if (node->step == 4) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5072,7 +5072,7 @@ again:
         }
     } else if (node->step == 4) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5170,7 +5170,7 @@ again:
         }
     } else if (node->step == 2) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5180,7 +5180,7 @@ again:
 goon2:
         node->step = 3;
         if (node->ret_var != NULL && node->ret_var->val->func != NULL) {
-            if (mln_lang_watch_funcBuild(ctx, \
+            if (mln_lang_watch_func_build(ctx, \
                                          node, \
                                          node->ret_var->val->func, \
                                          node->ret_var->val->udata, \
@@ -5196,7 +5196,7 @@ goon2:
         }
     } else if (node->step == 3) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5305,7 +5305,7 @@ again_index:
         }
     } else if (node->step == 3) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5445,7 +5445,7 @@ again_property:
         }
     } else if (node->step == 6) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5700,7 +5700,7 @@ static void mln_lang_stack_handler_spec(mln_lang_ctx_t *ctx)
                 type = M_LSNT_SPEC;
                 break;
             case M_SPEC_NEW:
-                if (mln_lang_stack_handler_spec_new(ctx, spec->data.setName) < 0) {
+                if (mln_lang_stack_handler_spec_new(ctx, spec->data.set_name) < 0) {
                     mln_lang_job_free(ctx);
                     return;
                 }
@@ -5810,7 +5810,7 @@ again:
         }
     } else if (node->step == 2) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5824,7 +5824,7 @@ goon2:
             node->ret_var != NULL && \
             node->ret_var->val->func != NULL)
         {
-            if (mln_lang_watch_funcBuild(ctx, \
+            if (mln_lang_watch_func_build(ctx, \
                                          node, \
                                          node->ret_var->val->func, \
                                          node->ret_var->val->udata, \
@@ -5840,7 +5840,7 @@ goon2:
         }
     } else if (node->step == 3) {
         if (node->call) {
-            if (mln_lang_withdrawUntilFunc(ctx) < 0) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
                 mln_lang_job_free(ctx);
                 return;
             }
@@ -5872,7 +5872,7 @@ static inline int mln_lang_stack_handler_spec_new(mln_lang_ctx_t *ctx, mln_strin
 again:
     sym = __mln_lang_symbol_node_search(ctx, name, 0);
     if (sym == NULL) {
-        sym = mln_lang_symbol_node_idSearch(ctx, name);
+        sym = mln_lang_symbol_node_id_search(ctx, name);
         if (sym == NULL) goto err;
         if (sym->type != M_LANG_SYMBOL_VAR) goto err;
         if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) goto err;
@@ -5886,7 +5886,7 @@ err:
         return -1;
     } else {
         if (sym->type == M_LANG_SYMBOL_SET) goto goon;
-        sym = mln_lang_symbol_node_idSearch(ctx, name);
+        sym = mln_lang_symbol_node_id_search(ctx, name);
         if (sym == NULL) goto err;
         if (sym->type != M_LANG_SYMBOL_VAR) goto err;
         if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) goto err;
@@ -5924,7 +5924,7 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
             case M_FACTOR_ID:
             {
                 mln_lang_symbol_node_t *sym;
-                if ((sym = mln_lang_symbol_node_idSearch(ctx, factor->data.s_id)) != NULL) {
+                if ((sym = mln_lang_symbol_node_id_search(ctx, factor->data.s_id)) != NULL) {
                     if (sym->type == M_LANG_SYMBOL_VAR) {
                         __mln_lang_ctx_set_ret_var(ctx, mln_lang_var_ref(sym->data.var));
                     } else {/*M_LANG_SYMBOL_SET*/
@@ -6429,7 +6429,7 @@ void mln_lang_msg_handler_set(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c
     ((mln_lang_msg_t *)(rn->data))->c_handler = handler;
 }
 
-int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC)
+int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int is_c)
 {
     mln_lang_msg_t tmp, *lm;
     mln_rbtree_node_t *rn;
@@ -6437,7 +6437,7 @@ int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *v
     rn = mln_rbtree_search(ctx->msg_map, ctx->msg_map->root, &tmp);
     if (mln_rbtree_null(rn, ctx->msg_map)) return -1;
     lm = (mln_lang_msg_t *)(rn->data);
-    if (isC) {
+    if (is_c) {
         if (!lm->script_read) return -1;
         if (lm->script_val != NULL) __mln_lang_val_free(lm->script_val);
         lm->script_val = val;
@@ -6449,7 +6449,7 @@ int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *v
                              M_EV_SEND|M_EV_ONESHOT, \
                              M_EV_UNLIMITED, \
                              lm, \
-                             mln_lang_msg_scriptRecver) < 0)
+                             mln_lang_msg_script_recver) < 0)
         {
             return -1;
         }
@@ -6460,7 +6460,7 @@ int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *v
                              M_EV_SEND|M_EV_ONESHOT, \
                              M_EV_UNLIMITED, \
                              lm, \
-                             mln_lang_msg_cRecver) < 0)
+                             mln_lang_msg_c_recver) < 0)
         {
             return -1;
         }
@@ -6472,7 +6472,7 @@ int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *v
     return 0;
 }
 
-static void mln_lang_msg_scriptRecver(mln_event_t *ev, int fd, void *data)
+static void mln_lang_msg_script_recver(mln_event_t *ev, int fd, void *data)
 {
     mln_lang_var_t *var;
     mln_lang_val_t *val;
@@ -6493,7 +6493,7 @@ static void mln_lang_msg_scriptRecver(mln_event_t *ev, int fd, void *data)
     mln_lang_ctx_continue(ctx);
 }
 
-static void mln_lang_msg_cRecver(mln_event_t *ev, int fd, void *data)
+static void mln_lang_msg_c_recver(mln_event_t *ev, int fd, void *data)
 {
     mln_lang_msg_t *lm = (mln_lang_msg_t *)data;
     ASSERT(!lm->c_read);
@@ -7032,7 +7032,7 @@ static mln_lang_var_t *mln_lang_func_unwatch_process(mln_lang_ctx_t *ctx)
 }
 
 static int
-mln_lang_watch_funcBuild(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node, mln_lang_func_detail_t *funcdef, mln_lang_val_t *udata, mln_lang_val_t *new)
+mln_lang_watch_func_build(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node, mln_lang_func_detail_t *funcdef, mln_lang_val_t *udata, mln_lang_val_t *new)
 {
     mln_lang_funccall_val_t *func;
     mln_lang_var_t *var;
@@ -7142,7 +7142,7 @@ static int mln_lang_msg_installer(mln_lang_ctx_t *ctx)
  * mln_lang_gc_item_t
  */
 static inline int
-mln_lang_gc_item_new(mln_alloc_t *pool, mln_gc_t *gc, mln_lang_gcType_t type, void *data)
+mln_lang_gc_item_new(mln_alloc_t *pool, mln_gc_t *gc, mln_lang_gc_type_t type, void *data)
 {
     mln_lang_gc_item_t *gi;
     if ((gi = (mln_lang_gc_item_t *)mln_alloc_m(pool, sizeof(mln_lang_gc_item_t))) == NULL) {
@@ -7186,7 +7186,7 @@ static void mln_lang_gc_item_free(mln_lang_gc_item_t *gc_item)
     mln_alloc_free(gc_item);
 }
 
-static inline void mln_lang_gc_item_freeImmediatly(mln_lang_gc_item_t *gc_item)
+static inline void mln_lang_gc_item_free_immediatly(mln_lang_gc_item_t *gc_item)
 {
     if (gc_item == NULL) return;
     mln_alloc_free(gc_item);
@@ -7244,16 +7244,16 @@ static void mln_lang_gc_item_member_setter_recursive(struct mln_lang_gc_setter_s
     switch (gc_item->type) {
         case M_GC_OBJ:
             t = gc_item->data.obj->members;
-            mln_rbtree_scan_all(t, mln_lang_gc_item_member_setter_objScanner, lgs);
+            mln_rbtree_scan_all(t, mln_lang_gc_item_member_setter_obj_scanner, lgs);
             break;
         default:
             t = gc_item->data.array->elems_index;
-            mln_rbtree_scan_all(t, mln_lang_gc_item_member_setter_arrayScanner, lgs);
+            mln_rbtree_scan_all(t, mln_lang_gc_item_member_setter_array_scanner, lgs);
             break;
     }
 }
 
-static int mln_lang_gc_item_member_setter_objScanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_lang_gc_item_member_setter_obj_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var = (mln_lang_var_t *)rn_data;
@@ -7270,7 +7270,7 @@ static int mln_lang_gc_item_member_setter_objScanner(mln_rbtree_node_t *node, vo
     return 0;
 }
 
-static int mln_lang_gc_item_member_setter_arrayScanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_lang_gc_item_member_setter_array_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_lang_val_t *val;
     mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
@@ -7301,9 +7301,9 @@ static int mln_lang_gc_item_member_setter_arrayScanner(mln_rbtree_node_t *node, 
     return 0;
 }
 
-static void mln_lang_gc_item_move_handler(mln_gc_t *destGC, mln_lang_gc_item_t *gc_item)
+static void mln_lang_gc_item_move_handler(mln_gc_t *dest_gc, mln_lang_gc_item_t *gc_item)
 {
-    gc_item->gc = destGC;
+    gc_item->gc = dest_gc;
 }
 
 static void mln_lang_gc_item_root_setter(mln_gc_t *gc, mln_lang_ctx_t *ctx)
@@ -7383,7 +7383,7 @@ static int mln_lang_gc_item_clean_searcher_array_scanner(mln_rbtree_node_t *node
     mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
     struct mln_lang_gc_scan_s *gs = (struct mln_lang_gc_scan_s *)udata;
     mln_s32_t type;
-    int needToFree = 0;
+    int need_to_free = 0;
 
     if (elem->key != NULL) {
         type = mln_lang_var_val_type_get(elem->key);
@@ -7394,7 +7394,7 @@ static int mln_lang_gc_item_clean_searcher_array_scanner(mln_rbtree_node_t *node
                     --(val->data.obj->ref);
                 }
                 val->data.obj = NULL;
-                needToFree = 1;
+                need_to_free = 1;
             }
         } else if (type == M_LANG_VAL_TYPE_ARRAY) {
             if (mln_gc_clean_add(gs->gc, val->data.array->gc_item) < 0) {
@@ -7402,7 +7402,7 @@ static int mln_lang_gc_item_clean_searcher_array_scanner(mln_rbtree_node_t *node
                     --(val->data.array->ref);
                 }
                 val->data.array = NULL;
-                needToFree = 1;
+                need_to_free = 1;
             }
         }
     }
@@ -7415,7 +7415,7 @@ static int mln_lang_gc_item_clean_searcher_array_scanner(mln_rbtree_node_t *node
                     --(val->data.obj->ref);
                 }
                 val->data.obj = NULL;
-                needToFree = 1;
+                need_to_free = 1;
             }
         } else if (type == M_LANG_VAL_TYPE_ARRAY) {
             if (mln_gc_clean_add(gs->gc, val->data.array->gc_item) < 0) {
@@ -7423,11 +7423,11 @@ static int mln_lang_gc_item_clean_searcher_array_scanner(mln_rbtree_node_t *node
                     --(val->data.array->ref);
                 }
                 val->data.array = NULL;
-                needToFree = 1;
+                need_to_free = 1;
             }
         }
     }
-    if (needToFree) {
+    if (need_to_free) {
         mln_rbtree_delete(gs->tree, node);
         mln_rbtree_node_free(gs->tree, node);
     }

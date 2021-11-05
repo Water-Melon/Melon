@@ -27,13 +27,13 @@ struct mln_thread_pool_attr {
     void                              *main_data;
     mln_thread_process                 child_process_handler;
     mln_thread_process                 main_process_handler;
-    mln_thread_dataFree                free_handler;
+    mln_thread_data_free                free_handler;
     mln_u64_t                          cond_timeout; /*ms*/
     mln_u32_t                          max;
     mln_u32_t                          concurrency;
 };
 typedef int  (*mln_thread_process)(void *);
-typedef void (*mln_thread_dataFree)(void *);
+typedef void (*mln_thread_data_free)(void *);
 ```
 
 描述：创建并运行内存池。
@@ -56,10 +56,10 @@ typedef void (*mln_thread_dataFree)(void *);
 
 
 
-#### mln_thread_pool_addResource
+#### mln_thread_pool_resource_add
 
 ```c
-int mln_thread_pool_addResource(void *data);
+int mln_thread_pool_resource_add(void *data);
 ```
 
 描述：将资源`data`放入到资源池中。本函数仅应由主线程调用，用于主线程向子线程下发任务所用。
@@ -80,10 +80,10 @@ void mln_thread_quit(void);
 
 
 
-#### mln_thread_ResourceInfo
+#### mln_thread_resource_info
 
 ```c
-void mln_thread_ResourceInfo(struct mln_thread_pool_info *info);
+void mln_thread_resource_info(struct mln_thread_pool_info *info);
 
 struct mln_thread_pool_info {
     mln_u32_t                          max_num;
@@ -158,7 +158,7 @@ static int main_process_handler(void *data)
         }
         n = snprintf(text, 15, "hello world");
         text[n] = 0;
-        mln_thread_pool_addResource(text);
+        mln_thread_pool_resource_add(text);
         usleep(1000);
     }
 }

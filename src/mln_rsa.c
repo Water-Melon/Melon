@@ -18,8 +18,8 @@
 static inline int mln_rsa_rsaep_rsadp(mln_rsa_key_t *key, mln_bignum_t *in, mln_bignum_t *out);
 static inline void mln_rsa_pub_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen);
 static inline void mln_rsa_pri_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen);
-static inline mln_u8ptr_t mln_rsa_antiPaddingPublic(mln_u8ptr_t in, mln_size_t len);
-static inline mln_u8ptr_t mln_rsa_antiPaddingPrivate(mln_u8ptr_t in, mln_size_t len);
+static inline mln_u8ptr_t mln_rsa_anti_padding_public(mln_u8ptr_t in, mln_size_t len);
+static inline mln_u8ptr_t mln_rsa_anti_padding_private(mln_u8ptr_t in, mln_size_t len);
 static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_string_t *m, mln_u32_t hash_type);
 static inline mln_string_t *mln_EMSAPKCS1V15_decode(mln_alloc_t *pool, mln_string_t *e, mln_u32_t *hash_type);
 
@@ -30,7 +30,7 @@ static mln_u8_t EMSAPKCS1V15_HASH_SHA1[] = \
 static mln_u8_t EMSAPKCS1V15_HASH_SHA256[] = \
 {0x60, 0x86, 0x48, 0x1, 0x65, 0x3, 0x4, 0x2, 0x1};
 struct mln_EMSAPKCS1V15_HASH_s {
-    mln_u8ptr_t digestAlgorithm;
+    mln_u8ptr_t digest_algorithm;
     mln_size_t  len;
 } EMSAPKCS1V15_HASH[] = {
     {EMSAPKCS1V15_HASH_MD5, sizeof(EMSAPKCS1V15_HASH_MD5)},
@@ -64,7 +64,7 @@ int mln_rsa_key_generate(mln_rsa_key_t *pub, mln_rsa_key_t *pri, mln_u32_t bits)
 {
     if (bits <= 88 || bits > M_BIGNUM_BITS) return -1;
 
-    mln_bignum_t p, q, n, phiN, one, d;
+    mln_bignum_t p, q, n, phi_n, one, d;
     mln_bignum_assign(&one, "1", 1);
     mln_bignum_t e, tmpp_1, tmpq_1;
 
@@ -96,12 +96,12 @@ lp:
     mln_bignum_sub(&q, &one);
     tmpp_1 = p;
     tmpq_1 = q;
-    phiN = p;
-    mln_bignum_mul(&phiN, &q);
+    phi_n = p;
+    mln_bignum_mul(&phi_n, &q);
 
     mln_bignum_assign(&e, "0x10001", 7);
 
-    if (mln_bignum_extend_eulid(&e, &phiN, &d, NULL) < 0) goto lp;
+    if (mln_bignum_extend_eulid(&e, &phi_n, &d, NULL) < 0) goto lp;
     if (mln_bignum_compare(&d, &e) <= 0) goto lp;
 
     if (pub != NULL) {
@@ -189,7 +189,7 @@ static inline void mln_rsa_pri_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8p
     memcpy(out, in, inlen);
 }
 
-static inline mln_u8ptr_t mln_rsa_antiPaddingPublic(mln_u8ptr_t in, mln_size_t len)
+static inline mln_u8ptr_t mln_rsa_anti_padding_public(mln_u8ptr_t in, mln_size_t len)
 {
     if (in == NULL || len == 0 || *in != 0) return NULL;
     mln_u8ptr_t p = in + 2, end = in + len;
@@ -201,7 +201,7 @@ static inline mln_u8ptr_t mln_rsa_antiPaddingPublic(mln_u8ptr_t in, mln_size_t l
     return p;
 }
 
-static inline mln_u8ptr_t mln_rsa_antiPaddingPrivate(mln_u8ptr_t in, mln_size_t len)
+static inline mln_u8ptr_t mln_rsa_anti_padding_private(mln_u8ptr_t in, mln_size_t len)
 {
     if (in == NULL || len == 0 || *in != 0) return NULL;
     mln_u8ptr_t p = in + 2, end = in + len;
@@ -299,7 +299,7 @@ mln_string_t *mln_RSAESPKCS1V15_public_decrypt(mln_rsa_key_t *pub, mln_string_t 
             return NULL;
         }
 
-        pos = mln_rsa_antiPaddingPrivate(in, nlen);
+        pos = mln_rsa_anti_padding_private(in, nlen);
         if (pos == NULL) {
             free(buf);
             return NULL;
@@ -392,7 +392,7 @@ mln_string_t *mln_RSAESPKCS1V15_private_decrypt(mln_rsa_key_t *pri, mln_string_t
             return NULL;
         }
 
-        pos = mln_rsa_antiPaddingPublic(in, nlen);
+        pos = mln_rsa_anti_padding_public(in, nlen);
         if (pos == NULL) {
             free(buf);
             return NULL;
@@ -463,7 +463,7 @@ static inline mln_string_t *mln_EMSAPKCS1V15_encode(mln_alloc_t *pool, mln_strin
         return NULL;
     }
     if (mln_asn1_encode_object_identifier(&res, \
-                                          EMSAPKCS1V15_HASH[hash_type].digestAlgorithm, \
+                                          EMSAPKCS1V15_HASH[hash_type].digest_algorithm, \
                                           EMSAPKCS1V15_HASH[hash_type].len) != M_ASN1_RET_OK)
     {
 err:
@@ -657,14 +657,14 @@ int mln_RSASSAPKCS1V15_verify(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_string_
 
 static inline mln_string_t *mln_EMSAPKCS1V15_decode(mln_alloc_t *pool, mln_string_t *e, mln_u32_t *hash_type)
 {
-    mln_asn1_deresult_t *res, *subRes, *ssubRes;
+    mln_asn1_deresult_t *res, *sub_res, *ssub_res;
     int err = M_ASN1_RET_OK;
     mln_string_t *ret, tmp, t;
     mln_u8ptr_t code_buf;
     mln_u64_t code_len;
     struct mln_EMSAPKCS1V15_HASH_s *p, *end;
 
-    if ((res = mln_asn1_decodeRef(e->data, e->len, &err, pool)) == NULL) {
+    if ((res = mln_asn1_decode_ref(e->data, e->len, &err, pool)) == NULL) {
         return NULL;
     }
 
@@ -677,51 +677,51 @@ err:
     }
 
 
-    subRes = mln_asn1_deresult_get_content(res, 0);
-    if (mln_asn1_deresult_get_ident(subRes) != M_ASN1_ID_SEQUENCE || \
-        mln_asn1_deresult_content_num(subRes) != 2)
+    sub_res = mln_asn1_deresult_get_content(res, 0);
+    if (mln_asn1_deresult_get_ident(sub_res) != M_ASN1_ID_SEQUENCE || \
+        mln_asn1_deresult_content_num(sub_res) != 2)
     {
         goto err;
     }
-    ssubRes = mln_asn1_deresult_get_content(subRes, 0);
-    if (mln_asn1_deresult_get_ident(ssubRes) != M_ASN1_ID_OBJECT_IDENTIFIER) {
+    ssub_res = mln_asn1_deresult_get_content(sub_res, 0);
+    if (mln_asn1_deresult_get_ident(ssub_res) != M_ASN1_ID_OBJECT_IDENTIFIER) {
         goto err;
     }
-    if ((ssubRes = mln_asn1_deresult_get_content(ssubRes, 0)) == NULL) {
+    if ((ssub_res = mln_asn1_deresult_get_content(ssub_res, 0)) == NULL) {
         goto err;
     }
-    code_buf = mln_asn1_deresult_get_code(ssubRes);
-    code_len = mln_asn1_deresult_get_code_length(ssubRes);
+    code_buf = mln_asn1_deresult_get_code(ssub_res);
+    code_len = mln_asn1_deresult_get_code_length(ssub_res);
     mln_string_nset(&tmp, code_buf, code_len);
     p = EMSAPKCS1V15_HASH;
     end = EMSAPKCS1V15_HASH + sizeof(EMSAPKCS1V15_HASH)/sizeof(struct mln_EMSAPKCS1V15_HASH_s);
     for (; p < end; ++p) {
-        mln_string_nset(&t, p->digestAlgorithm, p->len);
+        mln_string_nset(&t, p->digest_algorithm, p->len);
         if (!mln_string_strcmp(&tmp, &t)) break;
     }
     if (p >= end) goto err;
     *hash_type = p - EMSAPKCS1V15_HASH;
 
-    ssubRes = mln_asn1_deresult_get_content(subRes, 1);
-    if (mln_asn1_deresult_get_ident(ssubRes) != M_ASN1_ID_NULL || \
-        mln_asn1_deresult_content_num(ssubRes) != 1)
+    ssub_res = mln_asn1_deresult_get_content(sub_res, 1);
+    if (mln_asn1_deresult_get_ident(ssub_res) != M_ASN1_ID_NULL || \
+        mln_asn1_deresult_content_num(ssub_res) != 1)
     {
         goto err;
     }
-    ssubRes = mln_asn1_deresult_get_content(ssubRes, 0);
-    if (mln_asn1_deresult_get_code_length(ssubRes) != 0) {
+    ssub_res = mln_asn1_deresult_get_content(ssub_res, 0);
+    if (mln_asn1_deresult_get_code_length(ssub_res) != 0) {
         goto err;
     }
     
 
-    subRes = mln_asn1_deresult_get_content(res, 1);
-    if (mln_asn1_deresult_get_ident(subRes) != M_ASN1_ID_OCTET_STRING || \
-        mln_asn1_deresult_content_num(subRes) != 1)
+    sub_res = mln_asn1_deresult_get_content(res, 1);
+    if (mln_asn1_deresult_get_ident(sub_res) != M_ASN1_ID_OCTET_STRING || \
+        mln_asn1_deresult_content_num(sub_res) != 1)
     {
         goto err;
     }
-    subRes = mln_asn1_deresult_get_content(subRes, 0);
-    mln_string_nset(&tmp, mln_asn1_deresult_get_code(subRes), mln_asn1_deresult_get_code_length(subRes));
+    sub_res = mln_asn1_deresult_get_content(sub_res, 0);
+    mln_string_nset(&tmp, mln_asn1_deresult_get_code(sub_res), mln_asn1_deresult_get_code_length(sub_res));
     ret = mln_string_dup(&tmp);
     mln_asn1_deresult_free(res);
 

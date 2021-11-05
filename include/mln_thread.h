@@ -73,7 +73,7 @@ struct mln_thread_s {
     mln_rbtree_node_t         *node;
 };
 
-extern void mln_thread_clearMsg(mln_thread_msg_t *msg);
+extern void mln_thread_clear_msg(mln_thread_msg_t *msg);
 extern int mln_load_thread(mln_event_t *ev) __NONNULL1(1);
 extern int mln_thread_create(mln_thread_t *t, mln_event_t *ev) __NONNULL2(1,2);
 /*

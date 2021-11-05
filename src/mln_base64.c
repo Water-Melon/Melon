@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "mln_base64.h"
 
-static mln_s8_t baseMap[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static mln_s8_t base_map[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 int mln_base64_encode(mln_u8ptr_t in, mln_uauto_t inlen, \
                       mln_u8ptr_t *out, mln_uauto_t *outlen)
@@ -23,27 +23,27 @@ int mln_base64_encode(mln_u8ptr_t in, mln_uauto_t inlen, \
 
     for (i = 0, state = 0, j = 0; i < inlen; ++j) {
         if (state == 0) {
-            o[j] = (mln_u8_t)baseMap[(in[i] >> 2) & 0x3f];
+            o[j] = (mln_u8_t)base_map[(in[i] >> 2) & 0x3f];
             state = 1;
         } else if (state == 1) {
             if (i+1 >= inlen) {
-                o[j++] = (mln_u8_t)baseMap[(in[i] & 0x3) << 4];
+                o[j++] = (mln_u8_t)base_map[(in[i] & 0x3) << 4];
                 o[j++] = (mln_u8_t)'=';
                 o[j] = (mln_u8_t)'=';
                 break;
             } else {
-                o[j] = (mln_u8_t)baseMap[((in[i] & 0x3) << 4)|((in[i+1] >> 4) & 0xf)];
+                o[j] = (mln_u8_t)base_map[((in[i] & 0x3) << 4)|((in[i+1] >> 4) & 0xf)];
                 ++i;
                 state = 2;
             }
         } else {
             if (i+1 >= inlen) {
-                o[j++] = (mln_u8_t)baseMap[((in[i] & 0xf) << 2)];
+                o[j++] = (mln_u8_t)base_map[((in[i] & 0xf) << 2)];
                 o[j] = (mln_u8_t)'=';
                 break;
             } else {
-                o[j++] = (mln_u8_t)baseMap[((in[i] & 0xf) << 2)|((in[i+1] >> 6) & 0x3)];
-                o[j] = (mln_u8_t)baseMap[in[++i] & 0x3f];
+                o[j++] = (mln_u8_t)base_map[((in[i] & 0xf) << 2)|((in[i+1] >> 6) & 0x3)];
+                o[j] = (mln_u8_t)base_map[in[++i] & 0x3f];
                 ++i;
                 state = 0;
             }
@@ -69,27 +69,27 @@ int mln_base64_pool_encode(mln_alloc_t *pool, \
 
     for (i = 0, state = 0, j = 0; i < inlen; ++j) {
         if (state == 0) {
-            o[j] = (mln_u8_t)baseMap[(in[i] >> 2) & 0x3f];
+            o[j] = (mln_u8_t)base_map[(in[i] >> 2) & 0x3f];
             state = 1;
         } else if (state == 1) {
             if (i+1 >= inlen) {
-                o[j++] = (mln_u8_t)baseMap[(in[i] & 0x3) << 4];
+                o[j++] = (mln_u8_t)base_map[(in[i] & 0x3) << 4];
                 o[j++] = (mln_u8_t)'=';
                 o[j] = (mln_u8_t)'=';
                 break;
             } else {
-                o[j] = (mln_u8_t)baseMap[((in[i] & 0x3) << 4)|((in[i+1] >> 4) & 0xf)];
+                o[j] = (mln_u8_t)base_map[((in[i] & 0x3) << 4)|((in[i+1] >> 4) & 0xf)];
                 ++i;
                 state = 2;
             }
         } else {
             if (i+1 >= inlen) {
-                o[j++] = (mln_u8_t)baseMap[((in[i] & 0xf) << 2)];
+                o[j++] = (mln_u8_t)base_map[((in[i] & 0xf) << 2)];
                 o[j] = (mln_u8_t)'=';
                 break;
             } else {
-                o[j++] = (mln_u8_t)baseMap[((in[i] & 0xf) << 2)|((in[i+1] >> 6) & 0x3)];
-                o[j] = (mln_u8_t)baseMap[in[++i] & 0x3f];
+                o[j++] = (mln_u8_t)base_map[((in[i] & 0xf) << 2)|((in[i+1] >> 6) & 0x3)];
+                o[j] = (mln_u8_t)base_map[in[++i] & 0x3f];
                 ++i;
                 state = 0;
             }
@@ -108,7 +108,7 @@ int mln_base64_decode(mln_u8ptr_t in, mln_uauto_t inlen, \
     mln_uauto_t i, state, j;
 
     for (i = 0; i < 64; ++i) {
-        ascii[(mln_u8_t)baseMap[i]] = i;
+        ascii[(mln_u8_t)base_map[i]] = i;
     }
 
     *outlen = inlen / 4 * 3;
@@ -160,7 +160,7 @@ int mln_base64_pool_decode(mln_alloc_t *pool, \
     mln_uauto_t i, state, j;
 
     for (i = 0; i < 64; ++i) {
-        ascii[(mln_u8_t)baseMap[i]] = i;
+        ascii[(mln_u8_t)base_map[i]] = i;
     }
 
     *outlen = inlen / 4 * 3;

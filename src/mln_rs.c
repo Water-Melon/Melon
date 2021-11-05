@@ -92,7 +92,7 @@ static mln_u8_t mln_rs_gflog[] = {
                              mln_rs_gflog[(dst)]-mln_rs_gflog[(src)]) ]))
 
 static inline mln_size_t
-mln_rs_calcPower(mln_size_t base, mln_size_t exp)
+mln_rs_power_calc(mln_size_t base, mln_size_t exp)
 {
     mln_s32_t i;
     mln_size_t save = base;
@@ -251,13 +251,13 @@ static mln_rs_matrix_t *mln_rs_matrix_inverse(mln_rs_matrix_t *matrix)
 }
 
 static mln_rs_matrix_t *
-mln_rs_matrix_coMatrix(mln_size_t row, mln_size_t additionRow)
+mln_rs_matrix_co_matrix(mln_size_t row, mln_size_t addition_row)
 {
     mln_u8ptr_t data, p;
     mln_size_t i, j, k;
     mln_rs_matrix_t *matrix;
 
-    if ((data = (mln_u8ptr_t)malloc((row+additionRow)*row)) == NULL) {
+    if ((data = (mln_u8ptr_t)malloc((row+addition_row)*row)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
@@ -267,13 +267,13 @@ mln_rs_matrix_coMatrix(mln_size_t row, mln_size_t additionRow)
             *p++ = k==i? 1: 0;
         }
     }
-    for (j = 1; i < row+additionRow; ++i, ++j) {
+    for (j = 1; i < row+addition_row; ++i, ++j) {
         for (k = 1; k <= row; ++k) {
-            *p++ = (mln_u8_t)mln_rs_calcPower(k, j-1);
+            *p++ = (mln_u8_t)mln_rs_power_calc(k, j-1);
         }
     }
 
-    if ((matrix = mln_rs_matrix_new(row+additionRow, row, data, 0)) == NULL) {
+    if ((matrix = mln_rs_matrix_new(row+addition_row, row, data, 0)) == NULL) {
         free(data);
         errno = ENOMEM;
         return NULL;
@@ -282,7 +282,7 @@ mln_rs_matrix_coMatrix(mln_size_t row, mln_size_t additionRow)
 }
 
 static mln_rs_matrix_t *
-mln_rs_matrix_coInverseMatrix(uint8_t **data_vector, size_t len, size_t n, size_t k)
+mln_rs_matrix_co_inverse_matrix(uint8_t **data_vector, size_t len, size_t n, size_t k)
 {
     mln_size_t i, j, row = 0;
     mln_rs_matrix_t *matrix, *inverse;
@@ -306,7 +306,7 @@ mln_rs_matrix_coInverseMatrix(uint8_t **data_vector, size_t len, size_t n, size_
     for (i = 1; row < n && data_vector < pend; ++data_vector, ++i) {
         if (*data_vector == NULL) continue;
         for (j = 1; j <= n; ++j) {
-            *p++ = (mln_u8_t)mln_rs_calcPower(j, i-1);
+            *p++ = (mln_u8_t)mln_rs_power_calc(j, i-1);
         }
         ++row;
     }
@@ -327,7 +327,7 @@ mln_rs_matrix_coInverseMatrix(uint8_t **data_vector, size_t len, size_t n, size_
 }
 
 static mln_rs_matrix_t *
-mln_rs_matrix_dataMatrix(uint8_t **data_vector, size_t len, size_t n, size_t k)
+mln_rs_matrix_data_matrix(uint8_t **data_vector, size_t len, size_t n, size_t k)
 {
     mln_size_t row = 0;
     mln_u8ptr_t data, p, *pend;
@@ -402,9 +402,9 @@ mln_rs_result_t *
 mln_rs_encode(uint8_t *data_vector, size_t len, size_t n, size_t k)
 {
     mln_rs_result_t *result;
-    mln_rs_matrix_t *matrix, *coMatrix, *resMatrix;
+    mln_rs_matrix_t *matrix, *co_matrix, *res_matrix;
 
-    if (data_vector == NULL || !len || !n || !k || mln_rs_calcPower(n, k-1) > 255) {
+    if (data_vector == NULL || !len || !n || !k || mln_rs_power_calc(n, k-1) > 255) {
         errno = EINVAL;
         return NULL;
     }
@@ -413,26 +413,26 @@ mln_rs_encode(uint8_t *data_vector, size_t len, size_t n, size_t k)
         errno = ENOMEM;
         return NULL;
     }
-    if ((coMatrix = mln_rs_matrix_coMatrix(n, k)) == NULL) {
+    if ((co_matrix = mln_rs_matrix_co_matrix(n, k)) == NULL) {
         mln_rs_matrix_free(matrix);
         errno = ENOMEM;
         return NULL;
     }
-    resMatrix = mln_rs_matrix_mul(coMatrix, matrix);
+    res_matrix = mln_rs_matrix_mul(co_matrix, matrix);
     mln_rs_matrix_free(matrix);
-    mln_rs_matrix_free(coMatrix);
-    if (resMatrix == NULL) {
+    mln_rs_matrix_free(co_matrix);
+    if (res_matrix == NULL) {
         errno = ENOMEM;
         return NULL;
     }
 
-    if ((result = mln_rs_result_new(resMatrix->data, n+k, (n+k)*len)) == NULL) {
-        mln_rs_matrix_free(resMatrix);
+    if ((result = mln_rs_result_new(res_matrix->data, n+k, (n+k)*len)) == NULL) {
+        mln_rs_matrix_free(res_matrix);
         errno = ENOMEM;
         return NULL;
     }
-    resMatrix->is_ref = 1;
-    mln_rs_matrix_free(resMatrix);
+    res_matrix->is_ref = 1;
+    mln_rs_matrix_free(res_matrix);
     return result;
 }
 
@@ -441,7 +441,7 @@ mln_rs_decode(uint8_t **data_vector, size_t len, size_t n, size_t k)
 {
     mln_u8ptr_t data, p, *pp, *pend;
     mln_rs_result_t *result;
-    mln_rs_matrix_t *coMatrix, *dataMatrix, *resultMatrix;
+    mln_rs_matrix_t *co_matrix, *data_matrix, *result_matrix;
     if (!n && !k) {
         errno = EINVAL;
         return NULL;
@@ -464,32 +464,32 @@ mln_rs_decode(uint8_t **data_vector, size_t len, size_t n, size_t k)
         return result;
     }
 
-    if ((coMatrix = mln_rs_matrix_coInverseMatrix(data_vector, len, n, k)) == NULL) {
+    if ((co_matrix = mln_rs_matrix_co_inverse_matrix(data_vector, len, n, k)) == NULL) {
         return NULL;
     }
-    if ((dataMatrix = mln_rs_matrix_dataMatrix(data_vector, len, n, k)) == NULL) {
+    if ((data_matrix = mln_rs_matrix_data_matrix(data_vector, len, n, k)) == NULL) {
         int err = errno;
-        mln_rs_matrix_free(coMatrix);
+        mln_rs_matrix_free(co_matrix);
         errno = err;
         return NULL;
     }
-    resultMatrix = mln_rs_matrix_mul(coMatrix, dataMatrix);
-    mln_rs_matrix_free(coMatrix);
-    mln_rs_matrix_free(dataMatrix);
-    if (resultMatrix == NULL) {
+    result_matrix = mln_rs_matrix_mul(co_matrix, data_matrix);
+    mln_rs_matrix_free(co_matrix);
+    mln_rs_matrix_free(data_matrix);
+    if (result_matrix == NULL) {
         errno = ENOMEM;
         return NULL;
     }
-    if ((result = mln_rs_result_new(resultMatrix->data, \
-                                    resultMatrix->row, \
-                                    resultMatrix->row * resultMatrix->col)) == NULL)
+    if ((result = mln_rs_result_new(result_matrix->data, \
+                                    result_matrix->row, \
+                                    result_matrix->row * result_matrix->col)) == NULL)
     {
-        mln_rs_matrix_free(resultMatrix);
+        mln_rs_matrix_free(result_matrix);
         errno = ENOMEM;
         return NULL;
     }
-    resultMatrix->data = NULL;
-    mln_rs_matrix_free(resultMatrix);
+    result_matrix->data = NULL;
+    mln_rs_matrix_free(result_matrix);
     return result;
 }
 

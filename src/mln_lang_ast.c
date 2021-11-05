@@ -283,11 +283,11 @@ mln_lang_elemlist_new(mln_alloc_t *pool, \
 static void mln_lang_elemlist_free(void *data);
 
 static int mln_lang_semantic_start(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_stmBlock(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_stm_block(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_stmfunc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_setstmVar(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_setstmFunc(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_setstm_var(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_setstm_func(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_blockstmexp(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_blockstmstm(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_labelstm(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -393,7 +393,7 @@ mln_string(NULL),
 
 static mln_production_t prod_tbl[] = {
 {"start: stm LANG_TK_EOF", mln_lang_semantic_start},
-{"stm: blockstm stm", mln_lang_semantic_stmBlock},
+{"stm: blockstm stm", mln_lang_semantic_stm_block},
 {"stm: funcdef stm", mln_lang_semantic_stmfunc},
 {"stm: LANG_TK_ID LANG_TK_LBRACE setstm LANG_TK_RBRACE stm", mln_lang_semantic_stmset},
 {"stm: LANG_TK_ID LANG_TK_COLON stm", mln_lang_semantic_labelstm},
@@ -401,8 +401,8 @@ static mln_production_t prod_tbl[] = {
 {"stm: LANG_TK_FOR LANG_TK_LPAR exp LANG_TK_SEMIC exp LANG_TK_SEMIC exp LANG_TK_RPAR blockstm stm", mln_lang_semantic_forstm},
 {"stm: LANG_TK_SWITCH LANG_TK_LPAR exp LANG_TK_RPAR LANG_TK_LBRACE switchstm LANG_TK_RBRACE stm", mln_lang_semantic_switchstm},
 {"stm: ", NULL},
-{"setstm: LANG_TK_ID LANG_TK_SEMIC setstm", mln_lang_semantic_setstmVar},
-{"setstm: funcdef setstm", mln_lang_semantic_setstmFunc},
+{"setstm: LANG_TK_ID LANG_TK_SEMIC setstm", mln_lang_semantic_setstm_var},
+{"setstm: funcdef setstm", mln_lang_semantic_setstm_func},
 {"setstm: ", NULL},
 {"funcdef: LANG_TK_AT LANG_TK_ID LANG_TK_LPAR exp LANG_TK_RPAR use LANG_TK_LBRACE stm LANG_TK_RBRACE", mln_lang_semantic_funcdef},
 {"use: LANG_TK_DOLL LANG_TK_LPAR exp LANG_TK_RPAR", mln_lang_semantic_funcdef_closure},
@@ -1864,7 +1864,7 @@ mln_lang_spec_new(mln_alloc_t *pool, \
             ls->data.spec = (mln_lang_spec_t *)data;
             break;
         case M_SPEC_NEW:
-            ls->data.setName = (mln_string_t *)data;
+            ls->data.set_name = (mln_string_t *)data;
             break;
         case M_SPEC_PARENTH:
             ls->data.exp = (mln_lang_exp_t *)data;
@@ -1897,7 +1897,7 @@ static void mln_lang_spec_free(void *data)
                 right = ls->data.spec;
                 break;
             case M_SPEC_NEW:
-                if (ls->data.setName != NULL) mln_string_free(ls->data.setName);
+                if (ls->data.set_name != NULL) mln_string_free(ls->data.set_name);
                 right = NULL;
                 break;
             case M_SPEC_PARENTH:
@@ -2038,7 +2038,7 @@ static int mln_lang_semantic_start(mln_factor_t *left, mln_factor_t **right, voi
     return 0;
 }
 
-static int mln_lang_semantic_stmBlock(mln_factor_t *left, mln_factor_t **right, void *data)
+static int mln_lang_semantic_stm_block(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_stm_t *stm;
@@ -2093,7 +2093,7 @@ static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, vo
     return 0;
 }
 
-static int mln_lang_semantic_setstmVar(mln_factor_t *left, mln_factor_t **right, void *data)
+static int mln_lang_semantic_setstm_var(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
@@ -2114,7 +2114,7 @@ static int mln_lang_semantic_setstmVar(mln_factor_t *left, mln_factor_t **right,
     return 0;
 }
 
-static int mln_lang_semantic_setstmFunc(mln_factor_t *left, mln_factor_t **right, void *data)
+static int mln_lang_semantic_setstm_func(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_setstm_t *lc = mln_lang_setstm_new(pool, \

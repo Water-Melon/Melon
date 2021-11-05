@@ -15,7 +15,7 @@ typedef void *(*gc_item_getter)   (void *data);
 typedef void  (*gc_item_setter)   (void *data, void *item);
 typedef void  (*gc_item_freer)    (void *data);
 typedef void  (*gc_member_setter) (mln_gc_t *gc, void *data);
-typedef void  (*gc_move_handler)  (mln_gc_t *destGC, void *data);
+typedef void  (*gc_move_handler)  (mln_gc_t *dest_gc, void *data);
 typedef void  (*gc_root_setter)   (mln_gc_t *gc, void *data);
 typedef void  (*gc_clean_searcher)(mln_gc_t *gc, void *data);
 typedef void  (*gc_free_handler)  (void *data);
@@ -70,7 +70,7 @@ extern void mln_gc_suspect(mln_gc_t *gc, void *data) __NONNULL2(1,2);
 extern void mln_gc_merge(mln_gc_t *dest, mln_gc_t *src) __NONNULL2(1,2);
 extern void mln_gc_collect_add(mln_gc_t *gc, void *data) __NONNULL1(1);
 extern int mln_gc_clean_add(mln_gc_t *gc, void *data) __NONNULL2(1,2);
-extern void mln_gc_collect(mln_gc_t *gc, void *rootData) __NONNULL1(1);
-extern void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *procGC)__NONNULL2(1,2);
+extern void mln_gc_collect(mln_gc_t *gc, void *root_data) __NONNULL1(1);
+extern void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *proc_gc)__NONNULL2(1,2);
 
 #endif

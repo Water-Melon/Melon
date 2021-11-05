@@ -40,7 +40,7 @@
 
 typedef struct {
     mln_u64_t key;
-    mln_u64_t subKeys[__M_DES_SUBKEY_SIZE];
+    mln_u64_t sub_keys[__M_DES_SUBKEY_SIZE];
 } mln_des_t;
 
 extern void mln_des_init(mln_des_t *d, mln_u64_t key) __NONNULL1(1);

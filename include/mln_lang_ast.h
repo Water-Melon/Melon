@@ -402,7 +402,7 @@ struct mln_lang_spec_s {
         mln_lang_factor_t       *factor;
         mln_lang_spec_t         *spec;
         mln_lang_funccall_t     *func;
-        mln_string_t            *setName;
+        mln_string_t            *set_name;
     } data;
 };
 

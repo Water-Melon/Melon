@@ -13,7 +13,7 @@
 static mln_asn1_deresult_t *
 mln_asn1_decode_recursive(mln_u8ptr_t *code, mln_u64_t *code_len, int *err, mln_alloc_t *pool, mln_u32_t free);
 static int mln_encode_set_cmp(const void *data1, const void *data2);
-static int mln_encode_setOf_cmp(const void *data1, const void *data2);
+static int mln_encode_setof_cmp(const void *data1, const void *data2);
 static void mln_asn1_deresult_dump_recursive(mln_asn1_deresult_t *res, mln_u32_t nblank);
 
 /*
@@ -64,7 +64,7 @@ void mln_asn1_deresult_free(mln_asn1_deresult_t *res)
 /*
  * decode
  */
-mln_asn1_deresult_t *mln_asn1_decodeChain(mln_chain_t *in, int *err, mln_alloc_t *pool)
+mln_asn1_deresult_t *mln_asn1_decode_chain(mln_chain_t *in, int *err, mln_alloc_t *pool)
 {
     mln_u8ptr_t code, p;
     mln_u64_t code_len = 0;
@@ -114,7 +114,7 @@ mln_asn1_deresult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_al
     return mln_asn1_decode_recursive(&buf, &len, err, pool, 1);
 }
 
-mln_asn1_deresult_t *mln_asn1_decodeRef(void *data, mln_u64_t len, int *err, mln_alloc_t *pool)
+mln_asn1_deresult_t *mln_asn1_decode_ref(void *data, mln_u64_t len, int *err, mln_alloc_t *pool)
 {
     mln_u8ptr_t buf = (mln_u8ptr_t)data;
     return mln_asn1_decode_recursive(&buf, &len, err, pool, 0);
@@ -127,7 +127,7 @@ mln_asn1_decode_recursive(mln_u8ptr_t *code, mln_u64_t *code_len, int *err, mln_
     mln_u32_t _class, struc, ident;
     mln_u8_t ch;
     mln_u64_t length = 0;
-    mln_asn1_deresult_t *res, *subRes;
+    mln_asn1_deresult_t *res, *sub_res;
 
     if (*code_len < 2) {
 inc:
@@ -166,7 +166,7 @@ inc:
 
     if (struc) {
         while (length > 0) {
-            if ((subRes = mln_asn1_decode_recursive(&p, &length, err, pool, 0)) == NULL) {
+            if ((sub_res = mln_asn1_decode_recursive(&p, &length, err, pool, 0)) == NULL) {
                 res->free = 0;
                 mln_asn1_deresult_free(res);
                 return NULL;
@@ -185,16 +185,16 @@ inc:
                 }
                 res->contents = ptr;
             }
-            res->contents[res->pos++] = subRes;
+            res->contents[res->pos++] = sub_res;
         }
     } else {
-        if ((subRes = mln_asn1_deresult_new(pool, M_ASN1_CLASS_UNIVERSAL, 0, M_ASN1_ID_NONE, p, length, 0)) == NULL) {
+        if ((sub_res = mln_asn1_deresult_new(pool, M_ASN1_CLASS_UNIVERSAL, 0, M_ASN1_ID_NONE, p, length, 0)) == NULL) {
             res->free = 0;
             mln_asn1_deresult_free(res);
             *err = M_ASN1_RET_ERROR;
             return NULL;
         }
-        res->contents[res->pos++] = subRes;
+        res->contents[res->pos++] = sub_res;
         p += length;
     }
 
@@ -349,7 +349,7 @@ void mln_asn1_enresult_free(mln_asn1_enresult_t *res)
 /*
  * encode
  */
-static int mln_asn1_encode_addContent(mln_asn1_enresult_t *res, mln_u8ptr_t buf, mln_u64_t len)
+static int mln_asn1_encode_add_content(mln_asn1_enresult_t *res, mln_u8ptr_t buf, mln_u64_t len)
 {
     if (res->pos == res->max) {
         res->max += ((res->max)>>1);
@@ -367,7 +367,7 @@ static int mln_asn1_encode_addContent(mln_asn1_enresult_t *res, mln_u8ptr_t buf,
     return 0;
 }
 
-#define mln_asn1_encode_calcLength(bytes,len); \
+#define mln_asn1_encode_length_calc(bytes,len); \
 {\
     (len) = (bytes) + 1;\
     if ((mln_u64_t)(bytes) > 127) {\
@@ -405,7 +405,7 @@ static int mln_asn1_encode_addContent(mln_asn1_enresult_t *res, mln_u8ptr_t buf,
     }\
 }
 
-#define mln_asn1_encode_fillLength(bytes,ptr); \
+#define mln_asn1_encode_length_fill(bytes,ptr); \
 {\
     if ((mln_u64_t)(bytes) > 127) {\
         if ((mln_u64_t)(bytes) > 0xff) {\
@@ -485,7 +485,7 @@ int mln_asn1_encode_sequence(mln_asn1_enresult_t *res)
     mln_alloc_t *pool;
     mln_string_t *s, *send;
 
-    mln_asn1_encode_calcLength(res->size, len);
+    mln_asn1_encode_length_calc(res->size, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -494,7 +494,7 @@ int mln_asn1_encode_sequence(mln_asn1_enresult_t *res)
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | (1 << 5) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_SEQUENCE);
-    mln_asn1_encode_fillLength(res->size, p);
+    mln_asn1_encode_length_fill(res->size, p);
     send = res->contents + res->pos;
     for (s = res->contents; s < send; ++s) {
         memcpy(p, s->data, s->len);
@@ -502,7 +502,7 @@ int mln_asn1_encode_sequence(mln_asn1_enresult_t *res)
         mln_alloc_free(s->data);
     }
     res->pos = 0;
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -517,7 +517,7 @@ int mln_asn1_encode_boolean(mln_asn1_enresult_t *res, mln_u8_t val)
     mln_alloc_t *pool;
     mln_u8ptr_t buf, p;
 
-    mln_asn1_encode_calcLength(1, len);
+    mln_asn1_encode_length_calc(1, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -526,10 +526,10 @@ int mln_asn1_encode_boolean(mln_asn1_enresult_t *res, mln_u8_t val)
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_BOOLEAN);
-    mln_asn1_encode_fillLength(1, p);
+    mln_asn1_encode_length_fill(1, p);
     *p = val;
 
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -544,7 +544,7 @@ int mln_asn1_encode_integer(mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_
     mln_alloc_t *pool;
     mln_u8ptr_t buf, p;
 
-    mln_asn1_encode_calcLength(nints, len);
+    mln_asn1_encode_length_calc(nints, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -553,10 +553,10 @@ int mln_asn1_encode_integer(mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_
     
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_INTEGER);
-    mln_asn1_encode_fillLength(nints, p);
+    mln_asn1_encode_length_fill(nints, p);
     memcpy(p, ints, nints);
 
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -571,7 +571,7 @@ int mln_asn1_encode_bitstring(mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u6
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
 
-    mln_asn1_encode_calcLength(bytes, len);
+    mln_asn1_encode_length_calc(bytes, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -580,7 +580,7 @@ int mln_asn1_encode_bitstring(mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u6
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_BIT_STRING);
-    mln_asn1_encode_fillLength(bytes, p);
+    mln_asn1_encode_length_fill(bytes, p);
     *p++ = (nbits % 8)? 8-(nbits % 8): 0;
     if (bytes-1) memcpy(p, bits, bytes-1);
     p += (bytes-1);
@@ -589,7 +589,7 @@ int mln_asn1_encode_bitstring(mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u6
         *p = ((*p >> (8 - (nbits % 8))) & 0xff) << (8 - (nbits % 8));
     }
 
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -604,7 +604,7 @@ int mln_asn1_encode_octetstring(mln_asn1_enresult_t *res, mln_u8ptr_t octets, ml
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
 
-    mln_asn1_encode_calcLength(n, len);
+    mln_asn1_encode_length_calc(n, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -613,9 +613,9 @@ int mln_asn1_encode_octetstring(mln_asn1_enresult_t *res, mln_u8ptr_t octets, ml
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_OCTET_STRING);
-    mln_asn1_encode_fillLength(n, p);
+    mln_asn1_encode_length_fill(n, p);
     memcpy(p, octets, n);
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -635,7 +635,7 @@ int mln_asn1_encode_null(mln_asn1_enresult_t *res)
 
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_NULL);
     buf[1] = 0;
-    if (mln_asn1_encode_addContent(res, buf, 2) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, 2) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -650,7 +650,7 @@ int mln_asn1_encode_object_identifier(mln_asn1_enresult_t *res, mln_u8ptr_t oid,
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
 
-    mln_asn1_encode_calcLength(n, len);
+    mln_asn1_encode_length_calc(n, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -659,9 +659,9 @@ int mln_asn1_encode_object_identifier(mln_asn1_enresult_t *res, mln_u8ptr_t oid,
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_OBJECT_IDENTIFIER);
-    mln_asn1_encode_fillLength(n, p);
+    mln_asn1_encode_length_fill(n, p);
     memcpy(p, oid, n);
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -676,7 +676,7 @@ int mln_asn1_encode_utf8string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
 
-    mln_asn1_encode_calcLength(slen, len);
+    mln_asn1_encode_length_calc(slen, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -685,9 +685,9 @@ int mln_asn1_encode_utf8string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_UTF8STRING);
-    mln_asn1_encode_fillLength(slen, p);
+    mln_asn1_encode_length_fill(slen, p);
     memcpy(p, s, slen);
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -707,7 +707,7 @@ int mln_asn1_encode_printablestring(mln_asn1_enresult_t *res, mln_s8ptr_t s, mln
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
 
-    mln_asn1_encode_calcLength(slen, len);
+    mln_asn1_encode_length_calc(slen, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -716,9 +716,9 @@ int mln_asn1_encode_printablestring(mln_asn1_enresult_t *res, mln_s8ptr_t s, mln
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_PRINTABLESTRING);
-    mln_asn1_encode_fillLength(slen, p);
+    mln_asn1_encode_length_fill(slen, p);
     memcpy(p, s, slen);
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -733,7 +733,7 @@ int mln_asn1_encode_t61string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
 
-    mln_asn1_encode_calcLength(slen, len);
+    mln_asn1_encode_length_calc(slen, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -742,9 +742,9 @@ int mln_asn1_encode_t61string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_T61STRING);
-    mln_asn1_encode_fillLength(slen, p);
+    mln_asn1_encode_length_fill(slen, p);
     memcpy(p, s, slen);
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -759,7 +759,7 @@ int mln_asn1_encode_ia5string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
 
-    mln_asn1_encode_calcLength(slen, len);
+    mln_asn1_encode_length_calc(slen, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -768,9 +768,9 @@ int mln_asn1_encode_ia5string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_IA5STRING);
-    mln_asn1_encode_fillLength(slen, p);
+    mln_asn1_encode_length_fill(slen, p);
     memcpy(p, s, slen);
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -790,7 +790,7 @@ int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time)
     if (uc.year > 2000) uc.year -= 2000;
     else uc.year -= 1900;
 
-    mln_asn1_encode_calcLength(13, len);
+    mln_asn1_encode_length_calc(13, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -799,7 +799,7 @@ int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time)
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_UTCTIME);
-    mln_asn1_encode_fillLength(13, p);
+    mln_asn1_encode_length_fill(13, p);
     *p++ = uc.year/10 + '0';
     *p++ = uc.year%10 + '0';
     *p++ = uc.month/10 + '0';
@@ -813,7 +813,7 @@ int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time)
     *p++ = uc.second/10 + '0';
     *p++ = uc.second%10 + '0';
     *p = 'Z';
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -831,7 +831,7 @@ int mln_asn1_encode_generalized_time(mln_asn1_enresult_t *res, time_t time)
 
     mln_time2utc(time, &uc);
 
-    mln_asn1_encode_calcLength(15, len);
+    mln_asn1_encode_length_calc(15, len);
 
     pool = mln_asn1_enresult_get_pool(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
@@ -840,7 +840,7 @@ int mln_asn1_encode_generalized_time(mln_asn1_enresult_t *res, time_t time)
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_GENERALIZEDTIME);
-    mln_asn1_encode_fillLength(15, p);
+    mln_asn1_encode_length_fill(15, p);
     *p++ = uc.year/1000 + '0';
     *p++ = (uc.year%1000)/100 + '0';
     *p++ = (uc.year%100)/10 + '0';
@@ -856,7 +856,7 @@ int mln_asn1_encode_generalized_time(mln_asn1_enresult_t *res, time_t time)
     *p++ = uc.second/10 + '0';
     *p++ = uc.second%10 + '0';
     *p = 'Z';
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -872,11 +872,11 @@ int mln_asn1_encode_set(mln_asn1_enresult_t *res)
     mln_alloc_t *pool = mln_asn1_enresult_get_pool(res);
     mln_string_t *s, *send;
 
-    mln_asn1_encode_calcLength(res->size, len);
+    mln_asn1_encode_length_calc(res->size, len);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) return M_ASN1_RET_ERROR;
     buf[0] = (res->_class << 6) | (1 << 5) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_SET);
     p = buf + 1;
-    mln_asn1_encode_fillLength(res->size, p);
+    mln_asn1_encode_length_fill(res->size, p);
 
     qsort(res->contents, res->pos, sizeof(mln_string_t), mln_encode_set_cmp);
     send = res->contents + res->pos;
@@ -886,7 +886,7 @@ int mln_asn1_encode_set(mln_asn1_enresult_t *res)
         mln_alloc_free(s->data);
     }
     res->pos = 0;
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -911,13 +911,13 @@ int mln_asn1_encode_setof(mln_asn1_enresult_t *res)
     mln_alloc_t *pool = mln_asn1_enresult_get_pool(res);
     mln_string_t *s, *send;
 
-    mln_asn1_encode_calcLength(res->size, len);
+    mln_asn1_encode_length_calc(res->size, len);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) return M_ASN1_RET_ERROR;
     buf[0] = (res->_class << 6) | (1 << 5) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_SET);
     p = buf + 1;
-    mln_asn1_encode_fillLength(res->size, p);
+    mln_asn1_encode_length_fill(res->size, p);
 
-    qsort(res->contents, res->pos, sizeof(mln_string_t), mln_encode_setOf_cmp);
+    qsort(res->contents, res->pos, sizeof(mln_string_t), mln_encode_setof_cmp);
     send = res->contents + res->pos;
     for (s = res->contents; s < send; ++s) {
         memcpy(p, s->data, s->len);
@@ -925,7 +925,7 @@ int mln_asn1_encode_setof(mln_asn1_enresult_t *res)
         mln_alloc_free(s->data);
     }
     res->pos = 0;
-    if (mln_asn1_encode_addContent(res, buf, len) < 0) {
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
         mln_alloc_free(buf);
         return M_ASN1_RET_ERROR;
     }
@@ -934,7 +934,7 @@ int mln_asn1_encode_setof(mln_asn1_enresult_t *res)
     return M_ASN1_RET_OK;
 }
 
-static int mln_encode_setOf_cmp(const void *data1, const void *data2)
+static int mln_encode_setof_cmp(const void *data1, const void *data2)
 {
     mln_string_t *s1 = (mln_string_t *)data1;
     mln_string_t *s2 = (mln_string_t *)data2;
@@ -957,7 +957,7 @@ int mln_asn1_encode_merge(mln_asn1_enresult_t *dest, mln_asn1_enresult_t *src)
     for (s = src->contents; s < send; ++s) {
         if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, s->len)) == NULL) return M_ASN1_RET_ERROR;
         memcpy(buf, s->data, s->len);
-        if (mln_asn1_encode_addContent(dest, buf, s->len) < 0) {
+        if (mln_asn1_encode_add_content(dest, buf, s->len) < 0) {
             return M_ASN1_RET_ERROR;
         }
     }

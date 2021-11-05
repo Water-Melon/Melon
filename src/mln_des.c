@@ -46,7 +46,7 @@ static mln_u8_t extension_permutation[] = {
     23, 24, 25, 26, 27, 28, 27, 28, 29, 30, 31, 0
 };
 
-static mln_u8_t sBox[8][64] = {
+static mln_u8_t s_box[8][64] = {
     {
     14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
     0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8,
@@ -129,11 +129,11 @@ void mln_des_init(mln_des_t *d, mln_u64_t key)
         _l28key = __M_DES_ROL28(_l28key, move_times[j]);
         _56key = ((_h28key << 28) | _l28key) & 0xffffffffffffffllu;
         end = compression_permutation + sizeof(compression_permutation);
-        d->subKeys[j] = 0;
+        d->sub_keys[j] = 0;
         for (i = 47, scan = compression_permutation; scan < end; ++scan, --i) {
-            d->subKeys[j] |= (((_56key >> (55 - (*scan))) & 0x1) << i);
+            d->sub_keys[j] |= (((_56key >> (55 - (*scan))) & 0x1) << i);
         }
-        d->subKeys[j] &= 0xffffffffffffllu;
+        d->sub_keys[j] &= 0xffffffffffffllu;
     }
 }
 
@@ -178,7 +178,7 @@ mln_u64_t mln_des(mln_des_t *d, mln_u64_t msg, mln_u32_t is_encrypt)
         for (i = 0; i < 16; ++i) {
             tmp = right;
             mln_des_extension_permute(&right);
-            right ^= d->subKeys[i];
+            right ^= d->sub_keys[i];
             mln_des_s_permute(&right);
             mln_des_p_permute(&right);
             right ^= left;
@@ -188,7 +188,7 @@ mln_u64_t mln_des(mln_des_t *d, mln_u64_t msg, mln_u32_t is_encrypt)
         for (i = 15; i >= 0; --i) {
             tmp = right;
             mln_des_extension_permute(&right);
-            right ^= d->subKeys[i];
+            right ^= d->sub_keys[i];
             mln_des_s_permute(&right);
             mln_des_p_permute(&right);
             right ^= left;
@@ -236,7 +236,7 @@ static inline void mln_des_s_permute(mln_u64_t *right)
         _64tmp = (dup >> (i*6)) & 0x3f;
         _32tmp = (_64tmp & 0x1) | (((_64tmp >> 5) & 0x1) << 1);
         index = ((_64tmp >> 1) & 0xf) + (_32tmp << 4);
-        ret |= ((mln_u64_t)(sBox[7 - i][index] & 0xf) << (i << 2));
+        ret |= ((mln_u64_t)(s_box[7 - i][index] & 0xf) << (i << 2));
     }
 
     *right = ret & 0xffffffff;

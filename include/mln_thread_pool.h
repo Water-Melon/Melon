@@ -17,7 +17,7 @@
 typedef struct mln_thread_pool_s mln_thread_pool_t;
 
 typedef int  (*mln_thread_process)(void *);
-typedef void (*mln_thread_dataFree)(void *);
+typedef void (*mln_thread_data_free)(void *);
 
 typedef struct mln_thread_pool_resource_s {
     void                              *data;
@@ -49,16 +49,16 @@ struct mln_thread_pool_s {
     mln_u32_t                          quit:1;
     mln_u32_t                          padding:31;
     mln_u64_t                          cond_timeout;/*ms*/
-    mln_size_t                         nRes;
+    mln_size_t                         n_res;
     mln_thread_process                 process_handler;
-    mln_thread_dataFree                free_handler;
+    mln_thread_data_free               free_handler;
 };
 
 struct mln_thread_pool_attr {
     void                              *main_data;
     mln_thread_process                 child_process_handler;
     mln_thread_process                 main_process_handler;
-    mln_thread_dataFree                free_handler;
+    mln_thread_data_free               free_handler;
     mln_u64_t                          cond_timeout; /*ms*/
     mln_u32_t                          max;
     mln_u32_t                          concurrency;
@@ -72,7 +72,7 @@ struct mln_thread_pool_info {
 };
 
 extern int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr) __NONNULL1(1);
-extern int mln_thread_pool_addResource(void *data) __NONNULL1(1);
+extern int mln_thread_pool_resource_add(void *data) __NONNULL1(1);
 extern void mln_thread_quit(void);
-extern void mln_thread_ResourceInfo(struct mln_thread_pool_info *info);
+extern void mln_thread_resource_info(struct mln_thread_pool_info *info);
 #endif

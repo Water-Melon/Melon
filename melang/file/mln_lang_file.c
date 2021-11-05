@@ -17,17 +17,17 @@
 #define ASSERT(x);
 #endif
 
-static inline void mln_lang_file_open_getPrio(mln_s64_t prio, mode_t *mode);
-static int mln_lang_file_open_getOp(mln_string_t *op);
-static int mln_lang_file_addFD(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
-static int mln_lang_file_addErrno(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
-static int mln_lang_file_addOpen(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
-static int mln_lang_file_addLseek(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
-static int mln_lang_file_addRead(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
-static int mln_lang_file_addWrite(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
-static int mln_lang_file_addClose(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
-static int mln_lang_file_addErrmsg(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
-static int mln_lang_file_addSize(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
+static inline void mln_lang_file_open_get_prio(mln_s64_t prio, mode_t *mode);
+static int mln_lang_file_open_get_op(mln_string_t *op);
+static int mln_lang_file_add_fd(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
+static int mln_lang_file_add_errno(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
+static int mln_lang_file_add_open(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
+static int mln_lang_file_add_lseek(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
+static int mln_lang_file_add_read(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
+static int mln_lang_file_add_write(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
+static int mln_lang_file_add_close(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
+static int mln_lang_file_add_errmsg(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
+static int mln_lang_file_add_size(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set);
 static mln_lang_var_t *mln_lang_open_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_read_process(mln_lang_ctx_t *ctx);
@@ -35,7 +35,7 @@ static mln_lang_var_t *mln_lang_write_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_close_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_size_process(mln_lang_ctx_t *ctx);
-static int mln_lang_file_setErrno(mln_lang_ctx_t *ctx, int err);
+static int mln_lang_file_set_errno(mln_lang_ctx_t *ctx, int err);
 
 int mln_lang_file(mln_lang_ctx_t *ctx)
 {
@@ -52,37 +52,37 @@ int mln_lang_file(mln_lang_ctx_t *ctx)
         return -1;
     }
 
-    if (mln_lang_file_addFD(ctx, set) < 0) {
+    if (mln_lang_file_add_fd(ctx, set) < 0) {
         return -1;
     }
-    if (mln_lang_file_addErrno(ctx, set) < 0) {
+    if (mln_lang_file_add_errno(ctx, set) < 0) {
         return -1;
     }
-    if (mln_lang_file_addOpen(ctx, set) < 0) {
+    if (mln_lang_file_add_open(ctx, set) < 0) {
         return -1;
     }
-    if (mln_lang_file_addLseek(ctx, set) < 0) {
+    if (mln_lang_file_add_lseek(ctx, set) < 0) {
         return -1;
     }
-    if (mln_lang_file_addRead(ctx, set) < 0) {
+    if (mln_lang_file_add_read(ctx, set) < 0) {
         return -1;
     }
-    if (mln_lang_file_addWrite(ctx, set) < 0) {
+    if (mln_lang_file_add_write(ctx, set) < 0) {
         return -1;
     }
-    if (mln_lang_file_addClose(ctx, set) < 0) {
+    if (mln_lang_file_add_close(ctx, set) < 0) {
         return -1;
     }
-    if (mln_lang_file_addErrmsg(ctx, set) < 0) {
+    if (mln_lang_file_add_errmsg(ctx, set) < 0) {
         return -1;
     }
-    if (mln_lang_file_addSize(ctx, set) < 0) {
+    if (mln_lang_file_add_size(ctx, set) < 0) {
         return -1;
     }
     return 0;
 }
 
-static int mln_lang_file_addFD(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
+static int mln_lang_file_add_fd(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
     mln_s64_t fd = -1;
     mln_lang_val_t *val;
@@ -106,7 +106,7 @@ static int mln_lang_file_addFD(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
     return 0;
 }
 
-static int mln_lang_file_addErrno(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
+static int mln_lang_file_add_errno(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
     int err = 0;
     mln_lang_val_t *val;
@@ -130,7 +130,7 @@ static int mln_lang_file_addErrno(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *se
     return 0;
 }
 
-static int mln_lang_file_addOpen(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
+static int mln_lang_file_add_open(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
@@ -300,15 +300,15 @@ static mln_lang_var_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     }
     memcpy(path, val1->data.s->data, val1->data.s->len);
     path[val1->data.s->len] = 0;
-    if ((op = mln_lang_file_open_getOp(val2->data.s)) < 0) {
+    if ((op = mln_lang_file_open_get_op(val2->data.s)) < 0) {
         mln_lang_errmsg(ctx, "Invalid 'op'.");
         free(path);
         return NULL;
     }
     memset(&mode, 0, sizeof(mode));
-    mln_lang_file_open_getPrio(prio, &mode);
+    mln_lang_file_open_get_prio(prio, &mode);
     val->data.i = open(path, op, mode);
-    if (mln_lang_file_setErrno(ctx, errno) < 0) {
+    if (mln_lang_file_set_errno(ctx, errno) < 0) {
         free(path);
         return NULL;
     }
@@ -326,7 +326,7 @@ static mln_lang_var_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static inline void mln_lang_file_open_getPrio(mln_s64_t prio, mode_t *mode)
+static inline void mln_lang_file_open_get_prio(mln_s64_t prio, mode_t *mode)
 {
     mode_t m = 0;
     if (prio & 0x1) m |= S_IXOTH;
@@ -341,7 +341,7 @@ static inline void mln_lang_file_open_getPrio(mln_s64_t prio, mode_t *mode)
     *mode = m;
 }
 
-static int mln_lang_file_open_getOp(mln_string_t *op)
+static int mln_lang_file_open_get_op(mln_string_t *op)
 {
     int flags = 0, r = 0, w = 0, a = 0, notrunc = 0;
     mln_u8ptr_t p, pend;
@@ -379,7 +379,7 @@ static int mln_lang_file_open_getOp(mln_string_t *op)
     return flags;
 }
 
-static int mln_lang_file_addLseek(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
+static int mln_lang_file_add_lseek(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
@@ -492,7 +492,7 @@ static mln_lang_var_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     if (val1->data.i < 0) {
-        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+        if (mln_lang_file_set_errno(ctx, EBADF) < 0) {
             return NULL;
         }
         if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
@@ -531,7 +531,7 @@ static mln_lang_var_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
     }
 
     t = lseek(val->data.i, val1->data.i, whence);
-    if (mln_lang_file_setErrno(ctx, errno) < 0) {
+    if (mln_lang_file_set_errno(ctx, errno) < 0) {
         return NULL;
     }
     if (t < 0) {
@@ -546,7 +546,7 @@ static mln_lang_var_t *mln_lang_lseek_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_file_addRead(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
+static int mln_lang_file_add_read(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
@@ -633,7 +633,7 @@ static mln_lang_var_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
     }
     val = var->val;
     if (val->data.i < 0) {
-        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+        if (mln_lang_file_set_errno(ctx, EBADF) < 0) {
             return NULL;
         }
         if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
@@ -668,7 +668,7 @@ static mln_lang_var_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     n = read(val->data.i, buf, val1->data.i);
-    if (mln_lang_file_setErrno(ctx, errno) < 0) {
+    if (mln_lang_file_set_errno(ctx, errno) < 0) {
         free(buf);
         return NULL;
     }
@@ -687,7 +687,7 @@ static mln_lang_var_t *mln_lang_read_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_file_addWrite(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
+static int mln_lang_file_add_write(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
@@ -772,7 +772,7 @@ static mln_lang_var_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
     }
     val = var->val;
     if (val->data.i < 0) {
-        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+        if (mln_lang_file_set_errno(ctx, EBADF) < 0) {
             return NULL;
         }
         if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
@@ -800,7 +800,7 @@ static mln_lang_var_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
     }
 
     n = write(val->data.i, val1->data.s->data, val1->data.s->len);
-    if (mln_lang_file_setErrno(ctx, errno) < 0) {
+    if (mln_lang_file_set_errno(ctx, errno) < 0) {
         return NULL;
     }
     if (n < 0) {
@@ -815,7 +815,7 @@ static mln_lang_var_t *mln_lang_write_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_file_addClose(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
+static int mln_lang_file_add_close(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
@@ -883,7 +883,7 @@ static mln_lang_var_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
     }
     val = var->val;
     if (val->data.i < 0) {
-        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+        if (mln_lang_file_set_errno(ctx, EBADF) < 0) {
             return NULL;
         }
         if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
@@ -894,7 +894,7 @@ static mln_lang_var_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
     }
     close(val->data.i);
     val->data.i = -1;
-    if (mln_lang_file_setErrno(ctx, errno) < 0) {
+    if (mln_lang_file_set_errno(ctx, errno) < 0) {
         return NULL;
     }
 
@@ -905,7 +905,7 @@ static mln_lang_var_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_file_addErrmsg(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
+static int mln_lang_file_add_errmsg(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
@@ -981,7 +981,7 @@ static mln_lang_var_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_file_setErrno(mln_lang_ctx_t *ctx, int err)
+static int mln_lang_file_set_errno(mln_lang_ctx_t *ctx, int err)
 {
     mln_s32_t type;
     mln_lang_val_t *val;
@@ -1015,7 +1015,7 @@ static int mln_lang_file_setErrno(mln_lang_ctx_t *ctx, int err)
     return 0;
 }
 
-static int mln_lang_file_addSize(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
+static int mln_lang_file_add_size(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
@@ -1084,7 +1084,7 @@ static mln_lang_var_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
     }
     val = var->val;
     if (val->data.i < 0) {
-        if (mln_lang_file_setErrno(ctx, EBADF) < 0) {
+        if (mln_lang_file_set_errno(ctx, EBADF) < 0) {
             return NULL;
         }
         if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
@@ -1096,7 +1096,7 @@ static mln_lang_var_t *mln_lang_size_process(mln_lang_ctx_t *ctx)
 
     memset(&st, 0, sizeof(st));
     t = fstat(val->data.i, &st);
-    if (mln_lang_file_setErrno(ctx, errno) < 0) {
+    if (mln_lang_file_set_errno(ctx, errno) < 0) {
         return NULL;
     }
     if (t < 0) {

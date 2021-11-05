@@ -23,7 +23,7 @@
  */
 __thread void (*thread_cleanup)(void *) = NULL;
 __thread void *thread_data = NULL;
-__thread mln_thread_t *mThread = NULL;
+__thread mln_thread_t *m_thread = NULL;
 mln_rbtree_t *thread_tree = NULL;
 char thread_domain[] = "thread_exec";
 char thread_s_restart[] = "restart";
@@ -52,7 +52,7 @@ mln_thread_init(struct mln_thread_attr *attr) __NONNULL1(1);
 static void
 mln_thread_destroy(mln_event_t *ev, mln_thread_t *t);
 static void
-mln_thread_clearMsg_queue(mln_event_t *ev, mln_thread_t *t);
+mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t);
 static int
 mln_thread_rbtree_init(void);
 static int
@@ -136,12 +136,12 @@ mln_thread_destroy(mln_event_t *ev, mln_thread_t *t)
     c = mln_tcp_conn_get_head(&(t->conn), M_C_RECV);
     mln_thread_itc_chain_release_msg(c);
     mln_tcp_conn_destroy(&(t->conn));
-    mln_thread_clearMsg_queue(ev, t);
+    mln_thread_clear_msg_queue(ev, t);
     free(t);
 }
 
 static void
-mln_thread_clearMsg_queue(mln_event_t *ev, mln_thread_t *t)
+mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t)
 {
     mln_thread_msgq_t *tmq;
     while ((tmq = t->local_head) != NULL) {
@@ -155,7 +155,7 @@ mln_thread_clearMsg_queue(mln_event_t *ev, mln_thread_t *t)
             msg_local_chain_del(&(sender->local_head), &(sender->local_tail), tmq);
         }
         msg_dest_chain_del(&(t->dest_head), &(t->dest_tail), tmq);
-        mln_thread_clearMsg(&(tmq->msg));
+        mln_thread_clear_msg(&(tmq->msg));
         mln_thread_msgq_destroy(tmq);
     }
 }
@@ -163,7 +163,7 @@ mln_thread_clearMsg_queue(mln_event_t *ev, mln_thread_t *t)
 /*
  * msg
  */
-void mln_thread_clearMsg(mln_thread_msg_t *msg)
+void mln_thread_clear_msg(mln_thread_msg_t *msg)
 {
     if (msg == NULL) return;
     if (msg->dest != NULL) {
@@ -380,7 +380,7 @@ mln_thread_itc_chain_release_msg(mln_chain_t *c)
 
     for (; c != NULL; c = c->next) {
         if ((b = c->buf)== NULL) continue;
-        mln_thread_clearMsg((mln_thread_msg_t *)(b->pos));
+        mln_thread_clear_msg((mln_thread_msg_t *)(b->pos));
     }
 }
 
@@ -438,7 +438,7 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
         m->src = mln_string_dup(t->alias);
         if (m->src == NULL) {
             mln_log(error, "No memory.\n");
-            mln_thread_clearMsg(&(tmq->msg));
+            mln_thread_clear_msg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             continue;
         }
@@ -447,7 +447,7 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
         rn = mln_rbtree_search(thread_tree, thread_tree->root, &tmp);
         if (mln_rbtree_null(rn, thread_tree)) {
             mln_log(report, "No such thread named '%s'.\n", (char *)(m->dest->data));
-            mln_thread_clearMsg(&(tmq->msg));
+            mln_thread_clear_msg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             continue;
         }
@@ -513,14 +513,14 @@ again:
         c = mln_chain_new(pool);
         if (c == NULL) {
             mln_log(error, "No memory.\n");
-            mln_thread_clearMsg(&(tmq->msg));
+            mln_thread_clear_msg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             continue;
         }
         b = mln_buf_new(pool);
         if (b == NULL) {
             mln_log(error, "No memory.\n");
-            mln_thread_clearMsg(&(tmq->msg));
+            mln_thread_clear_msg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             mln_chain_pool_release(c);
             continue;
@@ -529,7 +529,7 @@ again:
         buf = (mln_u8ptr_t)mln_alloc_m(pool, sizeof(mln_thread_msg_t));
         if (buf == NULL) {
             mln_log(error, "No memory.\n");
-            mln_thread_clearMsg(&(tmq->msg));
+            mln_thread_clear_msg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             mln_chain_pool_release(c);
             continue;
@@ -593,7 +593,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
     mln_chain_pool_release_all(c);
     mln_chain_pool_release_all(mln_tcp_conn_remove(&(t->conn), M_C_SENT));
 
-    mln_thread_clearMsg_queue(ev, t);
+    mln_thread_clear_msg_queue(ev, t);
 
     int fds[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
@@ -617,7 +617,7 @@ static void *
 mln_thread_launcher(void *args)
 {
     mln_thread_t *t = (mln_thread_t *)args;
-    mThread = t;
+    m_thread = t;
     int ret = t->thread_main(t->argc, t->argv);
     if (thread_cleanup != NULL)
         thread_cleanup(thread_data);
@@ -657,8 +657,8 @@ mln_thread_rbtree_cmp(const void *data1, const void *data2)
  */
 void mln_thread_exit(int exit_code)
 {
-    mln_socket_close(mThread->peerfd);
-    mThread->peerfd = -1;
+    mln_socket_close(m_thread->peerfd);
+    m_thread->peerfd = -1;
     intptr_t ec = exit_code;
     pthread_exit((void *)ec);
 }

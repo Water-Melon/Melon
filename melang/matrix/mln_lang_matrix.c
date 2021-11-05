@@ -21,7 +21,7 @@ static mln_lang_var_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx);
 static mln_matrix_t *
 mln_lang_array2matrix(mln_lang_ctx_t *ctx, mln_lang_array_t *array);
-static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_t *m);
+static mln_lang_var_t *mln_lang_matrix2array_exp(mln_lang_ctx_t *ctx, mln_matrix_t *m);
 
 int mln_lang_matrix(mln_lang_ctx_t *ctx)
 {
@@ -151,7 +151,7 @@ static mln_lang_var_t *mln_lang_matrix_mul_process(mln_lang_ctx_t *ctx)
             return NULL;
         }
     } else {
-        ret_var = mln_lang_matrix2arrayExp(ctx, mres);
+        ret_var = mln_lang_matrix2array_exp(ctx, mres);
         mln_matrix_free(mres);
     }
     return ret_var;
@@ -243,7 +243,7 @@ static mln_lang_var_t *mln_lang_matrix_inv_process(mln_lang_ctx_t *ctx)
             return NULL;
         }
     } else {
-        ret_var = mln_lang_matrix2arrayExp(ctx, mres);
+        ret_var = mln_lang_matrix2array_exp(ctx, mres);
         mln_matrix_free(mres);
     }
     return ret_var;
@@ -360,7 +360,7 @@ mln_lang_array2matrix(mln_lang_ctx_t *ctx, mln_lang_array_t *array)
     return m;
 }
 
-static mln_lang_var_t *mln_lang_matrix2arrayExp(mln_lang_ctx_t *ctx, mln_matrix_t *m)
+static mln_lang_var_t *mln_lang_matrix2array_exp(mln_lang_ctx_t *ctx, mln_matrix_t *m)
 {
     double *p, *pend;
     mln_lang_array_t *array, *darray;

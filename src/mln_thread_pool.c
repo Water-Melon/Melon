@@ -35,7 +35,7 @@
  * Now, I just wanna say, fork() in thread is NOT recommended.
  */
 
-__thread mln_thread_pool_member_t *mThreadPoolSelf = NULL;
+__thread mln_thread_pool_member_t *m_thread_pool_self = NULL;
 
 static void *child_thread_launcher(void *arg);
 static void mln_thread_pool_free(mln_thread_pool_t *tp);
@@ -77,7 +77,7 @@ mln_thread_pool_member_join(mln_thread_pool_t *tp, mln_u32_t child)
 {
     /*
      * @ mutex must be locked by caller.
-     * and mThreadPoolSelf will be set later.
+     * and m_thread_pool_self will be set later.
      * This function only can be called by main thread.
      */
     mln_thread_pool_member_t *tpm;
@@ -119,30 +119,30 @@ static void mln_thread_pool_member_exit(void *arg)
 #if !defined(WIN32)
 static void mln_thread_pool_prepare(void)
 {
-    if (mThreadPoolSelf == NULL) return;
-    if (!mThreadPoolSelf->locked)
-        pthread_mutex_lock(&(mThreadPoolSelf->pool->mutex));
+    if (m_thread_pool_self == NULL) return;
+    if (!m_thread_pool_self->locked)
+        pthread_mutex_lock(&(m_thread_pool_self->pool->mutex));
 }
 
 static void mln_thread_pool_parent(void)
 {
-    if (mThreadPoolSelf == NULL) return;
-    if (!mThreadPoolSelf->locked)
-        pthread_mutex_unlock(&(mThreadPoolSelf->pool->mutex));
+    if (m_thread_pool_self == NULL) return;
+    if (!m_thread_pool_self->locked)
+        pthread_mutex_unlock(&(m_thread_pool_self->pool->mutex));
 }
 
 static void mln_thread_pool_child(void)
 {
-    if (mThreadPoolSelf == NULL) return;
-    mln_thread_pool_t *tpool = mThreadPoolSelf->pool;
-    if (!mThreadPoolSelf->locked)
+    if (m_thread_pool_self == NULL) return;
+    mln_thread_pool_t *tpool = m_thread_pool_self->pool;
+    if (!m_thread_pool_self->locked)
         pthread_mutex_unlock(&(tpool->mutex));
-    mThreadPoolSelf->forked = 1;
+    m_thread_pool_self->forked = 1;
     mln_thread_pool_member_t *tpm = tpool->child_head, *fr;
     while (tpm != NULL) {
         fr = tpm;
         tpm = tpm->next;
-        if (fr == mThreadPoolSelf) continue;
+        if (fr == m_thread_pool_self) continue;
         mln_thread_pool_member_exit(fr);
     }
 }
@@ -188,7 +188,7 @@ mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
     tp->idle = tp->counter = 0;
     tp->quit = 0;
     tp->cond_timeout = tpattr->cond_timeout;
-    tp->nRes = 0;
+    tp->n_res = 0;
     tp->process_handler = tpattr->child_process_handler;
     tp->free_handler = tpattr->free_handler;
     tp->max = tpattr->max;
@@ -208,7 +208,7 @@ mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
         return NULL;
     }
 #endif
-    if ((mThreadPoolSelf = mln_thread_pool_member_join(tp, 0)) == NULL) {
+    if ((m_thread_pool_self = mln_thread_pool_member_join(tp, 0)) == NULL) {
         pthread_attr_destroy(&(tp->attr));
         pthread_cond_destroy(&(tp->cond));
         pthread_mutex_destroy(&(tp->mutex));
@@ -222,7 +222,7 @@ mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
 static void mln_thread_pool_free(mln_thread_pool_t *tp)
 {
     if (tp == NULL) return;
-    mThreadPoolSelf = NULL;
+    m_thread_pool_self = NULL;
     mln_thread_pool_resource_t *tpr;
     while ((tpr = tp->res_chain_head) != NULL) {
         tp->res_chain_head = tp->res_chain_head->next;
@@ -243,17 +243,17 @@ static void mln_thread_pool_free(mln_thread_pool_t *tp)
 /*
  * resource
  */
-int mln_thread_pool_addResource(void *data)
+int mln_thread_pool_resource_add(void *data)
 {
     /*
      * Only main thread can call this function
      */
-    if (mThreadPoolSelf == NULL) {
+    if (m_thread_pool_self == NULL) {
         mln_log(error, "Fatal error, thread messed up.\n");
         abort();
     }
     mln_thread_pool_resource_t *tpr;
-    mln_thread_pool_t *tpool = mThreadPoolSelf->pool;
+    mln_thread_pool_t *tpool = m_thread_pool_self->pool;
 
     if ((tpr = (mln_thread_pool_resource_t *)malloc(sizeof(mln_thread_pool_resource_t))) == NULL) {
         return ENOMEM;
@@ -261,7 +261,7 @@ int mln_thread_pool_addResource(void *data)
     tpr->data = data;
     tpr->next = NULL;
 
-    mThreadPoolSelf->locked = 1;
+    m_thread_pool_self->locked = 1;
     pthread_mutex_lock(&(tpool->mutex));
 
     if (tpool->res_chain_head == NULL) {
@@ -270,7 +270,7 @@ int mln_thread_pool_addResource(void *data)
         tpool->res_chain_tail->next = tpr;
         tpool->res_chain_tail = tpr;
     }
-    ++(tpool->nRes);
+    ++(tpool->n_res);
 
     if (tpool->idle <= 1 && tpool->counter < tpool->max+1) {
         int rc;
@@ -278,46 +278,46 @@ int mln_thread_pool_addResource(void *data)
         mln_thread_pool_member_t *tpm;
         if ((tpm = mln_thread_pool_member_join(tpool, 1)) == NULL) {
             pthread_mutex_unlock(&(tpool->mutex));
-            mThreadPoolSelf->locked = 0;
+            m_thread_pool_self->locked = 0;
             return ENOMEM;
         }
         if ((rc = pthread_create(&threadid, &(tpool->attr), child_thread_launcher, tpm)) != 0) {
             pthread_mutex_unlock(&(tpool->mutex));
-            mThreadPoolSelf->locked = 0;
+            m_thread_pool_self->locked = 0;
             return rc;
         }
     }
     pthread_cond_signal(&(tpool->cond));
 
     pthread_mutex_unlock(&(tpool->mutex));
-    mThreadPoolSelf->locked = 0;
+    m_thread_pool_self->locked = 0;
     return 0;
 }
 
-static void *mln_thread_pool_removeResource(void)
+static void *mln_thread_pool_resource_remove(void)
 {
     /*
      * Only child threads can call this function
      * @ the lock will be locked by caller.
      */
-    if (mThreadPoolSelf == NULL) {
+    if (m_thread_pool_self == NULL) {
         mln_log(error, "Fatal error, thread messed up.\n");
         abort();
     }
     mln_thread_pool_resource_t *tpr;
-    mln_thread_pool_t *tpool = mThreadPoolSelf->pool;
+    mln_thread_pool_t *tpool = m_thread_pool_self->pool;
 again:
     if ((tpr = tpool->res_chain_head) == NULL) return NULL;
     tpool->res_chain_head = tpool->res_chain_head->next;
     if (tpool->res_chain_head == NULL) tpool->res_chain_tail = NULL;
-    --(tpool->nRes);
-    mThreadPoolSelf->data = tpr->data;
+    --(tpool->n_res);
+    m_thread_pool_self->data = tpr->data;
     free(tpr);
-    if (mThreadPoolSelf->data == NULL) goto again;
+    if (m_thread_pool_self->data == NULL) goto again;
 
-    mThreadPoolSelf->idle = 0;
+    m_thread_pool_self->idle = 0;
     --(tpool->idle);
-    return mThreadPoolSelf->data;
+    return m_thread_pool_self->data;
 }
 
 /*
@@ -340,20 +340,20 @@ int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr)
     rc = tpattr->main_process_handler(tpattr->main_data);
     tpool->quit = 1;
     while (1) {
-        mThreadPoolSelf->locked = 1;
+        m_thread_pool_self->locked = 1;
         pthread_mutex_lock(&(tpool->mutex));
         if (tpool->counter <= 1) {
             pthread_mutex_unlock(&(tpool->mutex));
-            mThreadPoolSelf->locked = 0;
+            m_thread_pool_self->locked = 0;
             break;
         }
         pthread_cond_broadcast(&(tpool->cond));
         pthread_mutex_unlock(&(tpool->mutex));
-        mThreadPoolSelf->locked = 0;
+        m_thread_pool_self->locked = 0;
         usleep(50000);
     }
-    mln_thread_pool_member_exit(mThreadPoolSelf);
-    mThreadPoolSelf = NULL;
+    mln_thread_pool_member_exit(m_thread_pool_self);
+    m_thread_pool_self = NULL;
     mln_thread_pool_free(tpool);
     return rc;
 }
@@ -369,7 +369,7 @@ static void *child_thread_launcher(void *arg)
     mln_thread_pool_member_t *tpm = (mln_thread_pool_member_t *)arg;
     mln_thread_pool_t *tpool = tpm->pool;
 
-    mThreadPoolSelf = tpm;
+    m_thread_pool_self = tpm;
 
     while (1) {
         tpm->locked = 1;
@@ -382,7 +382,7 @@ again:
         }
         if (tpool->quit) break;
 
-        if (mln_thread_pool_removeResource() == NULL) {
+        if (mln_thread_pool_resource_remove() == NULL) {
             if (timeout) break;
 
             ts.tv_sec = time(NULL) + tpool->cond_timeout / 1000;
@@ -408,43 +408,43 @@ again:
         tpm->data = NULL;
     }
 
-    forked = mThreadPoolSelf->forked;
+    forked = m_thread_pool_self->forked;
     pthread_cleanup_pop(1);
-    mThreadPoolSelf = NULL;
+    m_thread_pool_self = NULL;
     if (forked) exit(rc);
     return (void *)rc;
 }
 
 void mln_thread_quit(void)
 {
-    if (mThreadPoolSelf == NULL) {
+    if (m_thread_pool_self == NULL) {
         mln_log(error, "Fatal error, thread messed up.\n");
         abort();
     }
-    mln_thread_pool_t *tpool = mThreadPoolSelf->pool;
-    mThreadPoolSelf->locked = 1;
+    mln_thread_pool_t *tpool = m_thread_pool_self->pool;
+    m_thread_pool_self->locked = 1;
     pthread_mutex_lock(&(tpool->mutex));
     tpool->quit = 1;
     pthread_mutex_unlock(&(tpool->mutex));
-    mThreadPoolSelf->locked = 0;
+    m_thread_pool_self->locked = 0;
 }
 
-void mln_thread_ResourceInfo(struct mln_thread_pool_info *info)
+void mln_thread_resource_info(struct mln_thread_pool_info *info)
 {
     if (info == NULL) return;
-    if (mThreadPoolSelf == NULL) {
+    if (m_thread_pool_self == NULL) {
         mln_log(error, "Fatal error, thread messed up.\n");
         abort();
     }
-    mln_thread_pool_t *tpool = mThreadPoolSelf->pool;
-    mThreadPoolSelf->locked = 1;
+    mln_thread_pool_t *tpool = m_thread_pool_self->pool;
+    m_thread_pool_self->locked = 1;
     pthread_mutex_lock(&(tpool->mutex));
     info->max_num = tpool->max;
     info->idle_num = tpool->idle;
     info->cur_num = tpool->counter;
-    info->res_num = tpool->nRes;
+    info->res_num = tpool->n_res;
     pthread_mutex_unlock(&(tpool->mutex));
-    mThreadPoolSelf->locked = 0;
+    m_thread_pool_self->locked = 0;
 }
 
 MLN_CHAIN_FUNC_DEFINE(mln_child, \

@@ -20,8 +20,8 @@
     fprintf(stderr, "%d: \"%s\" %s.\n", (TK)->line, (char *)((TK)->text->data), MSG);\
 }
 
-mln_conf_hook_t *gConfHookHead = NULL, *gConfHookTail = NULL;
-mln_conf_t *gConf = NULL;
+mln_conf_hook_t *g_conf_hook_head = NULL, *g_conf_hook_tail = NULL;
+mln_conf_t *g_conf = NULL;
 mln_string_t default_domain = {(mln_u8ptr_t)"main", 4, 1};
 char conf_filename[] = "conf/melon.conf";
 mln_string_t conf_keywords[] = {
@@ -731,18 +731,18 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
 
 int mln_conf_load(void)
 {
-    gConf = mln_conf_init();
-    if (gConf == NULL) return -1;
+    g_conf = mln_conf_init();
+    if (g_conf == NULL) return -1;
     mln_rbtree_node_t *rn;
     mln_conf_domain_t *cd, tmp;
     tmp.domain_name = &default_domain;
-    rn = mln_rbtree_search(gConf->domain, gConf->domain->root, &tmp);
+    rn = mln_rbtree_search(g_conf->domain, g_conf->domain->root, &tmp);
     cd = (mln_conf_domain_t *)(rn->data);
-    mln_s32_t ret = _mln_conf_load(gConf, cd);
-    mln_conf_destroy_lex(gConf);
+    mln_s32_t ret = _mln_conf_load(g_conf, cd);
+    mln_conf_destroy_lex(g_conf);
     if (ret < 0) {
-        mln_conf_destroy(gConf);
-        gConf = NULL;
+        mln_conf_destroy(g_conf);
+        g_conf = NULL;
         return -1;
     }
     return 0;
@@ -750,9 +750,9 @@ int mln_conf_load(void)
 
 void mln_conf_free(void)
 {
-    if (gConf == NULL) return;
-    mln_conf_destroy(gConf);
-    gConf = NULL;
+    if (g_conf == NULL) return;
+    mln_conf_destroy(g_conf);
+    g_conf = NULL;
 }
 
 /*
@@ -781,22 +781,22 @@ mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data)
     if (ch == NULL) return NULL;
     ch->reload = reload;
     ch->data = data;
-    conf_hook_chain_add(&gConfHookHead, &gConfHookTail, ch);
+    conf_hook_chain_add(&g_conf_hook_head, &g_conf_hook_tail, ch);
     return ch;
 }
 
 void mln_conf_unset_hook(mln_conf_hook_t *hook)
 {
     if (hook == NULL) return;
-    conf_hook_chain_del(&gConfHookHead, &gConfHookTail, hook);
+    conf_hook_chain_del(&g_conf_hook_head, &g_conf_hook_tail, hook);
     mln_conf_hook_destroy(hook);
 }
 
 void mln_conf_free_hook(void)
 {
     mln_conf_hook_t *ch;
-    while ((ch = gConfHookHead) != NULL) {
-        conf_hook_chain_del(&gConfHookHead, &gConfHookTail, ch);
+    while ((ch = g_conf_hook_head) != NULL) {
+        conf_hook_chain_del(&g_conf_hook_head, &g_conf_hook_tail, ch);
         mln_conf_hook_destroy(ch);
     }
 }
@@ -809,7 +809,7 @@ int mln_conf_reload(void)
     mln_conf_free();
     mln_conf_load();
     mln_conf_hook_t *ch;
-    for (ch = gConfHookHead; ch != NULL; ch = ch->next) {
+    for (ch = g_conf_hook_head; ch != NULL; ch = ch->next) {
         if (ch->reload != NULL && ch->reload(ch->data) < 0)
             return -1;
     }
@@ -821,7 +821,7 @@ int mln_conf_reload(void)
  */
 mln_conf_t *mln_get_conf(void)
 {
-    return gConf;
+    return g_conf;
 }
 
 mln_u32_t mln_conf_get_ncmd(mln_conf_t *cf, char *domain)
@@ -867,7 +867,7 @@ mln_u32_t mln_conf_get_narg(mln_conf_cmd_t *cc)
 void mln_conf_dump(void)
 {
     printf("CONFIGURATIONS:\n");
-    mln_rbtree_scan_all(gConf->domain, mln_conf_dump_conf_scan, NULL);
+    mln_rbtree_scan_all(g_conf->domain, mln_conf_dump_conf_scan, NULL);
 }
 
 static int mln_conf_dump_conf_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)

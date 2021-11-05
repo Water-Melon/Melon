@@ -172,7 +172,7 @@ int mln_gc_clean_add(mln_gc_t *gc, void *data)
     return 0;
 }
 
-void mln_gc_collect(mln_gc_t *gc, void *rootData)
+void mln_gc_collect(mln_gc_t *gc, void *root_data)
 {
     int done = 0;
     mln_gc_item_t *item, *head = NULL, *tail = NULL;
@@ -182,8 +182,8 @@ void mln_gc_collect(mln_gc_t *gc, void *rootData)
             gc->proc_head != item)
             mln_gc_item_proc_chain_add(&(gc->proc_head), &(gc->proc_tail), item);
     }
-    if (rootData != NULL && gc->root_setter != NULL)
-        gc->root_setter(gc, rootData);
+    if (root_data != NULL && gc->root_setter != NULL)
+        gc->root_setter(gc, root_data);
     while (!done) {
         done = 1;
         for (item = gc->proc_head; item != NULL; item = item->proc_next) {
@@ -245,23 +245,23 @@ void mln_gc_collect(mln_gc_t *gc, void *rootData)
     }
 }
 
-void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *procGC)
+void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *proc_gc)
 {
     mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
     if (item == NULL) {
         mln_log(error, "'data' has NOT been added.\n");
         abort();
     }
-    if (procGC == NULL) procGC = gc;
+    if (proc_gc == NULL) proc_gc = gc;
     if (item->proc_prev != NULL || \
         item->proc_next != NULL || \
-        procGC->proc_head == item)
+        proc_gc->proc_head == item)
     {
-        if (procGC->iter != NULL && procGC->iter == item) {
-            procGC->iter = item->proc_next;
-            procGC->del = 1;
+        if (proc_gc->iter != NULL && proc_gc->iter == item) {
+            proc_gc->iter = item->proc_next;
+            proc_gc->del = 1;
         }
-        mln_gc_item_proc_chain_del(&(procGC->proc_head), &(procGC->proc_tail), item);
+        mln_gc_item_proc_chain_del(&(proc_gc->proc_head), &(proc_gc->proc_tail), item);
     }
     mln_gc_item_chain_del(&(gc->item_head), &(gc->item_tail), item);
     mln_gc_item_free(item);

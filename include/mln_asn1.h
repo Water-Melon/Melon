@@ -69,9 +69,9 @@ struct mln_asn1_deresult_s {
 #define mln_asn1_deresult_get_code_length(pres)  ((pres)->code_len)
 #define mln_asn1_deresult_content_num(pres)      ((pres)->pos)
 
-extern mln_asn1_deresult_t *mln_asn1_decodeChain(mln_chain_t *in, int *err, mln_alloc_t *pool) __NONNULL3(1,2,3);
+extern mln_asn1_deresult_t *mln_asn1_decode_chain(mln_chain_t *in, int *err, mln_alloc_t *pool) __NONNULL3(1,2,3);
 extern mln_asn1_deresult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_alloc_t *pool) __NONNULL3(1,3,4);
-extern mln_asn1_deresult_t *mln_asn1_decodeRef(void *data, mln_u64_t len, int *err, mln_alloc_t *pool) __NONNULL3(1,3,4);
+extern mln_asn1_deresult_t *mln_asn1_decode_ref(void *data, mln_u64_t len, int *err, mln_alloc_t *pool) __NONNULL3(1,3,4);
 extern void mln_asn1_deresult_free(mln_asn1_deresult_t *res);
 extern mln_asn1_deresult_t *mln_asn1_deresult_get_content(mln_asn1_deresult_t *res, mln_u32_t index) __NONNULL1(1);
 extern void mln_asn1_deresult_dump(mln_asn1_deresult_t *res);

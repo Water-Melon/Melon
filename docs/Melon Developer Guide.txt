@@ -2287,14 +2287,14 @@ Their definitions can be found in melon/include/mln_types.h.
       g) mln_asn1_deresult_content_num(pres);
          Get the number of sub-result.
 
-      h) mln_asn1_deresult_t *mln_asn1_decodeChain(mln_chain_t *in, int *err, mln_alloc_t *pool);
+      h) mln_asn1_deresult_t *mln_asn1_decode_chain(mln_chain_t *in, int *err, mln_alloc_t *pool);
          Decode ASN.1 string from chain 'in'.
 
       i) mln_asn1_deresult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_alloc_t *pool);
          Decode ASN.1 string from 'data'.
          'data' do not need to free. It will be freed while the function 'mln_asn1_deresult_free' called.
 
-      j) mln_asn1_deresult_t *mln_asn1_decodeRef(void *data, mln_u64_t len, int *err, mln_alloc_t *pool);
+      j) mln_asn1_deresult_t *mln_asn1_decode_ref(void *data, mln_u64_t len, int *err, mln_alloc_t *pool);
          Decode ASN.1 string from 'data'.
          'data' should be free explicitly. It won't be freed while the function 'mln_asn1_deresult_free' called.
 
@@ -2432,7 +2432,7 @@ Their definitions can be found in melon/include/mln_types.h.
                  void                              *main_data;
                  mln_thread_process                 child_process_handler;
                  mln_thread_process                 main_process_handler;
-                 mln_thread_dataFree                free_handler;
+                 mln_thread_data_free                free_handler;
                  mln_u64_t                          cond_timeout; /*ms*/
                  mln_u32_t                          max;
                  mln_u32_t                          concurrency;
@@ -2451,7 +2451,7 @@ Their definitions can be found in melon/include/mln_types.h.
                                    released.
          'free_handler' -- this callback function is provided for releaseing those unused resources when thread pool
                            quit. Its prototype is,
-                               typedef void (*mln_thread_dataFree)(void *);
+                               typedef void (*mln_thread_data_free)(void *);
                            the argument is a resource structure pointer which thread pool wanna free.
          'cond_timeout' -- this variable indicates a millisecond timeout timer for child thread(s). when someone child
                           thread's timer expired and there was no resource can be processed, this child thread would
@@ -2461,14 +2461,14 @@ Their definitions can be found in melon/include/mln_types.h.
                           This varibale may be ignored. Because, firstly not all OS platform support unix98,
                           secondly some OS platform just do nothing in 'pthread_setconcurrency()'.
 
-      b) int mln_thread_pool_addResource(void *data);
+      b) int mln_thread_pool_resource_add(void *data);
          This function is used to deliver a resource to someone child thread.
          It only can be called in main thread, which means, the callback function 'main_process_handler'.
 
       c) void mln_thread_quit(void);
          This function can make thread pool quit.
 
-      d) void mln_thread_ResourceInfo(struct mln_thread_pool_info *info);
+      d) void mln_thread_resource_info(struct mln_thread_pool_info *info);
          Get the information of thread pool.
          The prototype of 'struct mln_thread_pool_info' is
              struct mln_thread_pool_info {
@@ -2547,8 +2547,8 @@ Their definitions can be found in melon/include/mln_types.h.
       h) void mln_lang_msg_handler_set(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler);
          Set receiving handler for C-side code.
 
-      i) int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC);
-         Send the data to the script-side(isC must be 1) via the message communication item which is
+      i) int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int is_c);
+         Send the data to the script-side(is_c must be 1) via the message communication item which is
          located by 'name'.
 
       j) int mln_lang_ctx_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler);
@@ -2689,9 +2689,9 @@ Their definitions can be found in melon/include/mln_types.h.
                 Gather every related data from 'data' and add in 'gc' to participate the calculation
                 of garbage collection.
 
-         <V>    typedef void  (*gc_move_handler)  (mln_gc_t *destGC, void *data);
+         <V>    typedef void  (*gc_move_handler)  (mln_gc_t *dest_gc, void *data);
                 Change something about garbage collector in user data 'data' to be related with
-                'destGC'.
+                'dest_gc'.
 
          <VI>   typedef void  (*gc_root_setter)   (mln_gc_t *gc, void *data);
                 Gather every related data from 'data' and add in 'gc' to participate the calculation
@@ -2738,18 +2738,18 @@ Their definitions can be found in melon/include/mln_types.h.
          'clean_searcher'.
          'data' is an user data that you want to add in 'gc'.
 
-      h) void mln_gc_collect(mln_gc_t *gc, void *rootData);
+      h) void mln_gc_collect(mln_gc_t *gc, void *root_data);
          This function is used to collect garbage.
-         'rootData' indicates a data that will be used in callback function 'root_setter' to gather
+         'root_data' indicates a data that will be used in callback function 'root_setter' to gather
          root memory blocks those are reachable and can be tracked.
          In this function, callback functions -- 'gc_item_freer', 'gc_member_setter', 'gc_root_setter',
          'gc_clean_searcher' will be called.
 
-      i) void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *procGC);
+      i) void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *proc_gc);
          Remove 'data' from 'gc'.
          'data' is an user data.
          If your scenario is multi-level collection, you may need to create more than one collector.
-         So 'procGC' stand for the current collector.
+         So 'proc_gc' stand for the current collector.
 
   40) Cron format parser
       a) time_t mln_cron_parse(mln_string_t *exp, time_t base);
@@ -2976,7 +2976,7 @@ Their definitions can be found in melon/include/mln_types.h.
    need_clear -- indicates whether the 'pdata' should be freed.
    The rest variables can be used to pass some arguments and (or) a function pointer.
    There are three interfaces we should know:
-   a) void mln_thread_clearMsg(mln_thread_msg_t *msg);
+   a) void mln_thread_clear_msg(mln_thread_msg_t *msg);
       Free msg's memory.
 
    b) void mln_thread_exit(int exit_code);

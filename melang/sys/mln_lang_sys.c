@@ -36,22 +36,22 @@ static int mln_lang_sys_diff_scanner(mln_rbtree_node_t *node, void *rn_data, voi
 static int mln_lang_sys_diff_check_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static int mln_lang_sys_has_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_has_process(mln_lang_ctx_t *ctx);
-static int mln_lang_sys_isInt_handler(mln_lang_ctx_t *ctx);
-static mln_lang_var_t *mln_lang_sys_isInt_process(mln_lang_ctx_t *ctx);
-static int mln_lang_sys_isReal_handler(mln_lang_ctx_t *ctx);
-static mln_lang_var_t *mln_lang_sys_isReal_process(mln_lang_ctx_t *ctx);
-static int mln_lang_sys_isStr_handler(mln_lang_ctx_t *ctx);
-static mln_lang_var_t *mln_lang_sys_isStr_process(mln_lang_ctx_t *ctx);
-static int mln_lang_sys_isNil_handler(mln_lang_ctx_t *ctx);
-static mln_lang_var_t *mln_lang_sys_isNil_process(mln_lang_ctx_t *ctx);
-static int mln_lang_sys_isBool_handler(mln_lang_ctx_t *ctx);
-static mln_lang_var_t *mln_lang_sys_isBool_process(mln_lang_ctx_t *ctx);
-static int mln_lang_sys_isObj_handler(mln_lang_ctx_t *ctx);
-static mln_lang_var_t *mln_lang_sys_isObj_process(mln_lang_ctx_t *ctx);
-static int mln_lang_sys_isFunc_handler(mln_lang_ctx_t *ctx);
-static mln_lang_var_t *mln_lang_sys_isFunc_process(mln_lang_ctx_t *ctx);
-static int mln_lang_sys_isArray_handler(mln_lang_ctx_t *ctx);
-static mln_lang_var_t *mln_lang_sys_isArray_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_is_int_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_is_int_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_is_real_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_is_real_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_is_str_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_is_str_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_is_nil_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_is_nil_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_is_bool_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_is_bool_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_is_obj_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_is_obj_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_is_func_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_is_func_process(mln_lang_ctx_t *ctx);
+static int mln_lang_sys_is_array_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_sys_is_array_process(mln_lang_ctx_t *ctx);
 static int mln_lang_sys_int_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_int_process(mln_lang_ctx_t *ctx);
 static int mln_lang_sys_bool_handler(mln_lang_ctx_t *ctx);
@@ -87,7 +87,7 @@ static int mln_sys_remove_delete_dir(char * dirname);
 static int mln_sys_remove(char *pathname);
 static int mln_lang_sys_mkdir_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_mkdir_process(mln_lang_ctx_t *ctx);
-static inline void mln_lang_sys_mkdir_getPrio(mln_s64_t prio, mode_t *mode);
+static inline void mln_lang_sys_mkdir_get_prio(mln_s64_t prio, mode_t *mode);
 static int mln_lang_sys_exist_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_sys_exist_process(mln_lang_ctx_t *ctx);
 static int mln_lang_sys_lsdir_handler(mln_lang_ctx_t *ctx);
@@ -116,14 +116,14 @@ int mln_lang_sys(mln_lang_ctx_t *ctx)
     if (mln_lang_sys_diff_handler(ctx) < 0) goto err;
     if (mln_lang_sys_key_diff_handler(ctx) < 0) goto err;
     if (mln_lang_sys_has_handler(ctx) < 0) goto err;
-    if (mln_lang_sys_isInt_handler(ctx) < 0) goto err;
-    if (mln_lang_sys_isReal_handler(ctx) < 0) goto err;
-    if (mln_lang_sys_isStr_handler(ctx) < 0) goto err;
-    if (mln_lang_sys_isNil_handler(ctx) < 0) goto err;
-    if (mln_lang_sys_isBool_handler(ctx) < 0) goto err;
-    if (mln_lang_sys_isObj_handler(ctx) < 0) goto err;
-    if (mln_lang_sys_isFunc_handler(ctx) < 0) goto err;
-    if (mln_lang_sys_isArray_handler(ctx) < 0) goto err;
+    if (mln_lang_sys_is_int_handler(ctx) < 0) goto err;
+    if (mln_lang_sys_is_real_handler(ctx) < 0) goto err;
+    if (mln_lang_sys_is_str_handler(ctx) < 0) goto err;
+    if (mln_lang_sys_is_nil_handler(ctx) < 0) goto err;
+    if (mln_lang_sys_is_bool_handler(ctx) < 0) goto err;
+    if (mln_lang_sys_is_obj_handler(ctx) < 0) goto err;
+    if (mln_lang_sys_is_func_handler(ctx) < 0) goto err;
+    if (mln_lang_sys_is_array_handler(ctx) < 0) goto err;
     if (mln_lang_sys_int_handler(ctx) < 0) goto err;
     if (mln_lang_sys_bool_handler(ctx) < 0) goto err;
     if (mln_lang_sys_real_handler(ctx) < 0) goto err;
@@ -917,14 +917,14 @@ static mln_lang_var_t *mln_lang_sys_int_process(mln_lang_ctx_t *ctx)
     return NULL;
 }
 
-static int mln_lang_sys_isInt_handler(mln_lang_ctx_t *ctx)
+static int mln_lang_sys_is_int_handler(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_is_int");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isInt_process, NULL, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_is_int_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -959,7 +959,7 @@ static int mln_lang_sys_isInt_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_var_t *mln_lang_sys_isInt_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sys_is_int_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
@@ -984,14 +984,14 @@ static mln_lang_var_t *mln_lang_sys_isInt_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_sys_isReal_handler(mln_lang_ctx_t *ctx)
+static int mln_lang_sys_is_real_handler(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_is_real");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isReal_process, NULL, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_is_real_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -1026,7 +1026,7 @@ static int mln_lang_sys_isReal_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_var_t *mln_lang_sys_isReal_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sys_is_real_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
@@ -1051,14 +1051,14 @@ static mln_lang_var_t *mln_lang_sys_isReal_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_sys_isStr_handler(mln_lang_ctx_t *ctx)
+static int mln_lang_sys_is_str_handler(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_is_str");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isStr_process, NULL, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_is_str_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -1093,7 +1093,7 @@ static int mln_lang_sys_isStr_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_var_t *mln_lang_sys_isStr_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sys_is_str_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
@@ -1118,14 +1118,14 @@ static mln_lang_var_t *mln_lang_sys_isStr_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_sys_isNil_handler(mln_lang_ctx_t *ctx)
+static int mln_lang_sys_is_nil_handler(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_is_nil");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isNil_process, NULL, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_is_nil_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -1160,7 +1160,7 @@ static int mln_lang_sys_isNil_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_var_t *mln_lang_sys_isNil_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sys_is_nil_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
@@ -1185,14 +1185,14 @@ static mln_lang_var_t *mln_lang_sys_isNil_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_sys_isBool_handler(mln_lang_ctx_t *ctx)
+static int mln_lang_sys_is_bool_handler(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_is_bool");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isBool_process, NULL, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_is_bool_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -1227,7 +1227,7 @@ static int mln_lang_sys_isBool_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_var_t *mln_lang_sys_isBool_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sys_is_bool_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
@@ -1252,14 +1252,14 @@ static mln_lang_var_t *mln_lang_sys_isBool_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_sys_isObj_handler(mln_lang_ctx_t *ctx)
+static int mln_lang_sys_is_obj_handler(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_is_obj");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isObj_process, NULL, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_is_obj_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -1294,7 +1294,7 @@ static int mln_lang_sys_isObj_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_var_t *mln_lang_sys_isObj_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sys_is_obj_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
@@ -1319,14 +1319,14 @@ static mln_lang_var_t *mln_lang_sys_isObj_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_sys_isFunc_handler(mln_lang_ctx_t *ctx)
+static int mln_lang_sys_is_func_handler(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_is_func");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isFunc_process, NULL, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_is_func_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -1361,7 +1361,7 @@ static int mln_lang_sys_isFunc_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_var_t *mln_lang_sys_isFunc_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sys_is_func_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
@@ -1386,14 +1386,14 @@ static mln_lang_var_t *mln_lang_sys_isFunc_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_sys_isArray_handler(mln_lang_ctx_t *ctx)
+static int mln_lang_sys_is_array_handler(mln_lang_ctx_t *ctx)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("mln_is_array");
     mln_string_t v1 = mln_string("var");
-    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_isArray_process, NULL, NULL)) == NULL) {
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_sys_is_array_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
@@ -1428,7 +1428,7 @@ static int mln_lang_sys_isArray_handler(mln_lang_ctx_t *ctx)
     return 0;
 }
 
-static mln_lang_var_t *mln_lang_sys_isArray_process(mln_lang_ctx_t *ctx)
+static mln_lang_var_t *mln_lang_sys_is_array_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("var");
@@ -2829,7 +2829,7 @@ static mln_lang_var_t *mln_lang_sys_mkdir_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
 
-    mln_lang_sys_mkdir_getPrio(prio, &mode);
+    mln_lang_sys_mkdir_get_prio(prio, &mode);
 
 #if defined(WIN32)
     if (mkdir((char *)val1->data.s->data)) {
@@ -2847,7 +2847,7 @@ static mln_lang_var_t *mln_lang_sys_mkdir_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static inline void mln_lang_sys_mkdir_getPrio(mln_s64_t prio, mode_t *mode)
+static inline void mln_lang_sys_mkdir_get_prio(mln_s64_t prio, mode_t *mode)
 {
     mode_t m = 0;
     if (prio & 0x1) m |= S_IXOTH;

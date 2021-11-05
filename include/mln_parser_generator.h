@@ -905,7 +905,7 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
     mln_shift_t *sh;\
     mln_u64_t state_type, col_index;\
     int failed = 0, ret, is_recovered = 0;\
-    mln_sauto_t failedType = -1, failedline = -1;\
+    mln_sauto_t failed_type = -1, failedline = -1;\
     mln_factor_t *top = NULL;\
     while (1) {\
         if (*is_reduce) {\
@@ -938,9 +938,9 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
         } else if (state_type == M_PG_ERROR) {\
             if (is_recovered) return -1;\
             if (type == M_P_CUR_STACK) {\
-                if (failed && failedType == (*la)->token_type && failedline == (*la)->line) return -1;\
+                if (failed && failed_type == (*la)->token_type && failedline == (*la)->line) return -1;\
                 failed = 1;\
-                failedType = (*la)->token_type;\
+                failed_type = (*la)->token_type;\
                 failedline = (*la)->line;\
                 mln_s8ptr_t name = NULL;\
                 if ((*la)->token_type != TK_PREFIX##_TK_EOF && (*la)->data != NULL) \

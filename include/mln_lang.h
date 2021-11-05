@@ -247,12 +247,12 @@ struct mln_lang_scope_s {
 typedef enum {
     M_LANG_SYMBOL_VAR = 0,
     M_LANG_SYMBOL_SET
-} mln_lang_symbolType_t;
+} mln_lang_symbol_type_t;
 
 struct mln_lang_symbol_node_s {
     mln_string_t                    *symbol;
     mln_lang_ctx_t                  *ctx;
-    mln_lang_symbolType_t            type;
+    mln_lang_symbol_type_t           type;
     union {
         mln_lang_var_t          *var;
         mln_lang_set_detail_t   *set;
@@ -291,7 +291,7 @@ struct mln_lang_var_s {
 typedef enum {
     M_FUNC_INTERNAL = 0,
     M_FUNC_EXTERNAL
-} mln_lang_funcType_t;
+} mln_lang_func_type_t;
 
 struct mln_lang_func_detail_s {
     mln_lang_exp_t                  *exp;
@@ -300,7 +300,7 @@ struct mln_lang_func_detail_s {
     mln_size_t                       nargs;
     mln_lang_var_t                  *closure_head;
     mln_lang_var_t                  *closure_tail;
-    mln_lang_funcType_t              type;
+    mln_lang_func_type_t             type;
     union {
         mln_lang_internal        process;
         mln_lang_stm_t          *stm;
@@ -310,11 +310,11 @@ struct mln_lang_func_detail_s {
 typedef enum {
     M_GC_OBJ = 0,
     M_GC_ARRAY
-} mln_lang_gcType_t;
+} mln_lang_gc_type_t;
 
 typedef struct {
     mln_gc_t                        *gc;
-    mln_lang_gcType_t                type;
+    mln_lang_gc_type_t               type;
     union {
         mln_lang_object_t       *obj;
         mln_lang_array_t        *array;
@@ -448,7 +448,7 @@ extern mln_lang_var_t *mln_lang_var_create_string(mln_lang_ctx_t *ctx, mln_strin
 extern mln_lang_var_t *mln_lang_var_create_array(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL1(1);
 extern mln_lang_symbol_node_t *mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
 /* Note end*/
-extern int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbolType_t type, void *data) __NONNULL2(1,3);
+extern int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, void *data) __NONNULL2(1,3);
 extern mln_lang_var_t *mln_lang_var_new(mln_lang_ctx_t *ctx, \
                                         mln_string_t *name, \
                                         mln_lang_var_type_t type, \
@@ -474,7 +474,7 @@ extern int mln_lang_var_value_set(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln
 extern int mln_lang_var_value_set_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
 extern mln_lang_func_detail_t *
 mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
-                         mln_lang_funcType_t type, \
+                         mln_lang_func_type_t type, \
                          void *data, \
                          mln_lang_exp_t *exp, \
                          mln_lang_exp_t *closure) __NONNULL2(1,3);
@@ -498,7 +498,7 @@ mln_lang_array_get(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t 
 extern int mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_msg_free(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_msg_handler_set(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler) __NONNULL2(1,2);
-extern int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int isC) __NONNULL3(1,2,3);
+extern int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int is_c) __NONNULL3(1,2,3);
 extern mln_lang_set_detail_t *
 mln_lang_set_detail_new(mln_alloc_t *pool, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_set_detail_free(mln_lang_set_detail_t *c);
