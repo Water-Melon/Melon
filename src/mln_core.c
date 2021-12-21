@@ -253,10 +253,11 @@ static void mln_init_notice(void)
     }
     freeaddrinfo(res);
 #if defined(WIN32)
-     n = send(fd, (char *)buf, sizeof(buf) - 1, 0);
+    n = send(fd, (char *)buf, sizeof(buf) - 1, 0);
 #else
-     n = send(fd, buf, sizeof(buf) - 1, 0);
+    n = send(fd, buf, sizeof(buf) - 1, 0);
 #endif
-     mln_socket_close(fd);
+    if (n < 0) {/* do nothing */}
+    mln_socket_close(fd);
 }
 
