@@ -139,5 +139,8 @@ extern int socketpair(int domain, int type, int protocol, int sv[2]);
 #else
 #define mln_socket_close close
 #endif
+
+#define MLN_AUTHOR "Niklaus F.Schen"
+
 #endif
 

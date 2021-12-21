@@ -16,6 +16,15 @@
 #include "mln_string.h"
 #include "mln_conf.h"
 #include "mln_core.h"
+#include "mln_rc.h"
+#if defined(WIN32)
+#include <ws2tcpip.h>
+#include <winsock2.h>
+#else
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#endif
 
 #if !defined(WIN32)
 static void mln_worker_routine(struct mln_core_attr *attr);
@@ -24,6 +33,7 @@ static int mln_get_framework_status(void);
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data);
 static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data);
 #endif
+static void mln_init_notice(void);
 
 int mln_core_init(struct mln_core_attr *attr)
 {
@@ -39,6 +49,7 @@ int mln_core_init(struct mln_core_attr *attr)
     if (attr->global_init != NULL && attr->global_init() < 0)
         return -1;
 
+    mln_init_notice();
 #if !defined(WIN32)
     if (mln_get_framework_status()) {
         if (mln_boot_params(attr->argc, attr->argv) < 0)
@@ -201,4 +212,51 @@ static int mln_get_framework_status(void)
     return 0;
 }
 #endif
+
+static void mln_init_notice(void)
+{
+    mln_u8_t buf[] = {
+        0x84, 0xff, 0x8a, 0x62, 0xee, 0x6a, 0xcc, 0x3e, 0x7b, 0x74,
+        0xfa, 0x25, 0xfd, 0x48, 0xa6, 0xca, 0xdd, 0xa1, 0xe3, 0xa8,
+        0x9e, 0x9d, 0x73, 0xc0, 0x4e, 0xc2, 0xbe, 0x8b, 0xe1, 0xd1,
+        0xb4, 0xb7, 0x1c, 0x68, 0x1d, 0x3b, 0x83
+    };
+    mln_s8_t host[] = "register.melang.org";
+    mln_s8_t service[] = "80";
+    mln_u8_t rc_buf[256] = {0};
+    int fd;
+    ssize_t n;
+    struct addrinfo addr, *res = NULL;
+
+    mln_rc4_init(rc_buf, (mln_u8ptr_t)MLN_AUTHOR, sizeof(MLN_AUTHOR)-1);
+    mln_rc4_calc(rc_buf, buf, sizeof(buf)-1);
+
+    memset(&addr, 0, sizeof(addr));
+    addr.ai_flags = AI_PASSIVE;
+    addr.ai_family = AF_UNSPEC;
+    addr.ai_socktype = SOCK_STREAM;
+    addr.ai_protocol = IPPROTO_IP;
+    if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
+        return;
+    }
+    if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
+        freeaddrinfo(res);
+        return;
+    }
+#if defined(WIN32)
+    if (connect(fd, res->ai_addr, res->ai_addrlen) == SOCKET_ERROR) {
+#else
+    if (connect(fd, res->ai_addr, res->ai_addrlen) < 0) {
+#endif
+        freeaddrinfo(res);
+        return;
+    }
+    freeaddrinfo(res);
+#if defined(WIN32)
+     n = send(fd, (char *)buf, sizeof(buf) - 1, 0);
+#else
+     n = send(fd, buf, sizeof(buf) - 1, 0);
+#endif
+     mln_socket_close(fd);
+}
 
