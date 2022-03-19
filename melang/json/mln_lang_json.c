@@ -722,6 +722,7 @@ mln_lang_json_decode_number(mln_lang_ctx_t *ctx, mln_lang_array_t *array, double
 {
     mln_lang_var_t *array_val, var;
     mln_lang_val_t val;
+    mln_s64_t i = (mln_s64_t)num;
     if ((array_val = mln_lang_array_get(ctx, array, key)) == NULL) {
         return -1;
     }
@@ -730,8 +731,13 @@ mln_lang_json_decode_number(mln_lang_ctx_t *ctx, mln_lang_array_t *array, double
     var.val = &val;
     var.in_set = NULL;
     var.prev = var.next = NULL;
-    val.data.f = num;
-    val.type = M_LANG_VAL_TYPE_REAL;
+    if (i == num) {
+        val.data.i = num;
+        val.type = M_LANG_VAL_TYPE_INT;
+    } else {
+        val.data.f = num;
+        val.type = M_LANG_VAL_TYPE_REAL;
+    }
     val.ref = 1;
     if (mln_lang_var_value_set(ctx, array_val, &var) < 0) {
         return -1;

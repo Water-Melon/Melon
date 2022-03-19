@@ -718,10 +718,22 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
             *buf++ = '\"'; ++length;
             break;
         case M_JSON_NUM:
-            n = snprintf(buf, 512, "%f", j->data.m_j_number);
+        {
+            mln_s64_t i = (mln_s64_t)(j->data.m_j_number);
+            if (i == j->data.m_j_number)
+#if defined(WIN32)
+                n = snprintf(buf, 512, "%I64d", i);
+#elif defined(i386) || defined(__arm__)
+                n = snprintf(buf, 512, "%lld", i);
+#else
+                n = snprintf(buf, 512, "%ld", i);
+#endif
+            else
+                n = snprintf(buf, 512, "%f", j->data.m_j_number);
             buf += n;
             length += n;
             break;
+        }
         case M_JSON_TRUE:
             memcpy(buf, "true", 4);
             buf += 4;
