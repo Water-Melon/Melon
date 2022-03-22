@@ -512,7 +512,7 @@ Their definitions can be found in melon/include/mln_types.h.
          'define' is a capability to define a macro.
          Example:
              #define FOO 6  /*define a macro 'FOO' */
-             #FOO           /*use macro 'FOO', it should be start with '@'.*/
+             #FOO           /*use macro 'FOO', it should be start with '#'.*/
              #undef FOO     /*undefine the macro 'FOO'*/
          There are two macro will be defined automatically while initialized a lexer, '1' and 'true', their
          content is nil.
@@ -3230,7 +3230,7 @@ Their definitions can be found in melon/include/mln_types.h.
           e.g.
             @foo ()
             {
-                @mln_print(args);
+                _mln_print(args);
             }
             foo('hello', 1, ['world', 2]); //output [hello, 1, [world, 2, ], ]
 
@@ -3239,7 +3239,7 @@ Their definitions can be found in melon/include/mln_types.h.
           @foo() {
               a = 1;
               @bar() $(b) {     //b is a copy
-                  @mln_print(b);
+                  _mln_print(b);
               }
               b = 100;
               return bar;
@@ -3251,7 +3251,7 @@ Their definitions can be found in melon/include/mln_types.h.
           @foo() {
               a = 1;
               @bar() $(&b) { //b is a reference
-                  @mln_print(b);
+                  _mln_print(b);
               }
               b = 100;
               return bar;
@@ -3307,12 +3307,12 @@ Their definitions can be found in melon/include/mln_types.h.
       e.g. normal usage
           @foo (newval, userData)
           {
-              @mln_dump(newval);
-              @mln_dump(userData);
+              _mln_dump(newval);
+              _mln_dump(userData);
           }
           name = 'Susan';
           gender = 'female';
-          @mln_watch(name, foo, gender);
+          mln_watch(name, foo, gender);
           name = 'Tom';//Then foo will be called after 'name' assigned.
 
       e.g. reference
@@ -3322,9 +3322,9 @@ Their definitions can be found in melon/include/mln_types.h.
           }
           name = 'Susan';
           gender = 'female';
-          @mln_watch(name, foo, gender);
+          mln_watch(name, foo, gender);
           name = 'Tom';//Then foo will be called after 'name' assigned.
-          @mln_dump(gender);
+          mln_dump(gender);
 
 
    G. Operator

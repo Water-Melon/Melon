@@ -42,7 +42,6 @@ typedef struct mln_lang_locate_tmp_s       mln_lang_locate_tmp_t;
 typedef struct mln_lang_spec_s             mln_lang_spec_t;
 typedef struct mln_lang_factor_s           mln_lang_factor_t;
 typedef struct mln_lang_elemlist_s         mln_lang_elemlist_t;
-typedef struct mln_lang_funccall_s         mln_lang_funccall_t;
 
 typedef enum {
     M_STM_BLOCK = 0,
@@ -390,8 +389,7 @@ typedef enum mln_lang_spec_op_e {
     M_SPEC_DEC,
     M_SPEC_NEW,
     M_SPEC_PARENTH,
-    M_SPEC_FACTOR,
-    M_SPEC_FUNC
+    M_SPEC_FACTOR
 } mln_lang_spec_op_t;
 
 struct mln_lang_spec_s {
@@ -401,7 +399,6 @@ struct mln_lang_spec_s {
         mln_lang_exp_t          *exp;
         mln_lang_factor_t       *factor;
         mln_lang_spec_t         *spec;
-        mln_lang_funccall_t     *func;
         mln_string_t            *set_name;
     } data;
 };

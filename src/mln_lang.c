@@ -250,7 +250,6 @@ static void mln_lang_stack_handler_spec(mln_lang_ctx_t *ctx);
 static inline int mln_lang_stack_handler_spec_new(mln_lang_ctx_t *ctx, mln_string_t *name);
 static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_elemlist(mln_lang_ctx_t *ctx);
-static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx);
 
 static int mln_lang_dump_symbol(mln_lang_ctx_t *ctx, void *key, void *val, void *udata);
 static int mln_lang_dump_check_cmp(const void *addr1, const void *addr2);
@@ -437,12 +436,8 @@ static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *
             case M_LSNT_FACTOR:\
                 sn->data.factor = (mln_lang_factor_t *)(_data);\
                 break;\
-            case M_LSNT_ELEMLIST:\
+            default: /* M_LSNT_ELEMLIST */\
                 sn->data.elemlist = (mln_lang_elemlist_t *)(_data);\
-                break;\
-            default:/*M_LSNT_FUNCCALL*/\
-                sn->data.funccall = (mln_lang_funccall_t *)(_data);\
-                sn->pos = sn->data.funccall->args;\
                 break;\
         }\
         sn->ret_var = sn->ret_var2 = NULL;\
@@ -509,8 +504,7 @@ mln_lang_stack_handler mln_lang_stack_map[] = {
     mln_lang_stack_handler_locate,
     mln_lang_stack_handler_spec,
     mln_lang_stack_handler_factor,
-    mln_lang_stack_handler_elemlist,
-    mln_lang_stack_handler_funccall
+    mln_lang_stack_handler_elemlist
 };
 
 mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
@@ -3096,10 +3090,8 @@ static void __mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg)
                 line = node->data.spec->line; break;
             case M_LSNT_FACTOR:
                 line = node->data.factor->line; break;
-            case M_LSNT_ELEMLIST:
+            default: /* M_LSNT_ELEMLIST */
                 line = node->data.elemlist->line; break;
-            default:
-                line = node->data.funccall->line; break;
         }
     }
     if (ctx->filename == NULL) filename = &nilname;
@@ -5719,14 +5711,10 @@ static void mln_lang_stack_handler_spec(mln_lang_ctx_t *ctx)
                 }
                 node->step = 2;
                 break;
-            case M_SPEC_FACTOR:
+            default: /* M_SPEC_FACTOR */
                 data = (mln_u8ptr_t)(spec->data.factor);
                 type = M_LSNT_FACTOR;
                 node->step = M_LANG_STEP_OUT;
-                break;
-            default: /*M_SPEC_FUNC:*/
-                data = (mln_u8ptr_t)(spec->data.func);
-                type = M_LSNT_FUNCCALL;
                 break;
         }
         if (data != NULL) {
@@ -6092,56 +6080,6 @@ static void mln_lang_stack_handler_elemlist(mln_lang_ctx_t *ctx)
     __mln_lang_run(ctx->lang);
 }
 
-static void mln_lang_stack_handler_funccall(mln_lang_ctx_t *ctx)
-{
-    mln_lang_stack_node_t *node = mln_lang_stack_top(ctx);
-    mln_lang_funccall_t *lf = node->data.funccall;
-    mln_lang_funccall_val_t *funccall;
-    mln_lang_var_t *var;
-
-    if (node->step == 0) {
-        node->step = 1;
-        if ((funccall = __mln_lang_funccall_val_new(ctx->pool, lf->name)) == NULL) {
-            __mln_lang_errmsg(ctx, "No memory.");
-            mln_lang_job_free(ctx);
-            return;
-        }
-        if ((var = __mln_lang_var_create_call(ctx, funccall)) == NULL) {
-            __mln_lang_errmsg(ctx, "No memory.");
-            __mln_lang_funccall_val_free(funccall);
-            mln_lang_job_free(ctx);
-            return;
-        }
-        mln_lang_stack_node_set_ret_var(node, var);
-        mln_lang_ctx_reset_ret_var(ctx);
-        goto goon1;
-    } else {
-        if (ctx->ret_var != NULL) {
-            ASSERT(node->ret_var != NULL && node->ret_var->val->type == M_LANG_VAL_TYPE_CALL);
-            mln_lang_funccall_val_add_arg(node->ret_var->val->data.call, mln_lang_var_ref(ctx->ret_var));
-            mln_lang_ctx_reset_ret_var(ctx);
-        }
-goon1:
-        ASSERT(ctx->ret_var == NULL);
-        if (node->pos != NULL) {
-            mln_lang_exp_t *exp = (mln_lang_exp_t *)(node->pos);
-            node->pos = exp->next;
-            if ((node = mln_lang_stack_node_new(ctx, M_LSNT_ASSIGN, exp->assign)) == NULL) {
-                __mln_lang_errmsg(ctx, "No memory.");
-                mln_lang_job_free(ctx);
-                return;
-            }
-            mln_lang_stack_push(ctx, node);
-            return mln_lang_stack_map[node->type](ctx);
-        } else {
-            mln_lang_ctx_get_node_ret_val(ctx, node);
-            mln_lang_stack_pop(ctx, node);
-            mln_lang_stack_node_free(node);
-            mln_lang_stack_popuntil(ctx, node);
-        }
-    }
-    __mln_lang_run(ctx->lang);
-}
 
 static int mln_lang_dump_symbol(mln_lang_ctx_t *ctx, void *key, void *val, void *udata)
 {

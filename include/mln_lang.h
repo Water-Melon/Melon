@@ -183,8 +183,7 @@ typedef enum {
     M_LSNT_LOCATE,
     M_LSNT_SPEC,
     M_LSNT_FACTOR,
-    M_LSNT_ELEMLIST,
-    M_LSNT_FUNCCALL
+    M_LSNT_ELEMLIST
 } mln_lang_stack_node_type_t;
 
 struct mln_lang_stack_node_s {
@@ -217,7 +216,6 @@ struct mln_lang_stack_node_s {
         mln_lang_spec_t         *spec;
         mln_lang_factor_t       *factor;
         mln_lang_elemlist_t     *elemlist;
-        mln_lang_funccall_t     *funccall;
     } data;
     mln_lang_var_t                  *ret_var;
     mln_lang_var_t                  *ret_var2;/* only used to store object temporarily in locate production */
