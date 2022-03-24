@@ -334,7 +334,7 @@ again:
 static int
 mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
-    mln_u8_t *p;
+    mln_u8_t *p, flag = 0;
     int plen, count = 0;
     mln_string_t *str;
     mln_u8ptr_t buf;
@@ -346,8 +346,12 @@ mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     }
 
     for (p = (mln_u8ptr_t)jstr, plen = len; plen > 0; ++p, ++count, --plen) {
-        if (*p == (mln_u8_t)'\"' && (p == (mln_u8ptr_t)jstr || *(p-1) != (mln_u8_t)'\\')) {
-            break;
+        if (!flag && *p == (mln_u8_t)'\\') {
+            flag = 1;
+        } else {
+            if (*p == (mln_u8_t)'\"' && (p == (mln_u8ptr_t)jstr || !flag))
+                break;
+            if (flag) flag = 0;
         }
     }
     if (plen <= 0) {
@@ -676,6 +680,7 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
     mln_size_t length = 0, save;
     mln_string_t *s;
     struct mln_json_tmp_s tmp;
+    mln_u8ptr_t p, end;
 
     switch (j->type) {
         case M_JSON_OBJECT:
@@ -711,9 +716,16 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
         case M_JSON_STRING:
             *buf++ = '\"'; ++length;
             if ((s = j->data.m_j_string) != NULL) {
-                memcpy(buf, s->data, s->len);
-                buf += s->len;
-                length += s->len;
+                p = j->data.m_j_string->data;
+                end = p + j->data.m_j_string->len;
+                for (; p < end; ) {
+                    if (*p == '\"' || *p == '\\') {
+                        *buf++ = '\\';
+                        ++length;
+                    }
+                    *buf++ = *p++;
+                    ++length;
+                }
             }
             *buf++ = '\"'; ++length;
             break;
@@ -812,6 +824,7 @@ static inline mln_size_t mln_json_get_length(mln_json_t *j)
 
     char num_str[512] = {0};
     mln_size_t length = 1;
+    mln_u8ptr_t p, end;
 
     switch (j->type) {
         case M_JSON_OBJECT:
@@ -828,8 +841,15 @@ static inline mln_size_t mln_json_get_length(mln_json_t *j)
             break;
         case M_JSON_STRING:
             length += 2;
-            if (j->data.m_j_string != NULL)
+            if (j->data.m_j_string != NULL) {
+                p = j->data.m_j_string->data;
+                end = p + j->data.m_j_string->len;
+                for (; p < end; ++p) {
+                    if (*p == '\"' || *p == '\\')
+                        ++length;
+                }
                 length += j->data.m_j_string->len;
+            }
             break;
         case M_JSON_NUM:
             length += snprintf(num_str, sizeof(num_str), "%f", j->data.m_j_number);
