@@ -3703,7 +3703,7 @@ static mln_lang_var_t *mln_lang_sys_import_process(mln_lang_ctx_t *ctx)
     } else {
         if (name->len > 0 && name->data[0] != '.') {
 #if defined(WIN32)
-            n = snprintf(path, sizeof(path)-1, "./%s.dll", (char *)(name->data));
+            n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
 #else
             n = snprintf(path, sizeof(path)-1, "./%s.so", (char *)(name->data));
 #endif
@@ -3751,12 +3751,12 @@ goon:
     }
 
 #if defined(WIN32)
-    handle = GetModuleHandle(TEXT(path));
+    handle = LoadLibrary(TEXT(path));
 #else
     handle = dlopen(path, RTLD_LAZY);
 #endif
     if (handle == NULL) {
-        n = snprintf(tmp_path, sizeof(tmp_path)-1, "Load dynamic library [%s] failed.", path);
+        n = snprintf(tmp_path, sizeof(tmp_path)-1, "Load dynamic library [%s] failed. %ld", path, GetLastError());
         tmp_path[n] = 0;
         mln_lang_errmsg(ctx, tmp_path);
         return NULL;
