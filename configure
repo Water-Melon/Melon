@@ -45,8 +45,10 @@ realpath=`./path_generator $install_path`
 nullpath=`./path_generator /dev/null`
 if ! case $sysname in MINGW*) false;; esac; then
     melanglibpath=`./path_generator $HOME/lib/melang`
+    melangdylibpath=`./path_generator $HOME/lib/melang_dynamic`
 else
     melanglibpath=`./path_generator /usr/local/lib/melang`
+    melangdylibpath=`./path_generator /usr/local/lib/melang_dynamic`
 fi
 rm -f path_generator .path_generator.c
 #build path.c & h
@@ -55,6 +57,7 @@ echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
 echo -e "\nextern char *mln_path(void);" >> include/mln_path.h
 echo -e "\nextern char *mln_null_path(void);" >> include/mln_path.h
 echo -e "\nextern char *mln_melang_lib_path(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_melang_dylib_path(void);" >> include/mln_path.h
 echo -e "\n#endif\n" >> include/mln_path.h
 
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > src/mln_path.c
@@ -62,6 +65,7 @@ echo "#include \"mln_path.h\"" >> src/mln_path.c
 echo -e "\nstatic char install_path[] = \"$realpath\";" >> src/mln_path.c
 echo -e "\nstatic char null_path[] = \"$nullpath\";" >> src/mln_path.c
 echo -e "\nstatic char melang_lib_path[] = \"$melanglibpath\";" >> src/mln_path.c
+echo -e "\nstatic char melang_dylib_path[] = \"$melangdylibpath\";" >> src/mln_path.c
 echo -e "\nchar *mln_path(void)\n{" >> src/mln_path.c
 echo "    return install_path;" >> src/mln_path.c
 echo "}" >> src/mln_path.c
@@ -70,6 +74,9 @@ echo "    return null_path;" >> src/mln_path.c
 echo "}" >> src/mln_path.c
 echo -e "\nchar *mln_melang_lib_path(void)\n{" >> src/mln_path.c
 echo "    return melang_lib_path;" >> src/mln_path.c
+echo "}" >> src/mln_path.c
+echo -e "\nchar *mln_melang_dylib_path(void)\n{" >> src/mln_path.c
+echo "    return melang_dylib_path;" >> src/mln_path.c
 echo "}" >> src/mln_path.c
 
 # build mln_ipc.c & h

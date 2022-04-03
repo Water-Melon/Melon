@@ -75,6 +75,7 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
     } else if (type == M_INPUT_T_FILE) {
         int n;
         char path[1024] = {0};
+        char tmp_path[1024];
         char *melang_path = NULL;
         mln_u32_t len = data->len >= 1024? 1023: data->len;
         memcpy(path, data->data, len);
@@ -90,7 +91,6 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
                 li->fd = open(path, O_RDONLY);
             } else if ((melang_path = getenv("MELANG_PATH")) != NULL) {
                 char *end = strchr(melang_path, ';');
-                char tmp_path[1024];
                 int found = 0;
                 while (end != NULL) {
                     *end = 0;
@@ -110,11 +110,11 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
                         tmp_path[n] = 0;
                         li->fd = open(tmp_path, O_RDONLY);
                     } else {
-                        li->fd = -1;
+                        goto goon;
                     }
                 }
             } else {
-                char tmp_path[1024];
+goon:
                 n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_melang_lib_path(), path);
                 tmp_path[n] = 0;
                 li->fd = open(tmp_path, O_RDONLY);
