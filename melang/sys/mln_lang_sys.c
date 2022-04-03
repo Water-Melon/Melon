@@ -3701,11 +3701,19 @@ static mln_lang_var_t *mln_lang_sys_import_process(mln_lang_ctx_t *ctx)
 #endif
         path[n] = 0;
     } else {
+        if (name->len > 0 && name->data[0] != '.') {
 #if defined(WIN32)
-        n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
+            n = snprintf(path, sizeof(path)-1, "./%s.dll", (char *)(name->data));
 #else
-        n = snprintf(path, sizeof(path)-1, "%s.so", (char *)(name->data));
+            n = snprintf(path, sizeof(path)-1, "./%s.so", (char *)(name->data));
 #endif
+        } else {
+#if defined(WIN32)
+            n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
+#else
+            n = snprintf(path, sizeof(path)-1, "%s.so", (char *)(name->data));
+#endif
+        }
         path[n] = 0;
         if (!access(path, F_OK)) {
             /* do nothing */
@@ -3760,7 +3768,7 @@ goon:
     if (!mln_rbtree_null(rn, tree)) {
         psi = (mln_lang_sys_import_t *)(rn->data);
     } else {
-        if ((psi = mln_lang_sys_import_new(ctx, name, handle)) != NULL) {
+        if ((psi = mln_lang_sys_import_new(ctx, name, handle)) == NULL) {
 #if defined(WIN32)
             FreeLibrary((HMODULE)(psi->handle));
 #else
