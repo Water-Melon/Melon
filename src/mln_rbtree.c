@@ -70,7 +70,16 @@ mln_rbtree_destroy(mln_rbtree_t *t)
     mln_rbtree_node_t *fr;
 
     t->cache = 0;
-    while ((fr = t->head) != NULL) {
+
+    /*
+     * Warning: mln_lang_sys.c: mln_import is very dependent on this release order.
+     * This release order ensures that the resources of the dynamic extension library
+     * are released first, and then the import resources are released.
+     * If the import resource is released before the dynamic library resource,
+     * the function in the dynamic library cannot be read when the dynamic extension
+     * resource is released, and the program terminates abnormally.
+     */
+    while ((fr = t->tail) != NULL) {
         mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
         mln_rbtree_node_free(t, fr);
     }
