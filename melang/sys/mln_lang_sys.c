@@ -3756,7 +3756,7 @@ goon:
     handle = dlopen(path, RTLD_LAZY);
 #endif
     if (handle == NULL) {
-        n = snprintf(tmp_path, sizeof(tmp_path)-1, "Load dynamic library [%s] failed. %ld", path, GetLastError());
+        n = snprintf(tmp_path, sizeof(tmp_path)-1, "Load dynamic library [%s] failed.", path);
         tmp_path[n] = 0;
         mln_lang_errmsg(ctx, tmp_path);
         return NULL;

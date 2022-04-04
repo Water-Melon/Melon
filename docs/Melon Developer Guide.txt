@@ -3826,6 +3826,10 @@ Their definitions can be found in melon/include/mln_types.h.
       If 'bufsize' less than 0, it means unlimited.
       The output will be returned.
 
+      <90> mln_import(name);
+      Import dynamic library indicated by 'name' into current melang scope.
+      Dynamic library must contain the entrance function named 'init', its prototype is:
+          int init(mln_lang_ctx_t *);
 
    I. Function development
       Following these steps below:
@@ -3838,3 +3842,12 @@ Their definitions can be found in melon/include/mln_types.h.
              ...
          }
       Then you create a new script internal function. More details see .melang/print/.
+
+   J. Dynamic Library Extension
+      Write your dynamic library with an entrance function 'init' whose prototype is
+      int init(mln_lang_ctx_t *ctx)
+      {
+          ...
+      }
+      Many functions, sets and variables can be loaded in this function.
+      Return value: 0 - success, non-zero - error encountered.
