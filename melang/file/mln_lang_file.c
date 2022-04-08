@@ -36,11 +36,28 @@ static mln_lang_var_t *mln_lang_close_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_errmsg_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_size_process(mln_lang_ctx_t *ctx);
 static int mln_lang_file_set_errno(mln_lang_ctx_t *ctx, int err);
+static int mln_lang_file_fd_cmp(int fd1, int fd2);
 
 int mln_lang_file(mln_lang_ctx_t *ctx)
 {
     mln_string_t setname = mln_string("File");
     mln_lang_set_detail_t *set;
+    mln_rbtree_t *tree;
+    struct mln_rbtree_attr rbattr;
+
+    rbattr.pool = ctx->pool;
+    rbattr.cmp = (rbtree_cmp)mln_lang_file_fd_cmp;
+    rbattr.data_free = (rbtree_free_data)close;
+    rbattr.cache = 0;
+    if ((tree = mln_rbtree_init(&rbattr)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if (mln_lang_ctx_resource_register(ctx, "file_fd", tree, (mln_lang_resource_free)mln_rbtree_destroy) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_rbtree_destroy(tree);
+        return -1;
+    }
 
     if ((set = mln_lang_set_detail_new(ctx->pool, &setname)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -48,6 +65,7 @@ int mln_lang_file(mln_lang_ctx_t *ctx)
     }
     ++(set->ref);
     if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_SET, set) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
         mln_lang_set_detail_self_free(set);
         return -1;
     }
@@ -80,6 +98,11 @@ int mln_lang_file(mln_lang_ctx_t *ctx)
         return -1;
     }
     return 0;
+}
+
+static int mln_lang_file_fd_cmp(int fd1, int fd2)
+{
+    return fd1 - fd2;
 }
 
 static int mln_lang_file_add_fd(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *set)
@@ -214,6 +237,8 @@ static mln_lang_var_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_s8ptr_t path;
+    mln_rbtree_t *tree;
+    mln_rbtree_node_t *rn;
     mln_lang_var_t *ret_var;
     mode_t mode;
 
@@ -313,6 +338,15 @@ static mln_lang_var_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     free(path);
+
+    tree = mln_lang_ctx_resource_fetch(ctx, "file_fd");
+    if ((rn = mln_rbtree_node_new(tree, (void *)(val->data.i))) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        close(val->data.i);
+        return NULL;
+    }
+    mln_rbtree_insert(tree, rn);
+
     if (val->data.i < 0) {
         ret_var = mln_lang_var_create_false(ctx, NULL);
     } else {
@@ -855,6 +889,8 @@ static mln_lang_var_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
     mln_lang_symbol_node_t *sym;
     mln_lang_var_t *var;
     mln_lang_var_t *ret_var;
+    mln_rbtree_t *tree;
+    mln_rbtree_node_t *rn;
 
     if ((sym = mln_lang_symbol_node_search(ctx, &_this, 1)) == NULL) {
         ASSERT(0);
@@ -892,7 +928,14 @@ static mln_lang_var_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
         }
         return ret_var;
     }
-    close(val->data.i);
+    tree = mln_lang_ctx_resource_fetch(ctx, "file_fd");
+    rn = mln_rbtree_search(tree, tree->root, (void *)(val->data.i));
+    if (mln_rbtree_null(rn, tree)) {
+        mln_lang_errmsg(ctx, "Invalid file descriptor.");
+        return NULL;
+    }
+    mln_rbtree_delete(tree, rn);
+    mln_rbtree_node_free(tree, rn);
     val->data.i = -1;
     if (mln_lang_file_set_errno(ctx, errno) < 0) {
         return NULL;
