@@ -224,7 +224,7 @@ static mln_lang_var_t *mln_lang_msgqueue_mq_send_process(mln_lang_ctx_t *ctx)
     mln_string_t v1 = mln_string("qname");
     mln_string_t v2 = mln_string("msg");
     mln_string_t v3 = mln_string("asTopic");
-    mln_string_t *qname, *s;
+    mln_string_t *qname;
     mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val;
     mln_s32_t type, type2;
@@ -294,6 +294,7 @@ static mln_lang_var_t *mln_lang_msgqueue_mq_send_process(mln_lang_ctx_t *ctx)
     }
 
     if (type == M_LANG_VAL_TYPE_STRING) {
+        mln_string_t *s;
         if ((s = mln_string_pool_dup(ctx->lang->pool, (mln_string_t *)data)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
@@ -305,7 +306,7 @@ static mln_lang_var_t *mln_lang_msgqueue_mq_send_process(mln_lang_ctx_t *ctx)
     } else {
         ret_var = mln_lang_mq_msg_set(ctx, qname, type, data);
     }
-    if (type == M_LANG_VAL_TYPE_STRING) mln_string_free(s);
+    if (type == M_LANG_VAL_TYPE_STRING) mln_string_free((mln_string_t *)data);
     return ret_var;
 }
 
