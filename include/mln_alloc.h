@@ -21,7 +21,7 @@
 #define M_ALLOC_BEGIN_OFF        ((mln_size_t)4)
 #define M_ALLOC_MGR_GRAIN_SIZE   2
 #define M_ALLOC_MGR_LEN          18*M_ALLOC_MGR_GRAIN_SIZE-(M_ALLOC_MGR_GRAIN_SIZE-1)
-#define M_ALLOC_BLK_NUM          16
+#define M_ALLOC_BLK_NUM          4
 #define M_ALLOC_CHUNK_COUNT      1023
 
 #define M_ALLOC_SHM_BITMAP_LEN   4096
