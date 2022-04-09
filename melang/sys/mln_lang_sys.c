@@ -3557,7 +3557,7 @@ static mln_lang_sys_import_t *mln_lang_sys_import_new(mln_lang_ctx_t *ctx, mln_s
 {
     mln_lang_sys_import_t *si;
 
-    if ((si = (mln_lang_sys_import_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_sys_import_t))) == NULL) {
+    if ((si = (mln_lang_sys_import_t *)mln_alloc_m(ctx->lang->pool, sizeof(mln_lang_sys_import_t))) == NULL) {
         return NULL;
     }
     si->name = mln_string_ref(name);

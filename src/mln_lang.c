@@ -752,8 +752,12 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
     ctx->lang = lang;
-    ctx->pool = lang->pool;
+    if ((ctx->pool = mln_alloc_init()) == NULL) {
+        mln_alloc_free(ctx);
+        return NULL;
+    }
     if ((ctx->fset = mln_fileset_init(M_LANG_MAX_OPENFILE)) == NULL) {
+        mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
         return NULL;
     }
@@ -771,6 +775,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     }
     if (ctx->stm == NULL) {
         mln_fileset_destroy(ctx->fset);
+        mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
         return NULL;
     }
@@ -794,6 +799,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
             mln_lang_ast_free(ctx->stm);
         }
         mln_fileset_destroy(ctx->fset);
+        mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
         return NULL;
     }
@@ -812,6 +818,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
             mln_lang_ast_free(ctx->stm);
         }
         mln_fileset_destroy(ctx->fset);
+        mln_alloc_destroy(ctx->pool);
         mln_alloc_free(ctx);
         return NULL;
     }
@@ -933,6 +940,7 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
         }
     }
     mln_fileset_destroy(ctx->fset);
+    mln_alloc_destroy(ctx->pool);
     mln_alloc_free(ctx);
 }
 
