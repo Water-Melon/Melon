@@ -1,11 +1,9 @@
 .tmpSubIncs/
 Makefile
-include/mln_ipc.h
 include/mln_melang.h
 include/mln_path.h
 lib/
 objs/
-src/mln_ipc.c
 src/mln_melang.c
 src/mln_path.c
 conf/melon.conf

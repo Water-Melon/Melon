@@ -5,6 +5,8 @@
 
 #include "mln_conf.h"
 #include "mln_log.h"
+#include "mln_ipc.h"
+#include "mln_event.h"
 #include <stdlib.h>
 
 #define CONF_ERR(lex,TK,MSG); \
@@ -93,6 +95,10 @@ static int mln_conf_dump_domain_scan(mln_rbtree_node_t *node, void *rn_data, voi
 /*for hook*/
 static mln_conf_hook_t *mln_conf_hook_init(void);
 static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
+#if !defined(WIN32)
+static void mln_conf_reload_master_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
+static void mln_conf_reload_worker_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
+#endif
 
 
 /*
@@ -745,6 +751,13 @@ int mln_conf_load(void)
         g_conf = NULL;
         return -1;
     }
+#if !defined(WIN32)
+    if (mln_ipc_handler_register(M_IPC_TYPE_CONF, mln_conf_reload_master_handler, mln_conf_reload_worker_handler, NULL, NULL) < 0) {
+        mln_conf_destroy(g_conf);
+        g_conf = NULL;
+        return -1;
+    }
+#endif
     return 0;
 }
 
@@ -917,4 +930,24 @@ MLN_CHAIN_FUNC_DEFINE(conf_hook, \
                       static inline void, \
                       prev, \
                       next);
+
+/*
+ * ipc handlers
+ */
+#if !defined(WIN32)
+static void mln_conf_reload_master_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr)
+{
+    /*
+     * do nothing.
+     */
+}
+
+static void mln_conf_reload_worker_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr)
+{
+    if (mln_conf_reload() < 0) {
+        mln_log(error, "mln_conf_reload() failed.\n");
+        exit(1);
+    }
+}
+#endif
 

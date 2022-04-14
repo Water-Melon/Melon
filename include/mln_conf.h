@@ -11,6 +11,8 @@
 #include "mln_rbtree.h"
 #include "mln_string.h"
 
+#define M_IPC_TYPE_CONF 1
+
 typedef struct mln_conf_item_s    mln_conf_item_t;
 typedef struct mln_conf_domain_s  mln_conf_domain_t;
 typedef struct mln_conf_cmd_s     mln_conf_cmd_t;

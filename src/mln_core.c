@@ -184,7 +184,7 @@ static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *da
 {
     char msg[] = "conf_reload";
 
-    return mln_ipc_master_send_prepare(ev, M_IPC_CONF_RELOAD, msg, sizeof(msg)-1, f);
+    return mln_ipc_master_send_prepare(ev, M_IPC_TYPE_CONF, msg, sizeof(msg)-1, f);
 }
 
 static int mln_get_framework_status(void)

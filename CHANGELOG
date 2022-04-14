@@ -1,3 +1,24 @@
+Changes with melon 2.3.0                                          14 Apr 2022
+    *) Fixed json bugs
+    *) Fixed melang msgqueue bugs
+    *) Fixed cron bugs
+    *) Fixed melang exec bug
+    *) Fixed melang GC bug
+    *) Fixed event bug
+    *) Fixed dup warning
+    *) Optimized string slice
+    *) Updated for win32
+    *) Updated naming convention
+    *) Updated melang function call syntax
+    *) Added dynamic library import to melang
+    *) Updated red-black tree release order
+    *) Fixed file descriptor leak in melang
+    *) Optimized melang co-routine memory overhead
+    *) Optimized memory pool
+    *) Optimized multi-thread mode
+    *) Optimized IPC handler register
+    *) Updated docs
+
 Changes with melon 2.2.2                                          14 Aug 2021
     *) Add array diff and key diff in melang
     *) Add shell command execution function in melang

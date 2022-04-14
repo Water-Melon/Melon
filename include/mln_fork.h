@@ -9,7 +9,6 @@
 #include "mln_types.h"
 #include "mln_event.h"
 #include "mln_connection.h"
-#include "mln_ipc.h"
 
 #define STATE_IDLE    0
 #define STATE_LENGTH  1
@@ -69,10 +68,8 @@ struct mln_fork_s {
 };
 
 extern int mln_pre_fork(void);
-extern void
-mln_set_master_ipc_handler(mln_ipc_handler_t *ih) __NONNULL1(1);
-extern void
-mln_set_worker_ipc_handler(mln_ipc_handler_t *ih) __NONNULL1(1);
+extern int mln_set_master_ipc_handler(mln_u32_t type, ipc_handler handler, void *data) __NONNULL1(2);
+extern int mln_set_worker_ipc_handler(mln_u32_t type, ipc_handler handler, void *data) __NONNULL1(2);
 extern int
 mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data) __NONNULL1(1);
 extern mln_tcp_conn_t *mln_fork_get_master_connection(void);

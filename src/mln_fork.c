@@ -12,6 +12,7 @@
 #include "mln_rbtree.h"
 #include "mln_log.h"
 #include "mln_global.h"
+#include "mln_ipc.h"
 #include <sys/ioctl.h>
 
 mln_tcp_conn_t master_conn;
@@ -62,6 +63,8 @@ static void
 mln_ipc_fd_handler_master_send(mln_event_t *ev, int fd, void *data);
 static void
 mln_ipc_fd_handler_worker_send(mln_event_t *ev, int fd, void *data);
+static inline mln_ipc_handler_t *mln_ipc_handler_new(mln_u32_t type, ipc_handler handler, void *data);
+static void mln_ipc_handler_free(mln_ipc_handler_t *ih);
 
 /*pre-fork*/
 int mln_pre_fork(void)
@@ -96,7 +99,7 @@ int mln_pre_fork(void)
     struct mln_rbtree_attr rbattr;
     rbattr.pool = NULL;
     rbattr.cmp = mln_fork_rbtree_cmp;
-    rbattr.data_free = NULL;
+    rbattr.data_free = (rbtree_free_data)mln_ipc_handler_free;
     rbattr.cache = 0;
     if ((master_ipc_tree = mln_rbtree_init(&rbattr)) < 0) {
         mln_log(error, "No memory.\n");
@@ -114,7 +117,17 @@ int mln_pre_fork(void)
         mln_tcp_conn_destroy(&master_conn);
         return -1;
     }
-    mln_set_ipc_handlers();
+    if (mln_set_ipc_handlers() < 0) {
+        mln_log(error, "No memory.\n");
+        mln_rbtree_destroy(worker_ipc_tree);
+        worker_ipc_tree = NULL;
+        mln_rbtree_destroy(master_ipc_tree);
+        master_ipc_tree = NULL;
+        if (mln_tcp_conn_get_fd(&master_conn) >= 0)
+            mln_socket_close(mln_tcp_conn_get_fd(&master_conn));
+        mln_tcp_conn_destroy(&master_conn);
+        return -1;
+    }
     return 0;
 }
 
@@ -408,38 +421,64 @@ do_fork_core(enum proc_exec_type etype, \
 }
 
 /*mln_set_master_ipc_handler*/
-void mln_set_master_ipc_handler(mln_ipc_handler_t *ih)
+int mln_set_master_ipc_handler(mln_u32_t type, ipc_handler handler, void *data)
 {
+    mln_ipc_handler_t *ih = mln_ipc_handler_new(type, handler, data);
+    if (ih == NULL) return -1;
+
     mln_rbtree_node_t *rn = mln_rbtree_search(master_ipc_tree, \
                                               master_ipc_tree->root, \
                                               ih);
     if (rn->data != NULL) {
-        mln_log(error, "IPC type '%d' already existed.\n", ih->type);
-        abort();
+        mln_rbtree_delete(master_ipc_tree, rn);
+        mln_rbtree_node_free(master_ipc_tree, rn);
     }
     rn = mln_rbtree_node_new(master_ipc_tree, ih);
     if (rn == NULL) {
-        mln_log(error, "No memory.\n");
-        abort();
+        mln_ipc_handler_free(ih);
+        return -1;
     }
     mln_rbtree_insert(master_ipc_tree, rn);
+    return 0;
 }
 /*mln_set_worker_ipc_handler*/
-void mln_set_worker_ipc_handler(mln_ipc_handler_t *ih)
+int mln_set_worker_ipc_handler(mln_u32_t type, ipc_handler handler, void *data)
 {
+    mln_ipc_handler_t *ih = mln_ipc_handler_new(type, handler, data);
+    if (ih == NULL) return -1;
+
     mln_rbtree_node_t *rn = mln_rbtree_search(worker_ipc_tree, \
                                               worker_ipc_tree->root, \
                                               ih);
     if (rn->data != NULL) {
-        mln_log(error, "IPC type '%d' already existed.\n", ih->type);
-        abort();
+        mln_rbtree_delete(worker_ipc_tree, rn);
+        mln_rbtree_node_free(worker_ipc_tree, rn);
     }
     rn = mln_rbtree_node_new(worker_ipc_tree, ih);
     if (rn == NULL) {
-        mln_log(error, "No memory.\n");
-        abort();
+        mln_ipc_handler_free(ih);
+        return -1;
     }
     mln_rbtree_insert(worker_ipc_tree, rn);
+    return 0;
+}
+
+static inline mln_ipc_handler_t *mln_ipc_handler_new(mln_u32_t type, ipc_handler handler, void *data)
+{
+    mln_ipc_handler_t *ih;
+    if ((ih = (mln_ipc_handler_t *)malloc(sizeof(mln_ipc_handler_t))) == NULL) {
+        return NULL;
+    }
+    ih->handler = handler;
+    ih->data = data;
+    ih->type = type;
+    return ih;
+}
+
+static void mln_ipc_handler_free(mln_ipc_handler_t *ih)
+{
+    if (ih == NULL) return;
+    free(ih);
 }
 
 /*
