@@ -340,7 +340,12 @@ static mln_lang_var_t *mln_lang_open_process(mln_lang_ctx_t *ctx)
     free(path);
 
     tree = mln_lang_ctx_resource_fetch(ctx, "file_fd");
+#if defined(WIN32)
+    int fd = val->data.i;
+    if ((rn = mln_rbtree_node_new(tree, (void *)fd)) == NULL) {
+#else
     if ((rn = mln_rbtree_node_new(tree, (void *)(val->data.i))) == NULL) {
+#endif
         mln_lang_errmsg(ctx, "No memory.");
         close(val->data.i);
         return NULL;
@@ -929,7 +934,12 @@ static mln_lang_var_t *mln_lang_close_process(mln_lang_ctx_t *ctx)
         return ret_var;
     }
     tree = mln_lang_ctx_resource_fetch(ctx, "file_fd");
+#if defined(WIN32)
+    int fd = val->data.i;
+    rn = mln_rbtree_search(tree, tree->root, (void *)fd);
+#else
     rn = mln_rbtree_search(tree, tree->root, (void *)(val->data.i));
+#endif
     if (mln_rbtree_null(rn, tree)) {
         mln_lang_errmsg(ctx, "Invalid file descriptor.");
         return NULL;
