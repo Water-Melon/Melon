@@ -2833,28 +2833,18 @@ Their definitions can be found in melon/include/mln_types.h.
       'mln_worker_process'. That's all.
 
    Now, the next essential is IPC. How to implement IPC?
-   Melon provides an easy way. We don't need to modify the original source files. There is a directory for this,
-   named 'ipc_handlers'.
-   All files in this directory are used to define the IPC message types and their handlers.
-   File name can be separated in two parts.
-   The first one is the prefix of handlers' name. There are two handlers. One is for master process named
-   'xxx_master' and the other is for worker process named 'xxx_worker'.
-   The other part is the message type. This type will be defined in '/.../melon-xxx/include/mln_ipc.h', and we don't
-   need to modify this file.
-   Executing shell script 'configure', this file will be recreated automatically, then all message types are
-   redefined.
-   The prototypes of IPC handlers are:
-       void prefix_master(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
-       void prefix_worker(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
-   The first argument is an event object that is related with this connection.
-   The second one is a 'mln_fork_t' object. It can provide us some essentials about child process, such as TCP
-   connection object.
-   The third one is the data that master or worker received.
-   The fourth one indicates the length of 'buf'.
-   The last one is a custom data. The memory of it should be allocated and freed by the handler. Melon won't
-   initialize or destroy it.
-   About IPC, there is a case that the master may send a message to all child processes. Based on this case, Melon
-   provides an interface to scan and process all child processes' objects.
+   We can register our IPC handlers through `mln_ipc_handler_register`. Its prototype is:
+       int mln_ipc_handler_register(mln_u32_t type,
+                                    ipc_handler master_handler, ipc_handler worker_handler,
+                                    void *master_data, void *worker_data);
+   All registered handlers will be loaded when multi-process framework start.
+   `master_handler` is the main process handler, `master_data` is the main process user data.
+   `worker_handler` is the worker process handler, `master_data` is the worker process user data.
+   `type` is the message type. And 0~1024 is taken by melon, the rest integer numbers can be used by developer.
+   If type is duplicated, the handler will be repleaced by the new one.
+
+   About IPC, developer may want to may send a message to all child processes from master processs.
+   Based on this case, Melon provides an interface to scan and process all child processes' objects.
    Its prototype is
        int mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data);
        ev -- is the event object of the master process.
@@ -2882,52 +2872,146 @@ Their definitions can be found in melon/include/mln_types.h.
           The functionality is the same as 'mln_ipc_master_send_prepare', but is provided for worker process.
           This function do not have argument 'f_child' cause worker process do not need it to locate master process.
 
+       4) int mln_set_master_ipc_handler(mln_u32_t type, ipc_handler handler, void *data);
+          This function allow you to register an IPC handler on master process.
+          Note: if workers are forked, this function should be call by master process.
+
+       5) int mln_set_worker_ipc_handler(mln_u32_t type, ipc_handler handler, void *data);
+          This function allow you to register an IPC handler on worker process.
+          Note: if workers are forked, this function should be call by worker process.
+
 7. Thread Module Development
-   In Melon, there is only one model between multiprocess and multithread.
-   We can trigger one of them via the configuration item 'thread_mode'. This command has only one parameter, it's
+   Besides thread pool, Melon supports a kind of multithread mode. In this mode, every thread has its own entrance
+   function like `main`. And they can communicate with each other through message relaying on the main thread.
+   The entrance prototype is:
+       int entrance(int argc, char **argv);
+   `argc` and `argv` is given by configuration file.
+   We can switch to multi-thread mode via the configuration item 'thread_mode'. This command has only one parameter, it's
    a boolean value. If its value is 'on', multithread model will be triggered. Otherwise, multiprocess will be
-   triggered.
-
-   Thread module development is not only like process module development, but also like IPC development.
-   There is a directory named 'threads' that is provided for maintaining thread module files. Every file is a thread
-   module. The file name is the thread's alias.
-   Every thread has an entrance named 'xxx_main' (xxx is the thread alias). Its prototype is
-       int xxx_main(int argc, char **argv);
-   Thread will start from this function. This function is the same as 'main()' in application program except its name.
-
-   Not all of these thread modules in directory 'threads' can be started up. Only the thread modules that are written
-   in the domain 'thread_exec' in 'melon.conf' can be started up.
+   triggered. We can prepare many thread entrances but only start up part of them through configuration domain
+   'thread_exec' in 'melon.conf'.
 
    Now, let us see an example.
-   1) create a thread module file.
-          touch threads/hello
-      Then the thread's alias is 'hello', and its entrance should be named 'hello_main'.
+   1) write a source file:
+      //example.c
+      #include <stdio.h>
+      #include <assert.h>
+      #include <string.h>
+      #include <errno.h>
+      #include "mln_core.h"
+      #include "mln_log.h"
+      #include "mln_thread.h"
 
-   2) edit the thread file.
-          #include ...//include some essential header files.
-          int hello_main(int argc, char *argv[])
-          {
-              //this is a thread module.
-              mln_log(debug, "hello thread!\n");
-              return 0;
+      static int haha(int argc, char **argv)
+      {
+          int fd = atoi(argv[argc-1]);
+          mln_thread_msg_t msg;
+          int nfds;
+          fd_set rdset;
+          for (;;) {
+              FD_ZERO(&rdset);
+              FD_SET(fd, &rdset);
+              nfds = select(fd+1, &rdset, NULL, NULL, NULL);
+              if (nfds < 0) {
+                  if (errno == EINTR) continue;
+                  mln_log(error, "select error. %s\n", strerror(errno));
+                  return -1;
+              }
+              memset(&msg, 0, sizeof(msg));
+      #if defined(WIN32)
+              int n = recv(fd, (char *)&msg, sizeof(msg), 0);
+      #else
+              int n = recv(fd, &msg, sizeof(msg), 0);
+      #endif
+              if (n != sizeof(msg)) {
+                  mln_log(debug, "recv error. n=%d. %s\n", n, strerror(errno));
+                  return -1;
+              }
+              mln_log(debug, "!!!src:%S auto:%l char:%c\n", msg.src, msg.sauto, msg.c);
+              mln_thread_clear_msg(&msg);
           }
-      This thread is going to do one thing that output 'hello thread!' to the log file.
-      The last element in the second argument is a string indicating a file descriptor that is combined with a TCP
-      connection for communicating with the main thread.
-      And the first element in the second argument is the thread alias. The rest elements are all parameters.
+          return 0;
+      }
 
-   3) modify configuration file.
+      static void hello_cleanup(void *data)
+      {
+          mln_log(debug, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+      }
+
+      static int hello(int argc, char **argv)
+      {
+          mln_thread_cleanup_set(hello_cleanup, NULL);
+          int i;
+          for (i = 0; i < 1; ++i)  {
+              int fd = atoi(argv[argc-1]);
+              mln_thread_msg_t msg;
+              memset(&msg, 0, sizeof(msg));
+              msg.dest = mln_string_new("haha");
+              assert(msg.dest);
+              msg.sauto = 9736;
+              msg.c = 'N';
+              msg.type = ITC_REQUEST;
+              msg.need_clear = 1;
+      #if defined(WIN32)
+              int n = send(fd, (char *)&msg, sizeof(msg), 0);
+      #else
+              int n = send(fd, &msg, sizeof(msg), 0);
+      #endif
+              if (n != sizeof(msg)) {
+                  mln_log(debug, "send error. n=%d. %s\n", n, strerror(errno));
+                  mln_string_free(msg.dest);
+                  return -1;
+              }
+          }
+          usleep(100000);
+          return 0;
+      }
+
+      int main(int argc, char *argv[])
+      {
+          mln_thread_module_t modules[] = {
+            {"haha", haha},
+            {"hello", hello},
+          };
+
+          struct mln_core_attr cattr;
+
+          cattr.argc = argc;
+          cattr.argv = argv;
+          cattr.global_init = NULL;
+          cattr.worker_process = NULL;
+
+          mln_thread_module_set(modules, 2);
+
+          if (mln_core_init(&cattr) < 0) {
+             fprintf(stderr, "Melon init failed.\n");
+             return -1;
+          }
+
+          return 0;
+      }
+
+      In this example, we will find out that the last argument is a file descriptor appended after the parameters
+      given in configuration file. This fd is used to communicate with main thread.
+
+      We can register the entrance functions through `mln_thread_module_set`.
+
+   2) modify configuration file.
+        ...
+        thread_mode on;
+        framework on;
+        ...
         thread_exec {
             //format: restart|default 'alias' ["parameter",...];
             //... Other threads
-            restart "hello";
+            restart "hello" "hello" "world";
+            default "haha";
         }
       In this example, 'restart' is the command name that indicates Melon to restart this thread when it exited.
-      There is another command name 'default', it indicates Melon to clean up the thread's resources when the thread
-      is terminated.
+      'default' indicates Melon to clean up the thread's resources when the thread is terminated.
       The type of alias and parameters must be the string.
 
-   4) start up Melon.
+   3) compile source code with libmelon and start up.
 
    There is a command in the configuration file which is 'worker_process'.
    Its parameter notices Melon how many worker processes will be started up.
