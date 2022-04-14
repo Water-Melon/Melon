@@ -16,7 +16,6 @@
 #include "mln_rbtree.h"
 #include "mln_conf.h"
 #include "mln_log.h"
-#include "mln_thread_module.h"
 
 /*
  * global variables
@@ -33,6 +32,8 @@ char thread_start_func[] = "thread_main";
  * config format:
  * [restart|default] "alias" "path" "arg1", ... ;
  */
+static mln_thread_module_t *module_array = NULL;
+static mln_size_t module_array_num = 0;
 
 /*
  * declarations
@@ -73,6 +74,8 @@ static void
 mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t);
 static inline void
 mln_thread_itc_chain_release_msg(mln_chain_t *c);
+static inline void *
+mln_get_module_entrance(char *alias);
 
 
 /*
@@ -278,6 +281,15 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
     if (mln_thread_create(t, ev) < 0) {
         mln_thread_destroy(ev, t);
     }
+}
+
+static void *mln_get_module_entrance(char *alias)
+{
+    mln_thread_module_t *tm = module_array, *end = module_array + module_array_num;
+    for (; tm < end; ++tm) {
+        if (!strcmp(alias, tm->alias)) return tm->thread_main;
+    }
+    return NULL;
 }
 
 /*
@@ -655,6 +667,12 @@ mln_thread_rbtree_cmp(const void *data1, const void *data2)
 /*
  * other apis
  */
+void mln_thread_module_set(mln_thread_module_t *modules, mln_size_t num)
+{
+    module_array = modules;
+    module_array_num = num;
+}
+
 void mln_thread_exit(int exit_code)
 {
     mln_socket_close(m_thread->peerfd);

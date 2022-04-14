@@ -3,11 +3,9 @@ Makefile
 include/mln_ipc.h
 include/mln_melang.h
 include/mln_path.h
-include/mln_thread_module.h
 lib/
 objs/
 src/mln_ipc.c
 src/mln_melang.c
 src/mln_path.c
-src/mln_thread_module.c
 conf/melon.conf

@@ -13,7 +13,13 @@
 #define THREAD_SOCKFD_LEN 128
 
 typedef int (*tentrance)(int, char **);
+
 typedef struct mln_thread_s mln_thread_t;
+
+typedef struct {
+    char                      *alias;
+    tentrance                  thread_main;
+} mln_thread_module_t;
 
 enum thread_stype {
     THREAD_RESTART,
@@ -85,5 +91,6 @@ extern void mln_thread_exit(int exit_code);
  */
 extern void mln_thread_kill(mln_string_t *alias);
 extern void mln_thread_cleanup_set(void (*tcleanup)(void *), void *data);
+extern void mln_thread_module_set(mln_thread_module_t *modules, mln_size_t num);
 #endif
 
