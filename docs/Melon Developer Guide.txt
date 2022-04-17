@@ -1030,14 +1030,14 @@ Their definitions can be found in melon/include/mln_types.h.
 
      3. How to get a parser? We can use parser generator to generate it.
         How to define a parser generator? In our example, we can write
-            MLN_DECLARE_PASER_GENERATOR(static,
+            MLN_DECLARE_PARSER_GENERATOR(static,
+                                         test1,
+                                         TEST1,
+                                         TEST1_TK_FOR);
+            MLN_DEFINE_PARSER_GENERATOR(static,
                                         test1,
                                         TEST1,
-                                        TEST1_TK_FOR);
-            MLN_DEFINE_PASER_GENERATOR(static,
-                                       test1,
-                                       TEST1,
-                                      {TEST1_TK_FOR, "TEST_TK_FOR"});
+                                       {TEST1_TK_FOR, "TEST_TK_FOR"});
             mln_production_t prod_tbl[] = {
                 {"SS:S TEST1_TK_EOF", NULL},
                 {"S:V TEST1_TK_EQUAL E", NULL},
@@ -1088,19 +1088,22 @@ Their definitions can be found in melon/include/mln_types.h.
         a) void *test1_parser_generate(mln_production_t *prod_tbl, mln_u32_t nr_prod);
            This function is used to generate a big table that will be used in the parser.          
 
-        b) int test1_parse(struct mln_parse_attr *pattr);
+        b) void *test1_parse(struct mln_parse_attr *pattr);
            This function is used to parse a text.
            pattr -- is a data structure pointer, it's defined as
                struct mln_parse_attr {
+                   mln_alloc_t              *pool;
                    mln_production_t         *prod_tbl;
                    mln_lex_t                *lex;
                    void                     *pg_data;
                    void                     *udata;
                };
+           pool -- memory pool only for syntax parsing.
            prod_tbl -- is the production array.
            lex -- is a initialized lexer.
            pg_data -- is the data that test1_parser_generate() returned.
            udata -- is the user data that the third argument of semantic function.
+           Return value is the customized AST structure.
 
         c) void test1_pg_data_free(void *pg_data);
         It is used to free the data that test1_parser_generate() returned.

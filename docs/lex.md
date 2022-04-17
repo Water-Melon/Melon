@@ -413,36 +413,6 @@ mln_lex_init_with_hooks(PREFIX_NAME,lex_ptr,attr_ptr)
 
 ```c
 #include <stdio.h>
-#include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
-#include "mln_md5.h"
-
-int main(int argc, char *argv[])
-{
-    mln_md5_t m;
-    char text[] = "Hello";
-    char output[33] = {0};
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
-
-    mln_md5_init(&m);
-    mln_md5_calc(&m, (mln_u8ptr_t)text, sizeof(text)-1, 1);
-    mln_md5_tostring(&m, output, sizeof(output));
-    mln_log(debug, "%s\n", output);
-
-    return 0;
-}
-nik@MacBook-Pro-4 ~ % cat b.c
-#include <stdio.h>
 #include "mln_lex.h"
 
 mln_string_t keywords[] = {
