@@ -97,7 +97,7 @@ mln_fheap_consolidate(mln_fheap_t *fh)
         d = x->degree;
         while (array[d] != NULL) {
             y = array[d];
-            if (!fh->cmp(x->key, y->key)) {
+            if (!fh->cmp(y->key, x->key)) {
                 tmp = x;
                 x = y;
                 y = tmp;

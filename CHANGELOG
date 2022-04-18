@@ -1,3 +1,8 @@
+Changes with melon 2.3.1                                          18 Apr 2022
+    *) Fixed warning on Win32
+    *) Fixed fib-heap bug
+    *) Updated docs
+
 Changes with melon 2.3.0                                          14 Apr 2022
     *) Fixed json bugs
     *) Fixed melang msgqueue bugs
