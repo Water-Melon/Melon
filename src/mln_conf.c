@@ -911,7 +911,15 @@ static int mln_conf_dump_domain_scan(mln_rbtree_node_t *node, void *rn_data, voi
                 printf("BOOL [%u]\n", ci->val.b);
                 break;
             case CONF_INT:
+#if defined(WIN32)
+  #if defined(i386) || defined(__arm__)
                 printf("INT [%ld]\n", ci->val.i);
+  #else
+                printf("INT [%I64d]\n", ci->val.i);
+  #endif
+#else
+                printf("INT [%ld]\n", ci->val.i);
+#endif
                 break;
             case CONF_FLOAT:
                 printf("FLOAT [%f]\n", ci->val.f);

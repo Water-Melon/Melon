@@ -427,7 +427,15 @@ _mln_sys_log_process(mln_log_t *log, \
             {
                 memset(line_str, 0, sizeof(line_str));
                 mln_sauto_t num = va_arg(arg, long);
+#if defined(WIN32)
+  #if defined(i386) || defined(__arm__)
                 int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
+  #else
+                int n = snprintf(line_str, sizeof(line_str)-1, "%I64d", num);
+  #endif
+#else
+                int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
+#endif
                 mln_log_write(log, (void *)line_str, n);
                 break;
             }

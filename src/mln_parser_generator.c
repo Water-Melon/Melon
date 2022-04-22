@@ -862,10 +862,17 @@ void mln_pg_output_state(mln_pg_state_t *s)
     printf("STATES:\n");
     for (; s != NULL; s = s->next) {
 #if defined(WIN32)
+  #if defined(i386) || defined(__arm__)
         printf("State %ld: input: [%s] nr_item:%I64u\n", \
                s->id, \
                s->input==NULL?"(null)":(char *)(s->input->token->data), \
                (unsigned long long)(s->nr_item));
+  #else
+        printf("State %I64d: input: [%s] nr_item:%I64u\n", \
+               s->id, \
+               s->input==NULL?"(null)":(char *)(s->input->token->data), \
+               (unsigned long long)(s->nr_item));
+  #endif
 #else
         printf("State %ld: input: [%s] nr_item:%llu\n", \
                s->id, \
