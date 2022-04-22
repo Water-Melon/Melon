@@ -48,7 +48,7 @@ static int mln_lang_network_tcp_connect(mln_lang_ctx_t *ctx);
 static int mln_lang_network_tcp_shutdown(mln_lang_ctx_t *ctx);
 static int mln_lang_network_tcp_close(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx);
-static int mln_lang_network_get_addr(const struct sockaddr *addr, char *ip, mln_u16_t *port);
+static int mln_lang_network_get_addr(const void *in_addr, char *ip, mln_u16_t *port);
 static mln_lang_var_t *mln_lang_network_tcp_close_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_network_tcp_shutdown_process(mln_lang_ctx_t *ctx);
 static void mln_lang_network_tcp_accept_handler(mln_event_t *ev, int fd, void *data);
@@ -548,21 +548,24 @@ static mln_lang_var_t *mln_lang_network_tcp_listen_process(mln_lang_ctx_t *ctx)
     return ret_var;
 }
 
-static int mln_lang_network_get_addr(const struct sockaddr *addr, char *ip, mln_u16_t *port)
+static int mln_lang_network_get_addr(const void *in_addr, char *ip, mln_u16_t *port)
 {
     char *numeric_addr = NULL;
     char addr_buf[128] = {0};
+    struct sockaddr *saddr = (struct sockaddr *)in_addr;
 
-    if (AF_INET == addr->sa_family) {
-        numeric_addr = (char *)(&((struct sockaddr_in*)addr)->sin_addr);
-        *port = ntohs(((struct sockaddr_in *)addr)->sin_port);
-    } else if (AF_INET6 == addr->sa_family) {
-        numeric_addr = (char *)(&((struct sockaddr_in6*)addr)->sin6_addr);
-        *port = ntohs(((struct sockaddr_in6 *)addr)->sin6_port);
+    if (AF_INET == saddr->sa_family) {
+        struct sockaddr_in *addr = (struct sockaddr_in *)in_addr;
+        numeric_addr = (char *)(&addr->sin_addr);
+        *port = ntohs(addr->sin_port);
+    } else if (AF_INET6 == saddr->sa_family) {
+        struct sockaddr_in6 *addr = (struct sockaddr_in6 *)in_addr;
+        numeric_addr = (char *)(&addr->sin6_addr);
+        *port = ntohs(addr->sin6_port);
     } else {
         return -1;
     }
-    if (inet_ntop(addr->sa_family, numeric_addr, addr_buf, sizeof(addr_buf)) == NULL)
+    if (inet_ntop(saddr->sa_family, numeric_addr, addr_buf, sizeof(addr_buf)) == NULL)
         return -1;
     memcpy(ip, addr_buf, sizeof(addr_buf));
     return 0;
@@ -1484,15 +1487,16 @@ static void mln_lang_network_tcp_accept_handler(mln_event_t *ev, int fd, void *d
 {
     mln_lang_tcp_t *tcp = (mln_lang_tcp_t *)data, *newtcp;
     int connfd;
-    struct sockaddr addr;
+    mln_u8_t addr[sizeof(struct sockaddr) >= sizeof(struct sockaddr_in6)? \
+                  sizeof(struct sockaddr): \
+                  sizeof(struct sockaddr_in6)] = {0};
     char ip[128] = {0};
     mln_u16_t port;
     socklen_t len;
     mln_lang_var_t *ret_var;
 
-    memset(&addr, 0, sizeof(addr));
     len = sizeof(addr);
-    if ((connfd = accept(fd, &addr, &len)) < 0) {
+    if ((connfd = accept(fd, (struct sockaddr *)addr, &len)) < 0) {
         if (errno == EINTR || errno == ECONNABORTED || errno == EAGAIN) {
             mln_event_set_fd(ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, tcp->timeout, tcp, mln_lang_network_tcp_accept_handler);
             if (tcp->timeout >= 0)
@@ -1500,7 +1504,7 @@ static void mln_lang_network_tcp_accept_handler(mln_event_t *ev, int fd, void *d
             return;
         }
     } else {
-        if (mln_lang_network_get_addr(&addr, ip, &port) < 0) {
+        if (mln_lang_network_get_addr(addr, ip, &port) < 0) {
             mln_socket_close(connfd);
         } else {
             if ((newtcp = mln_lang_tcp_new(tcp->lang, connfd, ip, port)) == NULL) {
@@ -2438,7 +2442,9 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
 {
     mln_lang_udp_t *udp = (mln_lang_udp_t *)data;
     mln_u8ptr_t buf = NULL;
-    struct sockaddr addr;
+    mln_u8_t addr[sizeof(struct sockaddr) >= sizeof(struct sockaddr_in6)? \
+                  sizeof(struct sockaddr): \
+                  sizeof(struct sockaddr_in6)] = {0};
     socklen_t len;
     int rc;
     mln_lang_var_t *ret_var;
@@ -2448,7 +2454,6 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
     mln_u16_t port;
     char ip[128] = {0};
 
-    memset(&addr, 0, sizeof(addr));
     len = sizeof(addr);
     if ((buf = (mln_u8ptr_t)malloc(udp->bufsize)) == NULL) {
         mln_event_set_fd(ev, fd, M_EV_RECV|M_EV_NONBLOCK|M_EV_ONESHOT, udp->timeout, udp, mln_lang_network_udp_recv_handler);
@@ -2458,9 +2463,9 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
     }
 
 #if defined(WIN32)
-    rc = recvfrom(fd, (char *)buf, udp->bufsize, 0, &addr, &len);
+    rc = recvfrom(fd, (char *)buf, udp->bufsize, 0, (struct sockaddr *)addr, &len);
 #else
-    rc = recvfrom(fd, buf, udp->bufsize, MSG_DONTWAIT, &addr, &len);
+    rc = recvfrom(fd, buf, udp->bufsize, MSG_DONTWAIT, (struct sockaddr *)addr, &len);
 #endif
     if (rc < 0) {
         free(buf);
@@ -2473,7 +2478,7 @@ static void mln_lang_network_udp_recv_handler(mln_event_t *ev, int fd, void *dat
     } else if (rc == 0) {
         free(buf);
     }
-    if (mln_lang_network_get_addr(&addr, ip, &port) < 0) {
+    if (mln_lang_network_get_addr(addr, ip, &port) < 0) {
         if (rc > 0) free(buf);
         goto out;
     }
