@@ -131,8 +131,8 @@ echo "# " > Makefile
 echo "# Copyright (C) Niklaus F.Schen." >> Makefile
 echo "# " >> Makefile
 echo -e "CC\t\t= $cc" >> Makefile
-gccver=`gcc -dumpversion`
-if [ "$?" == "0" -a $gccver -ge 11 ]; then
+gccver=`gcc -dumpversion|cut -d '.' -f 1`
+if [ $sysname != 'Darwin' -a "$?" == "0" -a $gccver -ge 11 ]; then
     echo -e "FLAGS\t\t= -Iinclude -Imelang -c -Wall -ggdb -Werror -O2 -fPIC" >> Makefile
 else
     echo -e "FLAGS\t\t= -Iinclude -Imelang -c -Wall -ggdb -Werror -O3 -fPIC" >> Makefile
