@@ -14,6 +14,17 @@ On Windows, framework can NOT be activated, but other components still working.
 ### Installation
 
 On Windows, please install `mingw`, `git bash` and `make` at first. Then execute these shell commands on git bash or terminal (on UNIX).
+Install [MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds) with the installation settings:
+
+- `Version`: `8.1.0`
+
+- `Architecture`: `i686`
+
+- `Threads`: `posix`
+
+- `Exception`: `dwarf`
+
+- `Build revision`: `0`
 
 ```
 git clone https://github.com/Water-Melon/Melon.git
