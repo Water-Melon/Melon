@@ -1,3 +1,8 @@
+Changes with melon 2.3.2                                          28 Apr 2022
+    *) Fixed warnings on gcc 11.x and mingw
+    *) Added path hook
+    *) Updated docs
+
 Changes with melon 2.3.1                                          18 Apr 2022
     *) Fixed warning on Win32
     *) Fixed fib-heap bug
