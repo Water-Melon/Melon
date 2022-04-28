@@ -115,7 +115,7 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
                 }
             } else {
 goon:
-                n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_melang_lib_path(), path);
+                n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_lib(), path);
                 tmp_path[n] = 0;
                 li->fd = open(tmp_path, O_RDONLY);
             }

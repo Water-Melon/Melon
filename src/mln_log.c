@@ -124,15 +124,13 @@ mln_log_get_log(mln_log_t *log, int is_init)
     char *path_str = NULL;
     mln_u32_t path_len = 0;
     char buf[M_LOG_PATH_LEN] = {0}, *p;
-    char default_dir[] = "logs", default_file[] = "melon.log";
     int fd;
 
     cf = mln_get_conf();
     cd = cf->search(cf, "main");
     cc = cd->search(cd, log_path_cmd);
     if (cc == NULL) {
-        path_len = snprintf(buf, sizeof(buf)-1, "%s/%s/%s", \
-                            mln_path(), default_dir, default_file);
+        path_len = snprintf(buf, sizeof(buf)-1, "%s", mln_path_log());
         path_str = buf;
     } else {
         if (mln_conf_get_narg(cc) != 1) {

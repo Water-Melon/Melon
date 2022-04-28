@@ -25,7 +25,6 @@
 mln_conf_hook_t *g_conf_hook_head = NULL, *g_conf_hook_tail = NULL;
 mln_conf_t *g_conf = NULL;
 mln_string_t default_domain = {(mln_u8ptr_t)"main", 4, 1};
-char conf_filename[] = "conf/melon.conf";
 mln_string_t conf_keywords[] = {
     mln_string("on"),
     mln_string("off"),
@@ -324,7 +323,7 @@ static inline mln_conf_t *mln_conf_init(void)
     mln_alloc_t *pool;
     mln_string_t path;
     char *conf_file_path;
-    mln_size_t path_len = strlen(mln_path());
+    mln_size_t path_len = strlen(mln_path_conf());
     mln_lex_hooks_t hooks;
     struct mln_lex_attr lattr;
 
@@ -334,17 +333,16 @@ static inline mln_conf_t *mln_conf_init(void)
         free(cf);
         return NULL;
     }
-    if ((conf_file_path = (char *)mln_alloc_m(pool, path_len + sizeof(conf_filename) + 1)) == NULL) {
+    if ((conf_file_path = (char *)mln_alloc_m(pool, path_len + 1)) == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_alloc_destroy(pool);
         mln_rbtree_destroy(cf->domain);
         free(cf);
         return NULL;
     }
-    memcpy(conf_file_path, mln_path(), path_len);
-    conf_file_path[path_len] = '/';
-    memcpy(conf_file_path+path_len+1, conf_filename, sizeof(conf_filename)-1);
-    mln_string_nset(&path, conf_file_path, path_len + sizeof(conf_filename));
+    memcpy(conf_file_path, mln_path_conf(), path_len);
+    conf_file_path[path_len] = '0';
+    mln_string_nset(&path, conf_file_path, path_len);
 
     lattr.pool = pool;
     lattr.keywords = conf_keywords;

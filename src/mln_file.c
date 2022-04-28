@@ -12,8 +12,6 @@
 #include <errno.h>
 #include <sys/time.h>
 
-char mln_file_tmp_dir[256] = "tmp";
-
 MLN_CHAIN_FUNC_DECLARE(reg_file, \
                        mln_file_t, \
                        static inline void,);
@@ -175,7 +173,7 @@ mln_file_t *mln_file_open_tmp(mln_alloc_t *pool)
     unsigned long suffix;
     mln_file_t *f;
 
-    snprintf(dir_path, sizeof(dir_path)-1, "%s/%s", mln_path(), mln_file_tmp_dir);
+    snprintf(dir_path, sizeof(dir_path)-1, "%s", mln_path_tmpfile());
 #if defined(WIN32)
     if (mkdir(dir_path) < 0) {
 #else

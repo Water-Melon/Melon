@@ -43,6 +43,10 @@ echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", ar
 $cc -o path_generator .path_generator.c
 realpath=`./path_generator $install_path`
 nullpath=`./path_generator /dev/null`
+confpath=`./path_generator $realpath/conf/melon.conf`
+tmpfilepath=`./path_generator $realpath/tmp`
+pidpath=`./path_generator $realpath/logs/melon.pid`
+logpath=`./path_generator $realpath/logs/melon.log`
 if ! case $sysname in MINGW*) false;; esac; then
     melanglibpath=`./path_generator $HOME/lib/melang`
     melangdylibpath=`./path_generator $HOME/lib/melang_dynamic`
@@ -54,12 +58,16 @@ rm -f path_generator .path_generator.c
 #build path.c & h
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
 echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
-echo -e "\ntypedef enum {\n    install,\n    null,\n    melang_lib,\n    melang_dylib\n} mln_path_type_t;" >> include/mln_path.h
+echo -e "\ntypedef enum {\n    m_p_install,\n    m_p_conf,\n    m_p_tmpfile,\n    m_p_pid,\n    m_p_log,\n    m_p_null,\n    m_p_melang_lib,\n    m_p_melang_dylib\n} mln_path_type_t;" >> include/mln_path.h
 echo -e "\ntypedef char *(*mln_path_hook_t)(void);" >> include/mln_path.h
 echo -e "\nextern char *mln_path(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_null_path(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_melang_lib_path(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_melang_dylib_path(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_path_null(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_path_melang_lib(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_path_melang_dylib(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_path_conf(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_path_tmpfile(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_path_pid(void);" >> include/mln_path.h
+echo -e "\nextern char *mln_path_log(void);" >> include/mln_path.h
 echo -e "\nextern void mln_path_hook_set(mln_path_type_t type, mln_path_hook_t hook);" >> include/mln_path.h
 echo -e "\n#endif\n" >> include/mln_path.h
 
@@ -67,6 +75,10 @@ echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > src/mln_path.c
 echo "#include <stdio.h>" >> src/mln_path.c
 echo "#include \"mln_path.h\"" >> src/mln_path.c
 echo -e "\nstatic char install_path[] = \"$realpath\";" >> src/mln_path.c
+echo -e "\nstatic char conf_path[] = \"$confpath\";" >> src/mln_path.c
+echo -e "\nstatic char tmpfile_path[] = \"$tmpfilepath\";" >> src/mln_path.c
+echo -e "\nstatic char pid_path[] = \"$pidpath\";" >> src/mln_path.c
+echo -e "\nstatic char log_path[] = \"$logpath\";" >> src/mln_path.c
 echo -e "\nstatic char null_path[] = \"$nullpath\";" >> src/mln_path.c
 echo -e "\nstatic char melang_lib_path[] = \"$melanglibpath\";" >> src/mln_path.c
 echo -e "\nstatic char melang_dylib_path[] = \"$melangdylibpath\";" >> src/mln_path.c
@@ -74,25 +86,45 @@ echo -e "\nstatic mln_path_hook_t _install_path = NULL;" >> src/mln_path.c
 echo -e "\nstatic mln_path_hook_t _null_path = NULL;" >> src/mln_path.c
 echo -e "\nstatic mln_path_hook_t _melang_lib_path = NULL;" >> src/mln_path.c
 echo -e "\nstatic mln_path_hook_t _melang_dylib_path = NULL;" >> src/mln_path.c
+echo -e "\nstatic mln_path_hook_t _conf_path = NULL;" >> src/mln_path.c
+echo -e "\nstatic mln_path_hook_t _tmpfile_path = NULL;" >> src/mln_path.c
+echo -e "\nstatic mln_path_hook_t _pid_path = NULL;" >> src/mln_path.c
+echo -e "\nstatic mln_path_hook_t _log_path = NULL;" >> src/mln_path.c
 echo -e "\nvoid mln_path_hook_set(mln_path_type_t type, mln_path_hook_t hook)\n{" >> src/mln_path.c
 echo -e "    switch (type) {\n" >> src/mln_path.c
-echo -e "        case install:\n            _install_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case null:\n            _null_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case melang_lib:\n            _melang_lib_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case melang_dylib:\n            _melang_dylib_path = hook;\n            break;" >> src/mln_path.c
+echo -e "        case m_p_install:\n            _install_path = hook;\n            break;" >> src/mln_path.c
+echo -e "        case m_p_conf:\n            _conf_path = hook;\n            break;" >> src/mln_path.c
+echo -e "        case m_p_tmpfile:\n            _tmpfile_path = hook;\n            break;" >> src/mln_path.c
+echo -e "        case m_p_pid:\n            _pid_path = hook;\n            break;" >> src/mln_path.c
+echo -e "        case m_p_log:\n            _log_path = hook;\n            break;" >> src/mln_path.c
+echo -e "        case m_p_null:\n            _null_path = hook;\n            break;" >> src/mln_path.c
+echo -e "        case m_p_melang_lib:\n            _melang_lib_path = hook;\n            break;" >> src/mln_path.c
+echo -e "        case m_p_melang_dylib:\n            _melang_dylib_path = hook;\n            break;" >> src/mln_path.c
 echo -e "        default:\n            break;" >> src/mln_path.c
 echo -e "    }" >> src/mln_path.c
 echo -e "}" >> src/mln_path.c
 echo -e "\nchar *mln_path(void)\n{" >> src/mln_path.c
 echo "    return _install_path == NULL? install_path: _install_path();" >> src/mln_path.c
 echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_null_path(void)\n{" >> src/mln_path.c
+echo -e "\nchar *mln_path_conf(void)\n{" >> src/mln_path.c
+echo "    return _conf_path == NULL? conf_path: _conf_path();" >> src/mln_path.c
+echo "}" >> src/mln_path.c
+echo -e "\nchar *mln_path_tmpfile(void)\n{" >> src/mln_path.c
+echo "    return _tmpfile_path == NULL? tmpfile_path: _tmpfile_path();" >> src/mln_path.c
+echo "}" >> src/mln_path.c
+echo -e "\nchar *mln_path_pid(void)\n{" >> src/mln_path.c
+echo "    return _pid_path == NULL? pid_path: _pid_path();" >> src/mln_path.c
+echo "}" >> src/mln_path.c
+echo -e "\nchar *mln_path_log(void)\n{" >> src/mln_path.c
+echo "    return _log_path == NULL? log_path: _log_path();" >> src/mln_path.c
+echo "}" >> src/mln_path.c
+echo -e "\nchar *mln_path_null(void)\n{" >> src/mln_path.c
 echo "    return _null_path == NULL? null_path: _null_path();" >> src/mln_path.c
 echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_melang_lib_path(void)\n{" >> src/mln_path.c
+echo -e "\nchar *mln_path_melang_lib(void)\n{" >> src/mln_path.c
 echo "    return _melang_lib_path == NULL? melang_lib_path: _melang_lib_path();" >> src/mln_path.c
 echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_melang_dylib_path(void)\n{" >> src/mln_path.c
+echo -e "\nchar *mln_path_melang_dylib(void)\n{" >> src/mln_path.c
 echo "    return _melang_dylib_path == NULL? melang_dylib_path: _melang_dylib_path();" >> src/mln_path.c
 echo "}" >> src/mln_path.c
 

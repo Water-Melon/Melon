@@ -187,7 +187,7 @@ out:
     close(fd0);
     close(fd1);
     close(fd2);
-    fd0 = open(mln_null_path(), O_RDWR);
+    fd0 = open(mln_path_null(), O_RDWR);
     fd1 = dup(fd0);
     fd2 = dup(fd0);
     if (fd0 != STDIN_FILENO || \
@@ -358,7 +358,7 @@ mln_boot_stop(const char *boot_str, const char *alias)
     char buf[1024] = {0};
     int fd, n, pid;
 
-    snprintf(buf, sizeof(buf)-1, "%s/logs/melon.pid", mln_path());
+    snprintf(buf, sizeof(buf)-1, "%s", mln_path_pid());
     fd = open(buf, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "'melon.pid' not existent.\n");

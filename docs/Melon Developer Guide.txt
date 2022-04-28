@@ -385,6 +385,30 @@ Their definitions can be found in melon/include/mln_types.h.
        Depending on the parameter of shell script 'install', the installation path can be specified.
        We have to get the absolute path because some components need it.
 
+    b) char *mln_path_null(void);
+       `/dev/null` path.
+
+    c) char *mln_path_melang_lib(void);
+       Melang library files' directory path.
+
+    d) char *mln_path_melang_dylib(void);
+       Melang dynamic library directory path.
+
+    e) char *mln_path_conf(void);
+       Melon configuration file path.
+
+    f) char *mln_path_tmpfile(void);
+       Melon temporary file directory path.
+
+    g) char *mln_path_pid(void); 
+       Melon pid file path.
+
+    h) char *mln_path_log(void);
+       Melon log file path.
+
+    i) void mln_path_hook_set(mln_path_type_t type, mln_path_hook_t hook); 
+       Set path hook to customize every path as shown above.
+
   6) Prime number Generator
     a) mln_u32_t mln_prime_calc(mln_u32_t n);
        It returns a prime number which is equal to or greater than n.

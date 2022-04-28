@@ -3744,7 +3744,7 @@ static mln_lang_var_t *mln_lang_sys_import_process(mln_lang_ctx_t *ctx)
             }
         } else {
 goon:
-            n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_melang_dylib_path(), path);
+            n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_dylib(), path);
             memcpy(path, tmp_path, n);
             path[n] = 0;
         }
