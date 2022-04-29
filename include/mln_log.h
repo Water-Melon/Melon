@@ -6,33 +6,37 @@
 #ifndef __MLN_LOG_H
 #define __MLN_LOG_H
 
+#include <stdarg.h>
 #include "mln_types.h"
 
 #define M_LOG_PATH_LEN 1024
 
-enum log_level {
+typedef enum {
     none,
     report,
     debug,
     warn,
     error
-};
+} mln_log_level_t;
 
 typedef struct {
-    char           dir_path[M_LOG_PATH_LEN/2];
-    char           pid_path[M_LOG_PATH_LEN];
-    char           log_path[M_LOG_PATH_LEN];
-    int            fd;
-    int            in_daemon;
-    enum log_level level;
-    mln_lock_t     thread_lock;
+    char            dir_path[M_LOG_PATH_LEN/2];
+    char            pid_path[M_LOG_PATH_LEN];
+    char            log_path[M_LOG_PATH_LEN];
+    int             fd;
+    int             in_daemon;
+    mln_log_level_t level;
+    mln_lock_t      thread_lock;
 } mln_log_t;
     
 
+typedef void (*mln_logger_t)(mln_log_t *, mln_log_level_t, const char *, const char *, int, char *, va_list);
+
+extern void mln_log_set_logger(mln_logger_t logger);
 extern int mln_log_reload(void *data);
 extern int mln_log_init(int in_daemon);
 extern void mln_log_destroy(void);
-extern void _mln_sys_log(enum log_level level, \
+extern void _mln_sys_log(mln_log_level_t level, \
                          const char *file, \
                          const char *func, \
                          int line, \

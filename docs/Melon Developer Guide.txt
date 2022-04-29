@@ -459,6 +459,18 @@ Their definitions can be found in melon/include/mln_types.h.
        It returns the path of a pid file.
        The pid of the parent process is recorded in this file.
 
+    e) void mln_log_set_logger(mln_logger_t logger);
+       Customize logger. `logger`'s prototype is:
+           typedef void (*mln_logger_t)(mln_log_t *log,
+                                        mln_log_level_t level,
+                                        const char *filename,
+                                        const char *funcname,
+                                        int line,
+                                        char *fmt,
+                                        va_list args);
+       Some infomation and file descriptor `fd` can be found in `log`.
+       Developer can customize log file and log format through this function and path hook functions.
+
   9) Lexer
      In Melon, Lexer is very easy to use and customize.
      Even though, there are some open source lexer generators, such as flex, but they are not so much simple as

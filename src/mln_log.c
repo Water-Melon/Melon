@@ -13,7 +13,6 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <errno.h>
-#include <stdarg.h>
 #include "mln_log.h"
 #include "mln_conf.h"
 #include "mln_path.h"
@@ -24,7 +23,7 @@
  */
 static void
 _mln_sys_log_process(mln_log_t *log, \
-                     enum log_level level, \
+                     mln_log_level_t level, \
                      const char *file, \
                      const char *func, \
                      int line, \
@@ -39,6 +38,7 @@ static void mln_log_atfork_lock(void);
 static void mln_log_atfork_unlock(void);
 #endif
 static int mln_log_get_log(mln_log_t *log, int is_init);
+static mln_logger_t _logger = NULL;
 
 /*
  * global variables
@@ -77,6 +77,13 @@ static inline void mln_file_unlock(int fd)
 #endif
 }
 
+/*
+ * set logger
+ */
+void mln_log_set_logger(mln_logger_t logger)
+{
+    _logger = logger;
+}
 
 /*
  * g_log
@@ -301,7 +308,7 @@ int mln_log_reload(void *data)
 /*
  * reocrd log
  */
-void _mln_sys_log(enum log_level level, \
+void _mln_sys_log(mln_log_level_t level, \
                   const char *file, \
                   const char *func, \
                   int line, \
@@ -312,7 +319,10 @@ void _mln_sys_log(enum log_level level, \
     mln_file_lock(g_log.fd);
     va_list arg;
     va_start(arg, msg);
-    _mln_sys_log_process(&g_log, level, file, func, line, msg, arg);
+    if (_logger != NULL)
+        _logger(&g_log, level, file, func, line, msg, arg);
+    else
+        _mln_sys_log_process(&g_log, level, file, func, line, msg, arg);
     va_end(arg);
     mln_file_unlock(g_log.fd);
     MLN_UNLOCK(&(g_log.thread_lock));
@@ -340,7 +350,7 @@ ssize_t mln_log_writen(void *buf, mln_size_t size)
 
 static void
 _mln_sys_log_process(mln_log_t *log, \
-                     enum log_level level, \
+                     mln_log_level_t level, \
                      const char *file, \
                      const char *func, \
                      int line, \
