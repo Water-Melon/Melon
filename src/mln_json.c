@@ -1157,7 +1157,7 @@ int mln_json_add_element(mln_json_t *j, mln_json_t *value)
 
     int is_new = 0;
     mln_rbtree_node_t *rn;
-    if (M_JSON_IS_NONE(j)) {
+    if (M_JSON_IS_NONE(j) || (M_JSON_IS_ARRAY(j) && j->data.m_j_array == NULL)) {
         is_new = 1;
         struct mln_rbtree_attr rbattr;
         rbattr.pool = NULL;
