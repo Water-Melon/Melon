@@ -54,6 +54,7 @@ typedef enum {
 } mln_lang_stm_type_t;
 
 struct mln_lang_stm_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_stm_type_t              type;
     union {
@@ -69,6 +70,7 @@ struct mln_lang_stm_s {
 };
 
 struct mln_lang_funcdef_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_string_t                    *name;
     mln_lang_exp_t                  *args;
@@ -77,6 +79,7 @@ struct mln_lang_funcdef_s {
 };
 
 struct mln_lang_set_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_string_t                    *name;
     mln_lang_setstm_t               *stm;
@@ -88,6 +91,7 @@ typedef enum {
 } mln_lang_setstm_type_t;
 
 struct mln_lang_setstm_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_setstm_type_t           type;
     union {
@@ -108,6 +112,7 @@ typedef enum {
 } mln_lang_block_type_t;
 
 struct mln_lang_block_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_block_type_t            type;
     union {
@@ -119,12 +124,14 @@ struct mln_lang_block_s {
 };
 
 struct mln_lang_switch_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_exp_t                  *condition;
     mln_lang_switchstm_t            *switchstm;
 };
 
 struct mln_lang_switchstm_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_factor_t               *factor;
     mln_lang_stm_t                  *stm;
@@ -132,12 +139,14 @@ struct mln_lang_switchstm_s {
 };
 
 struct mln_lang_while_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_exp_t                  *condition;
     mln_lang_block_t                *blockstm;
 };
 
 struct mln_lang_for_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_exp_t                  *init_exp;
     mln_lang_exp_t                  *condition;
@@ -146,6 +155,7 @@ struct mln_lang_for_s {
 };
 
 struct mln_lang_if_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_exp_t                  *condition;
     mln_lang_block_t                *blockstm;
@@ -153,6 +163,7 @@ struct mln_lang_if_s {
 };
 
 struct mln_lang_exp_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_assign_t               *assign;
     mln_lang_exp_t                  *next;
@@ -176,6 +187,7 @@ typedef enum mln_lang_assign_op_e {
 } mln_lang_assign_op_t;
 
 struct mln_lang_assign_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_logiclow_t             *left;
     mln_lang_assign_op_t             op;
@@ -196,6 +208,7 @@ typedef enum mln_lang_logiclow_op_e {
 }mln_lang_logiclow_op_t;
 
 struct mln_lang_logiclow_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_logichigh_t            *left;
     mln_lang_logiclow_op_t           op;
@@ -217,6 +230,7 @@ typedef enum mln_lang_logichigh_op_e {
 } mln_lang_logichigh_op_t;
 
 struct mln_lang_logichigh_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_relativelow_t          *left;
     mln_lang_logichigh_op_t          op;
@@ -237,6 +251,7 @@ typedef enum mln_lang_relativelow_op_e {
 } mln_lang_relativelow_op_t;
 
 struct mln_lang_relativelow_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_relativehigh_t         *left;
     mln_lang_relativelow_op_t        op;
@@ -259,6 +274,7 @@ typedef enum mln_lang_relativehigh_op_e {
 } mln_lang_relativehigh_op_t;
 
 struct mln_lang_relativehigh_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_move_t                 *left;
     mln_lang_relativehigh_op_t       op;
@@ -279,6 +295,7 @@ typedef enum mln_lang_move_op_e {
 } mln_lang_move_op_t;
 
 struct mln_lang_move_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_addsub_t               *left;
     mln_lang_move_op_t               op;
@@ -299,6 +316,7 @@ typedef enum mln_lang_addsub_op_e {
 } mln_lang_addsub_op_t;
 
 struct mln_lang_addsub_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_muldiv_t               *left;
     mln_lang_addsub_op_t             op;
@@ -320,6 +338,7 @@ typedef enum mln_lang_muldiv_op_e {
 } mln_lang_muldiv_op_t;
 
 struct mln_lang_muldiv_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_suffix_t               *left;
     mln_lang_muldiv_op_t             op;
@@ -340,6 +359,7 @@ typedef enum mln_lang_suffix_op_e {
 } mln_lang_suffix_op_t;
 
 struct mln_lang_suffix_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_locate_t               *left;
     mln_lang_suffix_op_t             op;
@@ -359,6 +379,7 @@ typedef enum mln_lang_locate_op_e {
 } mln_lang_locate_op_t;
 
 struct mln_lang_locate_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_spec_t                 *left;
     mln_lang_locate_op_t             op;
@@ -393,6 +414,7 @@ typedef enum mln_lang_spec_op_e {
 } mln_lang_spec_op_t;
 
 struct mln_lang_spec_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_spec_op_t               op;
     union {
@@ -401,12 +423,6 @@ struct mln_lang_spec_s {
         mln_lang_spec_t         *spec;
         mln_string_t            *set_name;
     } data;
-};
-
-struct mln_lang_funccall_s {
-    mln_u64_t                        line;
-    mln_string_t                    *name;
-    mln_lang_exp_t                  *args;
 };
 
 typedef enum {
@@ -420,6 +436,7 @@ typedef enum {
 } mln_lang_factor_type_t;
 
 struct mln_lang_factor_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_factor_type_t           type;
     union {
@@ -433,6 +450,7 @@ struct mln_lang_factor_s {
 };
 
 struct mln_lang_elemlist_s {
+    mln_string_t                    *file;
     mln_u64_t                        line;
     mln_lang_assign_t               *key;
     mln_lang_assign_t               *val;

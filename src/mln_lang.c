@@ -3048,62 +3048,111 @@ void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg)
 static void __mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg)
 {
     mln_u64_t line = 0;
-    mln_string_t *filename, nilname = mln_string(" ");
+    mln_string_t *filename = NULL, nilname = mln_string(" ");
     mln_lang_stack_node_t *node;
     if ((node = mln_lang_stack_top(ctx)) != NULL) {
         switch (node->type) {
             case M_LSNT_STM:
-                line = node->data.stm->line; break;
+                filename = node->data.stm->file;
+                line = node->data.stm->line;
+                break;
             case M_LSNT_FUNCDEF:
-                line = node->data.funcdef->line; break;
+                filename = node->data.funcdef->file;
+                line = node->data.funcdef->line;
+                break;
             case M_LSNT_SET:
-                line = node->data.set->line; break;
+                filename = node->data.set->file;
+                line = node->data.set->line;
+                break;
             case M_LSNT_SETSTM:
-                line = node->data.set_stm->line; break;
+                filename = node->data.set_stm->file;
+                line = node->data.set_stm->line;
+                break;
             case M_LSNT_BLOCK:
-                line = node->data.block->line; break;
+                filename = node->data.block->file;
+                line = node->data.block->line;
+                break;
             case M_LSNT_WHILE:
-                line = node->data.w->line; break;
+                filename = node->data.w->file;
+                line = node->data.w->line;
+                break;
             case M_LSNT_SWITCH:
-                line = node->data.sw->line; break;
+                filename = node->data.sw->file;
+                line = node->data.sw->line;
+                break;
             case M_LSNT_SWITCHSTM:
-                line = node->data.sw_stm->line; break;
+                filename = node->data.sw_stm->file;
+                line = node->data.sw_stm->line;
+                break;
             case M_LSNT_FOR:
-                line = node->data.f->line; break;
+                filename = node->data.f->file;
+                line = node->data.f->line;
+                break;
             case M_LSNT_IF:
-                line = node->data.i->line; break;
+                filename = node->data.i->file;
+                line = node->data.i->line;
+                break;
             case M_LSNT_EXP:
-                line = node->data.exp->line; break;
+                filename = node->data.exp->file;
+                line = node->data.exp->line;
+                break;
             case M_LSNT_ASSIGN:
-                line = node->data.assign->line; break;
+                filename = node->data.assign->file;
+                line = node->data.assign->line;
+                break;
             case M_LSNT_LOGICLOW:
-                line = node->data.logiclow->line; break;
+                filename = node->data.logiclow->file;
+                line = node->data.logiclow->line;
+                break;
             case M_LSNT_LOGICHIGH:
-                line = node->data.logichigh->line; break;
+                filename = node->data.logichigh->file;
+                line = node->data.logichigh->line;
+                break;
             case M_LSNT_RELATIVELOW:
-                line = node->data.relativelow->line; break;
+                filename = node->data.relativelow->file;
+                line = node->data.relativelow->line;
+                break;
             case M_LSNT_RELATIVEHIGH:
-                line = node->data.relativehigh->line; break;
+                filename = node->data.relativehigh->file;
+                line = node->data.relativehigh->line;
+                break;
             case M_LSNT_MOVE:
-                line = node->data.move->line; break;
+                filename = node->data.move->file;
+                line = node->data.move->line;
+                break;
             case M_LSNT_ADDSUB:
-                line = node->data.addsub->line; break;
+                filename = node->data.addsub->file;
+                line = node->data.addsub->line;
+                break;
             case M_LSNT_MULDIV:
-                line = node->data.muldiv->line; break;
+                filename = node->data.muldiv->file;
+                line = node->data.muldiv->line;
+                break;
             case M_LSNT_SUFFIX:
-                line = node->data.suffix->line; break;
+                filename = node->data.suffix->file;
+                line = node->data.suffix->line;
+                break;
             case M_LSNT_LOCATE:
-                line = node->data.locate->line; break;
+                filename = node->data.locate->file;
+                line = node->data.locate->line;
+                break;
             case M_LSNT_SPEC:
-                line = node->data.spec->line; break;
+                filename = node->data.spec->file;
+                line = node->data.spec->line;
+                break;
             case M_LSNT_FACTOR:
-                line = node->data.factor->line; break;
+                filename = node->data.factor->file;
+                line = node->data.factor->line;
+                break;
             default: /* M_LSNT_ELEMLIST */
-                line = node->data.elemlist->line; break;
+                filename = node->data.elemlist->file;
+                line = node->data.elemlist->line;
+                break;
         }
     }
-    if (ctx->filename == NULL) filename = &nilname;
-    filename = ctx->filename;
+    if (filename == NULL) {
+        filename = (ctx->filename == NULL)? &nilname: ctx->filename;
+    }
     mln_log(none, "%S:%I: %s\n", filename, line, msg);
 }
 
