@@ -13,9 +13,9 @@ static inline int *compute_prefix_function(const char *pattern, int m);
 static inline char *
 kmp_string_match(char *text, const char *pattern, int text_len, int pattern_len) __NONNULL2(1,2);
 static mln_string_t *mln_string_slice_recursive(char *s, mln_u64_t len, mln_u8ptr_t ascii, int cnt, mln_string_t *save) __NONNULL3(1,3,5);
-static inline mln_string_t *mln_assign_string(char *s, mln_u32_t len);
+static inline mln_string_t *mln_string_assign(char *s, mln_u32_t len);
 
-static inline mln_string_t *mln_assign_string(char *s, mln_u32_t len)
+static inline mln_string_t *mln_string_assign(char *s, mln_u32_t len)
 {
     mln_string_t *str;
     str = (mln_string_t *)malloc(sizeof(mln_string_t));
@@ -309,14 +309,14 @@ mln_string_t *mln_string_new_strstr(mln_string_t *text, mln_string_t *pattern)
 {
     char *p = mln_string_strstr(text, pattern);
     if (p == NULL) return NULL;
-    return mln_assign_string(p, text->len - (p - (char *)(text->data)));
+    return mln_string_assign(p, text->len - (p - (char *)(text->data)));
 }
 
 mln_string_t *mln_string_new_const_strstr(mln_string_t *text, char *pattern)
 {
     char *p = mln_string_const_strstr(text, pattern);
     if (p == NULL) return NULL;
-    return mln_assign_string(p, text->len - (p - (char *)(text->data)));
+    return mln_string_assign(p, text->len - (p - (char *)(text->data)));
 }
 
 char *mln_string_kmp(mln_string_t *text, mln_string_t *pattern)
@@ -337,14 +337,14 @@ mln_string_t *mln_string_new_kmp(mln_string_t *text, mln_string_t *pattern)
 {
     char *p = mln_string_kmp(text, pattern);
     if (p == NULL) return NULL;
-    return mln_assign_string(p, text->len - (p - (char *)(text->data)));
+    return mln_string_assign(p, text->len - (p - (char *)(text->data)));
 }
 
 mln_string_t *mln_string_new_const_kmp(mln_string_t *text, char *pattern)
 {
     char *p = mln_string_const_kmp(text, pattern);
     if (p == NULL) return NULL;
-    return mln_assign_string(p, text->len - (p - (char *)(text->data)));
+    return mln_string_assign(p, text->len - (p - (char *)(text->data)));
 }
 
 /*
@@ -501,5 +501,45 @@ mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_st
     ret->pool = 1;
     ret->ref = 1;
     return ret;
+}
+
+mln_string_t *mln_string_trim(mln_string_t *s, mln_string_t *mask)
+{
+    mln_u8_t chars[256] = {0};
+    mln_string_t tmp;
+    mln_size_t i, j;
+
+    for (i = 0; i < mask->len; ++i) {
+        chars[mask->data[i]] = 1;
+    }
+    for (i = 0; i < s->len; ++i) {
+        if (!chars[s->data[i]]) break;
+    }
+    for (j = s->len; j > i; --j) {
+        if (!chars[s->data[j - 1]]) break;
+    }
+
+    mln_string_nset(&tmp, &(s->data[i]), j - i);
+    return mln_string_dup(&tmp);
+}
+
+mln_string_t *mln_string_pool_trim(mln_alloc_t *pool, mln_string_t *s, mln_string_t *mask)
+{
+    mln_u8_t chars[256] = {0};
+    mln_string_t tmp;
+    mln_size_t i, j;
+
+    for (i = 0; i < mask->len; ++i) {
+        chars[mask->data[i]] = 1;
+    }
+    for (i = 0; i < s->len; ++i) {
+        if (!chars[s->data[i]]) break;
+    }
+    for (j = s->len; j > i; --j) {
+        if (!chars[s->data[j - 1]]) break;
+    }
+
+    mln_string_nset(&tmp, &(s->data[i]), j - i);
+    return mln_string_pool_dup(pool, &tmp);
 }
 
