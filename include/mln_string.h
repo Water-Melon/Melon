@@ -136,5 +136,7 @@ extern mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2) __NON
 extern mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2) __NONNULL2(1,2);
 extern mln_string_t *mln_string_trim(mln_string_t *s, mln_string_t *mask);
 extern mln_string_t *mln_string_pool_trim(mln_alloc_t *pool, mln_string_t *s, mln_string_t *mask);
+extern void mln_string_upper(mln_string_t *s) __NONNULL1(1);
+extern void mln_string_lower(mln_string_t *s) __NONNULL1(1);
 #endif
 

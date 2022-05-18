@@ -543,3 +543,35 @@ mln_string_t *mln_string_pool_trim(mln_alloc_t *pool, mln_string_t *s, mln_strin
     return mln_string_pool_dup(pool, &tmp);
 }
 
+void mln_string_upper(mln_string_t *s)
+{
+    mln_u8_t chars[256] = {0};
+    mln_u8_t upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    mln_u8_t lower[] = "abcdefghijklmnopqrstuvwxyz";
+    mln_size_t i;
+
+    for (i = 0; i < sizeof(lower) - 1; ++i) {
+        chars[lower[i]] = upper[i];
+    }
+    for (i = 0; i < s->len; ++i) {
+        if (chars[s->data[i]])
+            s->data[i] = chars[s->data[i]];
+    }
+}
+
+void mln_string_lower(mln_string_t *s)
+{
+    mln_u8_t chars[256] = {0};
+    mln_u8_t upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    mln_u8_t lower[] = "abcdefghijklmnopqrstuvwxyz";
+    mln_size_t i;
+
+    for (i = 0; i < sizeof(upper) - 1; ++i) {
+        chars[upper[i]] = lower[i];
+    }
+    for (i = 0; i < s->len; ++i) {
+        if (chars[s->data[i]])
+            s->data[i] = chars[s->data[i]];
+    }
+}
+
