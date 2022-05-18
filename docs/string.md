@@ -535,3 +535,51 @@ mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_st
 描述：与`mln_string_strcat`功能一致，仅新的结构所使用内存由`pool`指向的内存池分配。
 
 返回值：成功则返回`mln_string_t`指针，否则返回`NULL`。
+
+
+
+#### mln_string_trim
+
+```c
+mln_string_t *mln_string_trim(mln_string_t *s, mln_string_t *mask);
+```
+
+描述：去除字符串首尾处的由`mask`指定的空白字符（或者其他字符）。
+
+返回值：由堆上分配的去除后的字符串`mln_string_t`指针。
+
+
+
+#### mln_string_pool_trim
+
+```c
+mln_string_t *mln_string_pool_trim(mln_alloc_t *pool, mln_string_t *s, mln_string_t *mask);
+```
+
+描述：与`mln_string_trim`功能相同。
+
+返回值：由`pool`指定的内存池上分配的去除后的字符串`mln_string_t`指针。
+
+
+
+#### mln_string_upper
+
+```c
+void mln_string_upper(mln_string_t *s);
+```
+
+描述：将字符串`s`中的所有英文字母转换为大写。
+
+返回值：无
+
+
+
+#### mln_string_lower
+
+```c
+void mln_string_lower(mln_string_t *s);
+```
+
+描述：将字符串`s`中的所有英文字母转换为小写。
+
+返回值：无

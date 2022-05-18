@@ -177,6 +177,18 @@ Their definitions can be found in melon/include/mln_types.h.
     af) mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2);
        It is the same as 'mln_string_strcat' but allocated by 'pool'.
 
+    ag) mln_string_t *mln_string_trim(mln_string_t *s, mln_string_t *mask);
+       Strip whitespace (or other characters) from the beginning and end of a string.
+
+    ah) mln_string_t *mln_string_pool_trim(mln_alloc_t *pool, mln_string_t *s, mln_string_t *mask);
+       Strip whitespace (or other characters) from the beginning and end of a string.
+
+    ai) void mln_string_upper(mln_string_t *s);
+       Make character uppercase.
+
+    aj) void mln_string_lower(mln_string_t *s);
+       Make character lowercase.
+
   2) Hash Table
     struct mln_hash_attr {
         mln_alloc_t         *pool;
@@ -3953,6 +3965,16 @@ Their definitions can be found in melon/include/mln_types.h.
       Import dynamic library indicated by 'name' into current melang scope.
       Dynamic library must contain the entrance function named 'init', its prototype is:
           int init(mln_lang_ctx_t *);
+
+      <91> mln_trim(s, mask);
+      Strip whitespace (or other characters) from the beginning and end of a string.
+      `mask` will be the default value " \n\r\t\v\x00" if it is omitted or `nil`.
+
+      <92> mln_upper(s);
+      Make character uppercase.
+
+      <93> mln_lower(s);
+      Make character lowercase.
 
    I. Function development
       Following these steps below:
