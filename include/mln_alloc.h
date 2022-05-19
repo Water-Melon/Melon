@@ -34,7 +34,7 @@ typedef struct mln_alloc_mgr_s   mln_alloc_mgr_t;
 typedef struct mln_alloc_chunk_s mln_alloc_chunk_t;
 
 /*
- * Notice:
+ * Note:
  * In Darwin, if set mln_alloc_blk_t's prev and next at the beginning of the structure,
  * program will encounter segmentation fault.
  * It seems that we can not set bit variables those summary not enough aligned bytes

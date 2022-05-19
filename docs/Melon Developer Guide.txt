@@ -3872,7 +3872,7 @@ Their definitions can be found in melon/include/mln_types.h.
       If succeed received data will be returned. If connection closed by peer, 'true' will be returned.
       Otherwise 'false' returned.
       If 'timeout' was given and accept timed out, 'nil' would be returned.
-      Notice: If one script task call 'mln_tcp_recv' to wait for data, but another script task call
+      Note: If one script task call 'mln_tcp_recv' to wait for data, but another script task call
       'mln_tcp_shutdown' to shutdown 'send' direction, this function will return 'true', because system call
       'recv' will return 0.
 
@@ -3983,6 +3983,13 @@ Their definitions can be found in melon/include/mln_types.h.
 
       <93> mln_lower(s);
       Make character lowercase.
+
+      <94> mln_join(glue, arr);
+      Join all elements in an array into a string, using a string as separator.
+      Returns a string containing a string representation of all the array elements, with
+      the separator string between each element.
+      Note: The order of elements does not depend on the index, but the order in which they
+      are appended to the array.
 
    I. Function development
       Following these steps below:
