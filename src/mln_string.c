@@ -28,6 +28,32 @@ static inline mln_string_t *mln_string_assign(char *s, mln_u32_t len)
     return str;
 }
 
+mln_string_t *mln_string_buf_new(mln_u8ptr_t buf, mln_u64_t len)
+{
+    mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t));
+    if (str == NULL) return NULL;
+
+    str->data = buf;
+    str->len = len;
+    str->data_ref = 0;
+    str->pool = 0;
+    str->ref = 1;
+    return str;
+}
+
+mln_string_t *mln_string_buf_pool_new(mln_alloc_t *pool, mln_u8ptr_t buf, mln_u64_t len)
+{
+    mln_string_t *str = (mln_string_t *)mln_alloc_m(pool, sizeof(mln_string_t));
+    if (str == NULL) return NULL;
+
+    str->data = buf;
+    str->len = len;
+    str->data_ref = 0;
+    str->pool = 1;
+    str->ref = 1;
+    return str;
+}
+
 mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s)
 {
     mln_string_t *str = (mln_string_t *)mln_alloc_m(pool, sizeof(mln_string_t));
@@ -37,6 +63,7 @@ mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s)
         str->len = 0;
         str->data_ref = 0;
         str->pool = 1;
+        str->ref = 1;
         return str;
     }
     mln_s32_t len = strlen(s);
@@ -62,6 +89,7 @@ mln_string_t *mln_string_new(const char *s)
         str->len = 0;
         str->data_ref = 0;
         str->pool = 0;
+        str->ref = 1;
         return str;
     }
     mln_s32_t len = strlen(s);

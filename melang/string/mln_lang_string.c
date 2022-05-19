@@ -13,6 +13,12 @@
 #define ASSERT(x);
 #endif
 
+struct mln_lang_string_join_s {
+    mln_lang_ctx_t *ctx;
+    mln_string_t *glue;
+    mln_string_t *res;
+};
+
 static int mln_lang_string_real2bin_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_int2bin_handler(mln_lang_ctx_t *ctx);
 static int mln_lang_string_bin2real_handler(mln_lang_ctx_t *ctx);
@@ -53,6 +59,9 @@ static int mln_lang_string_upper_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_string_upper_process(mln_lang_ctx_t *ctx);
 static int mln_lang_string_lower_handler(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_string_lower_process(mln_lang_ctx_t *ctx);
+static int mln_lang_string_join_handler(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_string_join_process(mln_lang_ctx_t *ctx);
+static int mln_lang_string_join_process_scan(mln_rbtree_node_t *node, mln_lang_array_elem_t *elem, struct mln_lang_string_join_s *lsj);
 
 int mln_lang_string(mln_lang_ctx_t *ctx)
 {
@@ -174,6 +183,9 @@ int mln_lang_string(mln_lang_ctx_t *ctx)
         return -1;
     }
     if (mln_lang_string_lower_handler(ctx) < 0) {
+        return -1;
+    }
+    if (mln_lang_string_join_handler(ctx) < 0) {
         return -1;
     }
     return 0;
@@ -2085,5 +2097,154 @@ static mln_lang_var_t *mln_lang_string_lower_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     return ret_var;
+}
+
+static int mln_lang_string_join_handler(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t v1 = mln_string("glue"), v2 = mln_string("arr");
+    mln_string_t funcname = mln_string("mln_join");
+
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_string_join_process, NULL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &v2, M_LANG_VAR_REFER, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+
+    return 0;
+}
+
+static mln_lang_var_t *mln_lang_string_join_process(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *ret_var;
+    mln_string_t v1 = mln_string("glue"), v2 = mln_string("arr");
+    mln_lang_array_t *arr;
+    struct mln_lang_string_join_s lsj = {ctx, NULL, NULL};
+    mln_string_t dflt = mln_string("");
+    mln_lang_symbol_node_t *sym;
+
+    if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+    val = mln_lang_var_val_get(sym->data.var);
+    lsj.glue = val->data.s;
+
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 2 missing.");
+        return NULL;
+    }
+    ASSERT(sym->type == M_LANG_SYMBOL_VAR);
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_ARRAY) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 2.");
+        return NULL;
+    }
+    val = mln_lang_var_val_get(sym->data.var);
+    arr = val->data.array;
+
+    if (mln_rbtree_scan_all(arr->elems_index, (rbtree_act)mln_lang_string_join_process_scan, &lsj)) {
+        if (lsj.res != NULL) mln_string_free(lsj.res);
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    if (lsj.res == NULL) {
+        ret_var = mln_lang_var_create_string(ctx, &dflt, NULL);
+    } else {
+        ret_var = mln_lang_var_create_ref_string(ctx, lsj.res, NULL);
+        mln_string_free(lsj.res);
+    }
+
+    if (ret_var == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return ret_var;
+}
+
+static int mln_lang_string_join_process_scan(mln_rbtree_node_t *node, mln_lang_array_elem_t *elem, struct mln_lang_string_join_s *lsj)
+{
+    mln_string_t *s, *tmp;
+    mln_u8ptr_t buf;
+    mln_u64_t len;
+
+    tmp = mln_lang_var_tostring(lsj->ctx->pool, elem->value);
+    if (tmp == NULL) return -1;
+
+    if (lsj->res == NULL) {
+        lsj->res = tmp;
+    } else {
+        len = lsj->res->len + lsj->glue->len + tmp->len;
+        if ((buf =(mln_u8ptr_t)mln_alloc_m(lsj->ctx->pool, len + 1)) == NULL) {
+            mln_string_free(tmp);
+            return -1;
+        }
+        if ((s = mln_string_buf_pool_new(lsj->ctx->pool, buf, len)) == NULL) {
+            mln_alloc_free(s);
+            mln_string_free(tmp);
+            return -1;
+        }
+
+        memcpy(buf, lsj->res->data, lsj->res->len);
+        buf += lsj->res->len;
+        memcpy(buf, lsj->glue->data, lsj->glue->len);
+        buf += lsj->glue->len;
+        memcpy(buf, tmp->data, tmp->len);
+
+        mln_string_free(tmp);
+        mln_string_free(lsj->res);
+        lsj->res = s;
+    }
+    return 0;
 }
 
