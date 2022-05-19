@@ -189,6 +189,14 @@ Their definitions can be found in melon/include/mln_types.h.
     aj) void mln_string_lower(mln_string_t *s);
        Make character lowercase.
 
+    ak) mln_string_t *mln_string_buf_new(mln_u8ptr_t buf, mln_u64_t len);
+       Allocate and initialize a new string though a given `buf`.
+       The argument buf should be allocated from heap (malloc, calloc, realloc).
+
+    al) mln_string_t *mln_string_buf_pool_new(mln_alloc_t *pool, mln_u8ptr_t buf, mln_u64_t len);
+       Allocate and initialize a new string though a given `buf`.
+       The argument buf should be allocated from the same memory pool.
+
   2) Hash Table
     struct mln_hash_attr {
         mln_alloc_t         *pool;

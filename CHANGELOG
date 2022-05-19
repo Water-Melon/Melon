@@ -1,3 +1,11 @@
+Changes with melon 2.3.3                                          19 May 2022
+    *) Added more path hook
+    *) Added log hook
+    *) Fixed JSON bug
+    *) Fixed file name bug in melang error tips
+    *) Added string trim, upper, lower and join
+    *) Updated docs
+
 Changes with melon 2.3.2                                          29 Apr 2022
     *) Fixed warnings on gcc 11.x and mingw
     *) Added path hook

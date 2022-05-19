@@ -151,6 +151,30 @@ mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s);
 
 
 
+#### mln_string_buf_new
+
+```c
+mln_string_t *mln_string_buf_new(mln_u8ptr_t buf, mln_u64_t len);
+```
+
+描述：利用`buf`和`len`作为字符串内容，创建一个字符串结构。**注意**：`buf`应是通过malloc族函数进行分配而来的，且不可在外部进行释放。
+
+返回值：成功则返回`mln_string_t`指针，否则返回`NULL`。
+
+
+
+#### mln_string_buf_pool_new
+
+```c
+mln_string_t *mln_string_buf_pool_new(mln_alloc_t *pool, mln_u8ptr_t buf, mln_u64_t len);
+```
+
+描述：利用`buf`和`len`作为字符串内容，创建一个字符串结构。**注意**：`buf`应是从`pool`中分配而来的，且不可在外部进行释放。
+
+返回值：成功则返回`mln_string_t`指针，否则返回`NULL`。
+
+
+
 #### mln_string_dup
 
 ```c
