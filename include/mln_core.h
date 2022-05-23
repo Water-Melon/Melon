@@ -8,13 +8,18 @@
 #include "mln_event.h"
 
 typedef int (*mln_core_init_t)(void);
-typedef void (*mln_core_worker_process_t)(mln_event_t *);
+#if !defined(WIN32)
+typedef void (*mln_core_process_t)(mln_event_t *);
+#endif
 
 struct mln_core_attr {
     int                       argc;
     char                    **argv;
     mln_core_init_t           global_init;
-    mln_core_worker_process_t worker_process;
+#if !defined(WIN32)
+    mln_core_process_t        master_process;
+    mln_core_process_t        worker_process;
+#endif
 };
 
 extern int mln_core_init(struct mln_core_attr *attr) __NONNULL1(1);

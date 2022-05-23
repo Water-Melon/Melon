@@ -28,7 +28,7 @@
 
 #if !defined(WIN32)
 static void mln_worker_routine(struct mln_core_attr *attr);
-static void mln_master_routine(void);
+static void mln_master_routine(struct mln_core_attr *attr);
 static int mln_get_framework_status(void);
 static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data);
 static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data);
@@ -76,7 +76,7 @@ int mln_core_init(struct mln_core_attr *attr)
         }
 
         if (is_master) {
-            mln_master_routine();
+            mln_master_routine(attr);
             goto chl;
         } else {
 chl:
@@ -116,7 +116,7 @@ chl:
 }
 
 #if !defined(WIN32)
-static void mln_master_routine(void)
+static void mln_master_routine(struct mln_core_attr *attr)
 {
     mln_event_t *ev = mln_event_init(1);
     if (ev == NULL) exit(1);
@@ -125,6 +125,7 @@ static void mln_master_routine(void)
         mln_log(error, "mln_event_set_signal() failed.\n");
         exit(1);
     }
+    if (attr->master_process != NULL) attr->master_process(ev);
     mln_event_dispatch(ev);
     mln_event_destroy(ev);
 }
