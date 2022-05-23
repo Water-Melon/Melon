@@ -186,6 +186,7 @@ int main(int argc, char *argv[])
     cattr.argc = argc;
     cattr.argv = argv;
     cattr.global_init = NULL;
+    cattr.master_process = NULL;
     cattr.worker_process = NULL;
     if (mln_core_init(&cattr) < 0) {
         fprintf(stderr, "init failed\n");

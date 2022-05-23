@@ -17,11 +17,12 @@ struct mln_core_attr {
     int                       argc; //一般为main的argc
     char                    **argv; //一般为main的argv
     mln_core_init_t           global_init; //初始化回调函数，一般用于初始化全局变量，该回调会在配置加载完成后被调用
-    mln_core_worker_process_t worker_process; //工作进程处理函数，我们将在多进程框架部分深入
+    mln_core_process_t        master_process; //主进程处理函数，我们将在多进程框架部分深入
+    mln_core_process_t        worker_process; //工作进程处理函数，我们将在多进程框架部分深入
 };
 
 typedef int (*mln_core_init_t)(void);
-typedef void (*mln_core_worker_process_t)(mln_event_t *);
+typedef void (*mln_core_process_t)(mln_event_t *);
 ```
 
 一般情况下，在Melon的各个组件中，被用来作为初始化参数的结构体都以`_attr`结尾，且不会被`typedef`定义为某一类型。
@@ -51,6 +52,7 @@ int main(int argc, char *argv[])
     cattr.argc = argc;
     cattr.argv = argv;
     cattr.global_init = NULL;
+    cattr.master_process = NULL;
     cattr.worker_process = NULL;
     return mln_core_init(&cattr);
 }
