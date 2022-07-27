@@ -3977,7 +3977,7 @@ Their definitions can be found in melon/include/mln_types.h.
       <90> mln_import(name);
       Import dynamic library indicated by 'name' into current melang scope.
       Dynamic library must contain the entrance function named 'init', its prototype is:
-          int init(mln_lang_ctx_t *);
+          mln_lang_var_t *init(mln_lang_ctx_t *);
 
       <91> mln_trim(s, mask);
       Strip whitespace (or other characters) from the beginning and end of a string.

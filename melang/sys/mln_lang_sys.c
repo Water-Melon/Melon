@@ -15,7 +15,6 @@
 #include "mln_lex.h"
 #include "mln_cron.h"
 #include "mln_log.h"
-#include "mln_melang.h"
 
 #ifdef __DEBUG__
 #include <assert.h>
@@ -3666,7 +3665,7 @@ static int mln_lang_sys_import_handler(mln_lang_ctx_t *ctx)
 
 static mln_lang_var_t *mln_lang_sys_import_process(mln_lang_ctx_t *ctx)
 {
-    mln_lang_var_t *ret_var = NULL;
+    mln_lang_var_t *ret_var;
     mln_string_t v1 = mln_string("name");
     mln_lang_ctx_sys_import_t csi, *pcsi;
     mln_lang_symbol_node_t *sym;
@@ -3677,7 +3676,7 @@ static mln_lang_var_t *mln_lang_sys_import_process(mln_lang_ctx_t *ctx)
     char path[1024];
     char tmp_path[1024];
     char *melang_dy_path;
-    melang_installer init;
+    import_init_t init;
     void *handle;
     int n;
 
@@ -3807,9 +3806,9 @@ goon:
     }
 
 #if defined(WIN32)
-    init = (melang_installer)GetProcAddress(handle, "init");
+    init = (import_init_t)GetProcAddress(handle, "init");
 #else
-    init = (melang_installer)dlsym(handle, "init");
+    init = (import_init_t)dlsym(handle, "init");
 #endif
     if (init == NULL) {
         n = snprintf(tmp_path, sizeof(tmp_path)-1, "No 'init' found in dynamic library [%s].", path);
@@ -3818,17 +3817,13 @@ goon:
         return NULL;
     }
 
-    if (init(ctx) != 0) {
+    if ((ret_var = init(ctx)) == NULL) {
         n = snprintf(tmp_path, sizeof(tmp_path)-1, "Init dynamic library [%s] failed.", path);
         tmp_path[n] = 0;
         mln_lang_errmsg(ctx, tmp_path);
         return NULL;
     }
 
-    if ((ret_var = mln_lang_var_create_nil(ctx, NULL)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return NULL;
-    }
     return ret_var;
 }
 

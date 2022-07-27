@@ -7,6 +7,8 @@
 
 #include "mln_lang.h"
 
+typedef mln_lang_var_t *(* import_init_t)(mln_lang_ctx_t *);
+
 #if !defined(WIN32)
 typedef struct {
     mln_lang_ctx_t        *ctx;

@@ -33,10 +33,14 @@
 1. 构造一个含有名为`init`函数的动态库，其中`init`的函数原型为：
 
    ```c
-   int init(mln_lang_ctx_t *);
+   mln_lang_var_t *init(mln_lang_ctx_t *);
    ```
 
-   即内置库中的`melang_installer`。开发者可在`init`函数中加载各种脚本函数、集合、变量等内容，这与内置库的步骤4是一样的。
+   `mln_lang_var_t`是脚本任务中函数返回值的类型，创建的方式可以参考`mln_lang.h`以及melang的各种内置函数实现。
+
+   开发者可在`init`函数中加载各种脚本函数、集合、变量等内容。如果函数返回值为`nil`，则这与内置库的步骤4是类似的。
+
+   `init`中的`mln_lang_var_t`返回值是在函数`mln_import`调用结束时返回的。
 
 2. 使用时，在脚本中调用`mln_import`函数引入此动态库，程序会调用`init`函数来将库内要加载的资源加载到脚本当前的作用域内。
 
