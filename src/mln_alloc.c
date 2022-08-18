@@ -84,15 +84,14 @@ static inline mln_alloc_shm_t *mln_alloc_shm_new(mln_alloc_t *pool, mln_size_t s
     return shm;
 }
 
-mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
+mln_alloc_t *mln_alloc_shm_init(struct mln_alloc_shm_attr_s *attr)
 {
-    pthread_rwlockattr_t attr;
     mln_alloc_t *pool;
 #if defined(WIN32)
     HANDLE handle;
 #endif
 
-    if (size < M_ALLOC_SHM_DEFAULT_SIZE+1024) {
+    if (attr->size < M_ALLOC_SHM_DEFAULT_SIZE+1024) {
         return NULL;
     }
 
@@ -101,11 +100,11 @@ mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
                                     NULL,
                                     PAGE_READWRITE,
 #if defined(__x86_64)
-                                    (u_long) (size >> 32),
+                                    (u_long) (attr->size >> 32),
 #else
                                     0,
 #endif
-                                    (u_long) (size & 0xffffffff),
+                                    (u_long) (attr->size & 0xffffffff),
                                     NULL)) == NULL)
     {
         return NULL;
@@ -118,17 +117,17 @@ mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
     pool->map_handle = handle;
 #else
 
-    pool = (mln_alloc_t *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0);
+    pool = (mln_alloc_t *)mmap(NULL, attr->size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0);
     if (pool == NULL) return NULL;
 #endif
     pool->parent = NULL;
     pool->large_used_head = pool->large_used_tail = NULL;
     pool->shm_head = pool->shm_tail = NULL;
     pool->mem = pool;
-    pool->shm_size = size;
-    pthread_rwlockattr_init(&attr);
-    pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
-    pthread_rwlock_init(&pool->rwlock, &attr);
+    pool->shm_size = attr->size;
+    pool->locker = attr->locker;
+    pool->lock = attr->lock;
+    pool->unlock = attr->unlock;
     return pool;
 }
 
@@ -136,10 +135,17 @@ mln_alloc_t *mln_alloc_init(mln_alloc_t *parent)
 {
     mln_alloc_t *pool;
 
-    if (parent != NULL)
+    if (parent != NULL) {
+        if (mln_alloc_is_shm(parent)) {
+            if (parent->lock(parent->locker) != 0) return NULL;
+        }
         pool = (mln_alloc_t *)mln_alloc_m(parent, sizeof(mln_alloc_t));
-    else
+        if (mln_alloc_is_shm(parent)) {
+            (void)parent->unlock(parent->locker);
+        }
+    } else {
         pool = (mln_alloc_t *)malloc(sizeof(mln_alloc_t));
+    }
     if (pool == NULL) return pool;
     mln_alloc_mgr_table_init(pool->mgr_tbl);
     pool->parent = parent;
@@ -147,7 +153,9 @@ mln_alloc_t *mln_alloc_init(mln_alloc_t *parent)
     pool->shm_head = pool->shm_tail = NULL;
     pool->mem = NULL;
     pool->shm_size = 0;
-    memset(&pool->rwlock, 0, sizeof(pthread_rwlock_t));
+    pool->locker = NULL;
+    pool->lock = NULL;
+    pool->unlock = NULL;
     return pool;
 }
 
@@ -181,6 +189,9 @@ void mln_alloc_destroy(mln_alloc_t *pool)
 {
     if (pool == NULL) return;
 
+    mln_alloc_t *parent = pool->parent;
+    if (parent != NULL && mln_alloc_is_shm(parent))
+        (void)pool->parent->lock(parent->locker);
     if (pool->mem == NULL) {
         mln_alloc_mgr_t *am, *amend;
         amend = pool->mgr_tbl + M_ALLOC_MGR_LEN;
@@ -208,6 +219,8 @@ void mln_alloc_destroy(mln_alloc_t *pool)
         munmap(pool->mem, pool->shm_size);
 #endif
     }
+    if (parent != NULL && mln_alloc_is_shm(parent))
+        (void)pool->parent->unlock(parent->locker);
 }
 
 void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
@@ -227,10 +240,18 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
     if (am == NULL) {
         n = (size + sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_chunk_t) + 3) >> 2;
         size = n << 2;
-        if (pool->parent != NULL)
+        if (pool->parent != NULL) {
+            if (mln_alloc_is_shm(pool->parent)) {
+                if (pool->parent->lock(pool->parent->locker) != 0)
+                    return NULL;
+            }
             ptr = (mln_u8ptr_t)mln_alloc_c(pool->parent, size);
-        else
+            if (mln_alloc_is_shm(pool->parent)) {
+                (void)pool->parent->unlock(pool->parent->locker);
+            }
+        } else {
             ptr = (mln_u8ptr_t)calloc(1, size);
+        }
         if (ptr == NULL) return NULL;
         ch = (mln_alloc_chunk_t *)ptr;
         ch->refer = 1;
@@ -252,10 +273,18 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
 
         n = (sizeof(mln_alloc_chunk_t) + M_ALLOC_BLK_NUM * size + 3) >> 2;
 
-        if (pool->parent != NULL)
+        if (pool->parent != NULL) {
+            if (mln_alloc_is_shm(pool->parent)) {
+                if (pool->parent->lock(pool->parent->locker) != 0)
+                    return NULL;
+            }
             ptr = (mln_u8ptr_t)mln_alloc_c(pool->parent, n << 2);
-        else
+            if (mln_alloc_is_shm(pool->parent)) {
+                (void)pool->parent->unlock(pool->parent->locker);
+            }
+        } else {
             ptr = (mln_u8ptr_t)calloc(1, n << 2);
+        }
         if (ptr == NULL) {
             for (; am < pool->mgr_tbl + M_ALLOC_MGR_LEN; ++am) {
                 if (am->free_head != NULL) goto out;
@@ -367,8 +396,18 @@ void mln_alloc_free(void *ptr)
 
     if (blk->is_large) {
         mln_chunk_chain_del(&(pool->large_used_head), &(pool->large_used_tail), blk->chunk);
-        if (pool->parent != NULL) mln_alloc_free(blk->chunk);
-        else free(blk->chunk);
+        if (pool->parent != NULL) {
+            if (mln_alloc_is_shm(pool->parent)) {
+                if (pool->parent->lock(pool->parent->locker) != 0) {
+                    return;
+                }
+            }
+            mln_alloc_free(blk->chunk);
+            if (mln_alloc_is_shm(pool->parent)) {
+                (void)pool->parent->unlock(pool->parent->locker);
+            }
+        } else
+            free(blk->chunk);
         return;
     }
     ch = blk->chunk;
@@ -382,34 +421,19 @@ void mln_alloc_free(void *ptr)
             mln_blk_chain_del(&(am->free_head), &(am->free_tail), *(blks++));
         }
         mln_chunk_chain_del(&(am->chunk_head), &(am->chunk_tail), ch);
-        if (pool->parent != NULL) mln_alloc_free(ch);
-        else free(ch);
+        if (pool->parent != NULL) {
+            if (mln_alloc_is_shm(pool->parent)) {
+                if (pool->parent->lock(pool->parent->locker) != 0) {
+                    return;
+                }
+            }
+            mln_alloc_free(ch);
+            if (mln_alloc_is_shm(pool->parent)) {
+                (void)pool->parent->unlock(pool->parent->locker);
+            }
+        } else
+            free(ch);
     }
-}
-
-int mln_alloc_shm_rdlock(mln_alloc_t *pool)
-{
-    return pthread_rwlock_rdlock(&pool->rwlock);
-}
-
-int mln_alloc_shm_tryrdlock(mln_alloc_t *pool)
-{
-    return pthread_rwlock_tryrdlock(&pool->rwlock);
-}
-
-int mln_alloc_shm_wrlock(mln_alloc_t *pool)
-{
-    return pthread_rwlock_wrlock(&pool->rwlock);
-}
-
-int mln_alloc_shm_trywrlock(mln_alloc_t *pool)
-{
-    return pthread_rwlock_trywrlock(&pool->rwlock);
-}
-
-int mln_alloc_shm_unlock(mln_alloc_t *pool)
-{
-    return pthread_rwlock_unlock(&pool->rwlock);
 }
 
 static inline void *mln_alloc_shm_m(mln_alloc_t *pool, mln_size_t size)

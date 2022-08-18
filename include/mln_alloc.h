@@ -15,8 +15,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include "mln_types.h"
+
+typedef int (*mln_alloc_shm_lock_cb_t)(void *);
 
 #define M_ALLOC_BEGIN_OFF        ((mln_size_t)4)
 #define M_ALLOC_MGR_GRAIN_SIZE   2
@@ -32,6 +33,13 @@
 typedef struct mln_alloc_s       mln_alloc_t;
 typedef struct mln_alloc_mgr_s   mln_alloc_mgr_t;
 typedef struct mln_alloc_chunk_s mln_alloc_chunk_t;
+
+struct mln_alloc_shm_attr_s {
+    mln_size_t                size;
+    void                     *locker;
+    mln_alloc_shm_lock_cb_t   lock;
+    mln_alloc_shm_lock_cb_t   unlock;
+};
 
 /*
  * Note:
@@ -93,19 +101,18 @@ struct mln_alloc_s {
     mln_alloc_shm_t          *shm_tail;
     void                     *mem;
     mln_size_t                shm_size;
-    pthread_rwlock_t          rwlock;
+    void                     *locker;
+    mln_alloc_shm_lock_cb_t   lock;
+    mln_alloc_shm_lock_cb_t   unlock;
 #if defined(WIN32)
     HANDLE                    map_handle;
 #endif
 };
 
 
-extern int mln_alloc_shm_rdlock(mln_alloc_t *pool);
-extern int mln_alloc_shm_tryrdlock(mln_alloc_t *pool);
-extern int mln_alloc_shm_wrlock(mln_alloc_t *pool);
-extern int mln_alloc_shm_trywrlock(mln_alloc_t *pool);
-extern int mln_alloc_shm_unlock(mln_alloc_t *pool);
-extern mln_alloc_t *mln_alloc_shm_init(mln_size_t size);
+#define mln_alloc_is_shm(pool) (pool->mem != NULL)
+
+extern mln_alloc_t *mln_alloc_shm_init(struct mln_alloc_shm_attr_s *attr);
 extern mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
 extern void mln_alloc_destroy(mln_alloc_t *pool);
 extern void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size);

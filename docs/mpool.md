@@ -36,10 +36,29 @@ mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
 mln_alloc_shm_init
 
 ```c
-mln_alloc_t *mln_alloc_shm_init(mln_size_t size);
+mln_alloc_t *mln_alloc_shm_init(struct mln_alloc_shm_attr_s *attr);
 ```
 
-描述：创建共享内存内存池。本池建立时需要给出池大小`size`（单位字节），一旦创建完毕后则后续无法再扩大。
+描述：创建共享内存内存池。
+
+参数结构体定义：
+```c
+struct mln_alloc_shm_attr_s {
+    mln_size_t                size;
+    void                     *locker;
+    mln_alloc_shm_lock_cb_t   lock;
+    mln_alloc_shm_lock_cb_t   unlock;
+};
+typedef int (*mln_alloc_shm_lock_cb_t)(void *);
+```
+
+本池建立时需要给出池大小`size`（单位字节），一旦创建完毕后则后续无法再扩大。
+
+`locker`是锁资源结构指针。
+
+`lock`是用于对锁资源加锁的回调函数，该函数参数为锁资源指针。若加锁失败则返回`非0`值。
+
+`unlock`是用于对锁资源解锁的回调函数，该函数参数为锁资源指针。若解锁失败则返回`非0`值。
 
 返回值：成功则返回内存池结构指针，否则返回`NULL`
 
