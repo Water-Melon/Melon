@@ -121,6 +121,7 @@ mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
     pool = (mln_alloc_t *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0);
     if (pool == NULL) return NULL;
 #endif
+    pool->parent = NULL;
     pool->large_used_head = pool->large_used_tail = NULL;
     pool->shm_head = pool->shm_tail = NULL;
     pool->mem = pool;
