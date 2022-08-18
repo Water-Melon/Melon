@@ -1180,7 +1180,7 @@ Their definitions can be found in melon/include/mln_types.h.
 
             char *keywords[] = {"for", NULL};
 
-            mln_alloc_t *pool = mln_alloc_init();
+            mln_alloc_t *pool = mln_alloc_init(NULL);
 
             mln_lex_t *lex = NULL;
             struct mln_lex_attr lattr;
@@ -1215,8 +1215,10 @@ Their definitions can be found in melon/include/mln_types.h.
 
   17) Memory Pool
      The memory pool can help developer use memory more easily.
-     a) mln_alloc_t *mln_alloc_init(void);
+     a) mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
         Initialize a memory pool object.
+        'parent' is another memory pool, which means a memory pool can be created by another pool.
+        If 'parent' is NULL, memory pool will be created from heap.
 
      b) void mln_alloc_destroy(mln_alloc_t *pool);
         Destroy a memory pool object and free all memory blocks that it allocated.

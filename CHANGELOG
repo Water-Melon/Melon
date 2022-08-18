@@ -1,3 +1,9 @@
+Changes with melon 2.3.4                                          18 Aug 2022
+    *) Added parent pool for memory pool component
+    *) Upgraded mln_import to have a return value in script layer
+    *) Added master processing handle for multi-process framework
+    *) Updated docs
+
 Changes with melon 2.3.3                                          19 May 2022
     *) Added more path hook
     *) Added log hook

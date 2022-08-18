@@ -3550,7 +3550,7 @@ void *mln_lang_ast_generate(mln_alloc_t *pool, void *state_tbl, mln_string_t *da
     mln_alloc_t *internal_pool;
     mln_u8ptr_t ret;
 
-    if ((internal_pool = mln_alloc_init()) == NULL) {
+    if ((internal_pool = mln_alloc_init(NULL)) == NULL) {
         return NULL;
     }
     lattr.pool = internal_pool;

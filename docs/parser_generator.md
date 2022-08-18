@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 
     //创建内存池，用于语法分析过程中使用，使用后可进行释放。这里需要注意，生成的抽象语法树结构尽量不要使用该内存池，
     //开发者可能会习惯性按本示例一样在解析后进行释放。则在后续处理抽象语法树时就会发生越界访问。
-    if ((pool = mln_alloc_init()) == NULL) {
+    if ((pool = mln_alloc_init(NULL)) == NULL) {
         mln_log(error, "init memory pool failed.\n");
         return -1;
     }

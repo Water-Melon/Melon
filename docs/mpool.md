@@ -24,10 +24,10 @@ Melon中，内存池分为两类：
 mln_alloc_init
 
 ```c
-mln_alloc_t *mln_alloc_init(void);
+mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
 ```
 
-描述：创建堆内存内存池。
+描述：创建堆内存内存池。参数`parent`是一个内存池实例，该参数为`NULL`时，本函数创建的内存池将从堆中分配内存，若不为`NULL`时，则从`parent`所在池中分配内存。即池结构可级联。
 
 返回值：成功则返回内存池结构指针，否则返回`NULL`
 
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    pool = mln_alloc_init();
+    pool = mln_alloc_init(NULL);
     if (pool == NULL) {
         mln_log(error, "pool init failed\n");
         return -1;

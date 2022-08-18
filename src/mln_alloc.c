@@ -131,11 +131,17 @@ mln_alloc_t *mln_alloc_shm_init(mln_size_t size)
     return pool;
 }
 
-mln_alloc_t *mln_alloc_init(void)
+mln_alloc_t *mln_alloc_init(mln_alloc_t *parent)
 {
-    mln_alloc_t *pool = (mln_alloc_t *)malloc(sizeof(mln_alloc_t));
+    mln_alloc_t *pool;
+
+    if (parent != NULL)
+        pool = (mln_alloc_t *)mln_alloc_m(parent, sizeof(mln_alloc_t));
+    else
+        pool = (mln_alloc_t *)malloc(sizeof(mln_alloc_t));
     if (pool == NULL) return pool;
     mln_alloc_mgr_table_init(pool->mgr_tbl);
+    pool->parent = parent;
     pool->large_used_head = pool->large_used_tail = NULL;
     pool->shm_head = pool->shm_tail = NULL;
     pool->mem = NULL;
@@ -181,14 +187,17 @@ void mln_alloc_destroy(mln_alloc_t *pool)
         for (am = pool->mgr_tbl; am < amend; ++am) {
             while ((ch = am->chunk_head) != NULL) {
                 mln_chunk_chain_del(&(am->chunk_head), &(am->chunk_tail), ch);
-                free(ch);
+                if (pool->parent != NULL) mln_alloc_free(ch);
+                else free(ch);
             }
         }
         while ((ch = pool->large_used_head) != NULL) {
             mln_chunk_chain_del(&(pool->large_used_head), &(pool->large_used_tail), ch);
-            free(ch);
+            if (pool->parent != NULL) mln_alloc_free(ch);
+            else free(ch);
         }
-        free(pool);
+        if (pool->parent != NULL) mln_alloc_free(pool);
+        else free(pool);
     } else {
 #if defined(WIN32)
         HANDLE handle = pool->map_handle;
@@ -217,7 +226,10 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
     if (am == NULL) {
         n = (size + sizeof(mln_alloc_blk_t) + sizeof(mln_alloc_chunk_t) + 3) >> 2;
         size = n << 2;
-        ptr = (mln_u8ptr_t)calloc(1, size);
+        if (pool->parent != NULL)
+            ptr = (mln_u8ptr_t)mln_alloc_c(pool->parent, size);
+        else
+            ptr = (mln_u8ptr_t)calloc(1, size);
         if (ptr == NULL) return NULL;
         ch = (mln_alloc_chunk_t *)ptr;
         ch->refer = 1;
@@ -239,7 +251,11 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
 
         n = (sizeof(mln_alloc_chunk_t) + M_ALLOC_BLK_NUM * size + 3) >> 2;
 
-        if ((ptr = (mln_u8ptr_t)calloc(1, n << 2)) == NULL) {
+        if (pool->parent != NULL)
+            ptr = (mln_u8ptr_t)mln_alloc_c(pool->parent, n << 2);
+        else
+            ptr = (mln_u8ptr_t)calloc(1, n << 2);
+        if (ptr == NULL) {
             for (; am < pool->mgr_tbl + M_ALLOC_MGR_LEN; ++am) {
                 if (am->free_head != NULL) goto out;
             }
@@ -350,7 +366,8 @@ void mln_alloc_free(void *ptr)
 
     if (blk->is_large) {
         mln_chunk_chain_del(&(pool->large_used_head), &(pool->large_used_tail), blk->chunk);
-        free(blk->chunk);
+        if (pool->parent != NULL) mln_alloc_free(blk->chunk);
+        else free(blk->chunk);
         return;
     }
     ch = blk->chunk;
@@ -364,7 +381,8 @@ void mln_alloc_free(void *ptr)
             mln_blk_chain_del(&(am->free_head), &(am->free_tail), *(blks++));
         }
         mln_chunk_chain_del(&(am->chunk_head), &(am->chunk_tail), ch);
-        free(ch);
+        if (pool->parent != NULL) mln_alloc_free(ch);
+        else free(ch);
     }
 }
 

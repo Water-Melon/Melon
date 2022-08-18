@@ -507,7 +507,7 @@ int main(int argc, char *argv[])
 
     mln_string_nset(&path, argv[1], strlen(argv[1]));
 
-    lattr.pool = mln_alloc_init();
+    lattr.pool = mln_alloc_init(NULL);
     if (lattr.pool == NULL) {
         fprintf(stderr, "init pool failed\n");
         return -1;

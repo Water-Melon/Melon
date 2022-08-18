@@ -327,7 +327,7 @@ static inline mln_conf_t *mln_conf_init(void)
     mln_lex_hooks_t hooks;
     struct mln_lex_attr lattr;
 
-    if ((pool = mln_alloc_init()) == NULL) {
+    if ((pool = mln_alloc_init(NULL)) == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_rbtree_destroy(cf->domain);
         free(cf);

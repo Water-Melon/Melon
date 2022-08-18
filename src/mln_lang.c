@@ -752,7 +752,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
     ctx->lang = lang;
-    if ((ctx->pool = mln_alloc_init()) == NULL) {
+    if ((ctx->pool = mln_alloc_init(NULL)) == NULL) {
         mln_alloc_free(ctx);
         return NULL;
     }

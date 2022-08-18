@@ -86,6 +86,7 @@ typedef struct mln_alloc_shm_s {
 
 struct mln_alloc_s {
     mln_alloc_mgr_t           mgr_tbl[M_ALLOC_MGR_LEN];
+    struct mln_alloc_s       *parent;
     mln_alloc_chunk_t        *large_used_head;
     mln_alloc_chunk_t        *large_used_tail;
     mln_alloc_shm_t          *shm_head;
@@ -105,7 +106,7 @@ extern int mln_alloc_shm_wrlock(mln_alloc_t *pool);
 extern int mln_alloc_shm_trywrlock(mln_alloc_t *pool);
 extern int mln_alloc_shm_unlock(mln_alloc_t *pool);
 extern mln_alloc_t *mln_alloc_shm_init(mln_size_t size);
-extern mln_alloc_t *mln_alloc_init(void);
+extern mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
 extern void mln_alloc_destroy(mln_alloc_t *pool);
 extern void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size);
 extern void *mln_alloc_c(mln_alloc_t *pool, mln_size_t size);

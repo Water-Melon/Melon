@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
        return -1;
     }
 
-    pool = mln_alloc_init();
+    pool = mln_alloc_init(NULL);
 
     ptr = mln_alloc_m(pool, 1024);
     mln_log(debug, "%X\n", ptr);
