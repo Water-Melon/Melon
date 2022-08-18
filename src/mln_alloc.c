@@ -91,7 +91,11 @@ mln_alloc_t *mln_alloc_shm_init(struct mln_alloc_shm_attr_s *attr)
     HANDLE handle;
 #endif
 
-    if (attr->size < M_ALLOC_SHM_DEFAULT_SIZE+1024) {
+    if (attr->size < M_ALLOC_SHM_DEFAULT_SIZE+1024 || \
+        attr->locker == NULL || \
+        attr->lock == NULL || \
+        attr->unlock == NULL)
+    {
         return NULL;
     }
 
@@ -191,7 +195,8 @@ void mln_alloc_destroy(mln_alloc_t *pool)
 
     mln_alloc_t *parent = pool->parent;
     if (parent != NULL && mln_alloc_is_shm(parent))
-        (void)pool->parent->lock(parent->locker);
+        if (parent->lock(parent->locker) != 0)
+            return;
     if (pool->mem == NULL) {
         mln_alloc_mgr_t *am, *amend;
         amend = pool->mgr_tbl + M_ALLOC_MGR_LEN;
@@ -199,16 +204,16 @@ void mln_alloc_destroy(mln_alloc_t *pool)
         for (am = pool->mgr_tbl; am < amend; ++am) {
             while ((ch = am->chunk_head) != NULL) {
                 mln_chunk_chain_del(&(am->chunk_head), &(am->chunk_tail), ch);
-                if (pool->parent != NULL) mln_alloc_free(ch);
+                if (parent != NULL) mln_alloc_free(ch);
                 else free(ch);
             }
         }
         while ((ch = pool->large_used_head) != NULL) {
             mln_chunk_chain_del(&(pool->large_used_head), &(pool->large_used_tail), ch);
-            if (pool->parent != NULL) mln_alloc_free(ch);
+            if (parent != NULL) mln_alloc_free(ch);
             else free(ch);
         }
-        if (pool->parent != NULL) mln_alloc_free(pool);
+        if (parent != NULL) mln_alloc_free(pool);
         else free(pool);
     } else {
 #if defined(WIN32)
@@ -220,7 +225,7 @@ void mln_alloc_destroy(mln_alloc_t *pool)
 #endif
     }
     if (parent != NULL && mln_alloc_is_shm(parent))
-        (void)pool->parent->unlock(parent->locker);
+        (void)parent->unlock(parent->locker);
 }
 
 void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
