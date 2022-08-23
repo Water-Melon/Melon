@@ -283,12 +283,18 @@ Their definitions can be found in melon/include/mln_types.h.
 
   3) Fibonacci Heap
     struct mln_fheap_attr {
-        fheap_cmp                cmp;
-        fheap_copy               copy;
-        fheap_key_free           key_free;
-        void                    *min_val;
-        mln_size_t               min_val_size;
+        void                     *pool;
+        fheap_pool_alloc_handler  pool_alloc;
+        fheap_pool_free_handler   pool_free;
+        fheap_cmp                 cmp;
+        fheap_copy                copy;
+        fheap_key_free            key_free;
+        void                     *min_val;
+        mln_size_t                min_val_size;
     };
+    pool -- is a memory pool given by caller. You can set it NULL if you don't want to allocate fib-heap node from memory pool.
+    pool_alloc -- is the corresponding allocation function pointer of 'pool'.
+    pool_free -- is the corresponding free function pointer of 'pool'.
     cmp -- is a function pointer, its prototype is
         typedef int (*fheap_cmp)(const void *, const void *);
     The two arguments are custom structure pointers.

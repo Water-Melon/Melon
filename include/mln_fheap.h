@@ -29,33 +29,41 @@ typedef int (*fheap_cmp)(const void *, const void *);
  */
 typedef void (*fheap_copy)(void *, void *);
 typedef void (*fheap_key_free)(void *);
+typedef void *(*fheap_pool_alloc_handler)(void *, mln_size_t);
+typedef void (*fheap_pool_free_handler)(void *);
 
 struct mln_fheap_attr {
-    fheap_cmp                cmp;
-    fheap_copy               copy;
-    fheap_key_free           key_free;    /*can be NULL*/
-    void                    *min_val;
-    mln_size_t               min_val_size;
+    void                     *pool;
+    fheap_pool_alloc_handler  pool_alloc;
+    fheap_pool_free_handler   pool_free;
+    fheap_cmp                 cmp;
+    fheap_copy                copy;
+    fheap_key_free            key_free;    /*can be NULL*/
+    void                     *min_val;
+    mln_size_t                min_val_size;
 };
 
 typedef struct mln_fheap_node_s {
-    void                    *key;
-    struct mln_fheap_node_s *parent;
-    struct mln_fheap_node_s *child;
-    struct mln_fheap_node_s *left;
-    struct mln_fheap_node_s *right;
-    mln_size_t               degree;
-    enum mln_fheap_mark      mark;
+    void                     *key;
+    struct mln_fheap_node_s  *parent;
+    struct mln_fheap_node_s  *child;
+    struct mln_fheap_node_s  *left;
+    struct mln_fheap_node_s  *right;
+    mln_size_t                degree;
+    enum mln_fheap_mark       mark;
 } mln_fheap_node_t;
 
 typedef struct {
-    void                    *min_val;
-    fheap_cmp                cmp;
-    fheap_copy               copy;
-    fheap_key_free           key_free;
-    mln_fheap_node_t        *min;
-    mln_fheap_node_t        *root_list;
-    mln_size_t               num;
+    void                     *pool;
+    fheap_pool_alloc_handler  pool_alloc;
+    fheap_pool_free_handler   pool_free;
+    void                     *min_val;
+    fheap_cmp                 cmp;
+    fheap_copy                copy;
+    fheap_key_free            key_free;
+    mln_fheap_node_t         *min;
+    mln_fheap_node_t         *root_list;
+    mln_size_t                num;
 } mln_fheap_t;
 
 

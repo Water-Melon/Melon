@@ -159,6 +159,9 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
         }
     }
     struct mln_fheap_attr fattr;
+    fattr.pool = NULL;
+    fattr.pool_alloc = NULL;
+    fattr.pool_free = NULL;
     fattr.cmp = mln_event_fd_timeout_cmp;
     fattr.copy = mln_event_fd_timeout_copy;
     fattr.key_free = NULL;
@@ -170,6 +173,9 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
         goto err2;
     }
     /*timer heap*/
+    fattr.pool = NULL;
+    fattr.pool_alloc = NULL;
+    fattr.pool_free = NULL;
     fattr.cmp = mln_event_fheap_timer_cmp;
     fattr.copy = mln_event_fheap_timer_copy;
     fattr.key_free = mln_event_desc_free;

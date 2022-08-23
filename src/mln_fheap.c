@@ -27,11 +27,20 @@ mln_fheap_cascading_cut(mln_fheap_t *fh, mln_fheap_node_t *y);
 
 mln_fheap_t *mln_fheap_init(struct mln_fheap_attr *attr)
 {
-    mln_fheap_t *fh = (mln_fheap_t *)malloc(sizeof(mln_fheap_t));
+    mln_fheap_t *fh;
+    if (attr->pool != NULL)
+        fh = (mln_fheap_t *)attr->pool_alloc(attr->pool, sizeof(mln_fheap_t));
+    else
+        fh = (mln_fheap_t *)malloc(sizeof(mln_fheap_t));
     if (fh == NULL) return NULL;
-    fh->min_val = malloc(attr->min_val_size);
+
+    fh->pool = attr->pool;
+    fh->pool_alloc = attr->pool_alloc;
+    fh->pool_free = attr->pool_free;
+    fh->min_val = attr->pool != NULL? attr->pool_alloc(attr->pool, attr->min_val_size): malloc(attr->min_val_size);
     if (fh->min_val == NULL) {
-        free(fh);
+        if (attr->pool != NULL) attr->pool_free(fh);
+        else free(fh);
         return NULL;
     }
     memcpy(fh->min_val, attr->min_val, attr->min_val_size);
@@ -186,21 +195,30 @@ void mln_fheap_delete(mln_fheap_t *fh, mln_fheap_node_t *node)
 void mln_fheap_destroy(mln_fheap_t *fh)
 {
     if (fh == NULL) return;
+
     mln_fheap_node_t *fn;
     while ((fn = mln_fheap_extract_min(fh)) != NULL) {
         mln_fheap_node_destroy(fh, fn);
     }
-    if (fh->min_val != NULL)
-        free(fh->min_val);
-    free(fh);
+    if (fh->min_val != NULL) {
+        if (fh->pool != NULL) fh->pool_free(fh->min_val);
+        else free(fh->min_val);
+    }
+    if (fh->pool != NULL) fh->pool_free(fh);
+    else free(fh);
 }
 
 /*mln_fheap_node_t*/
 mln_fheap_node_t *mln_fheap_node_init(mln_fheap_t *fh, void *key)
 {
     mln_fheap_node_t *fn;
-    fn = (mln_fheap_node_t *)malloc(sizeof(mln_fheap_node_t));
+
+    if (fh->pool != NULL)
+        fn = (mln_fheap_node_t *)fh->pool_alloc(fh->pool, sizeof(mln_fheap_node_t));
+    else
+        fn = (mln_fheap_node_t *)malloc(sizeof(mln_fheap_node_t));
     if (fn == NULL) return NULL;
+
     fn->key = key;
     fn->parent = NULL;
     fn->child = NULL;
@@ -216,7 +234,8 @@ void mln_fheap_node_destroy(mln_fheap_t *fh, mln_fheap_node_t *fn)
     if (fn == NULL) return;
     if (fh->key_free != NULL && fn->key != NULL)
         fh->key_free(fn->key);
-    free(fn);
+    if (fh->pool != NULL) fh->pool_free(fn);
+    else free(fn);
 }
 
 /*chain*/

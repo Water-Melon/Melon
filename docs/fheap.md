@@ -33,21 +33,29 @@ typedef struct mln_fheap_node_s {
 mln_fheap_t *mln_fheap_init(struct mln_fheap_attr *attr);
 
 struct mln_fheap_attr {
-    fheap_cmp                cmp;//比较函数
-    fheap_copy               copy;//复制函数
-    fheap_key_free           key_free;//key释放函数
-    void                    *min_val;//最小值结构
-    mln_size_t               min_val_size;//最小值结构字节大小
+    void                     *pool;//内存池
+    fheap_pool_alloc_handler  pool_alloc;//内存池分配内存函数指针
+    fheap_pool_free_handler   pool_free;//内存池释放内存函数指针
+    fheap_cmp                 cmp;//比较函数
+    fheap_copy                copy;//复制函数
+    fheap_key_free            key_free;//key释放函数
+    void                     *min_val;//最小值结构
+    mln_size_t                min_val_size;//最小值结构字节大小
 };
 typedef int (*fheap_cmp)(const void *, const void *);
 typedef void (*fheap_copy)(void *, void *);
 typedef void (*fheap_key_free)(void *);
+typedef void *(*fheap_pool_alloc_handler)(void *, mln_size_t);
+typedef void (*fheap_pool_free_handler)(void *);
 ```
 
 描述：创建斐波那契堆。
 
 其中：
 
+- `pool`是用户定义的内存池结构，如果该项不为`NULL`，则斐波那契堆结构将从该内存池中分配，否则从malloc库中分配。
+- `pool_alloc`是内存池的分配内存函数指针。
+- `pool_free`是内存池的释放内存函数指针。
 - `cmp`是用于key比较大小的函数，该函数有两个参数，皆为用户自定义的key结构指针。如果参数1小于参数2，则返回`0`，否则返回`非0`。
 - `copy`是用来拷贝key结构的，这个回调函数会在`decrease key`时被调用，用于将原有key值改为新的key值。这个函数有两个参数，依次分别为：原有key值指针和新key值指针。
 - `key_free`为key值结构释放函数，如果不需要释放，则可以置`NULL`。
