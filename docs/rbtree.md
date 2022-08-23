@@ -14,30 +14,32 @@
 
 ```c
 typedef struct rbtree_s {
-    mln_alloc_t              *pool;//内存池结构，若未使用内存池则为NULL
-    mln_rbtree_node_t         nil; //空节点
-    mln_rbtree_node_t        *root; //根节点
-    mln_rbtree_node_t        *min; //最小节点
-    mln_rbtree_node_t        *head;
-    mln_rbtree_node_t        *tail;
-    mln_rbtree_node_t        *free_head;
-    mln_rbtree_node_t        *free_tail;
-    mln_rbtree_node_t        *iter;
-    rbtree_cmp                cmp; //节点比较函数
-    rbtree_free_data          data_free; //节点内数据释放函数
-    mln_uauto_t               nr_node; //节点总个数
-    mln_u32_t                 del:1;
-    mln_u32_t                 cache:1; //是否缓存所有节点结构
+    void                      *pool; //内存池结构，若未使用内存池则为NULL
+    rbtree_pool_alloc_handler  pool_alloc; //内存池分配函数
+    rbtree_pool_free_handler   pool_free; //内存池释放函数
+    mln_rbtree_node_t          nil; //空节点
+    mln_rbtree_node_t         *root; //根节点
+    mln_rbtree_node_t         *min; //最小节点
+    mln_rbtree_node_t         *head;
+    mln_rbtree_node_t         *tail;
+    mln_rbtree_node_t         *free_head;
+    mln_rbtree_node_t         *free_tail;
+    mln_rbtree_node_t         *iter;
+    rbtree_cmp                 cmp; //节点比较函数
+    rbtree_free_data           data_free; //节点内数据释放函数
+    mln_uauto_t                nr_node; //节点总个数
+    mln_u32_t                  del:1;
+    mln_u32_t                  cache:1; //是否缓存所有节点结构
 } mln_rbtree_t;
 
 struct mln_rbtree_node_s {
-    void                     *data;//存放了用户数据
-    struct mln_rbtree_node_s *prev;
-    struct mln_rbtree_node_s *next;
-    struct mln_rbtree_node_s *parent;
-    struct mln_rbtree_node_s *left;
-    struct mln_rbtree_node_s *right;
-    enum rbtree_color         color;
+    void                      *data;//存放了用户数据
+    struct mln_rbtree_node_s  *prev;
+    struct mln_rbtree_node_s  *next;
+    struct mln_rbtree_node_s  *parent;
+    struct mln_rbtree_node_s  *left;
+    struct mln_rbtree_node_s  *right;
+    enum rbtree_color          color;
 };
 ```
 
@@ -259,6 +261,8 @@ int main(int argc, char *argv[])
     }
 
     rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
     rbattr.cmp = cmp_handler;
     rbattr.data_free = NULL;
     rbattr.cache = 0;

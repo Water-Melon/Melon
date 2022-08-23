@@ -163,6 +163,8 @@ mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
     val->index = index;
     val->type = M_JSON_OBJECT;
     hattr.pool = NULL;
+    hattr.pool_alloc = NULL;
+    hattr.pool_free = NULL;
     hattr.hash = mln_json_hash_calc;
     hattr.cmp = mln_json_hash_cmp;
     hattr.free_key = NULL;
@@ -268,6 +270,8 @@ mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
     struct mln_rbtree_attr rbattr;
 
     rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
     rbattr.cmp = mln_json_rbtree_cmp;
     rbattr.data_free = mln_json_free;
     rbattr.cache = 0;
@@ -1105,6 +1109,8 @@ int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val)
         M_JSON_SET_TYPE_OBJECT(j);
         struct mln_hash_attr hattr;
         hattr.pool = NULL;
+        hattr.pool_alloc = NULL;
+        hattr.pool_free = NULL;
         hattr.hash = mln_json_hash_calc;
         hattr.cmp = mln_json_hash_cmp;
         hattr.free_key = NULL;
@@ -1161,6 +1167,8 @@ int mln_json_add_element(mln_json_t *j, mln_json_t *value)
         is_new = 1;
         struct mln_rbtree_attr rbattr;
         rbattr.pool = NULL;
+        rbattr.pool_alloc = NULL;
+        rbattr.pool_free = NULL;
         rbattr.cmp = mln_json_rbtree_cmp;
         rbattr.data_free = mln_json_free;
         rbattr.cache = 0;

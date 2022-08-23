@@ -199,14 +199,16 @@ Their definitions can be found in melon/include/mln_types.h.
 
   2) Hash Table
     struct mln_hash_attr {
-        mln_alloc_t         *pool;
-        hash_calc_handler    hash;
-        hash_cmp_handler     cmp;
-        hash_free_handler    free_key;
-        hash_free_handler    free_val;
-        mln_u64_t            len_base;
-        mln_u32_t            expandable:1;
-        mln_u32_t            calc_prime:1;
+        void                    *pool;
+        hash_pool_alloc_handler  pool_alloc;
+        hash_pool_free_handler   pool_free;
+        hash_calc_handler        hash;
+        hash_cmp_handler         cmp;
+        hash_free_handler        free_key;
+        hash_free_handler        free_val;
+        mln_u64_t                len_base;
+        mln_u32_t                expandable:1;
+        mln_u32_t                calc_prime:1;
     };
     typedef int  (*hash_scan_handler)(void * /*key*/, void * /*val*/, void *);
     typedef mln_u64_t  (*hash_calc_handler)(mln_hash_t *, void *);
@@ -215,9 +217,13 @@ Their definitions can be found in melon/include/mln_types.h.
      */
     typedef int  (*hash_cmp_handler) (mln_hash_t *, void *, void *);
     typedef void (*hash_free_handler)(void *);
+    typedef void *(*hash_pool_alloc_handler)(void *, mln_size_t);
+    typedef void (*hash_pool_free_handler)(void *);
 
     This structure is used to be the argument that will be passed to mln_hash_init() to initialize a hash table.
-    pool -- a memory pool created by mln_alloc_init() or mln_alloc_shm_init();
+    pool -- a memory pool created by caller.
+    pool_alloc -- the allocation function of 'pool'.
+    pool_free -- the free function of 'pool'.
     hash -- is used to calculate and return a hash value to be the hash table index.
     cmp -- is used to compare with two hash elements' value.
     free_key and free_val -- are used to free hash element's key and value. These two pointers can be NULL.
@@ -335,12 +341,18 @@ Their definitions can be found in melon/include/mln_types.h.
 
   4) Red-Black Tree
     struct mln_rbtree_attr {
-        mln_alloc_t              *pool;
-        rbtree_cmp                cmp;
-        rbtree_free_data          data_free;
-        mln_u32_t                 cache:1;
+        void                      *pool;
+        rbtree_pool_alloc_handler  pool_alloc;
+        rbtree_pool_free_handler   pool_free;
+        rbtree_cmp                 cmp;
+        rbtree_free_data           data_free;
+        mln_u32_t                  cache:1;
     };
-    pool -- a memory pool created by mln_alloc_init() or mln_alloc_shm_init().
+    pool -- a memory pool created by caller
+    pool_alloc -- the allocation function pointer of 'pool', its prototype is:
+        typedef void *(*rbtree_pool_alloc_handler)(void *, mln_size_t);
+    pool_free -- the free function pointer of 'pool', its prototype is:
+        typedef void (*rbtree_pool_free_handler)(void *);
     cmp -- is a function pointer to compare with two RB-tree
     data. Its prototype is
         typedef int (*rbtree_cmp)(const void *, const void *);
@@ -1247,6 +1259,8 @@ Their definitions can be found in melon/include/mln_types.h.
           };
           typedef int (*mln_alloc_shm_lock_cb_t)(void *);
         Callback 'lock' can not be a trylock function.
+        'lock' and 'unlock' will be called only in sub-pool functions. So user should lock or unlock
+        by yourself when operate shared memory pool directly.
 
   18) Chain & Buf
      These two structures do not have interfaces to operate.

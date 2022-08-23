@@ -46,6 +46,8 @@ int mln_lang_file(mln_lang_ctx_t *ctx)
     struct mln_rbtree_attr rbattr;
 
     rbattr.pool = ctx->pool;
+    rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+    rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
     rbattr.cmp = (rbtree_cmp)mln_lang_file_fd_cmp;
     rbattr.data_free = (rbtree_free_data)close;
     rbattr.cache = 0;

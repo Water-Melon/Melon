@@ -86,6 +86,8 @@ static int mln_lang_msgqueue_resource_register(mln_lang_ctx_t *ctx)
     if ((mq_set = mln_lang_resource_fetch(ctx->lang, "mq")) == NULL) {
         struct mln_rbtree_attr rbattr;
         rbattr.pool = ctx->lang->pool;
+        rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+        rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
         rbattr.cmp = (rbtree_cmp)mln_lang_mq_cmp;
         rbattr.data_free = (rbtree_free_data)mln_lang_mq_free;
         rbattr.cache = 0;
@@ -1076,6 +1078,8 @@ static mln_lang_ctx_mq_t *mln_lang_ctx_mq_new(mln_lang_ctx_t *ctx)
     }
     lcm->mq_wait = NULL;
     rbattr.pool = ctx->pool;
+    rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+    rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
     rbattr.cmp = (rbtree_cmp)mln_lang_ctx_mq_topic_cmp;
     rbattr.data_free = (rbtree_free_data)mln_lang_ctx_mq_topic_free;
     rbattr.cache = 0;

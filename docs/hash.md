@@ -14,7 +14,9 @@
 
 ```c
 struct mln_hash_s {
-    mln_alloc_t             *pool;//内存池，不使用可为NULL
+    void                    *pool;//内存池，不使用可为NULL
+    hash_pool_alloc_handler  pool_alloc;//内存池分配函数
+    hash_pool_free_handler   pool_free;//内存池释放函数
     hash_calc_handler        hash;//计算所属桶的钩子函数
     hash_cmp_handler         cmp;//同一桶内链表节点比较函数
     hash_free_handler        free_key;//key释放函数
@@ -45,7 +47,9 @@ struct mln_hash_s {
 mln_hash_t *mln_hash_init(struct mln_hash_attr *attr);
 
 struct mln_hash_attr {
-    mln_alloc_t             *pool; //内存池
+    void                    *pool; //内存池
+    hash_pool_alloc_handler  pool_alloc;//内存池分配函数
+    hash_pool_free_handler   pool_free;//内存池释放函数
     hash_calc_handler        hash; //计算所属桶的钩子函数
     hash_cmp_handler         cmp; //同一桶内链表节点比较函数
     hash_free_handler        free_key; //key释放函数
@@ -59,13 +63,17 @@ struct mln_hash_attr {
 typedef mln_u64_t (*hash_calc_handler)(mln_hash_t *, void *);
 typedef int  (*hash_cmp_handler) (mln_hash_t *, void *, void *);
 typedef void (*hash_free_handler)(void *);
+typedef void *(*hash_pool_alloc_handler)(void *, mln_size_t);
+typedef void (*hash_pool_free_handler)(void *);
 ```
 
 描述：
 
 本函数用于初始化哈希表结构。
 
-参数`attr`的`pool`为可选项，如果希望从内存池分配，则赋值，否则置`NULL`由`malloc`分配。
+参数`attr`的`pool`为可选项，如果希望从内存池分配，则赋值，否则置`NULL`由`malloc`分配。即，池结构由调用方给出。
+
+`pool_alloc`与`pool_free`为池`pool`配套的内存分配与释放的函数指针。
 
 `free_key`与`free_val`也为可选参数，如果需要在表项删除时或哈希表销毁时同时释放资源，则进行设置，否则置`NULL`。释放函数参数为`key`或`value`的结构。
 
@@ -302,6 +310,8 @@ int main(int argc, char *argv[])
     }
 
     hattr.pool = NULL;
+    hattr.pool_alloc = NULL;
+    hattr.pool_free = NULL;
     hattr.hash = calc_handler;
     hattr.cmp = cmp_handler;
     hattr.free_key = NULL;

@@ -103,6 +103,8 @@ static mln_lang_var_t *mln_lang_print_process(mln_lang_ctx_t *ctx)
             struct mln_rbtree_attr rbattr;
             mln_rbtree_t *check;
             rbattr.pool = ctx->pool;
+            rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+            rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
             rbattr.cmp = mln_lang_print_array_cmp;
             rbattr.data_free = NULL;
             rbattr.cache = 0;

@@ -647,6 +647,8 @@ mln_thread_rbtree_init(void)
 {
     struct mln_rbtree_attr rbattr;
     rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
     rbattr.cmp = mln_thread_rbtree_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;

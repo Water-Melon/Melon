@@ -39,10 +39,12 @@ mln_rbtree_init(struct mln_rbtree_attr *attr)
     if (attr->pool == NULL) {
         t = (mln_rbtree_t *)malloc(sizeof(mln_rbtree_t));
     } else {
-        t = (mln_rbtree_t *)mln_alloc_m(attr->pool, sizeof(mln_rbtree_t));
+        t = (mln_rbtree_t *)attr->pool_alloc(attr->pool, sizeof(mln_rbtree_t));
     }
     if (t == NULL) return NULL;
     t->pool = attr->pool;
+    t->pool_alloc = attr->pool_alloc;
+    t->pool_free = attr->pool_free;
     t->nil.data = NULL;
     t->nil.parent = &(t->nil);
     t->nil.left = &(t->nil);
@@ -87,7 +89,7 @@ mln_rbtree_destroy(mln_rbtree_t *t)
         mln_rbtree_chain_del(&(t->free_head), &(t->free_tail), fr);
         mln_rbtree_node_free(t, fr);
     }
-    if (t->pool != NULL) mln_alloc_free(t);
+    if (t->pool != NULL) t->pool_free(t);
     else free(t);
 }
 
@@ -116,7 +118,7 @@ mln_rbtree_node_new(mln_rbtree_t *t, void *data)
         if (t->pool == NULL)
             n = (mln_rbtree_node_t *)malloc(sizeof(mln_rbtree_node_t));
         else
-            n = (mln_rbtree_node_t *)mln_alloc_m(t->pool, sizeof(mln_rbtree_node_t));
+            n = (mln_rbtree_node_t *)t->pool_alloc(t->pool, sizeof(mln_rbtree_node_t));
         if (n == NULL) return NULL;
     }
     n->data = data;
@@ -137,7 +139,7 @@ mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n)
         n->prev = n->next = NULL;
         mln_rbtree_chain_add(&(t->free_head), &(t->free_tail), n);
     } else {
-        if (t->pool != NULL) mln_alloc_free(n);
+        if (t->pool != NULL) t->pool_free(n);
         else free(n);
     }
 }

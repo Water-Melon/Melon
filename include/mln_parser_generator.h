@@ -511,6 +511,8 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     /*Init hash table*/\
     struct mln_hash_attr hattr;\
     hattr.pool = NULL;\
+    hattr.pool_alloc = NULL;\
+    hattr.pool_free = NULL;\
     hattr.hash = mln_pg_map_hash_calc;\
     hattr.cmp = mln_pg_map_hash_cmp;\
     hattr.free_key = mln_pg_map_hash_free;\
@@ -561,6 +563,8 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     /*Init token rbtree*/\
     struct mln_rbtree_attr rbattr;\
     rbattr.pool = NULL;\
+    rbattr.pool_alloc = NULL;\
+    rbattr.pool_free = NULL;\
     rbattr.cmp = mln_pg_token_rbtree_cmp;\
     rbattr.data_free = mln_pg_token_free;\
     rbattr.cache = 0;\

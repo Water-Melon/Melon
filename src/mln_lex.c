@@ -232,6 +232,8 @@ mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
     lex->pool = attr->pool;
 
     rbattr.pool = lex->pool;
+    rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+    rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
     rbattr.cmp = mln_lex_macro_cmp;
     rbattr.data_free = mln_lex_macro_free;
     rbattr.cache = 0;
@@ -270,6 +272,8 @@ err:
 
     if (attr->keywords != NULL) {
         rbattr.pool = lex->pool;
+        rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+        rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
         rbattr.cmp = mln_lex_keywords_cmp;
         rbattr.data_free = mln_lex_keyword_free;
         rbattr.cache = 0;

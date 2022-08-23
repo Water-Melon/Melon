@@ -27,6 +27,8 @@ int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
 {
     struct mln_hash_attr hattr;
     hattr.pool = mln_http_get_pool(http);
+    hattr.pool_alloc = (hash_pool_alloc_handler)mln_alloc_m;
+    hattr.pool_free = (hash_pool_free_handler)mln_alloc_free;
     hattr.hash = mln_websocket_hash_calc;
     hattr.cmp = mln_websocket_hash_cmp;
     hattr.free_key = mln_websocket_hash_free;

@@ -7,7 +7,6 @@
 #define __MLN_HASH_H
 
 #include "mln_types.h"
-#include "mln_alloc.h"
 
 typedef struct mln_hash_s mln_hash_t;
 
@@ -18,6 +17,8 @@ typedef mln_u64_t (*hash_calc_handler)(mln_hash_t *, void *);
  */
 typedef int  (*hash_cmp_handler) (mln_hash_t *, void *, void *);
 typedef void (*hash_free_handler)(void *);
+typedef void *(*hash_pool_alloc_handler)(void *, mln_size_t);
+typedef void (*hash_pool_free_handler)(void *);
 
 typedef enum mln_hash_flag {
     M_HASH_F_NONE,
@@ -27,7 +28,9 @@ typedef enum mln_hash_flag {
 } mln_hash_flag_t;
 
 struct mln_hash_attr {
-    mln_alloc_t             *pool;
+    void                    *pool;
+    hash_pool_alloc_handler  pool_alloc;
+    hash_pool_free_handler   pool_free;
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
     hash_free_handler        free_key;
@@ -54,7 +57,9 @@ typedef struct {
 } mln_hash_mgr_t;
 
 struct mln_hash_s {
-    mln_alloc_t             *pool;
+    void                    *pool;
+    hash_pool_alloc_handler  pool_alloc;
+    hash_pool_free_handler   pool_free;
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
     hash_free_handler        free_key;

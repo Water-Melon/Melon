@@ -95,6 +95,8 @@ mln_pg_token_t *mln_pg_token_new(mln_string_t *token, mln_u32_t nr_rule)
 
     struct mln_rbtree_attr rbattr;
     rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
     rbattr.cmp = mln_pg_token_rbtree_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;
@@ -182,6 +184,8 @@ mln_pg_item_t *mln_pg_item_new(void)
 
     struct mln_rbtree_attr rbattr;
     rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
     rbattr.cmp = mln_pg_token_rbtree_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;
@@ -240,6 +244,8 @@ int mln_pg_calc_info_init(struct mln_pg_calc_info_s *pci, \
 {
     struct mln_rbtree_attr rbattr;
     rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
     rbattr.cmp = mln_pg_calc_info_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;

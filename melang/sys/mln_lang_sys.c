@@ -172,6 +172,8 @@ static int mln_lang_sys_resource_register(mln_lang_ctx_t *ctx)
 
     if ((tree = mln_lang_resource_fetch(ctx->lang, "sys_import")) == NULL) {
         rbattr.pool = ctx->lang->pool;
+        rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+        rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
         rbattr.cmp = (rbtree_cmp)mln_lang_sys_import_cmp;
         rbattr.data_free = (rbtree_free_data)mln_lang_sys_import_free;
         rbattr.cache = 0;
@@ -187,6 +189,8 @@ static int mln_lang_sys_resource_register(mln_lang_ctx_t *ctx)
     }
 
     rbattr.pool = ctx->pool;
+    rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+    rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
     rbattr.cmp = (rbtree_cmp)mln_lang_ctx_sys_import_cmp;
     rbattr.data_free = (rbtree_free_data)mln_lang_ctx_sys_import_free;
     rbattr.cache = 0;
@@ -202,6 +206,8 @@ static int mln_lang_sys_resource_register(mln_lang_ctx_t *ctx)
 
 #if !defined(WIN32)
     rbattr.pool = ctx->pool;
+    rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+    rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
     rbattr.cmp = (rbtree_cmp)mln_lang_sys_exec_cmp;
     rbattr.data_free = (rbtree_free_data)mln_lang_sys_exec_free;
     rbattr.cache = 0;

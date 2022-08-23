@@ -98,6 +98,8 @@ int mln_pre_fork(void)
     cur_msg_type = 0;
     struct mln_rbtree_attr rbattr;
     rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
     rbattr.cmp = mln_fork_rbtree_cmp;
     rbattr.data_free = (rbtree_free_data)mln_ipc_handler_free;
     rbattr.cache = 0;
