@@ -84,6 +84,7 @@ chl:
         }
     } else {
 #endif
+        int daemon = 0;
         mln_conf_t *cf;
         mln_conf_domain_t *cd;
         mln_conf_cmd_t *cc;
@@ -96,19 +97,18 @@ chl:
             fprintf(stderr, "No such domain named 'main'.\n");
             return -1;
         }
-        if ((cc = cd->search(cd, "daemon")) == NULL) {
-            fprintf(stderr, "No such command named 'daemon'.\n");
-            return -1;
+        if ((cc = cd->search(cd, "daemon")) != NULL) {
+            if (mln_conf_get_narg(cc) != 1) {
+                fprintf(stderr, "Invalid command 'daemon'.\n");
+                return -1;
+            }
+            if ((ci = cc->search(cc, 1)) == NULL || ci->type != CONF_BOOL) {
+                fprintf(stderr, "Invalid command 'daemon'.\n");
+                return -1;
+            }
+            daemon = ci->val.b;
         }
-        if (mln_conf_get_narg(cc) != 1) {
-            fprintf(stderr, "Invalid command 'daemon'.\n");
-            return -1;
-        }
-        if ((ci = cc->search(cc, 1)) == NULL || ci->type != CONF_BOOL) {
-            fprintf(stderr, "Invalid command 'daemon'.\n");
-            return -1;
-        }
-        if (mln_log_init(ci->val.b) < 0) return -1;
+        if (mln_log_init(daemon) < 0) return -1;
 #if !defined(WIN32)
     }
 #endif

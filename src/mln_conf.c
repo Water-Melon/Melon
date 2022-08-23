@@ -346,25 +346,30 @@ static inline mln_conf_t *mln_conf_init(void)
     conf_file_path[path_len] = '0';
     mln_string_nset(&path, conf_file_path, path_len);
 
-    lattr.pool = pool;
-    lattr.keywords = conf_keywords;
-    memset(&hooks, 0, sizeof(hooks));
-    hooks.slash_handler = (lex_hook)mln_conf_lex_slash_handler;
-    hooks.sglq_handler = (lex_hook)mln_conf_lex_sglq_handler;
-    hooks.dblq_handler = (lex_hook)mln_conf_lex_dblq_handler;
-    lattr.hooks = &hooks;
-    lattr.preprocess = 1;
-    lattr.type = M_INPUT_T_FILE;
-    lattr.data = &path;
-    mln_lex_init_with_hooks(mln_conf_lex, cf->lex, &lattr);
-    mln_alloc_free(conf_file_path);
-    if (cf->lex == NULL) {
-        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
-        mln_alloc_destroy(pool);
-        mln_rbtree_destroy(cf->domain);
-        free(cf);
-        return NULL;
+    if (!access(conf_file_path, F_OK)) {
+        lattr.pool = pool;
+        lattr.keywords = conf_keywords;
+        memset(&hooks, 0, sizeof(hooks));
+        hooks.slash_handler = (lex_hook)mln_conf_lex_slash_handler;
+        hooks.sglq_handler = (lex_hook)mln_conf_lex_sglq_handler;
+        hooks.dblq_handler = (lex_hook)mln_conf_lex_dblq_handler;
+        lattr.hooks = &hooks;
+        lattr.preprocess = 1;
+        lattr.type = M_INPUT_T_FILE;
+        lattr.data = &path;
+        mln_lex_init_with_hooks(mln_conf_lex, cf->lex, &lattr);
+        mln_alloc_free(conf_file_path);
+        if (cf->lex == NULL) {
+            fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
+            mln_alloc_destroy(pool);
+            mln_rbtree_destroy(cf->domain);
+            free(cf);
+            return NULL;
+        }
+    } else {
+        fprintf(stderr, "[Warn] Configuration file not found.\n");
     }
+
     mln_conf_domain_t *cd = mln_conf_domain_init(cf, &default_domain);
     if (cd == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
@@ -746,12 +751,14 @@ int mln_conf_load(void)
     tmp.domain_name = &default_domain;
     rn = mln_rbtree_search(g_conf->domain, g_conf->domain->root, &tmp);
     cd = (mln_conf_domain_t *)(rn->data);
-    mln_s32_t ret = _mln_conf_load(g_conf, cd);
-    mln_conf_destroy_lex(g_conf);
-    if (ret < 0) {
-        mln_conf_destroy(g_conf);
-        g_conf = NULL;
-        return -1;
+    if (g_conf->lex != NULL) {
+        mln_s32_t ret = _mln_conf_load(g_conf, cd);
+        mln_conf_destroy_lex(g_conf);
+        if (ret < 0) {
+            mln_conf_destroy(g_conf);
+            g_conf = NULL;
+            return -1;
+        }
     }
 #if !defined(WIN32)
     if (mln_ipc_handler_register(M_IPC_TYPE_CONF, mln_conf_reload_master_handler, mln_conf_reload_worker_handler, NULL, NULL) < 0) {
