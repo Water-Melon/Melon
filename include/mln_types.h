@@ -10,12 +10,12 @@
 #include "mln_defs.h"
 #include "mln_path.h"
 #if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)
-typedef long                  mln_lock_t;
+typedef long                  mln_spin_t;
 #elif defined(i386) || defined(__x86_64)
-typedef unsigned long         mln_lock_t;
+typedef unsigned long         mln_spin_t;
 #else
 #include <pthread.h>
-typedef pthread_spinlock_t    mln_lock_t;
+typedef pthread_spinlock_t    mln_spin_t;
 #endif
 
 typedef unsigned char         mln_u8_t;

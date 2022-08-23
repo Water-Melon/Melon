@@ -46,7 +46,7 @@ static mln_logger_t _logger = NULL;
 char log_err_level[] = "Log level permission deny.";
 char log_err_fmt[] = "Log message format error.";
 char log_path_cmd[] = "log_path";
-mln_log_t g_log = {{0},{0},{0},STDERR_FILENO,0,none,(mln_lock_t)0};
+mln_log_t g_log = {{0},{0},{0},STDERR_FILENO,0,none,(mln_spin_t)0};
 
 /*
  * file lock
@@ -94,7 +94,7 @@ int mln_log_init(int in_daemon)
     log->in_daemon = in_daemon;
     log->level = none;
     int ret = 0;
-    if ((ret = MLN_LOCK_INIT(&(log->thread_lock))) != 0) {
+    if ((ret = mln_spin_init(&(log->thread_lock))) != 0) {
         fprintf(stderr, "%s(): Init log's thread_lock failed. %s\n", __FUNCTION__, strerror(ret));
         return -1;
     }
@@ -103,7 +103,7 @@ int mln_log_init(int in_daemon)
                               mln_log_atfork_unlock)) != 0)
     {
         fprintf(stderr, "%s(): pthread_atfork failed. %s\n", __FUNCTION__, strerror(ret));
-        MLN_LOCK_DESTROY(&(log->thread_lock));
+        mln_spin_destroy(&(log->thread_lock));
         return -1;
     }
 
@@ -217,12 +217,12 @@ mln_log_get_log(mln_log_t *log, int is_init)
 #if !defined(WIN32)
 static void mln_log_atfork_lock(void)
 {
-    MLN_LOCK(&(g_log.thread_lock));
+    mln_spin_lock(&(g_log.thread_lock));
 }
 
 static void mln_log_atfork_unlock(void)
 {
-    MLN_UNLOCK(&(g_log.thread_lock));
+    mln_spin_unlock(&(g_log.thread_lock));
 }
 #endif
 
@@ -236,7 +236,7 @@ void mln_log_destroy(void)
     {
         close(log->fd);
     }
-    MLN_LOCK_DESTROY(&(log->thread_lock));
+    mln_spin_destroy(&(log->thread_lock));
 }
 
 /*
@@ -296,12 +296,12 @@ static int mln_log_set_level(mln_log_t *log, int is_init)
  */
 int mln_log_reload(void *data)
 {
-    MLN_LOCK(&(g_log.thread_lock));
+    mln_spin_lock(&(g_log.thread_lock));
     mln_log_get_log(&g_log, 0);
     mln_file_lock(g_log.fd);
     int ret = mln_log_set_level(&g_log, 0);
     mln_file_unlock(g_log.fd);
-    MLN_UNLOCK(&(g_log.thread_lock));
+    mln_spin_unlock(&(g_log.thread_lock));
     return ret;
 }
 
@@ -315,7 +315,7 @@ void _mln_sys_log(mln_log_level_t level, \
                   char *msg, \
                   ...)
 {
-    MLN_LOCK(&(g_log.thread_lock));
+    mln_spin_lock(&(g_log.thread_lock));
     mln_file_lock(g_log.fd);
     va_list arg;
     va_start(arg, msg);
@@ -325,7 +325,7 @@ void _mln_sys_log(mln_log_level_t level, \
         _mln_sys_log_process(&g_log, level, file, func, line, msg, arg);
     va_end(arg);
     mln_file_unlock(g_log.fd);
-    MLN_UNLOCK(&(g_log.thread_lock));
+    mln_spin_unlock(&(g_log.thread_lock));
 }
 
 static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
@@ -340,11 +340,11 @@ static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
 
 ssize_t mln_log_writen(void *buf, mln_size_t size)
 {
-    MLN_LOCK(&(g_log.thread_lock));
+    mln_spin_lock(&(g_log.thread_lock));
     mln_file_lock(g_log.fd);
     ssize_t n = mln_log_write(&g_log, buf, size);
     mln_file_unlock(g_log.fd);
-    MLN_UNLOCK(&(g_log.thread_lock));
+    mln_spin_unlock(&(g_log.thread_lock));
     return n;
 }
 

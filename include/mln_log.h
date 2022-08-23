@@ -26,7 +26,7 @@ typedef struct {
     int             fd;
     int             in_daemon;
     mln_log_level_t level;
-    mln_lock_t      thread_lock;
+    mln_spin_t      thread_lock;
 } mln_log_t;
     
 

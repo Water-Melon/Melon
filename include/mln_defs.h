@@ -32,25 +32,25 @@
  */
 #if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)
 
-#define MLN_TRYLOCK(lock_ptr) \
+#define mln_spin_trylock(lock_ptr) \
     (!__sync_bool_compare_and_swap((lock_ptr), 0, 1))
-#define MLN_LOCK(lock_ptr) \
+#define mln_spin_lock(lock_ptr) \
     while (!(__sync_bool_compare_and_swap((lock_ptr), 0, 1)))
-#define MLN_UNLOCK(lock_ptr) \
+#define mln_spin_unlock(lock_ptr) \
     __sync_bool_compare_and_swap((lock_ptr), 1, 0)
-#define MLN_LOCK_INIT(lock_ptr) *(lock_ptr) = 0
-#define MLN_LOCK_DESTROY(lock_ptr) *(lock_ptr) = 0
+#define mln_spin_init(lock_ptr) *(lock_ptr) = 0
+#define mln_spin_destroy(lock_ptr) *(lock_ptr) = 0
 
 #elif defined(i386) || defined(__x86_64)
 
 extern void spin_lock(void *lock);
 extern void spin_unlock(void *lock);
 extern int spin_trylock(void *lock);
-#define MLN_LOCK(lock_ptr) spin_lock((lock_ptr))
-#define MLN_UNLOCK(lock_ptr) spin_unlock((lock_ptr))
-#define MLN_TRYLOCK(lock_ptr) spin_trylock((lock_ptr))
-#define MLN_LOCK_INIT(lock_ptr) *(lock_ptr) = 0
-#define MLN_LOCK_DESTROY(lock_ptr) *(lock_ptr) = 0
+#define mln_spin_lock(lock_ptr) spin_lock((lock_ptr))
+#define mln_spin_unlock(lock_ptr) spin_unlock((lock_ptr))
+#define mln_spin_trylock(lock_ptr) spin_trylock((lock_ptr))
+#define mln_spin_init(lock_ptr) *(lock_ptr) = 0
+#define mln_spin_destroy(lock_ptr) *(lock_ptr) = 0
 
 #else
 
@@ -59,15 +59,15 @@ extern int spin_trylock(void *lock);
  * so we cannot use these interfaces in FreeBSD to
  * implement malloc().
  */
-#define MLN_TRYLOCK(lock_ptr) \
+#define mln_spin_trylock(lock_ptr) \
     pthread_spin_trylock((lock_ptr))
-#define MLN_LOCK(lock_ptr) \
+#define mln_spin_lock(lock_ptr) \
     pthread_spin_lock((lock_ptr))
-#define MLN_UNLOCK(lock_ptr) \
+#define mln_spin_unlock(lock_ptr) \
     pthread_spin_unlock((lock_ptr))
-#define MLN_LOCK_INIT(lock_ptr) \
+#define mln_spin_init(lock_ptr) \
     pthread_spin_init((lock_ptr), PTHREAD_PROCESS_PRIVATE)
-#define MLN_LOCK_DESTROY(lock_ptr) \
+#define mln_spin_destroy(lock_ptr) \
     pthread_spin_destroy((lock_ptr))
 
 #endif

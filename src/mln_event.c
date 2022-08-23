@@ -114,7 +114,7 @@ mln_rbtree_t *ev_signal_refer_tree = NULL;
 mln_event_t  *main_thread_event = NULL;
 mln_event_t  *event_chain_head = NULL;
 mln_event_t  *event_chain_tail = NULL;
-mln_lock_t    event_lock;
+mln_spin_t    event_lock;
 mln_u32_t     is_lock_init = 0;
 mln_u32_t     main_thread_freeing = 0;
 
@@ -148,7 +148,7 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
     ev->ev_fd_active_head = NULL;
     ev->ev_fd_active_tail = NULL;
     if (!is_lock_init) {
-        MLN_LOCK_INIT(&event_lock);
+        mln_spin_init(&event_lock);
         is_lock_init = 1;
         if (pthread_atfork(mln_event_atfork_lock, \
                            mln_event_atfork_unlock, \
@@ -240,9 +240,9 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
             abort();/*there is only one event run in main thread.*/
         }
     } else {
-        MLN_LOCK(&event_lock);
+        mln_spin_lock(&event_lock);
         event_chain_add(&event_chain_head, &event_chain_tail, ev);
-        MLN_UNLOCK(&event_lock);
+        mln_spin_unlock(&event_lock);
     }
     return ev;
 
@@ -274,12 +274,12 @@ err1:
 #if !defined(WIN32)
 static void mln_event_atfork_lock(void)
 {
-    MLN_LOCK(&event_lock);
+    mln_spin_lock(&event_lock);
 }
 
 static void mln_event_atfork_unlock(void)
 {
-    MLN_UNLOCK(&event_lock);
+    mln_spin_unlock(&event_lock);
 }
 #endif
 
@@ -322,7 +322,7 @@ void mln_event_destroy(mln_event_t *ev)
     mln_event_desc_t *ed;
     if (ev->in_main_thread) 
         main_thread_freeing = 1;
-    MLN_LOCK(&event_lock);
+    mln_spin_lock(&event_lock);
     mln_fheap_destroy(ev->ev_fd_timeout_heap);
     if (ev->next != NULL || \
         ev->prev != NULL || \
@@ -357,7 +357,7 @@ void mln_event_destroy(mln_event_t *ev)
         mln_rbtree_destroy(ev_signal_refer_tree);
         ev_signal_refer_tree = NULL;
     }
-    MLN_UNLOCK(&event_lock);
+    mln_spin_unlock(&event_lock);
 }
 
 static inline void
@@ -383,9 +383,9 @@ int mln_event_set_signal(mln_event_t *event, \
                 if (mln_event_rbtree_refer_init() < 0)
                     return -1;
             }
-            MLN_LOCK(&event_lock);
+            mln_spin_lock(&event_lock);
             ret = mln_event_set_signal_set(event, signo, data, sg_handler);
-            MLN_UNLOCK(&event_lock);
+            mln_spin_unlock(&event_lock);
             if (ret < 0) return -1;
             break;
         case M_EV_UNSET:
@@ -393,9 +393,9 @@ int mln_event_set_signal(mln_event_t *event, \
                 mln_log(error, "No signal set.\n");
                 abort();
             }
-            MLN_LOCK(&event_lock);
+            mln_spin_lock(&event_lock);
             ret = mln_event_set_signal_unset(event, signo, data, sg_handler);
-            MLN_UNLOCK(&event_lock);
+            mln_spin_unlock(&event_lock);
             if (ret < 0) return -1;
             break;
         default:
@@ -509,7 +509,7 @@ mln_event_signal_handler(int signo)
 {
     int n;
     if (!main_thread_freeing) {
-        MLN_LOCK(&event_lock);
+        mln_spin_lock(&event_lock);
 lp1:
 #if defined(WIN32)
         n = send(main_thread_event->wr_fd, (char *)(&signo), sizeof(signo), 0);
@@ -537,7 +537,7 @@ lp2:
         }
     }
     if (!main_thread_freeing)
-        MLN_UNLOCK(&event_lock);
+        mln_spin_unlock(&event_lock);
 }
 
 static inline int

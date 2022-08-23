@@ -15,14 +15,14 @@ Melon中的自旋锁会根据不同编译器和不同CPU架构选用不同的实
 
 ### 函数/宏
 
-如下函数中的`lock_ptr`均为`mln_lock_t`类型，该类型定义在`mln_types.h`中。
+如下函数中的`lock_ptr`均为`mln_spin_t`类型，该类型定义在`mln_types.h`中。
 
 
 
-#### MLN_LOCK_INIT
+#### mln_spin_init
 
 ```c
-MLN_LOCK_INIT(lock_ptr)
+mln_spin_init(lock_ptr)
 ```
 
 描述：初始化锁`lock_ptr`。
@@ -31,10 +31,10 @@ MLN_LOCK_INIT(lock_ptr)
 
 
 
-#### MLN_LOCK_DESTROY
+#### mln_spin_destroy
 
 ```c
-MLN_LOCK_DESTROY(lock_ptr)
+mln_spin_destroy(lock_ptr)
 ```
 
 描述：销毁锁`lock_ptr`。
@@ -43,10 +43,10 @@ MLN_LOCK_DESTROY(lock_ptr)
 
 
 
-#### MLN_TRYLOCK
+#### mln_spin_trylock
 
 ```c
- MLN_TRYLOCK(lock_ptr)
+ mln_spin_trylock(lock_ptr)
 ```
 
 描述：尝试锁定自旋锁。若锁资源被占用则会立即返回。
@@ -55,10 +55,10 @@ MLN_LOCK_DESTROY(lock_ptr)
 
 
 
-#### MLN_LOCK
+#### mln_spin_lock
 
 ```c
-MLN_LOCK(lock_ptr)
+mln_spin_lock(lock_ptr)
 ```
 
 描述：锁定锁资源。若锁资源被占用，则等待其可用并将其锁定。
@@ -67,10 +67,10 @@ MLN_LOCK(lock_ptr)
 
 
 
-#### MLN_UNLOCK
+#### mln_spin_unlock
 
 ```c
-MLN_UNLOCK(lock_ptr)
+mln_spin_unlock(lock_ptr)
 ```
 
 描述：释放锁。
@@ -89,12 +89,12 @@ MLN_UNLOCK(lock_ptr)
 
 int main(int argc, char *argv[])
 {
-    mln_lock_t lock;
+    mln_spin_t lock;
 
-    MLN_LOCK_INIT(&lock);
-    MLN_LOCK(&lock);
-    MLN_UNLOCK(&lock);
-    MLN_LOCK_DESTROY(&lock);
+    mln_spin_init(&lock);
+    mln_spin_lock(&lock);
+    mln_spin_unlock(&lock);
+    mln_spin_destroy(&lock);
     return 0;
 }
 ```

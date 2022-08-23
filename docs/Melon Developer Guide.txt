@@ -454,22 +454,22 @@ Their definitions can be found in melon/include/mln_types.h.
   7) Lock
     The lock that we discuss here is a portable spin lock.
 
-    a) MLN_LOCK_INIT(lock_ptr)
+    a) mln_spin_init(lock_ptr)
        It initializes a spin lock.
        The argument is a lock pointer.
        The return value is an integer, 0 means OK, otherwise the return value is equivalent to the error number.
 
-    b) MLN_LOCK_DESTROY(lock_ptr)
+    b) mln_spin_destroy(lock_ptr)
        It destroys a spin lock.
        The return value is an integer, 0 means OK, otherwise the return value is equivalent to the error number.
 
-    c) MLN_LOCK(lock_ptr)
+    c) mln_spin_lock(lock_ptr)
        This interface triggers a lock.
 
-    d) MLN_TRYLOCK(lock_ptr)
+    d) mln_spin_trylock(lock_ptr)
        This interface tries to lock. When it fails, !0 will be returned. Otherwise 0.
 
-    e) MLN_UNLOCK(lock_ptr)
+    e) mln_spin_unlock(lock_ptr)
        This interface releases the lock.
 
   8) Log
