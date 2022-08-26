@@ -129,51 +129,6 @@ echo "    return _melang_dylib_path == NULL? melang_dylib_path: _melang_dylib_pa
 echo "}" >> src/mln_path.c
 
 
-#build melang.c&h file
-#  header file
-cnt=0
-for file in `ls melang`
-do
-        test -d melang/$file && let cnt+=1 > /dev/null
-done
-echo "/*" > include/mln_melang.h
-echo " * Copyright (C) Niklaus F.Schen." >> include/mln_melang.h
-echo " */" >> include/mln_melang.h
-echo "#ifndef __MLN_MELANG_H" >> include/mln_melang.h
-echo "#define __MLN_MELANG_H" >> include/mln_melang.h
-echo "#include \"mln_lang.h\"" >> include/mln_melang.h
-echo "#define M_N_INSTALLER $cnt" >> include/mln_melang.h
-echo "typedef int (*melang_installer)(mln_lang_ctx_t *);" >> include/mln_melang.h
-echo "extern melang_installer mln_melang_installers[];" >> include/mln_melang.h
-echo "#endif" >> include/mln_melang.h
-#  source file
-echo "/*" > src/mln_melang.c
-echo " * Copyright (C) Niklaus F.Schen." >> src/mln_melang.c
-echo " */" >> src/mln_melang.c
-echo "#include \"mln_melang.h\"" >> src/mln_melang.c
-for file in `ls melang`
-do
-        test -d melang/$file && echo '#include "'$file'/mln_lang_'$file'.h"' >> src/mln_melang.c
-done
-echo "melang_installer mln_melang_installers[$cnt] = {" >> src/mln_melang.c
-for file in `ls melang`
-do
-        test -d melang/$file && echo 'mln_lang_'$file',' >> src/mln_melang.c
-done
-echo "};" >> src/mln_melang.c
-
-# build sub include directory for melang
-mkdir .tmpSubIncs 2> /dev/null
-for tmpdir in `ls melang/`
-do
-    if [ $tmpdir = "." -o $tmpdir = ".." ]; then
-        continue
-    fi
-    mkdir .tmpSubIncs/$tmpdir 2> /dev/null
-    cp -f melang/$tmpdir/*.h .tmpSubIncs/$tmpdir/ 2> /dev/null
-done
-
-
 
 #  build makefile content
 echo "# " > Makefile

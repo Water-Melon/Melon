@@ -41,7 +41,6 @@ typedef struct mln_lang_set_detail_s    mln_lang_set_detail_t;
 typedef struct mln_lang_symbol_node_s   mln_lang_symbol_node_t;
 typedef struct mln_lang_scope_s         mln_lang_scope_t;
 typedef struct mln_lang_stack_node_s    mln_lang_stack_node_t;
-typedef struct mln_lang_msg_s           mln_lang_msg_t;
 typedef struct mln_lang_ctx_s           mln_lang_ctx_t;
 typedef struct mln_lang_s               mln_lang_t;
 typedef struct mln_lang_array_s         mln_lang_array_t;
@@ -58,6 +57,8 @@ typedef mln_lang_var_t *(*mln_lang_internal) (mln_lang_ctx_t *);
 typedef int (*mln_msg_c_handler)(mln_lang_ctx_t *, const mln_lang_val_t *);
 typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 typedef void (*mln_lang_resource_free)(void *data);
+/* import init */
+typedef mln_lang_var_t *(* import_init_t)(mln_lang_ctx_t *);
 
 
 struct mln_lang_hash_s {
@@ -110,7 +111,6 @@ struct mln_lang_ctx_s {
     mln_u64_t                        ref;
     mln_s64_t                        step;
     mln_string_t                    *filename;
-    mln_rbtree_t                    *msg_map;
     mln_rbtree_t                    *resource_set;
     mln_lang_var_t                  *ret_var;
     mln_lang_return_handler          return_handler;
@@ -144,19 +144,6 @@ struct mln_lang_resource_s {
     mln_string_t                    *name;
     void                            *data;
     mln_lang_resource_free           free_handler;
-};
-
-struct mln_lang_msg_s {
-    mln_lang_ctx_t                  *ctx;
-    mln_string_t                    *name;
-    mln_lang_val_t                  *script_val;
-    mln_lang_val_t                  *c_val;
-    int                              script_fd;
-    int                              c_fd;
-    mln_msg_c_handler                c_handler;
-    mln_u32_t                        script_read:1;
-    mln_u32_t                        c_read:1;
-    mln_u32_t                        script_wait:1;
 };
 
 typedef enum {
@@ -411,6 +398,18 @@ struct mln_lang_methods_s {
     mln_lang_op                      pdec_handler;
 };
 
+typedef struct {
+    mln_string_t                    *name;
+    mln_size_t                       ref;
+    void                            *handle;
+    mln_rbtree_node_t               *node;
+} mln_lang_import_t;
+
+typedef struct {
+    mln_lang_import_t               *i;
+    mln_lang_ctx_t                  *ctx;
+} mln_lang_ctx_import_t;
+
 extern mln_lang_method_t *mln_lang_methods[];
 
 
@@ -493,10 +492,6 @@ extern int mln_lang_funccall_val_obj_operator(mln_lang_ctx_t *ctx, \
                                               mln_lang_var_t *op2) __NONNULL5(1,2,3,4,5);
 extern mln_lang_var_t *
 mln_lang_array_get(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
-extern int mln_lang_msg_new(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);
-extern void mln_lang_msg_free(mln_lang_ctx_t *ctx, mln_string_t *name) __NONNULL2(1,2);
-extern void mln_lang_msg_handler_set(mln_lang_ctx_t *ctx, mln_string_t *name, mln_msg_c_handler handler) __NONNULL2(1,2);
-extern int mln_lang_msg_send(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_val_t *val, int is_c) __NONNULL3(1,2,3);
 extern mln_lang_set_detail_t *
 mln_lang_set_detail_new(mln_alloc_t *pool, mln_string_t *name) __NONNULL2(1,2);
 extern void mln_lang_set_detail_free(mln_lang_set_detail_t *c);

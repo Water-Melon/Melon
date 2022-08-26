@@ -3355,7 +3355,7 @@ Their definitions can be found in melon/include/mln_types.h.
           @foo();
       difference between these two is:
           in the first case, 'foo' is only a local variable which type is function.
-          in the second case, 'foo' can be a global function like 'mln_print'. If we
+          in the second case, 'foo' can be a global function like 'dump'. If we
         want to use a global function in someone function's scope, we have to use
         this way.
       <I>   In global function
@@ -3408,7 +3408,7 @@ Their definitions can be found in melon/include/mln_types.h.
           e.g.
             @foo ()
             {
-                _mln_print(args);
+                _sys.print(args);
             }
             foo('hello', 1, ['world', 2]); //output [hello, 1, [world, 2, ], ]
 
@@ -3417,7 +3417,7 @@ Their definitions can be found in melon/include/mln_types.h.
           @foo() {
               a = 1;
               @bar() $(b) {     //b is a copy
-                  _mln_print(b);
+                  _sys.print(b);
               }
               b = 100;
               return bar;
@@ -3429,7 +3429,7 @@ Their definitions can be found in melon/include/mln_types.h.
           @foo() {
               a = 1;
               @bar() $(&b) { //b is a reference
-                  _mln_print(b);
+                  _sys.print(b);
               }
               b = 100;
               return bar;
@@ -3485,12 +3485,12 @@ Their definitions can be found in melon/include/mln_types.h.
       e.g. normal usage
           @foo (newval, userData)
           {
-              _mln_dump(newval);
-              _mln_dump(userData);
+              _dump(newval);
+              _dump(userData);
           }
           name = 'Susan';
           gender = 'female';
-          mln_watch(name, foo, gender);
+          watch(name, foo, gender);
           name = 'Tom';//Then foo will be called after 'name' assigned.
 
       e.g. reference
@@ -3500,9 +3500,9 @@ Their definitions can be found in melon/include/mln_types.h.
           }
           name = 'Susan';
           gender = 'female';
-          mln_watch(name, foo, gender);
+          watch(name, foo, gender);
           name = 'Tom';//Then foo will be called after 'name' assigned.
-          mln_dump(gender);
+          dump(gender);
 
 
    G. Operator
@@ -3540,491 +3540,27 @@ Their definitions can be found in melon/include/mln_types.h.
       and of course, these arguments can be reference.
 
    H. Internal Function
-      <1> mln_print(var);
-      Output var's value. But it cannot output the details of object, function and array.
-
-      <2> mln_msg_new(name);
-      Register a message communication item via argument 'name'.
-      If it failed, 'false' will be returned. Otherwise, 'true' will be returned.
-
-      <3> mln_msg_free(name);
-      Unregister a message communication item via the argument.
-      Always return NIL.
-
-      <4> mln_msg_recv(name);
-      Receive the data from message communication which is located by 'name'.
-      Data will be returned as the return value of this function.
-
-      <5> mln_msg_send(name, var);
-      Send the data to the C-side via the message communication item which is located by 'name'.
-      'var' is the data which can be:
-          a. NIL
-          b. INT
-          c. REAL
-          d. STRING
-          e. OBJECT
-          f. ARRAY
-          g. BOOLEAN
-          h. FUNCTION
-      If it succeed, 'true' will be returned. Otherwise, 'false' will be returned.
-
-      <6> mln_strseqcmp(s1, s2);
-      Its functionality is the same as 'strcmp()' in C.
-      This function will check every byte strictly.
-      Both of arguments must be 'string'.
-      There are three return values:
-          1 - s1 > s2
-         -1 - s1 < s2
-          0 - s1 = s2
-
-      <7> mln_strcmp(s1, s2);
-      Its functionality is the same as 'strcmp()' in C.
-      Both of arguments must be 'string'.
-
-      <8> mln_strncmp(s1, s2, n);
-      Its functionality is the same as 'strncmp()' in C.
-      First two arguments must be 'string', and the last one must be 'int'.
-
-      <9> mln_strstr(s, pattern);
-      Its functionality is the same as 'strstr()' in C.
-      All of arguments are type 'string'.
-
-      <10> mln_kmp(s, pattern);
-      The same as 'mln_strstr()', but implemented in KMP algorithm.
-
-      <11> mln_split(s, offset, len);
-      Return a splited string which starts from 'offset' in 's'.
-      'offset' can be negative number.
-      'len' is optional, it should be greater than or equal to 0.
-
-      <12> mln_slice(s, seps);
-      Up to 'seps', 's' will be sliced into several pieces those are placed in an array as the
-      return value.
-      All of arguments must be 'string' type.
-      'seps' is a set of characters used to find the positions to slice.
-
-      <13> mln_strlen(s);
-      Return the length of string 's'.
-
-      <14> mln_b2s(bin);
-      Memory copy 'bin' into a string.
-      Return value is string type.
-
-      <15> mln_s2b(s, type);
-      Convert string 's' to be type 'type'.
-      'type' is a string which can be "int", "real" and "bool".
-      
-      <16> File
-      File is the name that a Set to operate file, its melang prototype can be given as,
-          set File {
-              fd;
-              errno;
-              open(path, op, prio);
-              lseek(offset, whence);
-              read(nbytes);
-              write(data);
-              close();
-              errmsg();
-              size();
-          };
-      'open' -- 'op' is string type that indicates the operation including Read, Write, Append.
-                e.g.   'rwa', 'r', 'w', 'a', 'ra', 'rw', 'rw+'.
-                'prio' is an integer that indicates the file access authority, e.g. 0777. This
-                is an optional argument.
-                If open failed, 'false' will be returned, and can get error message via calling
-                'errmsg()'.
-      'lseek' -- 'offset' is an integer and 'whence' is a string.
-                The value of whence includes, 'begin', 'current', 'end'.
-                If failed, 'false' will be returned, and can get error message via calling
-                'errmsg()'.
-      'read' -- 'nbytes' is an integer indicating how many bytes want to read.
-                A string will be returned if succeed. Otherwise, 'false' will be returned, and
-                error message can be got via calling 'errmsg()'.
-      'write' -- 'data' is string that want to be written.
-                 'false' will be returned if failed. Otherwise, the number of bytes that written
-                 successfully.
-      'close' -- close file descriptor.
-      'errmsg' -- Get and return error string.
-      'size' -- Get the file size in bytes.
-
-      <17> mln_mkdir(path, mode);
-      Setup a directory with mode 'mode'. 'mode' is an integer, such as, 0755.
-      It's a optional argument.
-      If succeed, 'true' will be returned. Otherwise, 'false' returned.
-
-      <18> mln_remove(path);
-      Remove a file or diectory, no matter whether sub-file or sub-directory exists.
-      If succeed, 'true' will be returned. Otherwise, 'false' returned.
-
-      <19> mln_exist(path);
-      Test whether 'path' exists or not, no matter 'path' is a file or directory.
-      If succeed, 'true' will be returned. Otherwise, 'false' returned.
-
-      <20> mln_aes(data, key, bits, op);
-      'data' -- a string and its length % 16 must equal to 0.
-      'key' -- the string type key used to encrypt/decrypt 'data'.
-      'bits' -- the bits of 'key'. Key's bit-length must equal or greater than 'bits'.
-      'op' -- indicates the operation 'encode' and 'decode' to encrypt and decrypt. It's a string.
-
-      <21> mln_base64(data, op);
-      Encode and decode 'data' to be base64 code or the original data.
-      'data' -- must be string type.
-      'op' -- a string indicating 'encode' or 'decode'.
-      Result will be given as return value.
-
-      <22> mln_des(data, key, op);
-      Encrypt or decrypt 'data' in DES.
-      'data' -- must be string type, and its length % 8 must be 0.
-      'key' -- an integer value.
-      'op' -- a string value indicating 'encode' or 'decode'.
-      Result will be given as return value.
-
-      <23> mln_3des(data, key1, key2, op);
-      Encrypt or decrypt 'data' in 3DES.
-      'data' -- must be string type, and its length % 8 must be 0.
-      'key1', 'key2' -- an integer value.
-      'op' -- a string value indicating 'encode' or 'decode'.
-      Result will be given as return value.
-
-      <24> mln_prime(base);
-      Generate a prime integer greater than 'base'.
-      'base' -- must be integer type.
-      The return value is an prime number.
-
-      <25> mln_rc4(data, key);
-      Encode and decode 'data' in RC4.
-      'data' -- must be string type.
-      'key' -- must be string type.
-      Result will be returned by function.
-
-      <26> mln_md5(data);
-      Calculate and return MD5 value.
-      'data' can be string type or set 'File'.
-
-      <27> mln_sha1(data);
-      Calculate and return SHA1 value.
-      'data' can be string type or set 'File'.
-
-      <28> mln_sha256(data);
-      Calculate and return SHA256 value.
-      'data' can be string type or set 'File'.
-
-      <29> mln_json_encode(array);
-      Encode 'array' to be a string. If succeed, result will be returned. Otherwise, 'false'
-      will be returned.
-
-      <30> mln_json_decode(s);
-      Decode string 's' to be an array. If succeed, result will be returned. Otherwise,
-      'false' will be returned.
-
-      <31> mln_matrix_mul(array1, array2);
-      Example:
-          array1 = ['row': 3, 'col': 2, 'data':[1,0,0,1,1,1]];
-          array2 = ['row': 2, 'col': 2, 'data':[1,2,3,4]];
-          res_array = mln_matrix_mul(array1, array2);
-          nr_row = res_array['row'];
-          nr_col = res_array['col'];
-          data_array = res_array['data'];
-      If failed, 'false' will be returned.
-
-      <32> mln_matrix_inv(array);
-      Inverse. Example:
-          array = ['row': 2, 'col': 2, 'data':[1,0,1,1]];
-          res_array = mln_matrix_inv(array);
-          nr_row = res_array['row'];
-          nr_col = res_array['col'];
-          data_array = res_array['data'];
-      If failed, 'false' will be returned.
-
-      <33> mln_size(array);
-      Return array's length.
-
-      <34> mln_is_int(var);
-      Return a boolean value indicating whether var is an integer.
-
-      <35> mln_is_real(var);
-      Return a boolean value indicating whether var is a Real-number.
-
-      <36> mln_is_str(var);
-      Return a boolean value indicating whether var is a String.
-
-      <37> mln_is_nil(var);
-      Return a boolean value indicating whether var is Nil.
-
-      <38> mln_is_bool(var);
-      Return a boolean value indicating whether var is Boolean.
-
-      <39> mln_is_obj(var);
-      Return a boolean value indicating whether var is an Object.
-
-      <40> mln_is_func(var);
-      Return a boolean value indicating whether var is an Function.
-
-      <41> mln_is_array(var);
-      Return a boolean value indicating whether var is an Array.
-
-      <42> mln_int(var);
-      Convert 'var' to be an integer as the return value.
-
-      <43> mln_bool(var);
-      Convert 'var' to be a boolean as the return value.
-
-      <44> mln_real(var);
-      Convert 'var' to be a real number as the return value.
-
-      <45> mln_str(var);
-      Convert 'var' to be a string as the return value.
-
-      <46> mln_obj(var);
-      Convert 'var' to be an object as the return value.
-      This function only can work on type array of 'var'.
-      It will convert an associative array to be an object.
-      Key in array will be the name of property in object.
-
-      <47> mln_array(var);
-      Convert 'var' to be an array as the return value.
-      But for type object, it is not return an array like "[obj]". It will return an associative array whose
-      keys and values are the property names and values in the object.
-
-      <48> mln_dump(var);
+      <1> dump(var);
       Dump all details of 'var' to console and log.
 
-      <49> mln_has(owner, thing);
-      Test whether the 'owner' has 'thing'.
-      This function is going to be used on array and object.
-      To array 'thing' can be any type that melang supports.
-      To object 'thing' must be a string.
-
-      <50> mln_keys(array);
-      This function will return an array contains all keys in 'array'.
-
-      <51> mln_merge(array1, array2);
-      Merge two array into one array.
-      If keys in 'array1' are existent in 'array2', the values associated with those keys in 'array2' will be
-      in result array.
-
-      <52> mln_watch(var, func, userData);
+      <2> watch(var, func, userData);
       This function is provided for supporting Reactive Programming.
       It means that 'var' is being watched by 'func'. If 'var' changed, 'func' will be executed.
       You can find some examples in Section <8. Script language>
       The prototype of 'func' is,
           func (newval, userData);
       Both of func's arguments can be either reference or not. And the second argument 'userData' is identical
-      with the third argument in 'mln_watch'.
+      with the third argument in 'watch'.
 
-      <53> mln_unwatch(var);
+      <3> unwatch(var);
       Remove watcher from 'var'.
 
-      <54> mln_hex2bin(hex);
-      Translate 'hex' to be a binary value indicated by 'hex'.
-      Such as mln_hex2bin('48') = 'H'.
-
-      <55> mln_bin2hex(bin);
-      Translate 'bin' to be a hex string value indicated by 'bin'.
-      Such as mln_bin2hex('H') = '48'.
-
-      <56> mln_bin2int(bin);
-      Translate 'bin' to be an integer indicated by 'bin'.
-
-      <57> mln_int2bin(i);
-      Translate 'i' to be a binary value indicated by 'i'.
-
-      <58> mln_bin2real(bin);
-      Translate 'bin' to be a real-value indicated by 'bin'.
-
-      <59> mln_real2bin(r);
-      Translate 'r' to be a binary value indicated by 'r'.
-
-      <60> Mysql
-      Mysql is the set operating MySQL database. Its melang prototype is:
-          set Mysql {
-              fd;
-              connect(host, port, dbname, username, password);
-              close();
-              autocommit(mode);
-              commit();
-              rollback();
-              error();
-              errno();
-              execute(sql);
-          };
-      'connect' -- 'port' is an integer, the rest of them are string.
-                   If succeed, true will be returned, otherwise false returned.
-      'close' -- close mysql connection. Only one return value 'nil'.
-      'autocommit' -- control autocommit mode. 'mode' is an boolean.
-      'commmit' -- commits the current transaction.
-      'rollback' -- rolls back the current transaction.
-      'error' -- return error message.
-      'errno' -- return error number.
-      'execute' -- execute sql.
-                   Reading operation returns an array whose every element is also an array
-                   to store every record in query results.
-                   Writing operation returns a boolean value.
-
-      <61> mln_type(var);
-      Return the type of variable. If 'var' is an object, the return value is its set name.
-
-      <62> mln_set_property(&obj, prop, &val);
-      Set object "obj's" property "prop's" value to be 'val'.
-
-      <63> mln_get_property(&obj, prop);
-      Get object "obj's" property "prop's" value.
-
-      <64> mln_eval(val, data, in_string);
-      This function will spawn another script task to execute mission indicated by 'val'.
-      'val' can be a script path or script code. It depends on 'in_string'.
-      'in_string' is a boolean value. If true, 'val' is script code, otherwise, 'val' is file path.
-      If 'in_string' is not given or it is not true, that means 'in_string' is false.
-      'data' is an injection data for new task. Its type must be one of below:
-          int, real, bool, nil, string
-      In new task, if we want to fetch this data, we can use variable EVAL_DATA to access it.
-
-      <65> mln_tcp_connect(host, service, timeout);
-      Connect to a server that indicated by 'host' and 'service'.
-      'host' and 'service' must be string.
-      'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
-      If succeed 'true' will be returned, 'nil' returned on timed out, otherwise 'false' returned.
-
-      <66> mln_tcp_listen(host, service);
-      Set up a TCP listen socket.
-      'host' and 'service' must be string.
-      If succeed socket file descriptor will be returned, otherwise 'false' returned.
-
-      <67> mln_tcp_accept(listenfd, timeout);
-      Accept a TCP connection.
-      'listenfd' is created by 'mln_tcp_listen'.
-      'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
-      If succeed a new socket file descriptor will be returned, otherwise 'false' returned.
-      If 'timeout' was given and accept timed out, 'nil' would be returned.
-
-      <68> mln_tcp_send(sockfd, data);
-      Send 'data' via 'sockfd'.
-      If succeed 'true' will be returned, otherwise 'false' returned.
-
-      <69> mln_tcp_recv(sockfd, timeout);
-      Receive data from 'sockfd'.
-      'timeout' is an optional argument. It must be an positive integer or zero. Omit means never timeout.
-      If succeed received data will be returned. If connection closed by peer, 'true' will be returned.
-      Otherwise 'false' returned.
-      If 'timeout' was given and accept timed out, 'nil' would be returned.
-      Note: If one script task call 'mln_tcp_recv' to wait for data, but another script task call
-      'mln_tcp_shutdown' to shutdown 'send' direction, this function will return 'true', because system call
-      'recv' will return 0.
-
-      <70> mln_tcp_close(sockfd);
-      Close the TCP connection indicated by 'sockfd'.
-
-      <71> mln_tcp_shutdown(sockfd, mode);
-      Shutdown TCP connection.
-      'mode' has two values: 'send' and 'recv'.
-
-      <72> mln_udp_create(host, service);
-      Create an UDP socket.
-      'host' and 'service' are optional arguments. They must be string.
-      If they are given, UDP socket will be bound with the address that is indicated by them.
-      If succeed, a socket file descriptor will be returned, otherwise 'false' returned.
-
-      <73> mln_udp_close(fd);
-      Close an UDP socket.
-
-      <74> mln_udp_send(fd, data, host, service);
-      Send 'data' via the UDP socket indicated by 'fd'.
-      'host' and 'service' must be given to set destination address. They must be string.
-      If succeed, 'true' will be returned, otherwise 'false' returned.
-
-      <75> mln_udp_recv(fd, bufsize, &ip, &port, timeout);
-      Receive remote peer's data via the UDP socket indicated by 'fd'.
-      The last three arguments are optional.
-      'timeout' is an zero or positive integer. If omit, that would be means wait until data arrived.
-      'ip' and 'port' are not input arguments, which means, function will not use their values.
-      But if they are given, function will set their value to be remote peer's ip and port.
-      Return value: If succeed, data will be returned, otherwise 'false' returned. If timed out,
-      'nil' will be returned.
-
-      <76> mln_msg_topic_subscribe(qname);
-      Subscribe topic 'qname' in current script task.
-
-      <77> mln_msg_topic_unsubscribe(qname);
-      Unsubscribe topic 'qname' in current script task.
-
-      <78> mln_msg_queue_send(qname, msg, asTopic);
-      Send 'msg' to message queue 'qname'.
-      'msg' must be an integer, boolean, real number or string.
-      'asTopic' is optional. If omitted, it just send a normal queue message.
-      Normal message will be received by any one of receivers.
-      Topic message will be received by all of receivers who subscribed topic 'qname'.
-      Return value always be 'nil'.
-
-      <79> mln_msg_queue_recv(qname, timeout);
-      Receive a normal or topic message from queue 'qname'.
-      'timeout' is optional. It must be a positive integer.
-      If no message arrived and function timed out, 'nil' would be returned.
-      Otherwise message returned.
-
-      <80> mln_reg_equal(exp, text);
-      'exp' is the regular expression.
-      'text' is the input text.
-      If completely matched, 'true' will be returned, otherwise 'false'.
-
-      <81> mln_reg_match(exp, text);
-      'exp' is the regular expression.
-      'text' is the input text.
-      Return value is an array stored every matched pieces of 'text'.
-      If not matched, 'false' returned.
-
-      <82> mln_lsdir(path);
-      'path' is the input string of a file or directory path.
-      Return value is an array contained every file and directory under this path.
-
-      <83> mln_isdir(path);
-      'path' is the input string of a file or directory path.
-      If path is a directory, true will be returned. Otherwise false returned.
-
-      <84> mln_time();
-      Return current time seconds.
-
-      <85> mln_cron(exp, timestamp);
-      Parse cron format expression 'exp' based on timestamp 'timestamp'.
-      If succeed, an integer next timestamp will be returned. Otherwise, false returned.
-
-      <86> mln_diff(&array1, &array2);
-      Return an array that contains elements in 'array1' but not in 'array2'.
-      Keys in the 'array1' are preserved.
-
-      <87> mln_key_diff(&array1, &array2);
-      Return an array that contains elements whose key is in 'array1' but not in 'array2'.
-      Keys in the 'array1' are preserved.
-
-      <88> mln_replace(&dict, &str);
-      Replace every specified keys given by 'dict''s keys with 'dict''s values.
-      The return value is the replaced string.
-
-      <89> mln_exec(cmd, bufsize);
-      Execute shell command 'cmd'. The output of command should be less than 'bufsize'.
-      If 'bufsize' less than 0, it means unlimited.
-      The output will be returned.
-
-      <90> mln_import(name);
+      <4> mln_import(name);
       Import dynamic library indicated by 'name' into current melang scope.
       Dynamic library must contain the entrance function named 'init', its prototype is:
           mln_lang_var_t *init(mln_lang_ctx_t *);
 
-      <91> mln_trim(s, mask);
-      Strip whitespace (or other characters) from the beginning and end of a string.
-      `mask` will be the default value " \n\r\t\v\x00" if it is omitted or `nil`.
-
-      <92> mln_upper(s);
-      Make character uppercase.
-
-      <93> mln_lower(s);
-      Make character lowercase.
-
-      <94> mln_join(glue, arr);
-      Join all elements in an array into a string, using a string as separator.
-      Returns a string containing a string representation of all the array elements, with
-      the separator string between each element.
-      Note: The order of elements does not depend on the index, but the order in which they
-      are appended to the array.
+      For more library functions, please refer to https://melang.org/.
 
    I. Function development
       Following these steps below:
