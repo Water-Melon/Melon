@@ -171,7 +171,7 @@ echo -e ".PHONY :\tcompile modules install clean" >> Makefile
 
 echo "compile: MKDIR \$(OBJS) \$(MELONSO) \$(MELONA)" >> Makefile
 echo "clean:" >> Makefile
-echo -e "\trm -fr objs lib .tmpSubIncs Makefile" >> Makefile
+echo -e "\trm -fr objs lib Makefile" >> Makefile
 echo "MKDIR :" >> Makefile
 echo -e "\ttest -d objs || mkdir objs" >> Makefile
 echo -e "\ttest -d lib || mkdir lib" >> Makefile
@@ -207,7 +207,6 @@ echo -e "\ttest -d $melanglibpath || mkdir -p $melanglibpath" >> Makefile
 echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
 echo -e "\tcp -fr lib $install_path" >> Makefile
 echo -e "\tcp -fr include $install_path" >> Makefile
-echo -e "\tcp -fr .tmpSubIncs/* $install_path/include" >> Makefile
 echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
 
 
