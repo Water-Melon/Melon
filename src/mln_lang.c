@@ -1466,13 +1466,16 @@ int mln_lang_symbol_node_upper_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t 
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    symbol->layer = ctx->scope_tail->prev == NULL? (ctx->scope_tail->layer): (ctx->scope_tail->layer - 1);
+    symbol->layer = ctx->scope_tail->prev == NULL? (ctx->scope_tail->layer): (ctx->scope_tail->prev->layer);
     symbol->bucket = mln_lang_hash_get_bucket(ctx->symbols, symbol);
     for (tmp = symbol->bucket->tail; tmp != NULL; tmp = tmp->prev) {
          if (tmp->layer != symbol->layer || tmp->symbol->len != name->len) continue;
          if (!memcmp(tmp->symbol->data, name->data, name->len)) {
              mln_lang_sym_chain_del(&(tmp->bucket->head), &(tmp->bucket->tail), tmp);
-             mln_lang_sym_scope_chain_del(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), tmp);
+             if (ctx->scope_tail->prev == NULL)
+                 mln_lang_sym_scope_chain_del(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), tmp);
+             else
+                 mln_lang_sym_scope_chain_del(&(ctx->scope_tail->prev->sym_head), &(ctx->scope_tail->prev->sym_tail), tmp);
              mln_lang_symbol_node_free(tmp);
              break;
          }
