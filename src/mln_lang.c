@@ -883,7 +883,6 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     }
     if (ctx->ret_var != NULL) __mln_lang_var_free(ctx->ret_var);
     if (ctx->filename != NULL) mln_string_free(ctx->filename);
-    if (ctx->resource_set != NULL) mln_rbtree_destroy(ctx->resource_set);
     while ((sn = ctx->run_stack_head) != NULL) {
         mln_lang_stack_node_chain_del(ctx->run_stack_head, ctx->run_stack_tail, sn);
         sn->ctx = NULL;
@@ -905,6 +904,7 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     if (ctx->gc != NULL) {
         mln_gc_free(ctx->gc);
     }
+    if (ctx->resource_set != NULL) mln_rbtree_destroy(ctx->resource_set);
     if (ctx->stm != NULL) {
         if (ctx->cache) {
             if (!(--(ctx->cache->ref))) {
