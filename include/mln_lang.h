@@ -446,6 +446,7 @@ extern mln_lang_var_t *mln_lang_var_create_array(mln_lang_ctx_t *ctx, mln_string
 extern mln_lang_symbol_node_t *mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local) __NONNULL2(1,2);
 /* Note end*/
 extern int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, void *data) __NONNULL2(1,3);
+extern int mln_lang_symbol_node_upper_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, void *data) __NONNULL2(1,3);
 extern mln_lang_var_t *mln_lang_var_new(mln_lang_ctx_t *ctx, \
                                         mln_string_t *name, \
                                         mln_lang_var_type_t type, \

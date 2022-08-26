@@ -1457,6 +1457,35 @@ static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symb
     return 0;
 }
 
+int mln_lang_symbol_node_upper_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, void *data)
+{
+    mln_lang_symbol_node_t *symbol, *tmp;
+    mln_string_t *name = type == M_LANG_SYMBOL_VAR? ((mln_lang_var_t *)data)->name: ((mln_lang_set_detail_t *)data)->name;
+
+    if ((symbol = mln_lang_symbol_node_new(ctx, name, type, data)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    symbol->layer = ctx->scope_tail->prev == NULL? (ctx->scope_tail->layer): (ctx->scope_tail->layer - 1);
+    symbol->bucket = mln_lang_hash_get_bucket(ctx->symbols, symbol);
+    for (tmp = symbol->bucket->tail; tmp != NULL; tmp = tmp->prev) {
+         if (tmp->layer != symbol->layer || tmp->symbol->len != name->len) continue;
+         if (!memcmp(tmp->symbol->data, name->data, name->len)) {
+             mln_lang_sym_chain_del(&(tmp->bucket->head), &(tmp->bucket->tail), tmp);
+             mln_lang_sym_scope_chain_del(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), tmp);
+             mln_lang_symbol_node_free(tmp);
+             break;
+         }
+    }
+    mln_lang_sym_chain_add(&(symbol->bucket->head), &(symbol->bucket->tail), symbol);
+    if (ctx->scope_tail->prev == NULL)
+        mln_lang_sym_scope_chain_add(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), symbol);
+    else
+        mln_lang_sym_scope_chain_add(&(ctx->scope_tail->prev->sym_head), &(ctx->scope_tail->prev->sym_tail), symbol);
+
+    return 0;
+}
+
 mln_lang_symbol_node_t *mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local)
 {
     return __mln_lang_symbol_node_search(ctx, name, local);
@@ -6647,20 +6676,22 @@ static int mln_lang_func_resource_register(mln_lang_ctx_t *ctx)
         }
     }
 
-    rbattr.pool = ctx->pool;
-    rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
-    rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
-    rbattr.cmp = (rbtree_cmp)mln_lang_func_ctx_import_cmp;
-    rbattr.data_free = (rbtree_free_data)mln_lang_func_ctx_import_free;
-    rbattr.cache = 0;
-    if ((tree = mln_rbtree_init(&rbattr)) == NULL) {
-        mln_lang_errmsg(ctx, "No memory.");
-        return -1;
-    }
-    if (mln_lang_ctx_resource_register(ctx, "import", tree, (mln_lang_resource_free)mln_rbtree_destroy) < 0) {
-        mln_lang_errmsg(ctx, "No memory.");
-        mln_rbtree_destroy(tree);
-        return -1;
+    if ((tree = mln_lang_ctx_resource_fetch(ctx, "import")) == NULL) {
+        rbattr.pool = ctx->pool;
+        rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
+        rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
+        rbattr.cmp = (rbtree_cmp)mln_lang_func_ctx_import_cmp;
+        rbattr.data_free = (rbtree_free_data)mln_lang_func_ctx_import_free;
+        rbattr.cache = 0;
+        if ((tree = mln_rbtree_init(&rbattr)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+        if (mln_lang_ctx_resource_register(ctx, "import", tree, (mln_lang_resource_free)mln_rbtree_destroy) < 0) {
+            mln_lang_errmsg(ctx, "No memory.");
+            mln_rbtree_destroy(tree);
+            return -1;
+        }
     }
 
     return 0;

@@ -480,6 +480,30 @@ int mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, 
 
 
 
+#### mln_lang_symbol_node_upper_join
+
+```c
+int mln_lang_symbol_node_upper_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t type, void *data);
+```
+
+描述：将类型为`type`的`data`加入上一层作用域的符号表，若已是最外层，则加入最外层的符号表。`type`值为：
+
+- `M_LANG_SYMBOL_VAR` - 变量
+- `M_LANG_SYMBOL_SET` - 类
+
+根据`type`的不同，`data`的类型也不同：
+
+- `mln_lang_var_t *`
+- `mln_lang_set_detail_t *`
+
+本函数处理时，`data`为直接引用而非复制。
+
+**注意**：变量必须有变量名。
+
+返回值：成功则返回`0`，否则返回`-1`
+
+
+
 #### mln_lang_func_detail_new
 
 ```c
