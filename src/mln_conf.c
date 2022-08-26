@@ -343,7 +343,7 @@ static inline mln_conf_t *mln_conf_init(void)
         return NULL;
     }
     memcpy(conf_file_path, mln_path_conf(), path_len);
-    conf_file_path[path_len] = '0';
+    conf_file_path[path_len] = '\0';
     mln_string_nset(&path, conf_file_path, path_len);
 
     if (!access(conf_file_path, F_OK)) {
