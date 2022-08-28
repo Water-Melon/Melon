@@ -3,102 +3,103 @@
 
 
 
-欢迎使用Melon C语言库，本库包含了诸多算法、数据结构、功能组件、脚本语言以及实用框架，可便于开发人员依此快速开发应用功能，避免了重复造轮子的窘境。
+Welcome to the Melon C language library. This library contains many algorithms, data structures, functional components, scripting languages and practical frameworks, which can facilitate developers to quickly develop application functions and avoid the dilemma of repeated wheel building.
+
 QQ: 756582294
 
 
-### 功能
+### Components
 
-Melon当前提供了如下功能：
+Melon currently provides the following components:
 
-- 数据结构
-  - 双向链表
-  - 斐波那契堆
-  - 哈希表
-  - 队列
-  - 红黑树
-  - 栈
-- 算法
-  - 加密算法：AES 、DES 、3DES 、RC4 、RSA
-  - 哈希算法：MD5 、SHA1 、SHA256
-  - Base64
-  - 大数计算
-  - FEC
-  - JSON
-  - 矩阵运算
-  - 里德所罗门编码
-  - 正则匹配算法
-  - KMP
-  - Cron格式解析器
-- 组件
-  - 内存池
-  - 线程池
-  - 数据链
-  - TCP 封装
-  - 事件机制
-  - 文件缓存
-  - HTTP 处理
-  - 脚本语言
-  - 词法分析器
-  - 语法解析器生成器
-  - websocket
-- 脚本语言
-  - 抢占式协程语言——Melang
-- 框架
-  - 多进程模型
-  - 多线程模型
-
-
-
-### 平台支持
-
-Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统，并在针对Intel CPU有少量优化。
-
-目前Melon也已经完成了向Windows的初步移植，因此可以在Windows上进行使用。但由于Windows在创建进程上与UNIX系统差异较大，因此导致上述`框架`部分功能在Windows中暂时不支持。
+- data structure
+  - Doubly linked list
+  - Fibonacci heap
+  - Hash table
+  - queue
+  - red black tree
+  - stack
+- Algorithms
+   - Encryption algorithm: AES, DES, 3DES, RC4, RSA
+   - Hash algorithm: MD5, SHA1, SHA256
+   - Base64
+   - Large number calculation
+   - FEC
+   - JSON
+   - Matrix Operations
+   - Reed Solomon coding
+   - Regular matching algorithm
+   - KMP
+   - Cron format parser
+- Components
+   - memory pool
+   - Thread Pool
+   - Data link
+   - TCP encapsulation
+   - Event mechanism
+   - file cache
+   - HTTP handling
+   - Scripting language
+   - Lexical analyzer
+   - Parser generator
+   - websocket
+- Scripting language
+   - Preemptive coroutine language - Melang
+- frame
+   - Multi-process model
+   - Multithreaded model
 
 
 
-### 目录
+### Platform Support
 
-- [安装](https://water-melon.github.io/Melon/install.html)
-- [快速入门](https://water-melon.github.io/Melon/quickstart.html)
-- [初始化](https://water-melon.github.io/Melon/core_init.html)
-- [配置](https://water-melon.github.io/Melon/conf.html)
-- [日志](https://water-melon.github.io/Melon/log.html)
-- [字符串](https://water-melon.github.io/Melon/string.html)
-- [素数生成器](https://water-melon.github.io/Melon/prime.html)
-- [哈希表](https://water-melon.github.io/Melon/hash.html)
-- [红黑树](https://water-melon.github.io/Melon/rbtree.html)
-- [双向链表](https://water-melon.github.io/Melon/double_linked_list.html)
-- [栈](https://water-melon.github.io/Melon/stack.html)
-- [队列](https://water-melon.github.io/Melon/queue.html)
-- [斐波那契堆](https://water-melon.github.io/Melon/fheap.html)
-- [事件](https://water-melon.github.io/Melon/event.html)
-- [内存池](https://water-melon.github.io/Melon/mpool.html)
-- [TCP连接及网络I/O链](https://water-melon.github.io/Melon/tcp_io.html)
-- [文件集合](https://water-melon.github.io/Melon/file.html)
-- [自旋锁](https://water-melon.github.io/Melon/spinlock.html)
-- [线程池](https://water-melon.github.io/Melon/threadpool.html)
-- [Cron格式解析器](https://water-melon.github.io/Melon/cron.html)
-- [正则表达式](https://water-melon.github.io/Melon/regex.html)
-- [Base64](https://water-melon.github.io/Melon/base64.html)
-- [JSON](https://water-melon.github.io/Melon/json.html)
-- [AES](https://water-melon.github.io/Melon/aes.html)
-- [DES](https://water-melon.github.io/Melon/des.html)
-- [RC4](https://water-melon.github.io/Melon/rc4.html)
-- [RSA](https://water-melon.github.io/Melon/rsa.html)
-- [MD5](https://water-melon.github.io/Melon/md5.html)
-- [SHA](https://water-melon.github.io/Melon/sha.html)
-- [HTTP](https://water-melon.github.io/Melon/http.html)
-- [Websocket](https://water-melon.github.io/Melon/websocket.html)
-- [FEC](https://water-melon.github.io/Melon/fec.html)
-- [里德所罗门纠错码](https://water-melon.github.io/Melon/reedsolomon.html)
-- [矩阵计算](https://water-melon.github.io/Melon/matrix.html)
-- [大数计算](https://water-melon.github.io/Melon/bignum.html)
-- [词法分析器](https://water-melon.github.io/Melon/lex.html)
-- [语法解析器生成器](https://water-melon.github.io/Melon/parser_generator.html)
-- [脚本任务](https://water-melon.github.io/Melon/melang.html)
-- [脚本开发](https://water-melon.github.io/Melon/melang-dev.html)
-- [多进程框架](https://water-melon.github.io/Melon/multithread.html)
-- [IPC模块开发](https://water-melon.github.io/Melon/ipc.html)
-- [多线程框架](https://water-melon.github.io/Melon/multiprocess.html)
+Melon was originally written for UNIX systems, so it is suitable for UNIX-like systems such as Linux and MacOS. And there are a few optimizations for Intel CPUs.
+
+At present, Melon has also completed the preliminary porting to Windows, so it can be used on Windows. However, because Windows differs greatly from the UNIX system in the creation process, some functions of the above `framework` are temporarily not supported in Windows.
+
+
+
+- ### Table of contents
+
+  - [Install](https://water-melon.github.io/Melon/en/install.html)
+  - [Quickstart](https://water-melon.github.io/Melon/en/quickstart.html)
+  - [Initialization](https://water-melon.github.io/Melon/en/core_init.html)
+  - [Configuration](https://water-melon.github.io/Melon/en/conf.html)
+  - [Log](https://water-melon.github.io/Melon/en/log.html)
+  - [string](https://water-melon.github.io/Melon/en/string.html)
+  - [Prime Number Generator](https://water-melon.github.io/Melon/en/prime.html)
+  - [Hash table](https://water-melon.github.io/Melon/en/hash.html)
+  - [Red-Black Tree](https://water-melon.github.io/Melon/en/rbtree.html)
+  - [Double Linked List](https://water-melon.github.io/Melon/en/double_linked_list.html)
+  - [stack](https://water-melon.github.io/Melon/en/stack.html)
+  - [queue](https://water-melon.github.io/Melon/en/queue.html)
+  - [Fibonacci Heap](https://water-melon.github.io/Melon/en/fheap.html)
+  - [Event](https://water-melon.github.io/Melon/en/event.html)
+  - [Memory Pool](https://water-melon.github.io/Melon/en/mpool.html)
+  - [TCP connection and network I/O chain](https://water-melon.github.io/Melon/en/tcp_io.html)
+  - [File Collection](https://water-melon.github.io/Melon/en/file.html)
+  - [Spinlock](https://water-melon.github.io/Melon/en/spinlock.html)
+  - [Thread Pool](https://water-melon.github.io/Melon/en/threadpool.html)
+  - [Cron format parser](https://water-melon.github.io/Melon/en/cron.html)
+  - [regex](https://water-melon.github.io/Melon/en/regex.html)
+  - [Base64](https://water-melon.github.io/Melon/en/base64.html)
+  - [JSON](https://water-melon.github.io/Melon/en/json.html)
+  - [AES](https://water-melon.github.io/Melon/en/aes.html)
+  - [DES](https://water-melon.github.io/Melon/en/des.html)
+  - [RC4](https://water-melon.github.io/Melon/en/rc4.html)
+  - [RSA](https://water-melon.github.io/Melon/en/rsa.html)
+  - [MD5](https://water-melon.github.io/Melon/en/md5.html)
+  - [SHA](https://water-melon.github.io/Melon/en/sha.html)
+  - [HTTP](https://water-melon.github.io/Melon/en/http.html)
+  - [Websocket](https://water-melon.github.io/Melon/en/websocket.html)
+  - [FEC](https://water-melon.github.io/Melon/en/fec.html)
+  - [Reed Solomon Error Correcting Code](https://water-melon.github.io/Melon/en/reedsolomon.html)
+  - [Matrix calculation](https://water-melon.github.io/Melon/en/matrix.html)
+  - [Bignum Computing](https://water-melon.github.io/Melon/en/bignum.html)
+  - [lexer](https://water-melon.github.io/Melon/en/lex.html)
+  - [Syntax Parser Generator](https://water-melon.github.io/Melon/en/parser_generator.html)
+  - [Script task](https://water-melon.github.io/Melon/en/melang.html)
+  - [Script development](https://water-melon.github.io/Melon/en/melang-dev.html)
+  - [Multi-Process Framework](https://water-melon.github.io/Melon/en/multithread.html)
+  - [IPC module development](https://water-melon.github.io/Melon/en/ipc.html)
+  - [Multithreading Framework](https://water-melon.github.io/Melon/en/multiprocess.html)
