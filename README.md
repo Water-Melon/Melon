@@ -45,7 +45,7 @@ Copyright (c) 2014-present, Niklaus F. Schen
 
 ### Document
 
-Please visit [Melon Developer Guide](https://water-melon.github.io/Melon/cn/) for more details.
+Please visit [Melon Developer Guide](https://water-melon.github.io/Melon/) for more details.
 
-中文文档请参考：[中文指南](https://water-melon.github.io/Melon/)
+中文文档请参考：[中文指南](https://water-melon.github.io/Melon/cn/)
 

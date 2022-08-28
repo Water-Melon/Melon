@@ -70,7 +70,7 @@ At present, Melon has also completed the preliminary porting to Windows, so it c
   - [Prime Number Generator](https://water-melon.github.io/Melon/en/prime.html)
   - [Hash table](https://water-melon.github.io/Melon/en/hash.html)
   - [Red-Black Tree](https://water-melon.github.io/Melon/en/rbtree.html)
-  - [Double Linked List](https://water-melon.github.io/Melon/en/double_linked_list.html)
+  - [Doubly Linked List](https://water-melon.github.io/Melon/en/double_linked_list.html)
   - [stack](https://water-melon.github.io/Melon/en/stack.html)
   - [queue](https://water-melon.github.io/Melon/en/queue.html)
   - [Fibonacci Heap](https://water-melon.github.io/Melon/en/fheap.html)
