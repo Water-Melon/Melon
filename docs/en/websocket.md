@@ -2,7 +2,7 @@
 
 
 
-### 头文件
+### Header file
 
 ```c
 #include "mln_websocket.h"
@@ -10,7 +10,7 @@
 
 
 
-### 函数/宏
+### Functions/Macros
 
 
 
@@ -20,9 +20,9 @@
 int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http);
 ```
 
-描述：初始化websocket结构`ws`，其依赖于`mln_http_t`结构`http`。ws可能是动态分配而来，也可能是栈内自动变亮。
+Description: Initialize the websocket structure `ws`, which depends on the `mln_http_t` structure `http`. ws may be dynamically allocated, or it may be automatically brightened in the stack.
 
-返回值：成功则返回`0`，否则返回`-1`
+Return value: return `0` if successful, otherwise return `-1`
 
 
 
@@ -32,9 +32,9 @@ int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http);
 mln_websocket_t *mln_websocket_new(mln_http_t *http);
 ```
 
-描述：创建并初始化`mln_websocket_t`结构，其依赖于`mln_http_t`结构`http`。
+Description: Create and initialize the `mln_websocket_t` structure, which depends on the `mln_http_t` structure `http`.
 
-返回值：成功则返回结构指针，否则返回`NULL`
+Return value: return the structure pointer if successful, otherwise return `NULL`
 
 
 
@@ -44,9 +44,9 @@ mln_websocket_t *mln_websocket_new(mln_http_t *http);
 void mln_websocket_destroy(mln_websocket_t *ws);
 ```
 
-描述：销毁`mln_websocket_t`结构，`ws`应由`mln_websocket_init`初始化而来。
+Description: Destroy the `mln_websocket_t` structure, `ws` should be initialized by `mln_websocket_init`.
 
-返回值：无
+Return value: none
 
 
 
@@ -56,9 +56,9 @@ void mln_websocket_destroy(mln_websocket_t *ws);
 void mln_websocket_free(mln_websocket_t *ws);
 ```
 
-描述：销毁并释放`mln_websocket_t`结构`ws`。
+Description: Destroy and free the `mln_websocket_t` structure `ws`.
 
-返回值：无
+Return value: none
 
 
 
@@ -68,9 +68,9 @@ void mln_websocket_free(mln_websocket_t *ws);
 void mln_websocket_reset(mln_websocket_t *ws);
 ```
 
-描述：重置`ws`内的所有内容。
+Description: Reset everything inside `ws`.
 
-返回值：无
+Return value: none
 
 
 
@@ -80,13 +80,13 @@ void mln_websocket_reset(mln_websocket_t *ws);
 int mln_websocket_is_websocket(mln_http_t *http);
 ```
 
-描述：判断本`http`是否是一个websocket。
+Description: Determine whether this `http` is a websocket.
 
-返回值：
+return value:
 
-- `M_WS_RET_NOTWS` 不是websocket
-- `M_WS_RET_ERROR` 不是HTTP请求
-- `M_WS_RET_OK` 是websocket
+- `M_WS_RET_NOTWS` is not a websocket
+- `M_WS_RET_ERROR` is not an HTTP request
+- `M_WS_RET_OK` is websocket
 
 
 
@@ -96,13 +96,13 @@ int mln_websocket_is_websocket(mln_http_t *http);
 int mln_websocket_validate(mln_websocket_t *ws);
 ```
 
-描述：判断`ws`是否是一个有效的websocket连接。
+- Description: Determine if `ws` is a valid websocket connection.
 
-返回值：
+  return value:
 
-- `M_WS_RET_NOTWS` 不是
-- `M_WS_RET_ERROR` 不是HTTP响应
-- `M_WS_RET_OK` 是
+  - `M_WS_RET_NOTWS` no
+  - `M_WS_RET_ERROR` is not an HTTP response
+  - `M_WS_RET_OK` yes
 
 
 
@@ -112,12 +112,12 @@ int mln_websocket_validate(mln_websocket_t *ws);
 int mln_websocket_set_field(mln_websocket_t *ws, mln_string_t *key, mln_string_t *val);
 ```
 
-描述：设置websocket首次交互的HTTP头。若`key`存在，则替换值为`val`。
+Description: Set the HTTP header for the first interaction of the websocket. If `key` exists, the replacement value is `val`.
 
-返回值：
+return value:
 
-- `M_WS_RET_FAILED` 失败
-- `M_WS_RET_OK` 成功
+- `M_WS_RET_FAILED` failed
+- `M_WS_RET_OK` on success
 
 
 
@@ -127,9 +127,9 @@ int mln_websocket_set_field(mln_websocket_t *ws, mln_string_t *key, mln_string_t
 mln_string_t *mln_websocket_get_field(mln_websocket_t *ws, mln_string_t *key);
 ```
 
-描述：获取websocket首次交互的HTTP头字段`key`的值。
+Description: Get the value of the HTTP header field `key` of the first websocket interaction.
 
-返回值：存在则返回`mln_string_t`类型指针，否则返回`NULL`
+Return value: Returns a pointer of type `mln_string_t` if it exists, otherwise returns `NULL`
 
 
 
@@ -139,12 +139,12 @@ mln_string_t *mln_websocket_get_field(mln_websocket_t *ws, mln_string_t *key);
 int mln_websocket_match(mln_websocket_t *ws);
 ```
 
-描述：将websocket中的头字段与其http结构中的头字段进行比较。
+Description: Compare the header fields in the websocket with the header fields in the http structure.
 
-返回值：
+return value:
 
-- `M_WS_RET_ERROR` 失败
-- `M_WS_RET_OK` 成功
+- `M_WS_RET_ERROR` failed
+- `M_WS_RET_OK` on success
 
 
 
@@ -154,12 +154,12 @@ int mln_websocket_match(mln_websocket_t *ws);
 int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t **chead, mln_chain_t **ctail);
 ```
 
-描述：生成一个websocket握手响应报文，报文内容为`chead`和`ctail`指定的链表中的内容。
+Description: Generate a websocket handshake response message, the content of the message is the content in the linked list specified by `chead` and `ctail`.
 
-返回值：
+return value:
 
-- `M_WS_RET_FAILED` 失败
-- `M_WS_RET_OK` 成功
+- `M_WS_RET_FAILED` failed
+- `M_WS_RET_OK` on success
 
 
 
@@ -169,12 +169,12 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
 int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **chead, mln_chain_t **ctail);
 ```
 
-描述：生成一个websocket握手请求报文，报文内容为`chead`和`ctail`指定的链表中的内容。
+Description: Generate a websocket handshake request message, the content of the message is the content in the linked list specified by `chead` and `ctail`.
 
-返回值：
+return value:
 
-- `M_WS_RET_FAILED` 失败
-- `M_WS_RET_OK` 成功
+- `M_WS_RET_FAILED` failed
+- `M_WS_RET_OK` on success
 
 
 
@@ -184,19 +184,19 @@ int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **
 int mln_websocket_text_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u8ptr_t buf, mln_size_t len, mln_u32_t flags);
 ```
 
-描述：生成一个文本数据帧。`out_cnode`为生成的帧数据，`buf`和`len`为文本内容。flags有若干值，且这些值可以使用或运算符一同赋予：
+Description: Generates a text data frame. `out_cnode` is the generated frame data, `buf` and `len` are the text content. flags has several values, and these values can be assigned together using the OR operator:
 
-- `M_WS_FLAG_NONE` 无含义
-- `M_WS_FLAG_NEW` 标记第一个数据分片
-- `M_WS_FLAG_END` 标记最后一个数据分片
-- `M_WS_FLAG_CLIENT` 标记为客户端生成
-- `M_WS_FLAG_SERVER` 标记为服务端生成
+- `M_WS_FLAG_NONE` has no meaning
+- `M_WS_FLAG_NEW` marks the first data fragment
+- `M_WS_FLAG_END` marks the last data fragment
+- `M_WS_FLAG_CLIENT` is flagged for client generation
+- `M_WS_FLAG_SERVER` flag for server generation
 
-返回值：
+return value:
 
-- `M_WS_RET_ERROR`数据有错
-- `M_WS_RET_FAILED`失败，例如内存不足等
-- `M_WS_RET_OK`成功
+- `M_WS_RET_ERROR` data is wrong
+- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_OK` succeeded
 
 
 
@@ -206,19 +206,19 @@ int mln_websocket_text_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, ml
 int mln_websocket_binary_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, void *buf, mln_size_t len, mln_u32_t flags);
 ```
 
-描述：生成一个二进制数据帧。`out_cnode`为生成的帧数据，`buf`和`len`为二进制数据。flags有若干值，且这些值可以使用或运算符一同赋予：
+Description: Generates a binary data frame. `out_cnode` is the generated frame data, `buf` and `len` are binary data. flags has several values, and these values can be assigned together using the OR operator:
 
-- `M_WS_FLAG_NONE` 无含义
-- `M_WS_FLAG_NEW` 标记第一个数据分片
-- `M_WS_FLAG_END` 标记最后一个数据分片
-- `M_WS_FLAG_CLIENT` 标记为客户端生成
-- `M_WS_FLAG_SERVER` 标记为服务端生成
+- `M_WS_FLAG_NONE` has no meaning
+- `M_WS_FLAG_NEW` marks the first data fragment
+- `M_WS_FLAG_END` marks the last data fragment
+- `M_WS_FLAG_CLIENT` is flagged for client generation
+- `M_WS_FLAG_SERVER` flag for server generation
 
-返回值：
+return value:
 
-- `M_WS_RET_ERROR`数据有错
-- `M_WS_RET_FAILED`失败，例如内存不足等
-- `M_WS_RET_OK`成功
+- `M_WS_RET_ERROR` data is wrong
+- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_OK` succeeded
 
 
 
@@ -228,7 +228,7 @@ int mln_websocket_binary_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, 
 int mln_websocket_close_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, char *reason, mln_u16_t status, mln_u32_t flags);
 ```
 
-描述：生成一个websocket关闭报文。`out_cnode`为本函数生成的报文，`reason`为关闭原因，`status`为关闭状态字：
+Description: Generate a websocket close message. `out_cnode` is the message generated by this function, `reason` is the shutdown reason, and `status` is the shutdown status word:
 
 - `M_WS_STATUS_NORMAL_CLOSURE`
 - `M_WS_STATUS_GOING_AWAY`
@@ -244,19 +244,19 @@ int mln_websocket_close_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, c
 - `M_WS_STATUS_INTERNAL_SERVER_ERROR`
 - `M_WS_STATUS_TLS_HANDSHAKE`
 
-flags有若干值，且这些值可以使用或运算符一同赋予：
+flags has several values, and these values can be assigned together using the OR operator:
 
-- `M_WS_FLAG_NONE` 无含义
-- `M_WS_FLAG_NEW` 标记第一个数据分片
-- `M_WS_FLAG_END` 标记最后一个数据分片
-- `M_WS_FLAG_CLIENT` 标记为客户端生成
-- `M_WS_FLAG_SERVER` 标记为服务端生成
+- `M_WS_FLAG_NONE` has no meaning
+- `M_WS_FLAG_NEW` marks the first data fragment
+- `M_WS_FLAG_END` marks the last data fragment
+- `M_WS_FLAG_CLIENT` is flagged for client generation
+- `M_WS_FLAG_SERVER` flag for server generation
 
-返回值：
+return value:
 
-- `M_WS_RET_ERROR`数据有错
-- `M_WS_RET_FAILED`失败，例如内存不足等
-- `M_WS_RET_OK`成功
+- `M_WS_RET_ERROR` data is wrong
+- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_OK` succeeded
 
 
 
@@ -266,19 +266,19 @@ flags有若干值，且这些值可以使用或运算符一同赋予：
 int mln_websocket_ping_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u32_t flags);
 ```
 
-描述：生成ping报文，`out_cnode`为生成的报文，flags有若干值，且这些值可以使用或运算符一同赋予：
+Description: Generate a ping message, `out_cnode` is the generated message, flags has several values, and these values can be assigned together with the OR operator:
 
-- `M_WS_FLAG_NONE` 无含义
-- `M_WS_FLAG_NEW` 标记第一个数据分片
-- `M_WS_FLAG_END` 标记最后一个数据分片
-- `M_WS_FLAG_CLIENT` 标记为客户端生成
-- `M_WS_FLAG_SERVER` 标记为服务端生成
+- `M_WS_FLAG_NONE` has no meaning
+- `M_WS_FLAG_NEW` marks the first data fragment
+- `M_WS_FLAG_END` marks the last data fragment
+- `M_WS_FLAG_CLIENT` is flagged for client generation
+- `M_WS_FLAG_SERVER` flag for server generation
 
-返回值：
+return value:
 
-- `M_WS_RET_ERROR`数据有错
-- `M_WS_RET_FAILED`失败，例如内存不足等
-- `M_WS_RET_OK`成功
+- `M_WS_RET_ERROR` data is wrong
+- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_OK` succeeded
 
 
 
@@ -288,19 +288,19 @@ int mln_websocket_ping_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, ml
 int mln_websocket_pong_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u32_t flags);
 ```
 
-描述：生成pong报文，`out_cnode`为生成的报文，flags有若干值，且这些值可以使用或运算符一同赋予：
+Description: Generate a pong message, `out_cnode` is the generated message, flags has several values, and these values can be assigned together using the OR operator:
 
-- `M_WS_FLAG_NONE` 无含义
-- `M_WS_FLAG_NEW` 标记第一个数据分片
-- `M_WS_FLAG_END` 标记最后一个数据分片
-- `M_WS_FLAG_CLIENT` 标记为客户端生成
-- `M_WS_FLAG_SERVER` 标记为服务端生成
+- `M_WS_FLAG_NONE` has no meaning
+- `M_WS_FLAG_NEW` marks the first data fragment
+- `M_WS_FLAG_END` marks the last data fragment
+- `M_WS_FLAG_CLIENT` is flagged for client generation
+- `M_WS_FLAG_SERVER` flag for server generation
 
-返回值：
+return value:
 
-- `M_WS_RET_ERROR`数据有错
-- `M_WS_RET_FAILED`失败，例如内存不足等
-- `M_WS_RET_OK`成功
+- `M_WS_RET_ERROR` data is wrong
+- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_OK` succeeded
 
 
 
@@ -310,13 +310,13 @@ int mln_websocket_pong_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, ml
 int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode);
 ```
 
-描述：根据`ws`结构的当前内容生成报文。如上生成函数皆为该函数的上层封装。`out_cnode`为生成的报文。当想自定义发送的格式时，需要配合后续的宏函数对`ws`的一些成员进行设置。
+Description: Generate a message based on the current contents of the `ws` structure. The above generated functions are all upper-level encapsulations of this function. `out_cnode` is the generated message. When you want to customize the sending format, you need to set some members of `ws` with the subsequent macro functions.
 
-返回值：
+return value:
 
-- `M_WS_RET_ERROR`数据有错
-- `M_WS_RET_FAILED`失败，例如内存不足等
-- `M_WS_RET_OK`成功
+- `M_WS_RET_ERROR` data is wrong
+- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_OK` succeeded
 
 
 
@@ -326,14 +326,14 @@ int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode);
 int mln_websocket_parse(mln_websocket_t *ws, mln_chain_t **in);
 ```
 
-描述：解析`in`中的数据，并将数据放入`ws`中的对应位置。
+Description: Parse the data in `in` and put the data into the corresponding position in `ws`.
 
-返回值：
+return value:
 
-- `M_WS_RET_ERROR`报文出错
-- `M_WS_RET_OK`解析成功
-- `M_WS_RET_FAILED`解析失败，例如内存不足等问题
-- `M_WS_RET_NOTYET`成功但数据不完全，需要继续处理
+- `M_WS_RET_ERROR` message error
+- `M_WS_RET_OK` parsed successfully
+- `M_WS_RET_FAILED` failed to parse, such as out of memory, etc.
+- `M_WS_RET_NOTYET` succeeded but the data is incomplete and needs to continue processing
 
 
 
@@ -343,9 +343,9 @@ int mln_websocket_parse(mln_websocket_t *ws, mln_chain_t **in);
 mln_websocket_get_http(ws)
 ```
 
-描述：获取`ws`所属的`http`结构。
+Description: Get the `http` structure to which `ws` belongs.
 
-返回值：`mln_http_t`类型指针
+Return value: `mln_http_t` type pointer
 
 
 
@@ -355,9 +355,9 @@ mln_websocket_get_http(ws)
 mln_websocket_get_pool(ws)
 ```
 
-描述：获取`ws`所使用的内存池结构。
+Description: Get the memory pool structure used by `ws`.
 
-返回值：`mln_alloc_t`类型指针
+Return value: pointer of type `mln_alloc_t`
 
 
 
@@ -367,9 +367,9 @@ mln_websocket_get_pool(ws)
 mln_websocket_get_connection(ws)
 ```
 
-描述：获取`ws`所使用的TCP链接结构。
+Description: Get the TCP link structure used by `ws`.
 
-返回值：`mln_tcp_conn_t`类型指针
+Return value: `mln_tcp_conn_t` type pointer
 
 
 
@@ -379,9 +379,9 @@ mln_websocket_get_connection(ws)
 mln_websocket_get_uri(ws)
 ```
 
-描述：获取`ws`当前的HTTP URI。
+Description: Get the current HTTP URI of `ws`.
 
-返回值：`mln_string_t`类型指针
+Return value: pointer of type `mln_string_t`
 
 
 
@@ -391,9 +391,9 @@ mln_websocket_get_uri(ws)
 mln_websocket_set_uri(ws,u)
 ```
 
-描述：设置`ws`要访问的URI为`mln_string_t`类型指针的`u`。
+Description: Set the URI to be accessed by `ws` to `u` of type `mln_string_t` pointer.
 
-返回值：无
+Return value: none
 
 
 
@@ -403,9 +403,9 @@ mln_websocket_set_uri(ws,u)
 mln_websocket_get_args(ws)
 ```
 
-描述：获取`ws`的HTTP请求参数。
+Description: Get HTTP request parameters for `ws`.
 
-返回值：`mln_string_t`类型指针
+Return value: pointer of type `mln_string_t`
 
 
 
@@ -415,9 +415,9 @@ mln_websocket_get_args(ws)
 mln_websocket_set_args(ws,a)
 ```
 
-描述：设置`ws`的HTTP请求参数为`mln_string_t`类型指针的`a`。
+Description: Set the HTTP request parameter of `ws` to `a` of type `mln_string_t` pointer.
 
-返回值：无
+Return value: none
 
 
 
@@ -427,9 +427,9 @@ mln_websocket_set_args(ws,a)
 mln_websocket_get_key(ws)
 ```
 
-描述：获取HTTP头字段`Sec-Websocket-Key`的值。
+Description: Get the value of the HTTP header field `Sec-Websocket-Key`.
 
-返回值：`mln_string_t`类型指针
+Return value: pointer of type `mln_string_t`
 
 
 
@@ -439,9 +439,9 @@ mln_websocket_get_key(ws)
  mln_websocket_set_key(ws,k)
 ```
 
-描述：设置websocket HTTP头字段`Sec-Websocket-Key`的值为`mln_string_t`类型指针`k`。
+Description: Set the value of the websocket HTTP header field `Sec-Websocket-Key` to a `mln_string_t` type pointer `k`.
 
-返回值：无
+Return value: none
 
 
 
@@ -451,9 +451,9 @@ mln_websocket_get_key(ws)
 mln_websocket_set_data(ws,d)
 ```
 
-描述：设置用户自定义结构`d`。
+Description: Set user-defined structure `d`.
 
-返回值：无
+Return value: none
 
 
 
@@ -463,9 +463,9 @@ mln_websocket_set_data(ws,d)
 mln_websocket_get_data(ws)
 ```
 
-描述：获取用户自定义结构。
+Description: Get user-defined structure.
 
-返回值：自定义结构指针
+Return value: custom structure pointer
 
 
 
@@ -475,9 +475,9 @@ mln_websocket_get_data(ws)
 mln_websocket_set_content(ws,c)
 ```
 
-描述：设置数据帧，`c`的数据类型取决于要发送的内容，可以是结构体，也可以是整数，也可以是其他数据类型。本函数仅用于自定义websocket报文时使用。
+Description: Set the data frame. The data type of `c` depends on the content to be sent. It can be a structure, an integer, or other data types. This function is only used when customizing websocket messages.
 
-返回值：无
+Return value: none
 
 
 
@@ -487,9 +487,9 @@ mln_websocket_set_content(ws,c)
 mln_websocket_get_content(ws)
 ```
 
-描述：获取数据帧内容。
+Description: Get the data frame content.
 
-返回值：`void *`类型数据
+Return value: `void *` type data
 
 
 
@@ -499,9 +499,9 @@ mln_websocket_get_content(ws)
 mln_websocket_set_content_len(ws,l)
 ```
 
-描述：设置数据长度。
+Description: Set the data length.
 
-返回值：无
+Return value: none
 
 
 
@@ -511,9 +511,9 @@ mln_websocket_set_content_len(ws,l)
 mln_websocket_get_content_len(ws)
 ```
 
-描述：获取数据长度。
+Description: Get the data length.
 
-返回值：无符号整型
+Return value: unsigned integer
 
 
 
@@ -525,9 +525,9 @@ mln_websocket_set_ext_handler(ws,h)
 typedef int (*mln_ws_extension_handle)(mln_websocket_t *);
 ```
 
-描述：设置extension handler `h`到`ws`中。该函数会在`mln_websocket_generate`和`mln_websocket_parse`中被调用，用于增加一写自定义处理内容。
+Description: Set extension handler `h` to `ws`. This function will be called in `mln_websocket_generate` and `mln_websocket_parse` to add a custom processing content.
 
-返回值：无
+Return value: none
 
 
 
@@ -537,9 +537,9 @@ typedef int (*mln_ws_extension_handle)(mln_websocket_t *);
 mln_websocket_get_ext_handler(ws)
 ```
 
-描述：获取extension handler。该函数会在`mln_websocket_generate`和`mln_websocket_parse`中被调用，用于增加一写自定义处理内容。
+Description: Get the extension handler. This function will be called in `mln_websocket_generate` and `mln_websocket_parse` to add a custom processing content.
 
-返回值：`mln_ws_extension_handle`类型指针
+Return value: pointer of type `mln_ws_extension_handle`
 
 
 
@@ -549,9 +549,9 @@ mln_websocket_get_ext_handler(ws)
  mln_websocket_set_rsv1(ws)
 ```
 
-描述：设置保留位rsv1位1。
+Description: Set reserved bit rsv1 bit 1.
 
-返回值：无
+Return value: none
 
 
 
@@ -561,9 +561,9 @@ mln_websocket_get_ext_handler(ws)
 mln_websocket_reset_rsv1(ws)
 ```
 
-描述：复位保留位rsv1。
+Description: Reset reserved bit rsv1.
 
-返回值：无
+Return value: none
 
 
 
@@ -573,9 +573,9 @@ mln_websocket_reset_rsv1(ws)
 mln_websocket_get_rsv1(ws)
 ```
 
-描述：获取保留位rsv1的值。
+Description: Get the value of reserved bit rsv1.
 
-返回值：无符号整型值
+Return value: unsigned integer value
 
 
 
@@ -585,9 +585,9 @@ mln_websocket_get_rsv1(ws)
 mln_websocket_set_rsv2(ws)
 ```
 
-描述：设置保留位rsv2位1。
+Description: Set reserved bit rsv2 bit 1.
 
-返回值：无
+Return value: none
 
 
 
@@ -597,9 +597,9 @@ mln_websocket_set_rsv2(ws)
 mln_websocket_reset_rsv2(ws)
 ```
 
-描述：复位保留位rsv2。
+Description: Reset reserved bit rsv2.
 
-返回值：无
+Return value: none
 
 
 
@@ -609,9 +609,9 @@ mln_websocket_reset_rsv2(ws)
 mln_websocket_get_rsv2(ws)
 ```
 
-描述：获取保留位rsv2的值。
+Description: Get the value of reserved bit rsv2.
 
-返回值：无符号整型值
+Return value: unsigned integer value
 
 
 
@@ -621,9 +621,9 @@ mln_websocket_get_rsv2(ws)
 mln_websocket_set_rsv3(ws)
 ```
 
-描述：设置保留位rsv3位1。
+Description: Set reserved bit rsv3 bit 1.
 
-返回值：无
+Return value: none
 
 
 
@@ -633,9 +633,9 @@ mln_websocket_set_rsv3(ws)
 mln_websocket_reset_rsv3(ws)
 ```
 
-描述：复位保留位rsv3。
+Description: Reset reserved bit rsv3.
 
-返回值：无
+Return value: none
 
 
 
@@ -645,9 +645,9 @@ mln_websocket_reset_rsv3(ws)
 mln_websocket_get_rsv3(ws)
 ```
 
-描述：获取保留位rsv3的值。
+Description: Get the value of reserved bit rsv3.
 
-返回值：无符号整型值
+Return value: unsigned integer value
 
 
 
@@ -657,16 +657,16 @@ mln_websocket_get_rsv3(ws)
 mln_websocket_set_opcode(ws,op)
 ```
 
-描述：设置操作码，该操作码用于告知`mln_websocket_generate`函数生成什么类型报文，`op`的值如下：
+Description: Set the opcode, which is used to tell the `mln_websocket_generate` function what type of message to generate. The value of `op` is as follows:
 
-- `M_WS_OPCODE_CONTINUE` 由于类型在首个数据包中设定，因此后续数据都为本类型。
-- `M_WS_OPCODE_TEXT` 文本类型
-- `M_WS_OPCODE_BINARY` 二进制类型
-- `M_WS_OPCODE_CLOSE` 断开
-- `M_WS_OPCODE_PING` 存活检测请求
-- `M_WS_OPCODE_PONG` 存活检测响应
+- `M_WS_OPCODE_CONTINUE` Since the type is set in the first packet, subsequent data are all of this type.
+- `M_WS_OPCODE_TEXT` text type
+- `M_WS_OPCODE_BINARY` binary type
+- `M_WS_OPCODE_CLOSE` disconnect
+- `M_WS_OPCODE_PING` liveness check request
+- `M_WS_OPCODE_PONG` liveness check response
 
-返回值：无
+Return value: none
 
 
 
@@ -676,9 +676,9 @@ mln_websocket_set_opcode(ws,op)
 mln_websocket_get_opcode(ws)
 ```
 
-描述：获取操作码，操作码详情见`mln_websocket_set_opcode`函数。
+Description: Get the opcode. For details of the opcode, see the `mln_websocket_set_opcode` function.
 
-返回值：无符号整型
+Return value: unsigned integer
 
 
 
@@ -702,9 +702,9 @@ mln_websocket_set_status(ws,s)
 #define M_WS_STATUS_TLS_HANDSHAKE         1015 
 ```
 
-描述：设置websocket状态码，状态码数值如宏定义所示。
+Description: Set the websocket status code, the value of the status code is shown in the macro definition.
 
-返回值：无
+Return value: none
 
 
 
@@ -714,9 +714,9 @@ mln_websocket_set_status(ws,s)
 mln_websocket_get_status(ws)
 ```
 
-描述：获取websocket状态码。
+Description: Get the websocket status code.
 
-返回值：无符号整型
+Return value: unsigned integer
 
 
 
@@ -726,9 +726,9 @@ mln_websocket_get_status(ws)
 mln_websocket_set_content_free(ws)
 ```
 
-描述：置位`content_free`标记。该标记控制是否在`ws`结构销毁或重置时释放content成员（数据帧数据）的内存，该内存必须由`ws`的内存池分配而来。
+Description: Set the `content_free` flag. This flag controls whether to free the memory of the content member (data frame data) when the `ws` structure is destroyed or reset, which must be allocated from the `ws` memory pool.
 
-返回值：无
+Return value: none
 
 
 
@@ -738,9 +738,9 @@ mln_websocket_set_content_free(ws)
 mln_websocket_reset_content_free(ws)
 ```
 
-描述：复位`content_free`标记值。
+Description: Reset the `content_free` flag value.
 
-返回值：无
+Return value: none
 
 
 
@@ -750,9 +750,9 @@ mln_websocket_reset_content_free(ws)
 mln_websocket_get_content_free(ws)
 ```
 
-描述：获取`content_free`标记值。
+Description: Get the `content_free` tag value.
 
-返回值：无符号整型
+Return value: unsigned integer
 
 
 
@@ -762,9 +762,9 @@ mln_websocket_get_content_free(ws)
 mln_websocket_set_fin(ws)
 ```
 
-描述：置位`fin`标记，该标记控制是否为最后一个数据帧。
+Description: Set the `fin` flag, which controls whether it is the last data frame.
 
-返回值：无
+Return value: none
 
 
 
@@ -774,9 +774,9 @@ mln_websocket_set_fin(ws)
 mln_websocket_reset_fin(ws)
 ```
 
-描述：复位`fin`标记。
+Description: Reset the `fin` flag.
 
-返回值：无
+Return value: none
 
 
 
@@ -786,9 +786,9 @@ mln_websocket_reset_fin(ws)
 mln_websocket_get_fin(ws)
 ```
 
-描述：获取`fin`的值。
+Description: Get the value of `fin`.
 
-返回值：无符号整型
+Return value: unsigned integer
 
 
 
@@ -798,9 +798,9 @@ mln_websocket_get_fin(ws)
 mln_websocket_set_maskbit(ws)
 ```
 
-描述：置位websocket报文的`mask`位。置位表示会携带有4字节masking-key。
+Description: Set the `mask` bit of websocket packets. When set, it will carry a 4-byte masking-key.
 
-返回值：无
+Return value: none
 
 
 
@@ -810,9 +810,9 @@ mln_websocket_set_maskbit(ws)
 mln_websocket_reset_maskbit(ws)
 ```
 
-描述：复位websocket报文的`mask`位。
+Description: Reset the `mask` bit of websocket packets.
 
-返回值：无
+Return value: none
 
 
 
@@ -822,9 +822,9 @@ mln_websocket_reset_maskbit(ws)
 mln_websocket_get_maskbit(ws)
 ```
 
-描述：获取websocket报文的`mask`位。
+Description: Get the `mask` bit of the websocket packet.
 
-返回值：无符号整型
+Return value: unsigned integer
 
 
 
@@ -834,9 +834,9 @@ mln_websocket_get_maskbit(ws)
 mln_websocket_set_masking_key(ws,k)
 ```
 
-描述：设置`masking-key`字段值为`k`。`k`为无符号32位整型。
+Description: Set the `masking-key` field to `k`. `k` is an unsigned 32-bit integer.
 
-返回值：无
+Return value: none
 
 
 
@@ -846,13 +846,13 @@ mln_websocket_set_masking_key(ws,k)
 mln_websocket_get_masking_key(ws)
 ```
 
-描述：获取websocket的`masking-key`值。
+Description: Get the `masking-key` value of websocket.
 
-返回值：无符号32位整型
+Return value: unsigned 32-bit integer
 
 
 
-###示例
+### Example
 
 ```c
 #include <stdio.h>

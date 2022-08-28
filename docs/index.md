@@ -47,7 +47,7 @@ Melon currently provides the following components:
    - Preemptive coroutine language - Melang
 - frame
    - Multi-process model
-   - Multithreaded model
+   - Multi-thread model
 
 
 
@@ -96,10 +96,10 @@ At present, Melon has also completed the preliminary porting to Windows, so it c
   - [Reed Solomon Error Correcting Code](https://water-melon.github.io/Melon/en/reedsolomon.html)
   - [Matrix calculation](https://water-melon.github.io/Melon/en/matrix.html)
   - [Bignum Computing](https://water-melon.github.io/Melon/en/bignum.html)
-  - [lexer](https://water-melon.github.io/Melon/en/lex.html)
+  - [Lexer](https://water-melon.github.io/Melon/en/lex.html)
   - [Syntax Parser Generator](https://water-melon.github.io/Melon/en/parser_generator.html)
   - [Script task](https://water-melon.github.io/Melon/en/melang.html)
   - [Script development](https://water-melon.github.io/Melon/en/melang-dev.html)
-  - [Multi-Process Framework](https://water-melon.github.io/Melon/en/multithread.html)
+  - [Multi-thread Framework](https://water-melon.github.io/Melon/en/multithread.html)
   - [IPC module development](https://water-melon.github.io/Melon/en/ipc.html)
-  - [Multithreading Framework](https://water-melon.github.io/Melon/en/multiprocess.html)
+  - [Multi-process Framework](https://water-melon.github.io/Melon/en/multiprocess.html)

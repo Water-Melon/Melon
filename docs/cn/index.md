@@ -99,6 +99,6 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [语法解析器生成器](https://water-melon.github.io/Melon/cn/parser_generator.html)
 - [脚本任务](https://water-melon.github.io/Melon/cn/melang.html)
 - [脚本开发](https://water-melon.github.io/Melon/cn/melang-dev.html)
-- [多进程框架](https://water-melon.github.io/Melon/cn/multithread.html)
+- [多线程框架](https://water-melon.github.io/Melon/cn/multithread.html)
 - [IPC模块开发](https://water-melon.github.io/Melon/cn/ipc.html)
-- [多线程框架](https://water-melon.github.io/Melon/cn/multiprocess.html)
+- [多进程框架](https://water-melon.github.io/Melon/cn/multiprocess.html)

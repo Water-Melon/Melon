@@ -1,3 +1,14 @@
+Changes with melon 2.4.0                                          28 Aug 2022
+    *) Optimized memory pool to support hierarchical pool
+    *) Optimized configuration processing
+    *) Updated fib-heap to support memory pool
+    *) Updated spinlock
+    *) Optimized core library, moved melang library to repository Melang
+    *) Fixed dlopen memory bug in melang import function
+    *) Added new function in script interpreter
+    *) Updated docs
+    *) Added English docs
+
 Changes with melon 2.3.4                                          18 Aug 2022
     *) Added parent pool for memory pool component
     *) Upgraded mln_import to have a return value in script layer

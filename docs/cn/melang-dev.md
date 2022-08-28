@@ -33,7 +33,7 @@
 
 ### 函数/宏
 
-开发者不仅可以使用这里给出的函数，也可以使用上一篇介绍的函数。例如Melang中`mln_eval`函数的实现。
+开发者不仅可以使用这里给出的函数，也可以使用上一篇介绍的函数。例如Melang中`eval`函数的实现。
 
 
 
@@ -743,6 +743,6 @@ void mln_lang_ctx_continue(mln_lang_ctx_t *ctx);
 
 ### 示例
 
-函数的实现可以参考`Melon/melang/aes`中的内容，极为简洁。
+函数的实现可以参考`Melang/lib_src/aes`中的内容，极为简洁。
 
-类实现的部分可以参考`Melon/melang/file`中的内容。
+类实现的部分可以参考`Melang/lib_src/file`中的内容。

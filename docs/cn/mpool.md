@@ -1,4 +1,4 @@
-内存池
+##内存池
 
 Melon中，内存池分为两类：
 
@@ -9,7 +9,7 @@ Melon中，内存池分为两类：
 
 
 
-头文件
+###头文件
 
 ```c
 #include "mln_alloc.h"
@@ -17,11 +17,11 @@ Melon中，内存池分为两类：
 
 
 
-函数
+###函数
 
 
 
-mln_alloc_init
+####mln_alloc_init
 
 ```c
 mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
@@ -33,7 +33,7 @@ mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
 
 
 
-mln_alloc_shm_init
+####mln_alloc_shm_init
 
 ```c
 mln_alloc_t *mln_alloc_shm_init(struct mln_alloc_shm_attr_s *attr);
@@ -66,7 +66,7 @@ typedef int (*mln_alloc_shm_lock_cb_t)(void *);
 
 
 
-mln_alloc_destroy
+####mln_alloc_destroy
 
 ```c
 void mln_alloc_destroy(mln_alloc_t *pool);
@@ -78,7 +78,7 @@ void mln_alloc_destroy(mln_alloc_t *pool);
 
 
 
-mln_alloc_m
+####mln_alloc_m
 
 ```c
 void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size);
@@ -90,7 +90,7 @@ void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size);
 
 
 
-mln_alloc_c
+####mln_alloc_c
 
 ```c
 void *mln_alloc_c(mln_alloc_t *pool, mln_size_t size);
@@ -102,7 +102,7 @@ void *mln_alloc_c(mln_alloc_t *pool, mln_size_t size);
 
 
 
-mln_alloc_re
+####mln_alloc_re
 
 ```c
 void *mln_alloc_re(mln_alloc_t *pool, void *ptr, mln_size_t size);
@@ -116,7 +116,7 @@ void *mln_alloc_re(mln_alloc_t *pool, void *ptr, mln_size_t size);
 
 
 
-mln_alloc_free
+####mln_alloc_free
 
 ```c
 void mln_alloc_free(void *ptr);
@@ -128,71 +128,7 @@ void mln_alloc_free(void *ptr);
 
 
 
-mln_alloc_shm_rdlock
-
-```c
-int mln_alloc_shm_rdlock(mln_alloc_t *pool);
-```
-
-描述：读锁定。本函数会等待直到锁资源可用，并将之锁定。
-
-本函数及后续锁相关函数均用于共享内存内存池。
-
-出于对读多写少的场景考虑，给共享内存配备的是读写锁，而非互斥锁。
-
-返回值：成功返回`0`，否则返回`非0`
-
-
-
-mln_alloc_shm_tryrdlock
-
-```c
-int mln_alloc_shm_tryrdlock(mln_alloc_t *pool);
-```
-
-描述：尝试读锁定。本函数不会挂起等待锁资源可用。
-
-返回值：成功返回`0`，否则返回`非0`
-
-
-
-mln_alloc_shm_wrlock
-
-```c
-int mln_alloc_shm_wrlock(mln_alloc_t *pool);
-```
-
-描述：写锁定。本函数会等待直到锁资源可用，并将之锁定。
-
-返回值：成功返回`0`，否则返回`非0`
-
-
-
-mln_alloc_shm_trywrlock
-
-```c
-int mln_alloc_shm_trywrlock(mln_alloc_t *pool);
-```
-
-描述：尝试写锁定。本函数不会挂起等待锁资源可用。
-
-返回值：成功返回`0`，否则返回`非0`
-
-
-
-mln_alloc_shm_unlock
-
-```c
-int mln_alloc_shm_unlock(mln_alloc_t *pool);
-```
-
-描述：解除锁定。
-
-返回值：成功返回`0`，否则返回`非0`
-
-
-
-示例
+###示例
 
 ```c
 #include <stdio.h>
