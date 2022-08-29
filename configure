@@ -14,7 +14,6 @@ else
     install_path=`echo "/usr/local/melon"`
     cc="cc"
 fi
-mysql_lib=""
 
 #get all parameters
 for param in $@
@@ -137,9 +136,9 @@ echo "# " >> Makefile
 echo -e "CC\t\t= $cc" >> Makefile
 gccver=`gcc -dumpversion|cut -d '.' -f 1`
 if [ $sysname != 'Darwin' -a "$?" == "0" -a $gccver -ge 11 ]; then
-    echo -e "FLAGS\t\t= -Iinclude -Imelang -c -Wall -ggdb -Werror -O2 -fPIC" >> Makefile
+    echo -e "FLAGS\t\t= -Iinclude -c -Wall -ggdb -Werror -O2 -fPIC" >> Makefile
 else
-    echo -e "FLAGS\t\t= -Iinclude -Imelang -c -Wall -ggdb -Werror -O3 -fPIC" >> Makefile
+    echo -e "FLAGS\t\t= -Iinclude -c -Wall -ggdb -Werror -O3 -fPIC" >> Makefile
 fi
 if ! case $sysname in MINGW*) false;; esac; then
     echo -e "MELONSO\t\t= libmelon.dll" >> Makefile
@@ -180,27 +179,13 @@ echo "\$(MELONA) : \$(OBJS)" >> Makefile
 echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile
 echo "\$(MELONSO) : \$(OBJS)" >> Makefile
 
-#test MySQL Asynchronous----------#
-echo -e "#include <stdio.h>\n#include <mysql.h>" > mysql_test.c
-echo "int main(void){MYSQL *mysql_local = mysql_init(NULL);mysql_real_connect_nonblocking(mysql_local, NULL, NULL, NULL, NULL, 3306, NULL, 0);return 0;}" >> mysql_test.c
-cc -o mysql_test mysql_test.c -I/usr/include/mysql/ -L/usr/lib64/mysql/ -lmysqlclient 2>/dev/null
-if [ "$?" == "0" ]; then
-    mysql=1
-    mysql_lib="-I /usr/include/mysql -L /usr/lib64/mysql -lmysqlclient"
-    echo -e "MySQL Asynchronous\t[support]"
-else
-    mysql=0
-    echo -e "MySQL Asynchronous\t[not support]"
-fi
-rm -fr mysql_test mysql_test.c
-#test MySQL Asynchronous end------#
 
 if [ $sysname = 'Linux' ]; then
-    echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl $mysql_lib -shared -fPIC" >> Makefile
+    echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
 elif ! case $sysname in MINGW*) false;; esac; then
-    echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -lWs2_32 -Llib/ $mysql_lib -shared -fPIC" >> Makefile
+    echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC" >> Makefile
 else
-    echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc $mysql_lib -shared -fPIC" >> Makefile
+    echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
 fi
 echo "install:" >> Makefile
 echo -e "\ttest -d $melanglibpath || mkdir -p $melanglibpath" >> Makefile
@@ -226,7 +211,6 @@ do
             continue
         fi
         test -e include/$header && echo -n "include/$header " >> Makefile
-        test -e melang/$header && echo -n "melang/$header " >> Makefile
     done
     echo "" >> Makefile
     test $fname = "./src/mln_event.c"
@@ -312,25 +296,6 @@ do
             echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
         fi
         rm -fr unix98_test unix98_test.c
-        continue
-    fi
-
-    test $fname = "./melang/mysql/mln_lang_mysql.c"
-    if [ $? -eq 0 ]; then
-        if [ $mysql -eq 1 ]; then
-            echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_MYSQL $mysql_lib" >> Makefile
-        else
-            echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
-        fi
-        continue
-    fi
-    test $fname = "./src/mln_melang.c"
-    if [ $? -eq 0 ]; then
-        if [ $mysql -eq 1 ]; then
-            echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $mysql_lib" >> Makefile
-        else
-            echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
-        fi
         continue
     fi
 
