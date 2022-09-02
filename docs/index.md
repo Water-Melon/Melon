@@ -34,6 +34,7 @@ Melon currently provides the following components:
 - Components
    - memory pool
    - Thread Pool
+   - I/O Thread
    - Data link
    - TCP encapsulation
    - Event mechanism
@@ -80,6 +81,7 @@ At present, Melon has also completed the preliminary porting to Windows, so it c
   - [File Collection](https://water-melon.github.io/Melon/en/file.html)
   - [Spinlock](https://water-melon.github.io/Melon/en/spinlock.html)
   - [Thread Pool](https://water-melon.github.io/Melon/en/threadpool.html)
+  - [I/O Thread](https://water-melon.github.io/Melon/en/iothread.html)
   - [Cron format parser](https://water-melon.github.io/Melon/en/cron.html)
   - [regex](https://water-melon.github.io/Melon/en/regex.html)
   - [Base64](https://water-melon.github.io/Melon/en/base64.html)

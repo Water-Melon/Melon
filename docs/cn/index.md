@@ -33,6 +33,7 @@ Melon当前提供了如下功能：
 - 组件
   - 内存池
   - 线程池
+  - I/O线程模型
   - 数据链
   - TCP 封装
   - 事件机制
@@ -79,6 +80,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [文件集合](https://water-melon.github.io/Melon/cn/file.html)
 - [自旋锁](https://water-melon.github.io/Melon/cn/spinlock.html)
 - [线程池](https://water-melon.github.io/Melon/cn/threadpool.html)
+- [I/O线程模型](https://water-melon.github.io/Melon/cn/iothread.html)
 - [Cron格式解析器](https://water-melon.github.io/Melon/cn/cron.html)
 - [正则表达式](https://water-melon.github.io/Melon/cn/regex.html)
 - [Base64](https://water-melon.github.io/Melon/cn/base64.html)

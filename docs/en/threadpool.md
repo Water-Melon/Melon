@@ -132,11 +132,11 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    tpattr.dataForMain = NULL;
+    tpattr.main_data = NULL;
     tpattr.child_process_handler = child_process_handler;
     tpattr.main_process_handler = main_process_handler;
     tpattr.free_handler = free_handler;
-    tpattr.condTimeout = 10;
+    tpattr.cond_timeout = 10;
     tpattr.max = 10;
     tpattr.concurrency = 10;
     return mln_thread_pool_run(&tpattr);

@@ -2845,6 +2845,30 @@ Their definitions can be found in melon/include/mln_types.h.
          Parse cron format expression 'exp' based on timestamp 'base'.
          It will return the next timestamp depending on 'exp'. If failed, 0 will be returned.
 
+  41) I/O Thread
+      a) int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr);
+         Initialize an iothread instance 't' with attribute 'attr'.
+         Return value: 0 on success, otherwise -1.
+
+      b) void mln_iothread_destroy(mln_iothread_t *t);
+         Destroy an iothread instance.
+
+      c) int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, int feedback);
+         Send 'data' with message type 'type' to 'to'.
+         If feedback is true, this function call will be blocked until receive a notification sent by peer.
+         Return value: 0 - success, -1 - error, 1 - output buffer is full
+
+      d) int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
+         Receive a message from 'from'.
+         Then the callback which is given in 'mln_iothread_init' will be called.
+         Return value: 0 - success, -1 - error
+
+      e) mln_iothread_iofd_get(p)
+         Get I/O thread socket file descriptor.
+
+      f) mln_iothread_userfd_get(p)
+         Get user thread socket file descriptor.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.
