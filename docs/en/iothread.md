@@ -22,7 +22,6 @@ I/O thread is another kind of thread pool. But this component is mainly used for
 int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr);
 
 struct mln_iothread_attr {
-    int                         fds[2]; //for inter-thread notification
     mln_u32_t                   nthread; //Total number of I/O threads
     mln_iothread_entry_t        entry; //I/O thread entry function
     void                       *args; //I/O thread entry parameters
@@ -36,9 +35,6 @@ typedef void (*mln_iothread_msg_process_t)(mln_iothread_t *t, mln_iothread_ep_ty
 Description: Initialize `t` according to `attr`.
 
 Return value: return `0` on success, otherwise return `-1`
-
-**Note**: In the case of multiple user threads and multiple I/O threads, if you use `select`, `epoll`, `kqueue` and other event listening sockets, the user needs to deal with the problem of the crowd. The socket is only used to notify the other thread(s) that the thread(s) at the other end has a message sent.
-
 
 
 #### mln_iothread_destroy
@@ -89,27 +85,18 @@ Return value:
 
 
 
-#### mln_iothread_iofd_get
+#### mln_iothread_sockfd_get
 
 ```c
  mln_iothread_iofd_get(p)
 ```
 
-Description: Get the communication socket of the I/O thread from the `mln_iothread_t` structure pointed to by `p`. Usually to add it to an event. Note that the shocking herd problem needs to be handled by the user.
+Description: According to the value of `t`, get the communication socket of the I/O thread or user thread from the `mln_iothread_t` structure pointed to by `p` . Usually to add it to an event.
 
 Return value: socket descriptor
 
+**Note**: In the case of multiple user threads and multiple I/O threads, if you use `select`, `epoll`, `kqueue` and other event listening sockets, the user needs to deal with the problem of the crowd. The socket is only used to notify the other thread(s) that the thread(s) at the other end has a message sent.
 
-
-#### mln_iothread_userfd_get
-
-```c
-mln_iothread_userfd_get(p)
-```
-
-Description: Get the communication socket of the userthread from the `mln_iothread_t` structure pointed to by `p`. Usually to add it to an event. Note that the shocking herd problem needs to be handled by the user.
-
-Return value: socket descriptor
 
 
 
@@ -117,11 +104,6 @@ Return value: socket descriptor
 
 ```c
 #include "mln_iothread.h"
-#if defined(WIN32)
-#include "mln_defs.h"
-#else
-#include <sys/socket.h>
-#endif
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
@@ -149,11 +131,6 @@ int main(void)
     int i, rc;
     mln_iothread_t t;
     struct mln_iothread_attr tattr;
-
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, tattr.fds) < 0) {
-        fprintf(stderr, "socketpair error %s\n", strerror(errno));
-        return -1;
-    }
 
     tattr.nthread = 1;
     tattr.entry = (mln_iothread_entry_t)entry;

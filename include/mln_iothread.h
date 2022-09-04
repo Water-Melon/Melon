@@ -29,7 +29,6 @@ struct mln_iothread_msg_s {
 };
 
 struct mln_iothread_attr {
-    int                         fds[2];
     mln_u32_t                   nthread;
     mln_iothread_entry_t        entry;
     void                       *args;
@@ -52,8 +51,7 @@ struct mln_iothread_s {
     mln_u32_t                   nthread;
 };
 
-#define mln_iothread_iofd_get(p)   ((p)->io_fd)
-#define mln_iothread_userfd_get(p) ((p)->user_fd)
+#define mln_iothread_sockfd_get(p,t)   ((t) == io_thread? (p)->io_fd: (p)->user_fd)
 
 extern int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr);
 extern void mln_iothread_destroy(mln_iothread_t *t);

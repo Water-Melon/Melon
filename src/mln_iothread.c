@@ -23,17 +23,17 @@ MLN_CHAIN_FUNC_DEFINE(mln_iothread_msg, mln_iothread_msg_t, static inline void, 
 int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr)
 {
     mln_u32_t i;
+    int fds[2];
 
-    if (!attr->nthread || \
-        attr->fds[0] < 0 || \
-        attr->fds[1] < 0 || \
-        attr->entry == NULL)
-    {
+    if (!attr->nthread || attr->entry == NULL) {
         return -1;
     }
 
-    t->io_fd = attr->fds[0];
-    t->user_fd = attr->fds[1];
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
+        return -1;
+    }
+    t->io_fd = fds[0];
+    t->user_fd = fds[1];
     mln_iothread_fd_nonblock_set(t->io_fd);
     mln_iothread_fd_nonblock_set(t->user_fd);
     t->entry = attr->entry;
@@ -46,6 +46,8 @@ int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr)
     t->nthread = attr->nthread;
 
     if ((t->tids = (pthread_t *)calloc(t->nthread, sizeof(pthread_t))) == NULL) {
+        mln_socket_close(fds[0]);
+        mln_socket_close(fds[1]);
         return -1;
     }
     for (i = 0; i < t->nthread; ++i) {
@@ -73,6 +75,8 @@ void mln_iothread_destroy(mln_iothread_t *t)
         }
         free(t->tids);
     }
+    mln_socket_close(t->io_fd);
+    mln_socket_close(t->user_fd);
 }
 
 int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, int feedback)

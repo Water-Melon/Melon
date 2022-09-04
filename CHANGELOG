@@ -1,3 +1,8 @@
+Changes with melon 2.4.1                                          04 Sep 2022
+    *) Updated configure shell
+    *) Added iothread component
+    *) Updated docs
+
 Changes with melon 2.4.0                                          28 Aug 2022
     *) Optimized memory pool to support hierarchical pool
     *) Optimized configuration processing

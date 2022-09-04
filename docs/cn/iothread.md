@@ -22,7 +22,6 @@ I/O线程算是一种另类线程池结构。但是这个组件主要用于图�
 int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr);
 
 struct mln_iothread_attr {
-    int                         fds[2]; //用于线程间通知的socket对
     mln_u32_t                   nthread; //几个I/O线程
     mln_iothread_entry_t        entry; //I/O线程入口函数
     void                       *args; //I/O线程入口参数
@@ -36,9 +35,6 @@ typedef void (*mln_iothread_msg_process_t)(mln_iothread_t *t, mln_iothread_ep_ty
 描述：依据`attr`对`t`进行初始化。
 
 返回值：成功返回`0`，否则返回`-1`
-
-**注意**：对于多用户线程和多I/O线程的情况下，如果使用`select`，`epoll`，`kqueue`等事件监听套接字，则使用者需要自行处理惊群问题。套接字仅是用来通知对方线程（或线程组），另一端线程（或线程组）有消息发送过来。
-
 
 
 #### mln_iothread_destroy
@@ -84,27 +80,17 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
 
 
 
-#### mln_iothread_iofd_get
+#### mln_iothread_sockfd_get
 
 ```c
- mln_iothread_iofd_get(p)
+ mln_iothread_iofd_get(p,t)
 ```
 
-描述：从`p`所指代的`mln_iothread_t`结构中获取I/O线程的通信套接字。一般是为了将其加入到事件中。注意，惊群问题需要使用者自行处理。
+描述：从`p`所指代的`mln_iothread_t`结构中，根据`t`的值，获取I/O线程或用户线程的通信套接字。一般是为了将其加入到事件中。
 
 返回值：套接字描述符
 
-
-
-#### mln_iothread_userfd_get
-
-```c
-mln_iothread_userfd_get(p)
-```
-
-描述：从`p`所指代的`mln_iothread_t`结构中获取用户线程的通信套接字。一般是为了将其加入到事件中。注意，惊群问题需要使用者自行处理。
-
-返回值：套接字描述符
+**注意**：对于多用户线程和多I/O线程的情况下，如果使用`select`，`epoll`，`kqueue`等事件监听套接字，则使用者需要自行处理惊群问题。套接字仅是用来通知对方线程（或线程组），另一端线程（或线程组）有消息发送过来。
 
 
 
@@ -112,11 +98,6 @@ mln_iothread_userfd_get(p)
 
 ```c
 #include "mln_iothread.h"
-#if defined(WIN32)
-#include "mln_defs.h"
-#else
-#include <sys/socket.h>
-#endif
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
@@ -144,11 +125,6 @@ int main(void)
     int i, rc;
     mln_iothread_t t;
     struct mln_iothread_attr tattr;
-
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, tattr.fds) < 0) {
-        fprintf(stderr, "socketpair error %s\n", strerror(errno));
-        return -1;
-    }
 
     tattr.nthread = 1;
     tattr.entry = (mln_iothread_entry_t)entry;

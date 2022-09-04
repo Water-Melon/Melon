@@ -2863,11 +2863,8 @@ Their definitions can be found in melon/include/mln_types.h.
          Then the callback which is given in 'mln_iothread_init' will be called.
          Return value: 0 - success, -1 - error
 
-      e) mln_iothread_iofd_get(p)
-         Get I/O thread socket file descriptor.
-
-      f) mln_iothread_userfd_get(p)
-         Get user thread socket file descriptor.
+      e) mln_iothread_sockfd_get(p.t)
+         Get I/O or user thread socket file descriptor.
 
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
