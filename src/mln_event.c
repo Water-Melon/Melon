@@ -508,7 +508,7 @@ static void
 mln_event_signal_handler(int signo)
 {
     int n;
-    if (!main_thread_freeing) {
+    if (!main_thread_freeing && main_thread_event != NULL) {
         mln_spin_lock(&event_lock);
 lp1:
 #if defined(WIN32)
