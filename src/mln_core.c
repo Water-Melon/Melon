@@ -45,6 +45,10 @@ int mln_core_init(struct mln_core_attr *attr)
         return -1;
     }
 
+    if (mln_event_init() < 0) {
+        return -1;
+    }
+
     /*Init Melon resources*/
     if (attr->global_init != NULL && attr->global_init() < 0)
         return -1;
@@ -118,7 +122,7 @@ chl:
 #if !defined(WIN32)
 static void mln_master_routine(struct mln_core_attr *attr)
 {
-    mln_event_t *ev = mln_event_init(1);
+    mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     mln_fork_master_set_events(ev);
     if (mln_event_set_signal(ev, M_EV_SET, SIGUSR2, NULL, mln_sig_conf_reload) < 0) {
@@ -132,7 +136,7 @@ static void mln_master_routine(struct mln_core_attr *attr)
 
 static void mln_worker_routine(struct mln_core_attr *attr)
 {
-    mln_event_t *ev = mln_event_init(1);
+    mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     mln_fork_worker_set_events(ev);
 

@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
+#include "mln_defs.h"
 #include "mln_event.h"
 #include "mln_log.h"
 #include "mln_global.h"
@@ -111,15 +112,29 @@ mln_event_desc_t fheap_min = {
     NULL, NULL, NULL, NULL
 };
 mln_rbtree_t *ev_signal_refer_tree = NULL;
-mln_event_t  *main_thread_event = NULL;
 mln_event_t  *event_chain_head = NULL;
 mln_event_t  *event_chain_tail = NULL;
 mln_spin_t    event_lock;
 mln_u32_t     is_lock_init = 0;
-mln_u32_t     main_thread_freeing = 0;
 
 
-mln_event_t *mln_event_init(mln_u32_t is_main)
+int mln_event_init(void)
+{
+    if (is_lock_init) return -1;
+
+    mln_spin_init(&event_lock);
+    is_lock_init = 1;
+    if (pthread_atfork(mln_event_atfork_lock, \
+                       mln_event_atfork_unlock, \
+                       mln_event_atfork_unlock) != 0)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+mln_event_t *mln_event_new(void)
 {
     mln_event_t *ev;
     ev = (mln_event_t *)malloc(sizeof(mln_event_t));
@@ -147,17 +162,7 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
     ev->ev_fd_wait_tail = NULL;
     ev->ev_fd_active_head = NULL;
     ev->ev_fd_active_tail = NULL;
-    if (!is_lock_init) {
-        mln_spin_init(&event_lock);
-        is_lock_init = 1;
-        if (pthread_atfork(mln_event_atfork_lock, \
-                           mln_event_atfork_unlock, \
-                           mln_event_atfork_unlock) != 0)
-        {
-            mln_log(error, "No memory.\n");
-            goto err2;
-        }
-    }
+
     struct mln_fheap_attr fattr;
     fattr.pool = NULL;
     fattr.pool_alloc = NULL;
@@ -199,10 +204,9 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
         goto err4;
     }
     ev->is_break = 0;
-    ev->in_main_thread = is_main;
     int fds[2];
-    if (pipe(fds) < 0) {
-        mln_log(error, "pipe error. %s\n", strerror(errno));
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
+        mln_log(error, "socketpair error. %s\n", strerror(errno));
         goto err5;
     }
     ev->rd_fd = fds[0];
@@ -233,17 +237,9 @@ mln_event_t *mln_event_init(mln_u32_t is_main)
                          NULL, \
                          mln_event_signal_fd_handler) < 0)
         goto err7;
-    if (is_main) {
-        if (main_thread_event == NULL) main_thread_event = ev;
-        else {
-            mln_log(error, "Main thread already existed.\n");
-            abort();/*there is only one event run in main thread.*/
-        }
-    } else {
-        mln_spin_lock(&event_lock);
-        event_chain_add(&event_chain_head, &event_chain_tail, ev);
-        mln_spin_unlock(&event_lock);
-    }
+    mln_spin_lock(&event_lock);
+    event_chain_add(&event_chain_head, &event_chain_tail, ev);
+    mln_spin_unlock(&event_lock);
     return ev;
 
 err7:
@@ -320,17 +316,10 @@ void mln_event_destroy(mln_event_t *ev)
 {
     if (ev == NULL) return;
     mln_event_desc_t *ed;
-    if (ev->in_main_thread) 
-        main_thread_freeing = 1;
     mln_spin_lock(&event_lock);
     mln_fheap_destroy(ev->ev_fd_timeout_heap);
-    if (ev->next != NULL || \
-        ev->prev != NULL || \
-        event_chain_head == ev || \
-        (ev == main_thread_event && ev->in_main_thread))
-    {
-        if (ev->in_main_thread) main_thread_event = NULL;
-        else event_chain_del(&event_chain_head, &event_chain_tail, ev);
+    if (ev->next != NULL || ev->prev != NULL || event_chain_head == ev) {
+        event_chain_del(&event_chain_head, &event_chain_tail, ev);
     }
     mln_rbtree_destroy(ev->ev_fd_tree);
     while ((ed = ev->ev_fd_wait_head) != NULL) {
@@ -350,8 +339,6 @@ void mln_event_destroy(mln_event_t *ev)
 #else
     /*select do nothing.*/
 #endif
-    if (ev->in_main_thread)
-        main_thread_freeing = 0;
     free(ev);
     if (event_chain_head == NULL) {
         mln_rbtree_destroy(ev_signal_refer_tree);
@@ -508,36 +495,23 @@ static void
 mln_event_signal_handler(int signo)
 {
     int n;
-    if (!main_thread_freeing && main_thread_event != NULL) {
-        mln_spin_lock(&event_lock);
-lp1:
-#if defined(WIN32)
-        n = send(main_thread_event->wr_fd, (char *)(&signo), sizeof(signo), 0);
-#else
-        n = send(main_thread_event->wr_fd, &signo, sizeof(signo), 0);
-#endif
-        if (n < 0) {
-            if (errno == EINTR) goto lp1;
-            mln_log(error, "send error. %s\n", strerror(errno));
-            abort();
-        }
-    }
     mln_event_t *ev;
+
+    mln_spin_lock(&event_lock);
     for (ev = event_chain_head; ev != NULL; ev = ev->next) {
-lp2:
+lp:
 #if defined(WIN32)
         n = send(ev->wr_fd, (char *)(&signo), sizeof(signo), 0);
 #else
         n = send(ev->wr_fd, &signo, sizeof(signo), 0);
 #endif
         if (n < 0) {
-            if (errno == EINTR) goto lp2;
+            if (errno == EINTR) goto lp;
             mln_log(error, "send error. %s\n", strerror(errno));
             abort();
         }
     }
-    if (!main_thread_freeing)
-        mln_spin_unlock(&event_lock);
+    mln_spin_unlock(&event_lock);
 }
 
 static inline int

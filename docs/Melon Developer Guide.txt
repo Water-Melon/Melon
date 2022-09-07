@@ -808,14 +808,17 @@ Their definitions can be found in melon/include/mln_types.h.
      Just like libevent, Melon's event module also integrates epoll, kqueue and select.
      It supports three kinds of event: timer event, signal event and file descriptor event.
 
-     a) mln_event_t *mln_event_init(mln_u32_t is_main);
-        It initializes an event object.
-        is_main -- indicates whether the event object is initialized as a main event object.
+     a) int mln_event_init(void);
+        Initialize global resources that event will depend on.
+        This function will be called in framework `mln_core.c`.
 
-     b) void mln_event_destroy(mln_event_t *ev);
+     b) mln_event_t *mln_event_new(void);
+        It initializes an event object.
+
+     c) void mln_event_destroy(mln_event_t *ev);
         It destroys an event object.
 
-     c) int mln_event_set_fd(mln_event_t *event,
+     d) int mln_event_set_fd(mln_event_t *event,
                              int fd, 
                              mln_u32_t flag,
                              int timeout_ms,
@@ -852,7 +855,7 @@ Their definitions can be found in melon/include/mln_types.h.
         There are three arguments of function 'fh_handler': an event object, a file descriptor and a user data.
         If an event is failed to set, -1 will be returned. Otherwise, the returned value is 0.
 
-     d) int mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
+     e) int mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
         It sets a timer event.
         The first argument is an event object.
         The second one is a millisecond timer. Its unit is 10ms.
@@ -862,7 +865,7 @@ Their definitions can be found in melon/include/mln_types.h.
         The arguments of 'tm_handler' are an event object and a user data.
         If an event is failed to set, -1 will be returned. Otherwise, the returned value is 0.
 
-     e) int mln_event_set_signal(mln_event_t *event,
+     f) int mln_event_set_signal(mln_event_t *event,
                                  mln_u32_t flag,
                                  int signo,
                                  void *data,
@@ -882,23 +885,23 @@ Their definitions can be found in melon/include/mln_types.h.
         When a signal raised, the handlers that are whether in the same event object or not, will be called in their
         thread.
 
-     f) void mln_event_dispatch(mln_event_t *event);
+     g) void mln_event_dispatch(mln_event_t *event);
         It dispatches every event.
         If a routine jumps into this function, it won't be out until encountering two situations:
             calling mln_event_set_break() to break out
         or
             a child process is forked.
 
-     g) void mln_event_set_break(mln_event_t *ev);
+     h) void mln_event_set_break(mln_event_t *ev);
         It lets the routine break out from mln_event_dispatch().
 
-     h) void mln_event_set_callback(mln_event_t *ev, dispatch_callback dc, void *dc_data);
+     i) void mln_event_set_callback(mln_event_t *ev, dispatch_callback dc, void *dc_data);
         Besides fd, timer and signal callback handlers, there is another one (this) can be called to process some
         other things in dispatch routine.
         The second argument is a function pointer, its prototype is
             typedef void (*dispatch_callback) (mln_event_t *, void *);
 
-     i) void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
+     j) void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
         This interface will set a callback handler for processing the case that the fd's timer expired.
 
   12) Connection I/O
@@ -2888,10 +2891,10 @@ Their definitions can be found in melon/include/mln_types.h.
           typedef int (*mln_core_init_t)(void);
       'master_process' is a function to process something in master process. Its prototype is,
           typedef void (*mln_core_process_t)(mln_event_t *);
-        ‘mln_event_t' is the type of event object which is initialized by 'mln_event_init()'.
+        ‘mln_event_t' is the type of event object which is initialized by 'mln_event_new()'.
       'worker_process' is a function to process something in worker process. Its prototype is,
           typedef void (*mln_core_process_t)(mln_event_t *);
-        ‘mln_event_t' is the type of event object which is initialized by 'mln_event_init()'.
+        ‘mln_event_t' is the type of event object which is initialized by 'mln_event_new()'.
    3) call init-function.
       if (mln_core_init(&attr) < 0) {
           ...

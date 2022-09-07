@@ -30,10 +30,22 @@ Melon中的事件**不支持**跨线程使用，原因有两点：
 #### mln_event_init
 
 ```c
-mln_event_t *mln_event_init(mln_u32_t is_main);
+int mln_event_init(void);
 ```
 
-描述：创建事件结构。`is_main`表达含义为：是否为主线程。主线程初始化则为`1`，否则为`0`，单线程情况下即为主线程。
+描述：为事件初始化必要的全局数据资源，该函数应该在多线程创建前，以及`mln_event_new`之前被调用。当框架功能启用时，该函数会被`mln_core_init`调用，因此用户不需要再显式调用。
+
+返回值：成功则返回`0`，否则返回`-1`
+
+
+
+#### mln_event_new
+
+```c
+mln_event_t *mln_event_init(void);
+```
+
+描述：创建事件结构。
 
 返回值：成功则返回事件结构指针，否则返回`NULL`
 

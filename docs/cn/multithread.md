@@ -102,6 +102,7 @@
        cattr.argv = argv;
        cattr.global_init = NULL;
        cattr.worker_process = NULL;
+       cattr.master_process = NULL;
 
        mln_thread_module_set(modules, 2);
 

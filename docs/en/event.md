@@ -30,10 +30,22 @@ The system calls used by events vary according to different operating system pla
 #### mln_event_init
 
 ```c
-mln_event_t *mln_event_init(mln_u32_t is_main);
+int mln_event_init(void);
 ```
 
-Description: Create an event structure. `is_main` expresses the meaning: whether it is the main thread. The main thread initialization is `1`, otherwise it is `0`, which is the main thread in the case of a single thread.
+Description: Initialize the necessary global data resources for the event. This function should be called before any new thread is created, and before `mln_event_new`. When the framework feature is enabled, this function will be called by `mln_core_init`, so the user does not need to call it explicitly.
+
+Return value: `0` on success, otherwise return `-1`
+
+
+
+#### mln_event_new
+
+```c
+mln_event_t *mln_event_new(void);
+```
+
+Description: Create an event structure.
 
 Return value: return event structure pointer if successful, otherwise return `NULL`
 
