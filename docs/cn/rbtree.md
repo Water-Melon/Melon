@@ -228,6 +228,20 @@ typedef int (*rbtree_act)(mln_rbtree_node_t *node, void *rn_data, void *udata);
 
 
 
+#### mln_rbtree_reset
+
+```c
+void mln_rbtree_reset(mln_rbtree_t *t);
+```
+
+描述：
+
+重制整个红黑树`t`，将其中全部节点释放。
+
+返回值：无
+
+
+
 ### 示例
 
 ```c

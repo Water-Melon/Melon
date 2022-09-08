@@ -131,7 +131,7 @@ static void mln_master_routine(struct mln_core_attr *attr)
     }
     if (attr->master_process != NULL) attr->master_process(ev);
     mln_event_dispatch(ev);
-    mln_event_destroy(ev);
+    mln_event_free(ev);
 }
 
 static void mln_worker_routine(struct mln_core_attr *attr)

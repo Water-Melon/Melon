@@ -228,6 +228,20 @@ return value:
 
 
 
+#### mln_rbtree_reset
+
+```c
+void mln_rbtree_reset(mln_rbtree_t *t);
+```
+
+Description:
+
+Reset red-black tree `t`, all nodes in it will be freed.
+
+Return value: none
+
+
+
 ### Example
 
 ```c

@@ -51,10 +51,10 @@ Return value: return event structure pointer if successful, otherwise return `NU
 
 
 
-#### mln_event_destroy
+#### mln_event_free
 
 ```c
-void mln_event_destroy(mln_event_t *ev);
+void mln_event_free(mln_event_t *ev);
 ```
 
 Description: Destroy the event structure.

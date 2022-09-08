@@ -51,10 +51,10 @@ mln_event_t *mln_event_init(void);
 
 
 
-#### mln_event_destroy
+#### mln_event_free
 
 ```c
-void mln_event_destroy(mln_event_t *ev);
+void mln_event_free(mln_event_t *ev);
 ```
 
 描述：销毁事件结构。

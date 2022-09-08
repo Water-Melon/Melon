@@ -86,5 +86,6 @@ extern void
 mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n) __NONNULL2(1,2);
 extern int
 mln_rbtree_scan_all(mln_rbtree_t *t, rbtree_act act, void *udata) __NONNULL2(1,2);
+extern void mln_rbtree_reset(mln_rbtree_t *t) __NONNULL1(1);
 #endif
 

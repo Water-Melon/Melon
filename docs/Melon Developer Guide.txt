@@ -418,6 +418,9 @@ Their definitions can be found in melon/include/mln_types.h.
        The first argument is the rbtree node. Second one is the data of rbtree node. And the last one is an user
        data passed by the third argument of mln_rbtree_scan_all().
 
+    l) void mln_rbtree_reset(mln_rbtree_t *t);
+       Reset rbtree. Every node in the tree will be freed.
+
   5) Path
     a) char *mln_path(void);
        Depending on the parameter of shell script 'install', the installation path can be specified.
@@ -815,8 +818,8 @@ Their definitions can be found in melon/include/mln_types.h.
      b) mln_event_t *mln_event_new(void);
         It initializes an event object.
 
-     c) void mln_event_destroy(mln_event_t *ev);
-        It destroys an event object.
+     c) void mln_event_free(mln_event_t *ev);
+        Free an event object.
 
      d) int mln_event_set_fd(mln_event_t *event,
                              int fd, 

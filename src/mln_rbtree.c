@@ -93,6 +93,25 @@ mln_rbtree_destroy(mln_rbtree_t *t)
     else free(t);
 }
 
+void mln_rbtree_reset(mln_rbtree_t *t)
+{
+    mln_rbtree_node_t *fr;
+    while ((fr = t->tail) != NULL) {
+        mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
+        mln_rbtree_node_free(t, fr);
+    }
+    while ((fr = t->free_head) != NULL) {
+        mln_rbtree_chain_del(&(t->free_head), &(t->free_tail), fr);
+        mln_rbtree_node_free(t, fr);
+    }
+
+    t->root = &(t->nil);
+    t->min = &(t->nil);
+    t->iter = NULL;
+    t->nr_node = 0;
+    t->del = 0;
+}
+
 /*rbtree successor*/
 mln_rbtree_node_t *
 mln_rbtree_successor(mln_rbtree_t *t, mln_rbtree_node_t *n)

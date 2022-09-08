@@ -298,7 +298,7 @@ int mln_fork_spawn(enum proc_state_type stype, \
         snprintf(fd_str, sizeof(fd_str)-1, "%d", \
                  mln_tcp_conn_get_fd(&master_conn));
         args[n_args] = fd_str;
-        if (master_ev != NULL) mln_event_destroy(master_ev);
+        if (master_ev != NULL) mln_event_free(master_ev);
         mln_log_destroy();
         if (execv(args[0], args) < 0) {
             mln_log(error, "execv error, %s\n", strerror(errno));

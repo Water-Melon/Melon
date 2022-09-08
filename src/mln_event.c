@@ -312,7 +312,7 @@ lp:
     }
 }
 
-void mln_event_destroy(mln_event_t *ev)
+void mln_event_free(mln_event_t *ev)
 {
     if (ev == NULL) return;
     mln_event_desc_t *ed;
