@@ -291,10 +291,10 @@ lp:
 #endif
     if (n < 0) {
         if (errno == EINTR) goto lp;
-        mln_log(error, "pipe recv error, fd:%d. %s\n", fd, strerror(errno));
+        mln_log(error, "socketpair recv error, fd:%d. %s\n", fd, strerror(errno));
         abort();
     } else if (n == 0) {
-        mln_log(error, "pipe closed, fd:%d.\n", fd);
+        mln_log(error, "socketpair closed, fd:%d.\n", fd);
         abort();
     }
     mln_rbtree_node_t *rn;

@@ -1,11 +1,8 @@
 ## Event
 
-Events in Melon are not supported across threads for two reasons:
+Events in Melon are not supported across threads, but **allows** individual threads to create their own event structures.
 
-1. The conventional multi-threading model is generally dominated by thread pools. Under the thread pool model, the main thread triggers events and then the lower tasks, and the child threads process tasks in synchronous mode.
-2. Under the conventional multi-process model, it is generally single-threaded, such as: Nginx
-
-Therefore, the event structure can only be used under a single thread. But **allows** individual threads to create their own event structures.
+**Note**: Do NOT put a file descriptor into a different thread's event model for processing.
 
 The system calls used by events vary according to different operating system platforms, and now support:
 

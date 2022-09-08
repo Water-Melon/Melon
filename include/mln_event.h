@@ -139,7 +139,7 @@ struct mln_event_s {
     mln_fheap_t             *ev_timer_heap;
     mln_rbtree_t            *ev_signal_tree;
     mln_u32_t                is_break:1;
-    mln_u32_t                in_main_thread:31;
+    mln_u32_t                padding:31;
     int                      rd_fd;
     int                      wr_fd;
 #if defined(MLN_EPOLL)
