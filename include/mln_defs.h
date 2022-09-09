@@ -38,8 +38,8 @@
     while (!(__sync_bool_compare_and_swap((lock_ptr), 0, 1)))
 #define mln_spin_unlock(lock_ptr) \
     __sync_bool_compare_and_swap((lock_ptr), 1, 0)
-#define mln_spin_init(lock_ptr) *(lock_ptr) = 0
-#define mln_spin_destroy(lock_ptr) *(lock_ptr) = 0
+#define mln_spin_init(lock_ptr) (*(lock_ptr) = 0)
+#define mln_spin_destroy(lock_ptr) (*(lock_ptr) = 0)
 
 #elif defined(i386) || defined(__x86_64)
 
@@ -49,8 +49,8 @@ extern int spin_trylock(void *lock);
 #define mln_spin_lock(lock_ptr) spin_lock((lock_ptr))
 #define mln_spin_unlock(lock_ptr) spin_unlock((lock_ptr))
 #define mln_spin_trylock(lock_ptr) spin_trylock((lock_ptr))
-#define mln_spin_init(lock_ptr) *(lock_ptr) = 0
-#define mln_spin_destroy(lock_ptr) *(lock_ptr) = 0
+#define mln_spin_init(lock_ptr) (*(lock_ptr) = 0)
+#define mln_spin_destroy(lock_ptr) (*(lock_ptr) = 0)
 
 #else
 

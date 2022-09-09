@@ -4,6 +4,7 @@
  */
 #include "mln_iothread.h"
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -129,7 +130,7 @@ int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothrea
 
 int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
 {
-    int fd;
+    int fd, rc;
     mln_s8_t buf[512];
     pthread_mutex_t *plock;
     mln_iothread_msg_t *msg;
@@ -149,11 +150,6 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
 
     pthread_mutex_lock(plock);
 
-    while (1) {
-        if (recv(fd, buf, sizeof(buf), 0) <= 0)
-            break;
-    }
-
     while ((msg = *head) != NULL) {
         mln_iothread_msg_chain_del(head, tail, msg);
         if (t->handler != NULL)
@@ -162,6 +158,12 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
             pthread_mutex_unlock(&(msg->mutex));
         } else {
             mln_iothread_msg_free(msg);
+        }
+    }
+
+    while (1) {
+        if ((rc = recv(fd, buf, sizeof(buf), 0)) <= 0) {
+            break;
         }
     }
 
