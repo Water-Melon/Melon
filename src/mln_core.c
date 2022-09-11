@@ -26,16 +26,17 @@
 #include <netdb.h>
 #endif
 
+static void mln_init_notice(void);
 #if !defined(WIN32)
 static void mln_worker_routine(struct mln_core_attr *attr);
 static void mln_master_routine(struct mln_core_attr *attr);
 static int mln_get_framework_status(void);
 static void mln_sig_conf_reload(int signo);
 static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data);
-#endif
-static void mln_init_notice(void);
 
 static mln_event_t *_ev = NULL;
+#endif
+
 
 int mln_core_init(struct mln_core_attr *attr)
 {
