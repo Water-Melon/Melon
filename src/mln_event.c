@@ -1071,13 +1071,17 @@ void mln_event_dispatch(mln_event_t *event)
             tm.tv_usec = M_EV_TIMEOUT_US;
             nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
             if (nfds < 0) {
+#if !defined(WIN32)
                 if (errno == EINTR || errno == ENOMEM) {
+#endif
                     pthread_mutex_unlock(&event->fd_lock);
                     continue;
+#if !defined(WIN32)
                 } else {
                     mln_log(error, "select error. %s\n", strerror(errno));
                     abort();
                 }
+#endif
             } else if (nfds == 0) {
                 pthread_mutex_unlock(&event->fd_lock);
                 continue;
