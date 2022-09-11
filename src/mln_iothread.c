@@ -133,7 +133,7 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
     int fd;
     mln_s8_t c;
     pthread_mutex_t *plock;
-    mln_iothread_msg_t *msg;
+    mln_iothread_msg_t *msg, *pos;
     mln_iothread_msg_t **head, **tail;
 
     if (from == io_thread) {
@@ -150,6 +150,7 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
 
     pthread_mutex_lock(plock);
 
+    pos = *head;
     while ((msg = *head) != NULL) {
         mln_iothread_msg_chain_del(head, tail, msg);
         if (t->handler != NULL)
@@ -161,7 +162,8 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
         }
     }
 
-    (void)recv(fd, &c, 1, 0);
+    if (pos != *head)
+        (void)recv(fd, &c, 1, 0);
 
     pthread_mutex_unlock(plock);
 
