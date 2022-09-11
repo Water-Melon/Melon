@@ -111,8 +111,8 @@ int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothrea
 
     if (*head == *tail && *head == msg && send(fd, " ", 1, 0) != 1) {
         mln_iothread_msg_chain_del(head, tail, msg);
+        if (feedback) pthread_mutex_unlock(&(msg->mutex));
         pthread_mutex_unlock(plock);
-        pthread_mutex_unlock(&(msg->mutex));
         mln_iothread_msg_free(msg);
         return 1;
     }
@@ -130,8 +130,8 @@ int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothrea
 
 int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
 {
-    int fd, rc;
-    mln_s8_t buf[512];
+    int fd;
+    mln_s8_t c;
     pthread_mutex_t *plock;
     mln_iothread_msg_t *msg;
     mln_iothread_msg_t **head, **tail;
@@ -161,11 +161,7 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
         }
     }
 
-    while (1) {
-        if ((rc = recv(fd, buf, sizeof(buf), 0)) <= 0) {
-            break;
-        }
-    }
+    (void)recv(fd, &c, 1, 0);
 
     pthread_mutex_unlock(plock);
 

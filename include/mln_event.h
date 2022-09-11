@@ -40,9 +40,6 @@
 #define M_EV_FD_MASK ((mln_u32_t)0xff)
 #define M_EV_UNLIMITED -1
 #define M_EV_UNMODIFIED -2
-/*for signal*/
-#define M_EV_SET ((mln_u32_t)0x100)
-#define M_EV_UNSET ((mln_u32_t)0x200)
 /*for epool, kqueue, select*/
 #define M_EV_TIMEOUT_US 10000 /*10ms*/
 #define M_EV_TIMEOUT_MS 10
@@ -53,17 +50,14 @@ typedef struct mln_event_desc_s mln_event_desc_t;
 
 typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);
 typedef void (*ev_tm_handler)  (mln_event_t *, void *);
-typedef void (*ev_sig_handler) (mln_event_t *, int, void *);
 /*
  * return value: 0 - no active, 1 - active
  */
-typedef int  (*ev_cust_check) (mln_event_desc_t *, void *);
 typedef void (*dispatch_callback) (mln_event_t *, void *);
 
 enum mln_event_type {
     M_EV_FD,
     M_EV_TM,
-    M_EV_SIG
 };
 
 typedef struct mln_event_fd_s {
@@ -94,19 +88,12 @@ typedef struct mln_event_tm_s {
     mln_uauto_t              end_tm;/*us*/
 } mln_event_tm_t;
 
-typedef struct mln_event_sig_s {
-    void                    *data;
-    ev_sig_handler           handler;
-    int                      signo;
-} mln_event_sig_t;
-
 struct mln_event_desc_s {
     enum mln_event_type      type;
     mln_u32_t                flag;
     union {
         mln_event_fd_t       fd;
         mln_event_tm_t       tm;
-        mln_event_sig_t      sig;
     } data;
     struct mln_event_desc_s *prev;
     struct mln_event_desc_s *next;
@@ -114,20 +101,7 @@ struct mln_event_desc_s {
     struct mln_event_desc_s *act_next;
 };
 
-typedef struct {
-    mln_event_desc_t        *sig_head;
-    mln_event_desc_t        *sig_tail;
-    int                      signo;
-} mln_event_sig_chain_t;
-
-typedef struct {
-    int                      signo;
-    mln_u32_t                refer_cnt;
-} mln_event_sig_refer_t;
-
 struct mln_event_s {
-    struct mln_event_s      *next;
-    struct mln_event_s      *prev;
     dispatch_callback        callback;
     void                    *callback_data;
     mln_rbtree_t            *ev_fd_tree;
@@ -137,15 +111,19 @@ struct mln_event_s {
     mln_event_desc_t        *ev_fd_active_tail;
     mln_fheap_t             *ev_fd_timeout_heap;
     mln_fheap_t             *ev_timer_heap;
-    mln_rbtree_t            *ev_signal_tree;
     mln_u32_t                is_break:1;
     mln_u32_t                padding:31;
     int                      rd_fd;
     int                      wr_fd;
+    pthread_mutex_t          fd_lock;
+    pthread_mutex_t          timer_lock;
+    pthread_mutex_t          cb_lock;
 #if defined(MLN_EPOLL)
     int                      epollfd;
+    int                      unusedfd;
 #elif defined(MLN_KQUEUE)
     int                      kqfd;
+    int                      unusedfd;
 #else
     int                      select_fd;
     fd_set                   rd_set;
@@ -154,7 +132,7 @@ struct mln_event_s {
 #endif
 };
 
-extern int mln_event_init(void);
+#define mln_event_set_signal signal
 extern mln_event_t *mln_event_new(void);
 extern void mln_event_free(mln_event_t *ev);
 extern void mln_event_dispatch(mln_event_t *event) __NONNULL1(1);
@@ -170,12 +148,6 @@ mln_event_set_timer(mln_event_t *event, \
                     mln_u32_t msec, \
                     void *data, \
                     ev_tm_handler tm_handler) __NONNULL1(1);
-extern int
-mln_event_set_signal(mln_event_t *event, \
-                     mln_u32_t flag, \
-                     int signo, \
-                     void *data, \
-                     ev_sig_handler sg_handler) __NONNULL1(1);
 extern void
 mln_event_set_fd_timeout_handler(mln_event_t *event, \
                                  int fd, \

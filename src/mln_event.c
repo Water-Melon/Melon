@@ -24,32 +24,10 @@ MLN_CHAIN_FUNC_DECLARE(ev_fd_wait, \
 MLN_CHAIN_FUNC_DECLARE(ev_fd_active, \
                        mln_event_desc_t, \
                        static inline void,);
-MLN_CHAIN_FUNC_DECLARE(event, \
-                       mln_event_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DECLARE(ev_sig, \
-                       mln_event_desc_t, \
-                       static inline void,);
-#if !defined(WIN32)
-static void mln_event_atfork_lock(void);
-static void mln_event_atfork_unlock(void);
-#endif
 static inline void
 mln_event_desc_free(void *data);
 static int
 mln_event_rbtree_fd_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
-static int
-mln_event_rbtree_sig_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
-static void
-mln_event_rbtree_sig_chain_free(void *data);
-static inline void
-mln_event_sig_decrease_refer(int signo);
-static int
-mln_event_rbtree_refer_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
-static void
-mln_event_rbtree_refer_free(void *data);
-static int
-mln_event_rbtree_refer_init(void);
 static int
 mln_event_fd_timeout_cmp(const void *k1, const void *k2);
 static void
@@ -64,14 +42,10 @@ static inline void
 mln_event_set_fd_block(int fd);
 static inline void
 mln_event_set_fd_clr(mln_event_t *event, int fd) __NONNULL1(1);
-static void
-mln_event_signal_handler(int signo);
 static inline void
 mln_event_deal_active_fd(mln_event_t *event) __NONNULL1(1);
-static inline void
-mln_event_deal_fd_timeout(mln_event_t *event, int *ret) __NONNULL2(1,2);
-static inline void
-mln_event_deal_timer(mln_event_t *event, int *ret) __NONNULL2(1,2);
+static inline void mln_event_deal_fd_timeout(mln_event_t *event);
+static inline void mln_event_deal_timer(mln_event_t *event);
 static inline int
 mln_event_set_fd_normal(mln_event_t *event, \
                         mln_event_desc_t *ed, \
@@ -92,18 +66,6 @@ mln_event_set_fd_append(mln_event_t *event, \
                         int other_mark);
 static int
 mln_event_set_fd_timeout(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms);
-static inline int
-mln_event_set_signal_set(mln_event_t *event, \
-                         int signo, \
-                         void *data, \
-                         ev_sig_handler sg_handler);
-static inline int
-mln_event_set_signal_unset(mln_event_t *event, \
-                           int signo, \
-                           void *data, \
-                           ev_sig_handler sg_handler);
-static void
-mln_event_signal_fd_handler(mln_event_t *ev, int fd, void *data) __NONNULL1(1);
 
 /*varliables*/
 mln_event_desc_t fheap_min = {
@@ -111,39 +73,16 @@ mln_event_desc_t fheap_min = {
     {{NULL, NULL, 0}},
     NULL, NULL, NULL, NULL
 };
-mln_rbtree_t *ev_signal_refer_tree = NULL;
-mln_event_t  *event_chain_head = NULL;
-mln_event_t  *event_chain_tail = NULL;
-mln_spin_t    event_lock;
-mln_u32_t     is_lock_init = 0;
-
-
-int mln_event_init(void)
-{
-    if (is_lock_init) return -1;
-
-    mln_spin_init(&event_lock);
-    is_lock_init = 1;
-    if (pthread_atfork(mln_event_atfork_lock, \
-                       mln_event_atfork_unlock, \
-                       mln_event_atfork_unlock) != 0)
-    {
-        return -1;
-    }
-
-    return 0;
-}
 
 mln_event_t *mln_event_new(void)
 {
+    int rc;
     mln_event_t *ev;
     ev = (mln_event_t *)malloc(sizeof(mln_event_t));
     if (ev == NULL) {
         mln_log(error, "No memory.\n");
         return NULL;
     }
-    ev->next = NULL;
-    ev->prev = NULL;
     ev->callback = NULL;
     ev->callback_data = NULL;
     struct mln_rbtree_attr rbattr;
@@ -191,38 +130,30 @@ mln_event_t *mln_event_new(void)
         mln_log(error, "No memory.\n");
         goto err3;
     }
-    /*signal rbtree*/
-    rbattr.pool = NULL;
-    rbattr.pool_alloc = NULL;
-    rbattr.pool_free = NULL;
-    rbattr.cmp = mln_event_rbtree_sig_cmp;
-    rbattr.data_free = mln_event_rbtree_sig_chain_free;
-    rbattr.cache = 0;
-    ev->ev_signal_tree = mln_rbtree_init(&rbattr);
-    if (ev->ev_signal_tree == NULL) {
-        mln_log(error, "No memory.\n");
-        goto err4;
-    }
     ev->is_break = 0;
-    int fds[2];
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
-        mln_log(error, "socketpair error. %s\n", strerror(errno));
-        goto err5;
-    }
-    ev->rd_fd = fds[0];
-    ev->wr_fd = fds[1];
 #if defined(MLN_EPOLL)
+    ev->epollfd = ev->unusedfd = -1;
     ev->epollfd = epoll_create(M_EV_EPOLL_SIZE);
     if (ev->epollfd < 0) {
         mln_log(error, "epoll_create error. %s\n", strerror(errno));
-        goto err6;
+        goto err4;
+    }
+    if ((ev->unusedfd = epoll_create(M_EV_EPOLL_SIZE)) < 0) {
+        mln_log(error, "epoll_create error. %s\n", strerror(errno));
+        close(ev->epollfd);
+        goto err4;
     }
 #elif defined(MLN_KQUEUE)
+    ev->kqfd = ev->unusedfd = -1;
     ev->kqfd = kqueue();
     if (ev->kqfd < 0) {
         mln_log(error, "kqueue error. %s\n", strerror(errno));
-        goto err6;
-        return NULL;
+        goto err4;
+    }
+    if ((ev->unusedfd = kqueue()) < 0) {
+        mln_log(error, "kqueue error. %s\n", strerror(errno));
+        close(ev->kqfd);
+        goto err4;
     }
 #else
     ev->select_fd = 3;
@@ -230,32 +161,28 @@ mln_event_t *mln_event_new(void)
     FD_ZERO(&(ev->wr_set));
     FD_ZERO(&(ev->err_set));
 #endif
-    if (mln_event_set_fd(ev, \
-                         ev->rd_fd, \
-                         M_EV_RECV, \
-                         M_EV_UNLIMITED, \
-                         NULL, \
-                         mln_event_signal_fd_handler) < 0)
-        goto err7;
-    mln_spin_lock(&event_lock);
-    event_chain_add(&event_chain_head, &event_chain_tail, ev);
-    mln_spin_unlock(&event_lock);
+
+    rc = pthread_mutex_init(&ev->fd_lock, NULL);
+    if (pthread_mutex_init(&ev->timer_lock, NULL) != 0)
+        rc = -1;
+    if (pthread_mutex_init(&ev->cb_lock, NULL) != 0)
+        rc = -1;
+    if (rc) {
+        pthread_mutex_destroy(&ev->fd_lock);
+        pthread_mutex_destroy(&ev->timer_lock);
+        pthread_mutex_destroy(&ev->cb_lock);
+#if defined(MLN_EPOLL)
+        close(ev->epollfd);
+        close(ev->unusedfd);
+#elif defined(MLN_KQUEUE)
+        close(ev->kqfd);
+        close(ev->unusedfd);
+#endif
+        goto err4;
+    }
+
     return ev;
 
-err7:
-#if defined(MLN_EPOLL)
-    close(ev->epollfd);
-err6:
-#elif defined(MLN_KQUEUE)
-    close(ev->kqfd);
-err6:
-#else
-    /*do nothing*/
-#endif    
-    mln_socket_close(ev->rd_fd);
-    mln_socket_close(ev->wr_fd);
-err5:
-    mln_rbtree_destroy(ev->ev_signal_tree);
 err4:
     mln_fheap_destroy(ev->ev_timer_heap);
 err3:
@@ -267,60 +194,11 @@ err1:
     return NULL;
 }
 
-#if !defined(WIN32)
-static void mln_event_atfork_lock(void)
-{
-    mln_spin_lock(&event_lock);
-}
-
-static void mln_event_atfork_unlock(void)
-{
-    mln_spin_unlock(&event_lock);
-}
-#endif
-
-static void
-mln_event_signal_fd_handler(mln_event_t *ev, int fd, void *data)
-{
-    int signo = 0, n;
-lp:
-#if defined(WIN32)
-    n = recv(fd, (char *)(&signo), sizeof(signo), 0);
-#else
-    n = recv(fd, &signo, sizeof(signo), 0);
-#endif
-    if (n < 0) {
-        if (errno == EINTR) goto lp;
-        mln_log(error, "socketpair recv error, fd:%d. %s\n", fd, strerror(errno));
-        abort();
-    } else if (n == 0) {
-        mln_log(error, "socketpair closed, fd:%d.\n", fd);
-        abort();
-    }
-    mln_rbtree_node_t *rn;
-    mln_event_sig_chain_t esc, *escp;
-    esc.signo = signo;
-    rn = mln_rbtree_search(ev->ev_signal_tree, \
-                           ev->ev_signal_tree->root, \
-                           &esc);
-    if (mln_rbtree_null(rn, ev->ev_signal_tree)) return;
-    escp = (mln_event_sig_chain_t *)(rn->data);
-    mln_event_desc_t *ed;
-    for (ed = escp->sig_head; ed != NULL; ed = ed->next) {
-        if (ed->data.sig.handler != NULL)
-            ed->data.sig.handler(ev, signo, ed->data.sig.data);
-    }
-}
-
 void mln_event_free(mln_event_t *ev)
 {
     if (ev == NULL) return;
     mln_event_desc_t *ed;
-    mln_spin_lock(&event_lock);
     mln_fheap_destroy(ev->ev_fd_timeout_heap);
-    if (ev->next != NULL || ev->prev != NULL || event_chain_head == ev) {
-        event_chain_del(&event_chain_head, &event_chain_tail, ev);
-    }
     mln_rbtree_destroy(ev->ev_fd_tree);
     while ((ed = ev->ev_fd_wait_head) != NULL) {
         ev_fd_wait_chain_del(&(ev->ev_fd_wait_head), \
@@ -329,22 +207,19 @@ void mln_event_free(mln_event_t *ev)
         mln_event_desc_free(ed);
     }
     mln_fheap_destroy(ev->ev_timer_heap);
-    mln_rbtree_destroy(ev->ev_signal_tree);
-    mln_socket_close(ev->rd_fd);
-    mln_socket_close(ev->wr_fd);
 #if defined(MLN_EPOLL)
     close(ev->epollfd);
+    close(ev->unusedfd);
 #elif defined(MLN_KQUEUE)
     close(ev->kqfd);
+    close(ev->unusedfd);
 #else
     /*select do nothing.*/
 #endif
+    pthread_mutex_destroy(&ev->fd_lock);
+    pthread_mutex_destroy(&ev->timer_lock);
+    pthread_mutex_destroy(&ev->cb_lock);
     free(ev);
-    if (event_chain_head == NULL) {
-        mln_rbtree_destroy(ev_signal_refer_tree);
-        ev_signal_refer_tree = NULL;
-    }
-    mln_spin_unlock(&event_lock);
 }
 
 static inline void
@@ -352,203 +227,6 @@ mln_event_desc_free(void *data)
 {
     if (data == NULL) return;
     free(data);
-}
-
-/*
- * ev_signal
- */
-int mln_event_set_signal(mln_event_t *event, \
-                         mln_u32_t flag, \
-                         int signo, \
-                         void *data, \
-                         ev_sig_handler sg_handler)
-{
-    int ret;
-    switch (flag) {
-        case M_EV_SET:
-            if (ev_signal_refer_tree == NULL) {
-                if (mln_event_rbtree_refer_init() < 0)
-                    return -1;
-            }
-            mln_spin_lock(&event_lock);
-            ret = mln_event_set_signal_set(event, signo, data, sg_handler);
-            mln_spin_unlock(&event_lock);
-            if (ret < 0) return -1;
-            break;
-        case M_EV_UNSET:
-            if (ev_signal_refer_tree == NULL) {
-                mln_log(error, "No signal set.\n");
-                abort();
-            }
-            mln_spin_lock(&event_lock);
-            ret = mln_event_set_signal_unset(event, signo, data, sg_handler);
-            mln_spin_unlock(&event_lock);
-            if (ret < 0) return -1;
-            break;
-        default:
-            mln_log(error, "flag error. %x\n", flag);
-            abort();
-    }
-    return 0;
-}
-
-static inline int
-mln_event_set_signal_set(mln_event_t *event, \
-                         int signo, \
-                         void *data, \
-                         ev_sig_handler sg_handler)
-{
-    mln_event_desc_t *ed;
-    ed = (mln_event_desc_t *)malloc(sizeof(mln_event_desc_t));
-    if (ed == NULL) {
-        mln_log(error, "No memory.\n");
-        return -1;
-    }
-    ed->type = M_EV_SIG;
-    ed->flag = 0;
-    ed->data.sig.data = data;
-    ed->data.sig.handler = sg_handler;
-    ed->data.sig.signo = signo;
-    ed->prev = NULL;
-    ed->next = NULL;
-    ed->act_prev = NULL;
-    ed->act_next = NULL;
-    mln_rbtree_node_t *rn;
-    mln_event_sig_chain_t esc, *escp;
-    esc.signo = signo;
-    rn = mln_rbtree_search(event->ev_signal_tree, \
-                           event->ev_signal_tree->root, \
-                           &esc);
-    if (mln_rbtree_null(rn, event->ev_signal_tree)) {
-        escp = (mln_event_sig_chain_t *)malloc(sizeof(mln_event_sig_chain_t));
-        if (escp == NULL) {
-            mln_log(error, "No memory.\n");
-            free(ed);
-            return -1;
-        }
-        escp->signo = signo;
-        escp->sig_head = NULL;
-        escp->sig_tail = NULL;
-        rn = mln_rbtree_node_new(event->ev_signal_tree, escp);
-        if (rn == NULL) {
-            mln_log(error, "No memory.\n");
-            free(escp);
-            free(ed);
-            return -1;
-        }
-        mln_rbtree_insert(event->ev_signal_tree, rn);
-    }
-    escp = (mln_event_sig_chain_t *)(rn->data);
-    ev_sig_chain_add(&(escp->sig_head), &(escp->sig_tail), ed);
-
-    mln_event_sig_refer_t esr, *esrp;
-    esr.signo = signo;
-    rn = mln_rbtree_search(ev_signal_refer_tree, \
-                           ev_signal_refer_tree->root, \
-                           &esr);
-    if (mln_rbtree_null(rn, ev_signal_refer_tree)) {
-        esrp = (mln_event_sig_refer_t *)malloc(sizeof(mln_event_sig_refer_t));
-        if (esrp == NULL) {
-            mln_log(error, "No memory.\n");
-            ev_sig_chain_del(&(escp->sig_head), &(escp->sig_tail), ed);
-            free(ed);
-            return -1;
-        }
-        esrp->signo = signo;
-        esrp->refer_cnt = 0;
-        rn = mln_rbtree_node_new(ev_signal_refer_tree, esrp);
-        if (rn == NULL) {
-            mln_log(error, "No memory.\n");
-            free(esrp);
-            ev_sig_chain_del(&(escp->sig_head), &(escp->sig_tail), ed);
-            free(ed);
-            return -1;
-        }
-        mln_rbtree_insert(ev_signal_refer_tree, rn);
-    }
-    esrp = (mln_event_sig_refer_t *)(rn->data);
-    if (esrp->refer_cnt++ == 0) {
-#if defined(WIN32)
-        signal(SIGABRT, mln_event_signal_handler);
-        signal(SIGFPE, mln_event_signal_handler);
-        signal(SIGILL, mln_event_signal_handler);
-        signal(SIGINT, mln_event_signal_handler);
-        signal(SIGSEGV, mln_event_signal_handler);
-        signal(SIGTERM, mln_event_signal_handler);
-#else
-        struct sigaction act;
-        memset(&act, 0, sizeof(act));
-        act.sa_handler = mln_event_signal_handler;
-        sigemptyset(&(act.sa_mask));
-        sigfillset(&(act.sa_mask));
-        if (sigaction(signo, &act, NULL) < 0) {
-            mln_log(error, "sigaction error, signo:%d. %s\n", \
-                    signo, strerror(errno));
-            abort();
-        }
-#endif
-    }
-    return 0;
-}
-
-static void
-mln_event_signal_handler(int signo)
-{
-    int n;
-    mln_event_t *ev;
-
-    mln_spin_lock(&event_lock);
-    for (ev = event_chain_head; ev != NULL; ev = ev->next) {
-lp:
-#if defined(WIN32)
-        n = send(ev->wr_fd, (char *)(&signo), sizeof(signo), 0);
-#else
-        n = send(ev->wr_fd, &signo, sizeof(signo), 0);
-#endif
-        if (n < 0) {
-            if (errno == EINTR) goto lp;
-            mln_log(error, "send error. %s\n", strerror(errno));
-            abort();
-        }
-    }
-    mln_spin_unlock(&event_lock);
-}
-
-static inline int
-mln_event_set_signal_unset(mln_event_t *event, \
-                           int signo, \
-                           void *data, \
-                           ev_sig_handler sg_handler)
-{
-    mln_rbtree_node_t *rn;
-    mln_event_sig_chain_t esc, *escp;
-    esc.signo = signo;
-    mln_event_desc_t *ed;
-    rn = mln_rbtree_search(event->ev_signal_tree, \
-                           event->ev_signal_tree->root, \
-                           &esc);
-    if (mln_rbtree_null(rn, event->ev_signal_tree)) {
-        mln_log(error, "signal %d not registed.\n", signo);
-        abort();
-    }
-    escp = (mln_event_sig_chain_t *)(rn->data);
-    for (ed = escp->sig_head; ed != NULL; ed = ed->next) {
-        if (ed->data.sig.data == data && \
-            ed->data.sig.handler == sg_handler)
-        break;
-    }
-    if (ed == NULL) {
-        mln_log(error, "signal %d handler not registered.\n", signo);
-        abort();
-    }
-    ev_sig_chain_del(&(escp->sig_head), &(escp->sig_tail), ed);
-    mln_event_desc_free(ed);
-    if (escp->sig_head == NULL) {
-        mln_rbtree_delete(event->ev_signal_tree, rn);
-        mln_rbtree_node_free(event->ev_signal_tree, rn);
-    }
-    mln_event_sig_decrease_refer(signo);
-    return 0;
 }
 
 /*
@@ -583,12 +261,13 @@ int mln_event_set_timer(mln_event_t *event, \
         free(ed);
         return -1;
     }
+    pthread_mutex_lock(&event->timer_lock);
     mln_fheap_insert(event->ev_timer_heap, fn);
+    pthread_mutex_unlock(&event->timer_lock);
     return 0;
 }
 
-static inline void
-mln_event_deal_timer(mln_event_t *event, int *ret)
+static inline void mln_event_deal_timer(mln_event_t *event)
 {
     mln_uauto_t now;
     struct timeval tv;
@@ -596,20 +275,34 @@ mln_event_deal_timer(mln_event_t *event, int *ret)
     now = tv.tv_sec * 1000000 + tv.tv_usec;
     mln_event_desc_t *ed;
     mln_fheap_node_t *fn;
-    while ( 1 ) {
-        fn = mln_fheap_minimum(event->ev_timer_heap);
-        if (fn == NULL) {
-            break;
-        }
-        *ret = -1;
-        ed = (mln_event_desc_t *)(fn->key);
-        if (ed->data.tm.end_tm > now) break;
-        fn = mln_fheap_extract_min(event->ev_timer_heap);
-        if (ed->data.tm.handler != NULL)
-            ed->data.tm.handler(event, ed->data.tm.data);
-        mln_fheap_node_destroy(event->ev_timer_heap, fn);
-        if (event->is_break) return;
+
+lp:
+    if (pthread_mutex_trylock(&event->timer_lock))
+        return;
+
+    fn = mln_fheap_minimum(event->ev_timer_heap);
+    if (fn == NULL) {
+        pthread_mutex_unlock(&event->timer_lock);
+        return;
     }
+
+    ed = (mln_event_desc_t *)(fn->key);
+    if (ed->data.tm.end_tm > now) {
+        pthread_mutex_unlock(&event->timer_lock);
+        return;
+    }
+
+    fn = mln_fheap_extract_min(event->ev_timer_heap);
+
+    pthread_mutex_unlock(&event->timer_lock);
+
+    if (ed->data.tm.handler != NULL)
+        ed->data.tm.handler(event, ed->data.tm.data);
+
+    mln_fheap_node_destroy(event->ev_timer_heap, fn);
+
+    if (!event->is_break)
+        goto lp;
 }
 
 /*
@@ -620,6 +313,7 @@ void mln_event_set_fd_timeout_handler(mln_event_t *event, \
                                       void *data, \
                                       ev_fd_handler timeout_handler)
 {
+    pthread_mutex_lock(&event->fd_lock);
     mln_event_desc_t tmp;
     memset(&tmp, 0, sizeof(tmp));
     tmp.type = M_EV_FD;
@@ -634,6 +328,7 @@ void mln_event_set_fd_timeout_handler(mln_event_t *event, \
     mln_event_desc_t *ed = (mln_event_desc_t *)(rn->data);
     ed->data.fd.timeout_data = data;
     ed->data.fd.timeout_handler = timeout_handler;
+    pthread_mutex_unlock(&event->fd_lock);
 }
 
 int mln_event_set_fd(mln_event_t *event, \
@@ -651,8 +346,10 @@ int mln_event_set_fd(mln_event_t *event, \
         mln_log(error, "fd or flag error.\n");
         abort();
     }
+    pthread_mutex_lock(&event->fd_lock);
     if (flag == M_EV_CLR) {
         mln_event_set_fd_clr(event, fd);
+        pthread_mutex_unlock(&event->fd_lock);
         return 0;
     }
     mln_event_desc_t tmp;
@@ -679,7 +376,10 @@ int mln_event_set_fd(mln_event_t *event, \
                                         data, \
                                         fd_handler, \
                                         1) < 0)
-            return -1;
+            {
+                pthread_mutex_unlock(&event->fd_lock);
+                return -1;
+            }
         } else {
             if (flag & M_EV_NONBLOCK) {
                 mln_event_set_fd_nonblock(fd);
@@ -694,8 +394,12 @@ int mln_event_set_fd(mln_event_t *event, \
                                         data, \
                                         fd_handler, \
                                         ((mln_event_desc_t *)(rn->data))->data.fd.is_clear?0:1) < 0)
-            return -1;
+            {
+                pthread_mutex_unlock(&event->fd_lock);
+                return -1;
+            }
         }
+        pthread_mutex_unlock(&event->fd_lock);
         return 0;
     }
     if (flag & M_EV_NONBLOCK) {
@@ -703,8 +407,11 @@ int mln_event_set_fd(mln_event_t *event, \
     } else {
         mln_event_set_fd_block(fd);
     }
-    if (mln_event_set_fd_normal(event, NULL, fd, flag, timeout_ms, data, fd_handler, 0) < 0)
+    if (mln_event_set_fd_normal(event, NULL, fd, flag, timeout_ms, data, fd_handler, 0) < 0) {
+        pthread_mutex_unlock(&event->fd_lock);
         return -1;
+    }
+    pthread_mutex_unlock(&event->fd_lock);
     return 0;
 }
 
@@ -749,7 +456,9 @@ mln_event_set_fd_normal(mln_event_t *event, \
         }
     } else {
         if (ed->data.fd.is_clear) {
+            mln_u32_t in_process = ed->data.fd.in_process;
             memset(&(ed->data.fd), 0, sizeof(mln_event_fd_t));
+            ed->data.fd.in_process = in_process;
             ed->data.fd.fd = fd;
             ed->flag = 0;
         } else {
@@ -1046,8 +755,10 @@ void mln_event_set_callback(mln_event_t *ev, \
                             dispatch_callback dc, \
                             void *dc_data)
 {
+    pthread_mutex_lock(&ev->cb_lock);
     ev->callback = dc;
     ev->callback_data = dc_data;
+    pthread_mutex_unlock(&ev->cb_lock);
 }
 
 /*
@@ -1105,264 +816,314 @@ mln_event_set_fd_block(int fd)
 void mln_event_dispatch(mln_event_t *event)
 {
     __uint32_t mod_event;
-    int nfds, n, oneshot, other_oneshot, ret;
+    int nfds, n, oneshot, other_oneshot;
     mln_event_desc_t *ed;
     struct epoll_event events[M_EV_EPOLL_SIZE], *ev, mod_ev;
+
     while (1) {
-        ret = 0;
-        if (event->callback) {
-            event->callback(event, event->callback_data);
-            BREAK_OUT();
+        if (!pthread_mutex_trylock(&event->cb_lock)) {
+            dispatch_callback cb = event->callback;
+            void *data = event->callback_data;
+            if (cb != NULL) {
+                pthread_mutex_unlock(&event->cb_lock);
+                cb(event, data);
+            } else {
+                pthread_mutex_unlock(&event->cb_lock);
+            }
         }
-        mln_event_deal_timer(event, &ret);
+        BREAK_OUT();
+        mln_event_deal_timer(event);
         BREAK_OUT();
         mln_event_deal_active_fd(event);
         BREAK_OUT();
-        mln_event_deal_fd_timeout(event, &ret);
+        mln_event_deal_fd_timeout(event);
         BREAK_OUT();
-        mln_event_deal_timer(event, &ret);
+        mln_event_deal_timer(event);
         BREAK_OUT();
-        if (ret < 0)
+
+        if (pthread_mutex_trylock(&event->fd_lock)) {
+            epoll_wait(event->unusedfd, events, M_EV_EPOLL_SIZE, M_EV_TIMEOUT_MS);
+        } else {
             nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, M_EV_TIMEOUT_MS);
-        else
-            nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, -1);
-        if (nfds < 0) {
-            if (errno == EINTR) continue;
-            else {
-                mln_log(error, "epoll_wait error. %s\n", strerror(errno));
-                abort();
-            }
-        } else if (nfds == 0) {
-            continue;
-        }
-        for (n = 0; n < nfds; ++n) {
-            mod_event = 0;
-            oneshot = 0;
-            other_oneshot = 0;
-            ev = &events[n];
-            ed = (mln_event_desc_t *)(ev->data.ptr);
-            if (ev->events & EPOLLIN) {
-                if (ed->data.fd.rd_oneshot) {
-                    ed->data.fd.rd_oneshot = 0;
-                    oneshot = 1;
-                    ed->flag &= (~M_EV_RECV);
-                }
-                ed->data.fd.active_flag |= M_EV_RECV;
-            }
-            if (ev->events & EPOLLOUT) {
-                if (ed->data.fd.wr_oneshot) {
-                    ed->data.fd.wr_oneshot = 0;
-                    oneshot = 1;
-                    ed->flag &= (~M_EV_SEND);
-                }
-                ed->data.fd.active_flag |= M_EV_SEND;
-            }
-            if (ev->events & EPOLLERR) {
-                if (ed->data.fd.err_oneshot) {
-                    ed->data.fd.err_oneshot = 0;
-                    oneshot = 1;
-                    ed->flag &= (~M_EV_ERROR);
-                }
-                ed->data.fd.active_flag |= M_EV_ERROR;
-            }
-            ev_fd_active_chain_add(&(event->ev_fd_active_head), \
-                                   &(event->ev_fd_active_tail), \
-                                   ed);
-            ed->data.fd.in_active = 1;
-            if (oneshot) {
-                if (ed->flag & M_EV_RECV) mod_event |= EPOLLIN;
-                if (ed->flag & M_EV_SEND) mod_event |= EPOLLOUT;
-                if (ed->flag & M_EV_ERROR) mod_event |= EPOLLERR;
-                if (ed->data.fd.rd_oneshot || \
-                    ed->data.fd.wr_oneshot || \
-                    ed->data.fd.err_oneshot)
-                {
-                    other_oneshot = 1;
-                }
-                memset(&mod_ev, 0, sizeof(mod_ev));
-                if (other_oneshot) {
-                    mod_ev.events = mod_event|EPOLLONESHOT;\
-                    mod_ev.data.ptr = ed;\
-                    epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+            if (nfds < 0) {
+                if (errno == EINTR) {
+                    pthread_mutex_unlock(&event->fd_lock);
+                    continue;
                 } else {
-                    mod_ev.events = mod_event;\
-                    mod_ev.data.ptr = ed;\
-                    epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+                    mln_log(error, "epoll_wait error. %s\n", strerror(errno));
+                    abort();
+                }
+            } else if (nfds == 0) {
+                pthread_mutex_unlock(&event->fd_lock);
+                continue;
+            }
+            for (n = 0; n < nfds; ++n) {
+                mod_event = 0;
+                oneshot = 0;
+                other_oneshot = 0;
+                ev = &events[n];
+                ed = (mln_event_desc_t *)(ev->data.ptr);
+                if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+                    continue;
+
+                if (ev->events & EPOLLIN) {
+                    if (ed->data.fd.rd_oneshot) {
+                        ed->data.fd.rd_oneshot = 0;
+                        oneshot = 1;
+                        ed->flag &= (~M_EV_RECV);
+                    }
+                    ed->data.fd.active_flag |= M_EV_RECV;
+                }
+                if (ev->events & EPOLLOUT) {
+                    if (ed->data.fd.wr_oneshot) {
+                        ed->data.fd.wr_oneshot = 0;
+                        oneshot = 1;
+                        ed->flag &= (~M_EV_SEND);
+                    }
+                    ed->data.fd.active_flag |= M_EV_SEND;
+                }
+                if (ev->events & EPOLLERR) {
+                    if (ed->data.fd.err_oneshot) {
+                        ed->data.fd.err_oneshot = 0;
+                        oneshot = 1;
+                        ed->flag &= (~M_EV_ERROR);
+                    }
+                    ed->data.fd.active_flag |= M_EV_ERROR;
+                }
+                ev_fd_active_chain_add(&(event->ev_fd_active_head), \
+                                       &(event->ev_fd_active_tail), \
+                                       ed);
+                ed->data.fd.in_active = 1;
+                if (oneshot) {
+                    if (ed->flag & M_EV_RECV) mod_event |= EPOLLIN;
+                    if (ed->flag & M_EV_SEND) mod_event |= EPOLLOUT;
+                    if (ed->flag & M_EV_ERROR) mod_event |= EPOLLERR;
+                    if (ed->data.fd.rd_oneshot || \
+                        ed->data.fd.wr_oneshot || \
+                        ed->data.fd.err_oneshot)
+                    {
+                        other_oneshot = 1;
+                    }
+                    memset(&mod_ev, 0, sizeof(mod_ev));
+                    if (other_oneshot) {
+                        mod_ev.events = mod_event|EPOLLONESHOT;\
+                        mod_ev.data.ptr = ed;\
+                        epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+                    } else {
+                        mod_ev.events = mod_event;\
+                        mod_ev.data.ptr = ed;\
+                        epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+                    }
                 }
             }
+            pthread_mutex_unlock(&event->fd_lock);
         }
     }
 }
 #elif defined(MLN_KQUEUE)
 void mln_event_dispatch(mln_event_t *event)
 {
-    int nfds, n, ret;
+    int nfds, n;
     mln_event_desc_t *ed;
     struct kevent events[M_EV_EPOLL_SIZE], *ev, mod;
     struct timespec ts;
+
     while (1) {
-        ret = 0;
-        if (event->callback) {
-            event->callback(event, event->callback_data);
-            BREAK_OUT();
+        if (!pthread_mutex_trylock(&event->cb_lock)) {
+            dispatch_callback cb = event->callback;
+            void *data = event->callback_data;
+            if (cb != NULL) {
+                pthread_mutex_unlock(&event->cb_lock);
+                cb(event, data);
+            } else {
+                pthread_mutex_unlock(&event->cb_lock);
+            }
         }
-        mln_event_deal_timer(event, &ret);
+        BREAK_OUT();
+        mln_event_deal_timer(event);
         BREAK_OUT();
         mln_event_deal_active_fd(event);
         BREAK_OUT();
-        mln_event_deal_fd_timeout(event, &ret);
+        mln_event_deal_fd_timeout(event);
         BREAK_OUT();
-        mln_event_deal_timer(event, &ret);
+        mln_event_deal_timer(event);
         BREAK_OUT();
-        if (ret < 0) {
+
+        if (pthread_mutex_trylock(&event->fd_lock)) {
+            ts.tv_sec = 0;
+            ts.tv_nsec = M_EV_TIMEOUT_NS;
+            kevent(event->unusedfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
+        } else {
             ts.tv_sec = 0;
             ts.tv_nsec = M_EV_TIMEOUT_NS;
             nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
-        } else {
-            nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, NULL);
-        }
-        if (nfds < 0) {
-            if (errno == EINTR) continue;
-            else {
-                mln_log(error, "kevent error. %s\n", strerror(errno));
-                abort();
+            if (nfds < 0) {
+                if (errno == EINTR) {
+                    pthread_mutex_unlock(&event->fd_lock);
+                    continue;
+                } else {
+                    mln_log(error, "kevent error. %s\n", strerror(errno));
+                    abort();
+                }
+            } else if (nfds == 0) {
+                pthread_mutex_unlock(&event->fd_lock);
+                continue;
             }
-        } else if (nfds == 0) {
-            continue;
-        }
-        for (n = 0; n < nfds; ++n) {
-            ev = &events[n];
-            ed = (mln_event_desc_t *)(ev->udata);
-            if (ev->filter == EVFILT_READ) {
-                ed->data.fd.active_flag |= M_EV_RECV;
-                if (ed->data.fd.rd_oneshot) {
-                    ed->data.fd.rd_oneshot = 0;
-                    EV_SET(&mod, ed->data.fd.fd, EVFILT_READ, EV_DISABLE, 0, 0, ed);
-                    if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
-                        mln_log(error, "kevent error. %s\n", strerror(errno));
-                        abort();
+            for (n = 0; n < nfds; ++n) {
+                ev = &events[n];
+                ed = (mln_event_desc_t *)(ev->udata);
+                if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+                    continue;
+
+                if (ev->filter == EVFILT_READ) {
+                    ed->data.fd.active_flag |= M_EV_RECV;
+                    if (ed->data.fd.rd_oneshot) {
+                        ed->data.fd.rd_oneshot = 0;
+                        EV_SET(&mod, ed->data.fd.fd, EVFILT_READ, EV_DISABLE, 0, 0, ed);
+                        if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
+                            mln_log(error, "kevent error. %s\n", strerror(errno));
+                            abort();
+                        }
+                        ed->flag &= (~M_EV_RECV);
                     }
-                    ed->flag &= (~M_EV_RECV);
                 }
-            }
-            if (ev->filter == EVFILT_WRITE) {
-                if (ed->data.fd.wr_oneshot) {
-                    ed->data.fd.wr_oneshot = 0;
-                    EV_SET(&mod, ed->data.fd.fd, EVFILT_WRITE, EV_DISABLE, 0, 0, ed);
-                    if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
-                        mln_log(error, "kevent error. %s\n", strerror(errno));
-                        abort();
+                if (ev->filter == EVFILT_WRITE) {
+                    if (ed->data.fd.wr_oneshot) {
+                        ed->data.fd.wr_oneshot = 0;
+                        EV_SET(&mod, ed->data.fd.fd, EVFILT_WRITE, EV_DISABLE, 0, 0, ed);
+                        if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
+                            mln_log(error, "kevent error. %s\n", strerror(errno));
+                            abort();
+                        }
+                        ed->flag &= (~M_EV_SEND);
                     }
-                    ed->flag &= (~M_EV_SEND);
+                    ed->data.fd.active_flag |= M_EV_SEND;
                 }
-                ed->data.fd.active_flag |= M_EV_SEND;
-            }
-            if ((ev->flags & EV_ERROR) && (ed->flag & M_EV_ERROR)) {
-                if (ed->data.fd.err_oneshot) {
-                    ed->data.fd.err_oneshot = 0;
-                    ed->flag &= ~(M_EV_ERROR);
+                if ((ev->flags & EV_ERROR) && (ed->flag & M_EV_ERROR)) {
+                    if (ed->data.fd.err_oneshot) {
+                        ed->data.fd.err_oneshot = 0;
+                        ed->flag &= ~(M_EV_ERROR);
+                    }
+                    ed->data.fd.active_flag |= M_EV_ERROR;
                 }
-                ed->data.fd.active_flag |= M_EV_ERROR;
+                ev_fd_active_chain_add(&(event->ev_fd_active_head), \
+                                       &(event->ev_fd_active_tail), \
+                                       ed);
+                ed->data.fd.in_active = 1;
             }
-            ev_fd_active_chain_add(&(event->ev_fd_active_head), \
-                                   &(event->ev_fd_active_tail), \
-                                   ed);
-            ed->data.fd.in_active = 1;
+            pthread_mutex_unlock(&event->fd_lock);
         }
     }
 }
 #else
 void mln_event_dispatch(mln_event_t *event)
 {
-    int nfds, fd, ret;
+    int nfds, fd;
     mln_event_desc_t *ed;
     fd_set *rd_set = &(event->rd_set);
     fd_set *wr_set = &(event->wr_set);
     fd_set *err_set = &(event->err_set);
     struct timeval tm;
     mln_u32_t move;
+
     while (1) {
-        ret = 0;
-        if (event->callback) {
-            event->callback(event, event->callback_data);
-            BREAK_OUT();
+        if (!pthread_mutex_trylock(&event->cb_lock)) {
+            dispatch_callback cb = event->callback;
+            void *data = event->callback_data;
+            if (cb != NULL) {
+                pthread_mutex_unlock(&event->cb_lock);
+                cb(event, data);
+            } else {
+                pthread_mutex_unlock(&event->cb_lock);
+            }
         }
-        mln_event_deal_timer(event, &ret);
+        BREAK_OUT();
+        mln_event_deal_timer(event);
         BREAK_OUT();
         mln_event_deal_active_fd(event);
         BREAK_OUT();
-        mln_event_deal_fd_timeout(event, &ret);
+        mln_event_deal_fd_timeout(event);
         BREAK_OUT();
-        mln_event_deal_timer(event, &ret);
+        mln_event_deal_timer(event);
         BREAK_OUT();
         event->select_fd = 1;
         FD_ZERO(rd_set);
         FD_ZERO(wr_set);
         FD_ZERO(err_set);
-        for (ed = event->ev_fd_wait_head; \
-             ed != NULL; \
-             ed = ed->next)
-        {
-            fd = ed->data.fd.fd;
-            if (ed->flag & M_EV_RECV) FD_SET(fd, rd_set);
-            if (ed->flag & M_EV_SEND) FD_SET(fd, wr_set);
-            if (ed->flag & M_EV_ERROR) FD_SET(fd, err_set);
-            if (fd >= event->select_fd)
-                event->select_fd = fd + 1;
-        }
-        if (ret < 0) {
+
+        if (pthread_mutex_trylock(&event->fd_lock)) {
+            tm.tv_sec = 0;
+            tm.tv_usec = M_EV_TIMEOUT_US;
+            select(event->select_fd, rd_set, wr_set, err_set, &tm);
+        } else {
+            for (ed = event->ev_fd_wait_head; \
+                 ed != NULL; \
+                 ed = ed->next)
+            {
+                fd = ed->data.fd.fd;
+                if (ed->flag & M_EV_RECV) FD_SET(fd, rd_set);
+                if (ed->flag & M_EV_SEND) FD_SET(fd, wr_set);
+                if (ed->flag & M_EV_ERROR) FD_SET(fd, err_set);
+                if (fd >= event->select_fd)
+                    event->select_fd = fd + 1;
+            }
             tm.tv_sec = 0;
             tm.tv_usec = M_EV_TIMEOUT_US;
             nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
-        } else {
-            nfds = select(event->select_fd, rd_set, wr_set, err_set, NULL);
-        }
-        if (nfds < 0) {
-            if (errno == EINTR || errno == ENOMEM) continue;
-            else {
-                mln_log(error, "select error. %s\n", strerror(errno));
-                abort();
-            }
-        } else if (nfds == 0) {
-            continue;
-        }
-        ed = event->ev_fd_wait_head;
-        for (; nfds > 0 && ed != NULL; ed = ed->next) {
-            move = 0;
-            fd = ed->data.fd.fd;
-            if (FD_ISSET(fd, rd_set)) {
-                ed->data.fd.active_flag |= M_EV_RECV;
-                if (ed->data.fd.rd_oneshot == 1) {
-                    ed->flag &= (~M_EV_RECV);
-                    ed->data.fd.rd_oneshot = 0;
+            if (nfds < 0) {
+                if (errno == EINTR || errno == ENOMEM) {
+                    pthread_mutex_unlock(&event->fd_lock);
+                    continue;
+                } else {
+                    mln_log(error, "select error. %s\n", strerror(errno));
+                    abort();
                 }
-                --nfds;
-                move = 1;
+            } else if (nfds == 0) {
+                pthread_mutex_unlock(&event->fd_lock);
+                continue;
             }
-            if (FD_ISSET(fd, wr_set)) {
-                ed->data.fd.active_flag |= M_EV_SEND;
-                if (ed->data.fd.wr_oneshot == 1) {
-                    ed->flag &= (~M_EV_SEND);
-                    ed->data.fd.wr_oneshot = 0;
+            ed = event->ev_fd_wait_head;
+            for (; nfds > 0 && ed != NULL; ed = ed->next) {
+                if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+                    continue;
+
+                move = 0;
+                fd = ed->data.fd.fd;
+                if (FD_ISSET(fd, rd_set)) {
+                    ed->data.fd.active_flag |= M_EV_RECV;
+                    if (ed->data.fd.rd_oneshot == 1) {
+                        ed->flag &= (~M_EV_RECV);
+                        ed->data.fd.rd_oneshot = 0;
+                    }
+                    --nfds;
+                    move = 1;
                 }
-                --nfds;
-                move = 1;
-            }
-            if (FD_ISSET(fd, err_set)) {
-                ed->data.fd.active_flag |= M_EV_ERROR;
-                if (ed->data.fd.err_oneshot == 1) {
-                    ed->flag &= (~M_EV_ERROR);
-                    ed->data.fd.err_oneshot = 0;
+                if (FD_ISSET(fd, wr_set)) {
+                    ed->data.fd.active_flag |= M_EV_SEND;
+                    if (ed->data.fd.wr_oneshot == 1) {
+                        ed->flag &= (~M_EV_SEND);
+                        ed->data.fd.wr_oneshot = 0;
+                    }
+                    --nfds;
+                    move = 1;
                 }
-                --nfds;
-                move = 1;
+                if (FD_ISSET(fd, err_set)) {
+                    ed->data.fd.active_flag |= M_EV_ERROR;
+                    if (ed->data.fd.err_oneshot == 1) {
+                        ed->flag &= (~M_EV_ERROR);
+                        ed->data.fd.err_oneshot = 0;
+                    }
+                    --nfds;
+                    move = 1;
+                }
+                if (move) {
+                    ev_fd_active_chain_add(&(event->ev_fd_active_head), \
+                                           &(event->ev_fd_active_tail), \
+                                           ed);
+                    ed->data.fd.in_active = 1;
+                }
             }
-            if (move) {
-                ev_fd_active_chain_add(&(event->ev_fd_active_head), \
-                                       &(event->ev_fd_active_tail), \
-                                       ed);
-                ed->data.fd.in_active = 1;
-            }
+            pthread_mutex_unlock(&event->fd_lock);
         }
     }
 }
@@ -1373,7 +1134,16 @@ mln_event_deal_active_fd(mln_event_t *event)
 {
     mln_event_desc_t *ed;
     mln_event_fd_t *ef;
-    while ((ed = event->ev_fd_active_head) != NULL) {
+    ev_fd_handler h;
+    void *data;
+    int fd;
+
+lp:
+    if (pthread_mutex_trylock(&event->fd_lock))
+        return;
+
+    ed = event->ev_fd_active_head;
+    if (ed != NULL) {
         ev_fd_active_chain_del(&(event->ev_fd_active_head), \
                                &(event->ev_fd_active_tail), \
                                ed);
@@ -1384,35 +1154,60 @@ mln_event_deal_active_fd(mln_event_t *event)
             ef->timeout_node = NULL;
             ef->end_us = 0;
         }
+
         ef->in_active = 0;
         ef->in_process = 1;
         if (ef->is_clear || event->is_break) ef->active_flag = 0;
+
         if (ef->active_flag & M_EV_RECV) {
-            if (ef->rcv_handler != NULL)
-                ef->rcv_handler(event, ef->fd, ef->rcv_data);
             ef->active_flag &= (~M_EV_RECV);
+            if (ef->rcv_handler != NULL) {
+                h = ef->rcv_handler;
+                data = ef->rcv_data;
+                fd = ef->fd;
+                pthread_mutex_unlock(&event->fd_lock);
+                h(event, fd, data);
+                pthread_mutex_lock(&event->fd_lock);
+            }
         }
         if (ef->is_clear || event->is_break) ef->active_flag = 0;
         if (ef->active_flag & M_EV_SEND) {
-            if (ef->snd_handler != NULL)
-                ef->snd_handler(event, ef->fd, ef->snd_data);
             ef->active_flag &= (~M_EV_SEND);
+            if (ef->snd_handler != NULL) {
+                h = ef->snd_handler;
+                data = ef->snd_data;
+                fd = ef->fd;
+                pthread_mutex_unlock(&event->fd_lock);
+                h(event, fd, data);
+                pthread_mutex_lock(&event->fd_lock);
+            }
         }
         if (ef->is_clear || event->is_break) ef->active_flag = 0;
         if (ef->active_flag & M_EV_ERROR) {
-            if (ef->err_handler != NULL)
-                ef->err_handler(event, ef->fd, ef->err_data);
             ef->active_flag &= (~M_EV_ERROR);
+            if (ef->err_handler != NULL) {
+                h = ef->err_handler;
+                data = ef->err_data;
+                fd = ef->fd;
+                pthread_mutex_unlock(&event->fd_lock);
+                h(event, fd, data);
+                pthread_mutex_lock(&event->fd_lock);
+            }
         }
         ef->in_process = 0;
-        if (ef->is_clear)
-            mln_event_set_fd_clr(event, ef->fd);
+
+        if (ef->is_clear) mln_event_set_fd_clr(event, ef->fd);
+
+        pthread_mutex_unlock(&event->fd_lock);
+
         if (event->is_break) return;
+        goto lp;
+    } else {
+        pthread_mutex_unlock(&event->fd_lock);
     }
 }
 
-static inline void
-mln_event_deal_fd_timeout(mln_event_t *event, int *ret)
+static inline void mln_event_deal_fd_timeout(mln_event_t *event)
 {
     mln_u64_t now;
     struct timeval tv;
@@ -1421,32 +1216,53 @@ mln_event_deal_fd_timeout(mln_event_t *event, int *ret)
     mln_event_desc_t *ed;
     mln_fheap_node_t *fn;
     mln_event_fd_t *ef;
-    while ( 1 ) {
-        fn = mln_fheap_minimum(event->ev_fd_timeout_heap);
-        if (fn == NULL) {
-            break;
-        }
-        *ret = -1;
-        ed = (mln_event_desc_t *)(fn->key);
-        ef = &(ed->data.fd);
-        if (ef->in_active) {
-            ev_fd_active_chain_del(&(event->ev_fd_active_head), \
-                                   &(event->ev_fd_active_tail), \
-                                   ed);
-            ef->in_active = 0;
-        }
-        ef->in_process = 1;
-        if (ef->end_us > now) break;
-        mln_fheap_delete(event->ev_fd_timeout_heap, fn);
-        mln_fheap_node_destroy(event->ev_fd_timeout_heap, fn);
-        ed->data.fd.timeout_node = NULL;
-        if (ed->data.fd.timeout_handler != NULL)
-            ed->data.fd.timeout_handler(event, ed->data.fd.fd, ed->data.fd.timeout_data);
-        ef->in_process = 0;
-        if (ef->is_clear)
-            mln_event_set_fd_clr(event, ef->fd);
-        if (event->is_break) return;
+    ev_fd_handler h;
+    void *data;
+    int fd;
+
+lp:
+    if (pthread_mutex_trylock(&event->fd_lock))
+        return;
+
+    fn = mln_fheap_minimum(event->ev_fd_timeout_heap);
+    if (fn == NULL) {
+        pthread_mutex_unlock(&event->fd_lock);
+        return;
     }
+    ed = (mln_event_desc_t *)(fn->key);
+    ef = &(ed->data.fd);
+    if (ef->in_active) {
+        ev_fd_active_chain_del(&(event->ev_fd_active_head), \
+                               &(event->ev_fd_active_tail), \
+                               ed);
+        ef->in_active = 0;
+    }
+    ef->in_process = 1;
+    if (ef->end_us > now) {
+        pthread_mutex_unlock(&event->fd_lock);
+        return;
+    }
+    mln_fheap_delete(event->ev_fd_timeout_heap, fn);
+    mln_fheap_node_destroy(event->ev_fd_timeout_heap, fn);
+    ed->data.fd.timeout_node = NULL;
+
+    if (ed->data.fd.timeout_handler != NULL) {
+        h = ed->data.fd.timeout_handler;
+        fd = ed->data.fd.fd;
+        data = ed->data.fd.timeout_data;
+        pthread_mutex_unlock(&event->fd_lock);
+        h(event, fd, data);
+        pthread_mutex_lock(&event->fd_lock);
+    }
+
+    ef->in_process = 0;
+
+    if (ef->is_clear) mln_event_set_fd_clr(event, ef->fd);
+
+    pthread_mutex_unlock(&event->fd_lock);
+
+    if (event->is_break) return;
+    goto lp;
 }
 
 /*
@@ -1458,94 +1274,6 @@ mln_event_rbtree_fd_cmp(const void *k1, const void *k2)
     mln_event_desc_t *ed1 = (mln_event_desc_t *)k1;
     mln_event_desc_t *ed2 = (mln_event_desc_t *)k2;
     return ed1->data.fd.fd - ed2->data.fd.fd;
-}
-
-static int
-mln_event_rbtree_sig_cmp(const void *k1, const void *k2)
-{
-    mln_event_sig_chain_t *esc1 = (mln_event_sig_chain_t *)k1;
-    mln_event_sig_chain_t *esc2 = (mln_event_sig_chain_t *)k2;
-    return esc1->signo - esc2->signo;
-}
-
-static void
-mln_event_rbtree_sig_chain_free(void *data)
-{
-    if (data == NULL) return;
-    mln_event_sig_chain_t *esc = (mln_event_sig_chain_t *)data;
-    mln_event_desc_t *ed;
-    while ((ed = esc->sig_head) != NULL) {
-        ev_sig_chain_del(&(esc->sig_head), &(esc->sig_tail), ed);
-        mln_event_desc_free(ed);
-        mln_event_sig_decrease_refer(esc->signo);
-    }
-    free(esc);
-}
-
-static inline void
-mln_event_sig_decrease_refer(int signo)
-{
-    mln_rbtree_node_t *rn;
-    mln_event_sig_refer_t esr, *ptr;
-    esr.signo = signo;
-    rn  = mln_rbtree_search(ev_signal_refer_tree, \
-                            ev_signal_refer_tree->root, \
-                            &esr);
-    if (mln_rbtree_null(rn, ev_signal_refer_tree)) return;
-    ptr = (mln_event_sig_refer_t *)(rn->data);
-    if (ptr->refer_cnt == 0) {
-        mln_log(error, "signal referrence shouldn't be 0.\n");
-        abort();
-    }
-    if ((--(ptr->refer_cnt)) == 0) {
-        mln_rbtree_delete(ev_signal_refer_tree, rn);
-        mln_rbtree_node_free(ev_signal_refer_tree, rn);
-    }
-}
-
-static int
-mln_event_rbtree_refer_cmp(const void *k1, const void *k2)
-{
-    mln_event_sig_refer_t *esr1 = (mln_event_sig_refer_t *)k1;
-    mln_event_sig_refer_t *esr2 = (mln_event_sig_refer_t *)k2;
-    return esr1->signo - esr2->signo;
-}
-
-static void
-mln_event_rbtree_refer_free(void *data)
-{
-    if (data == NULL) return ;
-    mln_event_sig_refer_t *esr = (mln_event_sig_refer_t *)data;
-#if defined(WIN32)
-    signal(esr->signo, SIG_DFL);
-#else
-    struct sigaction act;
-    memset(&act, 0, sizeof(act));
-    act.sa_handler = SIG_DFL;
-    if (sigaction(esr->signo, &act, NULL) != 0) {
-        mln_log(error, "sigaction error. %s\n", strerror(errno));
-        abort();
-    }
-#endif
-    free(data);
-}
-
-static int
-mln_event_rbtree_refer_init(void)
-{
-    struct mln_rbtree_attr rbattr;
-    rbattr.pool = NULL;
-    rbattr.pool_alloc = NULL;
-    rbattr.pool_free = NULL;
-    rbattr.cmp = mln_event_rbtree_refer_cmp;
-    rbattr.data_free = mln_event_rbtree_refer_free;
-    rbattr.cache = 0;
-    ev_signal_refer_tree = mln_rbtree_init(&rbattr);
-    if (ev_signal_refer_tree == NULL) {
-        mln_log(error, "No memory.\n");
-        return -1;
-    }
-    return 0;
 }
 
 /*
@@ -1598,13 +1326,3 @@ MLN_CHAIN_FUNC_DEFINE(ev_fd_active, \
                       static inline void, \
                       act_prev, \
                       act_next);
-MLN_CHAIN_FUNC_DEFINE(event, \
-                      mln_event_t, \
-                      static inline void, \
-                      prev, \
-                      next);
-MLN_CHAIN_FUNC_DEFINE(ev_sig, \
-                      mln_event_desc_t, \
-                      static inline void, \
-                      prev, \
-                      next);

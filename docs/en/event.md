@@ -1,9 +1,5 @@
 ## Event
 
-Events in Melon are not supported across threads, but **allows** individual threads to create their own event structures.
-
-**Note**: Do NOT put a file descriptor into a different thread's event model for processing.
-
 The system calls used by events vary according to different operating system platforms, and now support:
 
 - epoll
@@ -21,18 +17,6 @@ The system calls used by events vary according to different operating system pla
 
 
 ### Functions
-
-
-
-#### mln_event_init
-
-```c
-int mln_event_init(void);
-```
-
-Description: Initialize the necessary global data resources for the event. This function should be called before any new thread is created, and before `mln_event_new`. When the framework feature is enabled, this function will be called by `mln_core_init`, so the user does not need to call it explicitly.
-
-Return value: `0` on success, otherwise return `-1`
 
 
 
@@ -156,23 +140,14 @@ Return value: return `0` if successful, otherwise return `-1`
 #### mln_event_set_signal
 
 ```c
-int mln_event_set_signal(mln_event_t *event, mln_u32_t flag, int signo, void *data, ev_sig_handler sg_handler);
+typedef void (*sig_t)(int);
 
-typedef void (*ev_sig_handler) (mln_event_t *, int, void *);
+sig_t mln_event_set_signal(int signo, sig_t handle);
 ```
 
-Description: Set the signal event handler, where:
+Description: Set the signal handle. It is the alias of system `signal`.
 
-- `flag` is divided into two values, only one of the two can be set:
-   - `M_EV_SET` set signal event
-   - `M_EV_UNSET` unload signal event
-- `signo` is the signal value.
-- `data` is a custom user data structure.
-- `ev_sig_handler` is a signal processing function. The parameters of this function are: event structure, signal value, custom user data
-
-Since a signal allows multiple handlers to be set, which handler is unloaded when the signal is unloaded is matched by the `data` and `ev_sig_handler` pointer values.
-
-Return value: return `0` if successful, otherwise return `-1`
+Return value: The signal handle before setting.
 
 
 

@@ -30,10 +30,12 @@
 static void mln_worker_routine(struct mln_core_attr *attr);
 static void mln_master_routine(struct mln_core_attr *attr);
 static int mln_get_framework_status(void);
-static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data);
+static void mln_sig_conf_reload(int signo);
 static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data);
 #endif
 static void mln_init_notice(void);
+
+static mln_event_t *_ev = NULL;
 
 int mln_core_init(struct mln_core_attr *attr)
 {
@@ -42,10 +44,6 @@ int mln_core_init(struct mln_core_attr *attr)
         return -1;
     }
     if (mln_conf_set_hook(mln_log_reload, NULL) == NULL) {
-        return -1;
-    }
-
-    if (mln_event_init() < 0) {
         return -1;
     }
 
@@ -124,11 +122,9 @@ static void mln_master_routine(struct mln_core_attr *attr)
 {
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
+    if (_ev == NULL) _ev = ev;
     mln_fork_master_set_events(ev);
-    if (mln_event_set_signal(ev, M_EV_SET, SIGUSR2, NULL, mln_sig_conf_reload) < 0) {
-        mln_log(error, "mln_event_set_signal() failed.\n");
-        exit(1);
-    }
+    mln_event_set_signal(SIGUSR2, mln_sig_conf_reload);
     if (attr->master_process != NULL) attr->master_process(ev);
     mln_event_dispatch(ev);
     mln_event_free(ev);
@@ -138,6 +134,7 @@ static void mln_worker_routine(struct mln_core_attr *attr)
 {
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
+    if (_ev == NULL) _ev = ev;
     mln_fork_worker_set_events(ev);
 
     /* mln_process or mln_thread*/
@@ -173,9 +170,11 @@ static void mln_worker_routine(struct mln_core_attr *attr)
     }
 }
 
-static void mln_sig_conf_reload(mln_event_t *ev, int signo, void *data)
+static void mln_sig_conf_reload(int signo)
 {
-    if (mln_fork_scan_all(ev, mln_conf_reload_scan_handler, NULL) < 0) {
+    if (_ev == NULL) return;
+
+    if (mln_fork_scan_all(_ev, mln_conf_reload_scan_handler, NULL) < 0) {
         mln_log(error, "mln_fork_scan() failed.\n");
         return;
     }

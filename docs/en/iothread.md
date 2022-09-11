@@ -95,7 +95,7 @@ Description: According to the value of `t`, get the communication socket of the 
 
 Return value: socket descriptor
 
-**Note**: In the case of multiple user threads and multiple I/O threads, if you use `select`, `epoll`, `kqueue` and other event listening sockets, the user needs to deal with the problem of the crowd. The socket is only used to notify the other thread(s) that the thread(s) at the other end has a message sent.
+**Note**: The socket is only used to notify the other thread(s) that the thread(s) at the other end has a message sent. User can use epoll, kqueue, select and other event mechanisms to monitor.
 
 
 

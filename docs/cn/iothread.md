@@ -90,7 +90,7 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
 
 返回值：套接字描述符
 
-**注意**：对于多用户线程和多I/O线程的情况下，如果使用`select`，`epoll`，`kqueue`等事件监听套接字，则使用者需要自行处理惊群问题。套接字仅是用来通知对方线程（或线程组），另一端线程（或线程组）有消息发送过来。
+**注意**：套接字仅是用来通知对方线程（或线程组），另一端线程（或线程组）有消息发送过来，用户可以使用epoll、kqueue、select等事件机制进行监听。
 
 
 

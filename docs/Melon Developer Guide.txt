@@ -811,17 +811,13 @@ Their definitions can be found in melon/include/mln_types.h.
      Just like libevent, Melon's event module also integrates epoll, kqueue and select.
      It supports three kinds of event: timer event, signal event and file descriptor event.
 
-     a) int mln_event_init(void);
-        Initialize global resources that event will depend on.
-        This function will be called in framework `mln_core.c`.
-
-     b) mln_event_t *mln_event_new(void);
+     a) mln_event_t *mln_event_new(void);
         It initializes an event object.
 
-     c) void mln_event_free(mln_event_t *ev);
+     b) void mln_event_free(mln_event_t *ev);
         Free an event object.
 
-     d) int mln_event_set_fd(mln_event_t *event,
+     c) int mln_event_set_fd(mln_event_t *event,
                              int fd, 
                              mln_u32_t flag,
                              int timeout_ms,
@@ -858,7 +854,7 @@ Their definitions can be found in melon/include/mln_types.h.
         There are three arguments of function 'fh_handler': an event object, a file descriptor and a user data.
         If an event is failed to set, -1 will be returned. Otherwise, the returned value is 0.
 
-     e) int mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
+     d) int mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
         It sets a timer event.
         The first argument is an event object.
         The second one is a millisecond timer. Its unit is 10ms.
@@ -868,44 +864,27 @@ Their definitions can be found in melon/include/mln_types.h.
         The arguments of 'tm_handler' are an event object and a user data.
         If an event is failed to set, -1 will be returned. Otherwise, the returned value is 0.
 
-     f) int mln_event_set_signal(mln_event_t *event,
-                                 mln_u32_t flag,
-                                 int signo,
-                                 void *data,
-                                 ev_sig_handler sg_handler);
-        It sets a signal event.
-        The first argument is an event object.
-        The second one is a flag indicating the type of event to install or uninstall the event handler. Its value
-        can be M_EV_SET or M_EV_UNSET.
-        The third one is the signal number that we catch.
-        The fourth one is a user data.
-        Last one is an event handler. Its prototype is
-            typedef void (*ev_sig_handler) (mln_event_t *, int, void *);
-        The arguments of 'sg_handler' are an event object, a signal number and a user data.
-        If an event is failed to set, -1 will be returned. Otherwise, 0 will be returned.
-        It is different between this interface and the one in libevent. We allow to set signal event handlers (no
-        matter they are different or not) for the same one signal into one or many event objects.
-        When a signal raised, the handlers that are whether in the same event object or not, will be called in their
-        thread.
-
-     g) void mln_event_dispatch(mln_event_t *event);
+     e) void mln_event_dispatch(mln_event_t *event);
         It dispatches every event.
         If a routine jumps into this function, it won't be out until encountering two situations:
             calling mln_event_set_break() to break out
         or
             a child process is forked.
 
-     h) void mln_event_set_break(mln_event_t *ev);
+     f) void mln_event_set_break(mln_event_t *ev);
         It lets the routine break out from mln_event_dispatch().
 
-     i) void mln_event_set_callback(mln_event_t *ev, dispatch_callback dc, void *dc_data);
+     g) void mln_event_set_callback(mln_event_t *ev, dispatch_callback dc, void *dc_data);
         Besides fd, timer and signal callback handlers, there is another one (this) can be called to process some
         other things in dispatch routine.
         The second argument is a function pointer, its prototype is
             typedef void (*dispatch_callback) (mln_event_t *, void *);
 
-     j) void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
+     h) void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
         This interface will set a callback handler for processing the case that the fd's timer expired.
+
+     i) void mln_event_set_signal(int signo, void (*handler)(int));
+        The alias of system signal.
 
   12) Connection I/O
      Connection I/O, for now, only supports TCP (actually, it also supports file I/O).
