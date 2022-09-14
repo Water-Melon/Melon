@@ -23,10 +23,10 @@
 #### mln_lang_new
 
 ```c
-mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev);
+mln_lang_t *mln_lang_new(mln_event_t *ev);
 ```
 
-描述：创建脚本管理结构，该结构是脚本任务的管理结构，用于维护多个脚本任务的资源、调度、创建、删除等相关内容。其上每一个脚本任务被看作一个协程。`pool`为每个脚本任务所使用的内存池结构，`ev`为每个脚本任务所依赖的事件结构。换言之，脚本任务的执行是依赖于Melon的异步事件API的。
+描述：创建脚本管理结构，该结构是脚本任务的管理结构，用于维护多个脚本任务的资源、调度、创建、删除等相关内容。其上每一个脚本任务被看作一个协程。`ev`为每个脚本任务所依赖的事件结构。换言之，脚本任务的执行是依赖于Melon的异步事件API的。
 
 返回值：成功则返回脚本管理结构`mln_lang_t`指针，否则返回`NULL`
 
@@ -71,18 +71,6 @@ void mln_lang_job_free(mln_lang_ctx_t *ctx);
 ```
 
 描述：销毁并释放脚本任务结构所有资源。
-
-返回值：无
-
-
-
-#### mln_lang_run
-
-```c
-void mln_lang_run(mln_lang_t *lang);
-```
-
-描述：执行脚本。本函数不需要每一个调用`mln_lang_job_new`后调用，可以新建多个脚本任务后调用一次即可。
 
 返回值：无
 

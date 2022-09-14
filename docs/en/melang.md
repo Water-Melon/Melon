@@ -23,10 +23,10 @@ This article only provides functions for creating script tasks and scheduling sc
 #### mln_lang_new
 
 ```c
-mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev);
+mln_lang_t *mln_lang_new(mln_event_t *ev);
 ```
 
-Description: Create a script management structure, which is the management structure of script tasks, and is used to maintain the resources, scheduling, creation, deletion and other related content of multiple script tasks. Each script task on it is regarded as a coroutine. `pool` is the memory pool structure used by each script task, and `ev` is the event structure each script task depends on. In other words, the execution of script tasks is dependent on Melon's asynchronous event API.
+Description: Create a script management structure, which is the management structure of script tasks, and is used to maintain the resources, scheduling, creation, deletion and other related content of multiple script tasks. Each script task on it is regarded as a coroutine. `ev` is the event structure each script task depends on. In other words, the execution of script tasks is dependent on Melon's asynchronous event API.
 
 Return value: If successful, return the script management structure `mln_lang_t` pointer, otherwise return `NULL`
 
@@ -71,18 +71,6 @@ void mln_lang_job_free(mln_lang_ctx_t *ctx);
 ```
 
 Description: Destroy and release all resources of the script task structure.
-
-Return value: none
-
-
-
-#### mln_lang_run
-
-```c
-void mln_lang_run(mln_lang_t *lang);
-```
-
-Description: Execute the script. This function does not need to be called after every call to `mln_lang_job_new`, it can be called once after creating multiple script tasks.
 
 Return value: none
 

@@ -86,7 +86,6 @@ struct mln_lang_s {
     mln_lang_ctx_t                  *run_tail;
     mln_lang_ctx_t                  *wait_head;
     mln_lang_ctx_t                  *wait_tail;
-    mln_lang_ctx_t                  *ctx_cur;
     int                              fd_not_used;
     int                              fd_signal;
     mln_rbtree_t                    *resource_set;
@@ -96,6 +95,7 @@ struct mln_lang_s {
     void                            *shift_table;
     mln_lang_ast_cache_t            *cache_head;
     mln_lang_ast_cache_t            *cache_tail;
+    pthread_mutex_t                  lock;
 };
 
 struct mln_lang_ctx_s {
@@ -109,7 +109,6 @@ struct mln_lang_ctx_s {
     mln_lang_scope_t                *scope_head;
     mln_lang_scope_t                *scope_tail;
     mln_u64_t                        ref;
-    mln_s64_t                        step;
     mln_string_t                    *filename;
     mln_rbtree_t                    *resource_set;
     mln_lang_var_t                  *ret_var;
@@ -416,9 +415,8 @@ extern mln_lang_method_t *mln_lang_methods[];
 #define mln_lang_cache_set(lang) ((lang)->cache = 1)
 #define mln_lang_ctx_data_get(ctx) ((ctx)->data)
 extern void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg) __NONNULL2(1,2);
-extern mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev) __NONNULL2(1,2);
+extern mln_lang_t *mln_lang_new(mln_event_t *ev) __NONNULL1(1);
 extern void mln_lang_free(mln_lang_t *lang);
-extern void mln_lang_run(mln_lang_t *lang) __NONNULL1(1);
 extern mln_lang_ctx_t *
 mln_lang_job_new(mln_lang_t *lang, \
                  mln_u32_t type, \

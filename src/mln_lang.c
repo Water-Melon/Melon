@@ -97,7 +97,6 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_var, \
                       void, \
                       prev, \
                       next);
-static inline void __mln_lang_run(mln_lang_t *lang);
 static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data);
 static inline mln_lang_ast_cache_t *
 mln_lang_ast_cache_new(mln_lang_t *lang, mln_lang_stm_t *stm, mln_string_t *code);
@@ -507,20 +506,25 @@ mln_lang_stack_handler mln_lang_stack_map[] = {
     mln_lang_stack_handler_elemlist
 };
 
-mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
+mln_lang_t *mln_lang_new(mln_event_t *ev)
 {
     int fds[2];
     mln_lang_t *lang;
     struct timeval tv;
     struct mln_rbtree_attr rbattr;
+    mln_alloc_t *pool;
+
+    if ((pool = mln_alloc_init(NULL)) == NULL)
+        return NULL;
+
     if ((lang = (mln_lang_t *)mln_alloc_m(pool, sizeof(mln_lang_t))) == NULL) {
+        mln_alloc_destroy(pool);
         return NULL;
     }
     lang->ev = ev;
     lang->pool = pool;
     lang->run_head = lang->run_tail = NULL;
     lang->wait_head = lang->wait_tail = NULL;
-    lang->ctx_cur = NULL;
     lang->resource_set = NULL;
     lang->cache_head = NULL;
     lang->cache_tail = NULL;
@@ -528,8 +532,13 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
     lang->wait = 0;
     lang->quit = 0;
     lang->cache = 0;
+    if (pthread_mutex_init(&lang->lock, NULL) != 0) {
+        mln_alloc_destroy(pool);
+        return NULL;
+    }
     if (pipe(fds) < 0) {
-        mln_alloc_free(lang);
+        pthread_mutex_destroy(&lang->lock);
+        mln_alloc_destroy(pool);
         return NULL;
     }
     lang->fd_not_used = fds[0];
@@ -555,8 +564,12 @@ mln_lang_t *mln_lang_new(mln_alloc_t *pool, mln_event_t *ev)
 void mln_lang_free(mln_lang_t *lang)
 {
     if (lang == NULL) return;
+
+    pthread_mutex_lock(&lang->lock);
+
     if (lang->wait) {
         lang->quit = 1;
+        pthread_mutex_unlock(&lang->lock);
         return;
     }
     mln_lang_ctx_t *ctx;
@@ -578,74 +591,43 @@ void mln_lang_free(mln_lang_t *lang)
         mln_lang_ast_cache_chain_del(&(lang->cache_head), &(lang->cache_tail), cache);
         mln_lang_ast_cache_free(cache);
     }
-    mln_alloc_free(lang);
-}
 
-static inline void __mln_lang_run(mln_lang_t *lang)
-{
-    if ((lang)->ctx_cur != NULL) {
-        mln_lang_stack_node_t *node;
-        if ((node = mln_lang_stack_top((lang)->ctx_cur)) == NULL) {
-            if ((lang)->ctx_cur->ref)
-                mln_lang_ctx_chain_del(&((lang)->wait_head), &((lang)->wait_tail), (lang)->ctx_cur);
-            else
-                mln_lang_ctx_chain_del(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);
-            if ((lang)->ctx_cur != NULL && (lang)->ctx_cur->return_handler != NULL) {
-                (lang)->ctx_cur->return_handler((lang)->ctx_cur);
-            }
-            mln_lang_ctx_free((lang)->ctx_cur);
-            (lang)->ctx_cur = NULL;
-        } else {
-            if ((lang)->ctx_cur->ref) {
-                (lang)->ctx_cur = NULL;
-            } else {
-                if (--((lang)->ctx_cur->step) > 0) {
-                    return;
-                }
-                mln_lang_ctx_chain_del(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);
-                (lang)->ctx_cur->step = M_LANG_DEFAULT_STEP;
-                mln_lang_ctx_chain_add(&((lang)->run_head), &((lang)->run_tail), (lang)->ctx_cur);
-                (lang)->ctx_cur = NULL;
-            }
-        }
-    }
-    (lang)->ctx_cur = (lang)->run_head;
-}
+    pthread_mutex_unlock(&lang->lock);
+    pthread_mutex_destroy(&lang->lock);
 
-void mln_lang_run(mln_lang_t *lang)
-{
-    __mln_lang_run(lang);
+    mln_alloc_destroy(lang->pool);
 }
 
 static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
 {
-    mln_lang_ctx_t *ctx = (mln_lang_ctx_t *)data;
-    ASSERT(!ctx->ref);
     int n;
+    mln_lang_t *lang = (mln_lang_t *)data;
+    mln_lang_ctx_t *ctx = lang->run_head;
     mln_lang_stack_node_t *node;
-    mln_lang_t *lang = ctx->lang;
 
-    for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
-        if ((node = mln_lang_stack_top(ctx)) == NULL) {
-            if (ctx != NULL && ctx->return_handler != NULL) {
-                ctx->return_handler(ctx);
+    if (ctx != NULL) {
+        mln_lang_ctx_chain_del(&lang->run_head, &lang->run_tail, ctx);
+        mln_lang_ctx_chain_add(&lang->run_head, &lang->run_tail, ctx);
+        for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
+            if ((node = mln_lang_stack_top(ctx)) == NULL) {
+                if (ctx->return_handler != NULL) {
+                    ctx->return_handler(ctx);
+                }
+                mln_lang_job_free(ctx);
+                goto out;
             }
-            mln_lang_job_free(ctx);
-            break;
+            mln_lang_stack_map[node->type](ctx);
+            if (ctx->ref) break;
         }
-        mln_lang_stack_map[node->type](ctx);
-        if (lang->ctx_cur != ctx || ctx->ref || ctx->step <= 0) {
-            break;
-        }
-    }
-
-    if (lang->ctx_cur != NULL) {
-        mln_event_set_fd(lang->ev, \
-                         lang->fd_signal, \
-                         M_EV_SEND|M_EV_ONESHOT, \
-                         M_EV_UNLIMITED, \
-                         lang->ctx_cur, \
-                         mln_lang_run_handler);
+        mln_gc_collect(ctx->gc, ctx);
+out:
+        if (lang->run_head != NULL)
+            mln_event_set_fd(lang->ev, \
+                             lang->fd_signal, \
+                             M_EV_SEND|M_EV_ONESHOT, \
+                             M_EV_UNLIMITED, \
+                             lang, \
+                             mln_lang_run_handler);
     } else {
         mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     }
@@ -783,7 +765,6 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->run_stack_head = ctx->run_stack_tail = NULL;
     ctx->scope_head = ctx->scope_tail = NULL;
     ctx->ref = 0;
-    ctx->step = M_LANG_DEFAULT_STEP;
     ctx->filename = NULL;
     ctx->symbols = NULL;
     rbattr.pool = ctx->pool;
@@ -932,13 +913,12 @@ void mln_lang_ctx_continue(mln_lang_ctx_t *ctx)
     --(ctx->ref);
     mln_lang_ctx_chain_del(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
     mln_lang_ctx_chain_add(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
-    __mln_lang_run(ctx->lang);
-    if (ctx->lang->ctx_cur != NULL) {
+    if (ctx->lang->run_head != NULL) {
         mln_event_set_fd(ctx->lang->ev, \
                          ctx->lang->fd_signal, \
                          M_EV_SEND|M_EV_ONESHOT, \
                          M_EV_UNLIMITED, \
-                         ctx->lang->ctx_cur, \
+                         ctx->lang, \
                          mln_lang_run_handler);
     } else {
         mln_event_set_fd(ctx->lang->ev, ctx->lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
@@ -1003,13 +983,12 @@ mln_lang_job_new(mln_lang_t *lang, \
     if (ctx == NULL) return NULL;
     ctx->return_handler = handler;
     mln_lang_ctx_chain_add(&(lang->run_head), &(lang->run_tail), ctx);
-    __mln_lang_run(lang);
-    if (lang->ctx_cur != NULL) {
+    if (lang->run_head != NULL) {
         if (mln_event_set_fd(lang->ev, \
                              lang->fd_signal, \
                              M_EV_SEND|M_EV_ONESHOT, \
                              M_EV_UNLIMITED, \
-                             lang->ctx_cur, \
+                             lang, \
                              mln_lang_run_handler) < 0)
         {
             mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), ctx);
@@ -1026,24 +1005,20 @@ void mln_lang_job_free(mln_lang_ctx_t *ctx)
 {
     if (ctx == NULL) return;
     mln_lang_t *lang = ctx->lang;
-    if (lang->ctx_cur == ctx) lang->ctx_cur = NULL;
     if (ctx->ref)
         mln_lang_ctx_chain_del(&(lang->wait_head), &(lang->wait_tail), ctx);
     else
         mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), ctx);
     mln_lang_ctx_free(ctx);
-    if (lang->ctx_cur == NULL) {
-        __mln_lang_run(lang);
-        if (lang->ctx_cur != NULL) {
-            mln_event_set_fd(lang->ev, \
-                             lang->fd_signal, \
-                             M_EV_SEND|M_EV_ONESHOT, \
-                             M_EV_UNLIMITED, \
-                             lang->ctx_cur, \
-                             mln_lang_run_handler);
-        } else {
-            mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-        }
+    if (lang->run_head != NULL) {
+        mln_event_set_fd(lang->ev, \
+                         lang->fd_signal, \
+                         M_EV_SEND|M_EV_ONESHOT, \
+                         M_EV_UNLIMITED, \
+                         lang, \
+                         mln_lang_run_handler);
+    } else {
+        mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     }
 }
 
@@ -3229,13 +3204,7 @@ goon1:
         else mln_lang_ctx_reset_ret_var(ctx);
         mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
-
-        if (--(ctx->step) <= 0) {
-            mln_gc_collect(ctx->gc, ctx);
-            ctx->step = M_LANG_DEFAULT_STEP;
-        }
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_funcdef(mln_lang_ctx_t *ctx)
@@ -3312,7 +3281,6 @@ static void mln_lang_stack_handler_funcdef(mln_lang_ctx_t *ctx)
     }
     mln_lang_stack_pop(ctx, node);
     mln_lang_stack_node_free(node);
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_set(mln_lang_ctx_t *ctx)
@@ -3359,7 +3327,6 @@ static void mln_lang_stack_handler_set(mln_lang_ctx_t *ctx)
         mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_setstm(mln_lang_ctx_t *ctx)
@@ -3421,7 +3388,6 @@ goon1:
         mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_block(mln_lang_ctx_t *ctx)
@@ -3490,7 +3456,6 @@ nil:
             }
         }
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static inline int mln_lang_met_return(mln_lang_ctx_t *ctx)
@@ -3759,7 +3724,6 @@ goon1:
             mln_lang_stack_node_free(node);
         }
     }
-    __mln_lang_run(ctx->lang);
 }
 
 int mln_lang_condition_is_true(mln_lang_var_t *var)
@@ -3834,7 +3798,6 @@ static void mln_lang_stack_handler_switch(mln_lang_ctx_t *ctx)
         mln_lang_stack_pop(ctx, node);
         mln_lang_stack_node_free(node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_switchstm(mln_lang_ctx_t *ctx)
@@ -3949,7 +3912,6 @@ goon4:
             return mln_lang_stack_map[node->type](ctx);
         }
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_for(mln_lang_ctx_t *ctx)
@@ -4013,7 +3975,6 @@ goon2:
             goto goon1;
         }
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_if(mln_lang_ctx_t *ctx)
@@ -4062,7 +4023,6 @@ goon1:
             return mln_lang_stack_map[node->type](ctx);
         mln_lang_ctx_reset_ret_var(ctx);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_type_t type)
@@ -4262,7 +4222,6 @@ again:
             mln_lang_stack_popuntil(ctx, node);
         }
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_assign(mln_lang_ctx_t *ctx)
@@ -4425,7 +4384,6 @@ goon4:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_logiclow(mln_lang_ctx_t *ctx)
@@ -4480,7 +4438,6 @@ static void mln_lang_stack_handler_logiclow(mln_lang_ctx_t *ctx)
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_logichigh(mln_lang_ctx_t *ctx)
@@ -4594,7 +4551,6 @@ goon4:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_relativelow(mln_lang_ctx_t *ctx)
@@ -4705,7 +4661,6 @@ goon4:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_relativehigh(mln_lang_ctx_t *ctx)
@@ -4822,7 +4777,6 @@ goon4:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_move(mln_lang_ctx_t *ctx)
@@ -4933,7 +4887,6 @@ goon4:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_addsub(mln_lang_ctx_t *ctx)
@@ -5044,7 +4997,6 @@ goon4:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_muldiv(mln_lang_ctx_t *ctx)
@@ -5158,7 +5110,6 @@ goon4:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_suffix(mln_lang_ctx_t *ctx)
@@ -5275,7 +5226,6 @@ out:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx)
@@ -5550,7 +5500,6 @@ goon7:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
@@ -5915,7 +5864,6 @@ out:
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static inline int mln_lang_stack_handler_spec_new(mln_lang_ctx_t *ctx, mln_string_t *name)
@@ -6078,7 +6026,6 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
         mln_lang_stack_node_free(node);
         mln_lang_stack_popuntil(ctx, node);
     }
-    __mln_lang_run(ctx->lang);
 }
 
 static void mln_lang_stack_handler_elemlist(mln_lang_ctx_t *ctx)
@@ -6148,7 +6095,6 @@ static void mln_lang_stack_handler_elemlist(mln_lang_ctx_t *ctx)
             return mln_lang_stack_map[node->type](ctx);
         }
     }
-    __mln_lang_run(ctx->lang);
 }
 
 
