@@ -4,6 +4,8 @@ Changes with melon 2.5.0                                          16 Sep 2022
     *) Upgraded event to support multi-thread
     *) Fixed select error on Windows
     *) Upgraded Melang to enable tasks to execute across threads
+    *) Fixed event break
+    *) Updated docs
 
 Changes with melon 2.4.1                                          04 Sep 2022
     *) Updated configure shell

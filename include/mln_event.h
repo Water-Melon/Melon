@@ -132,6 +132,8 @@ struct mln_event_s {
 #endif
 };
 
+#define mln_event_set_break(ev) ((ev)->is_break = 1);
+#define mln_event_reset_break(ev) ((ev)->is_break = 0);
 #define mln_event_set_signal signal
 extern mln_event_t *mln_event_new(void);
 extern void mln_event_free(mln_event_t *ev);
@@ -153,7 +155,6 @@ mln_event_set_fd_timeout_handler(mln_event_t *event, \
                                  int fd, \
                                  void *data, \
                                  ev_fd_handler timeout_handler) __NONNULL1(1);
-extern void mln_event_set_break(mln_event_t *ev) __NONNULL1(1);
 extern void mln_event_set_callback(mln_event_t *ev, \
                                    dispatch_callback dc, \
                                    void *dc_data) __NONNULL1(1);

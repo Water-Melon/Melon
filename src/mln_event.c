@@ -741,14 +741,6 @@ mln_event_set_fd_clr(mln_event_t *event, int fd)
 }
 
 /*
- * set_break
- */
-void mln_event_set_break(mln_event_t *ev)
-{
-    ev->is_break = 1;
-}
-
-/*
  * set dispatch callback
  */
 void mln_event_set_callback(mln_event_t *ev, \
@@ -809,7 +801,6 @@ mln_event_set_fd_block(int fd)
  */
 #define BREAK_OUT(); \
     if (event->is_break) {\
-        event->is_break = 0;\
         return;\
     }
 #if defined(MLN_EPOLL)

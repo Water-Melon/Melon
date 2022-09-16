@@ -154,10 +154,22 @@ sig_t mln_event_set_signal(int signo, sig_t handle);
 #### mln_event_set_break
 
 ```c
-void mln_event_set_break(mln_event_t *ev);
+mln_event_set_break(ev);
 ```
 
 描述：中断事件处理，即使得`mln_event_dispatch`函数返回。
+
+返回值：无
+
+
+
+#### mln_event_reset_break
+
+```c
+mln_event_reset_break(ev);
+```
+
+描述：重置break标记。
 
 返回值：无
 

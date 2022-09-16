@@ -871,19 +871,22 @@ Their definitions can be found in melon/include/mln_types.h.
         or
             a child process is forked.
 
-     f) void mln_event_set_break(mln_event_t *ev);
+     f) mln_event_set_break(ev);
         It lets the routine break out from mln_event_dispatch().
 
-     g) void mln_event_set_callback(mln_event_t *ev, dispatch_callback dc, void *dc_data);
+     g) mln_event_reset_break(ev);
+        Reset break flag.
+
+     h) void mln_event_set_callback(mln_event_t *ev, dispatch_callback dc, void *dc_data);
         Besides fd, timer and signal callback handlers, there is another one (this) can be called to process some
         other things in dispatch routine.
         The second argument is a function pointer, its prototype is
             typedef void (*dispatch_callback) (mln_event_t *, void *);
 
-     h) void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
+     i) void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
         This interface will set a callback handler for processing the case that the fd's timer expired.
 
-     i) void mln_event_set_signal(int signo, void (*handler)(int));
+     j) void mln_event_set_signal(int signo, void (*handler)(int));
         The alias of system signal.
 
   12) Connection I/O

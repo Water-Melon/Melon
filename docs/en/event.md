@@ -154,10 +154,22 @@ Return value: The signal handle before setting.
 #### mln_event_set_break
 
 ```c
-void mln_event_set_break(mln_event_t *ev);
+mln_event_set_break(ev);
 ```
 
 Description: Interrupt event processing so that the `mln_event_dispatch` function returns.
+
+Return value: none
+
+
+
+#### mln_event_reset_break
+
+```c
+mln_event_reset_break(ev);
+```
+
+Description: Reset break flag.
 
 Return value: none
 
