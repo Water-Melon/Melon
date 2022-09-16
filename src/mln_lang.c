@@ -506,11 +506,9 @@ mln_lang_stack_handler mln_lang_stack_map[] = {
     mln_lang_stack_handler_elemlist
 };
 
-mln_lang_t *mln_lang_new(mln_event_t *ev)
+mln_lang_t *mln_lang_new(mln_event_t *ev, mln_lang_run_ctl_t signal, mln_lang_run_ctl_t clear)
 {
-    int fds[2];
     mln_lang_t *lang;
-    struct timeval tv;
     struct mln_rbtree_attr rbattr;
     mln_alloc_t *pool;
 
@@ -532,18 +530,13 @@ mln_lang_t *mln_lang_new(mln_event_t *ev)
     lang->wait = 0;
     lang->quit = 0;
     lang->cache = 0;
+    lang->signal = signal;
+    lang->launcher = mln_lang_run_handler;
+    lang->clear = clear;
     if (pthread_mutex_init(&lang->lock, NULL) != 0) {
         mln_alloc_destroy(pool);
         return NULL;
     }
-    if (pipe(fds) < 0) {
-        pthread_mutex_destroy(&lang->lock);
-        mln_alloc_destroy(pool);
-        return NULL;
-    }
-    lang->fd_not_used = fds[0];
-    lang->fd_signal = fds[1];
-    gettimeofday(&tv, NULL);
     rbattr.pool = pool;
     rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
     rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
@@ -582,9 +575,6 @@ void mln_lang_free(mln_lang_t *lang)
         mln_lang_ctx_chain_del(&(lang->wait_head), &(lang->wait_tail), ctx);
         mln_lang_ctx_free(ctx);
     }
-    mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
-    if (lang->fd_not_used >= 0) mln_socket_close(lang->fd_not_used);
-    if (lang->fd_signal >= 0) mln_socket_close(lang->fd_signal);
     if (lang->resource_set != NULL) mln_rbtree_destroy(lang->resource_set);
     if (lang->shift_table != NULL) mln_lang_ast_parser_destroy(lang->shift_table);
     while ((cache = lang->cache_head) != NULL) {
@@ -602,35 +592,37 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
 {
     int n;
     mln_lang_t *lang = (mln_lang_t *)data;
-    mln_lang_ctx_t *ctx = lang->run_head;
+    mln_lang_ctx_t *ctx;
     mln_lang_stack_node_t *node;
 
-    if (ctx != NULL) {
+    pthread_mutex_lock(&lang->lock);
+    if ((ctx = lang->run_head) != NULL && ctx->owner == 0) {
         mln_lang_ctx_chain_del(&lang->run_head, &lang->run_tail, ctx);
         mln_lang_ctx_chain_add(&lang->run_head, &lang->run_tail, ctx);
+        ctx->owner = pthread_self();
+        pthread_mutex_unlock(&lang->lock);
         for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
             if ((node = mln_lang_stack_top(ctx)) == NULL) {
                 if (ctx->return_handler != NULL) {
                     ctx->return_handler(ctx);
                 }
                 mln_lang_job_free(ctx);
+                pthread_mutex_lock(&lang->lock);
                 goto out;
             }
             mln_lang_stack_map[node->type](ctx);
             if (ctx->ref) break;
         }
         mln_gc_collect(ctx->gc, ctx);
+        pthread_mutex_lock(&lang->lock);
+        ctx->owner = 0;
 out:
         if (lang->run_head != NULL)
-            mln_event_set_fd(lang->ev, \
-                             lang->fd_signal, \
-                             M_EV_SEND|M_EV_ONESHOT, \
-                             M_EV_UNLIMITED, \
-                             lang, \
-                             mln_lang_run_handler);
+            lang->signal(lang);
     } else {
-        mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+        lang->clear(lang);
     }
+    pthread_mutex_unlock(&lang->lock);
 }
 
 
@@ -794,6 +786,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->free_node_head = ctx->free_node_tail = NULL;
     ctx->sym_head = ctx->sym_tail = NULL;
     ctx->scope_cache_head = ctx->scope_cache_tail = NULL;
+    ctx->owner = 0;
     ctx->sym_count = ctx->scope_count = 0;
     ctx->ret_flag = ctx->op_array_flag = ctx->op_bool_flag = ctx->op_func_flag = ctx->op_int_flag = \
     ctx->op_nil_flag = ctx->op_obj_flag = ctx->op_real_flag = ctx->op_str_flag = 0;
@@ -903,26 +896,25 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
 
 void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx)
 {
+    pthread_mutex_lock(&ctx->lang->lock);
     ++(ctx->ref);
     mln_lang_ctx_chain_del(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
     mln_lang_ctx_chain_add(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
+    pthread_mutex_unlock(&ctx->lang->lock);
 }
 
 void mln_lang_ctx_continue(mln_lang_ctx_t *ctx)
 {
+    pthread_mutex_lock(&ctx->lang->lock);
     --(ctx->ref);
     mln_lang_ctx_chain_del(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
     mln_lang_ctx_chain_add(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
     if (ctx->lang->run_head != NULL) {
-        mln_event_set_fd(ctx->lang->ev, \
-                         ctx->lang->fd_signal, \
-                         M_EV_SEND|M_EV_ONESHOT, \
-                         M_EV_UNLIMITED, \
-                         ctx->lang, \
-                         mln_lang_run_handler);
+        ctx->lang->signal(ctx->lang);
     } else {
-        mln_event_set_fd(ctx->lang->ev, ctx->lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+        ctx->lang->clear(ctx->lang);
     }
+    pthread_mutex_unlock(&ctx->lang->lock);
 }
 
 static inline mln_lang_set_detail_t *
@@ -979,25 +971,25 @@ mln_lang_job_new(mln_lang_t *lang, \
                  void *udata, \
                  mln_lang_return_handler handler)
 {
+    pthread_mutex_lock(&lang->lock);
     mln_lang_ctx_t *ctx = mln_lang_ctx_new(lang, udata, type==M_INPUT_T_FILE? data: NULL, type, data);
-    if (ctx == NULL) return NULL;
+    if (ctx == NULL) {
+        pthread_mutex_unlock(&lang->lock);
+        return NULL;
+    }
     ctx->return_handler = handler;
     mln_lang_ctx_chain_add(&(lang->run_head), &(lang->run_tail), ctx);
     if (lang->run_head != NULL) {
-        if (mln_event_set_fd(lang->ev, \
-                             lang->fd_signal, \
-                             M_EV_SEND|M_EV_ONESHOT, \
-                             M_EV_UNLIMITED, \
-                             lang, \
-                             mln_lang_run_handler) < 0)
-        {
+        if (lang->signal(lang) < 0) {
             mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), ctx);
             mln_lang_ctx_free(ctx);
+            pthread_mutex_unlock(&lang->lock);
             return NULL;
         }
     } else {
-        mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+        lang->clear(lang);
     }
+    pthread_mutex_unlock(&lang->lock);
     return ctx;
 }
 
@@ -1005,21 +997,18 @@ void mln_lang_job_free(mln_lang_ctx_t *ctx)
 {
     if (ctx == NULL) return;
     mln_lang_t *lang = ctx->lang;
+    pthread_mutex_lock(&lang->lock);
     if (ctx->ref)
         mln_lang_ctx_chain_del(&(lang->wait_head), &(lang->wait_tail), ctx);
     else
         mln_lang_ctx_chain_del(&(lang->run_head), &(lang->run_tail), ctx);
     mln_lang_ctx_free(ctx);
     if (lang->run_head != NULL) {
-        mln_event_set_fd(lang->ev, \
-                         lang->fd_signal, \
-                         M_EV_SEND|M_EV_ONESHOT, \
-                         M_EV_UNLIMITED, \
-                         lang, \
-                         mln_lang_run_handler);
+        lang->signal(lang);
     } else {
-        mln_event_set_fd(lang->ev, lang->fd_signal, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+        lang->clear(lang);
     }
+    pthread_mutex_unlock(&lang->lock);
 }
 
 
@@ -6584,7 +6573,9 @@ static mln_lang_var_t *mln_lang_func_dump_process(mln_lang_ctx_t *ctx)
         __mln_lang_errmsg(ctx, "Argument missing.");
         return NULL;
     }
+    pthread_mutex_lock(&ctx->lang->lock);
     (void)mln_lang_dump_symbol(ctx, NULL, sym, NULL);
+    pthread_mutex_unlock(&ctx->lang->lock);
     if ((var = mln_lang_var_create_nil(ctx, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         return NULL;
@@ -6619,8 +6610,8 @@ static int mln_lang_func_resource_register(mln_lang_ctx_t *ctx)
             return -1;
         }
         if (mln_lang_resource_register(ctx->lang, "import", tree, (mln_lang_resource_free)mln_rbtree_destroy) < 0) {
-            mln_lang_errmsg(ctx, "No memory.");
             mln_rbtree_destroy(tree);
+            mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
     }
@@ -6637,8 +6628,8 @@ static int mln_lang_func_resource_register(mln_lang_ctx_t *ctx)
             return -1;
         }
         if (mln_lang_ctx_resource_register(ctx, "import", tree, (mln_lang_resource_free)mln_rbtree_destroy) < 0) {
-            mln_lang_errmsg(ctx, "No memory.");
             mln_rbtree_destroy(tree);
+            mln_lang_errmsg(ctx, "No memory.");
             return -1;
         }
     }
@@ -6856,6 +6847,7 @@ goon:
     }
 
     i.name = name;
+    pthread_mutex_lock(&ctx->lang->lock);
     tree = mln_lang_resource_fetch(ctx->lang, "import");
     rn = mln_rbtree_search(tree, tree->root, &i);
     if (!mln_rbtree_null(rn, tree)) {
@@ -6867,12 +6859,14 @@ goon:
 #else
             dlclose(pi->handle);
 #endif
+            pthread_mutex_unlock(&ctx->lang->lock);
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
         if ((rn = mln_rbtree_node_new(tree, pi)) == NULL) {
-            mln_lang_errmsg(ctx, "No memory.");
             mln_lang_func_import_free(pi);
+            pthread_mutex_unlock(&ctx->lang->lock);
+            mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
         mln_rbtree_insert(tree, rn);
@@ -6884,16 +6878,18 @@ goon:
     rn = mln_rbtree_search(tree, tree->root, &ci);
     if (mln_rbtree_null(rn, tree)) {
         if ((pci = mln_lang_func_ctx_import_new(ctx, pi)) == NULL) {
-            mln_lang_errmsg(ctx, "No memory.");
             if (!pi->ref) {
                 mln_rbtree_delete(tree, rn);
                 mln_rbtree_node_free(tree, rn);
             }
+            pthread_mutex_unlock(&ctx->lang->lock);
+            mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
         if ((rn = mln_rbtree_node_new(tree, pci)) == NULL) {
-            mln_lang_errmsg(ctx, "No memory.");
             mln_lang_func_ctx_import_free(pci);
+            pthread_mutex_unlock(&ctx->lang->lock);
+            mln_lang_errmsg(ctx, "No memory.");
             return NULL;
         }
         mln_rbtree_insert(tree, rn);
@@ -6905,6 +6901,7 @@ goon:
     init = (import_init_t)dlsym(handle, "init");
 #endif
     if (init == NULL) {
+        pthread_mutex_unlock(&ctx->lang->lock);
         n = snprintf(tmp_path, sizeof(tmp_path)-1, "No 'init' found in dynamic library [%s].", path);
         tmp_path[n] = 0;
         mln_lang_errmsg(ctx, tmp_path);
@@ -6912,11 +6909,13 @@ goon:
     }
 
     if ((ret_var = init(ctx)) == NULL) {
+        pthread_mutex_unlock(&ctx->lang->lock);
         n = snprintf(tmp_path, sizeof(tmp_path)-1, "Init dynamic library [%s] failed.", path);
         tmp_path[n] = 0;
         mln_lang_errmsg(ctx, tmp_path);
         return NULL;
     }
+    pthread_mutex_unlock(&ctx->lang->lock);
 
     return ret_var;
 }

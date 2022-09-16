@@ -51,6 +51,7 @@ typedef struct mln_lang_ast_cache_s     mln_lang_ast_cache_t;
 typedef struct mln_lang_hash_s          mln_lang_hash_t;
 typedef struct mln_lang_hash_bucket_s   mln_lang_hash_bucket_t;
 
+typedef int (*mln_lang_run_ctl_t)(mln_lang_t *);
 typedef void (*mln_lang_stack_handler)(mln_lang_ctx_t *);
 typedef int (*mln_lang_op)(mln_lang_ctx_t *, mln_lang_var_t **, mln_lang_var_t *, mln_lang_var_t *);
 typedef mln_lang_var_t *(*mln_lang_internal) (mln_lang_ctx_t *);
@@ -86,8 +87,6 @@ struct mln_lang_s {
     mln_lang_ctx_t                  *run_tail;
     mln_lang_ctx_t                  *wait_head;
     mln_lang_ctx_t                  *wait_tail;
-    int                              fd_not_used;
-    int                              fd_signal;
     mln_rbtree_t                    *resource_set;
     mln_u64_t                        wait:62;
     mln_u64_t                        quit:1;
@@ -95,6 +94,9 @@ struct mln_lang_s {
     void                            *shift_table;
     mln_lang_ast_cache_t            *cache_head;
     mln_lang_ast_cache_t            *cache_tail;
+    mln_lang_run_ctl_t               signal;
+    mln_lang_run_ctl_t               clear;
+    ev_fd_handler                    launcher;
     pthread_mutex_t                  lock;
 };
 
@@ -124,6 +126,7 @@ struct mln_lang_ctx_s {
     mln_lang_symbol_node_t          *sym_tail;
     mln_lang_scope_t                *scope_cache_head;
     mln_lang_scope_t                *scope_cache_tail;
+    pthread_t                        owner;
     mln_u32_t                        sym_count:8;
     mln_u32_t                        scope_count:8;
     mln_u32_t                        ret_flag:1;
@@ -412,10 +415,16 @@ typedef struct {
 extern mln_lang_method_t *mln_lang_methods[];
 
 
-#define mln_lang_cache_set(lang) ((lang)->cache = 1)
-#define mln_lang_ctx_data_get(ctx) ((ctx)->data)
+#define mln_lang_mutex_lock(lang)   pthread_mutex_lock(&(lang)->lock)
+#define mln_lang_mutex_unlock(lang) pthread_mutex_unlock(&(lang)->lock)
+#define mln_lang_task_empty(lang)   ((lang)->run_head == NULL && (lang)->wait_head == NULL)
+#define mln_lang_signal_get(lang)   ((lang)->signal)
+#define mln_lang_event_get(lang)    ((lang)->ev)
+#define mln_lang_launcher_get(lang) ((lang)->launcher)
+#define mln_lang_cache_set(lang)    ((lang)->cache = 1)
+#define mln_lang_ctx_data_get(ctx)  ((ctx)->data)
 extern void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg) __NONNULL2(1,2);
-extern mln_lang_t *mln_lang_new(mln_event_t *ev) __NONNULL1(1);
+extern mln_lang_t *mln_lang_new(mln_event_t *ev, mln_lang_run_ctl_t signal, mln_lang_run_ctl_t clear) __NONNULL3(1,2,3);
 extern void mln_lang_free(mln_lang_t *lang);
 extern mln_lang_ctx_t *
 mln_lang_job_new(mln_lang_t *lang, \

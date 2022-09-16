@@ -78,10 +78,7 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
 
 Description: Receive a message from the side of `from`. After receiving, the message processing function set during initialization will be called to process the message.
 
-Return value:
-
-- `0` - success
-- `-1` - failed
+Return value: The number of received messages.
 
 
 
@@ -115,12 +112,11 @@ static void msg_handler(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_u32_
 
 static void *entry(void *args)
 {
+    int n;
     mln_iothread_t *t = (mln_iothread_t *)args;
     while (1) {
-        if (mln_iothread_recv(t, user_thread) < 0) {
-            fprintf(stderr, "recv failed\n");
-            sleep(3);
-        }
+        n = mln_iothread_recv(t, user_thread);
+        printf("recv %d message(s)\n", n);
     }
 
     return NULL;

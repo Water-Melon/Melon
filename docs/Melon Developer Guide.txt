@@ -2581,8 +2581,10 @@ Their definitions can be found in melon/include/mln_types.h.
   35) Lang
       This component aims to execute a script task.
 
-      a) mln_lang_t *mln_lang_new(mln_event_t *ev);
+      a) mln_lang_t *mln_lang_new(mln_event_t *ev, mln_lang_run_ctl_t signal, mln_lang_run_ctl_t clear);
          Create a lang object. It supports multi-task.
+         'signal' is used to trigger event to run tasks.
+         'clear' is used to remove event and prevent task to run.
 
       b) void mln_lang_free(mln_lang_t *lang);
          Destroy the 'lang' object.
@@ -2643,6 +2645,27 @@ Their definitions can be found in melon/include/mln_types.h.
 
       o) void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name);
          Fetch global resource data;
+
+      p) mln_lang_mutex_lock(lang);
+         Lock mutex of 'lang'.
+
+      q) mln_lang_mutex_unlock(lang);
+         Unlock mutex of 'lang'.
+
+      r) mln_lang_task_empty(lang);
+         Check if all tasks are completed.
+
+      s) mln_lang_signal_get(lang);
+         Get signal function from 'lang'.
+
+      t) mln_lang_event_get(lang);
+         Get event pointer from 'lang'.
+
+      u) mln_lang_launcher_get(lang);
+         Get event launcher from 'lang'.
+
+      v) mln_lang_ctx_data_get(ctx);
+         Get user data from task 'ctx'.
 
   36) FEC
       This component is used to recover RTP packet. Generation and recovery operations are described in
@@ -2841,7 +2864,7 @@ Their definitions can be found in melon/include/mln_types.h.
       d) int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
          Receive a message from 'from'.
          Then the callback which is given in 'mln_iothread_init' will be called.
-         Return value: 0 - success, -1 - error
+         Return value: the number of message received.
 
       e) mln_iothread_sockfd_get(p.t)
          Get I/O or user thread socket file descriptor.

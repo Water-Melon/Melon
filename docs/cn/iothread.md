@@ -73,10 +73,7 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
 
 描述：从`from`的一端接收消息。接收后会调用初始化时设置好的消息处理函数，对消息进行处理。
 
-返回值：
-
-- `0` - 成功
-- `-1` - 失败
+返回值：已接收并处理的消息个数
 
 
 
@@ -109,12 +106,11 @@ static void msg_handler(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_u32_
 
 static void *entry(void *args)
 {
+    int n;
     mln_iothread_t *t = (mln_iothread_t *)args;
     while (1) {
-        if (mln_iothread_recv(t, user_thread) < 0) {
-            fprintf(stderr, "recv failed\n");
-            sleep(3);
-        }
+        n = mln_iothread_recv(t, user_thread);
+        printf("recv %d message(s)\n", n);
     }
 
     return NULL;

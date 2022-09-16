@@ -23,10 +23,12 @@ This article only provides functions for creating script tasks and scheduling sc
 #### mln_lang_new
 
 ```c
-mln_lang_t *mln_lang_new(mln_event_t *ev);
+mln_lang_t *mln_lang_new(mln_event_t *ev, mln_lang_run_ctl_t signal, mln_lang_run_ctl_t clear);
+
+typedef int (*mln_lang_run_ctl_t)(mln_lang_t *);
 ```
 
-Description: Create a script management structure, which is the management structure of script tasks, and is used to maintain the resources, scheduling, creation, deletion and other related content of multiple script tasks. Each script task on it is regarded as a coroutine. `ev` is the event structure each script task depends on. In other words, the execution of script tasks is dependent on Melon's asynchronous event API.
+Description: Create a script management structure, which is the management structure of script tasks, and is used to maintain the resources, scheduling, creation, deletion and other related content of multiple script tasks. Each script task on it is regarded as a coroutine. `ev` is the event structure each script task depends on. In other words, the execution of script tasks is dependent on Melon's asynchronous event API. `signal` is used to trigger event to run tasks. `clear` is used to remove event and prevent task to run.
 
 Return value: If successful, return the script management structure `mln_lang_t` pointer, otherwise return `NULL`
 
@@ -97,6 +99,87 @@ mln_lang_ctx_data_get(ctx)
 Description: Get user-defined data in `ctx` of a pointer of type `mln_lang_ctx_t` of script task.
 
 Return value: user-defined data pointer
+
+
+
+#### mln_lang_launcher_get
+
+```c
+mln_lang_launcher_get(lang)
+```
+
+Description: Get the launcher function pointer in the `lang` structure, which is the handler for the file descriptor event in `mln_event_t`. The purpose of allowing access to this function here is to allow the caller to obtain the handler function in the custom `signal` function pointer for setting file descriptor events.
+
+Return value: launcher function pointer
+
+
+
+#### mln_lang_event_get
+
+```c
+mln_lang_event_get(lang)
+```
+
+Description: Get the `mln_event_t` pointer in `lang` for setting/clearing events in `signal` and `clear` callbacks.
+
+Return value: `mln_event_t` pointer
+
+
+
+#### mln_lang_signal_get
+
+```c
+mln_lang_signal_get(lang)
+```
+
+Description: Get the `signal` function pointer in the `lang` structure, which is used to trigger file descriptor events in script development, so that the script task can continue to execute.
+
+Return value: `signal` function pointer
+
+
+
+#### mln_lang_task_empty
+
+```c
+mln_lang_task_empty(lang)
+```
+
+Description: Check if there are no script tasks in `lang` anymore.
+
+Return value:
+
+- `0` has tasks
+- `non-0` no task
+
+
+
+#### mln_lang_mutex_lock
+
+```c
+mln_lang_mutex_lock(lang)
+```
+
+Description: Lock the resources in `lang`, for example, it should be locked before calling `mln_lang_task_empty` in script development.
+
+Return value:
+
+- `0` on success
+- `non-0` on fail
+
+
+
+#### mln_lang_mutex_unlock
+
+```c
+mln_lang_mutex_unlock(lang)
+```
+
+Description: Unlock resources in `lang`, for example, it should be unlocked after calling `mln_lang_task_empty` in script development.
+
+Return value:
+
+- `0` on success
+- `non-0` on fail
 
 
 

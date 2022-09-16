@@ -130,7 +130,7 @@ int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothrea
 
 int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
 {
-    int fd;
+    int fd, n = 0;
     mln_s8_t c;
     pthread_mutex_t *plock;
     mln_iothread_msg_t *msg, *pos;
@@ -160,6 +160,7 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
         } else {
             mln_iothread_msg_free(msg);
         }
+        ++n;
     }
 
     if (pos != *head)
@@ -167,7 +168,7 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
 
     pthread_mutex_unlock(plock);
 
-    return 0;
+    return n;
 }
 
 

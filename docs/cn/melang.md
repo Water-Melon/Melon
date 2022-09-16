@@ -23,10 +23,12 @@
 #### mln_lang_new
 
 ```c
-mln_lang_t *mln_lang_new(mln_event_t *ev);
+mln_lang_t *mln_lang_new(mln_event_t *ev, mln_lang_run_ctl_t signal, mln_lang_run_ctl_t clear);
+
+typedef int (*mln_lang_run_ctl_t)(mln_lang_t *);
 ```
 
-描述：创建脚本管理结构，该结构是脚本任务的管理结构，用于维护多个脚本任务的资源、调度、创建、删除等相关内容。其上每一个脚本任务被看作一个协程。`ev`为每个脚本任务所依赖的事件结构。换言之，脚本任务的执行是依赖于Melon的异步事件API的。
+描述：创建脚本管理结构，该结构是脚本任务的管理结构，用于维护多个脚本任务的资源、调度、创建、删除等相关内容。其上每一个脚本任务被看作一个协程。`ev`为每个脚本任务所依赖的事件结构。换言之，脚本任务的执行是依赖于Melon的异步事件API的。`signal`用于设置事件，来使其执行脚本任务。`clear`用于清除事件，来阻止脚本任务继续执行。
 
 返回值：成功则返回脚本管理结构`mln_lang_t`指针，否则返回`NULL`
 
@@ -97,6 +99,87 @@ mln_lang_ctx_data_get(ctx)
 描述：获取脚本任务`mln_lang_ctx_t`类型指针的`ctx`中的用户自定义数据。
 
 返回值：用户自定义数据指针
+
+
+
+#### mln_lang_launcher_get
+
+```c
+mln_lang_launcher_get(lang)
+```
+
+描述：获取`lang`结构中的launcher函数指针，该指针是`mln_event_t`中文件描述符事件的处理函数。这里允许获取这个函数的目的是为了让调用方可以在自定义的`signal`函数指针内获取到该处理函数，以便用于设置文件描述符事件。
+
+返回值：launcher函数指针
+
+
+
+#### mln_lang_event_get
+
+```c
+mln_lang_event_get(lang)
+```
+
+描述：获取`lang`中的`mln_event_t`指针，用于在`signal`以及`clear`回调中设置/清理事件。
+
+返回值：`mln_event_t`指针
+
+
+
+#### mln_lang_signal_get
+
+```c
+mln_lang_signal_get(lang)
+```
+
+描述：获取`lang`结构中的`signal`函数指针，用于在脚本开发中触发文件描述符事件，来使脚本任务得以继续执行。
+
+返回值：`signal`函数指针
+
+
+
+#### mln_lang_task_empty
+
+```c
+mln_lang_task_empty(lang)
+```
+
+描述：检查`lang`中是否已经没有脚本任务了。
+
+返回值：
+
+- `0` 有任务
+- `非0` 无任务
+
+
+
+#### mln_lang_mutex_lock
+
+```c
+mln_lang_mutex_lock(lang)
+```
+
+描述：对`lang`中资源进行加锁，例如在脚本开发中调用`mln_lang_task_empty`前应当加锁。
+
+返回值：
+
+- `0` 成功
+- `非0` 失败
+
+
+
+#### mln_lang_mutex_unlock
+
+```c
+mln_lang_mutex_unlock(lang)
+```
+
+描述：对`lang`中资源解除锁定，例如在脚本开发中调用`mln_lang_task_empty`后应当解锁。
+
+返回值：
+
+- `0` 成功
+- `非0` 失败
 
 
 

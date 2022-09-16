@@ -1,3 +1,10 @@
+Changes with melon 2.5.0                                          16 Sep 2022
+    *) Updated rbtree functions
+    *) Optimized iothread
+    *) Upgraded event to support multi-thread
+    *) Fixed select error on Windows
+    *) Upgraded Melang to enable tasks to execute across threads
+
 Changes with melon 2.4.1                                          04 Sep 2022
     *) Updated configure shell
     *) Added iothread component
