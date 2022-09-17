@@ -6652,7 +6652,10 @@ static mln_lang_import_t *mln_lang_func_import_new(mln_lang_ctx_t *ctx, mln_stri
     if ((i = (mln_lang_import_t *)mln_alloc_m(ctx->lang->pool, sizeof(mln_lang_import_t))) == NULL) {
         return NULL;
     }
-    i->name = mln_string_ref(name);
+    if ((i->name = mln_string_pool_dup(ctx->lang->pool, name)) == NULL) {
+        mln_alloc_free(i);
+        return NULL;
+    }
     i->ref = 0;
     i->handle = handle;
 
