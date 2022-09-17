@@ -2134,7 +2134,7 @@ mln_lang_funcdef_args_get(mln_lang_ctx_t *ctx, \
         factor = spec->data.factor;
         if (factor->type != M_FACTOR_ID) goto err;
 
-        if ((var = __mln_lang_var_new_ref_string(ctx, factor->data.s_id, type, NULL, NULL)) == NULL) {
+        if ((var = __mln_lang_var_new(ctx, factor->data.s_id, type, NULL, NULL)) == NULL) {
             return -1;
         }
         if (nargs == NULL) {/*closure args*/
@@ -3248,7 +3248,7 @@ static void mln_lang_stack_handler_funcdef(mln_lang_ctx_t *ctx)
                 break;
         }
     }
-    if ((var = __mln_lang_var_new_ref_string(ctx, funcdef->name, M_LANG_VAR_NORMAL, val, in_set)) == NULL) {
+    if ((var = __mln_lang_var_new(ctx, funcdef->name, M_LANG_VAR_NORMAL, val, in_set)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
         mln_lang_job_free(ctx);
@@ -3336,7 +3336,7 @@ again:
                 mln_lang_job_free(ctx);
                 return;
             }
-            if ((var = __mln_lang_var_new_ref_string(ctx, ls->data.var, M_LANG_VAR_NORMAL, val, in_set)) == NULL) {
+            if ((var = __mln_lang_var_new(ctx, ls->data.var, M_LANG_VAR_NORMAL, val, in_set)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 __mln_lang_val_free(val);
                 mln_lang_job_free(ctx);
@@ -5334,7 +5334,7 @@ again_index:
         }
         mln_lang_var_t *res = NULL;
         mln_lang_var_t *var;
-        if ((var = mln_lang_var_create_ref_string(ctx, locate->right.id, NULL)) == NULL) {
+        if ((var = mln_lang_var_create_string(ctx, locate->right.id, NULL)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             node->ret_var2 = NULL;
             mln_lang_job_free(ctx);
@@ -5913,6 +5913,7 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node = mln_lang_stack_top(ctx);
     mln_lang_factor_t *factor = node->data.factor;
+    mln_string_t *name;
     mln_lang_var_t *var;
     if (node->step == 0) {
         node->step = 1;
@@ -5929,11 +5930,18 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                         return;
                     }
                 } else {
-                    if ((var = __mln_lang_var_create_nil(ctx, factor->data.s_id)) == NULL) {
+                    if ((name = mln_string_pool_dup(ctx->pool, factor->data.s_id)) == NULL) {
                         __mln_lang_errmsg(ctx, "No memory.");
                         mln_lang_job_free(ctx);
                         return;
                     }
+                    if ((var = __mln_lang_var_create_nil(ctx, name)) == NULL) {
+                        __mln_lang_errmsg(ctx, "No memory.");
+                        mln_string_free(name);
+                        mln_lang_job_free(ctx);
+                        return;
+                    }
+                    mln_string_free(name);
                     if (__mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
                         __mln_lang_errmsg(ctx, "No memory.");
                         __mln_lang_var_free(var);
@@ -5961,7 +5969,7 @@ static void mln_lang_stack_handler_factor(mln_lang_ctx_t *ctx)
                 __mln_lang_ctx_set_ret_var(ctx, var);
                 break;
             case M_FACTOR_STRING:
-                if ((var = __mln_lang_var_create_ref_string(ctx, factor->data.s_id, NULL)) == NULL) {
+                if ((var = mln_lang_var_create_string(ctx, factor->data.s_id, NULL)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     mln_lang_job_free(ctx);
                     return;

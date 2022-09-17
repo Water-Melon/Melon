@@ -120,10 +120,8 @@ struct mln_event_s {
     pthread_mutex_t          cb_lock;
 #if defined(MLN_EPOLL)
     int                      epollfd;
-    int                      unusedfd;
 #elif defined(MLN_KQUEUE)
     int                      kqfd;
-    int                      unusedfd;
 #else
     int                      select_fd;
     fd_set                   rd_set;
