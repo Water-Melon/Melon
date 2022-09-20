@@ -139,7 +139,8 @@ struct mln_lang_ctx_s {
     mln_u32_t                        op_obj_flag:1;
     mln_u32_t                        op_real_flag:1;
     mln_u32_t                        op_str_flag:1;
-    mln_u32_t                        padding:7;
+    mln_u32_t                        quit:1;
+    mln_u32_t                        padding:6;
 };
 
 struct mln_lang_resource_s {
