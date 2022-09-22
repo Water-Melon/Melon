@@ -902,16 +902,13 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
 
 void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx)
 {
-    pthread_mutex_lock(&ctx->lang->lock);
     ++(ctx->ref);
     mln_lang_ctx_chain_del(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
     mln_lang_ctx_chain_add(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
-    pthread_mutex_unlock(&ctx->lang->lock);
 }
 
 void mln_lang_ctx_continue(mln_lang_ctx_t *ctx)
 {
-    pthread_mutex_lock(&ctx->lang->lock);
     --(ctx->ref);
     mln_lang_ctx_chain_del(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
     mln_lang_ctx_chain_add(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
@@ -920,7 +917,6 @@ void mln_lang_ctx_continue(mln_lang_ctx_t *ctx)
     } else {
         ctx->lang->clear(ctx->lang);
     }
-    pthread_mutex_unlock(&ctx->lang->lock);
 }
 
 static inline mln_lang_set_detail_t *

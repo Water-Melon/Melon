@@ -723,7 +723,7 @@ void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name);
 void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx);
 ```
 
-描述：将脚本任务`ctx`挂起等待。
+描述：将脚本任务`ctx`挂起等待。调用该函数前，必须要调用`mln_lang_mutex_lock`该宏上锁。
 
 返回值：无
 
@@ -735,7 +735,7 @@ void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx);
 void mln_lang_ctx_continue(mln_lang_ctx_t *ctx);
 ```
 
-描述：将脚本任务`ctx`放回执行队列继续执行。
+描述：将脚本任务`ctx`放回执行队列继续执行。调用该函数前，必须要调用`mln_lang_mutex_lock`该宏上锁。
 
 返回值：无
 

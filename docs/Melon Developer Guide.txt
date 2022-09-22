@@ -2636,9 +2636,11 @@ Their definitions can be found in melon/include/mln_types.h.
 
       k) void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx);
          Suspend the script task indicated by 'ctx'.
+         Before you call this function, you must call 'mln_lang_mutex_lock'.
 
       l) void mln_lang_ctx_continue(mln_lang_ctx_t *ctx);
          Continue to run the script task indicated by 'ctx';
+         Before you call this function, you must call 'mln_lang_mutex_lock'.
 
       m) int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, mln_lang_resource_free free_handler);
          Register a global resource that can be accessed by all script tasks those are in the same thread.

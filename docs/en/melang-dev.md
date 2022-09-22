@@ -724,7 +724,7 @@ Return value: Returns the resource pointer if it exists, otherwise returns `NULL
 void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx);
 ```
 
-Description: Suspend script task `ctx` to wait.
+Description: Suspend script task `ctx` to wait. `mln_lang_mutex_lock` must be called before calling this function.
 
 Return value: none
 
@@ -736,7 +736,7 @@ Return value: none
 void mln_lang_ctx_continue(mln_lang_ctx_t *ctx);
 ```
 
-Description: Put the script task `ctx` back in the execution queue to continue execution.
+Description: Put the script task `ctx` back in the execution queue to continue execution. `mln_lang_mutex_lock` must be called before calling this function.
 
 Return value: none
 
