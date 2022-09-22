@@ -41,9 +41,12 @@
 #define M_EV_UNLIMITED -1
 #define M_EV_UNMODIFIED -2
 /*for epool, kqueue, select*/
-#define M_EV_TIMEOUT_US 10000 /*10ms*/
-#define M_EV_TIMEOUT_MS 10
-#define M_EV_TIMEOUT_NS 10000000 /*10ms*/
+#define M_EV_TIMEOUT_US        10000 /*10ms*/
+#define M_EV_TIMEOUT_MS        10
+#define M_EV_TIMEOUT_NS        10000000 /*10ms*/
+#define M_EV_NOLOCK_TIMEOUT_US 3000 /*3ms*/
+#define M_EV_NOLOCK_TIMEOUT_MS 3
+#define M_EV_NOLOCK_TIMEOUT_NS 3000000/*3ms*/
 
 typedef struct mln_event_s      mln_event_t;
 typedef struct mln_event_desc_s mln_event_desc_t;
@@ -120,8 +123,10 @@ struct mln_event_s {
     pthread_mutex_t          cb_lock;
 #if defined(MLN_EPOLL)
     int                      epollfd;
+    int                      unusedfd;
 #elif defined(MLN_KQUEUE)
     int                      kqfd;
+    int                      unusedfd;
 #else
     int                      select_fd;
     fd_set                   rd_set;

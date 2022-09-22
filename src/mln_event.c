@@ -137,10 +137,22 @@ mln_event_t *mln_event_new(void)
         mln_log(error, "epoll_create error. %s\n", strerror(errno));
         goto err4;
     }
+    ev->unusedfd = epoll_create(M_EV_EPOLL_SIZE);
+    if (ev->unusedfd < 0) {
+        close(ev->epollfd);
+        mln_log(error, "epoll_create error. %s\n", strerror(errno));
+        goto err4;
+    }
 #elif defined(MLN_KQUEUE)
     ev->kqfd = kqueue();
     if (ev->kqfd < 0) {
         mln_log(error, "kqueue error. %s\n", strerror(errno));
+        goto err4;
+    }
+    ev->unusedfd = kqueue();
+    if (ev->unusedfd < 0) {
+        close(ev->kqfd);
+        mln_log(error, "epoll_create error. %s\n", strerror(errno));
         goto err4;
     }
 #else
@@ -195,8 +207,10 @@ void mln_event_free(mln_event_t *ev)
     mln_fheap_destroy(ev->ev_timer_heap);
 #if defined(MLN_EPOLL)
     close(ev->epollfd);
+    close(ev->unusedfd);
 #elif defined(MLN_KQUEUE)
     close(ev->kqfd);
+    close(ev->unusedfd);
 #else
     /*select do nothing.*/
 #endif
@@ -816,78 +830,81 @@ void mln_event_dispatch(mln_event_t *event)
         mln_event_deal_timer(event);
         BREAK_OUT();
 
-        nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, M_EV_TIMEOUT_MS);
-        if (nfds < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else {
-                mln_log(error, "epoll_wait error. %s\n", strerror(errno));
-                abort();
-            }
-        } else if (nfds == 0) {
-            continue;
-        }
-        pthread_mutex_lock(&event->fd_lock);
-        for (n = 0; n < nfds; ++n) {
-            mod_event = 0;
-            oneshot = 0;
-            other_oneshot = 0;
-            ev = &events[n];
-            ed = (mln_event_desc_t *)(ev->data.ptr);
-            if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
-                continue;
-
-            if (ev->events & EPOLLIN) {
-                if (ed->data.fd.rd_oneshot) {
-                    ed->data.fd.rd_oneshot = 0;
-                    oneshot = 1;
-                    ed->flag &= (~M_EV_RECV);
-                }
-                ed->data.fd.active_flag |= M_EV_RECV;
-            }
-            if (ev->events & EPOLLOUT) {
-                if (ed->data.fd.wr_oneshot) {
-                    ed->data.fd.wr_oneshot = 0;
-                    oneshot = 1;
-                    ed->flag &= (~M_EV_SEND);
-                }
-                ed->data.fd.active_flag |= M_EV_SEND;
-            }
-            if (ev->events & EPOLLERR) {
-                if (ed->data.fd.err_oneshot) {
-                    ed->data.fd.err_oneshot = 0;
-                    oneshot = 1;
-                    ed->flag &= (~M_EV_ERROR);
-                }
-                ed->data.fd.active_flag |= M_EV_ERROR;
-            }
-            ev_fd_active_chain_add(&(event->ev_fd_active_head), \
-                                   &(event->ev_fd_active_tail), \
-                                   ed);
-            ed->data.fd.in_active = 1;
-            if (oneshot) {
-                if (ed->flag & M_EV_RECV) mod_event |= EPOLLIN;
-                if (ed->flag & M_EV_SEND) mod_event |= EPOLLOUT;
-                if (ed->flag & M_EV_ERROR) mod_event |= EPOLLERR;
-                if (ed->data.fd.rd_oneshot || \
-                    ed->data.fd.wr_oneshot || \
-                    ed->data.fd.err_oneshot)
-                {
-                    other_oneshot = 1;
-                }
-                memset(&mod_ev, 0, sizeof(mod_ev));
-                if (other_oneshot) {
-                    mod_ev.events = mod_event|EPOLLONESHOT;\
-                    mod_ev.data.ptr = ed;\
-                    epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+        if (pthread_mutex_trylock(&event->fd_lock)) {
+            epoll_wait(event->unusedfd, events, M_EV_EPOLL_SIZE, M_EV_NOLOCK_TIMEOUT_MS);
+        } else {
+            nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, M_EV_TIMEOUT_MS);
+            if (nfds < 0) {
+                if (errno == EINTR) {
+                    continue;
                 } else {
-                    mod_ev.events = mod_event;\
-                    mod_ev.data.ptr = ed;\
-                    epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+                    mln_log(error, "epoll_wait error. %s\n", strerror(errno));
+                    abort();
+                }
+            } else if (nfds == 0) {
+                continue;
+            }
+            for (n = 0; n < nfds; ++n) {
+                mod_event = 0;
+                oneshot = 0;
+                other_oneshot = 0;
+                ev = &events[n];
+                ed = (mln_event_desc_t *)(ev->data.ptr);
+                if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+                    continue;
+
+                if (ev->events & EPOLLIN) {
+                    if (ed->data.fd.rd_oneshot) {
+                        ed->data.fd.rd_oneshot = 0;
+                        oneshot = 1;
+                        ed->flag &= (~M_EV_RECV);
+                    }
+                    ed->data.fd.active_flag |= M_EV_RECV;
+                }
+                if (ev->events & EPOLLOUT) {
+                    if (ed->data.fd.wr_oneshot) {
+                        ed->data.fd.wr_oneshot = 0;
+                        oneshot = 1;
+                        ed->flag &= (~M_EV_SEND);
+                    }
+                    ed->data.fd.active_flag |= M_EV_SEND;
+                }
+                if (ev->events & EPOLLERR) {
+                    if (ed->data.fd.err_oneshot) {
+                        ed->data.fd.err_oneshot = 0;
+                        oneshot = 1;
+                        ed->flag &= (~M_EV_ERROR);
+                    }
+                    ed->data.fd.active_flag |= M_EV_ERROR;
+                }
+                ev_fd_active_chain_add(&(event->ev_fd_active_head), \
+                                       &(event->ev_fd_active_tail), \
+                                       ed);
+                ed->data.fd.in_active = 1;
+                if (oneshot) {
+                    if (ed->flag & M_EV_RECV) mod_event |= EPOLLIN;
+                    if (ed->flag & M_EV_SEND) mod_event |= EPOLLOUT;
+                    if (ed->flag & M_EV_ERROR) mod_event |= EPOLLERR;
+                    if (ed->data.fd.rd_oneshot || \
+                        ed->data.fd.wr_oneshot || \
+                        ed->data.fd.err_oneshot)
+                    {
+                        other_oneshot = 1;
+                    }
+                    memset(&mod_ev, 0, sizeof(mod_ev));
+                    if (other_oneshot) {
+                        mod_ev.events = mod_event|EPOLLONESHOT;\
+                        mod_ev.data.ptr = ed;\
+                        epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+                    } else {
+                        mod_ev.events = mod_event;\
+                        mod_ev.data.ptr = ed;\
+                        epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+                    }
                 }
             }
+            pthread_mutex_unlock(&event->fd_lock);
         }
-        pthread_mutex_unlock(&event->fd_lock);
     }
 }
 #elif defined(MLN_KQUEUE)
@@ -919,63 +936,68 @@ void mln_event_dispatch(mln_event_t *event)
         mln_event_deal_timer(event);
         BREAK_OUT();
 
-        ts.tv_sec = 0;
-        ts.tv_nsec = M_EV_TIMEOUT_NS;
-        nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
-        if (nfds < 0) {
-            if (errno == EINTR) {
+        if (pthread_mutex_trylock(&event->fd_lock)) {
+            ts.tv_sec = 0;
+            ts.tv_nsec = M_EV_NOLOCK_TIMEOUT_NS;
+            kevent(event->unusedfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
+        } else {
+            ts.tv_sec = 0;
+            ts.tv_nsec = M_EV_TIMEOUT_NS;
+            nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
+            if (nfds < 0) {
+                if (errno == EINTR) {
+                    continue;
+                } else {
+                    mln_log(error, "kevent error. %s\n", strerror(errno));
+                    abort();
+                }
+            } else if (nfds == 0) {
                 continue;
-            } else {
-                mln_log(error, "kevent error. %s\n", strerror(errno));
-                abort();
             }
-        } else if (nfds == 0) {
-            continue;
-        }
-        pthread_mutex_lock(&event->fd_lock);
-        for (n = 0; n < nfds; ++n) {
-            ev = &events[n];
-            ed = (mln_event_desc_t *)(ev->udata);
-            if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
-                continue;
+            for (n = 0; n < nfds; ++n) {
+                ev = &events[n];
+                ed = (mln_event_desc_t *)(ev->udata);
+                if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+                    continue;
 
-            if (ev->filter == EVFILT_READ) {
-                ed->data.fd.active_flag |= M_EV_RECV;
-                if (ed->data.fd.rd_oneshot) {
-                    ed->data.fd.rd_oneshot = 0;
-                    EV_SET(&mod, ed->data.fd.fd, EVFILT_READ, EV_DISABLE, 0, 0, ed);
-                    if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
-                        mln_log(error, "kevent error. %s\n", strerror(errno));
-                        abort();
+                if (ev->filter == EVFILT_READ) {
+                    ed->data.fd.active_flag |= M_EV_RECV;
+                    if (ed->data.fd.rd_oneshot) {
+                        ed->data.fd.rd_oneshot = 0;
+                        EV_SET(&mod, ed->data.fd.fd, EVFILT_READ, EV_DISABLE, 0, 0, ed);
+                        if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
+                            mln_log(error, "kevent error. %s\n", strerror(errno));
+                            abort();
+                        }
+                        ed->flag &= (~M_EV_RECV);
                     }
-                    ed->flag &= (~M_EV_RECV);
                 }
-            }
-            if (ev->filter == EVFILT_WRITE) {
-                if (ed->data.fd.wr_oneshot) {
-                    ed->data.fd.wr_oneshot = 0;
-                    EV_SET(&mod, ed->data.fd.fd, EVFILT_WRITE, EV_DISABLE, 0, 0, ed);
-                    if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
-                        mln_log(error, "kevent error. %s\n", strerror(errno));
-                        abort();
+                if (ev->filter == EVFILT_WRITE) {
+                    if (ed->data.fd.wr_oneshot) {
+                        ed->data.fd.wr_oneshot = 0;
+                        EV_SET(&mod, ed->data.fd.fd, EVFILT_WRITE, EV_DISABLE, 0, 0, ed);
+                        if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
+                            mln_log(error, "kevent error. %s\n", strerror(errno));
+                            abort();
+                        }
+                        ed->flag &= (~M_EV_SEND);
                     }
-                    ed->flag &= (~M_EV_SEND);
+                    ed->data.fd.active_flag |= M_EV_SEND;
                 }
-                ed->data.fd.active_flag |= M_EV_SEND;
-            }
-            if ((ev->flags & EV_ERROR) && (ed->flag & M_EV_ERROR)) {
-                if (ed->data.fd.err_oneshot) {
-                    ed->data.fd.err_oneshot = 0;
-                    ed->flag &= ~(M_EV_ERROR);
+                if ((ev->flags & EV_ERROR) && (ed->flag & M_EV_ERROR)) {
+                    if (ed->data.fd.err_oneshot) {
+                        ed->data.fd.err_oneshot = 0;
+                        ed->flag &= ~(M_EV_ERROR);
+                    }
+                    ed->data.fd.active_flag |= M_EV_ERROR;
                 }
-                ed->data.fd.active_flag |= M_EV_ERROR;
+                ev_fd_active_chain_add(&(event->ev_fd_active_head), \
+                                       &(event->ev_fd_active_tail), \
+                                       ed);
+                ed->data.fd.in_active = 1;
             }
-            ev_fd_active_chain_add(&(event->ev_fd_active_head), \
-                                   &(event->ev_fd_active_tail), \
-                                   ed);
-            ed->data.fd.in_active = 1;
+            pthread_mutex_unlock(&event->fd_lock);
         }
-        pthread_mutex_unlock(&event->fd_lock);
     }
 }
 #else
@@ -1014,77 +1036,82 @@ void mln_event_dispatch(mln_event_t *event)
         FD_ZERO(wr_set);
         FD_ZERO(err_set);
 
-        for (ed = event->ev_fd_wait_head; \
-             ed != NULL; \
-             ed = ed->next)
-        {
-            fd = ed->data.fd.fd;
-            if (ed->flag & M_EV_RECV) FD_SET(fd, rd_set);
-            if (ed->flag & M_EV_SEND) FD_SET(fd, wr_set);
-            if (ed->flag & M_EV_ERROR) FD_SET(fd, err_set);
-            if (fd >= event->select_fd)
-                event->select_fd = fd + 1;
-        }
-        tm.tv_sec = 0;
-        tm.tv_usec = M_EV_TIMEOUT_US;
-        nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
-        if (nfds < 0) {
-#if !defined(WIN32)
-            if (errno == EINTR || errno == ENOMEM) {
-#endif
-                continue;
-#if !defined(WIN32)
-            } else {
-                mln_log(error, "select error. %s\n", strerror(errno));
-                abort();
+        if (pthread_mutex_trylock(&event->fd_lock)) {
+            tm.tv_sec = 0;
+            tm.tv_usec = M_EV_NOLOCK_TIMEOUT_US;
+            select(event->select_fd, rd_set, wr_set, err_set, &tm);
+        } else {
+            for (ed = event->ev_fd_wait_head; \
+                 ed != NULL; \
+                 ed = ed->next)
+            {
+                fd = ed->data.fd.fd;
+                if (ed->flag & M_EV_RECV) FD_SET(fd, rd_set);
+                if (ed->flag & M_EV_SEND) FD_SET(fd, wr_set);
+                if (ed->flag & M_EV_ERROR) FD_SET(fd, err_set);
+                if (fd >= event->select_fd)
+                    event->select_fd = fd + 1;
             }
+            tm.tv_sec = 0;
+            tm.tv_usec = M_EV_TIMEOUT_US;
+            nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
+            if (nfds < 0) {
+#if !def    ined(WIN32)
+                if (errno == EINTR || errno == ENOMEM) {
 #endif
-        } else if (nfds == 0) {
-            continue;
-        }
-        pthread_mutex_lock(&event->fd_lock);
-        ed = event->ev_fd_wait_head;
-        for (; nfds > 0 && ed != NULL; ed = ed->next) {
-            if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+                    continue;
+#if !def    ined(WIN32)
+                } else {
+                    mln_log(error, "select error. %s\n", strerror(errno));
+                    abort();
+                }
+#endif
+            } else if (nfds == 0) {
                 continue;
+            }
+            ed = event->ev_fd_wait_head;
+            for (; nfds > 0 && ed != NULL; ed = ed->next) {
+                if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+                    continue;
 
-            move = 0;
-            fd = ed->data.fd.fd;
-            if (FD_ISSET(fd, rd_set)) {
-                ed->data.fd.active_flag |= M_EV_RECV;
-                if (ed->data.fd.rd_oneshot == 1) {
-                    ed->flag &= (~M_EV_RECV);
-                    ed->data.fd.rd_oneshot = 0;
+                move = 0;
+                fd = ed->data.fd.fd;
+                if (FD_ISSET(fd, rd_set)) {
+                    ed->data.fd.active_flag |= M_EV_RECV;
+                    if (ed->data.fd.rd_oneshot == 1) {
+                        ed->flag &= (~M_EV_RECV);
+                        ed->data.fd.rd_oneshot = 0;
+                    }
+                    --nfds;
+                    move = 1;
                 }
-                --nfds;
-                move = 1;
-            }
-            if (FD_ISSET(fd, wr_set)) {
-                ed->data.fd.active_flag |= M_EV_SEND;
-                if (ed->data.fd.wr_oneshot == 1) {
-                    ed->flag &= (~M_EV_SEND);
-                    ed->data.fd.wr_oneshot = 0;
+                if (FD_ISSET(fd, wr_set)) {
+                    ed->data.fd.active_flag |= M_EV_SEND;
+                    if (ed->data.fd.wr_oneshot == 1) {
+                        ed->flag &= (~M_EV_SEND);
+                        ed->data.fd.wr_oneshot = 0;
+                    }
+                    --nfds;
+                    move = 1;
                 }
-                --nfds;
-                move = 1;
-            }
-            if (FD_ISSET(fd, err_set)) {
-                ed->data.fd.active_flag |= M_EV_ERROR;
-                if (ed->data.fd.err_oneshot == 1) {
-                    ed->flag &= (~M_EV_ERROR);
-                    ed->data.fd.err_oneshot = 0;
+                if (FD_ISSET(fd, err_set)) {
+                    ed->data.fd.active_flag |= M_EV_ERROR;
+                    if (ed->data.fd.err_oneshot == 1) {
+                        ed->flag &= (~M_EV_ERROR);
+                        ed->data.fd.err_oneshot = 0;
+                    }
+                    --nfds;
+                    move = 1;
                 }
-                --nfds;
-                move = 1;
+                if (move) {
+                    ev_fd_active_chain_add(&(event->ev_fd_active_head), \
+                                           &(event->ev_fd_active_tail), \
+                                           ed);
+                    ed->data.fd.in_active = 1;
+                }
             }
-            if (move) {
-                ev_fd_active_chain_add(&(event->ev_fd_active_head), \
-                                       &(event->ev_fd_active_tail), \
-                                       ed);
-                ed->data.fd.in_active = 1;
-            }
+            pthread_mutex_unlock(&event->fd_lock);
         }
-        pthread_mutex_unlock(&event->fd_lock);
     }
 }
 #endif
