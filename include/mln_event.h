@@ -41,9 +41,9 @@
 #define M_EV_UNLIMITED -1
 #define M_EV_UNMODIFIED -2
 /*for epool, kqueue, select*/
-#define M_EV_TIMEOUT_US        10000 /*10ms*/
-#define M_EV_TIMEOUT_MS        10
-#define M_EV_TIMEOUT_NS        10000000 /*10ms*/
+#define M_EV_TIMEOUT_US        7000 /*7ms*/
+#define M_EV_TIMEOUT_MS        7
+#define M_EV_TIMEOUT_NS        7000000 /*7ms*/
 #define M_EV_NOLOCK_TIMEOUT_US 3000 /*3ms*/
 #define M_EV_NOLOCK_TIMEOUT_MS 3
 #define M_EV_NOLOCK_TIMEOUT_NS 3000000/*3ms*/

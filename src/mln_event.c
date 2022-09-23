@@ -836,12 +836,15 @@ void mln_event_dispatch(mln_event_t *event)
             nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, M_EV_TIMEOUT_MS);
             if (nfds < 0) {
                 if (errno == EINTR) {
+                    pthread_mutex_unlock(&event->fd_lock);
                     continue;
                 } else {
                     mln_log(error, "epoll_wait error. %s\n", strerror(errno));
                     abort();
                 }
             } else if (nfds == 0) {
+                pthread_mutex_unlock(&event->fd_lock);
+                epoll_wait(event->unusedfd, events, M_EV_EPOLL_SIZE, M_EV_NOLOCK_TIMEOUT_MS);
                 continue;
             }
             for (n = 0; n < nfds; ++n) {
@@ -946,12 +949,17 @@ void mln_event_dispatch(mln_event_t *event)
             nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
             if (nfds < 0) {
                 if (errno == EINTR) {
+                    pthread_mutex_unlock(&event->fd_lock);
                     continue;
                 } else {
                     mln_log(error, "kevent error. %s\n", strerror(errno));
                     abort();
                 }
             } else if (nfds == 0) {
+                pthread_mutex_unlock(&event->fd_lock);
+                ts.tv_sec = 0;
+                ts.tv_nsec = M_EV_NOLOCK_TIMEOUT_NS;
+                kevent(event->unusedfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
                 continue;
             }
             for (n = 0; n < nfds; ++n) {
@@ -1056,17 +1064,22 @@ void mln_event_dispatch(mln_event_t *event)
             tm.tv_usec = M_EV_TIMEOUT_US;
             nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
             if (nfds < 0) {
-#if !def    ined(WIN32)
+#if !defined(WIN32)
                 if (errno == EINTR || errno == ENOMEM) {
 #endif
+                    pthread_mutex_unlock(&event->fd_lock);
                     continue;
-#if !def    ined(WIN32)
+#if !defined(WIN32)
                 } else {
                     mln_log(error, "select error. %s\n", strerror(errno));
                     abort();
                 }
 #endif
             } else if (nfds == 0) {
+                pthread_mutex_unlock(&event->fd_lock);
+                tm.tv_sec = 0;
+                tm.tv_usec = M_EV_NOLOCK_TIMEOUT_US;
+                select(event->select_fd, rd_set, wr_set, err_set, &tm);
                 continue;
             }
             ed = event->ev_fd_wait_head;
