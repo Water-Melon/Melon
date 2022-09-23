@@ -1,3 +1,10 @@
+Changes with melon 2.5.1                                          23 Sep 2022
+    *) Fixed event bugs
+    *) Optimized event
+    *) Updated functions of lang
+    *) Fixed bugs of lang
+    *) Added eval as an internal function of melang
+
 Changes with melon 2.5.0                                          16 Sep 2022
     *) Updated rbtree functions
     *) Optimized iothread

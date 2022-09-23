@@ -3584,10 +3584,16 @@ Their definitions can be found in melon/include/mln_types.h.
       <3> unwatch(var);
       Remove watcher from 'var'.
 
-      <4> mln_import(name);
+      <4> import(name);
       Import dynamic library indicated by 'name' into current melang scope.
       Dynamic library must contain the entrance function named 'init', its prototype is:
           mln_lang_var_t *init(mln_lang_ctx_t *);
+
+      <5> eval(val, data, in_string);
+      val - a file path or a code string.
+      data - the data that we want to deliver to the new coroutine.
+      on_string - a optional argument. If is set and its value is *true*, *val* is a code string.
+                  Otherwise, *val* is a file path.
 
       For more library functions, please refer to https://melang.org/.
 
