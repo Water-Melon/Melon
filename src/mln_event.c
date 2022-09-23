@@ -1237,11 +1237,11 @@ lp:
                                ed);
         ef->in_active = 0;
     }
-    ef->in_process = 1;
     if (ef->end_us > now) {
         pthread_mutex_unlock(&event->fd_lock);
         return;
     }
+    ef->in_process = 1;
     mln_fheap_delete(event->ev_fd_timeout_heap, fn);
     mln_fheap_node_destroy(event->ev_fd_timeout_heap, fn);
     ed->data.fd.timeout_node = NULL;
