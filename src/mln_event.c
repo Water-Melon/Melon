@@ -853,33 +853,72 @@ void mln_event_dispatch(mln_event_t *event)
                 other_oneshot = 0;
                 ev = &events[n];
                 ed = (mln_event_desc_t *)(ev->data.ptr);
-                if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+                if (ed->data.fd.in_active || ed->data.fd.is_clear)
                     continue;
 
                 if (ev->events & EPOLLIN) {
                     if (ed->data.fd.rd_oneshot) {
-                        ed->data.fd.rd_oneshot = 0;
-                        oneshot = 1;
-                        ed->flag &= (~M_EV_RECV);
+                        if (ed->data.fd.in_process) {
+                            mln_event_set_fd_append(event, \
+                                                    ed, \
+                                                    ed->data.fd.fd, \
+                                                    M_EV_RECV|M_EV_ONESHOT, \
+                                                    M_EV_UNMODIFIED, \
+                                                    ed->data.fd.rcv_data, \
+                                                    ed->data.fd.rcv_handler, \
+                                                    1);
+                        } else {
+                            ed->data.fd.rd_oneshot = 0;
+                            oneshot = 1;
+                            ed->flag &= (~M_EV_RECV);
+                        }
                     }
-                    ed->data.fd.active_flag |= M_EV_RECV;
+                    if (!ed->data.fd.in_process)
+                        ed->data.fd.active_flag |= M_EV_RECV;
                 }
                 if (ev->events & EPOLLOUT) {
                     if (ed->data.fd.wr_oneshot) {
-                        ed->data.fd.wr_oneshot = 0;
-                        oneshot = 1;
-                        ed->flag &= (~M_EV_SEND);
+                        if (ed->data.fd.in_process) {
+                            mln_event_set_fd_append(event, \
+                                                    ed, \
+                                                    ed->data.fd.fd, \
+                                                    M_EV_SEND|M_EV_ONESHOT, \
+                                                    M_EV_UNMODIFIED, \
+                                                    ed->data.fd.snd_data, \
+                                                    ed->data.fd.snd_handler, \
+                                                    1);
+                        } else {
+                            ed->data.fd.wr_oneshot = 0;
+                            oneshot = 1;
+                            ed->flag &= (~M_EV_SEND);
+                        }
                     }
-                    ed->data.fd.active_flag |= M_EV_SEND;
+                    if (!ed->data.fd.in_process)
+                        ed->data.fd.active_flag |= M_EV_SEND;
                 }
                 if (ev->events & EPOLLERR) {
                     if (ed->data.fd.err_oneshot) {
-                        ed->data.fd.err_oneshot = 0;
-                        oneshot = 1;
-                        ed->flag &= (~M_EV_ERROR);
+                        if (ed->data.fd.in_process) {
+                            mln_event_set_fd_append(event, \
+                                                    ed, \
+                                                    ed->data.fd.fd, \
+                                                    M_EV_ERROR|M_EV_ONESHOT, \
+                                                    M_EV_UNMODIFIED, \
+                                                    ed->data.fd.err_data, \
+                                                    ed->data.fd.err_handler, \
+                                                    1);
+                        } else {
+                            ed->data.fd.err_oneshot = 0;
+                            oneshot = 1;
+                            ed->flag &= (~M_EV_ERROR);
+                        }
                     }
-                    ed->data.fd.active_flag |= M_EV_ERROR;
+                    if (!ed->data.fd.in_process)
+                        ed->data.fd.active_flag |= M_EV_ERROR;
                 }
+
+                if (ed->data.fd.in_process) continue;
+
                 ev_fd_active_chain_add(&(event->ev_fd_active_head), \
                                        &(event->ev_fd_active_tail), \
                                        ed);
@@ -965,40 +1004,81 @@ void mln_event_dispatch(mln_event_t *event)
             for (n = 0; n < nfds; ++n) {
                 ev = &events[n];
                 ed = (mln_event_desc_t *)(ev->udata);
-                if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+                if (ed->data.fd.in_active || ed->data.fd.is_clear)
                     continue;
 
                 if (ev->filter == EVFILT_READ) {
-                    ed->data.fd.active_flag |= M_EV_RECV;
+                    if (!ed->data.fd.in_process)
+                        ed->data.fd.active_flag |= M_EV_RECV;
                     if (ed->data.fd.rd_oneshot) {
-                        ed->data.fd.rd_oneshot = 0;
-                        EV_SET(&mod, ed->data.fd.fd, EVFILT_READ, EV_DISABLE, 0, 0, ed);
-                        if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
-                            mln_log(error, "kevent error. %s\n", strerror(errno));
-                            abort();
+                    if (ed->data.fd.rd_oneshot) {
+                        if (ed->data.fd.in_process) {
+                            mln_event_set_fd_append(event, \
+                                                    ed, \
+                                                    ed->data.fd.fd, \
+                                                    M_EV_RECV|M_EV_ONESHOT, \
+                                                    M_EV_UNMODIFIED, \
+                                                    ed->data.fd.rcv_data, \
+                                                    ed->data.fd.rcv_handler, \
+                                                    1);
+                        } else {
+                            ed->data.fd.rd_oneshot = 0;
+                            EV_SET(&mod, ed->data.fd.fd, EVFILT_READ, EV_DISABLE, 0, 0, ed);
+                            if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
+                                mln_log(error, "kevent error. %s\n", strerror(errno));
+                                abort();
+                            }
+                            ed->flag &= (~M_EV_RECV);
                         }
-                        ed->flag &= (~M_EV_RECV);
                     }
                 }
                 if (ev->filter == EVFILT_WRITE) {
                     if (ed->data.fd.wr_oneshot) {
-                        ed->data.fd.wr_oneshot = 0;
-                        EV_SET(&mod, ed->data.fd.fd, EVFILT_WRITE, EV_DISABLE, 0, 0, ed);
-                        if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
-                            mln_log(error, "kevent error. %s\n", strerror(errno));
-                            abort();
+                    if (ed->data.fd.wr_oneshot) {
+                        if (ed->data.fd.in_process) {
+                            mln_event_set_fd_append(event, \
+                                                    ed, \
+                                                    ed->data.fd.fd, \
+                                                    M_EV_SEND|M_EV_ONESHOT, \
+                                                    M_EV_UNMODIFIED, \
+                                                    ed->data.fd.snd_data, \
+                                                    ed->data.fd.snd_handler, \
+                                                    1);
+                        } else {
+                            ed->data.fd.wr_oneshot = 0;
+                            EV_SET(&mod, ed->data.fd.fd, EVFILT_WRITE, EV_DISABLE, 0, 0, ed);
+                            if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
+                                mln_log(error, "kevent error. %s\n", strerror(errno));
+                                abort();
+                            }
+                            ed->flag &= (~M_EV_SEND);
                         }
-                        ed->flag &= (~M_EV_SEND);
                     }
-                    ed->data.fd.active_flag |= M_EV_SEND;
+                    if (!ed->data.fd.in_process)
+                        ed->data.fd.active_flag |= M_EV_SEND;
                 }
                 if ((ev->flags & EV_ERROR) && (ed->flag & M_EV_ERROR)) {
                     if (ed->data.fd.err_oneshot) {
-                        ed->data.fd.err_oneshot = 0;
-                        ed->flag &= ~(M_EV_ERROR);
+                        if (ed->data.fd.in_process) {
+                            mln_event_set_fd_append(event, \
+                                                    ed, \
+                                                    ed->data.fd.fd, \
+                                                    M_EV_ERROR|M_EV_ONESHOT, \
+                                                    M_EV_UNMODIFIED, \
+                                                    ed->data.fd.err_data, \
+                                                    ed->data.fd.err_handler, \
+                                                    1);
+                        } else {
+                            ed->data.fd.err_oneshot = 0;
+                            ed->flag &= ~(M_EV_ERROR);
+                        }
                     }
-                    ed->data.fd.active_flag |= M_EV_ERROR;
+                    if (!ed->data.fd.in_process)
+                        ed->data.fd.active_flag |= M_EV_ERROR;
                 }
+
+                if (ed->data.fd.in_process) continue;
+
                 ev_fd_active_chain_add(&(event->ev_fd_active_head), \
                                        &(event->ev_fd_active_tail), \
                                        ed);
