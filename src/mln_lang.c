@@ -627,7 +627,8 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                 goto out;
             }
         }
-        mln_gc_collect(ctx->gc, ctx);
+        if (!ctx->ref)
+            mln_gc_collect(ctx->gc, ctx);
         pthread_mutex_lock(&lang->lock);
         ctx->owner = 0;
 out:
@@ -5444,8 +5445,7 @@ again_property:
                 return;
             }
             node->ret_var = ret_var;
-            node->ret_var2 = ctx->ret_var;
-            ctx->ret_var = NULL;
+            mln_lang_ctx_reset_ret_var(ctx);
         }
         node->pos = locate->right.exp;
         node->step = 8;
@@ -5472,8 +5472,6 @@ again_property:
                 ctx->quit = 1;
                 return;
             }
-            __mln_lang_var_free(node->ret_var2);
-            node->ret_var2 = NULL;
         }
     } else if (node->step == 6) {
         if (node->call) {
