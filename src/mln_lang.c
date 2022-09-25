@@ -911,6 +911,7 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
 
 void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx)
 {
+    if (ctx->ref) return;
     ++(ctx->ref);
     mln_lang_ctx_chain_del(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
     mln_lang_ctx_chain_add(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
@@ -918,6 +919,7 @@ void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx)
 
 void mln_lang_ctx_continue(mln_lang_ctx_t *ctx)
 {
+    if (!ctx->ref) return;
     --(ctx->ref);
     mln_lang_ctx_chain_del(&(ctx->lang->wait_head), &(ctx->lang->wait_tail), ctx);
     mln_lang_ctx_chain_add(&(ctx->lang->run_head), &(ctx->lang->run_tail), ctx);
