@@ -1007,12 +1007,10 @@ void mln_event_dispatch(mln_event_t *event)
             for (n = 0; n < nfds; ++n) {
                 ev = &events[n];
                 ed = (mln_event_desc_t *)(ev->udata);
-                if (ed->data.fd.in_active || ed->data.fd.is_clear)
+                if (ed->data.fd.is_clear)
                     continue;
 
                 if (ev->filter == EVFILT_READ) {
-                    if (!ed->data.fd.in_active && !ed->data.fd.in_process)
-                        ed->data.fd.active_flag |= M_EV_RECV;
                     if (ed->data.fd.rd_oneshot) {
                         if (ed->data.fd.in_active || ed->data.fd.in_process) {
                             if (!(ed->data.fd.active_flag & M_EV_RECV))
@@ -1034,6 +1032,8 @@ void mln_event_dispatch(mln_event_t *event)
                             ed->flag &= (~M_EV_RECV);
                         }
                     }
+                    if (!ed->data.fd.in_active && !ed->data.fd.in_process)
+                        ed->data.fd.active_flag |= M_EV_RECV;
                 }
                 if (ev->filter == EVFILT_WRITE) {
                     if (ed->data.fd.wr_oneshot) {
