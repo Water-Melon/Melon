@@ -29,7 +29,7 @@ struct mln_iothread_attr {
 };
 
 typedef void *(*mln_iothread_entry_t)(void *); //I/O thread entry function
-typedef void (*mln_iothread_msg_process_t)(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_u32_t type, void *data);//message handler
+typedef void (*mln_iothread_msg_process_t)(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_iothread_msg_t *msg);//message handler
 ```
 
 Description: Initialize `t` according to `attr`.
@@ -97,6 +97,54 @@ Return value: socket descriptor
 
 
 
+#### mln_iothread_msg_hold
+
+```c
+mln_iothread_msg_hold(m)
+```
+
+Description: Hold message `m`. Which means this message won't be freed if the message handler returned. This macro only work on `feedback` message.
+
+Return value: None
+
+
+
+#### mln_iothread_msg_release
+
+```c
+mln_iothread_msg_release(m)
+```
+
+Description: Release message `m`. This macro only work on `feedback` message.
+
+Return value: None
+
+
+
+#### mln_iothread_msg_type
+
+```c
+mln_iothread_msg_type(m)
+```
+
+Description: Get message type.
+
+Return value: unsigned int type
+
+
+
+#### mln_iothread_msg_data
+
+```c
+mln_iothread_msg_data(m)
+```
+
+Description: Get user data from message `m`.
+
+Return value: user data pointer
+
+
+
 ### Example
 
 ```c
@@ -105,8 +153,9 @@ Return value: socket descriptor
 #include <stdio.h>
 #include <errno.h>
 
-static void msg_handler(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_u32_t type, void *data)
+static void msg_handler(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_iothread_msg_t *msg)
 {
+    mln_u32_t type = mln_iothread_msg_type(msg);
     printf("msg type: %u\n", type);
 }
 

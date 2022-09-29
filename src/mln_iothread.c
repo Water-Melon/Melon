@@ -80,7 +80,7 @@ void mln_iothread_destroy(mln_iothread_t *t)
     mln_socket_close(t->user_fd);
 }
 
-int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, int feedback)
+int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, mln_u32_t feedback)
 {
     int fd;
     pthread_mutex_t *plock;
@@ -154,9 +154,10 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
     while ((msg = *head) != NULL) {
         mln_iothread_msg_chain_del(head, tail, msg);
         if (t->handler != NULL)
-            t->handler(t, from, msg->type, msg->data);
+            t->handler(t, from, msg);
         if (msg->feedback) {
-            pthread_mutex_unlock(&(msg->mutex));
+            if (!msg->hold)
+                pthread_mutex_unlock(&(msg->mutex));
         } else {
             mln_iothread_msg_free(msg);
         }

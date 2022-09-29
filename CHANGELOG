@@ -1,3 +1,10 @@
+Changes with melon 2.5.2                                          29 Sep 2022
+    *) Upgraded iothread
+    *) Optimized lang lock
+    *) Updated functions in lang
+    *) Fixed event bugs
+    *) Fixed memory pool bug in lang
+
 Changes with melon 2.5.1                                          23 Sep 2022
     *) Fixed event bugs
     *) Optimized event

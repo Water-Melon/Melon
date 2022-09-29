@@ -29,7 +29,7 @@ struct mln_iothread_attr {
 };
 
 typedef void *(*mln_iothread_entry_t)(void *); //线程入口
-typedef void (*mln_iothread_msg_process_t)(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_u32_t type, void *data);//消息处理函数
+typedef void (*mln_iothread_msg_process_t)(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_iothread_msg_t *msg);//消息处理函数
 ```
 
 描述：依据`attr`对`t`进行初始化。
@@ -91,6 +91,54 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
 
 
 
+#### mln_iothread_msg_hold
+
+```c
+mln_iothread_msg_hold(m)
+```
+
+描述：将消息`m`持有，此时消息处理函数返回，该消息也不会被释放。主要用于流程较长的场景。该函数仅作用于`feedback`类型的消息，无需反馈的消息理论上也不需要持有，因为不在乎消息被处理的结果。
+
+返回值：无
+
+
+
+#### mln_iothread_msg_release
+
+```c
+mln_iothread_msg_release(m)
+```
+
+描述：释放持有的消息。该消息应该是`feedback`类型消息，非该类型消息则可能导致执行流程异常。
+
+返回值：无
+
+
+
+#### mln_iothread_msg_type
+
+```c
+mln_iothread_msg_type(m)
+```
+
+描述：获取消息的消息类型。
+
+返回值：无符号整型
+
+
+
+#### mln_iothread_msg_data
+
+```c
+mln_iothread_msg_data(m)
+```
+
+描述：获取消息的用户自定义数据。
+
+返回值：用户自定义数据结构指针
+
+
+
 ### 示例
 
 ```c
@@ -99,8 +147,9 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
 #include <stdio.h>
 #include <errno.h>
 
-static void msg_handler(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_u32_t type, void *data)
+static void msg_handler(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_iothread_msg_t *msg)
 {
+    mln_u32_t type = mln_iothread_msg_type(msg);
     printf("msg type: %u\n", type);
 }
 

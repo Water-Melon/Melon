@@ -2874,6 +2874,19 @@ Their definitions can be found in melon/include/mln_types.h.
       e) mln_iothread_sockfd_get(p.t)
          Get I/O or user thread socket file descriptor.
 
+      f) mln_iothread_msg_hold(m)
+         Hold message until to call 'mln_iothread_msg_release' to release it.
+         It is only work on feedback message.
+
+      g) mln_iothread_msg_release(m)
+         Release hold message. It is only work on feedback message.
+
+      h) mln_iothread_msg_type(m)
+         Get the message type.
+
+      i) mln_iothread_msg_data(m)
+         Get the message data.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.
