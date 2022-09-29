@@ -604,7 +604,9 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
     mln_lang_ctx_t *ctx;
     mln_lang_stack_node_t *node;
 
-    pthread_mutex_lock(&lang->lock);
+    if (pthread_mutex_trylock(&lang->lock) != 0)
+        return;
+
     if ((ctx = lang->run_head) != NULL && ctx->owner == 0) {
         mln_lang_ctx_chain_del(&lang->run_head, &lang->run_tail, ctx);
         mln_lang_ctx_chain_add(&lang->run_head, &lang->run_tail, ctx);
