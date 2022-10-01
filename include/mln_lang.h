@@ -19,7 +19,7 @@
 #define M_LANG_STEP_OUT          -1
 
 #define M_LANG_MAX_OPENFILE      67
-#define M_LANG_DEFAULT_STEP      20000
+#define M_LANG_DEFAULT_STEP      1700
 #define M_LANG_HEARTBEAT_US      50000
 
 #define M_LANG_VAL_TYPE_NIL      0
