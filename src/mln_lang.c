@@ -6690,6 +6690,8 @@ static mln_lang_import_t *mln_lang_func_import_new(mln_lang_ctx_t *ctx, mln_stri
     }
     i->ref = 0;
     i->handle = handle;
+    i->node = NULL;
+    i->lang = ctx->lang;
 
     return i;
 }
@@ -6701,7 +6703,19 @@ static int mln_lang_func_import_cmp(const mln_lang_import_t *i1, const mln_lang_
 
 static void mln_lang_func_import_free(mln_lang_import_t *i)
 {
+    import_destroy_t destroy;
+
     if (i == NULL) return;
+
+#if defined(WIN32)
+    destroy = (import_destroy_t)GetProcAddress(i->handle, "destroy");
+#else
+    destroy = (import_destroy_t)dlsym(i->handle, "destroy");
+#endif
+    if (destroy != NULL) {
+        destroy(i->lang);
+    }
+
     if (i->name != NULL) mln_string_free(i->name);
     if (i->handle != NULL) {
 #if defined(WIN32)
@@ -6877,24 +6891,24 @@ goon:
         }
     }
 
-#if defined(WIN32)
-    handle = LoadLibrary(TEXT(path));
-#else
-    handle = dlopen(path, RTLD_LAZY);
-#endif
-    if (handle == NULL) {
-        n = snprintf(tmp_path, sizeof(tmp_path)-1, "Load dynamic library [%s] failed.", path);
-        tmp_path[n] = 0;
-        mln_lang_errmsg(ctx, tmp_path);
-        return NULL;
-    }
-
     i.name = name;
     tree = mln_lang_resource_fetch(ctx->lang, "import");
     rn = mln_rbtree_search(tree, tree->root, &i);
     if (!mln_rbtree_null(rn, tree)) {
         pi = (mln_lang_import_t *)(rn->data);
     } else {
+#if defined(WIN32)
+        handle = LoadLibrary(TEXT(path));
+#else
+        handle = dlopen(path, RTLD_LAZY);
+#endif
+        if (handle == NULL) {
+            n = snprintf(tmp_path, sizeof(tmp_path)-1, "Load dynamic library [%s] failed.", path);
+            tmp_path[n] = 0;
+            mln_lang_errmsg(ctx, tmp_path);
+            return NULL;
+        }
+
         if ((pi = mln_lang_func_import_new(ctx, name, handle)) == NULL) {
 #if defined(WIN32)
             FreeLibrary((HMODULE)(pi->handle));
@@ -6934,9 +6948,9 @@ goon:
     }
 
 #if defined(WIN32)
-    init = (import_init_t)GetProcAddress(handle, "init");
+    init = (import_init_t)GetProcAddress(pi->handle, "init");
 #else
-    init = (import_init_t)dlsym(handle, "init");
+    init = (import_init_t)dlsym(pi->handle, "init");
 #endif
     if (init == NULL) {
         n = snprintf(tmp_path, sizeof(tmp_path)-1, "No 'init' found in dynamic library [%s].", path);

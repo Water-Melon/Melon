@@ -60,6 +60,7 @@ typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 typedef void (*mln_lang_resource_free)(void *data);
 /* import init */
 typedef mln_lang_var_t *(* import_init_t)(mln_lang_ctx_t *);
+typedef void (* import_destroy_t)(mln_lang_t *);
 
 
 struct mln_lang_hash_s {
@@ -406,6 +407,7 @@ typedef struct {
     mln_size_t                       ref;
     void                            *handle;
     mln_rbtree_node_t               *node;
+    mln_lang_t                      *lang;
 } mln_lang_import_t;
 
 typedef struct {
