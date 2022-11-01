@@ -206,7 +206,7 @@ Return value: none
 ```c
 int mln_rbtree_iterate(mln_rbtree_t *t, rbtree_iterate_handler handler, void *udata);
 
-typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *rn_data, void *udata);
+typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *udata);
 ```
 
 Description:
@@ -216,7 +216,6 @@ Traverse every node in the red-black tree `t`. And supports deleting tree nodes 
 `handler` is an access function to traverse each node. The meanings of the three parameters of this function are as follows:
 
 - `node` tree node structure currently visited
-- `rn_data` `data` within the current tree node
 - `udata` is the third parameter of `mln_rbtree_iterate`, which is a parameter passed in by the user. If not needed, it can be set to `NULL`
 
 The reason why the node node is additionally given is because there may be a requirement: to replace the data in the node during the traversal (not recommended because it will violate the existing order of the red-black tree node), but it needs to be used with caution .

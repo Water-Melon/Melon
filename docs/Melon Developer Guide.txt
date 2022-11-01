@@ -414,7 +414,7 @@ Their definitions can be found in melon/include/mln_types.h.
        This function is used to visit all rbtree nodes and process them by the callback function 'handler'.
        t -- is a rbtree pointer.
        handler -- is a callback function which is defined by the caller. Its prototype is
-           typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *rn_data, void *udata);
+           typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *udata);
        The first argument is the rbtree node. Second one is the data of rbtree node. And the last one is an user
        data passed by the third argument of mln_rbtree_iterate().
 

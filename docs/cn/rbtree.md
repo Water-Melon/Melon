@@ -206,7 +206,7 @@ void mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n);
 ```c
 int mln_rbtree_iterate(mln_rbtree_t *t, rbtree_iterate_handler handler, void *udata);
 
-typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *rn_data, void *udata);
+typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *udata);
 ```
 
 描述：
@@ -216,7 +216,6 @@ typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *rn_data, vo
 ·`handler`为遍历每个节点的访问函数，该函数的三个参数含义依次为：
 
 - `node` 当前访问的树节点结构
-- `rn_data` 当前树节点内的`data`
 - `udata`为`mln_rbtree_iterate`的第三个参数，是由用户传入的参数，若不需要则可以置`NULL`
 
 之所以额外给出node节点，是因为可能存在需求：在遍历中替换节点内的数据（不建议如此做，因为会违反红黑树节点现有有序性），但需要**慎重**使用。

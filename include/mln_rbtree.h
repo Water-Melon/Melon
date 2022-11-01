@@ -15,7 +15,7 @@ typedef struct mln_rbtree_node_s mln_rbtree_node_t;
  */
 typedef int (*rbtree_cmp)(const void *, const void *);
 typedef void (*rbtree_free_data)(void *);
-typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *rn_data, void *udata);
+typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *udata);
 typedef void *(*rbtree_pool_alloc_handler)(void *, mln_size_t);
 typedef void (*rbtree_pool_free_handler)(void *);
 

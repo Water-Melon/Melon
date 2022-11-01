@@ -88,9 +88,9 @@ mln_conf_item_init(mln_conf_t *cf, mln_conf_lex_struct_t *cls, mln_conf_item_t *
 static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current) __NONNULL2(1,2);
 static mln_conf_item_t *
 mln_conf_search_item(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
-static int mln_conf_get_cmds_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
-static int mln_conf_dump_conf_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
-static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_conf_get_cmds_iterate_handler(mln_rbtree_node_t *node, void *udata);
+static int mln_conf_dump_conf_iterate_handler(mln_rbtree_node_t *node, void *udata);
+static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *udata);
 /*for hook*/
 static mln_conf_hook_t *mln_conf_hook_init(void);
 static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
@@ -871,10 +871,10 @@ void mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **v)
     }
 }
 
-static int mln_conf_get_cmds_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_conf_get_cmds_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     struct conf_cmds_scan_s *ccs = (struct conf_cmds_scan_s *)udata;
-    ccs->cc[(ccs->pos)++] = (mln_conf_cmd_t *)rn_data;
+    ccs->cc[(ccs->pos)++] = (mln_conf_cmd_t *)(node->data);
     return 0;
 }
 
@@ -892,17 +892,17 @@ void mln_conf_dump(void)
     mln_rbtree_iterate(g_conf->domain, mln_conf_dump_conf_iterate_handler, NULL);
 }
 
-static int mln_conf_dump_conf_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_conf_dump_conf_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
-    mln_conf_domain_t *cd = (mln_conf_domain_t *)rn_data;
+    mln_conf_domain_t *cd = (mln_conf_domain_t *)(node->data);
     printf("\tDOMAIN [%s]:\n", (char *)(cd->domain_name->data));
     mln_rbtree_iterate(cd->cmd, mln_conf_dump_domain_iterate_handler, NULL);
     return 0;
 }
 
-static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
-    mln_conf_cmd_t *cc = (mln_conf_cmd_t *)rn_data;
+    mln_conf_cmd_t *cc = (mln_conf_cmd_t *)(node->data);
     printf("\t\tCOMMAND [%s]:\n", (char *)(cc->cmd_name->data));
     mln_s32_t i;
     mln_conf_item_t *ci;

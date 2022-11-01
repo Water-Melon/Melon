@@ -400,7 +400,7 @@ mln_rbtree_min(mln_rbtree_t *t)
 int mln_rbtree_iterate(mln_rbtree_t *t, rbtree_iterate_handler handler, void *udata)
 {
     for (t->iter = t->head; t->iter != NULL; ) {
-        if (handler(t->iter, t->iter->data, udata) < 0)
+        if (handler(t->iter, udata) < 0)
             return -1;
         if (t->del) {
             t->del = 0;
