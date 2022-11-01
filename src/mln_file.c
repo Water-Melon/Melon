@@ -118,7 +118,7 @@ mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
         mln_rbtree_insert(fs->reg_file_tree, rn);
         f->node = rn;
     } else {
-        f = (mln_file_t *)(rn->data);
+        f = (mln_file_t *)mln_rbtree_node_data(rn);
     }
 
     if (f->refer_cnt++ == 0) {

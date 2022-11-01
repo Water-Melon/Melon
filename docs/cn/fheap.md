@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
     mln_fheap_insert(fh, fn);
 
     fn = mln_fheap_minimum(fh);
-    mln_log(debug, "%d\n", *((int *)(fn->key)));
+    mln_log(debug, "%d\n", *((int *)mln_fheap_node_key(fn)));
 
     mln_fheap_destroy(fh);
 

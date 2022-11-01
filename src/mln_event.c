@@ -284,7 +284,7 @@ lp:
         return;
     }
 
-    ed = (mln_event_desc_t *)(fn->key);
+    ed = (mln_event_desc_t *)mln_fheap_node_key(fn);
     if (ed->data.tm.end_tm > now) {
         pthread_mutex_unlock(&event->timer_lock);
         return;
@@ -323,7 +323,7 @@ void mln_event_set_fd_timeout_handler(mln_event_t *event, \
         mln_log(error, "No such file descriptor in RB-Tree.\n");
         abort();
     }
-    mln_event_desc_t *ed = (mln_event_desc_t *)(rn->data);
+    mln_event_desc_t *ed = (mln_event_desc_t *)mln_rbtree_node_data(rn);
     ed->data.fd.timeout_data = data;
     ed->data.fd.timeout_handler = timeout_handler;
     pthread_mutex_unlock(&event->fd_lock);
@@ -362,12 +362,12 @@ int mln_event_set_fd(mln_event_t *event, \
         if (flag & M_EV_APPEND) {
             if (flag & M_EV_NONBLOCK) mln_event_set_fd_nonblock(fd);
             if (flag & M_EV_BLOCK) mln_event_set_fd_block(fd);
-            if (((mln_event_desc_t *)(rn->data))->data.fd.is_clear) {
+            if (((mln_event_desc_t *)mln_rbtree_node_data(rn))->data.fd.is_clear) {
                 mln_log(error, "Append fd already clear.\n");
                 abort();
             }
             if (mln_event_set_fd_append(event, \
-                                        (mln_event_desc_t *)(rn->data), \
+                                        (mln_event_desc_t *)mln_rbtree_node_data(rn), \
                                         fd, \
                                         flag, \
                                         timeout_ms, \
@@ -695,7 +695,7 @@ mln_event_set_fd_clr(mln_event_t *event, int fd)
     if (mln_rbtree_null(rn, event->ev_fd_tree)) {
         return;
     }
-    ed = (mln_event_desc_t *)(rn->data);
+    ed = (mln_event_desc_t *)mln_rbtree_node_data(rn);
     if (ed->data.fd.timeout_node != NULL) {
         mln_fheap_delete(event->ev_fd_timeout_heap, ed->data.fd.timeout_node);
         mln_fheap_node_destroy(event->ev_fd_timeout_heap, ed->data.fd.timeout_node);
@@ -1313,7 +1313,7 @@ lp:
         pthread_mutex_unlock(&event->fd_lock);
         return;
     }
-    ed = (mln_event_desc_t *)(fn->key);
+    ed = (mln_event_desc_t *)mln_fheap_node_key(fn);
     ef = &(ed->data.fd);
     if (ef->in_active) {
         ev_fd_active_chain_del(&(event->ev_fd_active_head), \

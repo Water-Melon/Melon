@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
         mln_log(error, "node not found\n");
         return -1;
     }
-    mln_log(debug, "%d\n", *((int *)(rn->data)));
+    mln_log(debug, "%d\n", *((int *)mln_rbtree_node_data(rn)));
 
     mln_rbtree_delete(t, rn);
     mln_rbtree_node_free(t, rn);

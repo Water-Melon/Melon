@@ -67,6 +67,8 @@ typedef struct {
 } mln_fheap_t;
 
 
+#define mln_fheap_node_key(node)   ((node)->key)
+
 extern mln_fheap_t *
 mln_fheap_init(struct mln_fheap_attr *attr) __NONNULL1(1);
 extern void

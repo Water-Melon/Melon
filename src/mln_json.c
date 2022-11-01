@@ -805,7 +805,7 @@ mln_json_write_content_hash_iterate_handler(void *key, void *val, void *data)
 static int
 mln_json_write_content_rbtree_iterate_handler(mln_rbtree_node_t *node, void *data)
 {
-    mln_json_t *j = (mln_json_t *)(node->data);
+    mln_json_t *j = (mln_json_t *)mln_rbtree_node_data(node);
     struct mln_json_tmp_s *tmp = (struct mln_json_tmp_s *)data;
     mln_size_t *length = tmp->length, n;
     mln_s8ptr_t *buf = tmp->buf;
@@ -897,7 +897,7 @@ mln_json_get_length_hash_iterate_handler(void *key, void *val, void *data)
 static int
 mln_json_get_length_rbtree_iterate_handler(mln_rbtree_node_t *node, void *data)
 {
-    mln_json_t *j = (mln_json_t *)(node->data);
+    mln_json_t *j = (mln_json_t *)mln_rbtree_node_data(node);
     mln_size_t *length = (mln_size_t *)data;
 
     if (j == NULL) return 0;
@@ -1038,7 +1038,7 @@ static int mln_json_dump_hash_iterate_handler(void *key, void *val, void *data)
 
 static int mln_json_dump_rbtree_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
-    mln_json_t *j = (mln_json_t *)(node->data);
+    mln_json_t *j = (mln_json_t *)mln_rbtree_node_data(node);
     int *space = (int *)udata;
 
     mln_json_dump(j, *space, "Array member:");
@@ -1078,7 +1078,7 @@ mln_json_t *mln_json_search_element(mln_json_t *j, mln_uauto_t index)
     rn = mln_rbtree_search(t, t->root, &json);
     if (mln_rbtree_null(rn, t)) return NULL;
 
-    return (mln_json_t *)(rn->data);
+    return (mln_json_t *)mln_rbtree_node_data(rn);
 }
 
 mln_uauto_t mln_json_get_array_length(mln_json_t *j)
@@ -1213,7 +1213,7 @@ int mln_json_update_element(mln_json_t *j, mln_json_t *value, mln_uauto_t index)
         mln_rbtree_insert(t, rn);
     }
 
-    elem = (mln_json_t *)(rn->data);
+    elem = (mln_json_t *)mln_rbtree_node_data(rn);
     mln_json_free(elem);
     M_JSON_SET_INDEX(value, index);
     rn->data = value;
@@ -1286,7 +1286,7 @@ mln_json_t *mln_json_remove_element(mln_json_t *j, mln_uauto_t index)
     if (mln_rbtree_null(rn, t)) return NULL;
 
     mln_rbtree_delete(t, rn);
-    val = (mln_json_t *)(rn->data);
+    val = (mln_json_t *)mln_rbtree_node_data(rn);
     rn->data = NULL;
     mln_rbtree_node_free(t, rn);
 

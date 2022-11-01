@@ -464,7 +464,7 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
             continue;
         }
 
-        target = (mln_thread_t *)(rn->data);
+        target = (mln_thread_t *)mln_rbtree_node_data(rn);
         if (target->dest_head == NULL) {
             mln_event_set_fd(ev, \
                              mln_tcp_conn_get_fd(&(target->conn)), \
@@ -690,7 +690,7 @@ void mln_thread_kill(mln_string_t *alias)
     tmp.alias = alias;
     rn = mln_rbtree_search(thread_tree, thread_tree->root, &tmp);
     if (mln_rbtree_null(rn, thread_tree)) return;
-    t = (mln_thread_t *)(rn->data);
+    t = (mln_thread_t *)mln_rbtree_node_data(rn);
     mln_socket_close(t->peerfd);
     t->peerfd = -1;
     pthread_cancel(t->tid);

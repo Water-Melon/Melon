@@ -259,7 +259,7 @@ MLN_DEFINE_TOKEN(PREFIX_NAME,TK_PREFIX,## __VA_ARGS__);\
 \
 SCOPE int PREFIX_NAME##_reduce_iterate_handler(mln_rbtree_node_t *node, void *udata)\
 {\
-    mln_pg_token_t *tk = (mln_pg_token_t *)(node->data);\
+    mln_pg_token_t *tk = (mln_pg_token_t *)mln_rbtree_node_data(node);\
     struct PREFIX_NAME##_reduce_info *info = (struct PREFIX_NAME##_reduce_info *)udata;\
     mln_shift_t *sh = info->sh;\
     int index = tk->type;\
@@ -422,7 +422,7 @@ PREFIX_NAME##_pg_create_token(struct PREFIX_NAME##_preprocess_attr *attr, PREFIX
         }\
         mln_rbtree_insert(attr->token_tree, rn);\
     } else {\
-        tk = (mln_pg_token_t *)(rn->data);\
+        tk = (mln_pg_token_t *)mln_rbtree_node_data(rn);\
         if (index >= 0) {\
             tk->right_rule_index[index] = 1;\
         } else {\

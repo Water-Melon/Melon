@@ -387,7 +387,7 @@ static int
 mln_pg_calc_first_rbtree_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     struct mln_pg_info *pgi = (struct mln_pg_info *)udata;
-    mln_pg_token_t *tk = (mln_pg_token_t *)(node->data);
+    mln_pg_token_t *tk = (mln_pg_token_t *)mln_rbtree_node_data(node);
     mln_rbtree_t *dest = pgi->tk->first_set;
     mln_rbtree_node_t *rn = mln_rbtree_search(dest, dest->root, tk);
     if (!mln_rbtree_null(rn, dest)) return 0;
@@ -480,7 +480,7 @@ int mln_pg_calc_follow(volatile int *map, mln_pg_rule_t *r, mln_u32_t nr_rule)
 static int
 mln_pg_calc_follow_rbtree_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
-    mln_pg_token_t *tk = (mln_pg_token_t *)(node->data);
+    mln_pg_token_t *tk = (mln_pg_token_t *)mln_rbtree_node_data(node);
     struct mln_pg_info *pgi = (struct mln_pg_info *)udata;
     mln_rbtree_node_t *rn;
     mln_rbtree_t *dest = pgi->tk->follow_set;
@@ -580,7 +580,7 @@ static int
 mln_pg_closure_rbtree_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     struct mln_pg_state *info = (struct mln_pg_state *)udata;
-    mln_pg_token_t *tk = (mln_pg_token_t *)(node->data);
+    mln_pg_token_t *tk = (mln_pg_token_t *)mln_rbtree_node_data(node);
     mln_pg_item_t *new_it = info->item;
     mln_rbtree_node_t *rn;
     rn = mln_rbtree_search(new_it->lookahead_set, new_it->lookahead_set->root, tk);
@@ -713,7 +713,7 @@ int mln_pg_goto(struct mln_pg_calc_info_s *pci)
 
             rn = mln_rbtree_search(tree, tree->root, new_s);
             if (!mln_rbtree_null(rn, tree)) {
-                tmp_s = (mln_pg_state_t *)(rn->data);
+                tmp_s = (mln_pg_state_t *)mln_rbtree_node_data(rn);
                 if (mln_pg_state_duplicate(&q_head, &q_tail, tmp_s, new_s) < 0) {
                     mln_pg_state_free(new_s);
                     return -1;
@@ -748,7 +748,7 @@ static int
 mln_pg_goto_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     mln_pg_item_t *it = (mln_pg_item_t *)udata;
-    mln_pg_token_t *tk = (mln_pg_token_t *)(node->data);
+    mln_pg_token_t *tk = (mln_pg_token_t *)mln_rbtree_node_data(node);
     mln_rbtree_node_t *rn = mln_rbtree_node_new(it->lookahead_set, tk);
     if (rn == NULL) {
         mln_log(error, "No memory.\n");
@@ -795,7 +795,7 @@ static int
 mln_pg_goto_la_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     struct mln_pg_state *info = (struct mln_pg_state *)udata;
-    mln_pg_token_t *tk = (mln_pg_token_t *)(node->data);
+    mln_pg_token_t *tk = (mln_pg_token_t *)mln_rbtree_node_data(node);
     mln_rbtree_node_t *rn;
     rn = mln_rbtree_search(info->item->lookahead_set, \
                            info->item->lookahead_set->root, \
@@ -838,7 +838,7 @@ void mln_pg_output_token(mln_rbtree_t *tree, mln_pg_rule_t *r, mln_u32_t nr_rule
 static int
 mln_pg_output_token_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
-    mln_pg_token_t *tk = (mln_pg_token_t *)(node->data);
+    mln_pg_token_t *tk = (mln_pg_token_t *)mln_rbtree_node_data(node);
     printf("[%s]:", (char *)(tk->token->data));
     printf("%d %s %s\n", tk->type, \
            tk->is_nonterminal?"Nonterminal":"Terminal", \
@@ -856,7 +856,7 @@ mln_pg_output_token_iterate_handler(mln_rbtree_node_t *node, void *udata)
 static int
 mln_pg_output_token_set_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
-    mln_pg_token_t *tk = (mln_pg_token_t *)(node->data);
+    mln_pg_token_t *tk = (mln_pg_token_t *)mln_rbtree_node_data(node);
     printf("[%s] ", (char *)(tk->token->data));
     return 0;
 }
@@ -904,7 +904,7 @@ void mln_pg_output_state(mln_pg_state_t *s)
 static int
 mln_pg_output_state_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
-    printf(" %s", (char *)(((mln_pg_token_t *)(node->data))->token->data));
+    printf(" %s", (char *)(((mln_pg_token_t *)mln_rbtree_node_data(node))->token->data));
     return 0;
 }
 

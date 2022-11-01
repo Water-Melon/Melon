@@ -63,6 +63,8 @@ typedef struct rbtree_s {
 } mln_rbtree_t;
 
 #define mln_rbtree_null(ptr,ptree) ((ptr)==&((ptree)->nil))
+#define mln_rbtree_node_data(node) ((node)->data)
+
 extern mln_rbtree_t *
 mln_rbtree_init(struct mln_rbtree_attr *attr) __NONNULL1(1);
 extern void
