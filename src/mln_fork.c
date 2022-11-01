@@ -517,7 +517,7 @@ void mln_fork_worker_set_events(mln_event_t *ev)
     }
 }
 
-int mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data)
+int mln_fork_iterate(mln_event_t *ev, fork_iterate_handler handler, void *data)
 {
     mln_fork_t *f;
     for (f = worker_list_head; f != NULL; f = f->next) {

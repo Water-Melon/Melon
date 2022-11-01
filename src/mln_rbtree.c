@@ -396,11 +396,11 @@ mln_rbtree_min(mln_rbtree_t *t)
     return t->min;
 }
 
-/*scan_all*/
-int mln_rbtree_scan_all(mln_rbtree_t *t, rbtree_act act, void *udata)
+/*iterate*/
+int mln_rbtree_iterate(mln_rbtree_t *t, rbtree_iterate_handler handler, void *udata)
 {
     for (t->iter = t->head; t->iter != NULL; ) {
-        if (act(t->iter, t->iter->data, udata) < 0)
+        if (handler(t->iter, t->iter->data, udata) < 0)
             return -1;
         if (t->del) {
             t->del = 0;

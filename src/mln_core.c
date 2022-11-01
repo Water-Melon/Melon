@@ -32,7 +32,7 @@ static void mln_worker_routine(struct mln_core_attr *attr);
 static void mln_master_routine(struct mln_core_attr *attr);
 static int mln_get_framework_status(void);
 static void mln_sig_conf_reload(int signo);
-static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data);
+static int mln_conf_reload_iterate_handler(mln_event_t *ev, mln_fork_t *f, void *data);
 
 static mln_event_t *_ev = NULL;
 #endif
@@ -175,7 +175,7 @@ static void mln_sig_conf_reload(int signo)
 {
     if (_ev == NULL) return;
 
-    if (mln_fork_scan_all(_ev, mln_conf_reload_scan_handler, NULL) < 0) {
+    if (mln_fork_iterate(_ev, mln_conf_reload_iterate_handler, NULL) < 0) {
         mln_log(error, "mln_fork_scan() failed.\n");
         return;
     }
@@ -185,7 +185,7 @@ static void mln_sig_conf_reload(int signo)
     }
 }
 
-static int mln_conf_reload_scan_handler(mln_event_t *ev, mln_fork_t *f, void *data)
+static int mln_conf_reload_iterate_handler(mln_event_t *ev, mln_fork_t *f, void *data)
 {
     char msg[] = "conf_reload";
 

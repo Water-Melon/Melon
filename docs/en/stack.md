@@ -119,22 +119,22 @@ Return value: if successful, return the new stack pointer, otherwise return `NUL
 
 
 
-#### mln_stack_scan_all
+#### mln_stack_iterate
 
 ```c
-int mln_stack_scan_all(mln_stack_t *st, stack_scan scanner, void *data);
+int mln_stack_iterate(mln_stack_t *st, stack_iterate_handler handler, void *data);
 
-typedef int (*stack_scan)(void *, void *);
+typedef int (*stack_iterate_handler)(void *, void *);
 ```
 
 Description:
 
-Traverse the data of each element in the stack `st` from the top of the stack to the bottom of the stack. `scanner` is the data access function, `data` is additional user data when traversing.
+Traverse the data of each element in the stack `st` from the top of the stack to the bottom of the stack. `handler` is the data access function, `data` is additional user data when traversing.
 
-`stack_scan` has two parameters: the data pointer in the stack node and the `data` parameter.
+`stack_iterate_handler` has two parameters: the data pointer in the stack node and the `data` parameter.
 
 return value:
 
-- `mln_stack_scan_all`: return `0` after all traversal, otherwise return `-1`
-- `stack_scan`: If you want to interrupt the traversal, return the value of `less than 0`, otherwise the return value of `greater than or equal to 0`
+- `mln_stack_iterate`: return `0` after all traversal, otherwise return `-1`
+- `stack_iterate_handler`: If you want to interrupt the traversal, return the value of `less than 0`, otherwise the return value of `greater than or equal to 0`
 

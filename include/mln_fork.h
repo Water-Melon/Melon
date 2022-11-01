@@ -19,7 +19,7 @@ typedef struct mln_fork_s mln_fork_t;
 
 typedef void (*clr_handler)(void *);
 
-typedef int (*scan_handler)(mln_event_t *, mln_fork_t *, void *);
+typedef int (*fork_iterate_handler)(mln_event_t *, mln_fork_t *, void *);
 /*ipc handler*/
 typedef void (*ipc_handler)(mln_event_t *, \
                             void *, /*mln_fork_t or mln_tcp_conn_t*/\
@@ -71,7 +71,7 @@ extern int mln_pre_fork(void);
 extern int mln_set_master_ipc_handler(mln_u32_t type, ipc_handler handler, void *data) __NONNULL1(2);
 extern int mln_set_worker_ipc_handler(mln_u32_t type, ipc_handler handler, void *data) __NONNULL1(2);
 extern int
-mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data) __NONNULL1(1);
+mln_fork_iterate(mln_event_t *ev, fork_iterate_handler handler, void *data) __NONNULL1(1);
 extern mln_tcp_conn_t *mln_fork_get_master_connection(void);
 extern int do_fork(void);
 /*

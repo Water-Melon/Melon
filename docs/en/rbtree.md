@@ -201,30 +201,30 @@ Return value: none
 
 
 
-#### mln_rbtree_scan_all
+#### mln_rbtree_iterate
 
 ```c
-int mln_rbtree_scan_all(mln_rbtree_t *t, rbtree_act act, void *udata);
+int mln_rbtree_iterate(mln_rbtree_t *t, rbtree_iterate_handler handler, void *udata);
 
-typedef int (*rbtree_act)(mln_rbtree_node_t *node, void *rn_data, void *udata);
+typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *rn_data, void *udata);
 ```
 
 Description:
 
 Traverse every node in the red-black tree `t`. And supports deleting tree nodes while traversing.
 
-`act` is an access function to traverse each node. The meanings of the three parameters of this function are as follows:
+`handler` is an access function to traverse each node. The meanings of the three parameters of this function are as follows:
 
 - `node` tree node structure currently visited
 - `rn_data` `data` within the current tree node
-- `udata` is the third parameter of `mln_rbtree_scan_all`, which is a parameter passed in by the user. If not needed, it can be set to `NULL`
+- `udata` is the third parameter of `mln_rbtree_iterate`, which is a parameter passed in by the user. If not needed, it can be set to `NULL`
 
 The reason why the node node is additionally given is because there may be a requirement: to replace the data in the node during the traversal (not recommended because it will violate the existing order of the red-black tree node), but it needs to be used with caution .
 
 return value:
 
-- `mln_rbtree_scan_all`: return `0` after all traversal, otherwise return `-1`
-- `rbtree_act`: return `-1` if the traversal is expected to be interrupted, otherwise the return value should be `greater than or equal to 0`
+- `mln_rbtree_iterate`: return `0` after all traversal, otherwise return `-1`
+- `rbtree_iterate_handler`: return `-1` if the traversal is expected to be interrupted, otherwise the return value should be `greater than or equal to 0`
 
 
 

@@ -427,7 +427,7 @@ int mln_lex_push_input_buf_stream(mln_lex_t *lex, mln_string_t *buf)
     return 0;
 }
 
-static int mln_lex_check_file_loop_scanner(void *st_data, void *data)
+static int mln_lex_check_file_loop_iterate_handler(void *st_data, void *data)
 {
     mln_string_t *path = (mln_string_t *)data;
     mln_lex_input_t *in = (mln_lex_input_t *)st_data;
@@ -442,7 +442,7 @@ int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path)
         mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
         return -1;
     }
-    if (mln_stack_scan_all(lex->stack, mln_lex_check_file_loop_scanner, path) < 0) {
+    if (mln_stack_iterate(lex->stack, mln_lex_check_file_loop_iterate_handler, path) < 0) {
         mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
         return -1;
     }

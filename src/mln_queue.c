@@ -69,13 +69,13 @@ void *mln_queue_search(mln_queue_t *q, mln_uauto_t index)
     return *ptr;
 }
 
-int mln_queue_scan_all(mln_queue_t *q, queue_scan scan_handler, void *udata)
+int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void *udata)
 {
     void **scan = q->head;
     mln_uauto_t i = 0;
     for (; i < q->nr_element; ++i) {
-        if (scan_handler != NULL) {
-            if (scan_handler(*scan, udata) < 0)
+        if (handler != NULL) {
+            if (handler(*scan, udata) < 0)
                 return -1;
         }
         if (++scan >= q->queue+q->qlen)

@@ -110,19 +110,19 @@ Return value: none
 
 
 
-#### mln_queue_scan_all
+#### mln_queue_iterate
 
 ```c
-int mln_queue_scan_all(mln_queue_t *q, queue_scan scan_handler, void *udata);
+int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void *udata);
 
-typedef int (*queue_scan)(void *, void *);
+typedef int (*queue_iterate_handler)(void *, void *);
 ```
 
 Description: Iterate over each queue member.
 
 `udata` is a custom structure pointer to assist traversal, and can be set to `NULL` if not required.
 
-The two parameters of `scan_handler` are: `member data`, `udata`.
+The two parameters of `handler` are: `member data`, `udata`.
 
 Return value: `0` is returned when the traversal is completed, and `-1` is returned when it is interrupted
 

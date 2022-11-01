@@ -505,7 +505,7 @@ Return value: return `mln_string_t` pointer on success, `NULL` on failure.
 mln_string_t *mln_string_slice(mln_string_t *s, const char *sep_array/*ended by \0*/);
 ```
 
-Description: `seq_array` is a zero-terminated array of characters, where each character of the array is a delimiter. The function will scan the data part of `s`. When any character in `seq_array` is encountered in the data, it will be divided. When multiple characters are encountered in a row, it will only be divided once, and after division, the delimiter will not appear in the in the split string.
+Description: `seq_array` is a zero-terminated array of characters, where each character of the array is a delimiter. The function will scan the data `s`. When any character in `seq_array` is encountered in the data, it will be divided. When multiple characters are encountered in a row, it will only be divided once, and after division, the delimiter will not appear in the in the split string.
 
 Return value: return `mln_string_t` array on success, otherwise return `NULL`. The `len` of the last element of the array is `0`.
 

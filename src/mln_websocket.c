@@ -15,10 +15,10 @@
 static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key);
 static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2);
 static void mln_websocket_hash_free(void *data);
-static int mln_websocket_match_scan(void *key, void *val, void *data);
+static int mln_websocket_match_iterate_handler(void *key, void *val, void *data);
 static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey);
 static mln_string_t *mln_websocket_accept_field(mln_http_t *http);
-static int mln_websocket_scan_set_fields(void *key, void *val, void *data);
+static int mln_websocket_iterate_set_fields(void *key, void *val, void *data);
 static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *pool);
 static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_string_t *in);
 static mln_u32_t mln_websocket_masking_key_generate(void);
@@ -229,12 +229,12 @@ mln_string_t *mln_websocket_get_field(mln_websocket_t *ws, mln_string_t *key)
 
 int mln_websocket_match(mln_websocket_t *ws)
 {
-    if (mln_hash_scan_all(ws->fields, mln_websocket_match_scan, ws->http) < 0)
+    if (mln_hash_iterate(ws->fields, mln_websocket_match_iterate_handler, ws->http) < 0)
         return M_WS_RET_ERROR;
     return M_WS_RET_OK;
 }
 
-static int mln_websocket_match_scan(void *key, void *val, void *data)
+static int mln_websocket_match_iterate_handler(void *key, void *val, void *data)
 {
     mln_string_t *tmp = mln_http_get_field((mln_http_t *)data, (mln_string_t *)key);
     if (tmp == NULL) return -1;
@@ -307,7 +307,7 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
     if (mln_http_set_field(http, &upgrade_key, &upgrade_val) != M_HTTP_RET_OK) return M_WS_RET_FAILED;
     if (mln_http_set_field(http, &connection_key, &upgrade_key) != M_HTTP_RET_OK) return M_WS_RET_FAILED;
 
-    if (mln_hash_scan_all(ws->fields, mln_websocket_scan_set_fields, http) < 0)
+    if (mln_hash_iterate(ws->fields, mln_websocket_iterate_set_fields, http) < 0)
         return M_WS_RET_FAILED;
 
     if (mln_http_generate(http, chead, ctail) == M_HTTP_RET_ERROR) return M_WS_RET_FAILED;
@@ -362,7 +362,7 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
     return tmp;
 }
 
-static int mln_websocket_scan_set_fields(void *key, void *val, void *data)
+static int mln_websocket_iterate_set_fields(void *key, void *val, void *data)
 {
     return mln_http_set_field((mln_http_t *)data, (mln_string_t *)key, (mln_string_t *)val)==M_HTTP_RET_OK?0:-1;
 }
@@ -439,7 +439,7 @@ int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **
     if (mln_http_set_field(http, &connection_key, &upgrade_key) < 0) return M_WS_RET_FAILED;
     if (mln_http_set_field(http, &version_key, &version_val) < 0) return M_WS_RET_FAILED;
 
-    if (mln_hash_scan_all(ws->fields, mln_websocket_scan_set_fields, http) < 0)
+    if (mln_hash_iterate(ws->fields, mln_websocket_iterate_set_fields, http) < 0)
         return M_WS_RET_FAILED;
 
     if (mln_http_generate(http, chead, ctail) == M_HTTP_RET_ERROR) return M_WS_RET_FAILED;

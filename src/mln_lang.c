@@ -149,7 +149,7 @@ static inline mln_lang_symbol_node_t *
 mln_lang_symbol_node_id_search(mln_lang_ctx_t *ctx, mln_string_t *name);
 static inline mln_lang_var_t *
 __mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name);
-static int mln_lang_set_member_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_set_member_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static inline mln_lang_var_t *
 __mln_lang_var_new(mln_lang_ctx_t *ctx, \
                  mln_string_t *name, \
@@ -266,7 +266,7 @@ static int mln_lang_dump_check_cmp(const void *addr1, const void *addr2);
 static void mln_lang_dump_var(mln_lang_var_t *var, int cnt, mln_rbtree_t *check);
 static void mln_lang_dump_set(mln_lang_set_detail_t *set);
 static void mln_lang_dump_object(mln_lang_object_t *obj, int cnt, mln_rbtree_t *check);
-static int mln_lang_dump_var_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_dump_var_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static void mln_lang_dump_function(mln_lang_func_detail_t *func, int cnt);
 static void mln_lang_dump_array(mln_lang_array_t *array, int cnt, mln_rbtree_t *check);
 static int mln_lang_dump_array_elem(mln_rbtree_node_t *node, void *rn_data, void *udata);
@@ -300,13 +300,13 @@ static void mln_lang_gc_item_setter(mln_lang_gc_item_t *gc_item, void *gc_data);
 static void mln_lang_gc_item_member_setter(mln_gc_t *gc, mln_lang_gc_item_t *gc_item);
 static int mln_lang_gc_setter_cmp(const void *data1, const void *data2);
 static void mln_lang_gc_item_member_setter_recursive(struct mln_lang_gc_setter_s *lgs, mln_lang_gc_item_t *gc_item);
-static int mln_lang_gc_item_member_setter_obj_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
-static int mln_lang_gc_item_member_setter_array_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_gc_item_member_setter_obj_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_gc_item_member_setter_array_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static void mln_lang_gc_item_move_handler(mln_gc_t *dest_gc, mln_lang_gc_item_t *gc_item);
 static void mln_lang_gc_item_root_setter(mln_gc_t *gc, mln_lang_ctx_t *ctx);
 static void mln_lang_gc_item_clean_searcher(mln_gc_t *gc, mln_lang_gc_item_t *gc_item);
-static int mln_lang_gc_item_clean_searcher_obj_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
-static int mln_lang_gc_item_clean_searcher_array_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_gc_item_clean_searcher_obj_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_lang_gc_item_clean_searcher_array_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static void mln_lang_gc_item_free_handler(mln_lang_gc_item_t *gc_item);
 static void mln_lang_ctx_resource_free_handler(mln_lang_resource_t *lr);
 static int mln_lang_resource_cmp(const mln_lang_resource_t *lr1, const mln_lang_resource_t *lr2);
@@ -1608,7 +1608,7 @@ __mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name)
     return (mln_lang_var_t *)(rn->data);
 }
 
-static int mln_lang_set_member_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_lang_set_member_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_lang_var_t *var, *lv = (mln_lang_var_t *)rn_data;
     struct mln_lang_scan_s *ls = (struct mln_lang_scan_s *)udata;
@@ -2334,7 +2334,7 @@ mln_lang_object_new(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *in_set)
         ls.tree = obj->members;
         ls.tree2 = NULL;
         ls.ctx = ctx;
-        if (mln_rbtree_scan_all(in_set->members, mln_lang_set_member_scan, &ls) < 0) {
+        if (mln_rbtree_iterate(in_set->members, mln_lang_set_member_iterate_handler, &ls) < 0) {
             mln_lang_object_free(obj);
             return NULL;
         }
@@ -6257,10 +6257,10 @@ static void mln_lang_dump_object(mln_lang_object_t *obj, int cnt, mln_rbtree_t *
         if ((rn = mln_rbtree_node_new(check, obj)) == NULL) return;
         mln_rbtree_insert(check, rn);
     }
-    mln_rbtree_scan_all(obj->members, mln_lang_dump_var_scan, &ls);
+    mln_rbtree_iterate(obj->members, mln_lang_dump_var_iterate_handler, &ls);
 }
 
-static int mln_lang_dump_var_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_lang_dump_var_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     struct mln_lang_scan_s *ls = (struct mln_lang_scan_s *)udata;
     mln_lang_dump_var((mln_lang_var_t *)rn_data, *(ls->cnt)+2, ls->tree);
@@ -6281,7 +6281,7 @@ static void mln_lang_dump_set(mln_lang_set_detail_t *set)
 {
     int cnt = 4;
     mln_log(none, "    Name: %S  ref:%I\n", set->name, set->ref);
-    mln_rbtree_scan_all(set->members, mln_lang_dump_var_scan, &cnt);
+    mln_rbtree_iterate(set->members, mln_lang_dump_var_iterate_handler, &cnt);
 }
 
 static void mln_lang_dump_array(mln_lang_array_t *array, int cnt, mln_rbtree_t *check)
@@ -6305,10 +6305,10 @@ static void mln_lang_dump_array(mln_lang_array_t *array, int cnt, mln_rbtree_t *
     }
     blank();
     mln_log(none, "ALL ELEMENTS:\n");
-    mln_rbtree_scan_all(array->elems_index, mln_lang_dump_array_elem, &ls);
+    mln_rbtree_iterate(array->elems_index, mln_lang_dump_array_elem, &ls);
     blank();
     mln_log(none, "KEY ELEMENTS:\n");
-    mln_rbtree_scan_all(array->elems_key, mln_lang_dump_array_elem, &ls);
+    mln_rbtree_iterate(array->elems_key, mln_lang_dump_array_elem, &ls);
     blank();
     mln_log(none, "Refs: %I\n", array->ref);
 }
@@ -7257,16 +7257,16 @@ static void mln_lang_gc_item_member_setter_recursive(struct mln_lang_gc_setter_s
     switch (gc_item->type) {
         case M_GC_OBJ:
             t = gc_item->data.obj->members;
-            mln_rbtree_scan_all(t, mln_lang_gc_item_member_setter_obj_scanner, lgs);
+            mln_rbtree_iterate(t, mln_lang_gc_item_member_setter_obj_iterate_handler, lgs);
             break;
         default:
             t = gc_item->data.array->elems_index;
-            mln_rbtree_scan_all(t, mln_lang_gc_item_member_setter_array_scanner, lgs);
+            mln_rbtree_iterate(t, mln_lang_gc_item_member_setter_array_iterate_handler, lgs);
             break;
     }
 }
 
-static int mln_lang_gc_item_member_setter_obj_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_lang_gc_item_member_setter_obj_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var = (mln_lang_var_t *)rn_data;
@@ -7283,7 +7283,7 @@ static int mln_lang_gc_item_member_setter_obj_scanner(mln_rbtree_node_t *node, v
     return 0;
 }
 
-static int mln_lang_gc_item_member_setter_array_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_lang_gc_item_member_setter_array_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_lang_val_t *val;
     mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;
@@ -7350,18 +7350,18 @@ static void mln_lang_gc_item_clean_searcher(mln_gc_t *gc, mln_lang_gc_item_t *gc
             t = gc_item->data.obj->members;
             gs.tree = t;
             gs.gc = gc;
-            mln_rbtree_scan_all(t, mln_lang_gc_item_clean_searcher_obj_scanner, &gs);
+            mln_rbtree_iterate(t, mln_lang_gc_item_clean_searcher_obj_iterate_handler, &gs);
             break;
         default:
             t = gc_item->data.array->elems_index;
             gs.tree = t;
             gs.gc = gc;
-            mln_rbtree_scan_all(t, mln_lang_gc_item_clean_searcher_array_scanner, &gs);
+            mln_rbtree_iterate(t, mln_lang_gc_item_clean_searcher_array_iterate_handler, &gs);
             break;
     }
 }
 
-static int mln_lang_gc_item_clean_searcher_obj_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_lang_gc_item_clean_searcher_obj_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_lang_val_t *val;
     mln_lang_var_t *var = (mln_lang_var_t *)rn_data;
@@ -7390,7 +7390,7 @@ static int mln_lang_gc_item_clean_searcher_obj_scanner(mln_rbtree_node_t *node, 
     return 0;
 }
 
-static int mln_lang_gc_item_clean_searcher_array_scanner(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_lang_gc_item_clean_searcher_array_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_lang_val_t *val;
     mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)rn_data;

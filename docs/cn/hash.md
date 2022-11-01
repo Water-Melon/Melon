@@ -201,21 +201,21 @@ typedef enum mln_hash_flag {
 
 
 
-#### mln_hash_scan_all
+#### mln_hash_iterate
 
 ```c
-int mln_hash_scan_all(mln_hash_t *h, hash_scan_handler handler, void *udata);
+int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata);
 
-typedef int (*hash_scan_handler)(void * /*key*/, void * /*val*/, void *);
+typedef int (*hash_iterate_handler)(void * /*key*/, void * /*val*/, void *);
 ```
 
 描述：遍历哈希表内所有表项。
 
-`handler`为表项访问函数，其第一个参数为`key`，第二个参数为`val`，第三个参数为`mln_hash_scan_all`的第三个参数`udata`。
+`handler`为表项访问函数，其第一个参数为`key`，第二个参数为`val`，第三个参数为`mln_hash_iterate`的第三个参数`udata`。
 
 返回值：
 
-- `mln_hash_scan_all`：成功返回`0`，失败返回`-1`
+- `mln_hash_iterate`：成功返回`0`，失败返回`-1`
 - `handler`处理函数：正常返回`0`，若想中断遍历则返回`-1`
 
 

@@ -63,13 +63,13 @@ struct mln_fork_s {
 由于Melon是一主多从模式，因此需要一个方法能够遍历子进程列表，并对其下发消息，因此提供了一个函数用于遍历所有子进程结构：
 
 ```c
-int mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data);
+int mln_fork_iterate(mln_event_t *ev, fork_iterate_handler handler, void *data);
 
-typedef int (*scan_handler)(mln_event_t *, mln_fork_t *, void *);
+typedef int (*fork_iterate_handler)(mln_event_t *, mln_fork_t *, void *);
 ```
 
 - `ev`为主进程消息相关的事件处理结构。
-- `handler`为每个子进程节点的处理函数，函数有三个参数，分别为：消息相关的事件处理结构、子进程的`mln_fork_t`结构以及用户自定义数据（即`mln_fork_scan_all`的第三个参数）。
+- `handler`为每个子进程节点的处理函数，函数有三个参数，分别为：消息相关的事件处理结构、子进程的`mln_fork_t`结构以及用户自定义数据（即`mln_fork_iterate`的第三个参数）。
 - `data`用户自定义数据。
 
 

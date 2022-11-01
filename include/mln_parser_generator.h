@@ -210,7 +210,7 @@ struct PREFIX_NAME##_reduce_info {\
     int                      *failed;\
 };\
 \
-SCOPE int PREFIX_NAME##_reduce_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);\
+SCOPE int PREFIX_NAME##_reduce_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);\
 SCOPE mln_pg_shift_tbl_t *PREFIX_NAME##_build_shift_tbl(struct mln_pg_calc_info_s *pci, \
                                                         struct PREFIX_NAME##_preprocess_attr *attr);\
 SCOPE void PREFIX_NAME##_pg_data_free(void *pg_data);\
@@ -249,7 +249,7 @@ SCOPE int PREFIX_NAME##_shift(struct mln_sys_parse_attr *spattr, \
                               mln_shift_t *sh);\
 SCOPE int PREFIX_NAME##_err_process(struct mln_sys_parse_attr *spattr, int opr);\
 SCOPE int PREFIX_NAME##_err_dup(struct mln_sys_parse_attr *spattr, mln_uauto_t pos, int ctype, int opr);\
-SCOPE int PREFIX_NAME##_err_dup_scan(void *q_node, void *udata);\
+SCOPE int PREFIX_NAME##_err_dup_iterate_handler(void *q_node, void *udata);\
 SCOPE int PREFIX_NAME##_err_recover(struct mln_sys_parse_attr *spattr, mln_uauto_t pos, int ctype, int opr);
 
 
@@ -257,7 +257,7 @@ SCOPE int PREFIX_NAME##_err_recover(struct mln_sys_parse_attr *spattr, mln_uauto
 #define MLN_DEFINE_PARSER_GENERATOR(SCOPE,PREFIX_NAME,TK_PREFIX,...); \
 MLN_DEFINE_TOKEN(PREFIX_NAME,TK_PREFIX,## __VA_ARGS__);\
 \
-SCOPE int PREFIX_NAME##_reduce_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)\
+SCOPE int PREFIX_NAME##_reduce_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)\
 {\
     mln_pg_token_t *tk = (mln_pg_token_t *)rn_data;\
     struct PREFIX_NAME##_reduce_info *info = (struct PREFIX_NAME##_reduce_info *)udata;\
@@ -321,7 +321,7 @@ SCOPE mln_pg_shift_tbl_t *PREFIX_NAME##_build_shift_tbl(struct mln_pg_calc_info_
                 info.rule = attr->rule_tbl;\
                 info.state = s;\
                 info.failed = &failed;\
-                if (mln_rbtree_scan_all(it->lookahead_set, PREFIX_NAME##_reduce_scan, &info) < 0) {\
+                if (mln_rbtree_iterate(it->lookahead_set, PREFIX_NAME##_reduce_iterate_handler, &info) < 0) {\
                     PREFIX_NAME##_pg_data_free((void *)stbl);\
                     return NULL;\
                 }\
@@ -1120,7 +1120,7 @@ SCOPE int PREFIX_NAME##_err_dup(struct mln_sys_parse_attr *spattr, mln_uauto_t p
     eq.pos = pos;\
     eq.opr = opr;\
     eq.ctype = ctype;\
-    if (mln_queue_scan_all(p->cur_queue, PREFIX_NAME##_err_dup_scan, (void *)&eq) < 0) {\
+    if (mln_queue_iterate(p->cur_queue, PREFIX_NAME##_err_dup_iterate_handler, (void *)&eq) < 0) {\
         mln_stack_destroy(p->err_stack);\
         p->err_stack = NULL;\
         PREFIX_NAME##_factor_destroy((void *)(p->err_la));\
@@ -1132,7 +1132,7 @@ SCOPE int PREFIX_NAME##_err_dup(struct mln_sys_parse_attr *spattr, mln_uauto_t p
     return 0;\
 }\
 \
-SCOPE int PREFIX_NAME##_err_dup_scan(void *q_node, void *udata)\
+SCOPE int PREFIX_NAME##_err_dup_iterate_handler(void *q_node, void *udata)\
 {\
     struct mln_err_queue_s *eq = (struct mln_err_queue_s *)udata;\
     if (eq->opr == M_P_ERR_DEL && eq->index == eq->pos) {\

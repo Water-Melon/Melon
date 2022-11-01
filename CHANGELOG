@@ -382,9 +382,9 @@ Changes with melon 1.2.3                                          10 May 2015
     *) Added an interface for setting an callback routine in
        'mln_dispatch()'.
     *) Modified some interfaces' implementation in event module.
-    *) Added an interface for scanning every worker process node
+    *) Added an interface for visiting every worker process node
        and processing the node with a specified fd-event handler.
-    *) Added an interface for scanning every data in hash table
+    *) Added an interface for visiting every data in hash table
        and processing the data with a specified function.
     *) Modified the macro interface form of 'MLN_DEFINE_TOKEN()'.
     *) Modified log data structures.
@@ -399,7 +399,7 @@ Changes with melon 1.2.3                                          10 May 2015
        writing worker process routine.
     *) Added a marco to judge whether the return value of
        'mln_rbtree_search()' is NULL.
-    *) Added an interface for scanning every red-black tree node
+    *) Added an interface for visiting every red-black tree node
        and processing the node with a specified function.
 
 Changes with melon 0.8.1                                          01 Mar 2015

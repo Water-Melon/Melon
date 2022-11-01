@@ -26,7 +26,7 @@ static void mln_http_hash_free(void *data);
 static mln_u64_t mln_http_hash_calc(mln_hash_t *h, void *key);
 static int mln_http_hash_cmp(mln_hash_t *h, void *key1, void *key2);
 static inline int mln_http_atou(mln_string_t *s, mln_u32_t *status);
-static int mln_http_dump_scan(void *key, void *val, void *data);
+static int mln_http_dump_iterate_handler(void *key, void *val, void *data);
 static inline int
 mln_http_generate_version(struct mln_http_chain_s *hc);
 static inline int
@@ -36,7 +36,7 @@ mln_http_generate_method(struct mln_http_chain_s *hc);
 static inline int
 mln_http_generate_uri(struct mln_http_chain_s *hc);
 static int
-mln_http_generate_fields_hash_scan(void *key, void *val, void *data);
+mln_http_generate_fields_hash_iterate_handler(void *key, void *val, void *data);
 static inline int
 mln_http_generate_write(struct mln_http_chain_s *hc, void *buf, mln_size_t size);
 static inline int
@@ -523,8 +523,8 @@ int mln_http_generate(mln_http_t *http, mln_chain_t **out_head, mln_chain_t **ou
         goto err;
 
     if (header_fields != NULL) {
-        if (mln_hash_scan_all(header_fields, \
-                              mln_http_generate_fields_hash_scan, \
+        if (mln_hash_iterate(header_fields, \
+                              mln_http_generate_fields_hash_iterate_handler, \
                               &hc) < 0)
             goto err;
     }
@@ -745,7 +745,7 @@ mln_http_generate_uri(struct mln_http_chain_s *hc)
 }
 
 static int
-mln_http_generate_fields_hash_scan(void *key, void *val, void *data)
+mln_http_generate_fields_hash_iterate_handler(void *key, void *val, void *data)
 {
     mln_string_t *k = (mln_string_t *)key;
     mln_string_t *v = (mln_string_t *)val;
@@ -1021,10 +1021,10 @@ void mln_http_dump(mln_http_t *http)
     printf("\ttype_code:%u\n", http->type);
     printf("\tfields:\n");
     if (rc <= 0) rc = 1;/*do nothing*/
-    mln_hash_scan_all(http->header_fields, mln_http_dump_scan, NULL);
+    mln_hash_iterate(http->header_fields, mln_http_dump_iterate_handler, NULL);
 }
 
-static int mln_http_dump_scan(void *key, void *val, void *data)
+static int mln_http_dump_iterate_handler(void *key, void *val, void *data)
 {
     printf("\t\tkey:[%s] value:[%s]\n", \
            (char *)(((mln_string_t *)key)->data), \

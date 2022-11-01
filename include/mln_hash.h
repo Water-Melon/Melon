@@ -10,7 +10,7 @@
 
 typedef struct mln_hash_s mln_hash_t;
 
-typedef int (*hash_scan_handler)(void * /*key*/, void * /*val*/, void *);
+typedef int (*hash_iterate_handler)(void * /*key*/, void * /*val*/, void *);
 typedef mln_u64_t (*hash_calc_handler)(mln_hash_t *, void *);
 /*
  * cmp_handler's return value: 0 -- not matched, !0 -- matched.
@@ -97,7 +97,7 @@ mln_hash_insert(mln_hash_t *h, void *key, void *val) __NONNULL2(1,2);
 extern void
 mln_hash_remove(mln_hash_t *h, void *key, mln_hash_flag_t flg) __NONNULL2(1,2);
 extern int
-mln_hash_scan_all(mln_hash_t *h, hash_scan_handler handler, void *udata) __NONNULL1(1);
+mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata) __NONNULL1(1);
 extern void *
 mln_hash_change_value(mln_hash_t *h, void *key, void *new_value) __NONNULL2(1,2);
 extern int mln_hash_key_exist(mln_hash_t *h, void *key) __NONNULL2(1,2);

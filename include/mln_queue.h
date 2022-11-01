@@ -11,7 +11,7 @@
 #include <string.h>
 
 typedef void (*queue_free)(void *);
-typedef int (*queue_scan)(void *, void *);
+typedef int (*queue_iterate_handler)(void *, void *);
 
 typedef struct {
     void                 **head;
@@ -40,7 +40,7 @@ extern void mln_queue_remove(mln_queue_t *q) __NONNULL1(1);
 /*mln_queue_free_index & mln_queue_search's index start from 0*/
 extern void *mln_queue_search(mln_queue_t *q, mln_uauto_t index) __NONNULL1(1);
 extern void mln_queue_free_index(mln_queue_t *q, mln_uauto_t index) __NONNULL1(1);
-extern int mln_queue_scan_all(mln_queue_t *q, queue_scan scan_handler, void *udata) __NONNULL1(1);
+extern int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void *udata) __NONNULL1(1);
 
 #endif
 

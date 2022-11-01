@@ -37,19 +37,19 @@ mln_json_parse_false(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
 static int
 mln_json_parse_null(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
 
-static int mln_json_dump_hash_scan(void *key, void *val, void *data);
-static int mln_json_dump_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udata);
+static int mln_json_dump_hash_iterate_handler(void *key, void *val, void *data);
+static int mln_json_dump_rbtree_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata);
 static inline mln_size_t mln_json_get_length(mln_json_t *j);
 static int
-mln_json_get_length_hash_scan(void *key, void *val, void *data);
+mln_json_get_length_hash_iterate_handler(void *key, void *val, void *data);
 static int
-mln_json_get_length_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *data);
+mln_json_get_length_rbtree_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *data);
 static inline mln_size_t
 mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf);
 static int
-mln_json_write_content_hash_scan(void *key, void *val, void *data);
+mln_json_write_content_hash_iterate_handler(void *key, void *val, void *data);
 static int
-mln_json_write_content_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *data);
+mln_json_write_content_rbtree_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *data);
 
 mln_json_t *mln_json_parse(mln_string_t *jstr)
 {
@@ -693,8 +693,8 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
             tmp.buf = &buf;
             save = length;
             if (j->data.m_j_obj != NULL)
-                mln_hash_scan_all(j->data.m_j_obj, \
-                                  mln_json_write_content_hash_scan, \
+                mln_hash_iterate(j->data.m_j_obj, \
+                                  mln_json_write_content_hash_iterate_handler, \
                                   &tmp);
             if (save < length) {
                 --buf; --length;
@@ -708,8 +708,8 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
             tmp.buf = &buf;
             save = length;
             if (j->data.m_j_array != NULL)
-                mln_rbtree_scan_all(j->data.m_j_array, \
-                                    mln_json_write_content_rbtree_scan, \
+                mln_rbtree_iterate(j->data.m_j_array, \
+                                    mln_json_write_content_rbtree_iterate_handler, \
                                     &tmp);
             if (save < length) {
                 --buf; --length;
@@ -773,7 +773,7 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
 }
 
 static int
-mln_json_write_content_hash_scan(void *key, void *val, void *data)
+mln_json_write_content_hash_iterate_handler(void *key, void *val, void *data)
 {
     mln_json_obj_t *obj = (mln_json_obj_t *)val;
     struct mln_json_tmp_s *tmp = (struct mln_json_tmp_s *)data;
@@ -803,7 +803,7 @@ mln_json_write_content_hash_scan(void *key, void *val, void *data)
 }
 
 static int
-mln_json_write_content_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *data)
+mln_json_write_content_rbtree_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *data)
 {
     mln_json_t *j = (mln_json_t *)rn_data;
     struct mln_json_tmp_s *tmp = (struct mln_json_tmp_s *)data;
@@ -834,13 +834,13 @@ static inline mln_size_t mln_json_get_length(mln_json_t *j)
         case M_JSON_OBJECT:
             length += 2;
             if (j->data.m_j_obj != NULL)
-                mln_hash_scan_all(j->data.m_j_obj, mln_json_get_length_hash_scan, &length);
+                mln_hash_iterate(j->data.m_j_obj, mln_json_get_length_hash_iterate_handler, &length);
             break;
         case M_JSON_ARRAY:
             length += 2;
             if (j->data.m_j_array != NULL)
-                mln_rbtree_scan_all(j->data.m_j_array, \
-                                    mln_json_get_length_rbtree_scan, \
+                mln_rbtree_iterate(j->data.m_j_array, \
+                                    mln_json_get_length_rbtree_iterate_handler, \
                                     &length);
             break;
         case M_JSON_STRING:
@@ -875,7 +875,7 @@ static inline mln_size_t mln_json_get_length(mln_json_t *j)
 }
 
 static int
-mln_json_get_length_hash_scan(void *key, void *val, void *data)
+mln_json_get_length_hash_iterate_handler(void *key, void *val, void *data)
 {
     mln_json_obj_t *obj = (mln_json_obj_t *)val;
     mln_size_t *length = (mln_size_t *)data;
@@ -895,7 +895,7 @@ mln_json_get_length_hash_scan(void *key, void *val, void *data)
 }
 
 static int
-mln_json_get_length_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *data)
+mln_json_get_length_rbtree_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *data)
 {
     mln_json_t *j = (mln_json_t *)rn_data;
     mln_size_t *length = (mln_size_t *)data;
@@ -992,13 +992,13 @@ void mln_json_dump(mln_json_t *j, int n_space, char *prefix)
         case M_JSON_OBJECT:
             printf("type:object\n");
             if (j->data.m_j_obj != NULL)
-                mln_hash_scan_all(j->data.m_j_obj, mln_json_dump_hash_scan, &space);
+                mln_hash_iterate(j->data.m_j_obj, mln_json_dump_hash_iterate_handler, &space);
             break;
         case M_JSON_ARRAY:
             printf("type:array\n");
             if (j->data.m_j_array != NULL)
-                mln_rbtree_scan_all(j->data.m_j_array, \
-                                    mln_json_dump_rbtree_scan, \
+                mln_rbtree_iterate(j->data.m_j_array, \
+                                    mln_json_dump_rbtree_iterate_handler, \
                                     &space);
             break;
         case M_JSON_STRING:
@@ -1023,7 +1023,7 @@ void mln_json_dump(mln_json_t *j, int n_space, char *prefix)
     }
 }
 
-static int mln_json_dump_hash_scan(void *key, void *val, void *data)
+static int mln_json_dump_hash_iterate_handler(void *key, void *val, void *data)
 {
     int *space = (int *)data;
     mln_json_obj_t *obj = (mln_json_obj_t *)val;
@@ -1036,7 +1036,7 @@ static int mln_json_dump_hash_scan(void *key, void *val, void *data)
     return 0;
 }
 
-static int mln_json_dump_rbtree_scan(mln_rbtree_node_t *node, void *rn_data, void *udata)
+static int mln_json_dump_rbtree_iterate_handler(mln_rbtree_node_t *node, void *rn_data, void *udata)
 {
     mln_json_t *j = (mln_json_t *)rn_data;
     int *space = (int *)udata;

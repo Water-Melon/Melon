@@ -10,7 +10,7 @@
 
 typedef void (*stack_free)(void *);
 typedef void *(*stack_copy)(void *, void *);
-typedef int (*stack_scan)(void *, void *);
+typedef int (*stack_iterate_handler)(void *, void *);
 
 typedef struct mln_stack_node_s {
     void                    *data;
@@ -49,7 +49,7 @@ extern void *mln_stack_pop(mln_stack_t *st) __NONNULL1(1);
  * mln_stack_dup():should be attention memory leak.
  */
 extern mln_stack_t *mln_stack_dup(mln_stack_t *st, void *udata) __NONNULL1(1);
-extern int mln_stack_scan_all(mln_stack_t *st, stack_scan scanner, void *data) __NONNULL1(1);
+extern int mln_stack_iterate(mln_stack_t *st, stack_iterate_handler handler, void *data) __NONNULL1(1);
 
 #endif
 

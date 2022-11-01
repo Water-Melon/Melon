@@ -63,13 +63,13 @@ struct mln_fork_s {
 Since Melon is a master-multiple-slave model, a method is needed to traverse the list of subprocesses and send messages to them, so a function is provided to traverse all subprocess structures:
 
 ```c
-int mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data);
+int mln_fork_iterate(mln_event_t *ev, fork_iterate_handler handler, void *data);
 
-typedef int (*scan_handler)(mln_event_t *, mln_fork_t *, void *);
+typedef int (*fork_iterate_handler)(mln_event_t *, mln_fork_t *, void *);
 ```
 
 - `ev` is an event handling structure related to messages from the main process.
-- `handler` is the processing function of each child process node. The function has three parameters: the message-related event processing structure, the `mln_fork_t` structure of the child process, and the user-defined data (that is, the third parameter of `mln_fork_scan_all` ).
+- `handler` is the processing function of each child process node. The function has three parameters: the message-related event processing structure, the `mln_fork_t` structure of the child process, and the user-defined data (that is, the third parameter of `mln_fork_iterate` ).
 - `data` user-defined data.
 
 

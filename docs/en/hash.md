@@ -201,21 +201,21 @@ Return value: none
 
 
 
-#### mln_hash_scan_all
+#### mln_hash_iterate
 
 ```c
-int mln_hash_scan_all(mln_hash_t *h, hash_scan_handler handler, void *udata);
+int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata);
 
-typedef int (*hash_scan_handler)(void * /*key*/, void * /*val*/, void *);
+typedef int (*hash_iterate_handler)(void * /*key*/, void * /*val*/, void *);
 ```
 
 Description: Traverse all entries in the hash table.
 
-`handler` is a table entry access function, its first parameter is `key`, the second parameter is `val`, and the third parameter is the third parameter `udata` of `mln_hash_scan_all`.
+`handler` is a table entry access function, its first parameter is `key`, the second parameter is `val`, and the third parameter is the third parameter `udata` of `mln_hash_iterate`.
 
 return value:
 
-- `mln_hash_scan_all`: returns `0` on success, `-1` on failure
+- `mln_hash_iterate`: returns `0` on success, `-1` on failure
 - `handler` processing function: return `0` normally, if you want to interrupt the traversal, return `-1`
 
 

@@ -15,7 +15,7 @@ typedef struct mln_rbtree_node_s mln_rbtree_node_t;
  */
 typedef int (*rbtree_cmp)(const void *, const void *);
 typedef void (*rbtree_free_data)(void *);
-typedef int (*rbtree_act)(mln_rbtree_node_t *node, void *rn_data, void *udata);
+typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *rn_data, void *udata);
 typedef void *(*rbtree_pool_alloc_handler)(void *, mln_size_t);
 typedef void (*rbtree_pool_free_handler)(void *);
 
@@ -85,7 +85,7 @@ mln_rbtree_node_new(mln_rbtree_t *t, void *data) __NONNULL2(1,2);
 extern void 
 mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n) __NONNULL2(1,2);
 extern int
-mln_rbtree_scan_all(mln_rbtree_t *t, rbtree_act act, void *udata) __NONNULL2(1,2);
+mln_rbtree_iterate(mln_rbtree_t *t, rbtree_iterate_handler handler, void *udata) __NONNULL2(1,2);
 extern void mln_rbtree_reset(mln_rbtree_t *t) __NONNULL1(1);
 #endif
 

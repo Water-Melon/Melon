@@ -119,22 +119,22 @@ mln_stack_t *mln_stack_dup(mln_stack_t *st, void *udata);
 
 
 
-#### mln_stack_scan_all
+#### mln_stack_iterate
 
 ```c
-int mln_stack_scan_all(mln_stack_t *st, stack_scan scanner, void *data);
+int mln_stack_iterate(mln_stack_t *st, stack_iterate_handler handler, void *data);
 
-typedef int (*stack_scan)(void *, void *);
+typedef int (*stack_iterate_handler)(void *, void *);
 ```
 
 描述：
 
-从栈顶向栈底遍历栈`st`的每一个栈内元素数据。`scanner`为数据访问函数，`data`为遍历时的额外用户数据。
+从栈顶向栈底遍历栈`st`的每一个栈内元素数据。`handler`为数据访问函数，`data`为遍历时的额外用户数据。
 
-`stack_scan`有两个参数，分别为：栈节点内数据指针 和 `data`参数。
+`stack_iterate_handler`有两个参数，分别为：栈节点内数据指针 和 `data`参数。
 
 返回值：
 
-- `mln_stack_scan_all`：全部遍历完则返回`0`，否则返回`-1`
-- `stack_scan`：若想中断遍历则返回`小于0`的值，否则返回值`大于等于0`
+- `mln_stack_iterate`：全部遍历完则返回`0`，否则返回`-1`
+- `stack_iterate_handler`：若想中断遍历则返回`小于0`的值，否则返回值`大于等于0`
 

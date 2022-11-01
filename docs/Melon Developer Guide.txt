@@ -210,7 +210,7 @@ Their definitions can be found in melon/include/mln_types.h.
         mln_u32_t                expandable:1;
         mln_u32_t                calc_prime:1;
     };
-    typedef int  (*hash_scan_handler)(void * /*key*/, void * /*val*/, void *);
+    typedef int  (*hash_iterate_handler)(void * /*key*/, void * /*val*/, void *);
     typedef mln_u64_t  (*hash_calc_handler)(mln_hash_t *, void *);
     /*
      * cmp_handler's return value: 0 -- not matched, !0 -- matched.
@@ -259,8 +259,8 @@ Their definitions can be found in melon/include/mln_types.h.
        If the 'free_key' and (or) 'free_value' are set and the 'flg' is not M_HASH_F_NONE, the element's key and (or)
        value will be freed at the same time.
 
-    g) int mln_hash_scan_all(mln_hash_t *h, hash_scan_handler handler, void *udata);
-       This interface is used to scan the whole table and process every key-value by the handler.
+    g) int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata);
+       This interface is used to visit the whole table and process every key-value by the handler.
        The third argument of handler is the 'udata' provided by caller.
 
     h) void *mln_hash_change_value(mln_hash_t *h, void *key, void *new_value);
@@ -410,13 +410,13 @@ Their definitions can be found in melon/include/mln_types.h.
        If function returns !0, the 'ptr' is pointing to the address of ptree's 'nil'.
        Otherwise, the data that is pointed by 'ptr' is valid.
 
-    k) int mln_rbtree_scan_all(mln_rbtree_t *t, rbtree_act act, void *udata);
-       This function is used to scan all rbtree nodes and process them by the callback function 'act'.
+    k) int mln_rbtree_iterate(mln_rbtree_t *t, rbtree_iterate_handler handler, void *udata);
+       This function is used to visit all rbtree nodes and process them by the callback function 'handler'.
        t -- is a rbtree pointer.
-       act -- is a callback function which is defined by the caller. Its prototype is
-           typedef int (*rbtree_act)(mln_rbtree_node_t *node, void *rn_data, void *udata);
+       handler -- is a callback function which is defined by the caller. Its prototype is
+           typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *rn_data, void *udata);
        The first argument is the rbtree node. Second one is the data of rbtree node. And the last one is an user
-       data passed by the third argument of mln_rbtree_scan_all().
+       data passed by the third argument of mln_rbtree_iterate().
 
     l) void mln_rbtree_reset(mln_rbtree_t *t);
        Reset rbtree. Every node in the tree will be freed.
@@ -1016,10 +1016,10 @@ Their definitions can be found in melon/include/mln_types.h.
      k) void mln_queue_free_index(mln_queue_t *q, mln_uauto_t index);
         It is used to remove the element that located by 'index' in the queue and free its memory.
 
-     l) int mln_queue_scan_all(mln_queue_t *q, queue_scan scan_handler, void *udata);
-        It is used to scan all elements in the queue.
-        scan_handler -- is a function pointer that is used to process every element. Its prototype is
-            typedef int (*queue_scan)(void *, void *);
+     l) int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void *udata);
+        It is used to visit all elements in the queue.
+        handler -- is a function pointer that is used to process every element. Its prototype is
+            typedef int (*queue_iterate_handler)(void *, void *);
         The first argument is the pointer of an element. The second one is a user data.
 
   15) Stack
@@ -1062,12 +1062,12 @@ Their definitions can be found in melon/include/mln_types.h.
         It is used to duplicate a stack data.
         'udata' is a customized data, it will be passed to the 'copy_handler'.
 
-     h) int mln_stack_scan_all(mln_stack_t *st, stack_scan scanner, void *data);
+     h) int mln_stack_iterate(mln_stack_t *st, stack_iterate_handler handler, void *data);
         Scan all node in stack 'st'.
-        'scanner' is a handler function to process every stack node. Its prototype is,
-            typedef int (*stack_scan)(void *, void *);
+        'handler' is a handler function to process every stack node. Its prototype is,
+            typedef int (*stack_iterate_handler)(void *, void *);
         the first argument is the data in stack node, the second argument is the same as
-        the 'data' passed to 'mln_stack_scan_all', that is a customized data.
+        the 'data' passed to 'mln_stack_iterate', that is a customized data.
 
   16) Parser and Parser Generator
      Parser can be used to parse a text which is in a file or buffer automatically.
@@ -2979,9 +2979,9 @@ Their definitions can be found in melon/include/mln_types.h.
    If type is duplicated, the handler will be repleaced by the new one.
 
    About IPC, developer may want to may send a message to all child processes from master processs.
-   Based on this case, Melon provides an interface to scan and process all child processes' objects.
+   Based on this case, Melon provides an interface to visit and process all child processes' objects.
    Its prototype is
-       int mln_fork_scan_all(mln_event_t *ev, scan_handler handler, void *data);
+       int mln_fork_iterate(mln_event_t *ev, fork_iterate_handler handler, void *data);
        ev -- is the event object of the master process.
        handler -- is a callback function to process everyone child process object.
        data -- is a user data.

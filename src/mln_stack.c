@@ -159,11 +159,11 @@ mln_stack_t *mln_stack_dup(mln_stack_t *st, void *udata)
 /*
  * scan
  */
-int mln_stack_scan_all(mln_stack_t *st, stack_scan scanner, void *data)
+int mln_stack_iterate(mln_stack_t *st, stack_iterate_handler handler, void *data)
 {
     mln_stack_node_t *sn;
     for (sn = st->top; sn != NULL; sn = sn->prev) {
-        if (scanner(sn->data, data) < 0) return -1;
+        if (handler(sn->data, data) < 0) return -1;
     }
     return 0;
 }

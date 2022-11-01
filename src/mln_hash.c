@@ -336,7 +336,7 @@ mln_hash_entry_free(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg)
     }
 }
 
-int mln_hash_scan_all(mln_hash_t *h, hash_scan_handler handler, void *udata)
+int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata)
 {
     mln_hash_mgr_t *mgr, *end;
     mgr = h->tbl;

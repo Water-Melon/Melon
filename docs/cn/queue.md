@@ -110,19 +110,19 @@ void mln_queue_free_index(mln_queue_t *q, mln_uauto_t index);
 
 
 
-#### mln_queue_scan_all
+#### mln_queue_iterate
 
 ```c
-int mln_queue_scan_all(mln_queue_t *q, queue_scan scan_handler, void *udata);
+int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void *udata);
 
-typedef int (*queue_scan)(void *, void *);
+typedef int (*queue_iterate_handler)(void *, void *);
 ```
 
 描述：遍历每一个队列成员。
 
 `udata`为辅助遍历的自定义结构指针，若不需要可置`NULL`。
 
-`scan_handler`的两个参数分别为：`成员数据`，`udata`。
+`handler`的两个参数分别为：`成员数据`，`udata`。
 
 返回值：遍历完成返回`0`，被中断则返回`-1`
 
