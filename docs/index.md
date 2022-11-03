@@ -32,6 +32,7 @@ Melon currently provides the following components:
    - KMP
    - Cron format parser
 - Components
+   - error code
    - memory pool
    - Thread Pool
    - I/O Thread
@@ -76,6 +77,7 @@ At present, Melon has also completed the preliminary porting to Windows, so it c
   - [queue](https://water-melon.github.io/Melon/en/queue.html)
   - [Fibonacci Heap](https://water-melon.github.io/Melon/en/fheap.html)
   - [Event](https://water-melon.github.io/Melon/en/event.html)
+  - [Error Code](https://water-melon.github.io/Melon/en/error.html)
   - [Memory Pool](https://water-melon.github.io/Melon/en/mpool.html)
   - [TCP connection and network I/O chain](https://water-melon.github.io/Melon/en/tcp_io.html)
   - [File Collection](https://water-melon.github.io/Melon/en/file.html)

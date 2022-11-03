@@ -1,3 +1,13 @@
+Changes with melon 2.5.3                                          03 Nov 2022
+    *) Optimize melang performance
+    *) Update import function of melang
+    *) update logo
+    *) Updated naming conventions of hash, rbtree, queue, stack and fork components
+    *) Optimize argument of iterate function in rbtree
+    *) Added macros for getting user data from fheap and rbtree nodes
+    *) Updated docs
+    *) Added error component
+
 Changes with melon 2.5.2                                          29 Sep 2022
     *) Upgraded iothread
     *) Optimized lang lock
