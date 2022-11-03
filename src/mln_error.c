@@ -35,11 +35,11 @@ char *mln_error_string(int err, void *buf, mln_size_t len)
         snprintf(intstr, sizeof(intstr) - 1, "%d", line);
 
         i = snprintf(b, len - 1, "%s:%s:%s", \
-                (i == 0x1ff? f: (char *)(mln_error_filenames[i].data)), \
+                ((i == 0x1ff || mln_error_filenames == NULL)? f: (char *)(mln_error_filenames[i].data)), \
                 (line == 0x3fff? l: intstr), \
                 ((err == 0xff || mln_error_errmsgs == NULL)? c: (char *)(mln_error_errmsgs[err].data)));
     } else {
-        i = snprintf(b, len - 1, "Success");
+        i = snprintf(b, len - 1, "%s", mln_error_errmsgs == NULL? "Success": (char *)(mln_error_errmsgs[err].data));
     }
     b[i] = 0;
 
