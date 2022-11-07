@@ -7,6 +7,7 @@ Among them, in the 32-bit `int`, 8 bits represents the error code, 14 bits repre
 - Support 255 error codes (0xff is reserved)
 - Supports 16383 lines per file (0x3ffff is reserved)
 - Supports 511 files (0x1ff is reserved)
+- Only for file names, not file path names, so have to avoid files with the same name in different directories
 
 When this limit is exceeded, the program will not generate any exception or report an error. It will generate error message with an hint like `Unknown ...`. You can refer to the example in the last section of this chapter.
 

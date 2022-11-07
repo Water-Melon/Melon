@@ -13,6 +13,8 @@ extern mln_string_t *mln_error_errmsgs;
 extern mln_size_t    mln_error_nfile;
 extern mln_size_t    mln_error_nmsg;
 
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+
 #define RET(code) ({\
     int r, l = __LINE__ >= 0x3fff? 0x3fff: (__LINE__ & 0x3fff);\
     int c = ((code) < 0 || (code) >= 0xff)? 0xff: (((code) & 0xff) >= mln_error_nmsg? 0xff: ((code) & 0xff));\
@@ -20,7 +22,8 @@ extern mln_size_t    mln_error_nmsg;
         if (mln_error_filenames == NULL) {\
             r = 0x1ff;\
         } else {\
-            mln_string_t tmp = mln_string(__FILE__);\
+            mln_string_t tmp;\
+            mln_string_set(&tmp, __FILENAME__);\
             for (r = 0; r < mln_error_nfile; ++r) {\
                 if (!mln_string_strcmp(&tmp, &mln_error_filenames[r]))\
                     break;\

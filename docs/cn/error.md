@@ -7,6 +7,7 @@
 - 支持255个错误码（0xff为表留值）
 - 支持每个文件16383行（0x3ffff为保留值）
 - 支持511个文件（0x1ff为保留值）
+- 仅针对文件名，而非文件路径名，因此应尽量避免不同目录下出现同名代码文件
 
 超出该限制的情况下，程序并不会发生异常或者报错，而是会报出`Unknown ...`的错误，可以参考本章最后一小节的示例。
 
@@ -83,8 +84,8 @@ char *mln_error_string(int err, void *buf, mln_size_t len);
 ```c
 #include "mln_error.h"
 
-#define OK    0
-#define NMEM  1
+#define OK    0 //0是个特殊值，表示一切正常，由0生成的返回值就是0，不会增加额外信息
+#define NMEM  1 //由使用者自行定义，但顺序必须与errs数组给出的错误信息顺序一致
 
 int main(void)
 {
