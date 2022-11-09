@@ -1,4 +1,4 @@
-## Error Code Component
+## Error Code Management
 
 This module is used to generate error return values. This module can generate an `int` type error code to locate the error file, error line number and error type.
 

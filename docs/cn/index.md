@@ -31,7 +31,7 @@ Melon当前提供了如下功能：
   - KMP
   - Cron格式解析器
 - 组件
-  - 错误码
+  - 错误码管理
   - 内存池
   - 线程池
   - I/O线程模型
@@ -76,7 +76,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [队列](https://water-melon.github.io/Melon/cn/queue.html)
 - [斐波那契堆](https://water-melon.github.io/Melon/cn/fheap.html)
 - [事件](https://water-melon.github.io/Melon/cn/event.html)
-- [错误码](https://water-melon.github.io/Melon/cn/error.html)
+- [错误码管理](https://water-melon.github.io/Melon/cn/error.html)
 - [内存池](https://water-melon.github.io/Melon/cn/mpool.html)
 - [TCP连接及网络I/O链](https://water-melon.github.io/Melon/cn/tcp_io.html)
 - [文件集合](https://water-melon.github.io/Melon/cn/file.html)

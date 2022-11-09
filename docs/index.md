@@ -12,13 +12,13 @@ QQ: 756582294
 
 Melon currently provides the following components:
 
-- data structure
+- Data structure
   - Doubly linked list
   - Fibonacci heap
   - Hash table
-  - queue
-  - red black tree
-  - stack
+  - Queue
+  - Red-black tree
+  - Stack
 - Algorithms
    - Encryption algorithm: AES, DES, 3DES, RC4, RSA
    - Hash algorithm: MD5, SHA1, SHA256
@@ -32,22 +32,22 @@ Melon currently provides the following components:
    - KMP
    - Cron format parser
 - Components
-   - error code
-   - memory pool
+   - Error code management
+   - Memory pool
    - Thread Pool
    - I/O Thread
    - Data link
    - TCP encapsulation
    - Event mechanism
-   - file cache
+   - File cache
    - HTTP handling
    - Scripting language
    - Lexical analyzer
    - Parser generator
-   - websocket
+   - Websocket
 - Scripting language
    - Preemptive coroutine language - Melang
-- frame
+- Framework
    - Multi-process model
    - Multi-thread model
 
@@ -68,16 +68,16 @@ At present, Melon has also completed the preliminary porting to Windows, so it c
   - [Initialization](https://water-melon.github.io/Melon/en/core_init.html)
   - [Configuration](https://water-melon.github.io/Melon/en/conf.html)
   - [Log](https://water-melon.github.io/Melon/en/log.html)
-  - [string](https://water-melon.github.io/Melon/en/string.html)
+  - [String](https://water-melon.github.io/Melon/en/string.html)
   - [Prime Number Generator](https://water-melon.github.io/Melon/en/prime.html)
   - [Hash table](https://water-melon.github.io/Melon/en/hash.html)
   - [Red-Black Tree](https://water-melon.github.io/Melon/en/rbtree.html)
   - [Doubly Linked List](https://water-melon.github.io/Melon/en/double_linked_list.html)
-  - [stack](https://water-melon.github.io/Melon/en/stack.html)
-  - [queue](https://water-melon.github.io/Melon/en/queue.html)
+  - [Stack](https://water-melon.github.io/Melon/en/stack.html)
+  - [Queue](https://water-melon.github.io/Melon/en/queue.html)
   - [Fibonacci Heap](https://water-melon.github.io/Melon/en/fheap.html)
   - [Event](https://water-melon.github.io/Melon/en/event.html)
-  - [Error Code](https://water-melon.github.io/Melon/en/error.html)
+  - [Error Code Management](https://water-melon.github.io/Melon/en/error.html)
   - [Memory Pool](https://water-melon.github.io/Melon/en/mpool.html)
   - [TCP connection and network I/O chain](https://water-melon.github.io/Melon/en/tcp_io.html)
   - [File Collection](https://water-melon.github.io/Melon/en/file.html)
@@ -85,7 +85,7 @@ At present, Melon has also completed the preliminary porting to Windows, so it c
   - [Thread Pool](https://water-melon.github.io/Melon/en/threadpool.html)
   - [I/O Thread](https://water-melon.github.io/Melon/en/iothread.html)
   - [Cron format parser](https://water-melon.github.io/Melon/en/cron.html)
-  - [regex](https://water-melon.github.io/Melon/en/regex.html)
+  - [Regex](https://water-melon.github.io/Melon/en/regex.html)
   - [Base64](https://water-melon.github.io/Melon/en/base64.html)
   - [JSON](https://water-melon.github.io/Melon/en/json.html)
   - [AES](https://water-melon.github.io/Melon/en/aes.html)

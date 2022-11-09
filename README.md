@@ -4,12 +4,55 @@
 
 
 
-Melon is a C framework library for simplifying-development. 
+**[中文说明](https://water-melon.github.io/Melon/cn/)**
+
+Melon is a C library for simplifying-development. 
 It includes many data structures, algorithms, architectures and many other useful components.
-You can pick some components or whole framework based on your demand.
-Melon supports both multi-process and multi-thread models with module development.
+
+- Data structure
+  - Doubly linked list
+  - Fibonacci heap
+  - Hash table
+  - queue
+  - Red-black tree
+  - stack
+- Algorithms
+  - Encryption algorithm: AES, DES, 3DES, RC4, RSA
+  - Hash algorithm: MD5, SHA1, SHA256
+  - Base64
+  - Large number calculation
+  - FEC
+  - JSON
+  - Matrix Operations
+  - Reed Solomon coding
+  - Regular matching algorithm
+  - KMP
+  - Cron format parser
+- Components
+  - Error code management
+  - Memory pool
+  - Thread Pool
+  - I/O Thread
+  - Data link
+  - TCP encapsulation
+  - Event mechanism
+  - File cache
+  - HTTP handling
+  - Scripting language
+  - Lexical analyzer
+  - Parser generator
+  - Websocket
+- Scripting language
+  - Preemptive coroutine language - Melang
+- Framework
+  - Multi-process model
+  - Multi-thread model
+
+You can pick some components or framework based on your demand.
 
 On Windows, framework can NOT be activated, but other components still working.
+
+
 
 ### Installation
 
@@ -45,7 +88,7 @@ Copyright (c) 2014-present, Niklaus F. Schen
 
 ### Document
 
-Please visit [Melon Developer Guide](https://water-melon.github.io/Melon/) for more details.
+Please refer to [Github Pages](https://water-melon.github.io/Melon/) for more details.
 
 中文文档请参考：[中文指南](https://water-melon.github.io/Melon/cn/)
 
