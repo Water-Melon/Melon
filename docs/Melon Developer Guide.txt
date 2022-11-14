@@ -2672,6 +2672,14 @@ Their definitions can be found in melon/include/mln_types.h.
       v) mln_lang_ctx_data_get(ctx);
          Get user data from task 'ctx'.
 
+      w) mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...);
+         Send message to script layer that can be received by 'pipe' in Melang.
+         'ctx' is a specified script task.
+         'fmt' contains three characters:
+             i - integer, it should be the type of mln_s64_t.
+             r - real number, it should be the type of double.
+             s - string, it should be a pointer of mln_string_t.
+
   36) FEC
       This component is used to recover RTP packet. Generation and recovery operations are described in
       RFC 5109.
@@ -3621,6 +3629,18 @@ Their definitions can be found in melon/include/mln_types.h.
       data - the data that we want to deliver to the new coroutine.
       on_string - a optional argument. If is set and its value is *true*, *val* is a code string.
                   Otherwise, *val* is a file path.
+
+      <6> pipe(op, wait);
+      Receive message sent by 'mln_lang_ctx_pipe_send' from C code.
+      op - has three values:
+          "subscribe" - subscribe message delivery.
+          "unsubscribe" - unsubscribe message delivery.
+          "recv" - receive message.
+      wait - wait for message or return immediately.
+      if pipe is called with "unsubscribe", that not means there is no message can be received, because there
+      is a gap between unsubscribe and 'mln_lang_ctx_pipe_send'. So you can call pipe again to clean all rest
+      messages.
+
 
       For more library functions, please refer to https://melang.org/.
 

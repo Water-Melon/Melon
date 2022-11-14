@@ -272,8 +272,6 @@ struct mln_lang_var_s {
     mln_lang_set_detail_t           *in_set;
     mln_lang_var_t                  *prev;
     mln_lang_var_t                  *next;
-    mln_lang_var_t                  *cache_prev;
-    mln_lang_var_t                  *cache_next;
     mln_uauto_t                      ref;
 };
 
@@ -415,6 +413,15 @@ typedef struct {
     mln_lang_ctx_t                  *ctx;
 } mln_lang_ctx_import_t;
 
+typedef struct {
+    mln_lang_ctx_t                  *ctx;
+    mln_lang_var_t                  *head;
+    mln_lang_var_t                  *tail;
+    mln_u32_t                        subscribed:1;
+    mln_u32_t                        wait:1;
+    mln_u32_t                        padding:30;
+} mln_lang_ctx_pipe_t;
+
 extern mln_lang_method_t *mln_lang_methods[];
 
 
@@ -525,5 +532,6 @@ extern void mln_lang_ctx_continue(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, mln_lang_resource_free free_handler) __NONNULL2(1,2);
 extern void mln_lang_resource_cancel(mln_lang_t *lang, const char *name) __NONNULL2(1,2);
 extern void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name) __NONNULL2(1,2);
+extern int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...);
 
 #endif

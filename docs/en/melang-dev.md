@@ -49,8 +49,8 @@ struct mln_lang_var_s {
     mln_lang_set_detail_t           *in_set;//Whether it belongs to a Set structure (ie, class definition)
     mln_lang_var_t                  *prev;
     mln_lang_var_t                  *next;
-    mln_lang_var_t                  *cache_prev;
-    mln_lang_var_t                  *cache_next;
+    mln_lang_var_t                  *prev;
+    mln_lang_var_t                  *next;
     mln_uauto_t                      ref;//reference counter
 };
 

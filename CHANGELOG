@@ -1,3 +1,8 @@
+Changes with melon 2.5.4                                          14 Nov 2022
+    *) Fixed bug of error component
+    *) Added functions in C and Melang to send message from c to script
+    *) Updated docs
+
 Changes with melon 2.5.3                                          03 Nov 2022
     *) Optimize melang performance
     *) Update import function of melang

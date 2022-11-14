@@ -48,8 +48,8 @@ struct mln_lang_var_s {
     mln_lang_set_detail_t           *in_set;//是否属于某个Set结构（即类定义）
     mln_lang_var_t                  *prev;
     mln_lang_var_t                  *next;
-    mln_lang_var_t                  *cache_prev;
-    mln_lang_var_t                  *cache_next;
+    mln_lang_var_t                  *prev;
+    mln_lang_var_t                  *next;
     mln_uauto_t                      ref;//被引用的次数
 };
 

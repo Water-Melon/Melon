@@ -183,6 +183,34 @@ Return value:
 
 
 
+#### mln_lang_ctx_pipe_send
+
+````c
+int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...)
+````
+
+Description: Send a message to the specified script task in C code. This message can be received by the `pipe` function of the script layer, where:
+
+- `ctx` is the context structure pointer corresponding to the script task
+- `fmt` is used for the interpretation of variable parameters, `fmt` supports three characters:
+   - `i` integer, which should be an `mln_s64_t` type integer
+   - `r` real number, which should be of type `double`
+   - `s` string, which should correspond to the `mln_string_t` pointer parameter
+
+return value:
+
+- `0` on success
+- `-1` fails
+
+Example:
+
+````c
+mln_string_t s = mln_string("hello");
+mln_lang_ctx_pipe_send(ctx, "sir", &s, 1, 3.14);
+````
+
+
+
 ### Example
 
 The best example is the source code of the Melang repository, which has only one file with no more than 200 lines, and only 35 lines of code for script calls. This repository is just a starter for the Melon core library. For details, see: [melang.c](https://github.com/Water-Melon/Melang/blob/master/melang.c).
