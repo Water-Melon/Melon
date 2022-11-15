@@ -59,7 +59,7 @@ typedef struct mln_alloc_blk_s {
     mln_size_t                padding:30;
     struct mln_alloc_blk_s   *prev;
     struct mln_alloc_blk_s   *next;
-} mln_alloc_blk_t __cacheline_aligned;
+} mln_alloc_blk_t;
 
 struct mln_alloc_chunk_s {
     struct mln_alloc_chunk_s *prev;

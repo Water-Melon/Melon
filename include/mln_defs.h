@@ -21,12 +21,6 @@
 #define __NONNULL5(v,w,x,y,z) __nonnull((v)) __nonnull((w)) __nonnull((x)) __nonnull((y)) __nonnull((z))
 #endif
 
-#ifdef __GNUC__
-#define __cacheline_aligned __attribute__((__aligned__(16)))
-#else
-#define __cacheline_aligned
-#endif
-
 /*
  * lock
  */
