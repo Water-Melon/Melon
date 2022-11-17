@@ -512,6 +512,9 @@ Their definitions can be found in melon/include/mln_types.h.
        Some infomation and file descriptor `fd` can be found in `log`.
        Developer can customize log file and log format through this function and path hook functions.
 
+    f) mln_logger_t mln_log_get_logger(void);
+       Get current logger function pointer.
+
   9) Lexer
      In Melon, Lexer is very easy to use and customize.
      Even though, there are some open source lexer generators, such as flex, but they are not so much simple as

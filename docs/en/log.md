@@ -45,3 +45,65 @@ Defaults to the lowest level `none`.
 `none` is different from other levels. Under this level, the content of all log output is completely the content of `msg` without any prefix information, such as: date, process number, file name, function name, line number Wait.
 
 This function needs to be used after `mln_core_init` or its callback function. It will be an error to use it before `mln_core_init`, because the log related components have not been initialized at this time.
+
+
+
+#### mln_log_get_dir_path
+
+```c
+char *mln_log_get_dir_path(void);
+```
+
+Description: Get the path of the directory where the log file is located.
+
+Return value: log directory path string
+
+
+
+#### mln_log_get_log_path
+
+```c
+char *mln_log_get_log_path(void);
+```
+
+Description: Get the log file path.
+
+Return value: log file path string
+
+
+
+#### mln_log_get_pid_path
+
+```c
+char *mln_log_get_pid_path(void);
+```
+
+Description: Get the path of the PID file, which records the process ID of the main process.
+
+Return value: PID file path string
+
+
+
+#### mln_log_set_logger
+
+```c
+void mln_log_set_logger(mln_logger_t logger);
+
+typedef void (*mln_logger_t)(mln_log_t *log, mln_log_level_t level, const char *filename, const char *funcname, int line, char *fmt, va_list args);
+```
+
+Description: Set a custom logging function. `mln_logger_t` is the function prototype, and all parameters are passed in by the log module. `args` is the variable parameter part.
+
+Return value: None
+
+
+
+#### mln_log_get_logger
+
+```c
+mln_logger_t mln_log_get_logger(void);
+```
+
+Description: Get the current log processing function pointer, which can be used to link processing functions when customizing processing functions.
+
+Return value: Returns the current log processing function pointer

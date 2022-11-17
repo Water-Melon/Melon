@@ -33,6 +33,7 @@ typedef struct {
 typedef void (*mln_logger_t)(mln_log_t *, mln_log_level_t, const char *, const char *, int, char *, va_list);
 
 extern void mln_log_set_logger(mln_logger_t logger);
+extern mln_logger_t mln_log_get_logger(void);
 extern int mln_log_reload(void *data);
 extern int mln_log_init(int in_daemon);
 extern void mln_log_destroy(void);

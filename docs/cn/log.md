@@ -45,3 +45,65 @@ log_level "none";
 `none`与其他级别有所不同，该级别下，所有日志输出的内容完全为`msg`的内容，而不带有任何前缀信息，如：日期、进程号、文件名、函数名、行号等。
 
 该函数需要在`mln_core_init`之后或其回调函数中使用，在`mln_core_init`之前使用将会出错，因为此时日志相关组件尚未被初始化。
+
+
+
+#### mln_log_get_dir_path
+
+```c
+char *mln_log_get_dir_path(void);
+```
+
+描述：获取日志文件所在目录路径。
+
+返回值：日志目录路径字符串
+
+
+
+#### mln_log_get_log_path
+
+```c
+char *mln_log_get_log_path(void);
+```
+
+描述：获取日志文集路径。
+
+返回值：日志文件路径字符串
+
+
+
+#### mln_log_get_pid_path
+
+```c
+char *mln_log_get_pid_path(void);
+```
+
+描述：获取PID文件路径，该文件记录了主进程的进程ID。
+
+返回值：PID文件路径字符串
+
+
+
+#### mln_log_set_logger
+
+```c
+void mln_log_set_logger(mln_logger_t logger);
+
+typedef void (*mln_logger_t)(mln_log_t *log, mln_log_level_t level, const char *filename, const char *funcname, int line, char *fmt, va_list args);
+```
+
+描述：设置自定义的日志记录函数。`mln_logger_t`为函数原型，所有参数均为日志模块传入，其中：`args`为可变参数部分。
+
+返回值：无
+
+
+
+#### mln_log_get_logger
+
+```c
+mln_logger_t mln_log_get_logger(void);
+```
+
+描述：获取当前日志处理函数指针，可用于在自定义处理函数时，串联处理函数。
+
+返回值：返回当前日志处理函数指针

@@ -1,3 +1,8 @@
+Changes with melon 2.5.5                                          17 Nov 2022
+    *) Removed no-use macros
+    *) Optimized log component
+    *) Updated log docs
+
 Changes with melon 2.5.4                                          14 Nov 2022
     *) Fixed bug of error component
     *) Added functions in C and Melang to send message from c to script

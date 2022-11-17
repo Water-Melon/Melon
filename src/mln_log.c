@@ -38,7 +38,7 @@ static void mln_log_atfork_lock(void);
 static void mln_log_atfork_unlock(void);
 #endif
 static int mln_log_get_log(mln_log_t *log, int is_init);
-static mln_logger_t _logger = NULL;
+static mln_logger_t _logger = _mln_sys_log_process;
 
 /*
  * global variables
@@ -78,11 +78,16 @@ static inline void mln_file_unlock(int fd)
 }
 
 /*
- * set logger
+ * set/get logger
  */
 void mln_log_set_logger(mln_logger_t logger)
 {
     _logger = logger;
+}
+
+mln_logger_t mln_log_get_logger(void)
+{
+    return _logger;
 }
 
 /*
@@ -321,8 +326,6 @@ void _mln_sys_log(mln_log_level_t level, \
     va_start(arg, msg);
     if (_logger != NULL)
         _logger(&g_log, level, file, func, line, msg, arg);
-    else
-        _mln_sys_log_process(&g_log, level, file, func, line, msg, arg);
     va_end(arg);
     mln_file_unlock(g_log.fd);
     mln_spin_unlock(&(g_log.thread_lock));
