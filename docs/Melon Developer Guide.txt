@@ -2682,6 +2682,7 @@ Their definitions can be found in melon/include/mln_types.h.
              i - integer, it should be the type of mln_s64_t.
              r - real number, it should be the type of double.
              s - string, it should be a pointer of mln_string_t.
+          NOTE: This function should be called in the same thread that 'ctx' running on.
 
   36) FEC
       This component is used to recover RTP packet. Generation and recovery operations are described in

@@ -7805,15 +7805,10 @@ int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...)
 {
     int rc;
     va_list arg;
-    mln_lang_t *lang = ctx->lang;
-
-    mln_lang_mutex_lock(lang);
 
     va_start(arg, fmt);
     rc = mln_lang_ctx_pipe_do_send(ctx, fmt, arg);
     va_end(arg);
-
-    mln_lang_mutex_unlock(lang);
 
     return rc;
 }

@@ -196,6 +196,7 @@ Description: Send a message to the specified script task in C code. This message
    - `i` integer, which should be an `mln_s64_t` type integer
    - `r` real number, which should be of type `double`
    - `s` string, which should correspond to the `mln_string_t` pointer parameter
+**NOTE**: This function should be called in the same thread that 'ctx' running on.
 
 return value:
 

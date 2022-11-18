@@ -196,6 +196,7 @@ int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...)
   - `i`整数，该整数应该是`mln_s64_t`类型整数
   - `r`实数，该实数应该是`double`类型
   - `s`字符串，该字符串应对应`mln_string_t`指针参数
+**注意**：本函数调用时所在线程当与`ctx`所指代的脚本任务执行线程是同一线程。
 
 返回值：
 
