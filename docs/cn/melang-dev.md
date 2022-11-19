@@ -741,6 +741,18 @@ void mln_lang_ctx_continue(mln_lang_ctx_t *ctx);
 
 
 
+#### mln_lang_func_detail_arg_append
+
+```c
+void mln_lang_func_detail_arg_append(mln_lang_func_detail_t *func, mln_lang_var_t *var);
+```
+
+描述：将参数`var`挂入到函数定义`func`的参数列表最后方。
+
+返回值：无
+
+
+
 ### 示例
 
 函数的实现可以参考`Melang/lib_src/aes`中的内容，极为简洁。

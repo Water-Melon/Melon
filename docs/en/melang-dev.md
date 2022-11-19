@@ -742,6 +742,18 @@ Return value: none
 
 
 
+#### mln_lang_func_detail_arg_append
+
+```c
+void mln_lang_func_detail_arg_append(mln_lang_func_detail_t *func, mln_lang_var_t *var);
+```
+
+Description: Append argument `var` to the argument list of function definition `func`.
+
+Return value: none
+
+
+
 ### 示例
 
 The implementation of the function can refer to the content in `Melang/lib_src/aes`, which is extremely concise.

@@ -50,6 +50,8 @@ typedef struct mln_lang_resource_s      mln_lang_resource_t;
 typedef struct mln_lang_ast_cache_s     mln_lang_ast_cache_t;
 typedef struct mln_lang_hash_s          mln_lang_hash_t;
 typedef struct mln_lang_hash_bucket_s   mln_lang_hash_bucket_t;
+typedef struct mln_lang_ctx_pipe_list_s mln_lang_ctx_pipe_list_t;
+typedef struct mln_lang_ctx_pipe_elem_s mln_lang_ctx_pipe_elem_t;
 
 typedef int (*mln_lang_run_ctl_t)(mln_lang_t *);
 typedef void (*mln_lang_stack_handler)(mln_lang_ctx_t *);
@@ -415,12 +417,30 @@ typedef struct {
 
 typedef struct {
     mln_lang_ctx_t                  *ctx;
-    mln_lang_var_t                  *head;
-    mln_lang_var_t                  *tail;
+    mln_lang_ctx_pipe_list_t        *head;
+    mln_lang_ctx_pipe_list_t        *tail;
+    pthread_mutex_t                  lock;
     mln_u32_t                        subscribed:1;
-    mln_u32_t                        wait:1;
-    mln_u32_t                        padding:30;
+    mln_u32_t                        padding:31;
 } mln_lang_ctx_pipe_t;
+
+struct mln_lang_ctx_pipe_list_s {
+    mln_lang_ctx_pipe_elem_t        *head;
+    mln_lang_ctx_pipe_elem_t        *tail;
+    struct mln_lang_ctx_pipe_list_s *prev;
+    struct mln_lang_ctx_pipe_list_s *next;
+};
+
+struct mln_lang_ctx_pipe_elem_s {
+    int                              type;
+    union {
+        mln_s64_t                    i;
+        double                       r;
+        mln_string_t                *s;
+    } data;
+    struct mln_lang_ctx_pipe_elem_s *prev;
+    struct mln_lang_ctx_pipe_elem_s *next;
+};
 
 extern mln_lang_method_t *mln_lang_methods[];
 
@@ -494,6 +514,7 @@ mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                          mln_lang_exp_t *exp, \
                          mln_lang_exp_t *closure) __NONNULL2(1,3);
 extern void mln_lang_func_detail_free(mln_lang_func_detail_t *lfd);
+extern void mln_lang_func_detail_arg_append(mln_lang_func_detail_t *func, mln_lang_var_t *var) __NONNULL2(1,2);
 extern mln_lang_val_t *mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data) __NONNULL1(1);
 extern void mln_lang_val_free(mln_lang_val_t *val);
 extern int mln_lang_condition_is_true(mln_lang_var_t *var) __NONNULL1(1);
@@ -520,9 +541,6 @@ extern int
 mln_lang_object_add_member(mln_lang_ctx_t *ctx, mln_lang_object_t *obj, mln_lang_var_t *var) __NONNULL3(1,2,3);
 extern mln_lang_array_t *mln_lang_array_new(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern void mln_lang_array_free(mln_lang_array_t *array);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
-                       mln_lang_var_t, \
-                       extern void,);
 extern int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
 extern int mln_lang_ctx_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler) __NONNULL2(1,2);
 extern void *mln_lang_ctx_resource_fetch(mln_lang_ctx_t *ctx, const char *name) __NONNULL2(1,2);
