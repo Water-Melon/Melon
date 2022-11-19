@@ -419,9 +419,17 @@ typedef struct {
     mln_lang_ctx_t                  *ctx;
     mln_lang_ctx_pipe_list_t        *head;
     mln_lang_ctx_pipe_list_t        *tail;
+    mln_lang_ctx_pipe_list_t        *pl_cache_head;
+    mln_lang_ctx_pipe_list_t        *pl_cache_tail;
+    mln_lang_ctx_pipe_elem_t        *pe_cache_head;
+    mln_lang_ctx_pipe_elem_t        *pe_cache_tail;
     pthread_mutex_t                  lock;
     mln_u32_t                        subscribed:1;
-    mln_u32_t                        padding:31;
+    mln_u32_t                        pl_cnt:7;
+    mln_u32_t                        pl_max:7;
+    mln_u32_t                        pe_cnt:7;
+    mln_u32_t                        pe_max:7;
+    mln_u32_t                        padding:3;
 } mln_lang_ctx_pipe_t;
 
 struct mln_lang_ctx_pipe_list_s {

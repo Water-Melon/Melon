@@ -343,6 +343,8 @@ static inline mln_lang_ctx_pipe_list_t *mln_lang_ctx_pipe_list_new(void);
 static inline void mln_lang_ctx_pipe_list_free(mln_lang_ctx_pipe_list_t *pl);
 static inline mln_lang_ctx_pipe_elem_t *mln_lang_ctx_pipe_elem_new(int type, void *value);
 static inline void mln_lang_ctx_pipe_elem_free(mln_lang_ctx_pipe_elem_t *pe);
+static inline void mln_lang_ctx_pipe_elem_reset(mln_lang_ctx_pipe_elem_t *pe);
+static inline int mln_lang_ctx_pipe_elem_set(mln_lang_ctx_pipe_elem_t *pe, int type, void *value);
 
 #define mln_lang_stack_node_chain_add(_head, _tail, _node); \
         (_node)->prev = (_node)->next = NULL;\
@@ -7647,7 +7649,11 @@ static mln_lang_ctx_pipe_t *mln_lang_ctx_pipe_new(mln_lang_ctx_t *ctx)
     }
     p->ctx = ctx;
     p->head = p->tail = NULL;
+    p->pl_cache_head = p->pl_cache_tail = NULL;
+    p->pe_cache_head = p->pe_cache_tail = NULL;
     p->subscribed = 0;
+    p->pl_cnt = p->pe_cnt = 0;
+    p->pl_max = p->pe_max = 0x7e;
 
     return p;
 }
@@ -7657,12 +7663,21 @@ static void mln_lang_ctx_pipe_free(mln_lang_ctx_pipe_t *p)
     if (p == NULL) return;
 
     mln_lang_ctx_pipe_list_t *pl;
+    mln_lang_ctx_pipe_elem_t *pe;
 
     pthread_mutex_lock(&p->lock);
 
     while ((pl = p->head) != NULL) {
         mln_lang_ctx_pipe_list_chain_del(&p->head, &p->tail, pl);
         mln_lang_ctx_pipe_list_free(pl);
+    }
+    while ((pl = p->pl_cache_head) != NULL) {
+        mln_lang_ctx_pipe_list_chain_del(&p->pl_cache_head, &p->pl_cache_tail, pl);
+        mln_lang_ctx_pipe_list_free(pl);
+    }
+    while ((pe = p->pe_cache_head) != NULL) {
+        mln_lang_ctx_pipe_elem_chain_del(&p->pe_cache_head, &p->pe_cache_tail, pe);
+        mln_lang_ctx_pipe_elem_free(pe);
     }
 
     pthread_mutex_unlock(&p->lock);
@@ -7721,6 +7736,8 @@ static inline mln_lang_ctx_pipe_elem_t *mln_lang_ctx_pipe_elem_new(int type, voi
             return NULL;
     }
 
+    pe->prev = pe->next = NULL;
+
     return pe;
 }
 
@@ -7731,6 +7748,36 @@ static inline void mln_lang_ctx_pipe_elem_free(mln_lang_ctx_pipe_elem_t *pe)
     if (pe->type == M_LANG_VAL_TYPE_STRING && pe->data.s != NULL)
         mln_string_free(pe->data.s);
     free(pe);
+}
+
+static inline void mln_lang_ctx_pipe_elem_reset(mln_lang_ctx_pipe_elem_t *pe)
+{
+    if (pe == NULL) return;
+
+    if (pe->type == M_LANG_VAL_TYPE_STRING && pe->data.s != NULL)
+        mln_string_free(pe->data.s);
+}
+
+static inline int mln_lang_ctx_pipe_elem_set(mln_lang_ctx_pipe_elem_t *pe, int type, void *value)
+{
+    pe->type = type;
+    switch(type) {
+        case M_LANG_VAL_TYPE_INT:
+            pe->data.i = *((mln_s64_t *)value);
+            break;
+        case M_LANG_VAL_TYPE_REAL:
+            pe->data.i = *((double *)value);
+            break;
+        case M_LANG_VAL_TYPE_STRING:
+            pe->data.s = mln_string_dup((mln_string_t *)value);
+            if (pe->data.s == NULL) {
+                return -1;
+            }
+            break;
+        default:
+            return -1;
+    }
+    return 0;
 }
 
 static int mln_lang_func_pipe(mln_lang_ctx_t *ctx)
@@ -7866,7 +7913,7 @@ static inline mln_lang_var_t *mln_lang_func_pipe_process_array_generate(mln_lang
         mln_lang_var_free(var);
         a = mln_lang_var_val_get(v)->data.array;
 
-        for (pe = pl->head; pe != NULL; pe = pe->next) {
+        while ((pe = pl->head) != NULL) {
             if ((v = mln_lang_array_get(ctx, a, NULL)) == NULL) {
                 mln_lang_var_free(ret_var);
                 return NULL;
@@ -7892,10 +7939,24 @@ static inline mln_lang_var_t *mln_lang_func_pipe_process_array_generate(mln_lang
                     mln_lang_var_free(ret_var);
                     return NULL;
             }
+
+            mln_lang_ctx_pipe_elem_chain_del(&pl->head, &pl->tail, pe);
+            if (pipe->pe_cnt >= pipe->pe_max)
+                mln_lang_ctx_pipe_elem_free(pe);
+            else {
+                mln_lang_ctx_pipe_elem_reset(pe);
+                mln_lang_ctx_pipe_elem_chain_add(&pipe->pe_cache_head, &pipe->pe_cache_tail, pe);
+                ++pipe->pe_cnt;
+            }
         }
 
         mln_lang_ctx_pipe_list_chain_del(&pipe->head, &pipe->tail, pl);
-        mln_lang_ctx_pipe_list_free(pl);
+        if (pipe->pl_cnt >= pipe->pl_max)
+            mln_lang_ctx_pipe_list_free(pl);
+        else {
+            mln_lang_ctx_pipe_list_chain_add(&pipe->pl_cache_head, &pipe->pl_cache_tail, pl);
+            ++pipe->pl_cnt;
+        }
     }
 
     return ret_var;
@@ -7930,9 +7991,14 @@ static inline int mln_lang_ctx_pipe_do_send(mln_lang_ctx_t *ctx, char *fmt, va_l
         return 0;
     }
 
-    if ((pl = mln_lang_ctx_pipe_list_new()) == NULL) {
-        pthread_mutex_unlock(&p->lock);
-        return -1;
+    if ((pl = p->pl_cache_head) != NULL) {
+        mln_lang_ctx_pipe_list_chain_del(&p->pl_cache_head, &p->pl_cache_tail, pl);
+        --p->pl_cnt;
+    } else {
+        if ((pl = mln_lang_ctx_pipe_list_new()) == NULL) {
+            pthread_mutex_unlock(&p->lock);
+            return -1;
+        }
     }
 
     while (*fmt) {
@@ -7940,10 +8006,16 @@ static inline int mln_lang_ctx_pipe_do_send(mln_lang_ctx_t *ctx, char *fmt, va_l
             case 'i':
             {
                 mln_s64_t tmp = va_arg(arg, mln_s64_t);
-                if ((pe = mln_lang_ctx_pipe_elem_new(M_LANG_VAL_TYPE_INT, &tmp)) == NULL) {
-                    mln_lang_ctx_pipe_list_free(pl);
-                    pthread_mutex_unlock(&p->lock);
-                    return -1;
+                if ((pe = p->pe_cache_head) != NULL) {
+                    mln_lang_ctx_pipe_elem_set(pe, M_LANG_VAL_TYPE_INT, &tmp);
+                    mln_lang_ctx_pipe_elem_chain_del(&p->pe_cache_head, &p->pe_cache_tail, pe);
+                    --p->pe_cnt;
+                } else {
+                    if ((pe = mln_lang_ctx_pipe_elem_new(M_LANG_VAL_TYPE_INT, &tmp)) == NULL) {
+                        mln_lang_ctx_pipe_list_free(pl);
+                        pthread_mutex_unlock(&p->lock);
+                        return -1;
+                    }
                 }
                 mln_lang_ctx_pipe_elem_chain_add(&pl->head, &pl->tail, pe);
                 break;
@@ -7951,10 +8023,20 @@ static inline int mln_lang_ctx_pipe_do_send(mln_lang_ctx_t *ctx, char *fmt, va_l
             case 's':
             {
                 mln_string_t *tmp = va_arg(arg, mln_string_t *);
-                if ((pe = mln_lang_ctx_pipe_elem_new(M_LANG_VAL_TYPE_STRING, tmp)) == NULL) {
-                    mln_lang_ctx_pipe_list_free(pl);
-                    pthread_mutex_unlock(&p->lock);
-                    return -1;
+                if ((pe = p->pe_cache_head) != NULL) {
+                    if (mln_lang_ctx_pipe_elem_set(pe, M_LANG_VAL_TYPE_STRING, tmp) < 0) {
+                        mln_lang_ctx_pipe_list_free(pl);
+                        pthread_mutex_unlock(&p->lock);
+                        return -1;
+                    }
+                    mln_lang_ctx_pipe_elem_chain_del(&p->pe_cache_head, &p->pe_cache_tail, pe);
+                    --p->pe_cnt;
+                } else {
+                    if ((pe = mln_lang_ctx_pipe_elem_new(M_LANG_VAL_TYPE_STRING, tmp)) == NULL) {
+                        mln_lang_ctx_pipe_list_free(pl);
+                        pthread_mutex_unlock(&p->lock);
+                        return -1;
+                    }
                 }
                 mln_lang_ctx_pipe_elem_chain_add(&pl->head, &pl->tail, pe);
                 break;
@@ -7962,10 +8044,16 @@ static inline int mln_lang_ctx_pipe_do_send(mln_lang_ctx_t *ctx, char *fmt, va_l
             case 'r':
             {
                 double tmp = va_arg(arg, double);
-                if ((pe = mln_lang_ctx_pipe_elem_new(M_LANG_VAL_TYPE_REAL, &tmp)) == NULL) {
-                    mln_lang_ctx_pipe_list_free(pl);
-                    pthread_mutex_unlock(&p->lock);
-                    return -1;
+                if ((pe = p->pe_cache_head) != NULL) {
+                    mln_lang_ctx_pipe_elem_set(pe, M_LANG_VAL_TYPE_REAL, &tmp);
+                    mln_lang_ctx_pipe_elem_chain_del(&p->pe_cache_head, &p->pe_cache_tail, pe);
+                    --p->pe_cnt;
+                } else {
+                    if ((pe = mln_lang_ctx_pipe_elem_new(M_LANG_VAL_TYPE_REAL, &tmp)) == NULL) {
+                        mln_lang_ctx_pipe_list_free(pl);
+                        pthread_mutex_unlock(&p->lock);
+                        return -1;
+                    }
                 }
                 mln_lang_ctx_pipe_elem_chain_add(&pl->head, &pl->tail, pe);
                 break;
