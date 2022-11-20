@@ -120,7 +120,7 @@ void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev
 #### mln_event_set_timer
 
 ```c
-int mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
+mln_event_timer_t *mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
 
 typedef void (*ev_tm_handler)  (mln_event_t *, void *);
 ```
@@ -133,7 +133,19 @@ typedef void (*ev_tm_handler)  (mln_event_t *, void *);
 
 定时事件每一次出发后，会自动从事件集中删除。若需要一直触发定时事件，则需要在处理函数内自行调用本函数进行设置。
 
-返回值：成功则返回`0`，否则返回`-1`
+返回值：成功则返回定时器句柄指针，否则返回`NULL`
+
+
+
+#### mln_event_cancel_timer
+
+```c
+void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer);
+```
+
+描述：取消已设置的定时器。本函数需要保证`timer`是已设置但未触发的超时事件句柄。
+
+返回值：无
 
 
 

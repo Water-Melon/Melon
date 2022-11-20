@@ -857,7 +857,7 @@ Their definitions can be found in melon/include/mln_types.h.
         There are three arguments of function 'fh_handler': an event object, a file descriptor and a user data.
         If an event is failed to set, -1 will be returned. Otherwise, the returned value is 0.
 
-     d) int mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
+     d) mln_event_timer_t *mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
         It sets a timer event.
         The first argument is an event object.
         The second one is a millisecond timer. Its unit is 10ms.
@@ -865,31 +865,34 @@ Their definitions can be found in melon/include/mln_types.h.
         The last one is an event handler. Its prototype is
             typedef void (*ev_tm_handler) (mln_event_t *, void *);
         The arguments of 'tm_handler' are an event object and a user data.
-        If an event is failed to set, -1 will be returned. Otherwise, the returned value is 0.
+        If an event is failed to set, NULL will be returned. Otherwise, the returned value is a timer descriptor.
 
-     e) void mln_event_dispatch(mln_event_t *event);
+     e) void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer);
+        Remove timer event.
+
+     f) void mln_event_dispatch(mln_event_t *event);
         It dispatches every event.
         If a routine jumps into this function, it won't be out until encountering two situations:
             calling mln_event_set_break() to break out
         or
             a child process is forked.
 
-     f) mln_event_set_break(ev);
+     g) mln_event_set_break(ev);
         It lets the routine break out from mln_event_dispatch().
 
-     g) mln_event_reset_break(ev);
+     h) mln_event_reset_break(ev);
         Reset break flag.
 
-     h) void mln_event_set_callback(mln_event_t *ev, dispatch_callback dc, void *dc_data);
+     i) void mln_event_set_callback(mln_event_t *ev, dispatch_callback dc, void *dc_data);
         Besides fd, timer and signal callback handlers, there is another one (this) can be called to process some
         other things in dispatch routine.
         The second argument is a function pointer, its prototype is
             typedef void (*dispatch_callback) (mln_event_t *, void *);
 
-     i) void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
+     j) void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
         This interface will set a callback handler for processing the case that the fd's timer expired.
 
-     j) void mln_event_set_signal(int signo, void (*handler)(int));
+     k) void mln_event_set_signal(int signo, void (*handler)(int));
         The alias of system signal.
 
   12) Connection I/O

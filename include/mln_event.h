@@ -50,6 +50,7 @@
 
 typedef struct mln_event_s      mln_event_t;
 typedef struct mln_event_desc_s mln_event_desc_t;
+typedef mln_fheap_node_t        mln_event_timer_t;
 
 typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);
 typedef void (*ev_tm_handler)  (mln_event_t *, void *);
@@ -148,11 +149,12 @@ mln_event_set_fd(mln_event_t *event, \
                  int timeout_ms, \
                  void *data, \
                  ev_fd_handler fd_handler) __NONNULL1(1);
-extern int
+extern mln_event_timer_t *
 mln_event_set_timer(mln_event_t *event, \
                     mln_u32_t msec, \
                     void *data, \
                     ev_tm_handler tm_handler) __NONNULL1(1);
+extern void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer) __NONNULL2(1,2);
 extern void
 mln_event_set_fd_timeout_handler(mln_event_t *event, \
                                  int fd, \

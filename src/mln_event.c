@@ -230,10 +230,10 @@ mln_event_desc_free(void *data)
 /*
  * ev_timer
  */
-int mln_event_set_timer(mln_event_t *event, \
-                        mln_u32_t msec, \
-                        void *data, \
-                        ev_tm_handler tm_handler)
+mln_event_timer_t *mln_event_set_timer(mln_event_t *event, \
+                                       mln_u32_t msec, \
+                                       void *data, \
+                                       ev_tm_handler tm_handler)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -242,7 +242,7 @@ int mln_event_set_timer(mln_event_t *event, \
     ed = (mln_event_desc_t *)malloc(sizeof(mln_event_desc_t));
     if (ed == NULL) {
         mln_log(error, "No memory.\n");
-        return -1;
+        return NULL;
     }
     ed->type = M_EV_TM;
     ed->flag = 0;
@@ -257,12 +257,20 @@ int mln_event_set_timer(mln_event_t *event, \
     if (fn == NULL) {
         mln_log(error, "No memory.\n");
         free(ed);
-        return -1;
+        return NULL;
     }
     pthread_mutex_lock(&event->timer_lock);
     mln_fheap_insert(event->ev_timer_heap, fn);
     pthread_mutex_unlock(&event->timer_lock);
-    return 0;
+    return fn;
+}
+
+void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer)
+{
+    pthread_mutex_lock(&event->timer_lock);
+    mln_fheap_delete(event->ev_timer_heap, timer);
+    mln_fheap_node_destroy(event->ev_timer_heap, timer);
+    pthread_mutex_unlock(&event->timer_lock);
 }
 
 static inline void mln_event_deal_timer(mln_event_t *event)

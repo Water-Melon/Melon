@@ -1,3 +1,12 @@
+Changes with melon 2.5.6                                          20 Nov 2022
+    *) Removed no-use macro
+    *) Optimized  log component
+    *) Optimized melang pipe
+    *) Fixed bug of melang pipe
+    *) Fixed Kqueue bug
+    *) Optimized timer event
+    *) Added timer cancellation function
+
 Changes with melon 2.5.5                                          17 Nov 2022
     *) Removed no-use macros
     *) Optimized log component

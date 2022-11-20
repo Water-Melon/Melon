@@ -133,7 +133,19 @@ Description: Set timer event where:
 
 Every time a timed event starts, it will be automatically deleted from the event set. If you need to trigger the timed event all the time, you need to call this function in the handler function to set it.
 
-Return value: return `0` if successful, otherwise return `-1`
+Return value: If successful, return the timer handle pointer, otherwise return `NULL`
+
+
+
+#### mln_event_cancel_timer
+
+```c
+void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer);
+```
+
+Description: Cancel the timer that has been set. This function needs to ensure that `timer` is a timeout event handler that has been set but not triggered.
+
+Return value: none
 
 
 
