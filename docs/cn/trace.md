@@ -10,6 +10,8 @@
 
 与ebpf不同，探针旨在收集应用相关的信息，即由开发人员指定的（业务或功能）信息。ebpf可以收集大量程序及内核信息，但无法针对与业务信息进行收集。因此，Melon中的trace模式就是为了补全这部分内容。
 
+关于Melang及其配套库，请参考[Melang仓库](https://github.com/Water-Melon/Melang)。
+
 
 
 ### 头文件
