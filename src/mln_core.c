@@ -17,6 +17,7 @@
 #include "mln_conf.h"
 #include "mln_core.h"
 #include "mln_rc.h"
+#include "mln_trace.h"
 #if defined(WIN32)
 #include <ws2tcpip.h>
 #include <winsock2.h>
@@ -69,6 +70,11 @@ int mln_core_init(struct mln_core_attr *attr)
             return -1;
         }
 
+        /*trace*/
+        if (mln_trace_init() < 0) {
+            return -1;
+        }
+
         /*fork*/
         if (mln_pre_fork() < 0) {
             return -1;
@@ -100,6 +106,7 @@ chl:
             fprintf(stderr, "No such domain named 'main'.\n");
             return -1;
         }
+        /*log*/
         if ((cc = cd->search(cd, "daemon")) != NULL) {
             if (mln_conf_get_narg(cc) != 1) {
                 fprintf(stderr, "Invalid command 'daemon'.\n");
@@ -112,6 +119,11 @@ chl:
             daemon = ci->val.b;
         }
         if (mln_log_init(daemon) < 0) return -1;
+        /*trace*/
+        if (mln_trace_init() < 0) {
+            return -1;
+        }
+
 #if !defined(WIN32)
     }
 #endif

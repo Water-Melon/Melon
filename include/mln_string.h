@@ -22,22 +22,24 @@ typedef struct {
  * init & free
  */
 #define mln_string(s) {(mln_u8ptr_t)s, sizeof(s)-1, 1, 0, 1}
-#define mln_string_set(pstring,s); \
-    {\
+#define mln_string_set(pstring,s) \
+    ({\
         (pstring)->data = (mln_u8ptr_t)(s);\
         (pstring)->len = strlen(s);\
         (pstring)->data_ref = 1;\
         (pstring)->pool = 0;\
         (pstring)->ref = 1;\
-    }
-#define mln_string_nset(pstring,s,n); \
-    {\
+        (pstring);\
+    })
+#define mln_string_nset(pstring,s,n) \
+    ({\
         (pstring)->data = (mln_u8ptr_t)(s);\
         (pstring)->len = (n);\
         (pstring)->data_ref = 1;\
         (pstring)->pool = 0;\
         (pstring)->ref = 1;\
-    }
+        (pstring);\
+    })
 #define mln_string_ref(pstring) \
     (++(pstring)->ref, (pstring))
 

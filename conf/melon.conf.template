@@ -33,4 +33,4 @@ thread_exec {
 //    restart "hello" "hello" "world";
 //    default "haha";
 }
-
+//trace_mode "trace/trace.m"; /* path or off */

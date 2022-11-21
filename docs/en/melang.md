@@ -192,10 +192,11 @@ int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...)
 Description: Send a message to the specified script task in C code. This message can be received by the `pipe` function of the script layer, where:
 
 - `ctx` is the context structure pointer corresponding to the script task
-- `fmt` is used for the interpretation of variable parameters, `fmt` supports three characters:
+- `fmt` is used for the interpretation of variable parameters, `fmt` supports four characters:
    - `i` integer, which should be an `mln_s64_t` type integer
    - `r` real number, which should be of type `double`
-   - `s` string, which should correspond to the `mln_string_t` pointer parameter
+   - `s` string, which should correspond to the `char` pointer parameter
+   - `S` string, which should correspond to the `mln_string_t` pointer parameter
 
 return value:
 
@@ -208,6 +209,18 @@ Example:
 mln_string_t s = mln_string("hello");
 mln_lang_ctx_pipe_send(ctx, "sir", &s, 1, 3.14);
 ````
+
+
+
+#### mln_lang_ctx_is_quit
+
+````c
+mln_lang_ctx_is_quit(ctx)
+````
+
+Description: Indicates whether the program exited without completion.
+
+return value: none
 
 
 

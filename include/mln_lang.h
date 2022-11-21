@@ -453,6 +453,7 @@ struct mln_lang_ctx_pipe_elem_s {
 extern mln_lang_method_t *mln_lang_methods[];
 
 
+#define mln_lang_ctx_is_quit(ctx)   ((ctx)->quit)
 #define mln_lang_mutex_lock(lang)   pthread_mutex_lock(&(lang)->lock)
 #define mln_lang_mutex_unlock(lang) pthread_mutex_unlock(&(lang)->lock)
 #define mln_lang_task_empty(lang)   ((lang)->run_head == NULL && (lang)->wait_head == NULL)

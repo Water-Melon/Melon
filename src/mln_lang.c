@@ -644,17 +644,15 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
         ctx->owner = pthread_self();
         pthread_mutex_unlock(&lang->lock);
         for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
-            if ((node = mln_lang_stack_top(ctx)) == NULL) {
-                if (ctx->return_handler != NULL) {
-                    ctx->return_handler(ctx);
-                }
-                mln_lang_job_free(ctx);
-                pthread_mutex_lock(&lang->lock);
-                goto out;
-            }
+            if ((node = mln_lang_stack_top(ctx)) == NULL)
+                goto quit;
             mln_lang_stack_map[node->type](ctx);
             if (ctx->ref) break;
             if (ctx->quit) {
+quit:
+                if (ctx->return_handler != NULL) {
+                    ctx->return_handler(ctx);
+                }
                 mln_lang_job_free(ctx);
                 pthread_mutex_lock(&lang->lock);
                 goto out;
@@ -7722,7 +7720,7 @@ static inline mln_lang_ctx_pipe_elem_t *mln_lang_ctx_pipe_elem_new(int type, voi
             pe->data.i = *((mln_s64_t *)value);
             break;
         case M_LANG_VAL_TYPE_REAL:
-            pe->data.i = *((double *)value);
+            pe->data.r = *((double *)value);
             break;
         case M_LANG_VAL_TYPE_STRING:
             pe->data.s = mln_string_dup((mln_string_t *)value);
@@ -7766,7 +7764,7 @@ static inline int mln_lang_ctx_pipe_elem_set(mln_lang_ctx_pipe_elem_t *pe, int t
             pe->data.i = *((mln_s64_t *)value);
             break;
         case M_LANG_VAL_TYPE_REAL:
-            pe->data.i = *((double *)value);
+            pe->data.r = *((double *)value);
             break;
         case M_LANG_VAL_TYPE_STRING:
             pe->data.s = mln_string_dup((mln_string_t *)value);
@@ -8021,6 +8019,29 @@ static inline int mln_lang_ctx_pipe_do_send(mln_lang_ctx_t *ctx, char *fmt, va_l
                 break;
             }
             case 's':
+            {
+                char *str = va_arg(arg, char *);
+                mln_string_t tmp;
+                mln_string_set(&tmp, str);
+                if ((pe = p->pe_cache_head) != NULL) {
+                    if (mln_lang_ctx_pipe_elem_set(pe, M_LANG_VAL_TYPE_STRING, &tmp) < 0) {
+                        mln_lang_ctx_pipe_list_free(pl);
+                        pthread_mutex_unlock(&p->lock);
+                        return -1;
+                    }
+                    mln_lang_ctx_pipe_elem_chain_del(&p->pe_cache_head, &p->pe_cache_tail, pe);
+                    --p->pe_cnt;
+                } else {
+                    if ((pe = mln_lang_ctx_pipe_elem_new(M_LANG_VAL_TYPE_STRING, &tmp)) == NULL) {
+                        mln_lang_ctx_pipe_list_free(pl);
+                        pthread_mutex_unlock(&p->lock);
+                        return -1;
+                    }
+                }
+                mln_lang_ctx_pipe_elem_chain_add(&pl->head, &pl->tail, pe);
+                break;
+            }
+            case 'S':
             {
                 mln_string_t *tmp = va_arg(arg, mln_string_t *);
                 if ((pe = p->pe_cache_head) != NULL) {

@@ -2681,13 +2681,17 @@ Their definitions can be found in melon/include/mln_types.h.
       w) mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...);
          Send message to script layer that can be received by 'pipe' in Melang.
          'ctx' is a specified script task.
-         'fmt' contains three characters:
+         'fmt' contains four characters:
              i - integer, it should be the type of mln_s64_t.
              r - real number, it should be the type of double.
-             s - string, it should be a pointer of mln_string_t.
+             s - string, it should be a pointer of char
+             S - string, it should be a pointer of mln_string_t.
 
       x) void mln_lang_func_detail_arg_append(mln_lang_func_detail_t *func, mln_lang_var_t *var);
          Append argument 'var' to the argument list of function definition 'func'.
+
+      y) mln_lang_ctx_is_quit(ctx);
+         Indicates whether the program exited without completion.
 
   36) FEC
       This component is used to recover RTP packet. Generation and recovery operations are described in

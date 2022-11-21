@@ -192,10 +192,11 @@ int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...)
 描述：在C代码中向指定的脚本任务发送一个消息。这个消息可以被脚本层的`pipe`函数接收，其中：
 
 - `ctx`是对应脚本任务的上下文结构指针
-- `fmt`是用于对可变参数的解释，`fmt`支持三种字符：
+- `fmt`是用于对可变参数的解释，`fmt`支持四种字符：
   - `i`整数，该整数应该是`mln_s64_t`类型整数
   - `r`实数，该实数应该是`double`类型
-  - `s`字符串，该字符串应对应`mln_string_t`指针参数
+  - `s`字符串，该字符串应对应`char`指针参数
+  - `S`字符串，该字符串应对应`mln_string_t`指针参数
 
 返回值：
 
@@ -208,6 +209,18 @@ int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...)
 mln_string_t s = mln_string("hello");
 mln_lang_ctx_pipe_send(ctx, "sir", &s, 1, 3.14);
 ```
+
+
+
+#### mln_lang_ctx_is_quit
+
+````c
+mln_lang_ctx_is_quit(ctx)
+````
+
+描述：判断程序是否未执行完退出。
+
+返回值：无
 
 
 

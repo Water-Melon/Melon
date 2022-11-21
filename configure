@@ -193,6 +193,7 @@ echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
 echo -e "\tcp -fr lib $install_path" >> Makefile
 echo -e "\tcp -fr include $install_path" >> Makefile
 echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
+echo -e "\ttest -d $melanglibpath/trace || cp -fr trace $melanglibpath" >> Makefile
 
 
 for fname in `find . -name "*.c"`

@@ -50,6 +50,7 @@ Melon currently provides the following components:
 - Framework
    - Multi-process model
    - Multi-thread model
+   - Trace mode
 
 
 
@@ -107,3 +108,4 @@ At present, Melon has also completed the preliminary porting to Windows, so it c
   - [Multi-thread Framework](https://water-melon.github.io/Melon/en/multithread.html)
   - [IPC module development](https://water-melon.github.io/Melon/en/ipc.html)
   - [Multi-process Framework](https://water-melon.github.io/Melon/en/multiprocess.html)
+  - [Trace Mode](https://water-melon.github.io/Melon/en/trace.html)
