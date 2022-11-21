@@ -47,6 +47,7 @@ It includes many data structures, algorithms, architectures and many other usefu
 - Framework
   - Multi-process model
   - Multi-thread model
+  - Trace Mode
 
 You can pick some components or framework based on your demand.
 
