@@ -2679,7 +2679,7 @@ Their definitions can be found in melon/include/mln_types.h.
          Get user data from task 'ctx'.
 
       w) mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...);
-         Send message to script layer that can be received by 'pipe' in Melang.
+         Send message to script layer that can be received by 'Pipe' in Melang.
          'ctx' is a specified script task.
          'fmt' contains four characters:
              i - integer, it should be the type of mln_s64_t.
@@ -3432,7 +3432,7 @@ Their definitions can be found in melon/include/mln_types.h.
           @foo();
       difference between these two is:
           in the first case, 'foo' is only a local variable which type is function.
-          in the second case, 'foo' can be a global function like 'dump'. If we
+          in the second case, 'foo' can be a global function like 'Dump'. If we
         want to use a global function in someone function's scope, we have to use
         this way.
       <I>   In global function
@@ -3485,7 +3485,7 @@ Their definitions can be found in melon/include/mln_types.h.
           e.g.
             @foo ()
             {
-                _sys.print(args);
+                Sys.print(args);
             }
             foo('hello', 1, ['world', 2]); //output [hello, 1, [world, 2, ], ]
 
@@ -3494,7 +3494,7 @@ Their definitions can be found in melon/include/mln_types.h.
           @foo() {
               a = 1;
               @bar() $(b) {     //b is a copy
-                  _sys.print(b);
+                  Sys.print(b);
               }
               b = 100;
               return bar;
@@ -3506,7 +3506,7 @@ Their definitions can be found in melon/include/mln_types.h.
           @foo() {
               a = 1;
               @bar() $(&b) { //b is a reference
-                  _sys.print(b);
+                  Sys.print(b);
               }
               b = 100;
               return bar;
@@ -3562,12 +3562,12 @@ Their definitions can be found in melon/include/mln_types.h.
       e.g. normal usage
           @foo (newval, userData)
           {
-              _dump(newval);
-              _dump(userData);
+              Dump(newval);
+              Dump(userData);
           }
           name = 'Susan';
           gender = 'female';
-          watch(name, foo, gender);
+          Watch(name, foo, gender);
           name = 'Tom';//Then foo will be called after 'name' assigned.
 
       e.g. reference
@@ -3577,9 +3577,9 @@ Their definitions can be found in melon/include/mln_types.h.
           }
           name = 'Susan';
           gender = 'female';
-          watch(name, foo, gender);
+          Watch(name, foo, gender);
           name = 'Tom';//Then foo will be called after 'name' assigned.
-          dump(gender);
+          Dump(gender);
 
 
    G. Operator
@@ -3617,40 +3617,40 @@ Their definitions can be found in melon/include/mln_types.h.
       and of course, these arguments can be reference.
 
    H. Internal Function
-      <1> dump(var);
+      <1> Dump(var);
       Dump all details of 'var' to console and log.
 
-      <2> watch(var, func, userData);
+      <2> Watch(var, func, userData);
       This function is provided for supporting Reactive Programming.
       It means that 'var' is being watched by 'func'. If 'var' changed, 'func' will be executed.
       You can find some examples in Section <8. Script language>
       The prototype of 'func' is,
           func (newval, userData);
       Both of func's arguments can be either reference or not. And the second argument 'userData' is identical
-      with the third argument in 'watch'.
+      with the third argument in 'Watch'.
 
-      <3> unwatch(var);
+      <3> Unwatch(var);
       Remove watcher from 'var'.
 
-      <4> import(name);
+      <4> Import(name);
       Import dynamic library indicated by 'name' into current melang scope.
       Dynamic library must contain the entrance function named 'init', its prototype is:
           mln_lang_var_t *init(mln_lang_ctx_t *);
 
-      <5> eval(val, data, in_string);
+      <5> Eval(val, data, in_string);
       val - a file path or a code string.
       data - the data that we want to deliver to the new coroutine.
       on_string - a optional argument. If is set and its value is *true*, *val* is a code string.
                   Otherwise, *val* is a file path.
 
-      <6> pipe(op);
+      <6> Pipe(op);
       Receive message sent by 'mln_lang_ctx_pipe_send' from C code.
       op - has three values:
           "subscribe" - subscribe message delivery.
           "unsubscribe" - unsubscribe message delivery.
           "recv" - receive message.
-      if pipe is called with "unsubscribe", that not means there is no message can be received, because there
-      is a gap between unsubscribe and 'mln_lang_ctx_pipe_send'. So you can call pipe again to clean all rest
+      if Pipe is called with "unsubscribe", that not means there is no message can be received, because there
+      is a gap between unsubscribe and 'mln_lang_ctx_pipe_send'. So you can call Pipe again to clean all rest
       messages.
 
 

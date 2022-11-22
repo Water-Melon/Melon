@@ -1,8 +1,11 @@
-Changes with melon 2.6.0                                          21 Nov 2022
+Changes with melon 2.6.0                                          22 Nov 2022
     *) Fixed bug of lang pipe send function
     *) Optimized callback function about lang task exit
     *) Optimized string macros
     *) Added trace mode
+    *) Fixed bug of lang cache path
+    *) Updated Melang naming convention for global name
+    *) Updated internal functions name in Melang
 
 Changes with melon 2.5.6                                          20 Nov 2022
     *) Removed no-use macro

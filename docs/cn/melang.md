@@ -189,7 +189,7 @@ mln_lang_mutex_unlock(lang)
 int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...)
 ```
 
-描述：在C代码中向指定的脚本任务发送一个消息。这个消息可以被脚本层的`pipe`函数接收，其中：
+描述：在C代码中向指定的脚本任务发送一个消息。这个消息可以被脚本层的`Pipe`函数接收，其中：
 
 - `ctx`是对应脚本任务的上下文结构指针
 - `fmt`是用于对可变参数的解释，`fmt`支持四种字符：

@@ -189,7 +189,7 @@ Return value:
 int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...)
 ````
 
-Description: Send a message to the specified script task in C code. This message can be received by the `pipe` function of the script layer, where:
+Description: Send a message to the specified script task in C code. This message can be received by the `Pipe` function of the script layer, where:
 
 - `ctx` is the context structure pointer corresponding to the script task
 - `fmt` is used for the interpretation of variable parameters, `fmt` supports four characters:

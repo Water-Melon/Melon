@@ -710,13 +710,56 @@ mln_lang_ast_cache_search(mln_lang_t *lang, mln_u32_t type, mln_string_t *conten
     mln_lang_stm_t *stm;
 
     if (type == M_INPUT_T_FILE) {
-        int fd;
+        int fd, n;
         size_t len = content->len >= 1024? 1023: content->len;
-        char path[1024];
+        char path[1024], *melang_path = NULL, tmp_path[1024];
         struct stat st;
         memcpy(path, content->data, len);
         path[len] = 0;
-        fd = open(path, O_RDONLY);
+
+#if defined(WIN32)
+        if (len > 1 && path[1] == ':') {
+#else
+        if (path[0] == '/') {
+#endif
+            fd = open(path, O_RDONLY);
+        } else {
+            if (!access(path, F_OK)) {
+                fd = open(path, O_RDONLY);
+            } else if ((melang_path = getenv("MELANG_PATH")) != NULL) {
+                char *end = strchr(melang_path, ';');
+                int found = 0;
+                while (end != NULL) {
+                    *end = 0;
+                    n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
+                    tmp_path[n] = 0;
+                    if (!access(tmp_path, F_OK)) {
+                        fd = open(tmp_path, O_RDONLY);
+                        found = 1;
+                        break;
+                    }
+                    melang_path = end + 1;
+                    end = strchr(melang_path, ';');
+                }
+                if (!found) {
+                    if (*melang_path) {
+                        n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
+                        tmp_path[n] = 0;
+                        fd = open(tmp_path, O_RDONLY);
+                    } else {
+                        goto goon;
+                    }
+                }
+            } else {
+goon:
+                n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_lib(), path);
+                tmp_path[n] = 0;
+                fd = open(tmp_path, O_RDONLY);
+            }
+        }
+
+        if (fd < 0) return NULL;
+
         if (fstat(fd, &st) < 0) {
             close(fd);
             return NULL;
@@ -1546,13 +1589,7 @@ __mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local
 static inline mln_lang_symbol_node_t *
 mln_lang_symbol_node_id_search(mln_lang_ctx_t *ctx, mln_string_t *name)
 {
-    mln_string_t n = *name;
-    if (name->len > 1 && name->data[0] == '_') {
-        n.data += 1;
-        n.len -= 1;
-        return __mln_lang_symbol_node_search(ctx, &n, 0);
-    }
-    return __mln_lang_symbol_node_search(ctx, name, 1);
+    return __mln_lang_symbol_node_search(ctx, name, (name->len > 0 && name->data[0] > 64 && name->data[0] < 91)? 0: 1);
 }
 
 
@@ -6369,7 +6406,7 @@ static int mln_lang_func_watch(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("watch");
+    mln_string_t funcname = mln_string("Watch");
     mln_string_t v1 = mln_string("var");
     mln_string_t v2 = mln_string("func");
     mln_string_t v3 = mln_string("data");
@@ -6498,7 +6535,7 @@ static int mln_lang_func_unwatch(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("unwatch");
+    mln_string_t funcname = mln_string("Unwatch");
     mln_string_t v1 = mln_string("var");
     if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_func_unwatch_process, NULL, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
@@ -6599,7 +6636,7 @@ static int mln_lang_func_dump(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("dump");
+    mln_string_t funcname = mln_string("Dump");
     mln_string_t v1 = mln_string("var");
     if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_func_dump_process, NULL, NULL)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
@@ -6801,7 +6838,7 @@ static int mln_lang_func_import_handler(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("import");
+    mln_string_t funcname = mln_string("Import");
     mln_string_t v1 = mln_string("name");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_func_import_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
@@ -7007,7 +7044,7 @@ static int mln_lang_func_eval(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("eval");
+    mln_string_t funcname = mln_string("Eval");
     mln_string_t v1 = mln_string("val");
     mln_string_t v2 = mln_string("data");
     mln_string_t v3 = mln_string("in_string");
@@ -7783,7 +7820,7 @@ static int mln_lang_func_pipe(mln_lang_ctx_t *ctx)
     mln_lang_val_t *val;
     mln_lang_var_t *var;
     mln_lang_func_detail_t *func;
-    mln_string_t funcname = mln_string("pipe");
+    mln_string_t funcname = mln_string("Pipe");
     mln_string_t v1 = mln_string("op");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_func_pipe_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
