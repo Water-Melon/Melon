@@ -72,9 +72,9 @@ mln_conf_t *mln_get_conf(void);
 #### search
 
 ```c
-typedef mln_conf_domain_t *(*search_domain) (mln_conf_t *, char *);
-typedef mln_conf_cmd_t    *(*search_cmd)    (mln_conf_domain_t *, char *);
-typedef mln_conf_item_t   *(*search_item)   (mln_conf_cmd_t *, mln_u32_t);
+typedef mln_conf_domain_t *(*mln_conf_domain_cb_t) (mln_conf_t *, char *);
+typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)    (mln_conf_domain_t *, char *);
+typedef mln_conf_item_t   *(*mln_conf_item_cb_t)   (mln_conf_cmd_t *, mln_u32_t);
 ```
 
 描述：
@@ -98,6 +98,48 @@ mln_conf_domain_t *d = conf->search(conf, "main");
 返回值：
 
 正常情况下，只要所需配置在配置文件中，且配置被正常初始化，那么返回值则必不为`NULL`。
+
+
+
+#### insert
+
+```c
+typedef mln_conf_domain_t *(*mln_conf_domain_cb_t) (mln_conf_t *, char *);
+typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)    (mln_conf_domain_t *, char *);
+```
+
+描述：
+
+在Melon配置中，允许开发者向`mln_conf_t`和`mln_conf_domain_t`区域中插入配置项。可以直接调用这两个结构中的`insert`函数指针成员来实现配置项的插入。例如：
+
+```
+mln_conf_domain_t *d = conf->insert(conf, "domain1");
+```
+
+返回值：
+
+返回插入的配置项结构体指针，失败返回`NULL`
+
+
+
+#### remove
+
+```c
+typedef mln_conf_domain_t *(*mln_conf_domain_cb_t) (mln_conf_t *, char *);
+typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)    (mln_conf_domain_t *, char *);
+```
+
+描述：
+
+在Melon配置中，允许开发者从`mln_conf_t`和`mln_conf_domain_t`区域中删除配置项。可以直接调用这两个结构中的`remove`函数指针成员来实现配置项的删除。例如：
+
+```
+conf->remove(conf, "domain1");
+```
+
+返回值：
+
+无。尽管函数指针定义存在返回值，但实际处理函数的返回值部分为`void`
 
 
 

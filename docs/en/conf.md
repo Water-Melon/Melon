@@ -72,9 +72,9 @@ Return value: `mln_conf_t` pointer, if it is `NULL`, it means that Melon is not 
 #### search
 
 ```c
-typedef mln_conf_domain_t *(*search_domain) (mln_conf_t *, char *);
-typedef mln_conf_cmd_t    *(*search_cmd)    (mln_conf_domain_t *, char *);
-typedef mln_conf_item_t   *(*search_item)   (mln_conf_cmd_t *, mln_u32_t);
+typedef mln_conf_domain_t *(*mln_conf_domain_cb_t) (mln_conf_t *, char *);
+typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)    (mln_conf_domain_t *, char *);
+typedef mln_conf_item_t   *(*mln_conf_item_cb_t)   (mln_conf_cmd_t *, mln_u32_t);
 ```
 
 Description:
@@ -98,6 +98,48 @@ A usage example is given at the end of this article.
 return value:
 
 In usual, as long as the required configuration is in the configuration file and the configuration is initialized normally, the return value must not be `NULL`.
+
+
+
+#### insert
+
+```c
+typedef mln_conf_domain_t *(*mln_conf_domain_cb_t) (mln_conf_t *, char *);
+typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)    (mln_conf_domain_t *, char *);
+```
+
+Description:
+
+In Melon configuration, developers are allowed to insert configuration items into `mln_conf_t` and `mln_conf_domain_t` areas. You can directly call the `insert` function pointer in these two structures to implement the insertion of configuration items. E.g:
+
+```
+mln_conf_domain_t *d = conf->insert(conf, "domain1");
+```
+
+return value:
+
+Returns the pointer to the inserted configuration item structure, or `NULL` on failure
+
+
+
+#### remove
+
+```c
+typedef mln_conf_domain_t *(*mln_conf_domain_cb_t) (mln_conf_t *, char *);
+typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)    (mln_conf_domain_t *, char *);
+```
+
+Description:
+
+In Melon configuration, developers are allowed to delete configuration items from `mln_conf_t` and `mln_conf_domain_t` areas. You can directly call the `remove` function pointer in these two structures to delete configuration items. E.g
+
+```
+conf->remove(conf, "domain1");
+```
+
+return value:
+
+None. Although the function pointer definition has a return value, the return value part of the actual processing function is `void`
 
 
 

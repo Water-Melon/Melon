@@ -24,7 +24,7 @@
 
 mln_conf_hook_t *g_conf_hook_head = NULL, *g_conf_hook_tail = NULL;
 mln_conf_t *g_conf = NULL;
-mln_string_t default_domain = {(mln_u8ptr_t)"main", 4, 1};
+char default_domain[] = "main";
 mln_string_t conf_keywords[] = {
     mln_string("on"),
     mln_string("off"),
@@ -65,13 +65,17 @@ static inline void
 mln_conf_destroy_lex(mln_conf_t *cf);
 /*for mln_conf_domain_t*/
 static mln_conf_domain_t *
+mln_conf_domain_insert(mln_conf_t *cf, char *domain_name);
+static void
+mln_conf_domain_remove(mln_conf_t *cf, char *domain_name);
+static mln_conf_domain_t *
 mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name) __NONNULL2(1,2);
 static void
 mln_conf_domain_destroy(void *data);
 static int
 mln_conf_domain_cmp(const void *data1, const void *data2);
 static mln_conf_domain_t *
-mln_conf_search_domain(mln_conf_t *cf, char *domain_name) __NONNULL2(1,2);
+mln_conf_domain_search(mln_conf_t *cf, char *domain_name) __NONNULL2(1,2);
 /*for mln_conf_cmd_t*/
 static mln_conf_cmd_t *
 mln_conf_cmd_init(mln_string_t *cmd_name) __NONNULL1(1);
@@ -80,14 +84,18 @@ mln_conf_cmd_destroy(void *data);
 static int
 mln_conf_cmd_cmp(const void *data1, const void *data2);
 static mln_conf_cmd_t *
-mln_conf_search_cmd(mln_conf_domain_t *cd, char *cmd_name) __NONNULL2(1,2);
+mln_conf_cmd_search(mln_conf_domain_t *cd, char *cmd_name) __NONNULL2(1,2);
+static mln_conf_cmd_t *
+mln_conf_cmd_insert(mln_conf_domain_t *cd, char *cmd_name);
+static void
+mln_conf_cmd_remove(mln_conf_domain_t *cd, char *cmd_name);
 /*for mln_conf_item_t*/
 static int mln_isvalid_item(mln_conf_lex_struct_t *cls) __NONNULL1(1);
 static int
 mln_conf_item_init(mln_conf_t *cf, mln_conf_lex_struct_t *cls, mln_conf_item_t *ci) __NONNULL2(1,2);
 static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current) __NONNULL2(1,2);
 static mln_conf_item_t *
-mln_conf_search_item(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
+mln_conf_item_search(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
 static int mln_conf_get_cmds_iterate_handler(mln_rbtree_node_t *node, void *udata);
 static int mln_conf_dump_conf_iterate_handler(mln_rbtree_node_t *node, void *udata);
 static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *udata);
@@ -301,13 +309,14 @@ static inline mln_conf_t *mln_conf_init(void)
 {
     mln_conf_lex_lex_dup(NULL, NULL);/*nothing to do, just get rid of compiler's warnging*/
     mln_conf_t *cf;
-    mln_rbtree_node_t *rn;
     cf = (mln_conf_t *)malloc(sizeof(mln_conf_t));
     if (cf == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         return NULL;
     }
-    cf->search = mln_conf_search_domain;
+    cf->search = mln_conf_domain_search;
+    cf->insert = mln_conf_domain_insert;
+    cf->remove = (mln_conf_domain_cb_t)mln_conf_domain_remove;
 
     struct mln_rbtree_attr rbattr;
     rbattr.pool = NULL;
@@ -370,19 +379,11 @@ static inline mln_conf_t *mln_conf_init(void)
         fprintf(stderr, "[Warn] Configuration file not found.\n");
     }
 
-    mln_conf_domain_t *cd = mln_conf_domain_init(cf, &default_domain);
-    if (cd == NULL) {
+    if (cf->insert(cf, default_domain) == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_conf_destroy(cf);
         return NULL;
     }
-    if ((rn = mln_rbtree_node_new(cf->domain, cd)) == NULL) {
-        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
-        mln_conf_domain_destroy((void *)cd);
-        mln_conf_destroy(cf);
-        return NULL;
-    }
-    mln_rbtree_insert(cf->domain, rn);
     return cf;
 }
 
@@ -417,7 +418,9 @@ mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name)
     mln_conf_domain_t *cd;
     cd = (mln_conf_domain_t *)malloc(sizeof(mln_conf_domain_t));
     if (cd == NULL) return NULL;
-    cd->search = mln_conf_search_cmd;
+    cd->search = mln_conf_cmd_search;
+    cd->insert = mln_conf_cmd_insert;
+    cd->remove = (mln_conf_cmd_cb_t)mln_conf_cmd_remove;
     cd->domain_name = mln_string_dup(domain_name);
     if (cd->domain_name == NULL) {
         free(cd);
@@ -463,7 +466,7 @@ mln_conf_domain_cmp(const void *data1, const void *data2)
 }
 
 static mln_conf_domain_t *
-mln_conf_search_domain(mln_conf_t *cf, char *domain_name)
+mln_conf_domain_search(mln_conf_t *cf, char *domain_name)
 {
     mln_string_t str;
     mln_rbtree_node_t *rn;
@@ -473,6 +476,42 @@ mln_conf_search_domain(mln_conf_t *cf, char *domain_name)
     rn = mln_rbtree_search(cf->domain, cf->domain->root, &tmp);
     if (mln_rbtree_null(rn, cf->domain)) return NULL;
     return (mln_conf_domain_t *)mln_rbtree_node_data(rn);
+}
+
+static mln_conf_domain_t *
+mln_conf_domain_insert(mln_conf_t *cf, char *domain_name)
+{
+    mln_string_t name;
+    mln_rbtree_node_t *rn;
+
+    mln_string_set(&name, domain_name);
+    mln_conf_domain_t *cd = mln_conf_domain_init(cf, &name);
+    if (cd == NULL) {
+        return NULL;
+    }
+    if ((rn = mln_rbtree_node_new(cf->domain, cd)) == NULL) {
+        mln_conf_domain_destroy((void *)cd);
+        return NULL;
+    }
+    mln_rbtree_insert(cf->domain, rn);
+
+    return cd;
+}
+
+static void
+mln_conf_domain_remove(mln_conf_t *cf, char *domain_name)
+{
+    mln_string_t dname;
+    mln_conf_domain_t cd;
+    mln_rbtree_node_t *rn;
+
+    mln_string_set(&dname, domain_name);
+    cd.domain_name = &dname;
+    rn = mln_rbtree_search(cf->domain, cf->domain->root, &dname);
+    if (!mln_rbtree_null(rn, cf->domain)) {
+        mln_rbtree_delete(cf->domain, rn);
+        mln_rbtree_node_free(cf->domain, rn);
+    }
 }
 
     /*mln_conf_cmd_t*/
@@ -487,7 +526,7 @@ mln_conf_cmd_init(mln_string_t *cmd_name)
         free(cc);
         return NULL;
     }
-    cc->search = mln_conf_search_item;
+    cc->search = mln_conf_item_search;
     cc->arg_tbl = NULL;
     cc->n_args = 0;
     return cc;
@@ -529,7 +568,7 @@ mln_conf_cmd_cmp(const void *data1, const void *data2)
 }
 
 static mln_conf_cmd_t *
-mln_conf_search_cmd(mln_conf_domain_t *cd, char *cmd_name)
+mln_conf_cmd_search(mln_conf_domain_t *cd, char *cmd_name)
 {
     mln_string_t str;
     mln_conf_cmd_t cmd;
@@ -540,6 +579,44 @@ mln_conf_search_cmd(mln_conf_domain_t *cd, char *cmd_name)
     rn = mln_rbtree_search(cd->cmd, cd->cmd->root, &cmd);
     if (mln_rbtree_null(rn, cd->cmd)) return NULL;
     return (mln_conf_cmd_t *)mln_rbtree_node_data(rn);
+}
+
+static mln_conf_cmd_t *
+mln_conf_cmd_insert(mln_conf_domain_t *cd, char *cmd_name)
+{
+    mln_conf_cmd_t *cmd;
+    mln_rbtree_node_t *rn;
+    mln_string_t cname;
+
+    mln_string_set(&cname, cmd_name);
+
+    cmd = mln_conf_cmd_init(&cname);
+    if (cmd == NULL) {
+        return NULL;
+    }
+    if ((rn = mln_rbtree_node_new(cd->cmd, cmd)) == NULL) {
+        mln_conf_cmd_destroy(cmd);
+        return NULL;
+    }
+    mln_rbtree_insert(cd->cmd, rn);
+
+    return cmd;
+}
+
+static void
+mln_conf_cmd_remove(mln_conf_domain_t *cd, char *cmd_name)
+{
+    mln_rbtree_node_t *rn;
+    mln_string_t cname;
+    mln_conf_cmd_t cmd;
+
+    mln_string_set(&cname, cmd_name);
+    cmd.cmd_name = &cname;
+    rn = mln_rbtree_search(cd->cmd, cd->cmd->root, &cmd);
+    if (!mln_rbtree_null(rn, cd->cmd)) {
+        mln_rbtree_delete(cd->cmd, rn);
+        mln_rbtree_node_free(cd->cmd, rn);
+    }
 }
 
     /*mln_conf_item_t*/
@@ -602,7 +679,7 @@ mln_conf_item_init(mln_conf_t *cf, mln_conf_lex_struct_t *cls, mln_conf_item_t *
 }
 
 static mln_conf_item_t *
-mln_conf_search_item(mln_conf_cmd_t *cmd, mln_u32_t index)
+mln_conf_item_search(mln_conf_cmd_t *cmd, mln_u32_t index)
 {
     if (!index || index > cmd->n_args) return NULL;
     return &(cmd->arg_tbl[index-1]);
@@ -658,7 +735,10 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
     mln_conf_lex_struct_t *fir, *next;
     mln_conf_cmd_t *cmd;
     mln_conf_domain_t *cd;
-    mln_rbtree_node_t *rn;
+    mln_string_t dname;
+
+    mln_string_set(&dname, default_domain);
+
     while ( 1 ) {
         fir = mln_conf_token(cf->lex);
         if (fir == NULL) {
@@ -668,7 +748,7 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
             mln_conf_lex_free(fir);
             break;
         } else if (fir->type == CONF_TK_RBRACE) {
-            if (mln_string_strcmp(current->domain_name, &default_domain)) {
+            if (mln_string_strcmp(current->domain_name, &dname)) {
                 mln_conf_lex_free(fir);
                 return 0;
             }
@@ -695,43 +775,29 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
         /*as domain*/
         if (next->type == CONF_TK_LBRACE) {
             mln_conf_lex_free(next);
-            if (mln_string_strcmp(current->domain_name, &default_domain)) {
+            if (mln_string_strcmp(current->domain_name, &dname)) {
                 CONF_ERR(cf->lex, fir, "Illegal domain");
                 mln_conf_lex_free(fir);
                 return -1;
             }
 
-            cd = mln_conf_domain_init(cf, fir->text);
+            cd = cf->insert(cf, (char *)(fir->text->data));
             mln_conf_lex_free(fir);
             if (cd == NULL) {
                 fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
                 return -1;
             }
-            if ((rn = mln_rbtree_node_new(cf->domain, cd)) == NULL) {
-                fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
-                mln_conf_domain_destroy(cd);
-                return -1;
-            }
-            mln_rbtree_insert(cf->domain, rn);
-
             if (_mln_conf_load(cf, cd) < 0) return -1;
             continue;
         }
         /*as command*/
-        cmd = mln_conf_cmd_init(fir->text);
+        cmd = current->insert(current, (char *)(fir->text->data));
         mln_conf_lex_free(fir);
         if (cmd == NULL) {
             fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
             mln_conf_lex_free(next);
             return -1;
         }
-        if ((rn = mln_rbtree_node_new(current->cmd, cmd)) == NULL) {
-            fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
-            mln_conf_cmd_destroy(cmd);
-            mln_conf_lex_free(next);
-            return -1;
-        }
-        mln_rbtree_insert(current->cmd, rn);
 
         if (mln_conf_item_recursive(cf, cmd, next, 0) < 0) return -1;
         /*
@@ -744,12 +810,17 @@ static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current)
 
 int mln_conf_load(void)
 {
-    g_conf = mln_conf_init();
-    if (g_conf == NULL) return -1;
+    mln_string_t dname;
     mln_rbtree_node_t *rn;
     mln_conf_domain_t *cd, tmp;
-    tmp.domain_name = &default_domain;
+    g_conf = mln_conf_init();
+
+    if (g_conf == NULL) return -1;
+
+    mln_string_set(&dname, default_domain);
+    tmp.domain_name = &dname;
     rn = mln_rbtree_search(g_conf->domain, g_conf->domain->root, &tmp);
+
     cd = (mln_conf_domain_t *)mln_rbtree_node_data(rn);
     if (g_conf->lex != NULL) {
         mln_s32_t ret = _mln_conf_load(g_conf, cd);

@@ -718,24 +718,24 @@ Their definitions can be found in melon/include/mln_types.h.
                ...
             Figure 3. Configuration architecture.
 
-     Except mln_conf_item_t, other structures have a function pointer named search.
-     In mln_conf_t, its prototype is
-         typedef mln_conf_domain_t *(*search_domain)(mln_conf_t *, char *);
+     Except mln_conf_item_t, other structures have three function pointers named insert, remove and search.
+     In mln_conf_t, their prototype is
+         typedef mln_conf_domain_t *(*mln_conf_domain_cb_t)(mln_conf_t *, char *);
      This function is used to search a conf-domain.
      The first argument is a configuration object returned by mln_get_conf().
      The second argument is a string indicating the domain name.
      If domain is existent, the domain object (mln_conf_domain_t) will be returned. Otherwise, the return value is
      NULL.
 
-     In mln_conf_domain_t, the prototype of function 'search' is
-         typedef mln_conf_cmd_t *(*search_cmd) (mln_conf_domain_t *, char *);
+     In mln_conf_domain_t, the prototype of function 'search', 'insert' and 'remove' is
+         typedef mln_conf_cmd_t *(*mln_conf_cmd_cb_t) (mln_conf_domain_t *, char *);
      This function is used to search a conf-command.
      The first argument is a domain object. The second argument
      is the command name that we are looking for.
      If command is not existent, NULL will be returned.
 
      In mln_conf_cmd_t, the prototype of function 'search' is
-         typedef mln_conf_item_t *(*search_item)  (mln_conf_cmd_t *, mln_u32_t);
+         typedef mln_conf_item_t *(*mln_conf_item_cb_t)  (mln_conf_cmd_t *, mln_u32_t);
      The first argument is a command object. The second one is an index indicating the position of the item in command.
      This index is start from 1.
      If index value is invalid, NULL will be returned.

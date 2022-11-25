@@ -1,9 +1,9 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-sys = import('sys');
+sys = Import('sys');
 
-pipe('subscribe');
+Pipe('subscribe');
 while (1) {
     ret = Pipe('recv');
     if (ret) {
@@ -13,4 +13,4 @@ while (1) {
     } fi
     sys.msleep(1000);
 }
-pipe('unsubscribe');
+Pipe('unsubscribe');
