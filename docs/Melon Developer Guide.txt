@@ -567,6 +567,7 @@ Their definitions can be found in melon/include/mln_types.h.
                  mln_u32_t           padding:31;
                  mln_u32_t           type;
                  mln_string_t       *data;
+                 mln_string_t       *env;
               };
          pool -- is a memory pool used in lexer. It is initilizaed by 'mln_alloc_init()'.
          keywords -- is a vector which records all keywords that we need and the last element in vector is NULL. 
@@ -576,6 +577,7 @@ Their definitions can be found in melon/include/mln_types.h.
              MLN_INPUT_T_FILE -- file stream.
              MLN_INPUT_T_BUF  -- buffer stream.
          data -- is the initial input filename or buffer. It can be set NULL if user don't wanna set input stream now.
+         env -- environment variable name for searching included file.
 
      (5) Preprocessing.
          The preprocessing function include three aspects.

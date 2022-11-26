@@ -201,6 +201,7 @@ struct PREFIX_NAME##_preprocess_attr {\
     mln_u32_t                 nr_type;/*input*/\
     int                       type_val;\
     int                       terminal_type_val;\
+    mln_string_t             *env;\
 };\
 struct PREFIX_NAME##_reduce_info {\
     mln_shift_t              *sh;\
@@ -222,7 +223,7 @@ SCOPE inline int \
 PREFIX_NAME##_pg_process_token(struct PREFIX_NAME##_preprocess_attr *attr, mln_lex_t *lex, mln_production_t *prod);\
 SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr);\
 SCOPE void PREFIX_NAME##_preprocess_attr_free(struct PREFIX_NAME##_preprocess_attr *attr);\
-SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t nr_prod);\
+SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t nr_prod, mln_string_t *env);\
 SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, \
                                               enum factor_data_type data_type, \
                                               int token_type, \
@@ -593,6 +594,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
         lattr.preprocess = 0;\
         lattr.type = M_INPUT_T_BUF;\
         lattr.data = &tmp;\
+        lattr.env = attr->env;\
         mln_lex_init_with_hooks(PREFIX_NAME, lex, &lattr);\
         if (lex == NULL) {\
             mln_log(error, "No memory.\n");\
@@ -632,7 +634,7 @@ SCOPE void PREFIX_NAME##_preprocess_attr_free(struct PREFIX_NAME##_preprocess_at
     }\
 }\
 \
-SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t nr_prod)\
+SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t nr_prod, mln_string_t *env)\
 {\
     struct PREFIX_NAME##_preprocess_attr pattr;\
     pattr.map_tbl = NULL;\
@@ -648,6 +650,7 @@ SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t 
     pattr.nr_type = sizeof(PREFIX_NAME##_token_type_array)/sizeof(PREFIX_NAME##_type_t);\
     pattr.type_val = -1;\
     pattr.terminal_type_val = -1;\
+    pattr.env = env;\
     if (PREFIX_NAME##_preprocess(&pattr) < 0) {\
         PREFIX_NAME##_preprocess_attr_free(&pattr);\
         return NULL;\

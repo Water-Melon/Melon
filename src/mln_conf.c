@@ -22,14 +22,15 @@
     fprintf(stderr, "%d: \"%s\" %s.\n", (TK)->line, (char *)((TK)->text->data), MSG);\
 }
 
-mln_conf_hook_t *g_conf_hook_head = NULL, *g_conf_hook_tail = NULL;
-mln_conf_t *g_conf = NULL;
-char default_domain[] = "main";
-mln_string_t conf_keywords[] = {
+static mln_conf_hook_t *g_conf_hook_head = NULL, *g_conf_hook_tail = NULL;
+static mln_conf_t *g_conf = NULL;
+static char default_domain[] = "main";
+static mln_string_t conf_keywords[] = {
     mln_string("on"),
     mln_string("off"),
     mln_string(NULL)
 };
+static mln_string_t mln_conf_env = mln_string("MELON_CONF_PATH");
 
 
 MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(static, mln_conf_lex, CONF, \
@@ -366,6 +367,7 @@ static inline mln_conf_t *mln_conf_init(void)
         lattr.preprocess = 1;
         lattr.type = M_INPUT_T_FILE;
         lattr.data = &path;
+        lattr.env = &mln_conf_env;
         mln_lex_init_with_hooks(mln_conf_lex, cf->lex, &lattr);
         mln_alloc_free(conf_file_path);
         if (cf->lex == NULL) {

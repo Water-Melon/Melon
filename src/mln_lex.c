@@ -54,16 +54,16 @@ void mln_lex_preprocess_data_free(mln_lex_preprocess_data_t *lpd)
 }
 
 mln_lex_input_t *
-mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line)
+mln_lex_input_new(mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line)
 {
     mln_lex_input_t *li;
-    if ((li = (mln_lex_input_t *)mln_alloc_m(pool, sizeof(mln_lex_input_t))) == NULL) {
+    if ((li = (mln_lex_input_t *)mln_alloc_m(lex->pool, sizeof(mln_lex_input_t))) == NULL) {
         *err = MLN_LEX_ENMEM;
         return NULL;
     }
     li->type = type;
     li->line = line;
-    if ((li->data = mln_string_pool_dup(pool, data)) == NULL) {
+    if ((li->data = mln_string_pool_dup(lex->pool, data)) == NULL) {
         mln_alloc_free(li);
         *err = MLN_LEX_ENMEM;
         return NULL;
@@ -89,7 +89,7 @@ mln_lex_input_new(mln_alloc_t *pool, mln_u32_t type, mln_string_t *data, int *er
         } else {
             if (!access(path, F_OK)) {
                 li->fd = open(path, O_RDONLY);
-            } else if ((melang_path = getenv("MELANG_PATH")) != NULL) {
+            } else if (lex->env != NULL && (melang_path = getenv((char *)(lex->env->data))) != NULL) {
                 char *end = strchr(melang_path, ';');
                 int found = 0;
                 while (end != NULL) {
@@ -305,6 +305,10 @@ err:
     lex->error = MLN_LEX_SUCCEED;
     lex->preprocess = attr->preprocess;
     lex->ignore = 0;
+    if ((lex->env = mln_string_pool_dup(lex->pool, attr->env)) == NULL) {
+        mln_lex_destroy(lex);
+        return NULL;
+    }
 
     if (attr->data != NULL) {
         if (attr->type == M_INPUT_T_BUF) {
@@ -339,6 +343,7 @@ void mln_lex_destroy(mln_lex_t *lex)
     if (lex->err_msg != NULL) mln_alloc_free(lex->err_msg);
     if (lex->result_buf != NULL) mln_alloc_free(lex->result_buf);
     if (lex->keywords != NULL) mln_rbtree_destroy(lex->keywords);
+    if (lex->env != NULL) mln_alloc_free(lex->env);
     mln_alloc_free(lex);
 }
 
@@ -384,7 +389,7 @@ char *mln_lex_strerror(mln_lex_t *lex)
 int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
 {
     int err = MLN_LEX_SUCCEED;
-    mln_lex_input_t *in = mln_lex_input_new(lex->pool, M_INPUT_T_FILE, path, &err, lex->line);
+    mln_lex_input_t *in = mln_lex_input_new(lex, M_INPUT_T_FILE, path, &err, lex->line);
     if (in == NULL) {
         lex->error = err;
         return -1;
@@ -407,7 +412,7 @@ int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
 int mln_lex_push_input_buf_stream(mln_lex_t *lex, mln_string_t *buf)
 {
     int err = MLN_LEX_SUCCEED;
-    mln_lex_input_t *in = mln_lex_input_new(lex->pool, M_INPUT_T_BUF, buf, &err, lex->line);
+    mln_lex_input_t *in = mln_lex_input_new(lex, M_INPUT_T_BUF, buf, &err, lex->line);
     if (in == NULL) {
         lex->error = err;
         return -1;

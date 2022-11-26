@@ -457,6 +457,7 @@ struct mln_lang_elemlist_s {
     mln_lang_elemlist_t             *next;
 };
 
+extern int mln_lang_ast_file_open(mln_string_t *file_path);
 extern void *mln_lang_ast_parser_generate(void);
 extern void mln_lang_ast_parser_destroy(void *data);
 extern void *

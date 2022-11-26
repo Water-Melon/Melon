@@ -88,6 +88,7 @@ struct mln_lex_attr {
     mln_u32_t           padding:31;
     mln_u32_t           type;
     mln_string_t       *data;
+    mln_string_t       *env;
 };
 
 typedef struct {
@@ -169,6 +170,7 @@ Description: Create and initialize the lexical analyzer. The members of the para
 - `padding` useless padding
 - `type` is used to indicate whether `data` is a file path or a code string: `M_INPUT_T_BUF` is a code string, `M_INPUT_T_FILE` is a code file path.
 - `data` code file path or code string, depending on the value of `type`.
+- `env` is used to find the file with the specified relative path from the directory set by the environment variable.
 
 Return value: return `mln_lex_t` structure pointer if successful, otherwise return `NULL`
 
@@ -518,6 +520,7 @@ int main(int argc, char *argv[])
     lattr.padding = 0;
     lattr.type = M_INPUT_T_FILE;
     lattr.data = &path;
+    lattr.env = NULL;
 
     mln_lex_init_with_hooks(mln_test, lex, &lattr);
     if (lex == NULL) {

@@ -710,55 +710,10 @@ mln_lang_ast_cache_search(mln_lang_t *lang, mln_u32_t type, mln_string_t *conten
     mln_lang_stm_t *stm;
 
     if (type == M_INPUT_T_FILE) {
-        int fd, n;
-        size_t len = content->len >= 1024? 1023: content->len;
-        char path[1024], *melang_path = NULL, tmp_path[1024];
+        int fd;
         struct stat st;
-        memcpy(path, content->data, len);
-        path[len] = 0;
 
-#if defined(WIN32)
-        if (len > 1 && path[1] == ':') {
-#else
-        if (path[0] == '/') {
-#endif
-            fd = open(path, O_RDONLY);
-        } else {
-            if (!access(path, F_OK)) {
-                fd = open(path, O_RDONLY);
-            } else if ((melang_path = getenv("MELANG_PATH")) != NULL) {
-                char *end = strchr(melang_path, ';');
-                int found = 0;
-                while (end != NULL) {
-                    *end = 0;
-                    n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
-                    tmp_path[n] = 0;
-                    if (!access(tmp_path, F_OK)) {
-                        fd = open(tmp_path, O_RDONLY);
-                        found = 1;
-                        break;
-                    }
-                    melang_path = end + 1;
-                    end = strchr(melang_path, ';');
-                }
-                if (!found) {
-                    if (*melang_path) {
-                        n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
-                        tmp_path[n] = 0;
-                        fd = open(tmp_path, O_RDONLY);
-                    } else {
-                        goto goon;
-                    }
-                }
-            } else {
-goon:
-                n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_lib(), path);
-                tmp_path[n] = 0;
-                fd = open(tmp_path, O_RDONLY);
-            }
-        }
-
-        if (fd < 0) return NULL;
+        if ((fd = mln_lang_ast_file_open(content)) < 0) return NULL;
 
         if (fstat(fd, &st) < 0) {
             close(fd);

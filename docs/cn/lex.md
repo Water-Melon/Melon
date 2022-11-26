@@ -88,6 +88,7 @@ struct mln_lex_attr {
     mln_u32_t           padding:31;
     mln_u32_t           type;
     mln_string_t       *data;
+    mln_string_t       *env;
 };
 
 typedef struct {
@@ -169,6 +170,7 @@ typedef void *(*lex_hook)(mln_lex_t *, void *);
 - `padding`无用填充
 - `type`用于指示`data`是文件路径还是代码字符串：`M_INPUT_T_BUF`为代码字符串，`M_INPUT_T_FILE`为代码文件路径。
 - `data`代码文件路径或代码字符串，取决于`type`的值。
+- `env`是用于从环境变量设置的目录中找到指定相对路径的文件。
 
 返回值：成功则返回`mln_lex_t`结构指针，否则返回`NULL`
 
@@ -518,6 +520,7 @@ int main(int argc, char *argv[])
     lattr.padding = 0;
     lattr.type = M_INPUT_T_FILE;
     lattr.data = &path;
+    lattr.env = NULL;
 
     mln_lex_init_with_hooks(mln_test, lex, &lattr);
     if (lex == NULL) {

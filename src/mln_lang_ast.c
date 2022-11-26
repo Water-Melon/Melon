@@ -2,6 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+#include <fcntl.h>
 #include "mln_lang_ast.h"
 #include "mln_parser_generator.h"
 
@@ -518,6 +519,8 @@ static mln_production_t prod_tbl[] = {
 {"elemnext: LANG_TK_COMMA elemlist", mln_lang_semantic_elemnext},
 {"elemnext: ", NULL}
 };
+
+static mln_string_t mln_lang_env = mln_string("MELANG_PATH");
 
 static inline int
 mln_get_char(mln_lex_t *lex, char c);
@@ -3531,9 +3534,61 @@ static int mln_lang_semantic_elemnext(mln_factor_t *left, mln_factor_t **right, 
 /*
  * APIs
  */
+int mln_lang_ast_file_open(mln_string_t *file_path)
+{
+    int fd, n;
+    size_t len = file_path->len >= 1024? 1023: file_path->len;
+    char path[1024], *melang_path = NULL, tmp_path[1024];
+    memcpy(path, file_path->data, len);
+    path[len] = 0;
+
+#if defined(WIN32)
+    if (len > 1 && path[1] == ':') {
+#else
+    if (path[0] == '/') {
+#endif
+        fd = open(path, O_RDONLY);
+    } else {
+        if (!access(path, F_OK)) {
+            fd = open(path, O_RDONLY);
+        } else if ((melang_path = getenv((char *)(mln_lang_env.data))) != NULL) {
+            char *end = strchr(melang_path, ';');
+            int found = 0;
+            while (end != NULL) {
+                *end = 0;
+                n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
+                tmp_path[n] = 0;
+                if (!access(tmp_path, F_OK)) {
+                    fd = open(tmp_path, O_RDONLY);
+                    found = 1;
+                    break;
+                }
+                melang_path = end + 1;
+                end = strchr(melang_path, ';');
+            }
+            if (!found) {
+                if (*melang_path) {
+                    n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
+                    tmp_path[n] = 0;
+                    fd = open(tmp_path, O_RDONLY);
+                } else {
+                    goto goon;
+                }
+            }
+        } else {
+goon:
+            n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_lib(), path);
+            tmp_path[n] = 0;
+            fd = open(tmp_path, O_RDONLY);
+        }
+    }
+
+    return fd;
+}
+
 void *mln_lang_ast_parser_generate(void)
 {
-    return mln_lang_parser_generate(prod_tbl, sizeof(prod_tbl)/sizeof(mln_production_t));
+    return mln_lang_parser_generate(prod_tbl, sizeof(prod_tbl)/sizeof(mln_production_t), &mln_lang_env);
 }
 
 void mln_lang_ast_parser_destroy(void *data)
@@ -3575,6 +3630,7 @@ void *mln_lang_ast_generate(mln_alloc_t *pool, void *state_tbl, mln_string_t *da
     lattr.preprocess = 1;
     lattr.type = data_type;
     lattr.data = data;
+    lattr.env = &mln_lang_env;
     mln_lex_init_with_hooks(mln_lang, lex, &lattr);
     if (lex == NULL) {
         mln_alloc_destroy(internal_pool);
