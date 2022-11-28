@@ -143,6 +143,32 @@ conf->remove(conf, "domain1");
 
 
 
+#### update
+
+```c
+typedef int (*mln_conf_item_update_cb_t) (mln_conf_cmd_t *, mln_conf_item_t *, mln_u32_t);
+```
+
+描述：
+
+在Melon配置中，允许开发者更新`mln_conf_cmd_t`中的参数列表。第一个参数为`mln_conf_cmd_t`指针，第二个参数为`mln_conf_item_t`类型数组，第三个参数为数组元素个数。参数二可以为栈上内存，因为在该函数中会自行复制一份参数二的数据进行保存和维护。
+
+```
+mln_conf_item_t items[] = {
+  {
+    CONF_BOOL,
+    0
+  },
+};
+cmd->update(cmd, items, 1);
+```
+
+返回值：
+
+成功返回`0`，否则返回`-1`
+
+
+
 #### mln_conf_set_hook
 
 ```c

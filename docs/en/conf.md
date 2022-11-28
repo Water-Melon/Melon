@@ -143,6 +143,32 @@ None. Although the function pointer definition has a return value, the return va
 
 
 
+#### update
+
+```c
+typedef int (*mln_conf_item_update_cb_t) (mln_conf_cmd_t *, mln_conf_item_t *, mln_u32_t);
+```
+
+Description:
+
+In Melon configuration, allows developers to update the argument list in `mln_conf_cmd_t`. The first argument is `mln_conf_cmd_t` pointer, the second argument is `mln_conf_item_t` type array, and the third argument is the number of array elements. Argument 2 can be the memory on the stack, because in this function, it will be duplicated.
+
+```
+mln_conf_item_t items[] = {
+  {
+    CONF_BOOL,
+    0
+  },
+};
+cmd->update(cmd, items, 1);
+```
+
+Return value:
+
+`0` on sucess, otherwise `-1` returned
+
+
+
 #### mln_conf_set_hook
 
 ```c

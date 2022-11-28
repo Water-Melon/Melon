@@ -97,6 +97,8 @@ mln_conf_item_init(mln_conf_t *cf, mln_conf_lex_struct_t *cls, mln_conf_item_t *
 static int _mln_conf_load(mln_conf_t *cf, mln_conf_domain_t *current) __NONNULL2(1,2);
 static mln_conf_item_t *
 mln_conf_item_search(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
+static int
+mln_conf_item_update(mln_conf_cmd_t *cmd, mln_conf_item_t *items, mln_u32_t nitems);
 static int mln_conf_get_cmds_iterate_handler(mln_rbtree_node_t *node, void *udata);
 static int mln_conf_dump_conf_iterate_handler(mln_rbtree_node_t *node, void *udata);
 static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *udata);
@@ -529,6 +531,7 @@ mln_conf_cmd_init(mln_string_t *cmd_name)
         return NULL;
     }
     cc->search = mln_conf_item_search;
+    cc->update = mln_conf_item_update;
     cc->arg_tbl = NULL;
     cc->n_args = 0;
     return cc;
@@ -685,6 +688,48 @@ mln_conf_item_search(mln_conf_cmd_t *cmd, mln_u32_t index)
 {
     if (!index || index > cmd->n_args) return NULL;
     return &(cmd->arg_tbl[index-1]);
+}
+
+static int
+mln_conf_item_update(mln_conf_cmd_t *cmd, mln_conf_item_t *items, mln_u32_t nitems)
+{
+    mln_u32_t i, j;
+    mln_conf_item_t *args;
+    mln_conf_item_t *ci;
+
+    if ((args = (mln_conf_item_t *)malloc(sizeof(mln_conf_item_t) * nitems)) == NULL) {
+        return -1;
+    }
+    for (i = 0; i < nitems; ++i) {
+        args[i].type = items[i].type;
+        if (items[i].type == CONF_STR) {
+            if ((args[i].val.s = mln_string_dup(items[i].val.s)) == NULL) {
+                for (j = 0; j < i; ++j) {
+                    if (args[j].type == CONF_STR && args[j].val.s != NULL)
+                        mln_string_free(args[j].val.s);
+                }
+                free(args);
+                return -1;
+            }
+        } else {
+            args[i].val = items[i].val;
+        }
+    }
+
+    if (cmd->arg_tbl != NULL) {
+        for (i = 0; i < cmd->n_args; ++i) {
+            ci = &(cmd->arg_tbl[i]);
+            if (ci->type == CONF_NONE) continue;
+            if (ci->type == CONF_STR) {
+                mln_string_free(ci->val.s);
+                ci->val.s = NULL;
+            }
+        }
+        free(cmd->arg_tbl);
+    }
+    cmd->arg_tbl = args;
+    cmd->n_args = nitems;
+    return 0;
 }
 
 /*

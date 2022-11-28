@@ -22,10 +22,11 @@ typedef struct mln_conf_s         mln_conf_t;
  * the second argument is an index locating command's item.
  * This index start from 1, not 0.
  */
-typedef mln_conf_item_t   *(*mln_conf_item_cb_t)   (mln_conf_cmd_t *, mln_u32_t);
-typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)    (mln_conf_domain_t *, char *);
-typedef mln_conf_domain_t *(*mln_conf_domain_cb_t) (mln_conf_t *, char *);
-typedef int                (*reload_handler)(void *);
+typedef mln_conf_item_t   *(*mln_conf_item_cb_t)        (mln_conf_cmd_t *, mln_u32_t);
+typedef int                (*mln_conf_item_update_cb_t) (mln_conf_cmd_t *, mln_conf_item_t *, mln_u32_t);
+typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)         (mln_conf_domain_t *, char *);
+typedef mln_conf_domain_t *(*mln_conf_domain_cb_t)      (mln_conf_t *, char *);
+typedef int                (*reload_handler)            (void *);
 
 struct mln_conf_item_s {
     enum {
@@ -48,6 +49,7 @@ struct mln_conf_item_s {
 struct mln_conf_cmd_s {
     mln_string_t                  *cmd_name;
     mln_conf_item_cb_t             search;
+    mln_conf_item_update_cb_t      update;
     mln_conf_item_t               *arg_tbl;
     mln_u32_t                      n_args;
 };
