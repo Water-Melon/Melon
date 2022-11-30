@@ -70,11 +70,6 @@ int mln_core_init(struct mln_core_attr *attr)
             return -1;
         }
 
-        /*trace*/
-        if (mln_trace_init() < 0) {
-            return -1;
-        }
-
         /*fork*/
         if (mln_pre_fork() < 0) {
             return -1;
@@ -119,11 +114,6 @@ chl:
             daemon = ci->val.b;
         }
         if (mln_log_init(daemon) < 0) return -1;
-        /*trace*/
-        if (mln_trace_init() < 0) {
-            return -1;
-        }
-
 #if !defined(WIN32)
     }
 #endif
@@ -133,9 +123,15 @@ chl:
 #if !defined(WIN32)
 static void mln_master_routine(struct mln_core_attr *attr)
 {
+    mln_string_t *trace_path;
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     if (_ev == NULL) _ev = ev;
+
+    trace_path = mln_trace_path();
+    if (trace_path != NULL)
+        mln_trace_init(ev, trace_path);
+
     mln_fork_master_set_events(ev);
     mln_event_set_signal(SIGUSR2, mln_sig_conf_reload);
     if (attr->master_process != NULL) attr->master_process(ev);
@@ -145,6 +141,7 @@ static void mln_master_routine(struct mln_core_attr *attr)
 
 static void mln_worker_routine(struct mln_core_attr *attr)
 {
+    mln_string_t *trace_path;
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     if (_ev == NULL) _ev = ev;
@@ -173,11 +170,17 @@ static void mln_worker_routine(struct mln_core_attr *attr)
         i_thread_mode = ci->val.b;
     }
 
+    trace_path = mln_trace_path();
     if (i_thread_mode) {
+        if (trace_path != NULL)
+            mln_trace_init(ev, trace_path);
+
         if (mln_load_thread(ev) < 0)
             exit(1);
         mln_event_dispatch(ev);
     } else {
+        if (trace_path != NULL)
+            mln_trace_init(ev, trace_path);
         if (attr->worker_process != NULL) attr->worker_process(ev);
         mln_event_dispatch(ev);
     }

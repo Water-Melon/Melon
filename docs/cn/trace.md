@@ -12,6 +12,11 @@
 
 关于Melang及其配套库，请参考[Melang仓库](https://github.com/Water-Melon/Melang)。
 
+> **注意事项**：
+>
+> 1. 配置中的`trace_mode`只有在开启框架模式（`framework`为`on`）时才会有效。
+> 2. 若在非框架模式下，或在配置中未启用`trace_mode`，但仍想使用该功能，则可以通过调用`mln_trace_init`进行初始化。
+
 
 
 ### 头文件
@@ -41,11 +46,59 @@ mln_trace(fmt, ...);
 
 
 
+#### mln_trace_path
+
+```c
+ mln_string_t *mln_trace_path(void);
+```
+
+描述：返回配置中`trace_mode`配置项设置的跟踪脚本路径。
+
+返回值：
+
+- `NULL` - 若配置不存在或者配置项参数为`off`
+- 跟踪脚本的文件路径
+
+
+
+#### mln_trace_init
+
+```c
+int mln_trace_init(mln_event_t *ev, mln_string_t *path);
+```
+
+描述：初始化全局跟踪模块。其中：
+
+- `ev` 是跟踪脚本所依赖的事件结构
+- `path`是跟踪脚本的文件路径
+
+返回值：
+
+- `0` - 成功
+- `-1` - 失败
+
+
+
+#### mln_trace_task_get
+
+```c
+mln_lang_ctx_t *mln_trace_task_get(void);
+```
+
+描述：获取全局跟踪模块中用于获取跟踪信息的脚本任务对象。
+
+返回值：
+
+- `NULL` - 跟踪模块未被初始化或脚本任务已退出
+- 脚本任务对象
+
+
+
 ### 示例
 
 安装Melon后，我们按如下步骤操作：
 
-1. 开启trace模式配置，编辑安装路径下的`conf/melon.conf`，将`trace_mode`前的注释（`//`）删掉。
+1. 开启trace模式配置，编辑安装路径下的`conf/melon.conf`，将`framework`设置为`on`，且将`trace_mode`前的注释（`//`）删掉。本例中`worker_proc`设置为`1`。
 
    > 如果想要禁用trace模式，只需要将配置注释或者将配置项改为 trace_mode off;即可。
 
@@ -56,6 +109,18 @@ mln_trace(fmt, ...);
    #include "mln_log.h"
    #include "mln_core.h"
    #include "mln_trace.h"
+   #include "mln_conf.h"
+
+   static void timeout_handler(mln_event_t *ev, void *data)
+   {
+       mln_trace("sir", "Hello", getpid(), 3.1);
+       mln_event_set_timer(ev, 1000, NULL, timeout_handler);
+   }
+
+   static void worker_process(mln_event_t *ev)
+   {
+       mln_event_set_timer(ev, 1000, NULL, timeout_handler);
+   }
 
    int main(int argc, char *argv[])
    {
@@ -65,17 +130,13 @@ mln_trace(fmt, ...);
        cattr.argv = argv;
        cattr.global_init = NULL;
        cattr.master_process = NULL;
-       cattr.worker_process = NULL;
+       cattr.worker_process = worker_process;
 
        if (mln_core_init(&cattr) < 0) {
           fprintf(stderr, "Melon init failed.\n");
           return -1;
        }
 
-       while (1) {
-           mln_trace("sir", "Hello", 2, 3.1);
-           usleep(10000);
-       }
        return 0;
    }
    ```
@@ -85,16 +146,10 @@ mln_trace(fmt, ...);
 3. 编译a.c文件，然后执行生成的可执行程序，可看到如下输出
 
    ```
-   [Hello, 2, 3.100000, ]
-   [Hello, 2, 3.100000, ]
-   [Hello, 2, 3.100000, ]
-   [Hello, 2, 3.100000, ]
-   [Hello, 2, 3.100000, ]
-   [Hello, 2, 3.100000, ]
-   [Hello, 2, 3.100000, ]
-   [Hello, 2, 3.100000, ]
-   [Hello, 2, 3.100000, ]
-   [Hello, 2, 3.100000, ]
+   Start up worker process No.1
+   [Hello, 11915, 3.100000, ]
+   [Hello, 11915, 3.100000, ]
+   [Hello, 11915, 3.100000, ]
    ...
    ```
 

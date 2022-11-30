@@ -1,3 +1,12 @@
+Changes with melon 2.6.1                                          30 Nov 2022
+    *) Upgraded trace component
+    *) Added function pointer 'update' to configuration item structure
+    *) Optimized environment variable settings in lexer and lang component
+    *) Updated melang naming convention
+    *) Updated internal functions' name in Melang
+    *) Fixed bug of lang cache path
+    *) Updated docs
+
 Changes with melon 2.6.0                                          22 Nov 2022
     *) Fixed bug of lang pipe send function
     *) Optimized callback function about lang task exit

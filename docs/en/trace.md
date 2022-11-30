@@ -12,9 +12,14 @@ Unlike ebpf, trace mode in Melon is designed to collect application-related info
 
 For Melang and its supporting library, please refer to [Melang Warehouse](https://github.com/Water-Melon/Melang).
 
+> **NOTE**:
+>
+> 1. `trace_mode` in the configuration will only be valid when the framework mode is turned on (`framework` is `on`).
+> 2. If you are in non-framework mode, or `trace_mode` is not enabled in the configuration, but you still want to use this function, you can initialize it by calling `mln_trace_init`.
 
 
-### Header
+
+### Header file
 
 ```c
 #include "mln_trace.h"
@@ -22,7 +27,7 @@ For Melang and its supporting library, please refer to [Melang Warehouse](https:
 
 
 
-### Function/Macro
+### Functions/Macros
 
 
 
@@ -32,10 +37,59 @@ For Melang and its supporting library, please refer to [Melang Warehouse](https:
 mln_trace(fmt, ...);
 ```
 
-- Description: Send some data to the specified processing script. The parameters here are exactly the same as `fmt` and its variable parameters of the `mln_lang_ctx_pipe_send` function ([see this chapter for details](https://water-melon.github.io/Melon/en/melang.html)), Because the inside of this macro is to call the function to complete the message delivery.
-- return value:
-  - `0` - success
-  - `-1` - failed
+Description: Send some data to the specified processing script. The parameters here are exactly the same as `fmt` and its variable parameters of the `mln_lang_ctx_pipe_send` function ([see this chapter for details](https://water-melon.github.io/Melon/en/melang.html)), Because the inside of this macro is to call the function to complete the message delivery.
+
+return value:
+- `0` - success
+- `-1` - failed
+
+
+
+#### mln_trace_path
+
+```c
+ mln_string_t *mln_trace_path(void);
+```
+
+Description: Returns the trace script path set by the `trace_mode` configuration item in the configuration.
+
+return value:
+
+- `NULL` - if the configuration does not exist or the parameter of the configuration item is `off`
+- the file path of the trace script
+
+
+
+#### mln_trace_init
+
+```c
+int mln_trace_init(mln_event_t *ev, mln_string_t *path);
+```
+
+Description: Initialize the global trace module.
+
+- `ev` is the event structure that the trace script depends on
+- `path` is the file path of the trace script
+
+return value:
+
+- `0` - success
+- `-1` - failed
+
+
+
+#### mln_trace_task_get
+
+```c
+mln_lang_ctx_t *mln_trace_task_get(void);
+```
+
+Description: Get the script task object used to get trace information in the global trace module.
+
+return value:
+
+- `NULL` - the tracking module has not been initialized or the script task has exited
+- script task object
 
 
 
@@ -43,56 +97,58 @@ mln_trace(fmt, ...);
 
 After installing Melon, we proceed as follows:
 
-1. Enable trace mode configuration, edit `conf/melon.conf` under the installation path, and delete the comment (`//`) before `trace_mode`.
+1. Enable trace mode configuration, edit `conf/melon.conf` under the installation path, set `framework` to `on`, and delete the comment (`//`) before `trace_mode`. In this example `worker_proc` is set to `1`.
 
-    > If you want to disable the trace mode, you only need to comment the configuration or change the configuration item to trace_mode off;.
+   > If you want to disable the trace mode, you only need to comment the configuration or change the configuration item to `trace_mode off;`.
 
-2. Create a new file called `a.c`
+2. Create a new file named `a.c`
 
-    ```c
-    #include <stdio.h>
-    #include "mln_log.h"
-    #include "mln_core.h"
-    #include "mln_trace.h"
+   ```c
+   #include <stdio.h>
+   #include "mln_log.h"
+   #include "mln_core.h"
+   #include "mln_trace.h"
+   #include "mln_conf.h"
 
-    int main(int argc, char *argv[])
-    {
-        struct mln_core_attr cattr;
+   static void timeout_handler(mln_event_t *ev, void *data)
+   {
+       mln_trace("sir", "Hello", getpid(), 3.1);
+       mln_event_set_timer(ev, 1000, NULL, timeout_handler);
+   }
 
-        cattr.argc = argc;
-        cattr.argv = argv;
-        cattr.global_init = NULL;
-        cattr.master_process = NULL;
-        cattr.worker_process = NULL;
+   static void worker_process(mln_event_t *ev)
+   {
+       mln_event_set_timer(ev, 1000, NULL, timeout_handler);
+   }
 
-        if (mln_core_init(&cattr) < 0) {
-           fprintf(stderr, "Melon init failed.\n");
-           return -1;
-        }
+   int main(int argc, char *argv[])
+   {
+       struct mln_core_attr cattr;
 
-        while (1) {
-            mln_trace("sir", "Hello", 2, 3.1);
-            usleep(10000);
-        }
-        return 0;
-    }
-    ```
+       cattr.argc = argc;
+       cattr.argv = argv;
+       cattr.global_init = NULL;
+       cattr.master_process = NULL;
+       cattr.worker_process = worker_process;
+
+       if (mln_core_init(&cattr) < 0) {
+          fprintf(stderr, "Melon init failed.\n");
+          return -1;
+       }
+
+       return 0;
+   }
+   ```
 
 
 
 3. Compile the a.c file, and then execute the generated executable program, you can see the following output
 
-    ```
-    [Hello, 2, 3.100000, ]
-    [Hello, 2, 3.100000, ]
-    [Hello, 2, 3.100000, ]
-    [Hello, 2, 3.100000, ]
-    [Hello, 2, 3.100000, ]
-    [Hello, 2, 3.100000, ]
-    [Hello, 2, 3.100000, ]
-    [Hello, 2, 3.100000, ]
-    [Hello, 2, 3.100000, ]
-    [Hello, 2, 3.100000, ]
-    ...
-    ```
+   ```
+   Start up worker process No.1
+   [Hello, 11915, 3.100000, ]
+   [Hello, 11915, 3.100000, ]
+   [Hello, 11915, 3.100000, ]
+   ...
+   ```
 

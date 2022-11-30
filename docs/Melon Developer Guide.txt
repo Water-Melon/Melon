@@ -2926,6 +2926,22 @@ Their definitions can be found in melon/include/mln_types.h.
       d) char *mln_error_string(int err, void *buf, mln_size_t len);
          Get error message string from return value 'err' and set in buffer 'buf' with buffer length 'len'.
 
+  43) Trace
+      a) mln_string_t *mln_trace_path(void);
+         Get trace script file path given in configuration. NULL will be returned if 'trace_mode' is not existent
+         or disabled.
+
+      b) int mln_trace_init(mln_event_t *ev, mln_string_t *path);
+         Initialize trace component.
+         'ev' is the event object.
+         'path' is the script file path.
+
+      c) mln_lang_ctx_t *mln_trace_task_get(void);
+         Get script task object. NULL will be returned if trace component is not initialized or script task exited.
+
+      d) mln_trace(fmt, ...);
+         Send trace info to script task. This macro will call `mln_lang_ctx_pipe_send` to send data to script task.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.
