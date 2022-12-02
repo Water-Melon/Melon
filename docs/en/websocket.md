@@ -906,7 +906,7 @@ static void worker_process(mln_event_t *ev)
         return;
     }
 
-    if (mln_event_set_fd(ev, \
+    if (mln_event_fd_set(ev, \
                          listenfd, \
                          M_EV_RECV|M_EV_NONBLOCK, \
                          M_EV_UNLIMITED, \
@@ -961,7 +961,7 @@ static void mln_accept(mln_event_t *ev, int fd, void *data)
             continue;
         }
 
-        if (mln_event_set_fd(ev, \
+        if (mln_event_fd_set(ev, \
                              connfd, \
                              M_EV_RECV|M_EV_NONBLOCK, \
                              M_EV_UNLIMITED, \
@@ -983,7 +983,7 @@ static void mln_quit(mln_event_t *ev, int fd, void *data)
     mln_http_t *http = (mln_http_t *)data;
     mln_tcp_conn_t *connection = mln_http_get_connection(http);
 
-    mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+    mln_event_fd_set(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     mln_http_destroy(http);
     mln_tcp_conn_destroy(connection);
     free(connection);
@@ -1076,7 +1076,7 @@ static void mln_send(mln_event_t *ev, int fd, void *data)
             break;
         } else if (ret == M_C_NOTYET) {
             mln_chain_pool_release_all(mln_tcp_conn_remove(connection, M_C_SENT));
-            mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK, M_EV_UNLIMITED, data, mln_send);
+            mln_event_fd_set(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK, M_EV_UNLIMITED, data, mln_send);
             return;
         } else if (ret == M_C_ERROR) {
             mln_quit(ev, fd, data);
@@ -1113,10 +1113,10 @@ static void mln_websocket_send(mln_event_t *ev, int fd, void *data)
     }
     if (c == NULL) {
         mln_chain_pool_release_all(mln_tcp_conn_remove(connection, M_C_SENT));
-        mln_event_set_fd(ev, fd, M_EV_RECV|M_EV_NONBLOCK, M_EV_UNLIMITED, data, mln_websocket_recv);
+        mln_event_fd_set(ev, fd, M_EV_RECV|M_EV_NONBLOCK, M_EV_UNLIMITED, data, mln_websocket_recv);
     } else {
         mln_chain_pool_release_all(mln_tcp_conn_remove(connection, M_C_SENT));
-        mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_send);
+        mln_event_fd_set(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_send);
     }
 }
 
@@ -1207,7 +1207,7 @@ lp:
             return;
         }
         mln_tcp_conn_append(connection, out, M_C_SEND);
-        mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_websocket_send);
+        mln_event_fd_set(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_websocket_send);
     } else if (mln_websocket_get_opcode(ws) == M_WS_OPCODE_CLOSE) {
         mln_chain_t *out = NULL;
         if (mln_websocket_close_generate(ws, &out, "just fun", M_WS_STATUS_NORMAL_CLOSURE, M_WS_FLAG_SERVER) != M_WS_RET_OK) {
@@ -1217,7 +1217,7 @@ lp:
             return;
         }
         mln_tcp_conn_append(connection, out, M_C_SEND);
-        mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_websocket_send);
+        mln_event_fd_set(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_websocket_send);
     } else {
         mln_chain_t *out = NULL;
         if (mln_websocket_pong_generate(ws, &out, M_WS_FLAG_SERVER) != M_WS_RET_OK) {
@@ -1234,7 +1234,7 @@ lp:
             return;
         }
         mln_tcp_conn_append(connection, out, M_C_SEND);
-        mln_event_set_fd(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_websocket_send);
+        mln_event_fd_set(ev, fd, M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, M_EV_UNLIMITED, data, mln_websocket_send);
     }
     if (c != NULL) goto lp;
 }

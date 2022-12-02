@@ -172,13 +172,13 @@ static void worker_process(mln_event_t *ev)
 {
     //we can set event handler here
     //let's set a timer
-    mln_event_set_timer(ev, 1000, text, print_handler);
+    mln_event_timer_set(ev, 1000, text, print_handler);
 }
 
 static void print_handler(mln_event_t *ev, void *data)
 {
     mln_log(debug, "%s\n", (char *)data);
-    mln_event_set_timer(ev, 1000, data, print_handler);
+    mln_event_timer_set(ev, 1000, data, print_handler);
 }
 ```
 

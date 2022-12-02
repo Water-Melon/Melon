@@ -52,16 +52,16 @@ void mln_event_dispatch(mln_event_t *event);
 
 描述：调度事件集`event`上的事件。当有事件触发时，则会调用相应的回调函数进行处理。
 
-**注意**：本函数在不调用`mln_event_set_break`的情况下是不会返回的。
+**注意**：本函数在不调用`mln_event_break_set`的情况下是不会返回的。
 
 返回值：无
 
 
 
-#### mln_event_set_fd
+#### mln_event_fd_set
 
 ```c
-int mln_event_set_fd(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms, void *data, ev_fd_handler fd_handler);
+int mln_event_fd_set(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms, void *data, ev_fd_handler fd_handler);
 
 typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);s
 ```
@@ -97,30 +97,30 @@ typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);s
 
 
 
-#### mln_event_set_fd_timeout_handler
+#### mln_event_fd_timeout_handler_set
 
 ```c
-void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
+void mln_event_fd_timeout_handler_set(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
 ```
 
 描述：设置描述符事件超时处理函数，其中：
 
 - `fd`为文件描述符。
 - `data`为超时时间处理相关的用户数据结构，可自行定义。
-- `timeout_handler`与`mln_event_set_fd`函数的回调函数类型一致，用于处理超时事件。
+- `timeout_handler`与`mln_event_fd_set`函数的回调函数类型一致，用于处理超时事件。
 
-该函数需要与`mln_event_set_fd`函数配合使用，先使用`mln_event_set_fd`设置事件，后使用本函数设置超时处理函数。
+该函数需要与`mln_event_fd_set`函数配合使用，先使用`mln_event_fd_set`设置事件，后使用本函数设置超时处理函数。
 
-之所以这样做，是因为有些事件超时后可能不需要特殊函数进行处理，而如果全部放在`mln_event_set_fd`函数中设置，会导致参数过多过于繁杂。
+之所以这样做，是因为有些事件超时后可能不需要特殊函数进行处理，而如果全部放在`mln_event_fd_set`函数中设置，会导致参数过多过于繁杂。
 
 返回值：无
 
 
 
-#### mln_event_set_timer
+#### mln_event_timer_set
 
 ```c
-mln_event_timer_t *mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
+mln_event_timer_t *mln_event_timer_set(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
 
 typedef void (*ev_tm_handler)  (mln_event_t *, void *);
 ```
@@ -137,10 +137,10 @@ typedef void (*ev_tm_handler)  (mln_event_t *, void *);
 
 
 
-#### mln_event_cancel_timer
+#### mln_event_timer_cancel
 
 ```c
-void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer);
+void mln_event_timer_cancel(mln_event_t *event, mln_event_timer_t *timer);
 ```
 
 描述：取消已设置的定时器。本函数需要保证`timer`是已设置但未触发的超时事件句柄。
@@ -149,12 +149,12 @@ void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer);
 
 
 
-#### mln_event_set_signal
+#### mln_event_signal_set
 
 ```c
 typedef void (*sig_t)(int);
 
-sig_t mln_event_set_signal(int signo, sig_t handle);
+sig_t mln_event_signal_set(int signo, sig_t handle);
 ```
 
 描述：设置信号处理函数，系统提供的signal函数的别名。
@@ -163,10 +163,10 @@ sig_t mln_event_set_signal(int signo, sig_t handle);
 
 
 
-#### mln_event_set_break
+#### mln_event_break_set
 
 ```c
-mln_event_set_break(ev);
+mln_event_break_set(ev);
 ```
 
 描述：中断事件处理，即使得`mln_event_dispatch`函数返回。
@@ -175,10 +175,10 @@ mln_event_set_break(ev);
 
 
 
-#### mln_event_reset_break
+#### mln_event_break_reset
 
 ```c
-mln_event_reset_break(ev);
+mln_event_break_reset(ev);
 ```
 
 描述：重置break标记。
@@ -187,7 +187,7 @@ mln_event_reset_break(ev);
 
 
 
-#### mln_event_set_callback
+#### mln_event_callback_set
 
 ```c
 void (mln_event_t *ev, dispatch_callback dc, void *dc_data);
@@ -217,14 +217,14 @@ typedef void (*dispatch_callback) (mln_event_t *, void *);
 static void timer_handler(mln_event_t *ev, void *data)
 {
     mln_log(debug, "timer\n");
-    mln_event_set_timer(ev, 1000, NULL, timer_handler);
+    mln_event_timer_set(ev, 1000, NULL, timer_handler);
 }
 
 static void mln_fd_write(mln_event_t *ev, int fd, void *data)
 {
     mln_log(debug, "write handler\n");
     write(fd, "hello\n", 6);
-    mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+    mln_event_fd_set(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
 }
 
 int main(int argc, char *argv[])
@@ -248,12 +248,12 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    if (mln_event_set_timer(ev, 1000, NULL, timer_handler) < 0) {
+    if (mln_event_timer_set(ev, 1000, NULL, timer_handler) < 0) {
         mln_log(error, "timer set failed.\n");
         return -1;
     }
 
-    if (mln_event_set_fd(ev, STDOUT_FILENO, M_EV_SEND, M_EV_UNLIMITED, NULL, mln_fd_write) < 0) {
+    if (mln_event_fd_set(ev, STDOUT_FILENO, M_EV_SEND, M_EV_UNLIMITED, NULL, mln_fd_write) < 0) {
         mln_log(error, "fd handler set failed.\n");
         return -1;
     }

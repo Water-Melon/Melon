@@ -313,14 +313,14 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
         return -1;
     }
     mln_rbtree_insert(thread_tree, rn);
-    if (mln_event_set_fd(ev, \
+    if (mln_event_fd_set(ev, \
                          mln_tcp_conn_get_fd(&(t->conn)), \
                          M_EV_RECV|M_EV_NONBLOCK, \
                          M_EV_UNLIMITED, \
                          t, \
                          mln_main_thread_itc_recv_handler) < 0)
     {
-        mln_log(error, "mln_event_set_fd failed.\n");
+        mln_log(error, "mln_event_fd_set failed.\n");
         mln_rbtree_delete(thread_tree, rn);
         mln_rbtree_node_free(thread_tree, rn);
         t->node = NULL;
@@ -329,7 +329,7 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
     int err;
     if ((err = pthread_create(&(t->tid), NULL, mln_thread_launcher, t)) != 0) {
         mln_log(error, "pthread_create error. %s\n", strerror(err));
-        mln_event_set_fd(ev, \
+        mln_event_fd_set(ev, \
                          mln_tcp_conn_get_fd(&(t->conn)), \
                          M_EV_CLR, \
                          M_EV_UNLIMITED, \
@@ -466,7 +466,7 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
 
         target = (mln_thread_t *)mln_rbtree_node_data(rn);
         if (target->dest_head == NULL) {
-            mln_event_set_fd(ev, \
+            mln_event_fd_set(ev, \
                              mln_tcp_conn_get_fd(&(target->conn)), \
                              M_EV_SEND|M_EV_ONESHOT|M_EV_NONBLOCK|M_EV_APPEND, \
                              M_EV_UNLIMITED, \
@@ -498,7 +498,7 @@ again:
             continue;
         } else if (ret == M_C_NOTYET) {
             mln_chain_pool_release_all(mln_tcp_conn_remove(conn, M_C_SENT));
-            mln_event_set_fd(ev, \
+            mln_event_fd_set(ev, \
                              mln_tcp_conn_get_fd(&(t->conn)), \
                              M_EV_SEND|M_EV_ONESHOT|M_EV_NONBLOCK|M_EV_APPEND, \
                              M_EV_UNLIMITED, \
@@ -569,7 +569,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
     mln_rbtree_delete(thread_tree, t->node);
     mln_rbtree_node_free(thread_tree, t->node);
     t->node = NULL;
-    mln_event_set_fd(ev, \
+    mln_event_fd_set(ev, \
                      mln_tcp_conn_get_fd(&(t->conn)), \
                      M_EV_CLR, \
                      M_EV_UNLIMITED, \

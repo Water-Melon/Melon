@@ -133,7 +133,7 @@ static void mln_master_routine(struct mln_core_attr *attr)
         mln_trace_init(ev, trace_path);
 
     mln_fork_master_set_events(ev);
-    mln_event_set_signal(SIGUSR2, mln_sig_conf_reload);
+    mln_event_signal_set(SIGUSR2, mln_sig_conf_reload);
     if (attr->master_process != NULL) attr->master_process(ev);
     mln_event_dispatch(ev);
     mln_event_free(ev);

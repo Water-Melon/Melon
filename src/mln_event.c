@@ -37,17 +37,17 @@ mln_event_fheap_timer_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
 static void
 mln_event_fheap_timer_copy(void *k1, void *k2) __NONNULL2(1,2);
 static inline void
-mln_event_set_fd_nonblock(int fd);
+mln_event_fd_nonblock_set(int fd);
 static inline void
-mln_event_set_fd_block(int fd);
+mln_event_fd_block_set(int fd);
 static inline void
-mln_event_set_fd_clr(mln_event_t *event, int fd) __NONNULL1(1);
+mln_event_fd_clr_set(mln_event_t *event, int fd) __NONNULL1(1);
 static inline void
-mln_event_deal_active_fd(mln_event_t *event) __NONNULL1(1);
-static inline void mln_event_deal_fd_timeout(mln_event_t *event);
-static inline void mln_event_deal_timer(mln_event_t *event);
+mln_event_active_fd_process(mln_event_t *event) __NONNULL1(1);
+static inline void mln_event_fd_timeout_process(mln_event_t *event);
+static inline void mln_event_timer_process(mln_event_t *event);
 static inline int
-mln_event_set_fd_normal(mln_event_t *event, \
+mln_event_fd_normal_set(mln_event_t *event, \
                         mln_event_desc_t *ed, \
                         int fd, \
                         mln_u32_t flag, \
@@ -56,7 +56,7 @@ mln_event_set_fd_normal(mln_event_t *event, \
                         ev_fd_handler fd_handler, \
                         int other_mark);
 static inline int
-mln_event_set_fd_append(mln_event_t *event, \
+mln_event_fd_append_set(mln_event_t *event, \
                         mln_event_desc_t *ed, \
                         int fd, \
                         mln_u32_t flag, \
@@ -65,7 +65,7 @@ mln_event_set_fd_append(mln_event_t *event, \
                         ev_fd_handler fd_handler, \
                         int other_mark);
 static int
-mln_event_set_fd_timeout(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms);
+mln_event_fd_timeout_set(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms);
 
 /*varliables*/
 mln_event_desc_t fheap_min = {
@@ -230,7 +230,7 @@ mln_event_desc_free(void *data)
 /*
  * ev_timer
  */
-mln_event_timer_t *mln_event_set_timer(mln_event_t *event, \
+mln_event_timer_t *mln_event_timer_set(mln_event_t *event, \
                                        mln_u32_t msec, \
                                        void *data, \
                                        ev_tm_handler tm_handler)
@@ -265,7 +265,7 @@ mln_event_timer_t *mln_event_set_timer(mln_event_t *event, \
     return fn;
 }
 
-void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer)
+void mln_event_timer_cancel(mln_event_t *event, mln_event_timer_t *timer)
 {
     pthread_mutex_lock(&event->timer_lock);
     mln_fheap_delete(event->ev_timer_heap, timer);
@@ -273,7 +273,7 @@ void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer)
     pthread_mutex_unlock(&event->timer_lock);
 }
 
-static inline void mln_event_deal_timer(mln_event_t *event)
+static inline void mln_event_timer_process(mln_event_t *event)
 {
     mln_uauto_t now;
     struct timeval tv;
@@ -314,7 +314,7 @@ lp:
 /*
  * ev_fd
  */
-void mln_event_set_fd_timeout_handler(mln_event_t *event, \
+void mln_event_fd_timeout_handler_set(mln_event_t *event, \
                                       int fd, \
                                       void *data, \
                                       ev_fd_handler timeout_handler)
@@ -337,7 +337,7 @@ void mln_event_set_fd_timeout_handler(mln_event_t *event, \
     pthread_mutex_unlock(&event->fd_lock);
 }
 
-int mln_event_set_fd(mln_event_t *event, \
+int mln_event_fd_set(mln_event_t *event, \
                      int fd, \
                      mln_u32_t flag, \
                      int timeout_ms, \
@@ -354,7 +354,7 @@ int mln_event_set_fd(mln_event_t *event, \
     }
     pthread_mutex_lock(&event->fd_lock);
     if (flag == M_EV_CLR) {
-        mln_event_set_fd_clr(event, fd);
+        mln_event_fd_clr_set(event, fd);
         pthread_mutex_unlock(&event->fd_lock);
         return 0;
     }
@@ -368,13 +368,13 @@ int mln_event_set_fd(mln_event_t *event, \
                            &tmp);
     if (!mln_rbtree_null(rn, event->ev_fd_tree)) {
         if (flag & M_EV_APPEND) {
-            if (flag & M_EV_NONBLOCK) mln_event_set_fd_nonblock(fd);
-            if (flag & M_EV_BLOCK) mln_event_set_fd_block(fd);
+            if (flag & M_EV_NONBLOCK) mln_event_fd_nonblock_set(fd);
+            if (flag & M_EV_BLOCK) mln_event_fd_block_set(fd);
             if (((mln_event_desc_t *)mln_rbtree_node_data(rn))->data.fd.is_clear) {
                 mln_log(error, "Append fd already clear.\n");
                 abort();
             }
-            if (mln_event_set_fd_append(event, \
+            if (mln_event_fd_append_set(event, \
                                         (mln_event_desc_t *)mln_rbtree_node_data(rn), \
                                         fd, \
                                         flag, \
@@ -388,11 +388,11 @@ int mln_event_set_fd(mln_event_t *event, \
             }
         } else {
             if (flag & M_EV_NONBLOCK) {
-                mln_event_set_fd_nonblock(fd);
+                mln_event_fd_nonblock_set(fd);
             } else {
-                mln_event_set_fd_block(fd);
+                mln_event_fd_block_set(fd);
             }
-            if (mln_event_set_fd_normal(event, \
+            if (mln_event_fd_normal_set(event, \
                                         (mln_event_desc_t *)(rn->data), \
                                         fd, \
                                         flag, \
@@ -409,11 +409,11 @@ int mln_event_set_fd(mln_event_t *event, \
         return 0;
     }
     if (flag & M_EV_NONBLOCK) {
-        mln_event_set_fd_nonblock(fd);
+        mln_event_fd_nonblock_set(fd);
     } else {
-        mln_event_set_fd_block(fd);
+        mln_event_fd_block_set(fd);
     }
-    if (mln_event_set_fd_normal(event, NULL, fd, flag, timeout_ms, data, fd_handler, 0) < 0) {
+    if (mln_event_fd_normal_set(event, NULL, fd, flag, timeout_ms, data, fd_handler, 0) < 0) {
         pthread_mutex_unlock(&event->fd_lock);
         return -1;
     }
@@ -422,7 +422,7 @@ int mln_event_set_fd(mln_event_t *event, \
 }
 
 static inline int
-mln_event_set_fd_normal(mln_event_t *event, \
+mln_event_fd_normal_set(mln_event_t *event, \
                         mln_event_desc_t *ed, \
                         int fd, \
                         mln_u32_t flag, \
@@ -456,7 +456,7 @@ mln_event_set_fd_normal(mln_event_t *event, \
         ev_fd_wait_chain_add(&(event->ev_fd_wait_head), \
                              &(event->ev_fd_wait_tail), \
                              ed);
-        if (mln_event_set_fd_timeout(event, ed, timeout_ms) < 0) {
+        if (mln_event_fd_timeout_set(event, ed, timeout_ms) < 0) {
             free(ed);
             return -1;
         }
@@ -474,12 +474,12 @@ mln_event_set_fd_normal(mln_event_t *event, \
             ed->data.fd.err_oneshot = 0;
             ed->data.fd.fd = fd;
         }
-        if (mln_event_set_fd_timeout(event, ed, timeout_ms) < 0) {
+        if (mln_event_fd_timeout_set(event, ed, timeout_ms) < 0) {
             return -1;
         }
     }
 
-    return mln_event_set_fd_append(event, \
+    return mln_event_fd_append_set(event, \
                                    ed, \
                                    fd, \
                                    flag, \
@@ -490,7 +490,7 @@ mln_event_set_fd_normal(mln_event_t *event, \
 }
 
 static inline int
-mln_event_set_fd_append(mln_event_t *event, \
+mln_event_fd_append_set(mln_event_t *event, \
                         mln_event_desc_t *ed, \
                         int fd, \
                         mln_u32_t flag, \
@@ -499,7 +499,7 @@ mln_event_set_fd_append(mln_event_t *event, \
                         ev_fd_handler fd_handler, \
                         int other_mark)
 {
-    if (mln_event_set_fd_timeout(event, ed, timeout_ms) < 0)
+    if (mln_event_fd_timeout_set(event, ed, timeout_ms) < 0)
         return -1;
 #if defined(MLN_EPOLL)
 #define CASE_MACRO(flg); \
@@ -654,7 +654,7 @@ mln_event_set_fd_append(mln_event_t *event, \
 }
 
 static int
-mln_event_set_fd_timeout(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms)
+mln_event_fd_timeout_set(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms)
 {
     if (timeout_ms == M_EV_UNMODIFIED) return 0;
     mln_event_fd_t *ef = &(ed->data.fd);
@@ -690,7 +690,7 @@ mln_event_set_fd_timeout(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms)
 }
 
 static inline void
-mln_event_set_fd_clr(mln_event_t *event, int fd)
+mln_event_fd_clr_set(mln_event_t *event, int fd)
 {
     mln_event_desc_t tmp, *ed;
     memset(&tmp, 0, sizeof(tmp));
@@ -750,7 +750,7 @@ mln_event_set_fd_clr(mln_event_t *event, int fd)
 /*
  * set dispatch callback
  */
-void mln_event_set_callback(mln_event_t *ev, \
+void mln_event_callback_set(mln_event_t *ev, \
                             dispatch_callback dc, \
                             void *dc_data)
 {
@@ -764,7 +764,7 @@ void mln_event_set_callback(mln_event_t *ev, \
  * tools
  */
 static inline void
-mln_event_set_fd_nonblock(int fd)
+mln_event_fd_nonblock_set(int fd)
 {
 #if defined(WIN32)
     u_long opt = 1;
@@ -784,7 +784,7 @@ mln_event_set_fd_nonblock(int fd)
 }
 
 static inline void
-mln_event_set_fd_block(int fd)
+mln_event_fd_block_set(int fd)
 {
 #if defined(WIN32)
     u_long opt = 0;
@@ -830,13 +830,13 @@ void mln_event_dispatch(mln_event_t *event)
             }
         }
         BREAK_OUT();
-        mln_event_deal_timer(event);
+        mln_event_timer_process(event);
         BREAK_OUT();
-        mln_event_deal_active_fd(event);
+        mln_event_active_fd_process(event);
         BREAK_OUT();
-        mln_event_deal_fd_timeout(event);
+        mln_event_fd_timeout_process(event);
         BREAK_OUT();
-        mln_event_deal_timer(event);
+        mln_event_timer_process(event);
         BREAK_OUT();
 
         if (pthread_mutex_trylock(&event->fd_lock)) {
@@ -869,7 +869,7 @@ void mln_event_dispatch(mln_event_t *event)
                     if (ed->data.fd.rd_oneshot) {
                         if (ed->data.fd.in_active || ed->data.fd.in_process) {
                             if (!(ed->data.fd.active_flag & M_EV_RECV))
-                                mln_event_set_fd_append(event, \
+                                mln_event_fd_append_set(event, \
                                                         ed, \
                                                         ed->data.fd.fd, \
                                                         M_EV_RECV|M_EV_ONESHOT, \
@@ -890,7 +890,7 @@ void mln_event_dispatch(mln_event_t *event)
                     if (ed->data.fd.wr_oneshot) {
                         if (ed->data.fd.in_active || ed->data.fd.in_process) {
                             if (!(ed->data.fd.active_flag & M_EV_SEND))
-                                mln_event_set_fd_append(event, \
+                                mln_event_fd_append_set(event, \
                                                         ed, \
                                                         ed->data.fd.fd, \
                                                         M_EV_SEND|M_EV_ONESHOT, \
@@ -911,7 +911,7 @@ void mln_event_dispatch(mln_event_t *event)
                     if (ed->data.fd.err_oneshot) {
                         if (ed->data.fd.in_active || ed->data.fd.in_process) {
                             if (!(ed->data.fd.active_flag & M_EV_ERROR))
-                                mln_event_set_fd_append(event, \
+                                mln_event_fd_append_set(event, \
                                                         ed, \
                                                         ed->data.fd.fd, \
                                                         M_EV_ERROR|M_EV_ONESHOT, \
@@ -981,13 +981,13 @@ void mln_event_dispatch(mln_event_t *event)
             }
         }
         BREAK_OUT();
-        mln_event_deal_timer(event);
+        mln_event_timer_process(event);
         BREAK_OUT();
-        mln_event_deal_active_fd(event);
+        mln_event_active_fd_process(event);
         BREAK_OUT();
-        mln_event_deal_fd_timeout(event);
+        mln_event_fd_timeout_process(event);
         BREAK_OUT();
-        mln_event_deal_timer(event);
+        mln_event_timer_process(event);
         BREAK_OUT();
 
         if (pthread_mutex_trylock(&event->fd_lock)) {
@@ -1023,7 +1023,7 @@ void mln_event_dispatch(mln_event_t *event)
                     if (ed->data.fd.rd_oneshot) {
                         if (ed->data.fd.in_active || ed->data.fd.in_process) {
                             if (!(ed->data.fd.active_flag & M_EV_RECV))
-                                mln_event_set_fd_append(event, \
+                                mln_event_fd_append_set(event, \
                                                         ed, \
                                                         ed->data.fd.fd, \
                                                         M_EV_RECV|M_EV_ONESHOT, \
@@ -1048,7 +1048,7 @@ void mln_event_dispatch(mln_event_t *event)
                     if (ed->data.fd.wr_oneshot) {
                         if (ed->data.fd.in_active || ed->data.fd.in_process) {
                             if (!(ed->data.fd.active_flag & M_EV_SEND))
-                                mln_event_set_fd_append(event, \
+                                mln_event_fd_append_set(event, \
                                                         ed, \
                                                         ed->data.fd.fd, \
                                                         M_EV_SEND|M_EV_ONESHOT, \
@@ -1073,7 +1073,7 @@ void mln_event_dispatch(mln_event_t *event)
                     if (ed->data.fd.err_oneshot) {
                         if (ed->data.fd.in_active || ed->data.fd.in_process) {
                             if (!(ed->data.fd.active_flag & M_EV_ERROR))
-                                mln_event_set_fd_append(event, \
+                                mln_event_fd_append_set(event, \
                                                         ed, \
                                                         ed->data.fd.fd, \
                                                         M_EV_ERROR|M_EV_ONESHOT, \
@@ -1124,13 +1124,13 @@ void mln_event_dispatch(mln_event_t *event)
             }
         }
         BREAK_OUT();
-        mln_event_deal_timer(event);
+        mln_event_timer_process(event);
         BREAK_OUT();
-        mln_event_deal_active_fd(event);
+        mln_event_active_fd_process(event);
         BREAK_OUT();
-        mln_event_deal_fd_timeout(event);
+        mln_event_fd_timeout_process(event);
         BREAK_OUT();
-        mln_event_deal_timer(event);
+        mln_event_timer_process(event);
         BREAK_OUT();
         event->select_fd = 1;
         FD_ZERO(rd_set);
@@ -1223,7 +1223,7 @@ void mln_event_dispatch(mln_event_t *event)
 #endif
 
 static inline void
-mln_event_deal_active_fd(mln_event_t *event)
+mln_event_active_fd_process(mln_event_t *event)
 {
     mln_event_desc_t *ed;
     mln_event_fd_t *ef;
@@ -1289,7 +1289,7 @@ lp:
         }
         ef->in_process = 0;
 
-        if (ef->is_clear) mln_event_set_fd_clr(event, ef->fd);
+        if (ef->is_clear) mln_event_fd_clr_set(event, ef->fd);
 
         pthread_mutex_unlock(&event->fd_lock);
 
@@ -1300,7 +1300,7 @@ lp:
     }
 }
 
-static inline void mln_event_deal_fd_timeout(mln_event_t *event)
+static inline void mln_event_fd_timeout_process(mln_event_t *event)
 {
     mln_u64_t now;
     struct timeval tv;
@@ -1350,7 +1350,7 @@ lp:
 
     ef->in_process = 0;
 
-    if (ef->is_clear) mln_event_set_fd_clr(event, ef->fd);
+    if (ef->is_clear) mln_event_fd_clr_set(event, ef->fd);
 
     pthread_mutex_unlock(&event->fd_lock);
 

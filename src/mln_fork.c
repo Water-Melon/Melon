@@ -390,14 +390,14 @@ do_fork_core(enum proc_exec_type etype, \
             abort();
         }
         if (master_ev != NULL) {
-            if (mln_event_set_fd(master_ev, \
+            if (mln_event_fd_set(master_ev, \
                                  mln_tcp_conn_get_fd(&(f->conn)), \
                                  M_EV_RECV, \
                                  M_EV_UNLIMITED, \
                                  f, \
                                  mln_ipc_fd_handler_master) < 0)
             {
-                mln_log(error, "mln_event_set_fd() failed.\n");
+                mln_log(error, "mln_event_fd_set() failed.\n");
                 abort();
             }
         }
@@ -490,14 +490,14 @@ void mln_fork_master_set_events(mln_event_t *ev)
 {
     mln_fork_t *f;
     for (f = worker_list_head; f != NULL; f = f->next) {
-        if (mln_event_set_fd(ev, \
+        if (mln_event_fd_set(ev, \
                              mln_tcp_conn_get_fd(&(f->conn)), \
                              M_EV_RECV|M_EV_NONBLOCK, \
                              M_EV_UNLIMITED, \
                              f, \
                              mln_ipc_fd_handler_master) < 0)
         {
-            mln_log(error, "mln_event_set_fd() failed.\n");
+            mln_log(error, "mln_event_fd_set() failed.\n");
             abort();
         }
     }
@@ -505,14 +505,14 @@ void mln_fork_master_set_events(mln_event_t *ev)
 
 void mln_fork_worker_set_events(mln_event_t *ev)
 {
-    if (mln_event_set_fd(ev, \
+    if (mln_event_fd_set(ev, \
                          mln_tcp_conn_get_fd(&master_conn), \
                          M_EV_RECV|M_EV_NONBLOCK, \
                          M_EV_UNLIMITED, \
                          NULL, \
                          mln_ipc_fd_handler_worker) < 0)
     {
-        mln_log(error, "mln_event_set_fd() failed.\n");
+        mln_log(error, "mln_event_fd_set() failed.\n");
         abort();
     }
 }
@@ -698,7 +698,7 @@ mln_ipc_fd_handler_master_process(mln_event_t *ev, mln_fork_t *f)
 
 void mln_socketpair_close_handler(mln_event_t *ev, mln_fork_t *f, int fd)
 {
-    mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+    mln_event_fd_set(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     enum proc_exec_type etype = f->etype;
     enum proc_state_type stype = f->stype;
     mln_s8ptr_t *args = f->args;
@@ -711,7 +711,7 @@ void mln_socketpair_close_handler(mln_event_t *ev, mln_fork_t *f, int fd)
                 mln_log(error, "mln_fork_restart() error.\n");
                 abort();
             } else if (rv == 0) {
-                mln_event_set_break(ev);
+                mln_event_break_set(ev);
             } else {
                 mln_log(report, "Child process restart.\n");
             }
@@ -849,7 +849,7 @@ int mln_ipc_master_send_prepare(mln_event_t *ev, \
 
     mln_tcp_conn_append(conn, c, M_C_SEND);
 
-    mln_event_set_fd(ev, \
+    mln_event_fd_set(ev, \
                      mln_tcp_conn_get_fd(conn), \
                      M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, \
                      M_EV_UNLIMITED, \
@@ -873,7 +873,7 @@ mln_ipc_fd_handler_master_send(mln_event_t *ev, int fd, void *data)
             continue;
         } else if (ret == M_C_NOTYET) {
             mln_chain_pool_release_all(mln_tcp_conn_remove(conn, M_C_SENT));
-            mln_event_set_fd(ev, \
+            mln_event_fd_set(ev, \
                              mln_tcp_conn_get_fd(conn), \
                              M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, \
                              M_EV_UNLIMITED, \
@@ -936,7 +936,7 @@ int mln_ipc_worker_send_prepare(mln_event_t *ev, \
 
     mln_tcp_conn_append(conn, c, M_C_SEND);
 
-    mln_event_set_fd(ev, \
+    mln_event_fd_set(ev, \
                      mln_tcp_conn_get_fd(conn), \
                      M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, \
                      M_EV_UNLIMITED, \
@@ -959,7 +959,7 @@ mln_ipc_fd_handler_worker_send(mln_event_t *ev, int fd, void *data)
             continue;
         } else if (ret == M_C_NOTYET) {
             mln_chain_pool_release_all(mln_tcp_conn_remove(conn, M_C_SENT));
-            mln_event_set_fd(ev, \
+            mln_event_fd_set(ev, \
                              mln_tcp_conn_get_fd(conn), \
                              M_EV_SEND|M_EV_APPEND|M_EV_NONBLOCK|M_EV_ONESHOT, \
                              M_EV_UNLIMITED, \

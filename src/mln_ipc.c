@@ -12,7 +12,7 @@
  * IPC only act on the control thread (main thread) and the parent process.
  * If you need to send something to the peer,
  * you can call mln_tcp_conn_init to initialize a connection and set its
- * send buffer, then call mln_event_set_fd() to set send event.
+ * send buffer, then call mln_event_fd_set() to set send event.
  * All above operations mean that you can customize the send routine.
  */
 

@@ -136,31 +136,31 @@ struct mln_event_s {
 #endif
 };
 
-#define mln_event_set_break(ev) ((ev)->is_break = 1);
-#define mln_event_reset_break(ev) ((ev)->is_break = 0);
-#define mln_event_set_signal signal
+#define mln_event_break_set(ev) ((ev)->is_break = 1);
+#define mln_event_break_reset(ev) ((ev)->is_break = 0);
+#define mln_event_signal_set signal
 extern mln_event_t *mln_event_new(void);
 extern void mln_event_free(mln_event_t *ev);
 extern void mln_event_dispatch(mln_event_t *event) __NONNULL1(1);
 extern int
-mln_event_set_fd(mln_event_t *event, \
+mln_event_fd_set(mln_event_t *event, \
                  int fd, \
                  mln_u32_t flag, \
                  int timeout_ms, \
                  void *data, \
                  ev_fd_handler fd_handler) __NONNULL1(1);
 extern mln_event_timer_t *
-mln_event_set_timer(mln_event_t *event, \
+mln_event_timer_set(mln_event_t *event, \
                     mln_u32_t msec, \
                     void *data, \
                     ev_tm_handler tm_handler) __NONNULL1(1);
-extern void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer) __NONNULL2(1,2);
+extern void mln_event_timer_cancel(mln_event_t *event, mln_event_timer_t *timer) __NONNULL2(1,2);
 extern void
-mln_event_set_fd_timeout_handler(mln_event_t *event, \
+mln_event_fd_timeout_handler_set(mln_event_t *event, \
                                  int fd, \
                                  void *data, \
                                  ev_fd_handler timeout_handler) __NONNULL1(1);
-extern void mln_event_set_callback(mln_event_t *ev, \
+extern void mln_event_callback_set(mln_event_t *ev, \
                                    dispatch_callback dc, \
                                    void *dc_data) __NONNULL1(1);
 #endif

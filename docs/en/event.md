@@ -52,16 +52,16 @@ void mln_event_dispatch(mln_event_t *event);
 
 Description: Dispatches an event on the event set `event`. When an event is triggered, the corresponding callback function will be called for processing.
 
-**Note**: This function will not return without calling `mln_event_set_break`.
+**Note**: This function will not return without calling `mln_event_break_set`.
 
 Return value: none
 
 
 
-#### mln_event_set_fd
+#### mln_event_fd_set
 
 ```c
-int mln_event_set_fd(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms, void *data, ev_fd_handler fd_handler);
+int mln_event_fd_set(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms, void *data, ev_fd_handler fd_handler);
 
 typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);s
 ```
@@ -97,30 +97,30 @@ Return value: return `0` if successful, otherwise return `-1`
 
 
 
-#### mln_event_set_fd_timeout_handler
+#### mln_event_fd_timeout_handler_set
 
 ```c
-void mln_event_set_fd_timeout_handler(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
+void mln_event_fd_timeout_handler_set(mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler);
 ```
 
 Description: Set the descriptor event timeout handler, where:
 
 - `fd` is the file descriptor.
 - `data` is a user data structure related to timeout processing, which can be defined by yourself.
-- `timeout_handler` is the same as the callback function type of `mln_event_set_fd` function to handle timeout events.
+- `timeout_handler` is the same as the callback function type of `mln_event_fd_set` function to handle timeout events.
 
-This function needs to be used in conjunction with the `mln_event_set_fd` function, first use `mln_event_set_fd` to set the event, and then use this function to set the timeout processing function.
+This function needs to be used in conjunction with the `mln_event_fd_set` function, first use `mln_event_fd_set` to set the event, and then use this function to set the timeout processing function.
 
-The reason for this is that some events may not need special functions for processing after timeout, and if they are all set in the `mln_event_set_fd` function, it will lead to too many parameters and too complicated.
+The reason for this is that some events may not need special functions for processing after timeout, and if they are all set in the `mln_event_fd_set` function, it will lead to too many parameters and too complicated.
 
 Return value: none
 
 
 
-#### mln_event_set_timer
+#### mln_event_timer_set
 
 ```c
-int mln_event_set_timer(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
+int mln_event_timer_set(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler);
 
 typedef void (*ev_tm_handler)  (mln_event_t *, void *);
 ```
@@ -137,10 +137,10 @@ Return value: If successful, return the timer handle pointer, otherwise return `
 
 
 
-#### mln_event_cancel_timer
+#### mln_event_timer_cancel
 
 ```c
-void mln_event_cancel_timer(mln_event_t *event, mln_event_timer_t *timer);
+void mln_event_timer_cancel(mln_event_t *event, mln_event_timer_t *timer);
 ```
 
 Description: Cancel the timer that has been set. This function needs to ensure that `timer` is a timeout event handler that has been set but not triggered.
@@ -149,12 +149,12 @@ Return value: none
 
 
 
-#### mln_event_set_signal
+#### mln_event_signal_set
 
 ```c
 typedef void (*sig_t)(int);
 
-sig_t mln_event_set_signal(int signo, sig_t handle);
+sig_t mln_event_signal_set(int signo, sig_t handle);
 ```
 
 Description: Set the signal handle. It is the alias of system `signal`.
@@ -163,10 +163,10 @@ Return value: The signal handle before setting.
 
 
 
-#### mln_event_set_break
+#### mln_event_break_set
 
 ```c
-mln_event_set_break(ev);
+mln_event_break_set(ev);
 ```
 
 Description: Interrupt event processing so that the `mln_event_dispatch` function returns.
@@ -175,10 +175,10 @@ Return value: none
 
 
 
-#### mln_event_reset_break
+#### mln_event_break_reset
 
 ```c
-mln_event_reset_break(ev);
+mln_event_break_reset(ev);
 ```
 
 Description: Reset break flag.
@@ -187,7 +187,7 @@ Return value: none
 
 
 
-#### mln_event_set_callback
+#### mln_event_callback_set
 
 ```c
 void (mln_event_t *ev, dispatch_callback dc, void *dc_data);
@@ -217,14 +217,14 @@ Return value: none
 static void timer_handler(mln_event_t *ev, void *data)
 {
     mln_log(debug, "timer\n");
-    mln_event_set_timer(ev, 1000, NULL, timer_handler);
+    mln_event_timer_set(ev, 1000, NULL, timer_handler);
 }
 
 static void mln_fd_write(mln_event_t *ev, int fd, void *data)
 {
     mln_log(debug, "write handler\n");
     write(fd, "hello\n", 6);
-    mln_event_set_fd(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+    mln_event_fd_set(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
 }
 
 int main(int argc, char *argv[])
@@ -248,12 +248,12 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    if (mln_event_set_timer(ev, 1000, NULL, timer_handler) < 0) {
+    if (mln_event_timer_set(ev, 1000, NULL, timer_handler) < 0) {
         mln_log(error, "timer set failed.\n");
         return -1;
     }
 
-    if (mln_event_set_fd(ev, STDOUT_FILENO, M_EV_SEND, M_EV_UNLIMITED, NULL, mln_fd_write) < 0) {
+    if (mln_event_fd_set(ev, STDOUT_FILENO, M_EV_SEND, M_EV_UNLIMITED, NULL, mln_fd_write) < 0) {
         mln_log(error, "fd handler set failed.\n");
         return -1;
     }

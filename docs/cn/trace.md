@@ -114,12 +114,12 @@ mln_lang_ctx_t *mln_trace_task_get(void);
    static void timeout_handler(mln_event_t *ev, void *data)
    {
        mln_trace("sir", "Hello", getpid(), 3.1);
-       mln_event_set_timer(ev, 1000, NULL, timeout_handler);
+       mln_event_timer_set(ev, 1000, NULL, timeout_handler);
    }
 
    static void worker_process(mln_event_t *ev)
    {
-       mln_event_set_timer(ev, 1000, NULL, timeout_handler);
+       mln_event_timer_set(ev, 1000, NULL, timeout_handler);
    }
 
    int main(int argc, char *argv[])

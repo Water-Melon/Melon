@@ -57,7 +57,7 @@ int mln_trace_init(mln_event_t *ev, mln_string_t *path)
         goto err3;
     }
 
-    if (mln_event_set_timer(ev, 10, NULL, mln_trace_lang_check) == NULL) {
+    if (mln_event_timer_set(ev, 10, NULL, mln_trace_lang_check) == NULL) {
         goto err3;
     }
 
@@ -84,18 +84,18 @@ static void mln_trace_lang_check(mln_event_t *ev, void *data)
         trace_lang = NULL;
         trace_ctx = NULL;
     } else {
-        mln_event_set_timer(ev, 10, NULL, mln_trace_lang_check);
+        mln_event_timer_set(ev, 10, NULL, mln_trace_lang_check);
     }
 }
 
 static int mln_trace_lang_signal(mln_lang_t *lang)
 {
-    return mln_event_set_fd(mln_lang_event_get(lang), trace_signal_fds[0], M_EV_SEND|M_EV_ONESHOT, M_EV_UNLIMITED, lang, mln_lang_launcher_get(lang));
+    return mln_event_fd_set(mln_lang_event_get(lang), trace_signal_fds[0], M_EV_SEND|M_EV_ONESHOT, M_EV_UNLIMITED, lang, mln_lang_launcher_get(lang));
 }
 
 static int mln_trace_lang_clear(mln_lang_t *lang)
 {
-    return mln_event_set_fd(mln_lang_event_get(lang), trace_signal_fds[0], M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
+    return mln_event_fd_set(mln_lang_event_get(lang), trace_signal_fds[0], M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
 }
 
 static void mln_trace_lang_ctx_return_handler(mln_lang_ctx_t *ctx)
