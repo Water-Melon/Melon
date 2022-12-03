@@ -16,6 +16,7 @@ For Melang and its supporting library, please refer to [Melang Warehouse](https:
 >
 > 1. `trace_mode` in the configuration will only be valid when the framework mode is turned on (`framework` is `on`).
 > 2. If you are in non-framework mode, or `trace_mode` is not enabled in the configuration, but you still want to use this function, you can initialize it by calling `mln_trace_init`.
+> 3. In this mode, the system has a certain performance loss, so try not to enable this mode in a production environment. If it must be enabled, you can use a separate thread to run scripts to collect data, which can effectively reduce the performance loss of worker threads.
 
 
 
@@ -109,33 +110,33 @@ After installing Melon, we proceed as follows:
    #include "mln_core.h"
    #include "mln_trace.h"
    #include "mln_conf.h"
-
+   
    static void timeout_handler(mln_event_t *ev, void *data)
    {
        mln_trace("sir", "Hello", getpid(), 3.1);
        mln_event_timer_set(ev, 1000, NULL, timeout_handler);
    }
-
+   
    static void worker_process(mln_event_t *ev)
    {
        mln_event_timer_set(ev, 1000, NULL, timeout_handler);
    }
-
+   
    int main(int argc, char *argv[])
    {
        struct mln_core_attr cattr;
-
+   
        cattr.argc = argc;
        cattr.argv = argv;
        cattr.global_init = NULL;
        cattr.master_process = NULL;
        cattr.worker_process = worker_process;
-
+   
        if (mln_core_init(&cattr) < 0) {
           fprintf(stderr, "Melon init failed.\n");
           return -1;
        }
-
+   
        return 0;
    }
    ```

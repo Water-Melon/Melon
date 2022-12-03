@@ -93,3 +93,13 @@ Please refer to [Github Pages](https://water-melon.github.io/Melon/) for more de
 
 中文文档请参考：[中文指南](https://water-melon.github.io/Melon/cn/)
 
+
+
+### Docker
+
+You can pull the built container image to deploy the running environment.
+
+```shell
+docker pull melonc/melon
+```
+

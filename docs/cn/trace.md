@@ -16,6 +16,7 @@
 >
 > 1. 配置中的`trace_mode`只有在开启框架模式（`framework`为`on`）时才会有效。
 > 2. 若在非框架模式下，或在配置中未启用`trace_mode`，但仍想使用该功能，则可以通过调用`mln_trace_init`进行初始化。
+> 3. 该模式下，系统存在一定的性能损耗，因此生产环境下尽量不要开启此模式。如若必须开启，则可以使用单独线程来运行脚本收集上报数据，可有效降低工作线程的性能损耗。
 
 
 
@@ -110,33 +111,33 @@ mln_lang_ctx_t *mln_trace_task_get(void);
    #include "mln_core.h"
    #include "mln_trace.h"
    #include "mln_conf.h"
-
+   
    static void timeout_handler(mln_event_t *ev, void *data)
    {
        mln_trace("sir", "Hello", getpid(), 3.1);
        mln_event_timer_set(ev, 1000, NULL, timeout_handler);
    }
-
+   
    static void worker_process(mln_event_t *ev)
    {
        mln_event_timer_set(ev, 1000, NULL, timeout_handler);
    }
-
+   
    int main(int argc, char *argv[])
    {
        struct mln_core_attr cattr;
-
+   
        cattr.argc = argc;
        cattr.argv = argv;
        cattr.global_init = NULL;
        cattr.master_process = NULL;
        cattr.worker_process = worker_process;
-
+   
        if (mln_core_init(&cattr) < 0) {
           fprintf(stderr, "Melon init failed.\n");
           return -1;
        }
-
+   
        return 0;
    }
    ```

@@ -33,3 +33,13 @@ $ sudo ldconfig
 
 By default, Melon is installed in `/usr/local/melon` on UNIX and `$HOME/libmelon` on Windows.
 
+
+
+#### Docker
+
+You can pull the built container image to deploy the running environment
+
+```shell
+docker pull melonc/melon
+```
+

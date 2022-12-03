@@ -33,3 +33,13 @@ $ sudo ldconfig
 
 默认情况下，UNIX中Melon会被安装在`/usr/local/melon`下，Windows中会安装于`$HOME/libmelon`中。
 
+
+
+#### Docker
+
+可以直接使用如下命令拉取已构建好的Melon环境，其中也包含了Melang脚本所使用到的系统库
+
+```shell
+docker pull melonc/melon
+```
+
