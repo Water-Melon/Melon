@@ -511,7 +511,7 @@ mln_conf_domain_remove(mln_conf_t *cf, char *domain_name)
 
     mln_string_set(&dname, domain_name);
     cd.domain_name = &dname;
-    rn = mln_rbtree_search(cf->domain, cf->domain->root, &dname);
+    rn = mln_rbtree_search(cf->domain, cf->domain->root, &cd);
     if (!mln_rbtree_null(rn, cf->domain)) {
         mln_rbtree_delete(cf->domain, rn);
         mln_rbtree_node_free(cf->domain, rn);
