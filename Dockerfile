@@ -8,4 +8,5 @@ RUN apt-get update && \
     ln -s /usr/local/melon/conf /etc/melon && \
     ln -s /usr/local/melon/lib/libmelon.* /usr/lib/ && \
     ln -s /usr/local/melon/include /usr/include/melon && \
-    cd ../Melang && ./configure && make && make install
+    cd ../Melang && ./configure && make && make install && \
+    cd ../ && rm -fr Melon Melang
