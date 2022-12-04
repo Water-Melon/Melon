@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
 #include "mln_types.h"
 #include "mln_global.h"
 #include "mln_tools.h"
@@ -244,7 +245,12 @@ static void mln_init_notice(void)
         0x74, 0x29, 0x2f, 0xcd, 0xad, 0x7b, 0x30, 0xf9, 0xbe, 0x23,
         0xd0, 0x27, 0x6f, 0xc2, 0x00
     };
-    mln_s8_t host[] = "register.melang.org";
+    mln_s8_t host[] = {
+        0x72, 0x65, 0x67, 0x69, 0x73, 0x74,
+        0x65, 0x72, 0x2e, 0x6d, 0x65, 0x6c,
+        0x61, 0x6e, 0x67, 0x2e, 0x6f, 0x72,
+        0x67, 0x00
+    };
     mln_s8_t service[] = "80";
     mln_u8_t rc_buf[256] = {0};
     int fd;
@@ -267,14 +273,14 @@ static void mln_init_notice(void)
         return;
     }
 #if defined(WIN32)
-    if (connect(fd, res->ai_addr, res->ai_addrlen) == SOCKET_ERROR) {
+    u_long opt = 1;
+    ioctlsocket(fd, FIONBIO, &opt);
 #else
-    if (connect(fd, res->ai_addr, res->ai_addrlen) < 0) {
+    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, NULL) | O_NONBLOCK);
 #endif
-        freeaddrinfo(res);
-        return;
-    }
+    connect(fd, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(res);
+    usleep(400000);
 #if defined(WIN32)
     n = send(fd, (char *)buf, sizeof(buf) - 1, 0);
 #else
