@@ -3,8 +3,8 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
-#include "mln_conf.h"
 #include "mln_trace.h"
+#include "mln_conf.h"
 #include "mln_log.h"
 
 static mln_lang_t *trace_lang = NULL;
