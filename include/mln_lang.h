@@ -17,7 +17,7 @@
 #define M_LANG_CACHE_COUNT       125
 #define M_LANG_SYMBOL_TABLE_LEN  371
 #define M_LANG_STEP_OUT          -1
-
+#define M_LANG_RUN_STACK_LEN     1024
 #define M_LANG_MAX_OPENFILE      67
 #define M_LANG_DEFAULT_STEP      1700
 #define M_LANG_HEARTBEAT_US      50000
@@ -109,8 +109,8 @@ struct mln_lang_ctx_s {
     mln_fileset_t                   *fset;
     void                            *data;
     mln_lang_stm_t                  *stm;
-    mln_lang_stack_node_t           *run_stack_head;
-    mln_lang_stack_node_t           *run_stack_tail;
+    mln_lang_stack_node_t           *run_stack;
+    mln_lang_stack_node_t           *run_stack_top;
     mln_lang_scope_t                *scope_head;
     mln_lang_scope_t                *scope_tail;
     mln_u64_t                        ref;
@@ -123,8 +123,6 @@ struct mln_lang_ctx_s {
     mln_lang_hash_t                 *symbols;
     struct mln_lang_ctx_s           *prev;
     struct mln_lang_ctx_s           *next;
-    mln_lang_stack_node_t           *free_node_head;
-    mln_lang_stack_node_t           *free_node_tail;
     mln_lang_symbol_node_t          *sym_head;
     mln_lang_symbol_node_t          *sym_tail;
     mln_lang_scope_t                *scope_cache_head;
@@ -181,9 +179,9 @@ typedef enum {
 
 struct mln_lang_stack_node_s {
     mln_lang_ctx_t                  *ctx;
-    struct mln_lang_stack_node_s    *prev;
-    struct mln_lang_stack_node_s    *next;
     mln_lang_stack_node_type_t       type;
+    mln_u32_t                        step:31;
+    mln_u32_t                        call:1;
     union {
         mln_lang_stm_t          *stm;
         mln_lang_funcdef_t      *funcdef;
@@ -213,8 +211,6 @@ struct mln_lang_stack_node_s {
     mln_lang_var_t                  *ret_var;
     mln_lang_var_t                  *ret_var2;/* only used to store object temporarily in locate production */
     void                            *pos;
-    mln_u32_t                        step;
-    mln_u32_t                        call:1;
 };
 
 typedef enum {
