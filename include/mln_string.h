@@ -40,8 +40,11 @@ typedef struct {
         (pstring)->ref = 1;\
         (pstring);\
     })
-#define mln_string_ref(pstring) \
-    (++(pstring)->ref, (pstring))
+#define mln_string_ref(pstring) ({\
+    mln_string_t *__s = (pstring);\
+    ++__s->ref;\
+    __s;\
+})
 
 #define mln_string_free(pstr) \
 ({\

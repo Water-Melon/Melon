@@ -14,10 +14,11 @@
 #include "mln_gc.h"
 #include "mln_alloc.h"
 
-#define M_LANG_CACHE_COUNT       125
+#define M_LANG_CACHE_COUNT       65535
 #define M_LANG_SYMBOL_TABLE_LEN  371
 #define M_LANG_STEP_OUT          -1
 #define M_LANG_RUN_STACK_LEN     1024
+#define M_LANG_SCOPE_LEN         1024
 #define M_LANG_MAX_OPENFILE      67
 #define M_LANG_DEFAULT_STEP      1700
 #define M_LANG_HEARTBEAT_US      50000
@@ -103,53 +104,6 @@ struct mln_lang_s {
     pthread_mutex_t                  lock;
 };
 
-struct mln_lang_ctx_s {
-    mln_lang_t                      *lang;
-    mln_alloc_t                     *pool;
-    mln_fileset_t                   *fset;
-    void                            *data;
-    mln_lang_stm_t                  *stm;
-    mln_lang_stack_node_t           *run_stack;
-    mln_lang_stack_node_t           *run_stack_top;
-    mln_lang_scope_t                *scope_head;
-    mln_lang_scope_t                *scope_tail;
-    mln_u64_t                        ref;
-    mln_string_t                    *filename;
-    mln_rbtree_t                    *resource_set;
-    mln_lang_var_t                  *ret_var;
-    mln_lang_return_handler          return_handler;
-    mln_lang_ast_cache_t            *cache;
-    mln_gc_t                        *gc;
-    mln_lang_hash_t                 *symbols;
-    struct mln_lang_ctx_s           *prev;
-    struct mln_lang_ctx_s           *next;
-    mln_lang_symbol_node_t          *sym_head;
-    mln_lang_symbol_node_t          *sym_tail;
-    mln_lang_scope_t                *scope_cache_head;
-    mln_lang_scope_t                *scope_cache_tail;
-    pthread_t                        owner;
-    mln_u32_t                        sym_count:8;
-    mln_u32_t                        scope_count:8;
-    mln_u32_t                        ret_flag:1;
-    /*flags for operator overloading*/
-    mln_u32_t                        op_array_flag:1;
-    mln_u32_t                        op_bool_flag:1;
-    mln_u32_t                        op_func_flag:1;
-    mln_u32_t                        op_int_flag:1;
-    mln_u32_t                        op_nil_flag:1;
-    mln_u32_t                        op_obj_flag:1;
-    mln_u32_t                        op_real_flag:1;
-    mln_u32_t                        op_str_flag:1;
-    mln_u32_t                        quit:1;
-    mln_u32_t                        padding:6;
-};
-
-struct mln_lang_resource_s {
-    mln_string_t                    *name;
-    void                            *data;
-    mln_lang_resource_free           free_handler;
-};
-
 typedef enum {
     M_LSNT_STM = 0,
     M_LSNT_FUNCDEF,
@@ -227,8 +181,50 @@ struct mln_lang_scope_s {
     mln_uauto_t                      layer;
     mln_lang_symbol_node_t          *sym_head;
     mln_lang_symbol_node_t          *sym_tail;
-    mln_lang_scope_t                *prev;
-    mln_lang_scope_t                *next;
+};
+
+struct mln_lang_ctx_s {
+    mln_lang_t                      *lang;
+    mln_alloc_t                     *pool;
+    mln_fileset_t                   *fset;
+    void                            *data;
+    mln_lang_stm_t                  *stm;
+    mln_lang_stack_node_t            run_stack[M_LANG_RUN_STACK_LEN + 1];
+    mln_lang_stack_node_t           *run_stack_top;
+    mln_lang_scope_t                 scopes[M_LANG_SCOPE_LEN + 1];
+    mln_lang_scope_t                *scope_top;
+    mln_u64_t                        ref;
+    mln_string_t                    *filename;
+    mln_rbtree_t                    *resource_set;
+    mln_lang_var_t                  *ret_var;
+    mln_lang_return_handler          return_handler;
+    mln_lang_ast_cache_t            *cache;
+    mln_gc_t                        *gc;
+    mln_lang_hash_t                 *symbols;
+    struct mln_lang_ctx_s           *prev;
+    struct mln_lang_ctx_s           *next;
+    mln_lang_symbol_node_t          *sym_head;
+    mln_lang_symbol_node_t          *sym_tail;
+    pthread_t                        owner;
+    mln_u32_t                        sym_count:16;
+    mln_u32_t                        ret_flag:1;
+    /*flags for operator overloading*/
+    mln_u32_t                        op_array_flag:1;
+    mln_u32_t                        op_bool_flag:1;
+    mln_u32_t                        op_func_flag:1;
+    mln_u32_t                        op_int_flag:1;
+    mln_u32_t                        op_nil_flag:1;
+    mln_u32_t                        op_obj_flag:1;
+    mln_u32_t                        op_real_flag:1;
+    mln_u32_t                        op_str_flag:1;
+    mln_u32_t                        quit:1;
+    mln_u32_t                        padding:6;
+};
+
+struct mln_lang_resource_s {
+    mln_string_t                    *name;
+    void                            *data;
+    mln_lang_resource_free           free_handler;
 };
 
 typedef enum {

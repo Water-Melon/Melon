@@ -84,14 +84,6 @@ MLN_CHAIN_FUNC_DEFINE(mln_lang_ctx, \
                       static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_scope, \
-                       mln_lang_scope_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_lang_scope, \
-                      mln_lang_scope_t, \
-                      static inline void, \
-                      prev, \
-                      next);
 MLN_CHAIN_FUNC_DECLARE(mln_lang_var, \
                        mln_lang_var_t, \
                        static inline void,);
@@ -151,13 +143,6 @@ mln_lang_stack_node_set_ret_var(mln_lang_stack_node_t *node, mln_lang_var_t *ret
 static inline void mln_lang_ctx_reset_ret_var(mln_lang_ctx_t *ctx);
 static inline void __mln_lang_ctx_set_ret_var(mln_lang_ctx_t *ctx, mln_lang_var_t *var);
 static inline void mln_lang_ctx_get_node_ret_val(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *node);
-static inline mln_lang_scope_t *
-mln_lang_scope_new(mln_lang_ctx_t *ctx, \
-                   mln_string_t *name, \
-                   mln_lang_scope_type_t type, \
-                   mln_lang_stack_node_t *cur_stack, \
-                   mln_lang_stm_t *entry_stm);
-static inline void mln_lang_scope_free(mln_lang_scope_t *scope);
 static inline mln_lang_symbol_node_t *
 mln_lang_symbol_node_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbol_type_t type, void *data);
 static void mln_lang_symbol_node_free(void *data);
@@ -478,6 +463,60 @@ static inline int mln_lang_ctx_pipe_elem_set(mln_lang_ctx_pipe_elem_t *pe, int t
     }\
 })
 
+#define mln_lang_scope_top(_ctx) ((_ctx)->scope_top)
+
+#define mln_lang_scope_base(_ctx) ((_ctx)->scopes)
+
+#define mln_lang_scope_in(_ctx,_scope) ({\
+    int in = 0;\
+    mln_lang_scope_t *s = (_scope);\
+    if (s != NULL && s - (_ctx)->scopes <= M_LANG_SCOPE_LEN) {\
+        in = 1;\
+    }\
+    in;\
+})
+
+#define mln_lang_scope_push(_ctx,_name,_type,_cur_stack,_entry_stm) ({\
+    mln_lang_scope_t *s = NULL, *last;\
+    last = (_ctx)->scope_top;\
+    if (last == NULL) {\
+        s = (_ctx)->scope_top = (_ctx)->scopes;\
+    } else if (last - (_ctx)->scopes < M_LANG_SCOPE_LEN) {\
+        s = (++(_ctx)->scope_top);\
+    }\
+    if (s != NULL) {\
+        s->ctx = (_ctx);\
+        s->type = (_type);\
+        if ((_name) != NULL) {\
+            s->name = mln_string_ref((_name));\
+        } else {\
+            s->name = NULL;\
+        }\
+        s->cur_stack = (_cur_stack);\
+        s->entry = (_entry_stm);\
+        s->layer = last == NULL? 1: last->layer + 1;\
+        s->sym_head = s->sym_tail = NULL;\
+    }\
+    s;\
+})
+
+#define mln_lang_scope_pop(_ctx) ({\
+    mln_lang_scope_t *s = (_ctx)->scope_top;\
+    mln_lang_symbol_node_t *sym;\
+    if (s != NULL) {\
+        if (s->name != NULL) {\
+            mln_string_free(s->name);\
+        }\
+        while ((sym = s->sym_head) != NULL) {\
+            mln_lang_sym_scope_chain_del(&s->sym_head, &s->sym_tail, sym);\
+            mln_lang_sym_chain_del(&sym->bucket->head, &sym->bucket->tail, sym);\
+            mln_lang_symbol_node_free(sym);\
+        }\
+        if (--(_ctx)->scope_top < (_ctx)->scopes) {\
+            (_ctx)->scope_top = NULL;\
+        }\
+    }\
+})
 
 
 mln_lang_method_t *mln_lang_methods[] = {
@@ -771,22 +810,10 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         mln_alloc_free(ctx);
         return NULL;
     }
-    if ((ctx->run_stack = (mln_lang_stack_node_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_stack_node_t) * (M_LANG_RUN_STACK_LEN + 1))) == NULL) {
-        if (ctx->cache != NULL) {
-            if (!(--(ctx->cache->ref))) {
-                mln_lang_ast_cache_chain_del(&(ctx->lang->cache_head), &(ctx->lang->cache_tail), ctx->cache);
-                mln_lang_ast_cache_free(ctx->cache);
-            }
-        } else {
-            mln_lang_ast_free(ctx->stm);
-        }
-        mln_fileset_destroy(ctx->fset);
-        mln_alloc_destroy(ctx->pool);
-        mln_alloc_free(ctx);
-        return NULL;
-    }
+    /* ctx->run_stack do not need to be initialized */
     ctx->run_stack_top = NULL;
-    ctx->scope_head = ctx->scope_tail = NULL;
+    /* ctx->scopes do not need to be initialized */
+    ctx->scope_top = NULL;
     ctx->ref = 0;
     ctx->filename = NULL;
     ctx->symbols = NULL;
@@ -815,9 +842,8 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->return_handler = NULL;
     ctx->prev = ctx->next = NULL;
     ctx->sym_head = ctx->sym_tail = NULL;
-    ctx->scope_cache_head = ctx->scope_cache_tail = NULL;
     ctx->owner = 0;
-    ctx->sym_count = ctx->scope_count = 0;
+    ctx->sym_count = 0;
     ctx->ret_flag = ctx->op_array_flag = ctx->op_bool_flag = ctx->op_func_flag = ctx->op_int_flag = \
     ctx->op_nil_flag = ctx->op_obj_flag = ctx->op_real_flag = ctx->op_str_flag = 0;
     ctx->quit = 0;
@@ -848,11 +874,10 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     }
 
     mln_lang_scope_t *outer_scope;
-    if ((outer_scope = mln_lang_scope_new(ctx, NULL, M_LANG_SCOPE_TYPE_FUNC, NULL, ctx->stm)) == NULL) {
+    if ((outer_scope = mln_lang_scope_push(ctx, NULL, M_LANG_SCOPE_TYPE_FUNC, NULL, ctx->stm)) == NULL) {
         mln_lang_ctx_free(ctx);
         return NULL;
     }
-    mln_lang_scope_chain_add(&(ctx->scope_head), &(ctx->scope_tail), outer_scope);
 
     if (filename != NULL) {
         if ((ctx->filename = mln_string_pool_dup(ctx->pool, filename)) == NULL) {
@@ -871,14 +896,8 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
 static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
 {
     if (ctx == NULL) return;
-    mln_lang_scope_t *scope;
     mln_lang_symbol_node_t *sym;
 
-    while ((scope = ctx->scope_cache_head) != NULL) {
-        mln_lang_scope_chain_del(&(ctx->scope_cache_head), &(ctx->scope_cache_tail), scope);
-        scope->ctx = NULL;
-        mln_lang_scope_free(scope);
-    }
     while ((sym = ctx->sym_head) != NULL) {
         mln_lang_sym_chain_del(&ctx->sym_head, &ctx->sym_tail, sym);
         sym->ctx = NULL;
@@ -886,10 +905,11 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     }
     if (ctx->ret_var != NULL) __mln_lang_var_free(ctx->ret_var);
     if (ctx->filename != NULL) mln_string_free(ctx->filename);
-    while ((scope = ctx->scope_head) != NULL) {
-        mln_lang_scope_chain_del(&(ctx->scope_head), &(ctx->scope_tail), scope);
-        scope->ctx = NULL;
-        mln_lang_scope_free(scope);
+    while (mln_lang_stack_top(ctx) != NULL) {
+        mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
+    }
+    while (mln_lang_scope_top(ctx) != NULL) {
+        mln_lang_scope_pop(ctx);
     }
     if (ctx->symbols != NULL) {
         mln_lang_hash_free(ctx->symbols);
@@ -941,13 +961,13 @@ mln_lang_ctx_get_class(mln_lang_ctx_t *ctx)
     mln_string_t *s, *name = NULL;
     mln_lang_symbol_node_t tmp, *sym;
 
-    ASSERT(ctx->scope_tail != NULL);
-    if (ctx->scope_tail->type != M_LANG_SCOPE_TYPE_SET) return NULL;
-    name = ctx->scope_tail->name;
-    ASSERT(ctx->scope_tail->prev != NULL);
+    ASSERT(mln_lang_scope_in(ctx, mln_lang_scope_top(ctx)));
+    if (mln_lang_scope_top(ctx)->type != M_LANG_SCOPE_TYPE_SET) return NULL;
+    name = mln_lang_scope_top(ctx)->name;
+    ASSERT(mln_lang_scope_in(ctx, mln_lang_scope_top(ctx)-1));
 
     tmp.symbol = name;
-    tmp.layer = ctx->scope_tail->prev->layer;
+    tmp.layer = (mln_lang_scope_top(ctx) - 1)->layer;
     hb = mln_lang_hash_get_bucket(ctx->symbols, &tmp);
     for (sym = hb->tail; sym != NULL; sym = sym->prev) {
         s = sym->symbol;
@@ -1315,60 +1335,6 @@ static inline void mln_lang_ctx_get_node_ret_val(mln_lang_ctx_t *ctx, mln_lang_s
     node->ret_var = NULL;
 }
 
-static inline mln_lang_scope_t *
-mln_lang_scope_new(mln_lang_ctx_t *ctx, \
-                   mln_string_t *name, \
-                   mln_lang_scope_type_t type, \
-                   mln_lang_stack_node_t *cur_stack, \
-                   mln_lang_stm_t *entry_stm)
-{
-    mln_lang_scope_t *scope;
-    if ((scope = ctx->scope_cache_head) != NULL) {
-        mln_lang_scope_chain_del(&(ctx->scope_cache_head), &(ctx->scope_cache_tail), scope);
-        --(ctx->scope_count);
-    } else {
-        if ((scope = (mln_lang_scope_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_scope_t))) == NULL) {
-            return NULL;
-        }
-        scope->ctx = ctx;
-    }
-    scope->type = type;
-    if (name != NULL) {
-        scope->name = mln_string_ref(name);
-    } else {
-        scope->name = NULL;
-    }
-
-    scope->cur_stack = cur_stack;
-    scope->entry = entry_stm;
-    scope->layer = ctx->scope_tail==NULL? 1: ctx->scope_tail->layer+1;
-    scope->sym_head = scope->sym_tail = NULL;
-    scope->prev = scope->next = NULL;
-    return scope;
-}
-
-static inline void mln_lang_scope_free(mln_lang_scope_t *scope)
-{
-    if (scope == NULL) return;
-    mln_lang_symbol_node_t *sym;
-
-    if (scope->name != NULL) {
-        mln_string_free(scope->name);
-        scope->name = NULL;
-    }
-    while ((sym = scope->sym_head) != NULL) {
-        mln_lang_sym_scope_chain_del(&scope->sym_head, &scope->sym_tail, sym);
-        mln_lang_sym_chain_del(&sym->bucket->head, &sym->bucket->tail, sym);
-        mln_lang_symbol_node_free(sym);
-    }
-    if (scope->ctx != NULL && scope->ctx->scope_count < M_LANG_CACHE_COUNT) {
-        mln_lang_scope_chain_add(&(scope->ctx->scope_cache_head), &(scope->ctx->scope_cache_tail), scope);
-        ++(scope->ctx->scope_count);
-    } else {
-        mln_alloc_free(scope);
-    }
-}
-
 static inline mln_lang_symbol_node_t *
 mln_lang_symbol_node_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_symbol_type_t type, void *data)
 {
@@ -1393,7 +1359,7 @@ mln_lang_symbol_node_new(mln_lang_ctx_t *ctx, mln_string_t *symbol, mln_lang_sym
             ls->data.set = (mln_lang_set_detail_t *)data;
             break;
     }
-    ls->layer = ctx->scope_tail->layer;
+    ls->layer = mln_lang_scope_top(ctx)->layer;
     ls->bucket = NULL;
     ls->scope_prev = ls->scope_next = NULL;
     return ls;
@@ -1444,13 +1410,13 @@ static inline int __mln_lang_symbol_node_join(mln_lang_ctx_t *ctx, mln_lang_symb
          if (tmp->layer != symbol->layer || tmp->symbol->len != name->len) continue;
          if (!memcmp(tmp->symbol->data, name->data, name->len)) {
              mln_lang_sym_chain_del(&(tmp->bucket->head), &(tmp->bucket->tail), tmp);
-             mln_lang_sym_scope_chain_del(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), tmp);
+             mln_lang_sym_scope_chain_del(&(mln_lang_scope_top(ctx)->sym_head), &(mln_lang_scope_top(ctx)->sym_tail), tmp);
              mln_lang_symbol_node_free(tmp);
              break;
          }
     }
     mln_lang_sym_chain_add(&(symbol->bucket->head), &(symbol->bucket->tail), symbol);
-    mln_lang_sym_scope_chain_add(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), symbol);
+    mln_lang_sym_scope_chain_add(&(mln_lang_scope_top(ctx)->sym_head), &(mln_lang_scope_top(ctx)->sym_tail), symbol);
 
     return 0;
 }
@@ -1464,25 +1430,25 @@ int mln_lang_symbol_node_upper_join(mln_lang_ctx_t *ctx, mln_lang_symbol_type_t 
         __mln_lang_errmsg(ctx, "No memory.");
         return -1;
     }
-    symbol->layer = ctx->scope_tail->prev == NULL? (ctx->scope_tail->layer): (ctx->scope_tail->prev->layer);
+    symbol->layer = !mln_lang_scope_in(ctx, mln_lang_scope_top(ctx)-1)? (mln_lang_scope_top(ctx)->layer): ((mln_lang_scope_top(ctx)-1)->layer);
     symbol->bucket = mln_lang_hash_get_bucket(ctx->symbols, symbol);
     for (tmp = symbol->bucket->tail; tmp != NULL; tmp = tmp->prev) {
          if (tmp->layer != symbol->layer || tmp->symbol->len != name->len) continue;
          if (!memcmp(tmp->symbol->data, name->data, name->len)) {
              mln_lang_sym_chain_del(&(tmp->bucket->head), &(tmp->bucket->tail), tmp);
-             if (ctx->scope_tail->prev == NULL)
-                 mln_lang_sym_scope_chain_del(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), tmp);
+             if (!mln_lang_scope_in(ctx, mln_lang_scope_top(ctx)-1))
+                 mln_lang_sym_scope_chain_del(&(mln_lang_scope_top(ctx)->sym_head), &(mln_lang_scope_top(ctx)->sym_tail), tmp);
              else
-                 mln_lang_sym_scope_chain_del(&(ctx->scope_tail->prev->sym_head), &(ctx->scope_tail->prev->sym_tail), tmp);
+                 mln_lang_sym_scope_chain_del(&((mln_lang_scope_top(ctx)-1)->sym_head), &((mln_lang_scope_top(ctx)-1)->sym_tail), tmp);
              mln_lang_symbol_node_free(tmp);
              break;
          }
     }
     mln_lang_sym_chain_add(&(symbol->bucket->head), &(symbol->bucket->tail), symbol);
-    if (ctx->scope_tail->prev == NULL)
-        mln_lang_sym_scope_chain_add(&(ctx->scope_tail->sym_head), &(ctx->scope_tail->sym_tail), symbol);
+    if (!mln_lang_scope_in(ctx, mln_lang_scope_top(ctx)-1))
+        mln_lang_sym_scope_chain_add(&(mln_lang_scope_top(ctx)->sym_head), &(mln_lang_scope_top(ctx)->sym_tail), symbol);
     else
-        mln_lang_sym_scope_chain_add(&(ctx->scope_tail->prev->sym_head), &(ctx->scope_tail->prev->sym_tail), symbol);
+        mln_lang_sym_scope_chain_add(&((mln_lang_scope_top(ctx)-1)->sym_head), &((mln_lang_scope_top(ctx)-1)->sym_tail), symbol);
 
     return 0;
 }
@@ -1497,7 +1463,7 @@ __mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local
 {
     mln_lang_symbol_node_t *sym, tmp;
     mln_lang_hash_bucket_t *hb;
-    mln_lang_scope_t *scope = ctx->scope_tail;
+    mln_lang_scope_t *scope = mln_lang_scope_top(ctx);
 
     tmp.symbol = name;
 
@@ -1509,8 +1475,8 @@ __mln_lang_symbol_node_search(mln_lang_ctx_t *ctx, mln_string_t *name, int local
             if (sym->layer != scope->layer || sym->symbol->len != name->len) continue;
             if (!memcmp(sym->symbol->data, name->data, name->len)) return sym;
         }
-        if (local || scope == ctx->scope_head) break;
-        scope = ctx->scope_head;
+        if (local || scope == mln_lang_scope_base(ctx)) break;
+        scope = mln_lang_scope_base(ctx);
     }
     return NULL;
 }
@@ -2115,48 +2081,27 @@ mln_lang_funcdef_args_get(mln_lang_ctx_t *ctx, \
     mln_size_t n = 0;
     mln_lang_exp_t *scan;
     mln_lang_var_t *var, *newvar;
-    mln_lang_assign_t *assign;
-    mln_lang_logiclow_t *logiclow;
-    mln_lang_logichigh_t *logichigh;
-    mln_lang_relativelow_t *relativelow;
-    mln_lang_relativehigh_t *relativehigh;
-    mln_lang_move_t *move;
-    mln_lang_addsub_t *addsub;
-    mln_lang_muldiv_t *muldiv;
-    mln_lang_suffix_t *suffix;
-    mln_lang_locate_t *locate;
-    mln_lang_spec_t *spec;
     mln_lang_factor_t *factor;
+    mln_lang_spec_t *spec;
     mln_lang_symbol_node_t *sym;
     mln_lang_var_type_t type = M_LANG_VAR_NORMAL;
     for (scan = exp; scan != NULL; ++n, scan = scan->next) {
-        assign = scan->assign;
-        if (assign->op != M_ASSIGN_NONE) goto err;
-        logiclow = assign->left;
-        if (logiclow->op != M_LOGICLOW_NONE) goto err;
-        logichigh = logiclow->left;
-        if (logichigh->op != M_LOGICHIGH_NONE) goto err;
-        relativelow = logichigh->left;
-        if (relativelow->op != M_RELATIVELOW_NONE) goto err;
-        relativehigh = relativelow->left;
-        if (relativehigh->op != M_RELATIVEHIGH_NONE) goto err;
-        move = relativehigh->left;
-        if (move->op != M_MOVE_NONE) goto err;
-        addsub = move->left;
-        if (addsub->op != M_ADDSUB_NONE) goto err;
-        muldiv = addsub->left;
-        if (muldiv->op != M_MULDIV_NONE) goto err;
-        suffix = muldiv->left;
-        if (suffix->op != M_SUFFIX_NONE) goto err;
-        locate = suffix->left;
-        if (locate->op != M_LOCATE_NONE) goto err;
-        spec = locate->left;
-        if (spec->op == M_SPEC_REFER) {
-            spec = spec->data.spec;
-            type = M_LANG_VAR_REFER;
+        if (scan->jump == NULL) {
+            mln_lang_generate_jump_ptr(scan, M_LSNT_EXP);
         }
-        if (spec->op != M_SPEC_FACTOR) goto err;
-        factor = spec->data.factor;
+        if (scan->type == M_LSNT_SPEC) {
+            spec = scan->jump;
+            if (spec->op == M_SPEC_REFER) {
+                spec = spec->data.spec;
+                type = M_LANG_VAR_REFER;
+            }
+            if (spec->op != M_SPEC_FACTOR) goto err;
+            factor = spec->data.factor;
+        } else if (scan->type == M_LSNT_FACTOR) {
+            factor = scan->jump;
+        } else {
+            goto err;
+        }
         if (factor->type != M_FACTOR_ID) goto err;
 
         if ((var = __mln_lang_var_new(ctx, factor->data.s_id, type, NULL, NULL)) == NULL) {
@@ -3038,9 +2983,9 @@ int mln_lang_funccall_val_obj_operator(mln_lang_ctx_t *ctx, \
 
 static inline int mln_lang_funccall_val_operator_overload_test(mln_lang_ctx_t *ctx, mln_string_t *name)
 {
-    mln_lang_scope_t *scope = ctx->scope_tail;
+    mln_lang_scope_t *scope = mln_lang_scope_top(ctx);
 
-    for (; scope != NULL; scope = scope->prev) {
+    for (; mln_lang_scope_in(ctx, scope); --scope) {
         if (scope->name != NULL && !mln_string_strcmp(scope->name, name))
             return 1;
     }
@@ -3320,12 +3265,11 @@ static void mln_lang_stack_handler_set(mln_lang_ctx_t *ctx)
         }
         if (set->stm != NULL) {
             node->step = 1;
-            if ((scope = mln_lang_scope_new(ctx, s_detail->name, M_LANG_SCOPE_TYPE_SET, NULL, NULL)) == NULL) {
-                __mln_lang_errmsg(ctx, "No memory.");
+            if ((scope = mln_lang_scope_push(ctx, s_detail->name, M_LANG_SCOPE_TYPE_SET, NULL, NULL)) == NULL) {
+                __mln_lang_errmsg(ctx, "Scope stack is full.");
                 ctx->quit = 1;
                 return;
             }
-            mln_lang_scope_chain_add(&(ctx->scope_head), &(ctx->scope_tail), scope);
             if ((node = mln_lang_stack_push(ctx, M_LSNT_SETSTM, set->stm)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
                 ctx->quit = 1;
@@ -3336,9 +3280,7 @@ static void mln_lang_stack_handler_set(mln_lang_ctx_t *ctx)
             mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
         }
     } else {
-        scope = ctx->scope_tail;
-        mln_lang_scope_chain_del(&(ctx->scope_head), &(ctx->scope_tail), scope);
-        mln_lang_scope_free(scope);
+        mln_lang_scope_pop(ctx);
         mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
     }
 }
@@ -3472,8 +3414,8 @@ nil:
 static inline int mln_lang_met_return(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node, *last;
-    ASSERT(ctx->scope_tail->type == M_LANG_SCOPE_TYPE_FUNC);
-    mln_lang_scope_t *scope = ctx->scope_tail;
+    mln_lang_scope_t *scope = mln_lang_scope_top(ctx);
+    ASSERT(scope->type == M_LANG_SCOPE_TYPE_FUNC);
     last = mln_lang_stack_pop(ctx);
     ASSERT(last);
     while (1) {
@@ -3568,10 +3510,10 @@ static inline int mln_lang_stack_handler_block_goto(mln_lang_ctx_t *ctx, mln_lan
     mln_string_t *pos = block->data.pos;
     mln_lang_stack_node_t *node;
     mln_lang_stm_t *stm;
-    ASSERT(ctx->scope_tail->type == M_LANG_SCOPE_TYPE_FUNC);
+    ASSERT(mln_lang_scope_top(ctx)->type == M_LANG_SCOPE_TYPE_FUNC);
     mln_lang_ctx_reset_ret_var(ctx);
 
-    for (stm = ctx->scope_tail->entry; stm != NULL; stm = stm->next) {
+    for (stm = mln_lang_scope_top(ctx)->entry; stm != NULL; stm = stm->next) {
         if (stm->type == M_STM_LABEL && !mln_string_strcmp(stm->data.pos, pos)) {
             stm = stm->next;
             break;
@@ -3584,7 +3526,7 @@ static inline int mln_lang_stack_handler_block_goto(mln_lang_ctx_t *ctx, mln_lan
 
     while (1) {
         node = mln_lang_stack_top(ctx);
-        if (node == ctx->scope_tail->cur_stack) {
+        if (node == mln_lang_scope_top(ctx)->cur_stack) {
             break;
         }
         mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
@@ -3658,8 +3600,8 @@ static inline mln_lang_stack_node_t *mln_lang_withdraw_break_loop(mln_lang_ctx_t
 static inline int mln_lang_withdraw_until_func(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node;
-    ASSERT(ctx->scope_tail->type == M_LANG_SCOPE_TYPE_FUNC);
-    mln_lang_scope_t *scope = ctx->scope_tail;
+    mln_lang_scope_t *scope = mln_lang_scope_top(ctx);
+    ASSERT(scope->type == M_LANG_SCOPE_TYPE_FUNC);
     while (1) {
         node = mln_lang_stack_top(ctx);
         if (node == NULL) break;
@@ -3668,8 +3610,7 @@ static inline int mln_lang_withdraw_until_func(mln_lang_ctx_t *ctx)
         }
         mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
     }
-    mln_lang_scope_chain_del(&(ctx->scope_head), &(ctx->scope_tail), scope);
-    mln_lang_scope_free(scope);
+    mln_lang_scope_pop(ctx);
     if (ctx->ret_var == NULL) {
         mln_lang_var_t *ret_var;
         if ((ret_var = __mln_lang_var_create_nil(ctx, NULL)) == NULL) {
@@ -5491,11 +5432,10 @@ static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
         }
     }
 
-    if ((scope = mln_lang_scope_new(ctx, funcname, M_LANG_SCOPE_TYPE_FUNC, node, NULL)) == NULL) {
-        __mln_lang_errmsg(ctx, "No memory.");
+    if ((scope = mln_lang_scope_push(ctx, funcname, M_LANG_SCOPE_TYPE_FUNC, node, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "Scope stack is full.");
         return -1;
     }
-    mln_lang_scope_chain_add(&(ctx->scope_head), &(ctx->scope_tail), scope);
 
     if (funccall->object != NULL) {
         if ((newvar = __mln_lang_var_new(ctx, &_this, M_LANG_VAR_NORMAL, funccall->object, NULL)) == NULL) {
