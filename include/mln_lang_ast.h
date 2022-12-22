@@ -67,6 +67,8 @@ struct mln_lang_stm_s {
         mln_string_t            *pos;
     } data;
     struct mln_lang_stm_s           *next;
+    void                            *jump;
+    int                              jump_type;
 };
 
 struct mln_lang_funcdef_s {
@@ -121,6 +123,8 @@ struct mln_lang_block_s {
         mln_string_t            *pos;
         mln_lang_if_t           *i;
     } data;
+    void                            *jump;
+    int                              jump_type;
 };
 
 struct mln_lang_switch_s {

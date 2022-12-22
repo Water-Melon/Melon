@@ -1799,138 +1799,6 @@ static inline void __mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *va
     var->val = val;
 }
 
-mln_s64_t mln_lang_var_toint(mln_lang_var_t *var)
-{
-    ASSERT(var != NULL && var->val != NULL);
-    mln_s64_t i = 0;
-    mln_lang_val_t *val = var->val;
-    switch (val->type) {
-        case M_LANG_VAL_TYPE_NIL:
-        case M_LANG_VAL_TYPE_OBJECT:
-        case M_LANG_VAL_TYPE_FUNC:
-        case M_LANG_VAL_TYPE_ARRAY:
-        case M_LANG_VAL_TYPE_CALL:
-            break;
-        case M_LANG_VAL_TYPE_INT:
-            i = val->data.i;
-            break;
-        case M_LANG_VAL_TYPE_BOOL:
-            i = val->data.b? 1: 0;
-            break;
-        case M_LANG_VAL_TYPE_REAL:
-            i = val->data.f;
-            break;
-        case M_LANG_VAL_TYPE_STRING:
-        {
-            mln_string_t *s = val->data.s;
-            mln_u8ptr_t buf = (mln_u8ptr_t)malloc(s->len + 1);
-            if (buf == NULL) break;
-            memcpy(buf, s->data, s->len);
-            buf[s->len] = 0;
-#if defined(WIN32)
-            sscanf((char *)buf, "%I64d", &i);
-#elif defined(i386) || defined(__arm__)
-            sscanf((char *)buf, "%lld", &i);
-#else
-            sscanf((char *)buf, "%ld", &i);
-#endif
-            free(buf);
-            break;
-        }
-        default:
-            ASSERT(0);
-            break;
-    }
-    return i;
-}
-
-double mln_lang_var_toreal(mln_lang_var_t *var)
-{
-    ASSERT(var != NULL && var->val != NULL);
-    double r = 0;
-    mln_lang_val_t *val = var->val;
-    switch (val->type) {
-        case M_LANG_VAL_TYPE_NIL:
-        case M_LANG_VAL_TYPE_OBJECT:
-        case M_LANG_VAL_TYPE_FUNC:
-        case M_LANG_VAL_TYPE_ARRAY:
-        case M_LANG_VAL_TYPE_CALL:
-            break;
-        case M_LANG_VAL_TYPE_INT:
-            r = (double)val->data.i;
-            break;
-        case M_LANG_VAL_TYPE_BOOL:
-            r = val->data.b? 1.0: 0;
-            break;
-        case M_LANG_VAL_TYPE_REAL:
-            r = val->data.f;
-            break;
-        case M_LANG_VAL_TYPE_STRING:
-        {
-            mln_string_t *s = val->data.s;
-            mln_u8ptr_t buf = (mln_u8ptr_t)malloc(s->len + 1);
-            if (buf == NULL) break;
-            memcpy(buf, s->data, s->len);
-            buf[s->len] = 0;
-            sscanf((char *)buf, "%lf", &r);
-            free(buf);
-            break;
-        }
-        default:
-            ASSERT(0);
-            break;
-    }
-    return r;
-}
-
-mln_string_t *mln_lang_var_tostring(mln_alloc_t *pool, mln_lang_var_t *var)
-{
-    ASSERT(var != NULL && var->val != NULL);
-    char buf[1024] = {0};
-    mln_lang_val_t *val = var->val;
-    int n = 0;
-    switch (val->type) {
-        case M_LANG_VAL_TYPE_NIL:
-            n = snprintf(buf, sizeof(buf)-1, "nil");
-            break;
-        case M_LANG_VAL_TYPE_OBJECT:
-            n = snprintf(buf, sizeof(buf)-1, "Object");
-            break;
-        case M_LANG_VAL_TYPE_FUNC:
-            n = snprintf(buf, sizeof(buf)-1, "Function");
-            break;
-        case M_LANG_VAL_TYPE_ARRAY:
-            n = snprintf(buf, sizeof(buf)-1, "Array");
-            break;
-        case M_LANG_VAL_TYPE_INT:
-#if defined(WIN32)
-            n = snprintf(buf, sizeof(buf)-1, "%I64d", val->data.i);
-#elif defined(i386) || defined(__arm__)
-            n = snprintf(buf, sizeof(buf)-1, "%lld", val->data.i);
-#else
-            n = snprintf(buf, sizeof(buf)-1, "%ld", val->data.i);
-#endif
-            break;
-        case M_LANG_VAL_TYPE_BOOL:
-            n = snprintf(buf, sizeof(buf)-1, "%s", val->data.b?"true":"false");
-            break;
-        case M_LANG_VAL_TYPE_REAL:
-            n = snprintf(buf, sizeof(buf)-1, "%lf", val->data.f);
-            break;
-        case M_LANG_VAL_TYPE_STRING:
-        {
-            mln_string_t *s = mln_string_ref(val->data.s);
-            return s;
-        }
-        default:
-            ASSERT(0);
-            break;
-    }
-    mln_string_t tmp;
-    mln_string_nset(&tmp, buf, n);
-    return mln_string_pool_dup(pool, &tmp);
-}
-
 int mln_lang_var_value_set(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src)
 {
     return __mln_lang_var_value_set(ctx, dest, src);
@@ -3117,41 +2985,14 @@ static void mln_lang_stack_handler_stm(mln_lang_ctx_t *ctx)
 {
     mln_lang_stack_node_t *node = mln_lang_stack_top(ctx);
     mln_lang_stm_t *stm = node->data.stm;
-    mln_u8ptr_t data;
-    mln_lang_stack_node_type_t type;
 
     if (node->step == 0) {
         ++(node->step);
 again:
-        switch (stm->type) {
-            case M_STM_BLOCK:
-                data = (mln_u8ptr_t)(stm->data.block);
-                type = M_LSNT_BLOCK;
-                break;
-            case M_STM_FUNC:
-                data = (mln_u8ptr_t)(stm->data.func);
-                type = M_LSNT_FUNCDEF;
-                break;
-            case M_STM_SET:
-                data = (mln_u8ptr_t)(stm->data.setdef);
-                type = M_LSNT_SET;
-                break;
-            case M_STM_LABEL:
-                goto goon1;
-            case M_STM_SWITCH:
-                data = (mln_u8ptr_t)(stm->data.sw);
-                type = M_LSNT_SWITCH;
-                break;
-            case M_STM_WHILE:
-                data = (mln_u8ptr_t)(stm->data.w);
-                type = M_LSNT_WHILE;
-                break;
-            default:
-                data = (mln_u8ptr_t)(stm->data.f);
-                type = M_LSNT_FOR;
-                break;
-        }
-        if ((node = mln_lang_stack_push(ctx, type, data)) == NULL) {
+        if (stm->type == M_STM_LABEL) goto goon1;
+        if (stm->jump == NULL)
+            mln_lang_generate_jump_ptr(stm, M_LSNT_STM);
+        if ((node = mln_lang_stack_push(ctx, stm->jump_type, stm->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
             ctx->quit = 1;
             return;
@@ -3444,7 +3285,9 @@ static inline int mln_lang_met_return(mln_lang_ctx_t *ctx)
 static inline int mln_lang_stack_handler_block_exp(mln_lang_ctx_t *ctx, mln_lang_block_t *block)
 {
     mln_lang_stack_node_t *node;
-    if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, block->data.exp)) == NULL) {
+    if (block->jump == NULL)
+        mln_lang_generate_jump_ptr(block, M_LSNT_BLOCK);
+    if ((node = mln_lang_stack_push(ctx, block->jump_type, block->jump)) == NULL) {
         __mln_lang_errmsg(ctx, "Stack is full.");
         return -1;
     }
@@ -3951,6 +3794,56 @@ goon1:
 static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_type_t type)
 {
     switch (type) {
+        case M_LSNT_STM:
+        {
+            mln_lang_stm_t *stm = (mln_lang_stm_t *)ptr;
+            switch (stm->type) {
+                case M_STM_BLOCK:
+                    if (stm->data.block->type == M_BLOCK_EXP) {
+                        if (stm->data.block->jump == NULL)
+                            mln_lang_generate_jump_ptr(stm->data.block, M_LSNT_BLOCK);
+                        stm->jump = stm->data.block->jump;
+                        stm->jump_type = stm->data.block->jump_type;
+                    } else {
+                        stm->jump = stm->data.block;
+                        stm->jump_type = M_LSNT_BLOCK;
+                    }
+                    break;
+                case M_STM_FUNC:
+                    stm->jump = stm->data.func;
+                    stm->jump_type = M_LSNT_FUNCDEF;
+                    break;
+                case M_STM_SET:
+                    stm->jump = stm->data.setdef;
+                    stm->jump_type = M_LSNT_SET;
+                    break;
+                case M_STM_LABEL:
+                    break;
+                case M_STM_SWITCH:
+                    stm->jump = stm->data.sw;
+                    stm->jump_type = M_LSNT_SWITCH;
+                    break;
+                case M_STM_WHILE:
+                    stm->jump = stm->data.w;
+                    stm->jump_type = M_LSNT_WHILE;
+                    break;
+                default:
+                    stm->jump = stm->data.f;
+                    stm->jump_type = M_LSNT_FOR;
+                    break;
+            }
+            break;
+        }
+        case M_LSNT_BLOCK:
+        {
+            mln_lang_block_t *block = (mln_lang_block_t *)ptr;
+            ASSERT(block->type == M_BLOCK_EXP);
+            if (block->data.exp->jump == NULL)
+                mln_lang_generate_jump_ptr(block->data.exp, M_LSNT_EXP);
+            block->jump = block->data.exp->jump;
+            block->jump_type = block->data.exp->type;
+            break;
+        }
         case M_LSNT_EXP:
         {
             mln_lang_exp_t *exp = (mln_lang_exp_t *)ptr;

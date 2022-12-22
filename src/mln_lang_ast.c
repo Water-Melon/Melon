@@ -890,6 +890,8 @@ mln_lang_stm_new(mln_alloc_t *pool, \
             break;
     }
     ls->next = next;
+    ls->jump = NULL;
+    ls->jump_type = 0;
     return ls;
 }
 
@@ -1086,6 +1088,8 @@ mln_lang_block_new(mln_alloc_t *pool, void *data, mln_lang_block_type_t type, ml
             lb->data.pos = NULL;
             break;
     }
+    lb->jump = NULL;
+    lb->jump_type = 0;
     return lb;
 }
 
