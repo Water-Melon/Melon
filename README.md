@@ -103,3 +103,15 @@ You can pull the built container image to deploy the running environment.
 docker pull melonc/melon
 ```
 
+
+### Webassembly
+
+You should install `emsdk` at first, make sure `emcc` and `emar` have been installed. Then execute:
+
+```shell
+./configure --enable-wasm
+make && make install
+```
+
+There is only one static library `libmelon.a` to be created.
+

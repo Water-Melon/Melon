@@ -1,3 +1,10 @@
+Changes with melon 2.6.2                                          30 Dec 2022
+    *) Updated naming convention for functions in event module
+    *) Fixed error in configuration module
+    *) Supported Docker
+    *) Optimized Melang performance
+    *) Supported Webassembly
+
 Changes with melon 2.6.1                                          30 Nov 2022
     *) Upgraded trace component
     *) Added function pointer 'update' to configuration item structure
