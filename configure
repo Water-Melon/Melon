@@ -15,6 +15,9 @@ else
     cc="cc"
 fi
 
+#wasm flag
+wasm=0
+
 #get all parameters
 for param in $@
 do
@@ -24,6 +27,7 @@ do
         echo "Options:"
         echo -e "\t--prefix=INSTALL_PATH"
         echo -e "\t--cc=C compiler"
+        echo -e "\t--enable-wasm"
         exit 0
     fi
     param_prefix=`echo $param|cut -d '=' -f 1`
@@ -34,7 +38,22 @@ do
     if [ $param_prefix == "--cc" ]; then
         cc=$param_suffix
     fi
+    if [ $param_prefix == "--enable-wasm" ]; then
+        wasm=1
+    fi
 done
+
+#wasm
+if [ $wasm -eq 1 ]; then
+    echo -e "Webassembly\t\t[enable]"
+
+    #llvm
+    llvm_flag=""
+    cc --help|grep LLVM > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        llvm_flag="--llvm-lto 1"
+    fi
+fi
 
 #output installation path
 echo -e "Installation Path \t[$install_path]"
@@ -133,18 +152,28 @@ echo "}" >> src/mln_path.c
 echo "# " > Makefile
 echo "# Copyright (C) Niklaus F.Schen." >> Makefile
 echo "# " >> Makefile
-echo -e "CC\t\t= $cc" >> Makefile
+if [ $wasm -eq 1 ]; then
+    echo -e "CC\t\t= emcc" >> Makefile
+else
+    echo -e "CC\t\t= $cc" >> Makefile
+fi
 gccver=`gcc -dumpversion|cut -d '.' -f 1`
-if [ $sysname != 'Darwin' -a "$?" == "0" -a $gccver -ge 11 ]; then
+if [ $wasm -eq 1 ]; then
+    echo -e "FLAGS\t\t= -Iinclude -c -g -O3 $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc" >> Makefile
+elif [ $sysname != 'Darwin' -a "$?" == "0" -a $gccver -ge 11 ]; then
     echo -e "FLAGS\t\t= -Iinclude -c -Wall -ggdb -Werror -O2 -fPIC" >> Makefile
 else
     echo -e "FLAGS\t\t= -Iinclude -c -Wall -ggdb -Werror -O3 -fPIC" >> Makefile
 fi
 if ! case $sysname in MINGW*) false;; esac; then
-    echo -e "MELONSO\t\t= libmelon.dll" >> Makefile
+    if [ $wasm -eq 0 ]; then
+        echo -e "MELONSO\t\t= libmelon.dll" >> Makefile
+    fi
     echo -e "MELONA\t\t= libmelon.lib" >> Makefile
 else
-    echo -e "MELONSO\t\t= libmelon.so" >> Makefile
+    if [ $wasm -eq 0 ]; then
+        echo -e "MELONSO\t\t= libmelon.so" >> Makefile
+    fi
     echo -e "MELONA\t\t= libmelon.a" >> Makefile
 fi
 echo -e "OBJS\t\t= \\" >> Makefile
@@ -166,9 +195,13 @@ do
 done
 echo "" >> Makefile
 
-echo -e ".PHONY :\tcompile modules install clean" >> Makefile
+echo -e ".PHONY :\tcompile install clean" >> Makefile
 
-echo "compile: MKDIR \$(OBJS) \$(MELONSO) \$(MELONA)" >> Makefile
+if [ $wasm -eq 1 ]; then
+    echo "compile: MKDIR \$(OBJS) \$(MELONA)" >> Makefile
+else
+    echo "compile: MKDIR \$(OBJS) \$(MELONSO) \$(MELONA)" >> Makefile
+fi
 echo "clean:" >> Makefile
 echo -e "\trm -fr objs lib Makefile" >> Makefile
 echo "MKDIR :" >> Makefile
@@ -176,16 +209,21 @@ echo -e "\ttest -d objs || mkdir objs" >> Makefile
 echo -e "\ttest -d lib || mkdir lib" >> Makefile
 
 echo "\$(MELONA) : \$(OBJS)" >> Makefile
-echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile
-echo "\$(MELONSO) : \$(OBJS)" >> Makefile
-
-
-if [ $sysname = 'Linux' ]; then
-    echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
-elif ! case $sysname in MINGW*) false;; esac; then
-    echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC" >> Makefile
+if [ $wasm -eq 1 ]; then
+    echo -e "\temar rcs lib/\$(MELONA) \$(OBJS)" >> Makefile
 else
-    echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
+    echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile
+fi
+
+if [ $wasm -eq 0 ]; then
+    echo "\$(MELONSO) : \$(OBJS)" >> Makefile
+    if [ $sysname = 'Linux' ]; then
+        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
+    elif ! case $sysname in MINGW*) false;; esac; then
+        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC" >> Makefile
+    else
+        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
+    fi
 fi
 echo "install:" >> Makefile
 echo -e "\ttest -d $melanglibpath || mkdir -p $melanglibpath" >> Makefile
@@ -214,6 +252,12 @@ do
         test -e include/$header && echo -n "include/$header " >> Makefile
     done
     echo "" >> Makefile
+
+    if [ $wasm -eq 1 ]; then
+        echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
+        continue
+    fi
+
     test $fname = "./src/mln_event.c"
     if [ $? -eq 0 ]; then
     #test event system call
@@ -227,6 +271,7 @@ do
             rm -f ev_test ev_test.c
             continue
         fi
+
         echo "#include<stdio.h>
         #include<sys/types.h>
         #include<sys/event.h>
@@ -240,15 +285,16 @@ do
             continue
         fi
         rm -f ev_test ev_test.c
+
         echo -e "event\t\t\t[SELECT]"
         echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_SELECT" >> Makefile
         continue
     fi
 
-        test $fname = "./src/mln_connection.c"
-        if [ $? -eq 0 ]; then
+    #test sendfile & writev
+    test $fname = "./src/mln_connection.c"
+    if [ $? -eq 0 ]; then
         sendfile=0
-        #test sendfile
         echo "#include <sys/sendfile.h>
         int main(void){sendfile(1,0,0,1);return 0;}" > sendfile_test.c
         cc -o sendfile_test sendfile_test.c 2>/dev/null
@@ -259,7 +305,8 @@ do
             echo -e "sendfile\t\t[NOT support]"
         fi
         rm -f sendfile_test sendfile_test.c
-    #test writev
+
+        #test writev
         echo -e "#include <stdio.h>\n#include <sys/uio.h>" > writev_test.c
         echo "int main(void){writev(0,NULL,0);return 0;}" >> writev_test.c
         cc -o writev_test writev_test.c 2>/dev/null
@@ -280,12 +327,12 @@ do
         fi
         rm -f writev_test writev_test.c
         continue
-        fi
+    fi
 
-        test $fname = "./src/mln_thread_pool.c"
+    #test __USE_UNIX98
+    test $fname = "./src/mln_thread_pool.c"
     if [ $? -eq 0 ]; then
         unix98=0
-    #test __USE_UNIX98
         echo -e "#ifndef __USE_UNIX98\n#define __USE_UNIX98\n#endif\n#include <pthread.h>\n" > unix98_test.c
         echo "int main(void){pthread_setconcurrency(0);return 0;}" >> unix98_test.c
         cc -o unix98_test unix98_test.c -lpthread 2>/dev/null

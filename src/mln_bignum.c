@@ -896,7 +896,7 @@ void mln_bignum_dump(mln_bignum_t *bn)
     for (i = 0; i < M_BIGNUM_SIZE; ++i) {
 #if defined(WIN32)
         fprintf(stderr, "\t%I64x\n", bn->data[i]);
-#elif defined(i386) || defined(__arm__)
+#elif defined(i386) || defined(__arm__) || defined(__wasm__)
         fprintf(stderr, "\t%llx\n", bn->data[i]);
 #else
         fprintf(stderr, "\t%lx\n", bn->data[i]);

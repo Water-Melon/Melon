@@ -739,7 +739,7 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
             if (i == j->data.m_j_number)
 #if defined(WIN32)
                 n = snprintf(buf, 512, "%I64d", i);
-#elif defined(i386) || defined(__arm__)
+#elif defined(i386) || defined(__arm__) || defined(__wasm__)
                 n = snprintf(buf, 512, "%lld", i);
 #else
                 n = snprintf(buf, 512, "%ld", i);

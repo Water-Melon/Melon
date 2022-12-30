@@ -367,7 +367,7 @@ char *mln_lex_strerror(mln_lex_t *lex)
         n += snprintf(lex->err_msg + n, len - n, "%s:", (char *)(lex->cur->data->data));
 #if defined(WIN32)
     n += snprintf(lex->err_msg + n, len - n, "%I64u: %s", lex->line, mln_lex_errmsg[lex->error]);
-#elif defined(i386) || defined(__arm__)
+#elif defined(i386) || defined(__arm__) || defined(__wasm__)
     n += snprintf(lex->err_msg + n, len - n, "%llu: %s", lex->line, mln_lex_errmsg[lex->error]);
 #else
     n += snprintf(lex->err_msg + n, len - n, "%lu: %s", lex->line, mln_lex_errmsg[lex->error]);

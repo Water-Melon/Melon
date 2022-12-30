@@ -7,7 +7,7 @@
 
 #include <pthread.h>
 
-#if defined(__APPLE__) || defined(WIN32)
+#if defined(__APPLE__) || defined(WIN32) || defined(__wasm__)
 #define __NONNULL1(x)
 #define __NONNULL2(x,y)
 #define __NONNULL3(x,y,z)

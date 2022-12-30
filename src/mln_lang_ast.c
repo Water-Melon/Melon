@@ -3409,7 +3409,7 @@ static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right,
         if (num[1] == 'x' || num[1] == 'X') {
 #if defined(WIN32)
             sscanf(num, "%I64x", &i);
-#elif defined(i386) || defined(__arm__)
+#elif defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf(num, "%llx", &i);
 #else
             sscanf(num, "%lx", &i);
@@ -3417,7 +3417,7 @@ static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right,
         } else {
 #if defined(WIN32)
             sscanf(num, "%I64o", &i);
-#elif defined(i386) || defined(__arm__)
+#elif defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf(num, "%llo", &i);
 #else
             sscanf(num, "%lo", &i);
@@ -3426,7 +3426,7 @@ static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right,
     } else {
 #if defined(WIN32)
         sscanf(num, "%I64d", &i);
-#elif defined(i386) || defined(__arm__)
+#elif defined(i386) || defined(__arm__) || defined(__wasm__)
         sscanf(num, "%lld", &i);
 #else
         sscanf(num, "%ld", &i);

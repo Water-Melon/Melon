@@ -196,7 +196,7 @@ static inline mln_s64_t mln_lang_int_var_toint(mln_lang_var_t *var)
             buf[s->len] = 0;
 #if defined(WIN32)
             sscanf((char *)buf, "%I64d", &i);
-#elif defined(i386) || defined(__arm__)
+#elif defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf((char *)buf, "%lld", &i);
 #else
             sscanf((char *)buf, "%ld", &i);
