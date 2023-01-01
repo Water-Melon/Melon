@@ -94,6 +94,18 @@ return value:
 
 
 
+#### mln_trace_finalize
+
+```c
+void mln_trace_finalize(void);
+```
+
+Description: Destroy all trace structures and reset the global pointer.
+
+return value: none
+
+
+
 ### Example
 
 After installing Melon, we proceed as follows:

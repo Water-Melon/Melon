@@ -43,6 +43,8 @@ mln_string_t *mln_trace_path(void)
 
 int mln_trace_init(mln_event_t *ev, mln_string_t *path)
 {
+    if (trace_lang != NULL || trace_ctx != NULL) goto err1;
+
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, trace_signal_fds) < 0) {
         goto err1;
     }
@@ -75,6 +77,13 @@ err1:
 mln_lang_ctx_t *mln_trace_task_get(void)
 {
     return trace_ctx;
+}
+
+void mln_trace_finalize(void)
+{
+    mln_lang_free(trace_lang);
+    trace_lang = NULL;
+    trace_ctx = NULL;
 }
 
 static void mln_trace_lang_check(mln_event_t *ev, void *data)

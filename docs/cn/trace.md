@@ -95,6 +95,18 @@ mln_lang_ctx_t *mln_trace_task_get(void);
 
 
 
+#### mln_trace_finalize
+
+```c
+void mln_trace_finalize(void);
+```
+
+描述：销毁所有trace结构，并将全局指针复位。
+
+返回值：无
+
+
+
 ### 示例
 
 安装Melon后，我们按如下步骤操作：

@@ -2942,6 +2942,9 @@ Their definitions can be found in melon/include/mln_types.h.
       d) mln_trace(fmt, ...);
          Send trace info to script task. This macro will call `mln_lang_ctx_pipe_send` to send data to script task.
 
+      e) void mln_trace_finalize(void);
+         Destroy all about script. Then you can use 'mln_trace_init' to create another tracer again.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.
