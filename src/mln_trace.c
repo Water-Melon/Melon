@@ -43,7 +43,7 @@ mln_string_t *mln_trace_path(void)
 
 int mln_trace_init(mln_event_t *ev, mln_string_t *path)
 {
-    if (trace_lang != NULL || trace_ctx != NULL) goto err1;
+    if (path == NULL || trace_lang != NULL || trace_ctx != NULL) goto err1;
 
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, trace_signal_fds) < 0) {
         goto err1;
