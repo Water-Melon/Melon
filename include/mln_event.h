@@ -142,6 +142,12 @@ struct mln_event_s {
 extern mln_event_t *mln_event_new(void);
 extern void mln_event_free(mln_event_t *ev);
 extern void mln_event_dispatch(mln_event_t *event) __NONNULL1(1);
+/*
+ * Note: There is a event named A triggered in thread t1,
+ * and another event B triggered in thread t2. If we want to free
+ * the data 'da' which is combinded with event A in event B handler,
+ * we have to resolve the confliction of 'da' in event handler.
+ */
 extern int
 mln_event_fd_set(mln_event_t *event, \
                  int fd, \
