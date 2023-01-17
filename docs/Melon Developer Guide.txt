@@ -421,6 +421,15 @@ Their definitions can be found in melon/include/mln_types.h.
     l) void mln_rbtree_reset(mln_rbtree_t *t);
        Reset rbtree. Every node in the tree will be freed.
 
+    m) mln_rbtree_node_num(ptree)
+       The macro for getting current node numbers from tree 'ptree'.
+
+    n) mln_rbtree_root(ptree)
+       Get root node of tree 'ptree'.
+
+    o) mln_rbtree_root_search(ptree,key)
+       The wrapper of 'mln_rbtree_search' with 'mln_rbtree_root'.
+
   5) Path
     a) char *mln_path(void);
        Depending on the parameter of shell script 'install', the installation path can be specified.

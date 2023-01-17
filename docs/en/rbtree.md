@@ -241,6 +241,48 @@ Return value: none
 
 
 
+#### mln_rbtree_node_num
+
+```c
+mln_rbtree_node_num(ptree)
+```
+
+Description:
+
+Get the number of nodes in the tree `ptree`.
+
+Return value: the number of integer nodes
+
+
+
+#### mln_rbtree_root
+
+```c
+mln_rbtree_root(ptree)
+```
+
+Description:
+
+Get the root node pointer from the tree `ptree`.
+
+Return value: root node pointer
+
+
+
+#### mln_rbtree_root_search
+
+```c
+mln_rbtree_root_search(ptree,key)
+```
+
+Description:
+
+A wrapper for `mln_rbtree_search`, by default it searches for the specified `key` value node from the root node of the tree `ptree`.
+
+Return value: node pointer
+
+
+
 ### Example
 
 ```c
@@ -292,7 +334,7 @@ int main(int argc, char *argv[])
     }
     mln_rbtree_insert(t, rn);
 
-    rn = mln_rbtree_search(t, t->root, &n);
+    rn = mln_rbtree_root_search(t, &n);
     if (mln_rbtree_null(rn, t)) {
         mln_log(error, "node not found\n");
         return -1;

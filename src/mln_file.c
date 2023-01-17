@@ -79,7 +79,7 @@ mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
 
     mln_string_set(&path, filepath);
     tmpf.file_path = &path;
-    rn = mln_rbtree_search(fs->reg_file_tree, fs->reg_file_tree->root, &tmpf);
+    rn = mln_rbtree_root_search(fs->reg_file_tree, &tmpf);
     if (mln_rbtree_null(rn, fs->reg_file_tree)) {
         struct stat st;
 
@@ -148,7 +148,7 @@ void mln_file_close(mln_file_t *pfile)
     fs = pfile->fset;
     reg_file_chain_add(&(fs->reg_free_head), &(fs->reg_free_tail), pfile);
 
-    if (fs->reg_file_tree->nr_node > fs->max_file) {
+    if (mln_rbtree_node_num(fs->reg_file_tree) > fs->max_file) {
         pfile = fs->reg_free_head;
         reg_file_chain_del(&(fs->reg_free_head), &(fs->reg_free_tail), pfile);
         mln_rbtree_delete(fs->reg_file_tree, pfile->node);

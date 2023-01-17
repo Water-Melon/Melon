@@ -241,6 +241,48 @@ void mln_rbtree_reset(mln_rbtree_t *t);
 
 
 
+#### mln_rbtree_node_num
+
+```c
+mln_rbtree_node_num(ptree)
+```
+
+描述：
+
+获取当前树中结点个数。
+
+返回值：整型结点数
+
+
+
+#### mln_rbtree_root
+
+```c
+mln_rbtree_root(ptree)
+```
+
+描述：
+
+获取树结构的根结点指针。
+
+返回值：根结点指针
+
+
+
+#### mln_rbtree_root_search
+
+```c
+mln_rbtree_root_search(ptree,key)
+```
+
+描述：
+
+`mln_rbtree_search`的一个封装，默认从树的根结点开始搜索指定的`key`值结点。
+
+返回值：结点指针
+
+
+
 ### 示例
 
 ```c
@@ -292,7 +334,7 @@ int main(int argc, char *argv[])
     }
     mln_rbtree_insert(t, rn);
 
-    rn = mln_rbtree_search(t, t->root, &n);
+    rn = mln_rbtree_root_search(t, &n);
     if (mln_rbtree_null(rn, t)) {
         mln_log(error, "node not found\n");
         return -1;

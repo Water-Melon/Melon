@@ -62,8 +62,11 @@ typedef struct rbtree_s {
     mln_u32_t                  cache:1;
 } mln_rbtree_t;
 
-#define mln_rbtree_null(ptr,ptree) ((ptr)==&((ptree)->nil))
-#define mln_rbtree_node_data(node) ((node)->data)
+#define mln_rbtree_node_num(ptree)        ((ptree)->nr_node)
+#define mln_rbtree_null(ptr,ptree)        ((ptr)==&((ptree)->nil))
+#define mln_rbtree_node_data(node)        ((node)->data)
+#define mln_rbtree_root(ptree)            ((ptree)->root)
+#define mln_rbtree_root_search(ptree,key) mln_rbtree_search((ptree), mln_rbtree_root((ptree)), (key))
 
 extern mln_rbtree_t *
 mln_rbtree_init(struct mln_rbtree_attr *attr) __NONNULL1(1);
