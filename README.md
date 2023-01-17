@@ -87,7 +87,7 @@ Copyright (c) 2014-present, Niklaus F. Schen
 
 
 
-### Document
+### Documentation
 
 Please refer to [Github Pages](https://water-melon.github.io/Melon/) for more details.
 
@@ -114,4 +114,11 @@ make && make install
 ```
 
 There is only one static library `libmelon.a` to be created.
+
+
+### Contact
+
+Twitter: @MelangInc
+
+QQ: 756582294
 
