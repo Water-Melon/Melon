@@ -1,5 +1,10 @@
 ## 双向链表
 
+Melon中有两个双向链表实现，读者可自行选用所需的一种。下面，我们分别进行介绍。
+
+
+
+## 第一种实现
 
 
 ### 头文件
@@ -92,4 +97,143 @@ int main(void)
   return 0;
 }
 ```
+
+
+
+## 第二种实现
+
+### 头文件
+
+```c
+#include "mln_list.h"
+```
+
+除了函数和宏以外，我们只需要知道，如果需要使用该双向链表，则需要在自定义的结构体中加入一个`mln_list_t`的成员（不是指针）。
+
+
+
+### 函数/宏
+
+
+
+#### mln_list_add
+
+```c
+void mln_list_add(mln_list_t *sentinel, mln_list_t *node);
+```
+
+描述：将结点`node`添加到双向链表`sentinel`中。
+
+返回值：无
+
+
+
+#### mln_list_remove
+
+```c
+void mln_list_remove(mln_list_t *sentinel, mln_list_t *node);
+```
+
+描述：将结点`node`从双向链表`sentinel`中移除。
+
+返回值：无
+
+
+
+### mln_list_head
+
+```c
+mln_list_head(sentinel)
+```
+
+描述：获得双向链表的首结点指针。
+
+返回值：首结点指针，若无则为`NULL`
+
+
+
+#### mln_list_tail
+
+```c
+ mln_list_tail(sentinel)
+```
+
+描述：获得双向链表的尾结点指针。
+
+返回值：首结点指针，若无则为`NULL`
+
+
+
+#### mln_list_next
+
+```c
+mln_list_next(node)
+```
+
+描述：获得当前结点`node`的下一个结点指针。
+
+返回值：下一个结点的指针，若无则为`NULL`
+
+
+
+#### mln_list_prev
+
+```c
+mln_list_prev(node)
+```
+
+描述：获得当前结点`node`的前一个结点指针。
+
+返回值：前一个结点的指针，若无则为`NULL`
+
+
+
+#### mln_list_null
+
+```c
+mln_list_null()
+```
+
+描述：用于对队列初始化。
+
+返回值：无
+
+
+
+### 示例
+
+```c
+#include "mln_list.h"
+#include "mln_defs.h"
+#include <stdlib.h>
+
+typedef struct {
+    int        val;
+    mln_list_t node;
+} test_t;
+
+int main(void)
+{
+    int i;
+    test_t *t;
+    mln_list_t sentinel = mln_list_null();
+
+    for (i = 0; i < 3; ++i) {
+        t = (test_t *)calloc(1, sizeof(*t));
+        if (t == NULL)
+            return -1;
+        mln_list_add(&sentinel, &t->node);
+        t->val = i;
+    }
+    for (t = mln_container_of(mln_list_head(&sentinel), test_t, node); \
+         t != NULL; \
+         t = mln_container_of(mln_list_next(&t->node), test_t, node))
+    {
+        printf("%d\n", t->val);
+    }
+    return 0;
+}
+```
+
+这里使用了`mln_defs.h`中定义的`mln_container_of`来获取链结点所属的自定义结构体`test_t`的指针。
 

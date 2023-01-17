@@ -2954,6 +2954,32 @@ Their definitions can be found in melon/include/mln_types.h.
       e) void mln_trace_finalize(void);
          Destroy all about script. Then you can use 'mln_trace_init' to create another tracer again.
 
+  44) Linked list
+      In melon, there is only one kind of linked list, doubly linked list.
+      We need add a property that is type of 'mln_list_t' to our customized structure if we want to use doubly linked list.
+      But we don't have to know the implementation details about linked list.
+
+      a) void mln_list_add(mln_list_t *sentinel, mln_list_t *node);
+         Add 'node' to linked list maintained by 'sendtinel'.
+
+      b) void mln_list_remove(mln_list_t *sentinel, mln_list_t *node);
+         Remove 'node' from linked list maintained by 'sendtinel'.
+
+      c) mln_list_head(sentinel);
+         Get the first list node from linked list 'sentinel'.
+
+      d) mln_list_tail(sentinel);
+         Get the last list node from linked list 'sentinel'.
+
+      e) mln_list_next(node);
+         Get the next list node from current node 'node'.
+
+      f) mln_list_prev(node);
+         Get the previous list node from current node 'node'.
+
+      g) mln_list_null();
+         This is used to initialize linked list.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.

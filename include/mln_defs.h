@@ -7,6 +7,21 @@
 
 #include <pthread.h>
 
+/*
+ * container_of and offsetof
+ */
+#define mln_offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+#define mln_container_of(ptr, type, member) ({\
+    type *__rptr = NULL;\
+    if ((ptr) != NULL) {\
+        __rptr = (type *)((char *)((const typeof(((type *)0)->member) *)(ptr)) - mln_offsetof(type, member));\
+    }\
+    __rptr;\
+})
+
+/*
+ * nonnull attribute
+ */
 #if defined(__APPLE__) || defined(WIN32) || defined(__wasm__)
 #define __NONNULL1(x)
 #define __NONNULL2(x,y)
