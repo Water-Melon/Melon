@@ -100,12 +100,12 @@ mln_pg_token_t *mln_pg_token_new(mln_string_t *token, mln_u32_t nr_rule)
     rbattr.cmp = mln_pg_token_rbtree_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;
-    t->first_set = mln_rbtree_init(&rbattr);
+    t->first_set = mln_rbtree_new(&rbattr);
     if (t->first_set == NULL) {
         mln_pg_token_free(t);
         return NULL;
     }
-    t->follow_set = mln_rbtree_init(&rbattr);
+    t->follow_set = mln_rbtree_new(&rbattr);
     if (t->follow_set == NULL) {
         mln_pg_token_free(t);
         return NULL;
@@ -130,9 +130,9 @@ void mln_pg_token_free(void *token)
     if (t->token != NULL)
         mln_string_free(t->token);
     if (t->first_set != NULL)
-        mln_rbtree_destroy(t->first_set);
+        mln_rbtree_free(t->first_set);
     if (t->follow_set != NULL)
-        mln_rbtree_destroy(t->follow_set);
+        mln_rbtree_free(t->follow_set);
     if (t->right_rule_index != NULL)
         free(t->right_rule_index);
     if (t->left_rule_index != NULL)
@@ -189,7 +189,7 @@ mln_pg_item_t *mln_pg_item_new(void)
     rbattr.cmp = mln_pg_token_rbtree_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;
-    item->lookahead_set = mln_rbtree_init(&rbattr);
+    item->lookahead_set = mln_rbtree_new(&rbattr);
     if (item->lookahead_set == NULL) {
         mln_pg_item_free(item);
         return NULL;
@@ -201,7 +201,7 @@ void mln_pg_item_free(mln_pg_item_t *item)
 {
     if (item == NULL) return;
     if (item->lookahead_set != NULL) {
-        mln_rbtree_destroy(item->lookahead_set);
+        mln_rbtree_free(item->lookahead_set);
     }
     free(item);
 }
@@ -249,7 +249,7 @@ int mln_pg_calc_info_init(struct mln_pg_calc_info_s *pci, \
     rbattr.cmp = mln_pg_calc_info_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;
-    if ((pci->tree = mln_rbtree_init(&rbattr)) == NULL) {
+    if ((pci->tree = mln_rbtree_new(&rbattr)) == NULL) {
         return -1;
     }
     pci->head = NULL;
@@ -264,7 +264,7 @@ int mln_pg_calc_info_init(struct mln_pg_calc_info_s *pci, \
 void mln_pg_calc_info_destroy(struct mln_pg_calc_info_s *pci)
 {
     if (pci == NULL) return;
-    if (pci->tree != NULL) mln_rbtree_destroy(pci->tree);
+    if (pci->tree != NULL) mln_rbtree_free(pci->tree);
     mln_pg_state_t *s;
     while ((s = pci->head) != NULL) {
         mln_state_chain_del(&(pci->head), &(pci->tail), s);

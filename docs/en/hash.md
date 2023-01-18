@@ -41,10 +41,10 @@ Here, we mainly focus on `len`, because when calculating the belonging bucket, t
 
 
 
-#### mln_hash_init
+#### mln_hash_new
 
 ```c
-mln_hash_t *mln_hash_init(struct mln_hash_attr *attr);
+mln_hash_t *mln_hash_new(struct mln_hash_attr *attr);
 
 struct mln_hash_attr {
     void                    *pool; //memory pool, it's an option, NULL means memory pool not activated
@@ -91,10 +91,10 @@ Return value: if successful, return the hash table structure pointer, otherwise 
 
 
 
-#### mln_hash_destroy
+#### mln_hash_free
 
 ```c
-void mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg);
+void mln_hash_free(mln_hash_t *h, mln_hash_flag_t flg);
 
 typedef enum mln_hash_flag {
     M_HASH_F_NONE,
@@ -321,7 +321,7 @@ int main(int argc, char *argv[])
     hattr.calc_prime = 0;
     hattr.cache = 0;
 
-    if ((h = mln_hash_init(&hattr)) == NULL) {
+    if ((h = mln_hash_new(&hattr)) == NULL) {
         mln_log(error, "Hash init failed.\n");
         return -1;
     }
@@ -341,7 +341,7 @@ int main(int argc, char *argv[])
     ret = mln_hash_search(h, &(item->key));
     mln_log(debug, "%X %X\n", ret, item);
 
-    mln_hash_destroy(h, M_HASH_F_VAL);
+    mln_hash_free(h, M_HASH_F_VAL);
 
     return 0;
 }

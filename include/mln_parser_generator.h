@@ -522,7 +522,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     hattr.expandable = 1;\
     hattr.calc_prime = 0;\
     hattr.cache = 0;\
-    attr->map_tbl = mln_hash_init(&hattr);\
+    attr->map_tbl = mln_hash_new(&hattr);\
     if (attr->map_tbl == NULL) {\
         mln_log(error, "No memory.\n");\
         return -1;\
@@ -569,7 +569,7 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     rbattr.cmp = mln_pg_token_rbtree_cmp;\
     rbattr.data_free = mln_pg_token_free;\
     rbattr.cache = 0;\
-    attr->token_tree = mln_rbtree_init(&rbattr);\
+    attr->token_tree = mln_rbtree_new(&rbattr);\
     if (attr->token_tree == NULL) {\
         mln_log(error, "No memory.\n");\
         goto err1;\
@@ -612,18 +612,18 @@ err3:\
     mln_alloc_destroy(pool);\
 \
 err2:\
-    mln_rbtree_destroy(attr->token_tree);\
+    mln_rbtree_free(attr->token_tree);\
 err1:\
-    mln_hash_destroy(attr->map_tbl, M_HASH_F_KV);\
+    mln_hash_free(attr->map_tbl, M_HASH_F_KV);\
     return -1;\
 }\
 \
 SCOPE void PREFIX_NAME##_preprocess_attr_free(struct PREFIX_NAME##_preprocess_attr *attr)\
 {\
     if (attr->map_tbl != NULL) \
-        mln_hash_destroy(attr->map_tbl, M_HASH_F_KV);\
+        mln_hash_free(attr->map_tbl, M_HASH_F_KV);\
     if (attr->token_tree != NULL) \
-        mln_rbtree_destroy(attr->token_tree);\
+        mln_rbtree_free(attr->token_tree);\
     if (attr->rule_tbl != NULL) {\
         mln_u32_t i;\
         for (i = 0; i < attr->nr_prod; ++i) {\

@@ -237,13 +237,13 @@ mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
     rbattr.cmp = mln_lex_macro_cmp;
     rbattr.data_free = mln_lex_macro_free;
     rbattr.cache = 0;
-    if ((lex->macros = mln_rbtree_init(&rbattr)) == NULL) {
+    if ((lex->macros = mln_rbtree_new(&rbattr)) == NULL) {
         mln_alloc_free(lex);
         return NULL;
     }
     if ((lm = mln_lex_macro_new(lex->pool, &k1, NULL)) == NULL) {
 err:
-        mln_rbtree_destroy(lex->macros);
+        mln_rbtree_free(lex->macros);
         mln_alloc_free(lex);
         return NULL;
     }
@@ -277,19 +277,19 @@ err:
         rbattr.cmp = mln_lex_keywords_cmp;
         rbattr.data_free = mln_lex_keyword_free;
         rbattr.cache = 0;
-        if ((lex->keywords = mln_rbtree_init(&rbattr)) == NULL) {
+        if ((lex->keywords = mln_rbtree_new(&rbattr)) == NULL) {
             mln_stack_destroy(lex->stack);
             goto err;
         }
         for (scan = attr->keywords; scan->data != NULL; ++scan) {
             if ((newkw = mln_lex_keyword_new(scan, scan - attr->keywords)) == NULL) {
-                 mln_rbtree_destroy(lex->keywords);
+                 mln_rbtree_free(lex->keywords);
                  mln_stack_destroy(lex->stack);
                  goto err;
             }
             if ((rn = mln_rbtree_node_new(lex->keywords, newkw)) == NULL) {
                 mln_lex_keyword_free(newkw);
-                mln_rbtree_destroy(lex->keywords);
+                mln_rbtree_free(lex->keywords);
                 mln_stack_destroy(lex->stack);
                 goto err;
             }
@@ -337,12 +337,12 @@ void mln_lex_destroy(mln_lex_t *lex)
         mln_lex_preprocess_data_free((mln_lex_preprocess_data_t *)(lex->hooks.at_data));
         lex->hooks.at_data = NULL;
     }
-    if (lex->macros != NULL) mln_rbtree_destroy(lex->macros);
+    if (lex->macros != NULL) mln_rbtree_free(lex->macros);
     if (lex->cur != NULL) mln_lex_input_free(lex->cur);
     if (lex->stack != NULL) mln_stack_destroy(lex->stack);
     if (lex->err_msg != NULL) mln_alloc_free(lex->err_msg);
     if (lex->result_buf != NULL) mln_alloc_free(lex->result_buf);
-    if (lex->keywords != NULL) mln_rbtree_destroy(lex->keywords);
+    if (lex->keywords != NULL) mln_rbtree_free(lex->keywords);
     if (lex->env != NULL) mln_alloc_free(lex->env);
     mln_alloc_free(lex);
 }

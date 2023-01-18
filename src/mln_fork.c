@@ -103,16 +103,16 @@ int mln_pre_fork(void)
     rbattr.cmp = mln_fork_rbtree_cmp;
     rbattr.data_free = (rbtree_free_data)mln_ipc_handler_free;
     rbattr.cache = 0;
-    if ((master_ipc_tree = mln_rbtree_init(&rbattr)) < 0) {
+    if ((master_ipc_tree = mln_rbtree_new(&rbattr)) < 0) {
         mln_log(error, "No memory.\n");
         if (mln_tcp_conn_get_fd(&master_conn) >= 0)
             mln_socket_close(mln_tcp_conn_get_fd(&master_conn));
         mln_tcp_conn_destroy(&master_conn);
         return -1;
     }
-    if ((worker_ipc_tree = mln_rbtree_init(&rbattr)) < 0) {
+    if ((worker_ipc_tree = mln_rbtree_new(&rbattr)) < 0) {
         mln_log(error, "No memory.\n");
-        mln_rbtree_destroy(master_ipc_tree);
+        mln_rbtree_free(master_ipc_tree);
         master_ipc_tree = NULL;
         if (mln_tcp_conn_get_fd(&master_conn) >= 0)
             mln_socket_close(mln_tcp_conn_get_fd(&master_conn));
@@ -121,9 +121,9 @@ int mln_pre_fork(void)
     }
     if (mln_set_ipc_handlers() < 0) {
         mln_log(error, "No memory.\n");
-        mln_rbtree_destroy(worker_ipc_tree);
+        mln_rbtree_free(worker_ipc_tree);
         worker_ipc_tree = NULL;
-        mln_rbtree_destroy(master_ipc_tree);
+        mln_rbtree_free(master_ipc_tree);
         master_ipc_tree = NULL;
         if (mln_tcp_conn_get_fd(&master_conn) >= 0)
             mln_socket_close(mln_tcp_conn_get_fd(&master_conn));
@@ -405,7 +405,7 @@ do_fork_core(enum proc_exec_type etype, \
     } else if (pid == 0) {
         mln_socket_close(fds[0]);
         mln_fork_destroy_all();
-        mln_rbtree_destroy(master_ipc_tree);
+        mln_rbtree_free(master_ipc_tree);
         if (rs_clr_handler != NULL)
             rs_clr_handler(rs_clr_data);
         master_ipc_tree = NULL;

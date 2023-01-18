@@ -69,9 +69,9 @@ typedef struct rbtree_s {
 #define mln_rbtree_root_search(ptree,key) mln_rbtree_search((ptree), mln_rbtree_root((ptree)), (key))
 
 extern mln_rbtree_t *
-mln_rbtree_init(struct mln_rbtree_attr *attr) __NONNULL1(1);
+mln_rbtree_new(struct mln_rbtree_attr *attr) __NONNULL1(1);
 extern void
-mln_rbtree_destroy(mln_rbtree_t *t);
+mln_rbtree_free(mln_rbtree_t *t);
 extern void
 mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *n) __NONNULL2(1,2);
 extern void

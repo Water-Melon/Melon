@@ -41,7 +41,7 @@ int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
     ws->http = http;
     ws->pool = mln_http_get_pool(http);
     ws->connection = mln_http_get_connection(http);
-    if ((ws->fields = mln_hash_init(&hattr)) == NULL) return -1;
+    if ((ws->fields = mln_hash_new(&hattr)) == NULL) return -1;
     ws->uri = ws->args = ws->key = NULL;
 
     ws->data = NULL;
@@ -97,7 +97,7 @@ mln_websocket_t *mln_websocket_new(mln_http_t *http)
 void mln_websocket_destroy(mln_websocket_t *ws)
 {
     if (ws == NULL) return;
-    if (ws->fields != NULL) mln_hash_destroy(ws->fields, M_HASH_F_KV);
+    if (ws->fields != NULL) mln_hash_free(ws->fields, M_HASH_F_KV);
     if (ws->uri != NULL) mln_string_free(ws->uri);
     if (ws->args != NULL) mln_string_free(ws->args);
     if (ws->key != NULL) mln_string_free(ws->key);

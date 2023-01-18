@@ -65,10 +65,10 @@ Return value: This check is mainly used for the `mln_rbtree_search` operation. W
 
 
 
-#### mln_rbtree_init
+#### mln_rbtree_new
 
 ```c
-mln_rbtree_t *mln_rbtree_init(struct mln_rbtree_attr *attr);
+mln_rbtree_t *mln_rbtree_new(struct mln_rbtree_attr *attr);
 
 struct mln_rbtree_attr {
     mln_alloc_t              *pool;//The memory pool, if not needed, set NULL, at this time the red-black tree nodes will be allocated by malloc
@@ -101,10 +101,10 @@ Return value: return `mln_rbtree_t` pointer successfully, otherwise return `NULL
 
 
 
-#### mln_rbtree_destroy
+#### mln_rbtree_free
 
 ```c
-void mln_rbtree_destroy(mln_rbtree_t *t);
+void mln_rbtree_free(mln_rbtree_t *t);
 ```
 
 Description: Destroy the red-black tree and release the resources stored in each node on it.
@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
     rbattr.data_free = NULL;
     rbattr.cache = 0;
 
-    if ((t = mln_rbtree_init(&rbattr)) == NULL) {
+    if ((t = mln_rbtree_new(&rbattr)) == NULL) {
         mln_log(error, "rbtree init failed.\n");
         return -1;
     }
@@ -344,7 +344,7 @@ int main(int argc, char *argv[])
     mln_rbtree_delete(t, rn);
     mln_rbtree_node_free(t, rn);
 
-    mln_rbtree_destroy(t);
+    mln_rbtree_free(t);
 
     return 0;
 }

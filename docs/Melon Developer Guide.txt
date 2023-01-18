@@ -220,7 +220,7 @@ Their definitions can be found in melon/include/mln_types.h.
     typedef void *(*hash_pool_alloc_handler)(void *, mln_size_t);
     typedef void (*hash_pool_free_handler)(void *);
 
-    This structure is used to be the argument that will be passed to mln_hash_init() to initialize a hash table.
+    This structure is used to be the argument that will be passed to mln_hash_new() to initialize a hash table.
     pool -- a memory pool created by caller.
     pool_alloc -- the allocation function of 'pool'.
     pool_free -- the free function of 'pool'.
@@ -234,10 +234,10 @@ Their definitions can be found in melon/include/mln_types.h.
     calc_prime -- is a flag to indicate whether a prime number should be calculated. This prime number can be the
     length or the threshold of hash table. This calculation will take maybe more than a hundred microseconds.
 
-    a) mln_hash_t *mln_hash_init(struct mln_hash_attr *attr);
+    a) mln_hash_t *mln_hash_new(struct mln_hash_attr *attr);
        Initialize a hash table.
 
-    b) void mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg);
+    b) void mln_hash_free(mln_hash_t *h, mln_hash_flag_t flg);
        Destroy the hash table.
        If people set 'free_key' and (or) 'free_value' and the 'flg' is not M_HASH_F_NONE, this function will free
        hash element's key and (or) value at the same time.
@@ -308,21 +308,21 @@ Their definitions can be found in melon/include/mln_types.h.
     min_val -- is a key's value actually. This is the minimum value in the heap.
     min_val_size -- is the size of 'min_val' structure.
 
-    a) mln_fheap_node_t* mln_fheap_node_init(mln_fheap_t *fh, void *key);
+    a) mln_fheap_node_t* mln_fheap_node_new(mln_fheap_t *fh, void *key);
        It initializes a fibonacci heap node.
        The first argument is a pointer points to a fibonacci heap.
        The second one is a user data.
        If memory is not enough, NULL will be returned.
 
-    b) void mln_fheap_node_destroy(mln_fheap_t *fh, mln_fheap_node_t *fn);
+    b) void mln_fheap_node_free(mln_fheap_t *fh, mln_fheap_node_t *fn);
        It destroys a heap node and frees its system resources.
-       The second argument is the pointer that mln_fheap_node_init() returned.
+       The second argument is the pointer that mln_fheap_node_new() returned.
        If key_free isn't NULL, the key's value in the heap node will be freed.
 
-    c) mln_fheap_t *mln_fheap_init(struct mln_fheap_attr *attr);
+    c) mln_fheap_t *mln_fheap_new(struct mln_fheap_attr *attr);
        It initializes and returns a fibonacci heap.
 
-    d) void mln_fheap_destroy(mln_fheap_t *fh);
+    d) void mln_fheap_free(mln_fheap_t *fh);
        It destroys a fibonacci heap. If 'key_free' is not NULL, the key's value in every heap node will be freed by
        the function 'key_free' at the same time.
 
@@ -378,11 +378,11 @@ Their definitions can be found in melon/include/mln_types.h.
        This function destroys RB-tree node and frees its resources.
        If RB-tree's 'data_free' is not NULL, the user data in the node will be freed by calling function data_free().
 
-    c) mln_rbtree_t *mln_rbtree_init(struct mln_rbtree_attr *attr);
+    c) mln_rbtree_t *mln_rbtree_new(struct mln_rbtree_attr *attr);
        It initializes an RB-tree.
        If memory is not enough, NULL will be returned.
 
-    d) void mln_rbtree_destroy(mln_rbtree_t *t);
+    d) void mln_rbtree_free(mln_rbtree_t *t);
        It destroys an RB-tree.
        If 'data_free' is not NULL, all user data in the whole tree will be freed.
 

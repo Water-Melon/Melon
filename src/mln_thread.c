@@ -205,7 +205,7 @@ int mln_load_thread(mln_event_t *ev)
     mln_conf_cmd_t **v = (mln_conf_cmd_t **)calloc(nr_cmds, sizeof(mln_conf_cmd_t *));
     if (v == NULL) {
         mln_log(error, "No memory.\n");
-        mln_rbtree_destroy(thread_tree);
+        mln_rbtree_free(thread_tree);
         thread_tree = NULL;
         return -1;
     }
@@ -652,7 +652,7 @@ mln_thread_rbtree_init(void)
     rbattr.cmp = mln_thread_rbtree_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;
-    if ((thread_tree = mln_rbtree_init(&rbattr)) == NULL) {
+    if ((thread_tree = mln_rbtree_new(&rbattr)) == NULL) {
         return -1;
     }
     return 0;

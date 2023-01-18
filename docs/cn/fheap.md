@@ -27,10 +27,10 @@ typedef struct mln_fheap_node_s {
 
 
 
-#### mln_fheap_init
+#### mln_fheap_new
 
 ```c
-mln_fheap_t *mln_fheap_init(struct mln_fheap_attr *attr);
+mln_fheap_t *mln_fheap_new(struct mln_fheap_attr *attr);
 
 struct mln_fheap_attr {
     void                     *pool;//内存池
@@ -66,10 +66,10 @@ typedef void (*fheap_pool_free_handler)(void *);
 
 
 
-#### mln_fheap_destroy
+#### mln_fheap_free
 
 ```c
-void mln_fheap_destroy(mln_fheap_t *fh);
+void mln_fheap_free(mln_fheap_t *fh);
 ```
 
 描述：销毁斐波那契堆，并根据`key_free`对堆内key进行释放。
@@ -78,22 +78,22 @@ void mln_fheap_destroy(mln_fheap_t *fh);
 
 
 
-#### mln_fheap_node_init
+#### mln_fheap_node_new
 
 ```c
-mln_fheap_node_t *mln_fheap_node_init(mln_fheap_t *fh, void *key);
+mln_fheap_node_t *mln_fheap_node_new(mln_fheap_t *fh, void *key);
 ```
 
-描述：创建一个斐波那契堆节点结构，`key`为用户自定义结构，`fh`为`mln_fheap_init`创建的堆。
+描述：创建一个斐波那契堆节点结构，`key`为用户自定义结构，`fh`为`mln_fheap_new`创建的堆。
 
 返回值：成功则返回节点结构指针，否则返回`NULL`
 
 
 
-#### mln_fheap_node_destroy
+#### mln_fheap_node_free
 
 ```c
-void mln_fheap_node_destroy(mln_fheap_t *fh, mln_fheap_node_t *fn);
+void mln_fheap_node_free(mln_fheap_t *fh, mln_fheap_node_t *fn);
 ```
 
 描述：释放斐波那契堆`fh`的节点`fn`的资源，并根据`key_free`对节点数据进行释放。
@@ -206,13 +206,13 @@ int main(int argc, char *argv[])
     fattr.key_free = NULL;
     fattr.min_val = &min;
     fattr.min_val_size = sizeof(min);
-    fh = mln_fheap_init(&fattr);
+    fh = mln_fheap_new(&fattr);
     if (fh == NULL) {
         mln_log(error, "fheap init failed.\n");
         return -1;
     }
 
-    fn = mln_fheap_node_init(fh, &i);
+    fn = mln_fheap_node_new(fh, &i);
     if (fn == NULL) {
         mln_log(error, "fheap node init failed.\n");
         return -1;
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     fn = mln_fheap_minimum(fh);
     mln_log(debug, "%d\n", *((int *)mln_fheap_node_key(fn)));
 
-    mln_fheap_destroy(fh);
+    mln_fheap_free(fh);
 
     return 0;
 }

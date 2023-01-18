@@ -27,7 +27,7 @@ static inline void
 mln_move_hash_entry(mln_hash_t *h, mln_hash_mgr_t *old_tbl, mln_u32_t old_len) __NONNULL2(1,2);
 
 mln_hash_t *
-mln_hash_init(struct mln_hash_attr *attr)
+mln_hash_new(struct mln_hash_attr *attr)
 {
     mln_hash_t *h;
     if (attr->pool != NULL) {
@@ -79,7 +79,7 @@ mln_hash_init(struct mln_hash_attr *attr)
 }
 
 void
-mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg)
+mln_hash_free(mln_hash_t *h, mln_hash_flag_t flg)
 {
     mln_hash_entry_t *he, *fr;
     mln_hash_mgr_t *mgr, *mgr_end = h->tbl + h->len;

@@ -893,7 +893,7 @@ mln_http_t *mln_http_init(mln_tcp_conn_t *connection, void *data, mln_http_handl
     hattr.expandable = 0;
     hattr.calc_prime = 0;
     hattr.cache = 0;
-    http->header_fields = mln_hash_init(&hattr);
+    http->header_fields = mln_hash_new(&hattr);
     if (http->header_fields == NULL) {
         mln_alloc_free(http);
         return NULL;
@@ -919,7 +919,7 @@ void mln_http_destroy(mln_http_t *http)
     if (http == NULL) return;
 
     if (http->header_fields != NULL) {
-        mln_hash_destroy(http->header_fields, M_HASH_F_KV);
+        mln_hash_free(http->header_fields, M_HASH_F_KV);
     }
     if (http->body_head != NULL) {
         mln_chain_pool_release_all(http->body_head);

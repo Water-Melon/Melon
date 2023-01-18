@@ -328,7 +328,7 @@ static inline mln_conf_t *mln_conf_init(void)
     rbattr.cmp = mln_conf_domain_cmp;
     rbattr.data_free = mln_conf_domain_destroy;
     rbattr.cache = 0;
-    if ((cf->domain = mln_rbtree_init(&rbattr)) == NULL) {
+    if ((cf->domain = mln_rbtree_new(&rbattr)) == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         free(cf);
         return NULL;
@@ -343,14 +343,14 @@ static inline mln_conf_t *mln_conf_init(void)
 
     if ((pool = mln_alloc_init(NULL)) == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
-        mln_rbtree_destroy(cf->domain);
+        mln_rbtree_free(cf->domain);
         free(cf);
         return NULL;
     }
     if ((conf_file_path = (char *)mln_alloc_m(pool, path_len + 1)) == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_alloc_destroy(pool);
-        mln_rbtree_destroy(cf->domain);
+        mln_rbtree_free(cf->domain);
         free(cf);
         return NULL;
     }
@@ -375,7 +375,7 @@ static inline mln_conf_t *mln_conf_init(void)
         if (cf->lex == NULL) {
             fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
             mln_alloc_destroy(pool);
-            mln_rbtree_destroy(cf->domain);
+            mln_rbtree_free(cf->domain);
             free(cf);
             return NULL;
         }
@@ -397,7 +397,7 @@ mln_conf_destroy(mln_conf_t *cf)
     if (cf == NULL) return;
     mln_conf_destroy_lex(cf);
     if (cf->domain != NULL) {
-        mln_rbtree_destroy(cf->domain);
+        mln_rbtree_free(cf->domain);
         cf->domain = NULL;
     }
     free(cf);
@@ -437,7 +437,7 @@ mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name)
     rbattr.cmp = mln_conf_cmd_cmp;
     rbattr.data_free = mln_conf_cmd_destroy;
     rbattr.cache = 0;
-    if ((cd->cmd = mln_rbtree_init(&rbattr)) == NULL) {
+    if ((cd->cmd = mln_rbtree_new(&rbattr)) == NULL) {
         mln_string_free(cd->domain_name);
         free(cd);
         return NULL;
@@ -455,7 +455,7 @@ mln_conf_domain_destroy(void *data)
         cd->domain_name = NULL;
     }
     if (cd->cmd != NULL) {
-        mln_rbtree_destroy(cd->cmd);
+        mln_rbtree_free(cd->cmd);
         cd->cmd = NULL;
     }
     free(cd);

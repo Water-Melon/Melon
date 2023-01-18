@@ -77,9 +77,9 @@ struct mln_hash_s {
 
 
 extern mln_hash_t *
-mln_hash_init(struct mln_hash_attr *attr) __NONNULL1(1);
+mln_hash_new(struct mln_hash_attr *attr) __NONNULL1(1);
 extern void
-mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg) __NONNULL1(1);
+mln_hash_free(mln_hash_t *h, mln_hash_flag_t flg) __NONNULL1(1);
 extern void *
 mln_hash_search(mln_hash_t *h, void *key) __NONNULL2(1,2);
 extern void *

@@ -25,7 +25,7 @@ static inline void
 mln_fheap_cascading_cut(mln_fheap_t *fh, mln_fheap_node_t *y);
 
 
-mln_fheap_t *mln_fheap_init(struct mln_fheap_attr *attr)
+mln_fheap_t *mln_fheap_new(struct mln_fheap_attr *attr)
 {
     mln_fheap_t *fh;
     if (attr->pool != NULL)
@@ -192,13 +192,13 @@ void mln_fheap_delete(mln_fheap_t *fh, mln_fheap_node_t *node)
     mln_fheap_extract_min(fh);
 }
 
-void mln_fheap_destroy(mln_fheap_t *fh)
+void mln_fheap_free(mln_fheap_t *fh)
 {
     if (fh == NULL) return;
 
     mln_fheap_node_t *fn;
     while ((fn = mln_fheap_extract_min(fh)) != NULL) {
-        mln_fheap_node_destroy(fh, fn);
+        mln_fheap_node_free(fh, fn);
     }
     if (fh->min_val != NULL) {
         if (fh->pool != NULL) fh->pool_free(fh->min_val);
@@ -209,7 +209,7 @@ void mln_fheap_destroy(mln_fheap_t *fh)
 }
 
 /*mln_fheap_node_t*/
-mln_fheap_node_t *mln_fheap_node_init(mln_fheap_t *fh, void *key)
+mln_fheap_node_t *mln_fheap_node_new(mln_fheap_t *fh, void *key)
 {
     mln_fheap_node_t *fn;
 
@@ -229,7 +229,7 @@ mln_fheap_node_t *mln_fheap_node_init(mln_fheap_t *fh, void *key)
     return fn;
 }
 
-void mln_fheap_node_destroy(mln_fheap_t *fh, mln_fheap_node_t *fn)
+void mln_fheap_node_free(mln_fheap_t *fh, mln_fheap_node_t *fn)
 {
     if (fn == NULL) return;
     if (fh->key_free != NULL && fn->key != NULL)

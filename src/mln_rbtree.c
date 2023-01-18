@@ -33,7 +33,7 @@ rbtree_delete_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n) __NONNULL2(1,2);
 
 /*rbtree_init*/
 mln_rbtree_t *
-mln_rbtree_init(struct mln_rbtree_attr *attr)
+mln_rbtree_new(struct mln_rbtree_attr *attr)
 {
     mln_rbtree_t *t;
     if (attr->pool == NULL) {
@@ -65,7 +65,7 @@ mln_rbtree_init(struct mln_rbtree_attr *attr)
 
 /*rbtree_destroy*/
 void
-mln_rbtree_destroy(mln_rbtree_t *t)
+mln_rbtree_free(mln_rbtree_t *t)
 {
     if (t == NULL) return;
 

@@ -92,7 +92,7 @@ mln_event_t *mln_event_new(void)
     rbattr.cmp = mln_event_rbtree_fd_cmp;
     rbattr.data_free = NULL;
     rbattr.cache = 0;
-    ev->ev_fd_tree = mln_rbtree_init(&rbattr);
+    ev->ev_fd_tree = mln_rbtree_new(&rbattr);
     if (ev->ev_fd_tree == NULL) {
         mln_log(error, "No memory.\n");
         goto err1;
@@ -111,7 +111,7 @@ mln_event_t *mln_event_new(void)
     fattr.key_free = NULL;
     fattr.min_val = &fheap_min;
     fattr.min_val_size = sizeof(mln_event_desc_t);
-    ev->ev_fd_timeout_heap = mln_fheap_init(&fattr);
+    ev->ev_fd_timeout_heap = mln_fheap_new(&fattr);
     if (ev->ev_fd_timeout_heap == NULL) {
         mln_log(error, "No memory.\n");
         goto err2;
@@ -125,7 +125,7 @@ mln_event_t *mln_event_new(void)
     fattr.key_free = mln_event_desc_free;
     fattr.min_val = &fheap_min;
     fattr.min_val_size = sizeof(mln_event_desc_t);
-    ev->ev_timer_heap = mln_fheap_init(&fattr);
+    ev->ev_timer_heap = mln_fheap_new(&fattr);
     if (ev->ev_timer_heap == NULL) {
         mln_log(error, "No memory.\n");
         goto err3;
@@ -182,11 +182,11 @@ mln_event_t *mln_event_new(void)
     return ev;
 
 err4:
-    mln_fheap_destroy(ev->ev_timer_heap);
+    mln_fheap_free(ev->ev_timer_heap);
 err3:
-    mln_fheap_destroy(ev->ev_fd_timeout_heap);
+    mln_fheap_free(ev->ev_fd_timeout_heap);
 err2:
-    mln_rbtree_destroy(ev->ev_fd_tree);
+    mln_rbtree_free(ev->ev_fd_tree);
 err1:
     free(ev);
     return NULL;
@@ -196,15 +196,15 @@ void mln_event_free(mln_event_t *ev)
 {
     if (ev == NULL) return;
     mln_event_desc_t *ed;
-    mln_fheap_destroy(ev->ev_fd_timeout_heap);
-    mln_rbtree_destroy(ev->ev_fd_tree);
+    mln_fheap_free(ev->ev_fd_timeout_heap);
+    mln_rbtree_free(ev->ev_fd_tree);
     while ((ed = ev->ev_fd_wait_head) != NULL) {
         ev_fd_wait_chain_del(&(ev->ev_fd_wait_head), \
                              &(ev->ev_fd_wait_tail), \
                              ed);
         mln_event_desc_free(ed);
     }
-    mln_fheap_destroy(ev->ev_timer_heap);
+    mln_fheap_free(ev->ev_timer_heap);
 #if defined(MLN_EPOLL)
     close(ev->epollfd);
     close(ev->unusedfd);
@@ -253,7 +253,7 @@ mln_event_timer_t *mln_event_timer_set(mln_event_t *event, \
     ed->next = NULL;
     ed->act_prev = NULL;
     ed->act_next = NULL;
-    mln_fheap_node_t *fn = mln_fheap_node_init(event->ev_timer_heap, ed);
+    mln_fheap_node_t *fn = mln_fheap_node_new(event->ev_timer_heap, ed);
     if (fn == NULL) {
         mln_log(error, "No memory.\n");
         free(ed);
@@ -269,7 +269,7 @@ void mln_event_timer_cancel(mln_event_t *event, mln_event_timer_t *timer)
 {
     pthread_mutex_lock(&event->timer_lock);
     mln_fheap_delete(event->ev_timer_heap, timer);
-    mln_fheap_node_destroy(event->ev_timer_heap, timer);
+    mln_fheap_node_free(event->ev_timer_heap, timer);
     pthread_mutex_unlock(&event->timer_lock);
 }
 
@@ -305,7 +305,7 @@ lp:
     if (ed->data.tm.handler != NULL)
         ed->data.tm.handler(event, ed->data.tm.data);
 
-    mln_fheap_node_destroy(event->ev_timer_heap, fn);
+    mln_fheap_node_free(event->ev_timer_heap, fn);
 
     if (!event->is_break)
         goto lp;
@@ -657,7 +657,7 @@ mln_event_fd_timeout_set(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms)
     if (timeout_ms == M_EV_UNLIMITED) {
         if (ef->timeout_node != NULL) {
             mln_fheap_delete(ev->ev_fd_timeout_heap, ef->timeout_node);
-            mln_fheap_node_destroy(ev->ev_fd_timeout_heap, ef->timeout_node);
+            mln_fheap_node_free(ev->ev_fd_timeout_heap, ef->timeout_node);
             ef->timeout_node = NULL;
             ef->end_us = 0;
         }
@@ -669,7 +669,7 @@ mln_event_fd_timeout_set(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms)
     gettimeofday(&tv, NULL);
     if (ef->timeout_node == NULL) {
         ef->end_us = tv.tv_sec*1000000+tv.tv_usec+timeout_ms*1000;
-        fn = mln_fheap_node_init(ev->ev_fd_timeout_heap, ed);
+        fn = mln_fheap_node_new(ev->ev_fd_timeout_heap, ed);
         if (fn == NULL) {
             mln_log(error, "No memory.\n");
             return -1;
@@ -700,7 +700,7 @@ mln_event_fd_clr_set(mln_event_t *event, int fd)
     ed = (mln_event_desc_t *)mln_rbtree_node_data(rn);
     if (ed->data.fd.timeout_node != NULL) {
         mln_fheap_delete(event->ev_fd_timeout_heap, ed->data.fd.timeout_node);
-        mln_fheap_node_destroy(event->ev_fd_timeout_heap, ed->data.fd.timeout_node);
+        mln_fheap_node_free(event->ev_fd_timeout_heap, ed->data.fd.timeout_node);
         ed->data.fd.timeout_node = NULL;
         ed->data.fd.end_us = 0;
     }
@@ -1237,7 +1237,7 @@ lp:
         ef = &(ed->data.fd);
         if (ef->timeout_node != NULL) {
             mln_fheap_delete(event->ev_fd_timeout_heap, ef->timeout_node);
-            mln_fheap_node_destroy(event->ev_fd_timeout_heap, ef->timeout_node);
+            mln_fheap_node_free(event->ev_fd_timeout_heap, ef->timeout_node);
             ef->timeout_node = NULL;
             ef->end_us = 0;
         }
@@ -1330,7 +1330,7 @@ lp:
     }
     ef->in_process = 1;
     mln_fheap_delete(event->ev_fd_timeout_heap, fn);
-    mln_fheap_node_destroy(event->ev_fd_timeout_heap, fn);
+    mln_fheap_node_free(event->ev_fd_timeout_heap, fn);
     ed->data.fd.timeout_node = NULL;
 
     if (ed->data.fd.timeout_handler != NULL) {

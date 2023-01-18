@@ -70,9 +70,9 @@ typedef struct {
 #define mln_fheap_node_key(node)   ((node)->key)
 
 extern mln_fheap_t *
-mln_fheap_init(struct mln_fheap_attr *attr) __NONNULL1(1);
+mln_fheap_new(struct mln_fheap_attr *attr) __NONNULL1(1);
 extern void
-mln_fheap_destroy(mln_fheap_t *fh);
+mln_fheap_free(mln_fheap_t *fh);
 extern void
 mln_fheap_insert(mln_fheap_t *fh, mln_fheap_node_t *fn) __NONNULL2(1,2);
 extern mln_fheap_node_t *
@@ -89,9 +89,9 @@ mln_fheap_delete(mln_fheap_t *fh, mln_fheap_node_t *node) __NONNULL2(1,2);
 
 /*mln_fheap_node_t*/
 extern mln_fheap_node_t *
-mln_fheap_node_init(mln_fheap_t *fh, void *key) __NONNULL2(1,2);
+mln_fheap_node_new(mln_fheap_t *fh, void *key) __NONNULL2(1,2);
 extern void
-mln_fheap_node_destroy(mln_fheap_t *fh, mln_fheap_node_t *fn) __NONNULL1(1);
+mln_fheap_node_free(mln_fheap_t *fh, mln_fheap_node_t *fn) __NONNULL1(1);
 
 #endif
 

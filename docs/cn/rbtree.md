@@ -65,10 +65,10 @@ mln_rbtree_null(mln_rbtree_node_t *ptr, mln_rbtree_t *ptree)
 
 
 
-#### mln_rbtree_init
+#### mln_rbtree_new
 
 ```c
-mln_rbtree_t *mln_rbtree_init(struct mln_rbtree_attr *attr);
+mln_rbtree_t *mln_rbtree_new(struct mln_rbtree_attr *attr);
 
 struct mln_rbtree_attr {
     mln_alloc_t              *pool;//内存池，如果不需要则置NULL，此时红黑树节点将由malloc进行分配
@@ -101,10 +101,10 @@ typedef void (*rbtree_free_data)(void *);
 
 
 
-#### mln_rbtree_destroy
+#### mln_rbtree_free
 
 ```c
-void mln_rbtree_destroy(mln_rbtree_t *t);
+void mln_rbtree_free(mln_rbtree_t *t);
 ```
 
 描述：销毁红黑树，并释放其上每个节点内存放的资源。
@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
     rbattr.data_free = NULL;
     rbattr.cache = 0;
 
-    if ((t = mln_rbtree_init(&rbattr)) == NULL) {
+    if ((t = mln_rbtree_new(&rbattr)) == NULL) {
         mln_log(error, "rbtree init failed.\n");
         return -1;
     }
@@ -344,7 +344,7 @@ int main(int argc, char *argv[])
     mln_rbtree_delete(t, rn);
     mln_rbtree_node_free(t, rn);
 
-    mln_rbtree_destroy(t);
+    mln_rbtree_free(t);
 
     return 0;
 }

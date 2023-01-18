@@ -27,10 +27,10 @@ typedef struct mln_fheap_node_s {
 
 
 
-#### mln_fheap_init
+#### mln_fheap_new
 
 ```c
-mln_fheap_t *mln_fheap_init(struct mln_fheap_attr *attr);
+mln_fheap_t *mln_fheap_new(struct mln_fheap_attr *attr);
 
 struct mln_fheap_attr {
     void                     *pool;//memory pool
@@ -64,10 +64,10 @@ Return value: return `mln_fheap_t` type pointer if successful, otherwise return 
 
 
 
-#### mln_fheap_destroy
+#### mln_fheap_free
 
 ```c
-void mln_fheap_destroy(mln_fheap_t *fh);
+void mln_fheap_free(mln_fheap_t *fh);
 ```
 
 Description: Destroy the Fibonacci heap and release the keys in the heap according to `key_free`.
@@ -76,22 +76,22 @@ Return value: none
 
 
 
-#### mln_fheap_node_init
+#### mln_fheap_node_new
 
 ```c
-mln_fheap_node_t *mln_fheap_node_init(mln_fheap_t *fh, void *key);
+mln_fheap_node_t *mln_fheap_node_new(mln_fheap_t *fh, void *key);
 ```
 
-Description: Create a Fibonacci heap node structure, `key` is a user-defined structure, `fh` is the heap created by `mln_fheap_init`.
+Description: Create a Fibonacci heap node structure, `key` is a user-defined structure, `fh` is the heap created by `mln_fheap_new`.
 
 Return value: Returns the node structure pointer if successful, otherwise returns `NULL`
 
 
 
-#### mln_fheap_node_destroy
+#### mln_fheap_node_free
 
 ```c
-void mln_fheap_node_destroy(mln_fheap_t *fh, mln_fheap_node_t *fn);
+void mln_fheap_node_free(mln_fheap_t *fh, mln_fheap_node_t *fn);
 ```
 
 Description: Release the resources of the node `fn` of the Fibonacci heap `fh`, and release the node data according to `key_free`.
@@ -204,13 +204,13 @@ int main(int argc, char *argv[])
     fattr.key_free = NULL;
     fattr.min_val = &min;
     fattr.min_val_size = sizeof(min);
-    fh = mln_fheap_init(&fattr);
+    fh = mln_fheap_new(&fattr);
     if (fh == NULL) {
         mln_log(error, "fheap init failed.\n");
         return -1;
     }
 
-    fn = mln_fheap_node_init(fh, &i);
+    fn = mln_fheap_node_new(fh, &i);
     if (fn == NULL) {
         mln_log(error, "fheap node init failed.\n");
         return -1;
@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
     fn = mln_fheap_minimum(fh);
     mln_log(debug, "%d\n", *((int *)mln_fheap_node_key(fn)));
 
-    mln_fheap_destroy(fh);
+    mln_fheap_free(fh);
 
     return 0;
 }
