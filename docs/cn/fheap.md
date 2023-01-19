@@ -201,6 +201,9 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    fattr.pool = NULL;
+    fattr.pool_alloc = NULL;
+    fattr.pool_free = NULL;
     fattr.cmp = cmp_handler;
     fattr.copy = copy_handler;
     fattr.key_free = NULL;

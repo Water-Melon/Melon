@@ -38,7 +38,7 @@ struct mln_fheap_attr {
     fheap_pool_free_handler   pool_free;
     fheap_cmp                 cmp;
     fheap_copy                copy;
-    fheap_key_free            key_free;    /*can be NULL*/
+    fheap_key_free            key_free;
     void                     *min_val;
     mln_size_t                min_val_size;
 };
