@@ -39,7 +39,6 @@ mln_fileset_t *mln_fileset_init(mln_size_t max_file)
     attr.pool_free = NULL;
     attr.cmp = mln_file_set_cmp;
     attr.data_free = mln_file_free;
-    attr.cache = 0;
     if ((fs->reg_file_tree = mln_rbtree_new(&attr)) == NULL) {
         mln_alloc_destroy(fs->pool);
         free(fs);

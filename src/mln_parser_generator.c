@@ -99,7 +99,6 @@ mln_pg_token_t *mln_pg_token_new(mln_string_t *token, mln_u32_t nr_rule)
     rbattr.pool_free = NULL;
     rbattr.cmp = mln_pg_token_rbtree_cmp;
     rbattr.data_free = NULL;
-    rbattr.cache = 0;
     t->first_set = mln_rbtree_new(&rbattr);
     if (t->first_set == NULL) {
         mln_pg_token_free(t);
@@ -188,7 +187,6 @@ mln_pg_item_t *mln_pg_item_new(void)
     rbattr.pool_free = NULL;
     rbattr.cmp = mln_pg_token_rbtree_cmp;
     rbattr.data_free = NULL;
-    rbattr.cache = 0;
     item->lookahead_set = mln_rbtree_new(&rbattr);
     if (item->lookahead_set == NULL) {
         mln_pg_item_free(item);
@@ -248,7 +246,6 @@ int mln_pg_calc_info_init(struct mln_pg_calc_info_s *pci, \
     rbattr.pool_free = NULL;
     rbattr.cmp = mln_pg_calc_info_cmp;
     rbattr.data_free = NULL;
-    rbattr.cache = 0;
     if ((pci->tree = mln_rbtree_new(&rbattr)) == NULL) {
         return -1;
     }

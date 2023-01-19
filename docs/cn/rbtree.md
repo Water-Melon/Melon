@@ -22,14 +22,12 @@ typedef struct rbtree_s {
     mln_rbtree_node_t         *min; //最小节点
     mln_rbtree_node_t         *head;
     mln_rbtree_node_t         *tail;
-    mln_rbtree_node_t         *free_head;
-    mln_rbtree_node_t         *free_tail;
     mln_rbtree_node_t         *iter;
     rbtree_cmp                 cmp; //节点比较函数
     rbtree_free_data           data_free; //节点内数据释放函数
     mln_uauto_t                nr_node; //节点总个数
     mln_u32_t                  del:1;
-    mln_u32_t                  cache:1; //是否缓存所有节点结构
+    mln_u32_t                  padding:31;
 } mln_rbtree_t;
 
 struct mln_rbtree_node_s {
@@ -71,10 +69,11 @@ mln_rbtree_null(mln_rbtree_node_t *ptr, mln_rbtree_t *ptree)
 mln_rbtree_t *mln_rbtree_new(struct mln_rbtree_attr *attr);
 
 struct mln_rbtree_attr {
-    mln_alloc_t              *pool;//内存池，如果不需要则置NULL，此时红黑树节点将由malloc进行分配
-    rbtree_cmp                cmp;//红黑树节点比较函数
-    rbtree_free_data          data_free;//红黑树节点的用户数据释放函数
-    mln_u32_t                 cache:1;//是否缓存所有红黑树节点
+    void                      *pool; //内存池结构，若未使用内存池则为NULL
+    rbtree_pool_alloc_handler  pool_alloc; //内存池分配函数
+    rbtree_pool_free_handler   pool_free; //内存池释放函数
+    rbtree_cmp                 cmp;//红黑树节点比较函数
+    rbtree_free_data           data_free;//红黑树节点的用户数据释放函数
 };
 
 typedef int (*rbtree_cmp)(const void *, const void *);
@@ -94,8 +93,6 @@ typedef void (*rbtree_free_data)(void *);
 -  `1`  第一个参数大于第二个参数
 
 `data_free`用于释放`mln_rbtree_node_t`结构中`data`所指向的用户资源。若不需要释放用户资源，则置`NULL`。该函数仅有一个参数为`mln_rbtree_node_t`中`data`同类型结构。
-
-`cache`用于指示红黑树是否缓存已被释放用户资源的红黑树节点结构。**注意**，是所有的节点结构都会被缓存。
 
 返回值：成功返回`mln_rbtree_t`指针，否则返回`NULL`
 
@@ -179,7 +176,7 @@ mln_rbtree_node_t *mln_rbtree_min(mln_rbtree_t *t);
 mln_rbtree_node_t *mln_rbtree_node_new(mln_rbtree_t *t, void *data);
 ```
 
-描述：创建红黑树节点，节点所需内存由`t`中的`pool`和`cache`决定如何分配。`data`为与该节点关联的用户数据。
+描述：创建红黑树节点，节点所需内存由`t`中的`pool`决定如何分配。`data`为与该节点关联的用户数据。
 
 返回值：成功则返回`mln_rbtree_node_t`指针，否则为`NULL`
 
@@ -195,7 +192,7 @@ void mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n);
 
 释放红黑树节点`n`。
 
-释放时会根据红黑树`t`中的`cache`及`pool`来决定节点内存如何回收，并且用户数据将由`data_free`回调函数决定如何释放。
+释放时会根据红黑树`t`中的`pool`来决定节点内存如何回收，并且用户数据将由`data_free`回调函数决定如何释放。
 
 返回值：无
 
@@ -320,7 +317,6 @@ int main(int argc, char *argv[])
     rbattr.pool_free = NULL;
     rbattr.cmp = cmp_handler;
     rbattr.data_free = NULL;
-    rbattr.cache = 0;
 
     if ((t = mln_rbtree_new(&rbattr)) == NULL) {
         mln_log(error, "rbtree init failed.\n");

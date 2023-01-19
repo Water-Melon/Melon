@@ -892,7 +892,6 @@ mln_http_t *mln_http_init(mln_tcp_conn_t *connection, void *data, mln_http_handl
     hattr.len_base = M_HTTP_HASH_LEN;
     hattr.expandable = 0;
     hattr.calc_prime = 0;
-    hattr.cache = 0;
     http->header_fields = mln_hash_new(&hattr);
     if (http->header_fields == NULL) {
         mln_alloc_free(http);

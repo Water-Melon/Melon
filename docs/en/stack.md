@@ -22,7 +22,6 @@ mln_stack_t *mln_stack_init(struct mln_stack_attr *attr);
 struct mln_stack_attr {
     stack_free               free_handler;//stack node data release function
     stack_copy               copy_handler;//Stack node data copy function
-    mln_u32_t                cache:1;//Whether to cache the unusedstack node structure
 };
 
 typedef void (*stack_free)(void *);
@@ -36,8 +35,6 @@ Initialize the stack structure.
 `free_handler`: It is the release function of the data on the stack. Since the data on the stack may be a custom data structure, if you need to release it, you can set it, otherwise set it to `NULL`.
 
 `copy_handler`: Copy stack node data.
-
-`cache`: Whether to cache **all** stack node structure memory to improve efficiency (non-user data).
 
 The parameter of `stack_free` is the data structure pointer of user-defined data.
 

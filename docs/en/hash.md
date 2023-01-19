@@ -22,14 +22,11 @@ struct mln_hash_s {
     hash_free_handler        free_key;//key free function
     hash_free_handler        free_val;//value free function
     mln_hash_mgr_t          *tbl;//buckets
-    mln_hash_entry_t        *cache_head;//cache doubly linked list
-    mln_hash_entry_t        *cache_tail;
     mln_u64_t                len;//bucket length
     mln_u32_t                nr_nodes;//number of nodes
     mln_u32_t                threshold;//bucket expansion Threshold
     mln_u32_t                expandable:1;//expansion flag
     mln_u32_t                calc_prime:1;//prime flag for calculating bucket length as a prime number
-    mln_u32_t                cache:1;//flag for caching unused node memory
 };
 ```
 
@@ -57,7 +54,6 @@ struct mln_hash_attr {
     mln_u64_t                len_base; //recommended bucket length
     mln_u32_t                expandable:1; //expansion flag
     mln_u32_t                calc_prime:1; //prime flag for calculating bucket length as a prime number
-    mln_u32_t                cache:1; //flag for caching unused node memory
 };
 
 typedef mln_u64_t (*hash_calc_handler)(mln_hash_t *, void *);
@@ -84,8 +80,6 @@ The return value of `hash` is a 64-bit integer offset, and the offset should not
 The hash table supports automatic expansion of the bucket length according to the number of elements, but it is recommended to treat this option with caution, because the expansion of the bucket length will accompany the node migration, which will cause corresponding calculation and time overhead, so use it with caution.
 
 The bucket length of the hash table is recommended to be a prime number, because taking the modulo of the prime number will relatively evenly drop the elements into different buckets, preventing some bucket lists from being too long.
-
-The `cache` option will cache all bucket list structures, please note that it is all. Therefore, please consider carefully whether you need to enable this option. Caching is good for performance, but there is also a memory overhead.
 
 Return value: if successful, return the hash table structure pointer, otherwise `NULL`
 
@@ -319,7 +313,6 @@ int main(int argc, char *argv[])
     hattr.len_base = 97;
     hattr.expandable = 0;
     hattr.calc_prime = 0;
-    hattr.cache = 0;
 
     if ((h = mln_hash_new(&hattr)) == NULL) {
         mln_log(error, "Hash init failed.\n");

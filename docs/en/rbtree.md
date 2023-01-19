@@ -29,7 +29,7 @@ typedef struct rbtree_s {
     rbtree_free_data           data_free; //In-node data release function
     mln_uauto_t                nr_node; //total number of nodes
     mln_u32_t                  del:1;
-    mln_u32_t                  cache:1; //Whether to cache all unused node
+    mln_u32_t                  padding:31;
 } mln_rbtree_t;
 
 struct mln_rbtree_node_s {
@@ -71,10 +71,11 @@ Return value: This check is mainly used for the `mln_rbtree_search` operation. W
 mln_rbtree_t *mln_rbtree_new(struct mln_rbtree_attr *attr);
 
 struct mln_rbtree_attr {
-    mln_alloc_t              *pool;//The memory pool, if not needed, set NULL, at this time the red-black tree nodes will be allocated by malloc
-    rbtree_cmp                cmp;//Red-black tree node comparison function
-    rbtree_free_data          data_free;//User data release function of red-black tree node
-    mln_u32_t                 cache:1;//Whether to cache all unused red-black tree nodes
+    void                      *pool; //The memory pool structure, or NULL if the memory pool is not used
+    rbtree_pool_alloc_handler  pool_alloc; //memory pool allocation function
+    rbtree_pool_free_handler   pool_free; //memory pool release function
+    rbtree_cmp                 cmp;//Red-black tree node comparison function
+    rbtree_free_data           data_free;//User data release function of red-black tree node
 };
 
 typedef int (*rbtree_cmp)(const void *, const void *);
@@ -94,8 +95,6 @@ Initialize the red-black tree.
 - `1` The first argument is greater than the second argument
 
 `data_free` is used to free the user resources pointed to by `data` in the `mln_rbtree_node_t` structure. Set `NULL` if user resources do not need to be released. This function has only one parameter which is the same type of structure as `data` in `mln_rbtree_node_t`.
-
-`cache` is used to indicate whether the red-black tree caches the red-black tree node structure that has been released user resources. **Note**, all node structures are cached.
 
 Return value: return `mln_rbtree_t` pointer successfully, otherwise return `NULL`
 
@@ -179,7 +178,7 @@ Return value: red-black tree node pointer, the macro `mln_rbtree_null` needs to 
 mln_rbtree_node_t *mln_rbtree_node_new(mln_rbtree_t *t, void *data);
 ```
 
-Description: Create a red-black tree node. The memory required by the node is determined by `pool` and `cache` in `t`. `data` is the user data associated with this node.
+Description: Create a red-black tree node. The memory required by the node is determined by `pool` in `t`. `data` is the user data associated with this node.
 
 Return value: `mln_rbtree_node_t` pointer if successful, `NULL` otherwise
 
@@ -195,7 +194,7 @@ Description:
 
 Free the red-black tree node `n`.
 
-When freeing, the node memory will be reclaimed according to the `cache` and `pool` in the red-black tree `t`, and the user data will be released by the `data_free` callback function.
+When freeing, the node memory will be reclaimed according to the `pool` in the red-black tree `t`, and the user data will be released by the `data_free` callback function.
 
 Return value: none
 
@@ -320,7 +319,6 @@ int main(int argc, char *argv[])
     rbattr.pool_free = NULL;
     rbattr.cmp = cmp_handler;
     rbattr.data_free = NULL;
-    rbattr.cache = 0;
 
     if ((t = mln_rbtree_new(&rbattr)) == NULL) {
         mln_log(error, "rbtree init failed.\n");

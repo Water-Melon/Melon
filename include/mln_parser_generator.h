@@ -521,7 +521,6 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     hattr.len_base = M_PG_DFL_HASHLEN;\
     hattr.expandable = 1;\
     hattr.calc_prime = 0;\
-    hattr.cache = 0;\
     attr->map_tbl = mln_hash_new(&hattr);\
     if (attr->map_tbl == NULL) {\
         mln_log(error, "No memory.\n");\
@@ -568,7 +567,6 @@ SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
     rbattr.pool_free = NULL;\
     rbattr.cmp = mln_pg_token_rbtree_cmp;\
     rbattr.data_free = mln_pg_token_free;\
-    rbattr.cache = 0;\
     attr->token_tree = mln_rbtree_new(&rbattr);\
     if (attr->token_tree == NULL) {\
         mln_log(error, "No memory.\n");\
@@ -772,7 +770,6 @@ SCOPE mln_parser_t *PREFIX_NAME##_parser_init(void)\
     struct mln_stack_attr sattr;\
     sattr.free_handler = PREFIX_NAME##_factor_destroy;\
     sattr.copy_handler = PREFIX_NAME##_factor_copy;\
-    sattr.cache = 0;\
     p->cur_stack = mln_stack_init(&sattr);\
     if (p->cur_stack == NULL) {\
         goto err1;\

@@ -327,7 +327,6 @@ static inline mln_conf_t *mln_conf_init(void)
     rbattr.pool_free = NULL;
     rbattr.cmp = mln_conf_domain_cmp;
     rbattr.data_free = mln_conf_domain_destroy;
-    rbattr.cache = 0;
     if ((cf->domain = mln_rbtree_new(&rbattr)) == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         free(cf);
@@ -436,7 +435,6 @@ mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name)
     rbattr.pool_free = NULL;
     rbattr.cmp = mln_conf_cmd_cmp;
     rbattr.data_free = mln_conf_cmd_destroy;
-    rbattr.cache = 0;
     if ((cd->cmd = mln_rbtree_new(&rbattr)) == NULL) {
         mln_string_free(cd->domain_name);
         free(cd);

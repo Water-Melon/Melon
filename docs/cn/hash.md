@@ -22,14 +22,11 @@ struct mln_hash_s {
     hash_free_handler        free_key;//key释放函数
     hash_free_handler        free_val;//value释放函数
     mln_hash_mgr_t          *tbl;//桶
-    mln_hash_entry_t        *cache_head;//缓存双向链表
-    mln_hash_entry_t        *cache_tail;
     mln_u64_t                len;//桶长
     mln_u32_t                nr_nodes;//表项数
     mln_u32_t                threshold;//扩张阈值
     mln_u32_t                expandable:1;//是否自动扩张桶
     mln_u32_t                calc_prime:1;//桶长是否自动计算为素数
-    mln_u32_t                cache:1;//是否缓存表项链表节点
 };
 ```
 
@@ -57,7 +54,6 @@ struct mln_hash_attr {
     mln_u64_t                len_base; //建议桶长
     mln_u32_t                expandable:1; //是否自动扩展桶长
     mln_u32_t                calc_prime:1; //是否计算素数桶长
-    mln_u32_t                cache:1; //是否缓存所有桶内链表节点
 };
 
 typedef mln_u64_t (*hash_calc_handler)(mln_hash_t *, void *);
@@ -84,8 +80,6 @@ typedef void (*hash_pool_free_handler)(void *);
 哈希表支持根据元素数量自动扩张桶长，但建议谨慎对待该选项，因为桶长扩张将伴随节点迁移，会产生相应计算和时间开销，因此慎用。
 
 哈希表桶长建议为素数，因为对素数取模会相对均匀的将元素落入不同的桶中，避免部分桶链表过长。
-
-`cache`选项会将所有桶链表结构进行缓存，请注意是所有。因此请谨慎考虑是否需要开启此选项。缓存有利于性能，但内存开销亦存在。
 
 返回值：若成功则返回哈希表结构指针，否则为`NULL`
 
@@ -319,7 +313,6 @@ int main(int argc, char *argv[])
     hattr.len_base = 97;
     hattr.expandable = 0;
     hattr.calc_prime = 0;
-    hattr.cache = 0;
 
     if ((h = mln_hash_new(&hattr)) == NULL) {
         mln_log(error, "Hash init failed.\n");

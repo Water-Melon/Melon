@@ -22,7 +22,6 @@ mln_stack_t *mln_stack_init(struct mln_stack_attr *attr);
 struct mln_stack_attr {
     stack_free               free_handler;//栈节点数据释放函数
     stack_copy               copy_handler;//栈节点数据复制函数
-    mln_u32_t                cache:1;//是否缓存栈节点结构
 };
 
 typedef void (*stack_free)(void *);
@@ -36,8 +35,6 @@ typedef void *(*stack_copy)(void *, void *);
 `free_handler`：是入栈数据的释放函数，由于入栈数据可能为自定义数据结构，因此若需释放，可对此进行设置否则置`NULL`。
 
 `copy_handler`：复制栈节点数据。
-
-`cache`：是否缓存**全部**栈节点结构内存以提升效率（非用户数据）。
 
 `stack_free`的参数为用户自定义数据的数据结构指针。
 

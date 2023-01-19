@@ -352,7 +352,6 @@ Their definitions can be found in melon/include/mln_types.h.
         rbtree_pool_free_handler   pool_free;
         rbtree_cmp                 cmp;
         rbtree_free_data           data_free;
-        mln_u32_t                  cache:1;
     };
     pool -- a memory pool created by caller
     pool_alloc -- the allocation function pointer of 'pool', its prototype is:
@@ -1046,7 +1045,6 @@ Their definitions can be found in melon/include/mln_types.h.
      struct mln_stack_attr {
          stack_free               free_handler;
          stack_copy               copy_handler;
-         mln_u32_t                cache:1;
      };
      This structure is used to initialize a stack object.
      free_handler -- is a function pointer to free stack data.

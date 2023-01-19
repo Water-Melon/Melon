@@ -26,13 +26,11 @@ typedef struct {
     mln_uauto_t              nr_node;
     stack_free               free_handler;
     stack_copy               copy_handler;
-    mln_u32_t                cache:1;
 } mln_stack_t;
 
 struct mln_stack_attr {
     stack_free               free_handler;
     stack_copy               copy_handler;
-    mln_u32_t                cache:1;
 };
 
 

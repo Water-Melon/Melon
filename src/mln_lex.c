@@ -224,7 +224,6 @@ mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
     mln_lex_keyword_t *newkw;
     sattr.free_handler = mln_lex_input_free;
     sattr.copy_handler = NULL;
-    sattr.cache = 0;
     mln_lex_t *lex;
     if ((lex = (mln_lex_t *)mln_alloc_m(attr->pool, sizeof(mln_lex_t))) == NULL) {
         return NULL;
@@ -236,7 +235,6 @@ mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
     rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
     rbattr.cmp = mln_lex_macro_cmp;
     rbattr.data_free = mln_lex_macro_free;
-    rbattr.cache = 0;
     if ((lex->macros = mln_rbtree_new(&rbattr)) == NULL) {
         mln_alloc_free(lex);
         return NULL;
@@ -276,7 +274,6 @@ err:
         rbattr.pool_free = (rbtree_pool_free_handler)mln_alloc_free;
         rbattr.cmp = mln_lex_keywords_cmp;
         rbattr.data_free = mln_lex_keyword_free;
-        rbattr.cache = 0;
         if ((lex->keywords = mln_rbtree_new(&rbattr)) == NULL) {
             mln_stack_destroy(lex->stack);
             goto err;

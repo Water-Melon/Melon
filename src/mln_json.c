@@ -172,7 +172,6 @@ mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
     hattr.len_base = M_JSON_HASH_LEN;
     hattr.expandable = 1;
     hattr.calc_prime = 0;
-    hattr.cache = 0;
     val->data.m_j_obj = mln_hash_new(&hattr);
     if (val->data.m_j_obj == NULL) {
         return -1;
@@ -274,7 +273,6 @@ mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
     rbattr.pool_free = NULL;
     rbattr.cmp = mln_json_rbtree_cmp;
     rbattr.data_free = mln_json_free;
-    rbattr.cache = 0;
     val->index = index;
     val->type = M_JSON_ARRAY;
     val->data.m_j_array = mln_rbtree_new(&rbattr);
@@ -1118,7 +1116,6 @@ int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val)
         hattr.len_base = M_JSON_HASH_LEN;
         hattr.expandable = 1;
         hattr.calc_prime = 0;
-        hattr.cache = 0;
         j->data.m_j_obj = mln_hash_new(&hattr);
         if (j->data.m_j_obj == NULL) {
             return -1;
@@ -1171,7 +1168,6 @@ int mln_json_add_element(mln_json_t *j, mln_json_t *value)
         rbattr.pool_free = NULL;
         rbattr.cmp = mln_json_rbtree_cmp;
         rbattr.data_free = mln_json_free;
-        rbattr.cache = 0;
         j->data.m_j_array = mln_rbtree_new(&rbattr);
         if (j->data.m_j_array == NULL) return -1;
         M_JSON_SET_TYPE_ARRAY(j);

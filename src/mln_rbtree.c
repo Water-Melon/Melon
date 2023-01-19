@@ -53,13 +53,11 @@ mln_rbtree_new(struct mln_rbtree_attr *attr)
     t->root = &(t->nil);
     t->min = &(t->nil);
     t->head = t->tail = NULL;
-    t->free_head = t->free_tail = NULL;
     t->iter = NULL;
     t->cmp = attr->cmp;
     t->data_free = attr->data_free;
     t->nr_node = 0;
     t->del = 0;
-    t->cache = attr->cache;
     return t;
 }
 
@@ -70,8 +68,6 @@ mln_rbtree_free(mln_rbtree_t *t)
     if (t == NULL) return;
 
     mln_rbtree_node_t *fr;
-
-    t->cache = 0;
 
     /*
      * Warning: mln_lang_sys.c: mln_import is very dependent on this release order.
@@ -85,10 +81,6 @@ mln_rbtree_free(mln_rbtree_t *t)
         mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
         mln_rbtree_node_free(t, fr);
     }
-    while ((fr = t->free_head) != NULL) {
-        mln_rbtree_chain_del(&(t->free_head), &(t->free_tail), fr);
-        mln_rbtree_node_free(t, fr);
-    }
     if (t->pool != NULL) t->pool_free(t);
     else free(t);
 }
@@ -98,10 +90,6 @@ void mln_rbtree_reset(mln_rbtree_t *t)
     mln_rbtree_node_t *fr;
     while ((fr = t->tail) != NULL) {
         mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
-        mln_rbtree_node_free(t, fr);
-    }
-    while ((fr = t->free_head) != NULL) {
-        mln_rbtree_chain_del(&(t->free_head), &(t->free_tail), fr);
         mln_rbtree_node_free(t, fr);
     }
 
@@ -131,15 +119,11 @@ mln_rbtree_node_new(mln_rbtree_t *t, void *data)
 {
     mln_rbtree_node_t *n;
 
-    if ((n = t->free_head) != NULL) {
-        mln_rbtree_chain_del(&(t->free_head), &(t->free_tail), n);
-    } else {
-        if (t->pool == NULL)
-            n = (mln_rbtree_node_t *)malloc(sizeof(mln_rbtree_node_t));
-        else
-            n = (mln_rbtree_node_t *)t->pool_alloc(t->pool, sizeof(mln_rbtree_node_t));
-        if (n == NULL) return NULL;
-    }
+    if (t->pool == NULL)
+        n = (mln_rbtree_node_t *)malloc(sizeof(mln_rbtree_node_t));
+    else
+        n = (mln_rbtree_node_t *)t->pool_alloc(t->pool, sizeof(mln_rbtree_node_t));
+    if (n == NULL) return NULL;
     n->data = data;
     n->prev = n->next = NULL;
     n->parent = &(t->nil);
@@ -154,13 +138,8 @@ mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n)
 {
     if (n->data != NULL && t->data_free != NULL)
         t->data_free(n->data);
-    if (t->cache) {
-        n->prev = n->next = NULL;
-        mln_rbtree_chain_add(&(t->free_head), &(t->free_tail), n);
-    } else {
-        if (t->pool != NULL) t->pool_free(n);
-        else free(n);
-    }
+    if (t->pool != NULL) t->pool_free(n);
+    else free(n);
 }
 
 /*Left rotate*/

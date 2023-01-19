@@ -38,17 +38,13 @@ struct mln_hash_attr {
     mln_u64_t                len_base;
     mln_u32_t                expandable:1;
     mln_u32_t                calc_prime:1;
-    mln_u32_t                cache:1;
 };
 
 typedef struct mln_hash_entry_s {
-    mln_hash_t              *hash;
     void                    *val;
     void                    *key;
     struct mln_hash_entry_s *prev;
     struct mln_hash_entry_s *next;
-    struct mln_hash_entry_s *cache_prev;
-    struct mln_hash_entry_s *cache_next;
 } mln_hash_entry_t;
 
 typedef struct {
@@ -65,14 +61,11 @@ struct mln_hash_s {
     hash_free_handler        free_key;
     hash_free_handler        free_val;
     mln_hash_mgr_t          *tbl;
-    mln_hash_entry_t        *cache_head;
-    mln_hash_entry_t        *cache_tail;
     mln_u64_t                len;
     mln_u32_t                nr_nodes;
     mln_u32_t                threshold;
     mln_u32_t                expandable:1;
     mln_u32_t                calc_prime:1;
-    mln_u32_t                cache:1;
 };
 
 

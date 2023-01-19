@@ -651,7 +651,6 @@ mln_thread_rbtree_init(void)
     rbattr.pool_free = NULL;
     rbattr.cmp = mln_thread_rbtree_cmp;
     rbattr.data_free = NULL;
-    rbattr.cache = 0;
     if ((thread_tree = mln_rbtree_new(&rbattr)) == NULL) {
         return -1;
     }

@@ -30,7 +30,6 @@ struct mln_rbtree_attr {
     rbtree_pool_free_handler   pool_free;
     rbtree_cmp                 cmp;
     rbtree_free_data           data_free;
-    mln_u32_t                  cache:1;
 };
 
 struct mln_rbtree_node_s {
@@ -52,14 +51,11 @@ typedef struct rbtree_s {
     mln_rbtree_node_t         *min;
     mln_rbtree_node_t         *head;
     mln_rbtree_node_t         *tail;
-    mln_rbtree_node_t         *free_head;
-    mln_rbtree_node_t         *free_tail;
     mln_rbtree_node_t         *iter;
     rbtree_cmp                 cmp;
     rbtree_free_data           data_free;
     mln_uauto_t                nr_node;
     mln_u32_t                  del:1;
-    mln_u32_t                  cache:1;
 } mln_rbtree_t;
 
 #define mln_rbtree_node_num(ptree)        ((ptree)->nr_node)

@@ -91,7 +91,6 @@ mln_event_t *mln_event_new(void)
     rbattr.pool_free = NULL;
     rbattr.cmp = mln_event_rbtree_fd_cmp;
     rbattr.data_free = NULL;
-    rbattr.cache = 0;
     ev->ev_fd_tree = mln_rbtree_new(&rbattr);
     if (ev->ev_fd_tree == NULL) {
         mln_log(error, "No memory.\n");
