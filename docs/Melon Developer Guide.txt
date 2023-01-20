@@ -2942,6 +2942,7 @@ Their definitions can be found in melon/include/mln_types.h.
          Initialize trace component.
          'ev' is the event object.
          'path' is the script file path.
+         If this function is called by master process, a variable named 'MASTER' will be inserted into trace script context.
 
       c) mln_lang_ctx_t *mln_trace_task_get(void);
          Get script task object. NULL will be returned if trace component is not initialized or script task exited.
@@ -2951,6 +2952,10 @@ Their definitions can be found in melon/include/mln_types.h.
 
       e) void mln_trace_finalize(void);
          Destroy all about script. Then you can use 'mln_trace_init' to create another tracer again.
+
+      f) void mln_trace_init_callback_set(mln_trace_init_cb_t cb);
+         typedef int (*mln_trace_init_cb_t)(mln_lang_ctx_t *ctx);
+         This function is used to set the initialization callback of trace script context.
 
   44) Linked list
       In melon, there is only one kind of linked list, doubly linked list.

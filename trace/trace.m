@@ -2,6 +2,10 @@
  * Copyright (C) Niklaus F.Schen.
  */
 sys = Import('sys');
+if (MASTER)
+    sys.print('master process');
+else
+    sys.print('worker process');
 
 Pipe('subscribe');
 while (1) {

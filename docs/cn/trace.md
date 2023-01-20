@@ -16,7 +16,7 @@
 >
 > 1. 配置中的`trace_mode`只有在开启框架模式（`framework`为`on`）时才会有效。
 > 2. 若在非框架模式下，或在配置中未启用`trace_mode`，但仍想使用该功能，则可以通过调用`mln_trace_init`进行初始化。
-> 3. 该模式下，系统存在一定的性能损耗，因此生产环境下尽量不要开启此模式。如若必须开启，则可以使用单独线程来运行脚本收集上报数据，可有效降低工作线程的性能损耗。
+> 3. 该模式下，系统存在一定的性能损耗。
 
 
 
@@ -73,6 +73,8 @@ int mln_trace_init(mln_event_t *ev, mln_string_t *path);
 - `ev` 是跟踪脚本所依赖的事件结构
 - `path`是跟踪脚本的文件路径
 
+若跟踪脚本在主进程中初始化成功，则会向其增加一个全局`MASTER`变量，且值为`true`。
+
 返回值：
 
 - `0` - 成功
@@ -102,6 +104,19 @@ void mln_trace_finalize(void);
 ```
 
 描述：销毁所有trace结构，并将全局指针复位。
+
+返回值：无
+
+
+
+#### mln_trace_init_callback_set
+
+```c
+void mln_trace_init_callback_set(mln_trace_init_cb_t cb);
+typedef int (*mln_trace_init_cb_t)(mln_lang_ctx_t *ctx);
+```
+
+描述：这个函数用于设置跟踪脚本的初始化回调，这个回调会在`mln_trace_init`中被调用。
 
 返回值：无
 

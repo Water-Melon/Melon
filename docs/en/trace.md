@@ -72,6 +72,8 @@ Description: Initialize the global trace module.
 - `ev` is the event structure that the trace script depends on
 - `path` is the file path of the trace script
 
+If the tracing script is successfully initialized in the main process, a global `MASTER` variable will be added to it with a value of `true`.
+
 return value:
 
 - `0` - success
@@ -101,6 +103,19 @@ void mln_trace_finalize(void);
 ```
 
 Description: Destroy all trace structures and reset the global pointer.
+
+return value: none
+
+
+
+#### mln_trace_init_callback_set
+
+```c
+void mln_trace_init_callback_set(mln_trace_init_cb_t cb);
+typedef int (*mln_trace_init_cb_t)(mln_lang_ctx_t *ctx);
+```
+
+Description: This function is used to set the initialization callback of the tracing script, which will be called in `mln_trace_init`.
 
 return value: none
 

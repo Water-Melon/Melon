@@ -30,6 +30,7 @@
 
 static void mln_init_notice(void);
 #if !defined(WIN32)
+static int mln_master_trace_init(mln_lang_ctx_t *ctx);
 static void mln_worker_routine(struct mln_core_attr *attr);
 static void mln_master_routine(struct mln_core_attr *attr);
 static int mln_get_framework_status(void);
@@ -124,15 +125,12 @@ chl:
 #if !defined(WIN32)
 static void mln_master_routine(struct mln_core_attr *attr)
 {
-    mln_string_t *trace_path;
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     if (_ev == NULL) _ev = ev;
 
-    trace_path = mln_trace_path();
-    if (trace_path != NULL)
-        mln_trace_init(ev, trace_path);
-
+    mln_trace_init_callback_set(mln_master_trace_init);
+    mln_trace_init(ev, mln_trace_path());
     mln_fork_master_set_events(ev);
     mln_event_signal_set(SIGUSR2, mln_sig_conf_reload);
     if (attr->master_process != NULL) attr->master_process(ev);
@@ -142,7 +140,6 @@ static void mln_master_routine(struct mln_core_attr *attr)
 
 static void mln_worker_routine(struct mln_core_attr *attr)
 {
-    mln_string_t *trace_path;
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     if (_ev == NULL) _ev = ev;
@@ -171,20 +168,28 @@ static void mln_worker_routine(struct mln_core_attr *attr)
         i_thread_mode = ci->val.b;
     }
 
-    trace_path = mln_trace_path();
+    mln_trace_init(ev, mln_trace_path());
     if (i_thread_mode) {
-        if (trace_path != NULL)
-            mln_trace_init(ev, trace_path);
-
         if (mln_load_thread(ev) < 0)
             exit(1);
         mln_event_dispatch(ev);
     } else {
-        if (trace_path != NULL)
-            mln_trace_init(ev, trace_path);
         if (attr->worker_process != NULL) attr->worker_process(ev);
         mln_event_dispatch(ev);
     }
+}
+
+static int mln_master_trace_init(mln_lang_ctx_t *ctx)
+{
+    mln_u8_t master = 1;
+    mln_string_t *dup, name = mln_string("MASTER");
+    if ((dup = mln_string_pool_dup(ctx->pool, &name)) == NULL)
+        return -1;
+    if (mln_lang_ctx_global_var_add(ctx, dup, &master, M_LANG_VAL_TYPE_BOOL) < 0) {
+        mln_string_free(dup);
+        return -1;
+    }
+    return 0;
 }
 
 static void mln_sig_conf_reload(int signo)

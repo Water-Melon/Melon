@@ -10,6 +10,7 @@
 static mln_lang_t *trace_lang = NULL;
 static mln_lang_ctx_t *trace_ctx = NULL;
 static int trace_signal_fds[2];
+static mln_trace_init_cb_t trace_init_cb = NULL;
 
 static int mln_trace_lang_signal(mln_lang_t *lang);
 static int mln_trace_lang_clear(mln_lang_t *lang);
@@ -63,6 +64,10 @@ int mln_trace_init(mln_event_t *ev, mln_string_t *path)
         goto err3;
     }
 
+    if (trace_init_cb != NULL && trace_init_cb(trace_ctx) < 0) {
+        goto err3;
+    }
+
     return 0;
 
 err3:
@@ -112,5 +117,10 @@ static void mln_trace_lang_ctx_return_handler(mln_lang_ctx_t *ctx)
     trace_ctx = NULL;
     if (mln_lang_ctx_is_quit(ctx))
         mln_log(warn, "trace script exit\n");
+}
+
+void mln_trace_init_callback_set(mln_trace_init_cb_t cb)
+{
+    trace_init_cb = cb;
 }
 
