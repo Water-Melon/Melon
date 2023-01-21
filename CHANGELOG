@@ -1,3 +1,9 @@
+Changes with melon 2.6.4                                          21 Jan 2023
+    *) Updated and optimized rbtree, fib-heap and hash components
+    *) Optimized trace component for trace mode
+    *) Added array structure
+    *) Updated docs
+
 Changes with melon 2.6.3                                          17 Jan 2023
     *) Updated trace module
     *) Updated Dockerfile

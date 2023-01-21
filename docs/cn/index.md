@@ -18,6 +18,7 @@ Melon当前提供了如下功能：
   - 队列
   - 红黑树
   - 栈
+  - 数组
 - 算法
   - 加密算法：AES 、DES 、3DES 、RC4 、RSA
   - 哈希算法：MD5 、SHA1 、SHA256
@@ -76,6 +77,7 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [栈](https://water-melon.github.io/Melon/cn/stack.html)
 - [队列](https://water-melon.github.io/Melon/cn/queue.html)
 - [斐波那契堆](https://water-melon.github.io/Melon/cn/fheap.html)
+- [数组](https://water-melon.github.io/Melon/cn/array.html)
 - [事件](https://water-melon.github.io/Melon/cn/event.html)
 - [错误码管理](https://water-melon.github.io/Melon/cn/error.html)
 - [内存池](https://water-melon.github.io/Melon/cn/mpool.html)

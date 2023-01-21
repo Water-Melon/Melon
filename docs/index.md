@@ -19,6 +19,7 @@ Melon currently provides the following components:
   - Queue
   - Red-black tree
   - Stack
+  - Array
 - Algorithms
    - Encryption algorithm: AES, DES, 3DES, RC4, RSA
    - Hash algorithm: MD5, SHA1, SHA256
@@ -77,6 +78,7 @@ At present, Melon has also completed the preliminary porting to Windows, so it c
   - [Stack](https://water-melon.github.io/Melon/en/stack.html)
   - [Queue](https://water-melon.github.io/Melon/en/queue.html)
   - [Fibonacci Heap](https://water-melon.github.io/Melon/en/fheap.html)
+  - [Array](https://water-melon.github.io/Melon/en/array.html)
   - [Event](https://water-melon.github.io/Melon/en/event.html)
   - [Error Code Management](https://water-melon.github.io/Melon/en/error.html)
   - [Memory Pool](https://water-melon.github.io/Melon/en/mpool.html)
