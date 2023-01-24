@@ -16,6 +16,7 @@ It includes many data structures, algorithms, architectures and many other usefu
   - queue
   - Red-black tree
   - stack
+  - Array
 - Algorithms
   - Encryption algorithm: AES, DES, 3DES, RC4, RSA
   - Hash algorithm: MD5, SHA1, SHA256

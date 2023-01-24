@@ -50,7 +50,7 @@ Melon当前提供了如下功能：
 - 框架
   - 多进程模型
   - 多线程模型
-  - 探针模式
+  - 跟踪模式
 
 
 
@@ -109,4 +109,4 @@ Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统
 - [多线程框架](https://water-melon.github.io/Melon/cn/multithread.html)
 - [IPC模块开发](https://water-melon.github.io/Melon/cn/ipc.html)
 - [多进程框架](https://water-melon.github.io/Melon/cn/multiprocess.html)
-- [探针模式](https://water-melon.github.io/Melon/cn/trace.html)
+- [跟踪模式](https://water-melon.github.io/Melon/cn/trace.html)
