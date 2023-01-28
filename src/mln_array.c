@@ -18,6 +18,7 @@ int mln_array_init(mln_array_t *arr, struct mln_array_attr *attr)
     arr->pool = attr->pool;
     arr->pool_alloc = attr->pool_alloc;
     arr->pool_free = attr->pool_free;
+    arr->free = attr->free;
     return mln_array_alloc(arr, arr->nalloc);
 }
 
@@ -45,6 +46,12 @@ void mln_array_destroy(mln_array_t *arr)
 {
     if (arr == NULL) return;
 
+    if (arr->free != NULL && arr->nelts) {
+        mln_u8ptr_t p = arr->elts, pend = arr->elts + (arr->nelts * arr->size);
+        for (; p < pend; p += arr->size)
+            arr->free(p);
+    }
+
     if (arr->pool != NULL)
         arr->pool_free(arr->elts);
     else
@@ -55,6 +62,12 @@ void mln_array_free(mln_array_t *arr)
 {
     if (arr == NULL) return;
 
+    if (arr->free != NULL && arr->nelts) {
+        mln_u8ptr_t p = arr->elts, pend = arr->elts + (arr->nelts * arr->size);
+        for (; p < pend; p += arr->size)
+            arr->free(p);
+    }
+
     if (arr->pool != NULL) {
         arr->pool_free(arr->elts);
         arr->pool_free(arr);
@@ -62,6 +75,18 @@ void mln_array_free(mln_array_t *arr)
         free(arr->elts);
         free(arr);
     }
+}
+
+void mln_array_reset(mln_array_t *arr)
+{
+    if (arr == NULL) return;
+
+    if (arr->free != NULL && arr->nelts) {
+        mln_u8ptr_t p = arr->elts, pend = arr->elts + (arr->nelts * arr->size);
+        for (; p < pend; p += arr->size)
+            arr->free(p);
+    }
+    arr->nelts = 0;
 }
 
 void *mln_array_push(mln_array_t *arr)
@@ -110,5 +135,15 @@ static inline int mln_array_alloc(mln_array_t *arr, mln_size_t n)
     arr->nalloc = num;
 
     return 0;
+}
+
+void mln_array_pop(mln_array_t *arr)
+{
+    if (arr == NULL || !arr->nelts)
+        return;
+
+    if (arr->free != NULL)
+        arr->free(arr->elts + (arr->nelts - 1) * arr->size);
+    --arr->nelts;
 }
 

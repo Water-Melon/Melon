@@ -25,11 +25,13 @@ struct mln_array_attr {
     void                     *pool;
     array_pool_alloc_handler  pool_alloc;
     array_pool_free_handler   pool_free;
+    array_free                free;
     mln_size_t                size;
     mln_size_t                nalloc;
 };
 typedef void *(*array_pool_alloc_handler)(void *, mln_size_t);
 typedef void (*array_pool_free_handler)(void *);
+typedef void (*array_free)(void *);
 ```
 
 其中：
@@ -37,6 +39,7 @@ typedef void (*array_pool_free_handler)(void *);
 - `pool`是自定义内存池结构指针
 - `pool_alloc`是自定义内存池分配函数指针
 - `pool_free`是自定义内存池释放函数指针
+- `free`是用于对数组元素做资源释放的函数指针
 - `size`是单个数组元素的字节大小
 - `nalloc`是初始数组长度，后续数组扩张则是针对当前数组分配元素的两倍进行扩张
 
@@ -80,6 +83,18 @@ void mln_array_free(mln_array_t *arr);
 
 
 
+#### mln_array_reset
+
+```c
+void mln_array_reset(mln_array_t *arr);
+```
+
+描述：将`arr`中的元素进行释放，并将数组长度归0，但不释放数组结构。
+
+返回值：无
+
+
+
 #### mln_array_push
 
 ```c
@@ -101,6 +116,18 @@ void *mln_array_pushn(mln_array_t *arr, mln_size_t n);
 描述：向数组中追加`n`个元素，并将这些元素的内存首地址返回。
 
 返回值：成功则返回元素地址，否则返回`NULL`
+
+
+
+#### mln_array_pop
+
+```c
+void *mln_array_pop(mln_array_t *arr);
+```
+
+描述：将数组的最后一个元素移除并释放。
+
+返回值：无
 
 
 
@@ -149,6 +176,7 @@ int main(void)
     attr.pool = NULL;
     attr.pool_alloc = NULL;
     attr.pool_free = NULL;
+    attr.free = NULL;
     attr.size = sizeof(test_t);
     attr.nalloc = 1;
     mln_array_init(&arr, &attr);

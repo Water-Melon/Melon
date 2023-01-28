@@ -10,11 +10,13 @@
 
 typedef void *(*array_pool_alloc_handler)(void *, mln_size_t);
 typedef void (*array_pool_free_handler)(void *);
+typedef void (*array_free)(void *);
 
 struct mln_array_attr {
     void                     *pool;
     array_pool_alloc_handler  pool_alloc;
     array_pool_free_handler   pool_free;
+    array_free                free;
     mln_size_t                size;
     mln_size_t                nalloc;
 };
@@ -27,6 +29,7 @@ typedef struct {
     void                     *pool;
     array_pool_alloc_handler  pool_alloc;
     array_pool_free_handler   pool_free;
+    array_free                free;
 } mln_array_t;
 
 #define mln_array_elts(arr)    ((arr)->elts)
@@ -36,7 +39,9 @@ extern int mln_array_init(mln_array_t *arr, struct mln_array_attr *attr) __NONNU
 extern mln_array_t *mln_array_new(struct mln_array_attr *attr) __NONNULL1(1);
 extern void mln_array_destroy(mln_array_t *arr);
 extern void mln_array_free(mln_array_t *arr);
+extern void mln_array_reset(mln_array_t *arr);
 extern void *mln_array_push(mln_array_t *arr) __NONNULL1(1);
 extern void *mln_array_pushn(mln_array_t *arr, mln_size_t n) __NONNULL1(1);
+extern void mln_array_pop(mln_array_t *arr);
 #endif
 

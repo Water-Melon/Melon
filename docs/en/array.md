@@ -25,16 +25,19 @@ struct mln_array_attr {
     void                     *pool;
     array_pool_alloc_handler  pool_alloc;
     array_pool_free_handler   pool_free;
+    array_free                free;
     mln_size_t                size;
     mln_size_t                nalloc;
 };
 typedef void *(*array_pool_alloc_handler)(void *, mln_size_t);
 typedef void (*array_pool_free_handler)(void *);
+typedef void (*array_free)(void *);
 ```
 
 - `pool` is a custom memory pool structure pointer
 - `pool_alloc` is a custom memory pool allocation function pointer
 - `pool_free` is a custom memory pool release function pointer
+- `free` is a function pointer for resource release of array elements
 - `size` is the size in bytes of a single array element
 - `nalloc` is the initial array length, and the subsequent array expansion is to expand twice the number of elements allocated in the current array
 
@@ -78,6 +81,18 @@ Return value: None
 
 
 
+#### mln_array_reset
+
+```c
+void mln_array_reset(mln_array_t *arr);
+```
+
+Description: Release the elements in `arr`, and set the length of the array to 0, but do not release the array structure.
+
+Return value: None
+
+
+
 #### mln_array_push
 
 ```c
@@ -99,6 +114,18 @@ void *mln_array_pushn(mln_array_t *arr, mln_size_t n);
 Description: Append `n` elements to the array, and return the first memory address of these elements.
 
 Return value: return element address if successful, otherwise return `NULL`
+
+
+
+#### mln_array_pop
+
+```c
+void *mln_array_pop(mln_array_t *arr);
+```
+
+Description: Remove and release the last element of the array.
+
+Return value: None
 
 
 
@@ -147,6 +174,7 @@ int main(void)
     attr.pool = NULL;
     attr.pool_alloc = NULL;
     attr.pool_free = NULL;
+    attr.free = NULL;
     attr.size = sizeof(test_t);
     attr.nalloc = 1;
     mln_array_init(&arr, &attr);

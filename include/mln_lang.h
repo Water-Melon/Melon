@@ -13,25 +13,28 @@
 #include "mln_defs.h"
 #include "mln_gc.h"
 #include "mln_alloc.h"
+#include "mln_array.h"
 
-#define M_LANG_CACHE_COUNT       65535
-#define M_LANG_SYMBOL_TABLE_LEN  371
-#define M_LANG_STEP_OUT          -1
-#define M_LANG_RUN_STACK_LEN     1024
-#define M_LANG_SCOPE_LEN         1024
-#define M_LANG_MAX_OPENFILE      67
-#define M_LANG_DEFAULT_STEP      1700
-#define M_LANG_HEARTBEAT_US      50000
+#define M_LANG_CACHE_COUNT        65535
+#define M_LANG_SYMBOL_TABLE_LEN   371
+#define M_LANG_STEP_OUT           -1
+#define M_LANG_RUN_STACK_LEN      1024
+#define M_LANG_SCOPE_LEN          1024
+#define M_LANG_MAX_OPENFILE       67
+#define M_LANG_DEFAULT_STEP       1700
+#define M_LANG_HEARTBEAT_US       50000
+#define MLN_LANG_PIPE_LIST_NALLOC 128
+#define MLN_LANG_PIPE_ELEM_NALLOC 6
 
-#define M_LANG_VAL_TYPE_NIL      0
-#define M_LANG_VAL_TYPE_INT      1
-#define M_LANG_VAL_TYPE_BOOL     2
-#define M_LANG_VAL_TYPE_REAL     3
-#define M_LANG_VAL_TYPE_STRING   4
-#define M_LANG_VAL_TYPE_OBJECT   5
-#define M_LANG_VAL_TYPE_FUNC     6
-#define M_LANG_VAL_TYPE_ARRAY    7
-#define M_LANG_VAL_TYPE_CALL     8
+#define M_LANG_VAL_TYPE_NIL       0
+#define M_LANG_VAL_TYPE_INT       1
+#define M_LANG_VAL_TYPE_BOOL      2
+#define M_LANG_VAL_TYPE_REAL      3
+#define M_LANG_VAL_TYPE_STRING    4
+#define M_LANG_VAL_TYPE_OBJECT    5
+#define M_LANG_VAL_TYPE_FUNC      6
+#define M_LANG_VAL_TYPE_ARRAY     7
+#define M_LANG_VAL_TYPE_CALL      8
 
 typedef struct mln_lang_funccall_val_s  mln_lang_funccall_val_t;
 typedef struct mln_lang_val_s           mln_lang_val_t;
@@ -51,7 +54,6 @@ typedef struct mln_lang_resource_s      mln_lang_resource_t;
 typedef struct mln_lang_ast_cache_s     mln_lang_ast_cache_t;
 typedef struct mln_lang_hash_s          mln_lang_hash_t;
 typedef struct mln_lang_hash_bucket_s   mln_lang_hash_bucket_t;
-typedef struct mln_lang_ctx_pipe_list_s mln_lang_ctx_pipe_list_t;
 typedef struct mln_lang_ctx_pipe_elem_s mln_lang_ctx_pipe_elem_t;
 
 typedef int (*mln_lang_run_ctl_t)(mln_lang_t *);
@@ -409,27 +411,11 @@ typedef struct {
 
 typedef struct {
     mln_lang_ctx_t                  *ctx;
-    mln_lang_ctx_pipe_list_t        *head;
-    mln_lang_ctx_pipe_list_t        *tail;
-    mln_lang_ctx_pipe_list_t        *pl_cache_head;
-    mln_lang_ctx_pipe_list_t        *pl_cache_tail;
-    mln_lang_ctx_pipe_elem_t        *pe_cache_head;
-    mln_lang_ctx_pipe_elem_t        *pe_cache_tail;
+    mln_array_t                      list;
     pthread_mutex_t                  lock;
     mln_u32_t                        subscribed:1;
-    mln_u32_t                        pl_cnt:7;
-    mln_u32_t                        pl_max:7;
-    mln_u32_t                        pe_cnt:7;
-    mln_u32_t                        pe_max:7;
-    mln_u32_t                        padding:3;
+    mln_u32_t                        padding:31;
 } mln_lang_ctx_pipe_t;
-
-struct mln_lang_ctx_pipe_list_s {
-    mln_lang_ctx_pipe_elem_t        *head;
-    mln_lang_ctx_pipe_elem_t        *tail;
-    struct mln_lang_ctx_pipe_list_s *prev;
-    struct mln_lang_ctx_pipe_list_s *next;
-};
 
 struct mln_lang_ctx_pipe_elem_s {
     int                              type;
@@ -438,8 +424,6 @@ struct mln_lang_ctx_pipe_elem_s {
         double                       r;
         mln_string_t                *s;
     } data;
-    struct mln_lang_ctx_pipe_elem_s *prev;
-    struct mln_lang_ctx_pipe_elem_s *next;
 };
 
 extern mln_lang_method_t *mln_lang_methods[];
