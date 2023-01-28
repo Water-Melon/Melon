@@ -8,11 +8,13 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include "mln_defs.h"
 #include "mln_fork.h"
 #include "mln_rbtree.h"
 #include "mln_log.h"
 #include "mln_global.h"
 #include "mln_ipc.h"
+#include "mln_alloc.h"
 #include <sys/ioctl.h>
 
 mln_tcp_conn_t master_conn;
@@ -27,8 +29,6 @@ mln_rbtree_t *master_ipc_tree = NULL;
 mln_rbtree_t *worker_ipc_tree = NULL;
 clr_handler rs_clr_handler = NULL;
 void *rs_clr_data = NULL;
-volatile mln_u32_t child_startup = 0;
-int wait_signo = SIGUSR1;
 
 MLN_CHAIN_FUNC_DECLARE(worker_list, \
                        mln_fork_t, \
@@ -37,8 +37,6 @@ static int
 mln_fork_rbtree_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
 static int
 do_fork_worker_process(mln_sauto_t n_worker_proc);
-static void
-do_fork_sig_handler(int signo);
 static int
 do_fork_core(enum proc_exec_type etype, \
              enum proc_state_type stype, \
@@ -75,16 +73,6 @@ int mln_pre_fork(void)
     }
     if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
         mln_log(error, "signal() to ignore SIGPIPE failed, %s\n", strerror(errno));
-        return -1;
-    }
-    struct sigaction act;
-    memset(&act, 0, sizeof(act));
-    act.sa_handler = do_fork_sig_handler;
-    sigemptyset(&(act.sa_mask));
-    sigfillset(&(act.sa_mask));
-    if (sigaction(wait_signo, &act, NULL) < 0) {
-        mln_log(error, "sigaction error, signo:%d. %s\n", \
-                wait_signo, strerror(errno));
         return -1;
     }
     if (mln_tcp_conn_init(&master_conn, -1) < 0) {
@@ -338,12 +326,6 @@ void mln_set_resource_clear_handler(clr_handler handler, void *data)
     rs_clr_data = data;
 }
 
-static void
-do_fork_sig_handler(int signo)
-{
-    child_startup = 1;
-}
-
 static int
 do_fork_core(enum proc_exec_type etype, \
              enum proc_state_type stype, \
@@ -352,10 +334,13 @@ do_fork_core(enum proc_exec_type etype, \
              mln_event_t *master_ev)
 {
     int fds[2];
+    mln_u8_t c;
+
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
         mln_log(error, "socketpair() error. %s\n", strerror(errno));
         return -1;
     }
+
     pid_t pid = fork();
     if (pid > 0) {
         mln_socket_close(fds[1]);
@@ -373,9 +358,9 @@ do_fork_core(enum proc_exec_type etype, \
          * And then, child process built, that would make the event
          * which is triggered in parent process to be a lie.
          */
-        while (child_startup == 0)
+        while (read(fds[0], &c, 1) <= 0)
             ;
-        child_startup = 0;
+
         struct mln_fork_attr fattr;
         fattr.args = args;
         fattr.n_args = n_args;
@@ -410,11 +395,8 @@ do_fork_core(enum proc_exec_type etype, \
         master_ipc_tree = NULL;
         mln_tcp_conn_set_fd(&master_conn, fds[1]);
         signal(SIGCHLD, SIG_DFL);
-        signal(wait_signo, SIG_DFL);
-        if (kill(getppid(), wait_signo) < 0) {
-            mln_log(error, "kill() error. %s\n", strerror(errno));
-            abort();
-        }
+        if (write(fds[1], " ", 1) < 0)
+            exit(1);
         return 0;
     }
     mln_log(error, "fork() error. %s\n", strerror(errno));

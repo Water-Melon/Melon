@@ -172,6 +172,7 @@ static void mln_worker_routine(struct mln_core_attr *attr)
     if (i_thread_mode) {
         if (mln_load_thread(ev) < 0)
             exit(1);
+        if (attr->main_thread != NULL) attr->main_thread(ev);
         mln_event_dispatch(ev);
     } else {
         if (attr->worker_process != NULL) attr->worker_process(ev);

@@ -12,28 +12,29 @@
 
 #define THREAD_SOCKFD_LEN 128
 
-typedef int (*tentrance)(int, char **);
+typedef int (*mln_thread_entrance_t)(int, char **);
 
 typedef struct mln_thread_s mln_thread_t;
 
 typedef struct {
     char                      *alias;
-    tentrance                  thread_main;
+    mln_thread_entrance_t      thread_main;
 } mln_thread_module_t;
 
-enum thread_stype {
+typedef enum {
     THREAD_RESTART,
     THREAD_DEFAULT
-};
+} mln_thread_stype_t;
 
 struct mln_thread_attr {
-    tentrance                  thread_main;
+    mln_event_t               *ev;
+    mln_thread_entrance_t      thread_main;
     char                      *alias;
     char                     **argv;
     int                        argc;
     int                        peerfd;
     int                        sockfd;
-    enum thread_stype          stype;
+    mln_thread_stype_t         stype;
 };
 
 typedef struct {
@@ -63,13 +64,14 @@ typedef struct mln_thread_msgq_s {
 } mln_thread_msgq_t;
 
 struct mln_thread_s {
-    tentrance                  thread_main;
+    mln_event_t               *ev;
+    mln_thread_entrance_t      thread_main;
     mln_string_t              *alias;
     char                     **argv;
     int                        argc;
     int                        peerfd;
     int                        is_created;
-    enum thread_stype          stype;
+    mln_thread_stype_t         stype;
     pthread_t                  tid;
     mln_tcp_conn_t             conn;
     mln_thread_msgq_t         *local_head;
@@ -81,7 +83,12 @@ struct mln_thread_s {
 
 extern void mln_thread_clear_msg(mln_thread_msg_t *msg);
 extern int mln_load_thread(mln_event_t *ev) __NONNULL1(1);
-extern int mln_thread_create(mln_thread_t *t, mln_event_t *ev) __NONNULL2(1,2);
+extern int mln_thread_create(mln_event_t *ev, \
+                             char *alias, \
+                             mln_thread_stype_t stype, \
+                             mln_thread_entrance_t entrance, \
+                             int argc, \
+                             char *argv[]) __NONNULL4(1,2,4,6);
 /*
  * mln_thread_exit() called by child thread only.
  */

@@ -38,9 +38,8 @@ static inline mln_alloc_shm_t *mln_alloc_shm_new(mln_alloc_t *pool, mln_size_t s
         if ((mln_u8ptr_t)(tmp->addr) - p >= size) break;
         p = tmp->addr + tmp->size;
     }
-    if (tmp == NULL) {
-        if ((mln_u8ptr_t)(pool->mem + pool->shm_size) - p < size)
-            return NULL;
+    if (tmp == NULL && (mln_u8ptr_t)(pool->mem + pool->shm_size) - p < size) {
+        return NULL;
     }
 
     shm = (mln_alloc_shm_t *)p;
@@ -453,7 +452,9 @@ static inline void *mln_alloc_shm_m(mln_alloc_t *pool, mln_size_t size)
     if (pool->shm_head == NULL) {
 new_block:
         as = mln_alloc_shm_new_block(pool, &Boff, &boff, size);
-        if (as == NULL) return NULL;
+        if (as == NULL) {
+            return NULL;
+        }
     } else {
         for (as = pool->shm_head; as != NULL; as = as->next) {
             if (mln_alloc_shm_allowed(as, &Boff, &boff, size)) {

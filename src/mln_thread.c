@@ -51,7 +51,7 @@ mln_thread_msgq_destroy(mln_thread_msgq_t *tmq);
 static mln_thread_t *
 mln_thread_init(struct mln_thread_attr *attr) __NONNULL1(1);
 static void
-mln_thread_destroy(mln_event_t *ev, mln_thread_t *t);
+mln_thread_destroy(mln_thread_t *t);
 static void
 mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t);
 static int
@@ -76,6 +76,8 @@ static inline void
 mln_thread_itc_chain_release_msg(mln_chain_t *c);
 static inline void *
 mln_get_module_entrance(char *alias);
+static inline int
+__mln_thread_create(mln_thread_t *t);
 
 
 /*
@@ -86,6 +88,7 @@ mln_thread_init(struct mln_thread_attr *attr)
 {
     mln_thread_t *t = (mln_thread_t *)malloc(sizeof(mln_thread_t));
     if (t == NULL) return NULL;
+    t->ev = attr->ev;
     t->thread_main = attr->thread_main;
     t->alias = mln_string_new(attr->alias);
     if (t->alias == NULL) {
@@ -110,7 +113,7 @@ mln_thread_init(struct mln_thread_attr *attr)
 }
 
 static void
-mln_thread_destroy(mln_event_t *ev, mln_thread_t *t)
+mln_thread_destroy(mln_thread_t *t)
 {
     mln_chain_t *c;
 
@@ -139,7 +142,7 @@ mln_thread_destroy(mln_event_t *ev, mln_thread_t *t)
     c = mln_tcp_conn_get_head(&(t->conn), M_C_RECV);
     mln_thread_itc_chain_release_msg(c);
     mln_tcp_conn_destroy(&(t->conn));
-    mln_thread_clear_msg_queue(ev, t);
+    mln_thread_clear_msg_queue(t->ev, t);
     free(t);
 }
 
@@ -242,6 +245,7 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
         return;
     }
 
+    thattr.ev = ev;
     thattr.argv = (char **)calloc(nr_args+2, sizeof(char *));
     if (thattr.argv == NULL) return;
     thattr.argc = nr_args+1;
@@ -256,7 +260,7 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
     }
 
     thattr.alias = thattr.argv[0];
-    thattr.thread_main = (tentrance)mln_get_module_entrance(thattr.alias);
+    thattr.thread_main = (mln_thread_entrance_t)mln_get_module_entrance(thattr.alias);
     if (thattr.thread_main == NULL) {
         mln_log(error, "No such thread module named '%s'.\n", thattr.alias);
         free(thattr.argv);
@@ -278,9 +282,46 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
         return;
     }
     mln_log(none, "Start thread '%s'\n", t->argv[0]);
-    if (mln_thread_create(t, ev) < 0) {
-        mln_thread_destroy(ev, t);
+    if (__mln_thread_create(t) < 0) {
+        mln_thread_destroy(t);
     }
+}
+
+int mln_thread_create(mln_event_t *ev, \
+                      char *alias, \
+                      mln_thread_stype_t stype, \
+                      mln_thread_entrance_t entrance, \
+                      int argc, \
+                      char *argv[])
+{
+    mln_thread_t *t;
+    int fds[2];
+    struct mln_thread_attr thattr;
+
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
+        return -1;
+    }
+
+    thattr.ev = ev;
+    thattr.stype = stype;
+    thattr.argv = argv;
+    thattr.argc = argc + 1;
+    thattr.alias = alias;
+    thattr.thread_main = entrance;
+    thattr.sockfd = fds[0];
+    thattr.peerfd = fds[1];
+    t = mln_thread_init(&thattr);
+    if (t == NULL) {
+        mln_socket_close(fds[0]);
+        mln_socket_close(fds[1]);
+        return -1;
+    }
+    if (__mln_thread_create(t) < 0) {
+        mln_thread_destroy(t);
+        return -1;
+    }
+
+    return 0;
 }
 
 static void *mln_get_module_entrance(char *alias)
@@ -295,7 +336,7 @@ static void *mln_get_module_entrance(char *alias)
 /*
  * create_thread
  */
-int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
+static inline int __mln_thread_create(mln_thread_t *t)
 {
     mln_rbtree_node_t *rn;
     if (t->argv[t->argc-1] == NULL) {
@@ -313,7 +354,7 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
         return -1;
     }
     mln_rbtree_insert(thread_tree, rn);
-    if (mln_event_fd_set(ev, \
+    if (mln_event_fd_set(t->ev, \
                          mln_tcp_conn_get_fd(&(t->conn)), \
                          M_EV_RECV|M_EV_NONBLOCK, \
                          M_EV_UNLIMITED, \
@@ -329,7 +370,7 @@ int mln_thread_create(mln_thread_t *t, mln_event_t *ev)
     int err;
     if ((err = pthread_create(&(t->tid), NULL, mln_thread_launcher, t)) != 0) {
         mln_log(error, "pthread_create error. %s\n", strerror(err));
-        mln_event_fd_set(ev, \
+        mln_event_fd_set(t->ev, \
                          mln_tcp_conn_get_fd(&(t->conn)), \
                          M_EV_CLR, \
                          M_EV_UNLIMITED, \
@@ -577,7 +618,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
                      NULL);
 
     if (t->stype == THREAD_DEFAULT) {
-        mln_thread_destroy(ev, t);
+        mln_thread_destroy(t);
         return 0;
     }
 
@@ -610,13 +651,13 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
     int fds[2];
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
         mln_log(error, "socketpair error. %s\n", strerror(errno));
-        mln_thread_destroy(ev, t);
+        mln_thread_destroy(t);
         return -1;
     }
     mln_tcp_conn_set_fd(&(t->conn), fds[0]);
     t->peerfd = fds[1];
-    if (mln_thread_create(t, ev) < 0) {
-        mln_thread_destroy(ev, t);
+    if (__mln_thread_create(t) < 0) {
+        mln_thread_destroy(t);
         return -1;
     }
     return 0;

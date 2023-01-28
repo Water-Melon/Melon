@@ -17,6 +17,7 @@ struct mln_core_attr {
     char                    **argv;
     mln_core_init_t           global_init;
 #if !defined(WIN32)
+    mln_core_process_t        main_thread;
     mln_core_process_t        master_process;
     mln_core_process_t        worker_process;
 #endif

@@ -45,7 +45,29 @@ int socketpair(int domain, int type, int protocol, int sv[2])
 #endif
 
 
-#if defined(i386) || defined(__x86_64)
+#if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)
+
+void spin_lock(void *lock)
+{
+    long *l = (long *)lock;
+    while (!(__sync_bool_compare_and_swap(l, 0, 1)))
+        ;
+}
+
+void spin_unlock(void *lock)
+{
+    long *l = (long *)lock;
+    __sync_bool_compare_and_swap(l, 1, 0);
+}
+
+int spin_trylock(void *lock)
+{
+    long *l = (long *)lock;
+    return !__sync_bool_compare_and_swap(l, 0, 1);
+}
+
+#elif defined(i386) || defined(__x86_64)
+
 #define barrier() asm volatile ("": : :"memory")
 #define cpu_relax() asm volatile ("pause\n": : :"memory")
 static inline unsigned long xchg(void *ptr, unsigned long x)
