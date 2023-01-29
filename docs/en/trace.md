@@ -156,6 +156,7 @@ After installing Melon, we proceed as follows:
        cattr.argc = argc;
        cattr.argv = argv;
        cattr.global_init = NULL;
+       cattr.main_thread = NULL;
        cattr.master_process = NULL;
        cattr.worker_process = worker_process;
    

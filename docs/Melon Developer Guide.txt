@@ -3027,6 +3027,7 @@ Their definitions can be found in melon/include/mln_types.h.
            int                       argc;
            char                    **argv;
            mln_core_init_t           global_init;
+           mln_core_process_t        main_thread;
            mln_core_process_t        master_process;
            mln_core_process_t        worker_process;
        };
@@ -3034,6 +3035,8 @@ Their definitions can be found in melon/include/mln_types.h.
       'argv' normally equals to the second argument of 'main'.
       'global_init' is a function to initialize some global variables. Its prototype is,
           typedef int (*mln_core_init_t)(void);
+      'main_thread' is a function to process something in main thread when the configuration
+        'framework' and 'thread_mode' are set 'on'.
       'master_process' is a function to process something in master process. Its prototype is,
           typedef void (*mln_core_process_t)(mln_event_t *);
         ‘mln_event_t' is the type of event object which is initialized by 'mln_event_new()'.
@@ -3241,6 +3244,7 @@ Their definitions can be found in melon/include/mln_types.h.
           cattr.argc = argc;
           cattr.argv = argv;
           cattr.global_init = NULL;
+          cattr.main_thread = NULL;
           cattr.master_process = NULL;
           cattr.worker_process = NULL;
 

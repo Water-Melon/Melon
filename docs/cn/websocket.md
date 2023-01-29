@@ -1300,6 +1300,7 @@ int main(int argc, char *argv[])
     cattr.argc = argc;
     cattr.argv = argv;
     cattr.global_init = NULL;
+    cattr.main_thread = NULL;
     cattr.master_process = NULL;
     cattr.worker_process = worker_process;
     return mln_core_init(&cattr);

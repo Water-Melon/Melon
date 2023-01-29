@@ -17,6 +17,7 @@ struct mln_core_attr {
     int                       argc; //一般为main的argc
     char                    **argv; //一般为main的argv
     mln_core_init_t           global_init; //初始化回调函数，一般用于初始化全局变量，该回调会在配置加载完成后被调用
+    mln_core_process_t        main_thread; //主线程处理函数，我们将在多线程框架部分深入
     mln_core_process_t        master_process; //主进程处理函数，我们将在多进程框架部分深入
     mln_core_process_t        worker_process; //工作进程处理函数，我们将在多进程框架部分深入
 };
@@ -52,6 +53,7 @@ int main(int argc, char *argv[])
     cattr.argc = argc;
     cattr.argv = argv;
     cattr.global_init = NULL;
+    cattr.main_thread = NULL;
     cattr.master_process = NULL;
     cattr.worker_process = NULL;
     return mln_core_init(&cattr);

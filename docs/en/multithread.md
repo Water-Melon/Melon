@@ -100,6 +100,7 @@ Different from the thread pool described above, the multi-threaded framework is 
        cattr.argc = argc;
        cattr.argv = argv;
        cattr.global_init = NULL;
+       cattr.main_thread = NULL;
        cattr.worker_process = NULL;
        cattr.master_process = NULL;
    
@@ -204,3 +205,85 @@ Different from the thread pool described above, the multi-threaded framework is 
    ```
 
    It can be seen that in fact Melon will start a worker process to pull up its child threads, and the number of worker processes is controlled by the `worker_proc` configuration item. If there is more than one, each worker process will pull up a set of haha and hello threads . In addition, we also see that after the hello thread exits, the cleanup function is called.
+
+### Advanced
+
+In addition to registering thread modules with `mln_thread_module_set`, threads can be dynamically added and removed using the API. This feature enables threads to be dynamically deployed and undeployed according to external requirements.
+
+Let's look at a simple example:
+
+```c
+#include <stdio.h>
+#include <errno.h>
+#include "mln_core.h"
+#include "mln_log.h"
+#include "mln_thread.h"
+#include <unistd.h>
+
+int sw = 0;
+char name[] = "hello";
+static void main_thread(mln_event_t *ev);
+
+static int hello(int argc, char *argv[])
+{
+    while (1) {
+        printf("%d: Hello\n", getpid());
+        usleep(10);
+    }
+    return 0;
+}
+
+static void timer_handler(mln_event_t *ev, void *data)
+{
+    if (sw) {
+        mln_string_t alias = mln_string("hello");
+        mln_thread_kill(&alias);
+        sw = !sw;
+        mln_event_timer_set(ev, 1000, NULL, timer_handler);
+    } else {
+        main_thread(ev);
+    }
+}
+
+static void main_thread(mln_event_t *ev)
+{
+    char **argv = (char **)calloc(3, sizeof(char *));
+    if (argv != NULL) {
+        argv[0] = name;
+        argv[1] = NULL;
+        argv[2] = NULL;
+        mln_thread_create(ev, "hello", THREAD_DEFAULT, hello, 1, argv);
+        sw = !sw;
+        mln_event_timer_set(ev, 1000, NULL, timer_handler);
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    struct mln_core_attr cattr;
+
+    cattr.argc = argc;
+    cattr.argv = argv;
+    cattr.global_init = NULL;
+    cattr.main_thread = main_thread;
+    cattr.worker_process = NULL;
+    cattr.master_process = NULL;
+
+    if (mln_core_init(&cattr) < 0) {
+       fprintf(stderr, "Melon init failed.\n");
+       return -1;
+    }
+
+    return 0;
+}
+```
+
+In this code, we use the `main_thread` callback to add some initialization processing to the main thread of the worker process.
+
+An array of pointers is allocated in `main_thread`, which is used as a thread entry parameter. And use the `mln_thread_create` function to create a thread named `hello`, the entry function of the thread is `hello`, the type of this thread is `THREAD_DEFAULT` (it will not restart after exiting). Then set a timer with a timeout of 1 second.
+
+Enter a timing processing function every second, in which the global variable `sw` is used to control killing or creating `hello` thread.
+
+The `hello` thread outputs the hello string in an endless loop.
+
+**Note**: If you want to use `mln_thread_kill` to kill the child thread, you cannot use `mln_log` to output logs in the child thread, because the log function lock may not be released and the main thread may deadlock.

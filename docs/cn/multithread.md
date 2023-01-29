@@ -6,7 +6,7 @@
 
 多线程框架与前面介绍的线程池不同，是一种模块化线程。模块化线程是指，每一个线程都是一个独立的代码模块，都有各自对应的入口函数（类似于每一个 C 语言程序有一个 main 函数一样）。
 
-> 自2.3.0版本起，多线程模块不再是以在Melon目录下的threads目录中编写代码文件的方式进行集成，而是采用注册函数由使用者在程序中进行注册加载。这样可以解除线程模块代码与Melon库在目录结构上的耦合。
+> 自2.3.0版本起，多线程模块不再是以在Melon目录下的threads目录中编写代码文件的方式进行集成，而是采用注册函数，由使用者在程序中进行注册加载。这样可以解除线程模块代码与Melon库在目录结构上的耦合。
 >
 
 
@@ -101,6 +101,7 @@
        cattr.argc = argc;
        cattr.argv = argv;
        cattr.global_init = NULL;
+       cattr.main_thread = NULL;
        cattr.worker_process = NULL;
        cattr.master_process = NULL;
 
@@ -205,3 +206,85 @@
    ```
 
    可以看到，事实上 Melon 中会启动工作进程来拉起其子线程，而工作进程数量由`worker_proc`配置项控制，如果多于一个，则每个工作进程都会拉起一组haha和hello线程。此外，我们也看到，hello线程退出后，清理函数被调用。
+
+### 高级使用
+
+除了使用`mln_thread_module_set`注册线程模块外，还可以使用API动态添加和删除线程。这一功能可以使得线程可以根据外部需求进行动态部署和下线。
+
+我们来看一个简单的例子：
+
+```c
+#include <stdio.h>
+#include <errno.h>
+#include "mln_core.h"
+#include "mln_log.h"
+#include "mln_thread.h"
+#include <unistd.h>
+
+int sw = 0;
+char name[] = "hello";
+static void main_thread(mln_event_t *ev);
+
+static int hello(int argc, char *argv[])
+{
+    while (1) {
+        printf("%d: Hello\n", getpid());
+        usleep(10);
+    }
+    return 0;
+}
+
+static void timer_handler(mln_event_t *ev, void *data)
+{
+    if (sw) {
+        mln_string_t alias = mln_string("hello");
+        mln_thread_kill(&alias);
+        sw = !sw;
+        mln_event_timer_set(ev, 1000, NULL, timer_handler);
+    } else {
+        main_thread(ev);
+    }
+}
+
+static void main_thread(mln_event_t *ev)
+{
+    char **argv = (char **)calloc(3, sizeof(char *));
+    if (argv != NULL) {
+        argv[0] = name;
+        argv[1] = NULL;
+        argv[2] = NULL;
+        mln_thread_create(ev, "hello", THREAD_DEFAULT, hello, 1, argv);
+        sw = !sw;
+        mln_event_timer_set(ev, 1000, NULL, timer_handler);
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    struct mln_core_attr cattr;
+
+    cattr.argc = argc;
+    cattr.argv = argv;
+    cattr.global_init = NULL;
+    cattr.main_thread = main_thread;
+    cattr.worker_process = NULL;
+    cattr.master_process = NULL;
+
+    if (mln_core_init(&cattr) < 0) {
+       fprintf(stderr, "Melon init failed.\n");
+       return -1;
+    }
+
+    return 0;
+}
+```
+
+这段代码中，我们使用`main_thread`这个回调来让worker进程的主线程增加一些初始化处理。
+
+在`main_thread`中分配了一个指针数组，用来作为线程入口参数。并且利用`mln_thread_create`函数创建了一个名为`hello`的线程，线程的入口函数是`hello`，这个线程的类型是`THREAD_DEFAULT`（退出后不会重启）。然后设置了一个1秒的定时器。
+
+每秒钟进入一次定时处理函数，函数中通过全局变量`sw`来杀掉和创建`hello`线程。
+
+`hello`线程则是死循环输出hello字符串。
+
+这里有一个点要**注意**：如果要使用`mln_thread_kill`杀掉子线程，则子线程内不能使用`mln_log`来打印日志，因为可能会导致日志函数锁无法释放而致使主线程死锁。

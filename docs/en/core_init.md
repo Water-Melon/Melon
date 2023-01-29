@@ -17,6 +17,7 @@ struct mln_core_attr {
     int                       argc; //Usually the argc of main
     char                    **argv; //Usually the argv of main
     mln_core_init_t           global_init; //The initialization callback function is generally used to initialize global variables. The callback will be called after the configuration is loaded.
+    mln_core_process_t        main_thread; //The main thread handler function, which we will dive into in the mutli-thread framework section
     mln_core_process_t        master_process; //The main process handler function, which we will dive into in the multi-process framework section
     mln_core_process_t        worker_process; //Worker process handlers, which we'll dive into in the multiprocessing framework section
 };
@@ -54,6 +55,7 @@ int main(int argc, char *argv[])
     cattr.argc = argc;
     cattr.argv = argv;
     cattr.global_init = NULL;
+    cattr.main_thread = NULL;
     cattr.master_process = NULL;
     cattr.worker_process = NULL;
     return mln_core_init(&cattr);
