@@ -1,3 +1,12 @@
+Changes with melon 2.6.5                                          02 Feb 2023
+    *) Upgraded array component
+    *) Optimized pipe send of melang
+    *) Optimized core component
+    *) Optimized multi-process framework
+    *) Optimized multi-thread framework
+    *) Added pipe receive feature to melang
+    *) Updated docs
+
 Changes with melon 2.6.4                                          21 Jan 2023
     *) Updated and optimized rbtree, fib-heap and hash components
     *) Optimized trace component for trace mode

@@ -22,6 +22,7 @@ extern int mln_trace_init(mln_event_t *ev, mln_string_t *path);
 extern mln_lang_ctx_t *mln_trace_task_get(void);
 extern void mln_trace_finalize(void);
 extern void mln_trace_init_callback_set(mln_trace_init_cb_t cb);
+extern int mln_trace_recv_handler_set(mln_lang_ctx_pipe_recv_cb_t recv_handler);
 
 #endif
 

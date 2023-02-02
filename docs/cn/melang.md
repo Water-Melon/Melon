@@ -212,6 +212,29 @@ mln_lang_ctx_pipe_send(ctx, "sir", &s, 1, 3.14);
 
 
 
+#### mln_lang_ctx_pipe_recv_handler_set
+
+```c
+int mln_lang_ctx_pipe_recv_handler_set(mln_lang_ctx_t *ctx, mln_lang_ctx_pipe_recv_cb_t recv_handler);
+```
+
+描述：设置接收从脚本层`Pipe`函数发送来的数据的回调函数`recv_handler`，其定义为：
+
+```c
+typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
+```
+
+- 第一个参数是脚本任务的上下文结构指针
+- 第二个是传递的数据，该数据为`mln_lang_var_t`类型
+
+返回值：
+
+- `0` 成功
+- `-1` 失败
+
+
+
+
 #### mln_lang_ctx_is_quit
 
 ````c

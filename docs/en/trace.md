@@ -121,6 +121,19 @@ return value: none
 
 
 
+#### mln_trace_recv_handler_set
+
+```c
+int mln_trace_recv_handler_set(mln_lang_ctx_pipe_recv_cb_t recv_handler);
+typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
+```
+
+Description: This function is used to set the processing function of the data passed to the C layer by the `Pipe` function in the trace script.
+
+Return value: returns `0` on success, otherwise returns `-1`
+
+
+
 ### Example
 
 After installing Melon, we proceed as follows:
@@ -144,9 +157,16 @@ After installing Melon, we proceed as follows:
        mln_event_timer_set(ev, 1000, NULL, timeout_handler);
    }
    
+   static int recv_handler(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
+   {
+       mln_log(debug, "%d\n", mln_lang_var_val_get(var)->data.i);
+       return 0;
+   }
+
    static void worker_process(mln_event_t *ev)
    {
        mln_event_timer_set(ev, 1000, NULL, timeout_handler);
+       mln_log(debug, "%d\n", mln_trace_recv_handler_set(recv_handler));
    }
    
    int main(int argc, char *argv[])

@@ -66,6 +66,8 @@ typedef void (*mln_lang_resource_free)(void *data);
 /* import init */
 typedef mln_lang_var_t *(* import_init_t)(mln_lang_ctx_t *);
 typedef void (* import_destroy_t)(mln_lang_t *);
+/* pipe */
+typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
 
 
 struct mln_lang_hash_s {
@@ -413,6 +415,7 @@ typedef struct {
     mln_lang_ctx_t                  *ctx;
     mln_array_t                      list;
     pthread_mutex_t                  lock;
+    mln_lang_ctx_pipe_recv_cb_t      recv_handler;
     mln_u32_t                        subscribed:1;
     mln_u32_t                        padding:31;
 } mln_lang_ctx_pipe_t;
@@ -533,5 +536,6 @@ extern int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, 
 extern void mln_lang_resource_cancel(mln_lang_t *lang, const char *name) __NONNULL2(1,2);
 extern void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name) __NONNULL2(1,2);
 extern int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...);
+extern int mln_lang_ctx_pipe_recv_handler_set(mln_lang_ctx_t *ctx, mln_lang_ctx_pipe_recv_cb_t recv_handler) __NONNULL1(1);
 
 #endif

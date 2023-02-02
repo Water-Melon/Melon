@@ -212,6 +212,29 @@ mln_lang_ctx_pipe_send(ctx, "sir", &s, 1, 3.14);
 
 
 
+#### mln_lang_ctx_pipe_recv_handler_set
+
+```c
+int mln_lang_ctx_pipe_recv_handler_set(mln_lang_ctx_t *ctx, mln_lang_ctx_pipe_recv_cb_t recv_handler);
+```
+
+Description: Set the callback function `recv_handler` that receives the data sent from the script layer `Pipe` function, which is defined as:
+
+```c
+typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
+```
+
+- The first parameter is the context structure pointer of the script task
+- The second is the passed data, which is of type `mln_lang_var_t`
+
+return value:
+
+- `0` for success
+- `-1` fails
+
+
+
+
 #### mln_lang_ctx_is_quit
 
 ````c

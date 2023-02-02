@@ -124,3 +124,9 @@ void mln_trace_init_callback_set(mln_trace_init_cb_t cb)
     trace_init_cb = cb;
 }
 
+int mln_trace_recv_handler_set(mln_lang_ctx_pipe_recv_cb_t recv_handler)
+{
+    if (trace_ctx == NULL) return -1;
+    return mln_lang_ctx_pipe_recv_handler_set(trace_ctx, recv_handler);
+}
+

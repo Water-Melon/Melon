@@ -2704,6 +2704,12 @@ Their definitions can be found in melon/include/mln_types.h.
       y) mln_lang_ctx_is_quit(ctx);
          Indicates whether the program exited without completion.
 
+      z) int mln_lang_ctx_pipe_recv_handler_set(mln_lang_ctx_t *ctx, mln_lang_ctx_pipe_recv_cb_t recv_handler);
+         Set receive handler that is used to receive data from script layer.
+         The prototype of 'recv_handler' is:
+             typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
+         The first argument is script context, the second one is the variable data.
+
   36) FEC
       This component is used to recover RTP packet. Generation and recovery operations are described in
       RFC 5109.
@@ -2956,6 +2962,10 @@ Their definitions can be found in melon/include/mln_types.h.
       f) void mln_trace_init_callback_set(mln_trace_init_cb_t cb);
          typedef int (*mln_trace_init_cb_t)(mln_lang_ctx_t *ctx);
          This function is used to set the initialization callback of trace script context.
+
+      g) int mln_trace_recv_handler_set(mln_lang_ctx_pipe_recv_cb_t recv_handler);
+         Set receive handler that is used to receive data from trace script.
+         The prototype of 'recv_handler' is same to 'mln_lang_ctx_pipe_recv_handler_set'.
 
   44) Linked list
       In melon, there is only one kind of linked list, doubly linked list.

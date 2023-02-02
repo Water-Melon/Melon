@@ -7327,6 +7327,7 @@ static mln_lang_ctx_pipe_t *mln_lang_ctx_pipe_new(mln_lang_ctx_t *ctx)
         mln_alloc_free(p);
         return NULL;
     }
+    p->recv_handler = NULL;
     p->subscribed = 0;
 
     return p;
@@ -7380,6 +7381,7 @@ static int mln_lang_func_pipe(mln_lang_ctx_t *ctx)
     mln_lang_func_detail_t *func;
     mln_string_t funcname = mln_string("Pipe");
     mln_string_t v1 = mln_string("op");
+    mln_string_t v2 = mln_string("data");
     if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, mln_lang_func_pipe_process, NULL, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return -1;
@@ -7390,6 +7392,19 @@ static int mln_lang_func_pipe(mln_lang_ctx_t *ctx)
         return -1;
     }
     if ((var = mln_lang_var_new(ctx, &v1, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    mln_lang_var_chain_add(&(func->args_head), &(func->args_tail), var);
+    ++func->nargs;
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &v2, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_val_free(val);
         mln_lang_func_detail_free(func);
@@ -7418,13 +7433,18 @@ static int mln_lang_func_pipe(mln_lang_ctx_t *ctx)
 static mln_lang_var_t *mln_lang_func_pipe_process(mln_lang_ctx_t *ctx)
 {
     mln_lang_var_t *ret_var = NULL;
+    mln_lang_var_t *var = NULL;
     mln_string_t v1 = mln_string("op");
+    mln_string_t v2 = mln_string("data");
     mln_string_t op_sub = mln_string("subscribe");
     mln_string_t op_unsub = mln_string("unsubscribe");
     mln_string_t op_recv = mln_string("recv");
+    mln_string_t op_send = mln_string("send");
     mln_lang_symbol_node_t *sym;
     mln_lang_ctx_pipe_t *p;
+    mln_lang_ctx_pipe_recv_cb_t cb;
     mln_string_t *op;
+    int rc = 0;
 
     /*arg1*/
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
@@ -7437,6 +7457,18 @@ static mln_lang_var_t *mln_lang_func_pipe_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     op = mln_lang_var_val_get(sym->data.var)->data.s;
+
+    /*arg2*/
+    if ((sym = mln_lang_symbol_node_search(ctx, &v2, 1)) == NULL) {
+        ASSERT(0);
+        mln_lang_errmsg(ctx, "Argument 2 missing.");
+        return NULL;
+    }
+    if (sym->type != M_LANG_SYMBOL_VAR) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 2.");
+        return NULL;
+    }
+    var = sym->data.var;
 
     if (!mln_string_strcmp(op, &op_sub)) {
         if ((p = mln_lang_ctx_resource_fetch(ctx, "pipe")) == NULL) {
@@ -7466,6 +7498,18 @@ static mln_lang_var_t *mln_lang_func_pipe_process(mln_lang_ctx_t *ctx)
             pthread_mutex_lock(&p->lock);
             ret_var = mln_lang_func_pipe_process_array_generate(ctx, p);
             pthread_mutex_unlock(&p->lock);
+        } else {
+            ret_var = mln_lang_var_create_false(ctx, NULL);
+        }
+    } else if (!mln_string_strcmp(op, &op_send)) {
+        if ((p = mln_lang_ctx_resource_fetch(ctx, "pipe")) != NULL) {
+            pthread_mutex_lock(&p->lock);
+            cb = p->recv_handler;
+            pthread_mutex_unlock(&p->lock);
+            if (cb != NULL) {
+                rc = cb(ctx, var);
+            }
+            ret_var = !rc? mln_lang_var_create_true(ctx, NULL): mln_lang_var_create_false(ctx, NULL);
         } else {
             ret_var = mln_lang_var_create_false(ctx, NULL);
         }
@@ -7642,5 +7686,28 @@ static inline int mln_lang_ctx_pipe_do_send(mln_lang_ctx_t *ctx, char *fmt, va_l
 
     return 0;
 
+}
+
+int mln_lang_ctx_pipe_recv_handler_set(mln_lang_ctx_t *ctx, mln_lang_ctx_pipe_recv_cb_t recv_handler)
+{
+    mln_lang_ctx_pipe_t *p;
+
+    if ((p = mln_lang_ctx_resource_fetch(ctx, "pipe")) == NULL) {
+        if ((p = mln_lang_ctx_pipe_new(ctx)) == NULL) {
+            return -1;
+        }
+        if (mln_lang_ctx_resource_register(ctx, "pipe", p, (mln_lang_resource_free)mln_lang_ctx_pipe_free) < 0) {
+            mln_lang_ctx_pipe_free(p);
+            return -1;
+        }
+    }
+
+    if (p->ctx != ctx) return -1;
+
+    pthread_mutex_lock(&p->lock);
+    p->recv_handler = recv_handler;
+    pthread_mutex_unlock(&p->lock);
+
+    return 0;
 }
 

@@ -122,6 +122,19 @@ typedef int (*mln_trace_init_cb_t)(mln_lang_ctx_t *ctx);
 
 
 
+#### mln_trace_recv_handler_set
+
+```c
+int mln_trace_recv_handler_set(mln_lang_ctx_pipe_recv_cb_t recv_handler);
+typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
+```
+
+描述：这个函数用于设置跟踪脚本中`Pipe`函数传递给C层的数据的处理函数。
+
+返回值：成功返回`0`，否则返回`-1`
+
+
+
 ### 示例
 
 安装Melon后，我们按如下步骤操作：
@@ -145,9 +158,16 @@ typedef int (*mln_trace_init_cb_t)(mln_lang_ctx_t *ctx);
        mln_event_timer_set(ev, 1000, NULL, timeout_handler);
    }
    
+   static int recv_handler(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
+   {
+       mln_log(debug, "%d\n", mln_lang_var_val_get(var)->data.i);
+       return 0;
+   }
+   
    static void worker_process(mln_event_t *ev)
    {
        mln_event_timer_set(ev, 1000, NULL, timeout_handler);
+       mln_log(debug, "%d\n", mln_trace_recv_handler_set(recv_handler));
    }
    
    int main(int argc, char *argv[])
