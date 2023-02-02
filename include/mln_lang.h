@@ -67,7 +67,7 @@ typedef void (*mln_lang_resource_free)(void *data);
 typedef mln_lang_var_t *(* import_init_t)(mln_lang_ctx_t *);
 typedef void (* import_destroy_t)(mln_lang_t *);
 /* pipe */
-typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
+typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_val_t *);
 
 
 struct mln_lang_hash_s {

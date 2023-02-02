@@ -7404,7 +7404,7 @@ static int mln_lang_func_pipe(mln_lang_ctx_t *ctx)
         mln_lang_func_detail_free(func);
         return -1;
     }
-    if ((var = mln_lang_var_new(ctx, &v2, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = mln_lang_var_new(ctx, &v2, M_LANG_VAR_REFER, val, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         mln_lang_val_free(val);
         mln_lang_func_detail_free(func);
@@ -7507,7 +7507,7 @@ static mln_lang_var_t *mln_lang_func_pipe_process(mln_lang_ctx_t *ctx)
             cb = p->recv_handler;
             pthread_mutex_unlock(&p->lock);
             if (cb != NULL) {
-                rc = cb(ctx, var);
+                rc = cb(ctx, mln_lang_var_val_get(var));
             }
             ret_var = !rc? mln_lang_var_create_true(ctx, NULL): mln_lang_var_create_false(ctx, NULL);
         } else {

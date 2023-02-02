@@ -126,7 +126,7 @@ typedef int (*mln_trace_init_cb_t)(mln_lang_ctx_t *ctx);
 
 ```c
 int mln_trace_recv_handler_set(mln_lang_ctx_pipe_recv_cb_t recv_handler);
-typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
+typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_val_t *);
 ```
 
 描述：这个函数用于设置跟踪脚本中`Pipe`函数传递给C层的数据的处理函数。
@@ -158,9 +158,9 @@ typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
        mln_event_timer_set(ev, 1000, NULL, timeout_handler);
    }
    
-   static int recv_handler(mln_lang_ctx_t *ctx, mln_lang_var_t *var)
+   static int recv_handler(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
    {
-       mln_log(debug, "%d\n", mln_lang_var_val_get(var)->data.i);
+       mln_log(debug, "%d\n", val->data.i);
        return 0;
    }
    
@@ -196,9 +196,15 @@ typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
 
    ```
    Start up worker process No.1
-   [Hello, 11915, 3.100000, ]
-   [Hello, 11915, 3.100000, ]
-   [Hello, 11915, 3.100000, ]
+   02/02/2023 07:08:54 GMT DEBUG: a.c:worker_process:22: PID:58451 0
+   master process
+   worker process
+   [Hello, 58451, 3.100000, ]
+   02/02/2023 07:08:56 GMT DEBUG: a.c:recv_handler:15: PID:58451 1
+   [Hello, 58451, 3.100000, ]
+   02/02/2023 07:08:57 GMT DEBUG: a.c:recv_handler:15: PID:58451 1
+   [Hello, 58451, 3.100000, ]
+   02/02/2023 07:08:58 GMT DEBUG: a.c:recv_handler:15: PID:58451 1
    ...
    ```
 

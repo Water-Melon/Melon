@@ -2707,8 +2707,8 @@ Their definitions can be found in melon/include/mln_types.h.
       z) int mln_lang_ctx_pipe_recv_handler_set(mln_lang_ctx_t *ctx, mln_lang_ctx_pipe_recv_cb_t recv_handler);
          Set receive handler that is used to receive data from script layer.
          The prototype of 'recv_handler' is:
-             typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_var_t *);
-         The first argument is script context, the second one is the variable data.
+             typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_val_t *);
+         The first argument is script context, the second one is the value of variable.
 
   36) FEC
       This component is used to recover RTP packet. Generation and recovery operations are described in
