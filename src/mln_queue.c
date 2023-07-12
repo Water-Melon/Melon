@@ -39,8 +39,8 @@ void mln_queue_destroy(mln_queue_t *q)
 int mln_queue_append(mln_queue_t *q, void *data)
 {
     if (q->nr_element >= q->qlen) return -1;
-    *(q->tail) = data;
-    if (++(q->tail) == q->queue+q->qlen)
+    *(q->tail)++ = data;
+    if (q->tail == q->queue + q->qlen)
         q->tail = q->queue;
     ++(q->nr_element);
     return 0;
@@ -55,7 +55,7 @@ void *mln_queue_get(mln_queue_t *q)
 void mln_queue_remove(mln_queue_t *q)
 {
     if (!q->nr_element) return;
-    if (++(q->head) >= q->queue+q->qlen)
+    if (++(q->head) >= q->queue + q->qlen)
         q->head = q->queue;
     --(q->nr_element);
 }
@@ -78,7 +78,7 @@ int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void *udata
             if (handler(*scan, udata) < 0)
                 return -1;
         }
-        if (++scan >= q->queue+q->qlen)
+        if (++scan >= q->queue + q->qlen)
             scan = q->queue;
     }
     return 0;
@@ -94,10 +94,10 @@ void mln_queue_free_index(mln_queue_t *q, mln_uauto_t index)
     void **next = pos;
     mln_uauto_t i, end = q->nr_element - index;
     for (i = 0; i < end; ++i) {
-        if (++next >= q->queue+q->qlen)
+        if (++next >= q->queue + q->qlen)
             next = q->queue;
-        *pos = *next;
-        if (++pos >= q->queue+q->qlen)
+        *pos++ = *next;
+        if (pos >= q->queue + q->qlen)
             pos = q->queue;
     }
     q->tail = pos;

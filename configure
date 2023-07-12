@@ -55,6 +55,10 @@ if [ $wasm -eq 1 ]; then
     fi
 fi
 
+if [[ "$install_path" == ~* ]]; then
+    install_path=$HOME/${install_path:1}
+fi
+
 #output installation path
 echo -e "Installation Path \t[$install_path]"
 echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", argv[1]);return 0;}" > .path_generator.c
