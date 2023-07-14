@@ -10,8 +10,8 @@
 static inline void mln_aes_addroundkey(mln_u32_t *state, mln_u32_t *roundkey, int round);
 static inline void mln_aes_mixcolume(mln_u32_t *state);
 static inline void mln_aes_bytesub(mln_u32_t *state);
-static inline void mln_aes_shiftrow(mln_aes_t *a, mln_u32_t *state);
-static inline void mln_aes_invshiftrow(mln_aes_t *a, mln_u32_t *state);
+static inline void mln_aes_shiftrow(mln_u32_t *state);
+static inline void mln_aes_invshiftrow(mln_u32_t *state);
 static inline void mln_aes_invbytesub(mln_u32_t *state);
 static inline void mln_aes_invmixcolume(mln_u32_t *state);
 
@@ -67,24 +67,12 @@ static mln_u32_t rcon[] = {
     0x36000000  
 };
 
-static inline mln_u32_t mln_aes_rotbyte(mln_u32_t val)
-{
-    mln_u32_t ret = 0;
-    ret |= (((val >> 24) & 0xff) | ((val & 0xffffff) << 8));
-    return ret;
-}
+#define mln_aes_rotbyte(val) (((val >> 24) & 0xff) | ((val & 0xffffff) << 8))
 
-static inline mln_u32_t mln_aes_subbyte(mln_u32_t val)
-{
-    mln_u8_t b, i;
-    mln_u32_t ret = 0;
-
-    for (i = 0; i < sizeof(val); ++i) {
-        b = (val >> (i<<3)) & 0xff;
-        ret |= ((((mln_u32_t)sbox[b]) & 0xff) << (i << 3));
-    }
-    return ret;
-}
+#define mln_aes_subbyte(val) ((((mln_u32_t)sbox[val & 0xff]) & 0xff) | \
+                                 ((((mln_u32_t)sbox[(val >> 8) & 0xff]) & 0xff) << 8) | \
+                                 ((((mln_u32_t)sbox[(val >> 16) & 0xff]) & 0xff) << 16) | \
+                                 ((((mln_u32_t)sbox[(val >> 24) & 0xff]) & 0xff) << 24))
 
 int mln_aes_init(mln_aes_t *a, mln_u8ptr_t key, mln_u32_t bits)
 {
@@ -161,16 +149,12 @@ void mln_aes_pool_free(mln_aes_t *a)
 static inline void mln_aes_addroundkey(mln_u32_t *state, mln_u32_t *roundkey, int round)
 {
     int i, j;
-    mln_u8_t b, k;
-    mln_u32_t tmp;
+    mln_u8_t b;
     for (i = 0; i < sizeof(mln_u32_t); ++i) {
         for (j = 0; j < sizeof(mln_u32_t); ++j) {
-            b = k = 0;
             b = (state[j] >> ((sizeof(mln_u32_t)-1-i) << 3)) & 0xff;
-            tmp = ((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3);
-            k = (roundkey[round*__MLN_AES_Nb+i] >> ((sizeof(mln_u32_t)-1-j) << 3)) & 0xff;
-            b ^= k;
-            state[j] ^= tmp;
+            state[j] ^= ((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3);
+            b ^= ((roundkey[round*__MLN_AES_Nb+i] >> ((sizeof(mln_u32_t)-1-j) << 3)) & 0xff);
             state[j] |= ((((mln_u32_t)b) & 0xff) << ((sizeof(mln_u32_t)-1-i) << 3));
         }
     }
@@ -180,7 +164,6 @@ static inline void mln_aes_mixcolume(mln_u32_t *state)
 {
     int i;
     mln_u8_t _0, _1, _2, _3, b;
-    mln_u32_t tmp;
 
     for (i = 0; i < 4; ++i) {
         _0 = (state[0] >> ((sizeof(mln_u32_t)-1-i) << 3)) & 0xff;
@@ -188,65 +171,43 @@ static inline void mln_aes_mixcolume(mln_u32_t *state)
         _2 = (state[2] >> ((sizeof(mln_u32_t)-1-i) << 3)) & 0xff;
         _3 = (state[3] >> ((sizeof(mln_u32_t)-1-i) << 3)) & 0xff;
 
-        tmp = 0;
-        tmp |= (((mln_u32_t)_0) << ((sizeof(mln_u32_t)-1-i) << 3));
-        state[0] ^= tmp;
+        state[0] ^= (((mln_u32_t)_0) << ((sizeof(mln_u32_t)-1-i) << 3));
         b = __MLN_AES_MULTIB_02(_0) ^ __MLN_AES_MULTIB_03(_1) ^ __MLN_AES_MULTIB_01(_2) ^ __MLN_AES_MULTIB_01(_3);
         state[0] |= (((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3));
 
-        tmp = 0;
-        tmp |= (((mln_u32_t)_1) << ((sizeof(mln_u32_t)-1-i) << 3));
-        state[1] ^= tmp;
+        state[1] ^= (((mln_u32_t)_1) << ((sizeof(mln_u32_t)-1-i) << 3));
         b = __MLN_AES_MULTIB_01(_0) ^ __MLN_AES_MULTIB_02(_1) ^ __MLN_AES_MULTIB_03(_2) ^ __MLN_AES_MULTIB_01(_3);
         state[1] |= (((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3));
 
-        tmp = 0;
-        tmp |= (((mln_u32_t)_2) << ((sizeof(mln_u32_t)-1-i) << 3));
-        state[2] ^= tmp;
+        state[2] ^= (((mln_u32_t)_2) << ((sizeof(mln_u32_t)-1-i) << 3));
         b = __MLN_AES_MULTIB_01(_0) ^ __MLN_AES_MULTIB_01(_1) ^ __MLN_AES_MULTIB_02(_2) ^ __MLN_AES_MULTIB_03(_3);
         state[2] |= (((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3));
 
-        tmp = 0;
-        tmp |= (((mln_u32_t)_3) << ((sizeof(mln_u32_t)-1-i) << 3));
-        state[3] ^= tmp;
+        state[3] ^= (((mln_u32_t)_3) << ((sizeof(mln_u32_t)-1-i) << 3));
         b = __MLN_AES_MULTIB_03(_0) ^ __MLN_AES_MULTIB_01(_1) ^ __MLN_AES_MULTIB_01(_2) ^ __MLN_AES_MULTIB_02(_3);
         state[3] |= (((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3));
-
     }
 }
 
 static inline void mln_aes_bytesub(mln_u32_t *state)
 {
-    mln_u32_t i, j, tmp;
+    mln_u32_t i, j;
     mln_u8_t b;
 
     for (i = 0; i < sizeof(mln_u32_t); ++i) {
         for (j = 0; j < sizeof(mln_u32_t); ++j) {
-            tmp = 0;
             b = (state[j] >> ((sizeof(mln_u32_t)-1-i) << 3)) & 0xff;
-            tmp = ((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3);
-            b = sbox[b];
-            state[j] ^= tmp;
-            state[j] |= ((((mln_u32_t)b) & 0xff) << ((sizeof(mln_u32_t)-1-i) << 3));
+            state[j] ^= ((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3);
+            state[j] |= ((((mln_u32_t)sbox[b]) & 0xff) << ((sizeof(mln_u32_t)-1-i) << 3));
         }
     }
 }
 
-static inline void mln_aes_shiftrow(mln_aes_t *a, mln_u32_t *state)
+static inline void mln_aes_shiftrow(mln_u32_t *state)
 {
-    mln_u32_t tmp;
-
-    tmp = state[1];
-    state[1] = 0;
-    state[1] |= (((tmp << 8) | (tmp >> 24)) & 0xffffffff);
-
-    tmp = state[2];
-    state[2] = 0;
-    state[2] |= (((tmp << 16) | (tmp >> 16)) & 0xffffffff);
-
-    tmp = state[3];
-    state[3] = 0;
-    state[3] |= (((tmp << 24) | (tmp >> 8)) & 0xffffffff);
+    state[1] = (((state[1] << 8) | (state[1] >> 24)) & 0xffffffff);
+    state[2] = (((state[2] << 16) | (state[2] >> 16)) & 0xffffffff);
+    state[3] = (((state[3] << 24) | (state[3] >> 8)) & 0xffffffff);
 }
 
 int mln_aes_encrypt(mln_aes_t *a, mln_u8ptr_t text)
@@ -276,13 +237,13 @@ int mln_aes_encrypt(mln_aes_t *a, mln_u8ptr_t text)
 
     for (round = 1; round < nr; ++round) {
         mln_aes_bytesub(state);
-        mln_aes_shiftrow(a, state);
+        mln_aes_shiftrow(state);
         mln_aes_mixcolume(state);
         mln_aes_addroundkey(state, a->w, round);
     }
 
     mln_aes_bytesub(state);
-    mln_aes_shiftrow(a, state);
+    mln_aes_shiftrow(state);
     mln_aes_addroundkey(state, a->w, nr);
 
     for (i = 0; i < sizeof(mln_u32_t); ++i) {
@@ -320,13 +281,13 @@ int mln_aes_decrypt(mln_aes_t *a, mln_u8ptr_t cipher)
     mln_aes_addroundkey(state, a->w, nr);
 
     for (round = nr-1; round > 0; --round) {
-        mln_aes_invshiftrow(a, state);
+        mln_aes_invshiftrow(state);
         mln_aes_invbytesub(state);
         mln_aes_addroundkey(state, a->w, round);
         mln_aes_invmixcolume(state);
     }
 
-    mln_aes_invshiftrow(a, state);
+    mln_aes_invshiftrow(state);
     mln_aes_invbytesub(state);
     mln_aes_addroundkey(state, a->w, 0);
 
@@ -339,36 +300,23 @@ int mln_aes_decrypt(mln_aes_t *a, mln_u8ptr_t cipher)
     return 0;
 }
 
-static inline void mln_aes_invshiftrow(mln_aes_t *a, mln_u32_t *state)
+static inline void mln_aes_invshiftrow(mln_u32_t *state)
 {
-    mln_u32_t tmp;
-
-    tmp = state[1];
-    state[1] = 0;
-    state[1] |= (((tmp >> 8) | (tmp << 24)) & 0xffffffff);
-
-    tmp = state[2];
-    state[2] = 0;
-    state[2] |= (((tmp >> 16) | (tmp << 16)) & 0xffffffff);
-
-    tmp = state[3];
-    state[3] = 0;
-    state[3] |= (((tmp >> 24) | (tmp << 8)) & 0xffffffff);
+    state[1] = (((state[1] >> 8) | (state[1] << 24)) & 0xffffffff);
+    state[2] = (((state[2] >> 16) | (state[2] << 16)) & 0xffffffff);
+    state[3] = (((state[3] >> 24) | (state[3] << 8)) & 0xffffffff);
 }
 
 static inline void mln_aes_invbytesub(mln_u32_t *state)
 {
-    mln_u32_t i, j, tmp;
+    mln_u32_t i, j;
     mln_u8_t b;
 
     for (i = 0; i < sizeof(mln_u32_t); ++i) {
         for (j = 0; j < sizeof(mln_u32_t); ++j) {
-            tmp = 0;
             b = (state[j] >> ((sizeof(mln_u32_t)-1-i) << 3)) & 0xff;
-            tmp = ((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3);
-            b = rsbox[b];
-            state[j] ^= tmp;
-            state[j] |= ((((mln_u32_t)b) & 0xff) << ((sizeof(mln_u32_t)-1-i) << 3));
+            state[j] ^= ((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3);
+            state[j] |= ((((mln_u32_t)rsbox[b]) & 0xff) << ((sizeof(mln_u32_t)-1-i) << 3));
         }
     }
 }
@@ -376,8 +324,7 @@ static inline void mln_aes_invbytesub(mln_u32_t *state)
 static inline void mln_aes_invmixcolume(mln_u32_t *state)
 {
     int i;
-    mln_u8_t _0, _1, _2, _3, b;
-    mln_u32_t tmp;
+    mln_u8_t _0, _1, _2, _3;
 
     for (i = 0; i < 4; ++i) {
         _0 = (state[0] >> ((sizeof(mln_u32_t)-1-i) << 3)) & 0xff;
@@ -385,30 +332,17 @@ static inline void mln_aes_invmixcolume(mln_u32_t *state)
         _2 = (state[2] >> ((sizeof(mln_u32_t)-1-i) << 3)) & 0xff;
         _3 = (state[3] >> ((sizeof(mln_u32_t)-1-i) << 3)) & 0xff;
 
-        tmp = 0;
-        tmp |= (((mln_u32_t)_0) << ((sizeof(mln_u32_t)-1-i) << 3));
-        state[0] ^= tmp;
-        b = __MLN_AES_MULTIB_0e(_0) ^ __MLN_AES_MULTIB_0b(_1) ^ __MLN_AES_MULTIB_0d(_2) ^ __MLN_AES_MULTIB_09(_3);
-        state[0] |= (((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3));
+        state[0] ^= (((mln_u32_t)_0) << ((sizeof(mln_u32_t)-1-i) << 3));
+        state[0] |= (((mln_u32_t)(__MLN_AES_MULTIB_0e(_0) ^ __MLN_AES_MULTIB_0b(_1) ^ __MLN_AES_MULTIB_0d(_2) ^ __MLN_AES_MULTIB_09(_3))) << ((sizeof(mln_u32_t)-1-i) << 3));
 
-        tmp = 0;
-        tmp |= (((mln_u32_t)_1) << ((sizeof(mln_u32_t)-1-i) << 3));
-        state[1] ^= tmp;
-        b = __MLN_AES_MULTIB_09(_0) ^ __MLN_AES_MULTIB_0e(_1) ^ __MLN_AES_MULTIB_0b(_2) ^ __MLN_AES_MULTIB_0d(_3);
-        state[1] |= (((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3));
+        state[1] ^= (((mln_u32_t)_1) << ((sizeof(mln_u32_t)-1-i) << 3));
+        state[1] |= (((mln_u32_t)(__MLN_AES_MULTIB_09(_0) ^ __MLN_AES_MULTIB_0e(_1) ^ __MLN_AES_MULTIB_0b(_2) ^ __MLN_AES_MULTIB_0d(_3))) << ((sizeof(mln_u32_t)-1-i) << 3));
 
-        tmp = 0;
-        tmp |= (((mln_u32_t)_2) << ((sizeof(mln_u32_t)-1-i) << 3));
-        state[2] ^= tmp;
-        b = __MLN_AES_MULTIB_0d(_0) ^ __MLN_AES_MULTIB_09(_1) ^ __MLN_AES_MULTIB_0e(_2) ^ __MLN_AES_MULTIB_0b(_3);
-        state[2] |= (((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3));
+        state[2] ^= (((mln_u32_t)_2) << ((sizeof(mln_u32_t)-1-i) << 3));
+        state[2] |= (((mln_u32_t)(__MLN_AES_MULTIB_0d(_0) ^ __MLN_AES_MULTIB_09(_1) ^ __MLN_AES_MULTIB_0e(_2) ^ __MLN_AES_MULTIB_0b(_3))) << ((sizeof(mln_u32_t)-1-i) << 3));
 
-        tmp = 0;
-        tmp |= (((mln_u32_t)_3) << ((sizeof(mln_u32_t)-1-i) << 3));
-        state[3] ^= tmp;
-        b = __MLN_AES_MULTIB_0b(_0) ^ __MLN_AES_MULTIB_0d(_1) ^ __MLN_AES_MULTIB_09(_2) ^ __MLN_AES_MULTIB_0e(_3);
-        state[3] |= (((mln_u32_t)b) << ((sizeof(mln_u32_t)-1-i) << 3));
-
+        state[3] ^= (((mln_u32_t)_3) << ((sizeof(mln_u32_t)-1-i) << 3));
+        state[3] |= (((mln_u32_t)(__MLN_AES_MULTIB_0b(_0) ^ __MLN_AES_MULTIB_0d(_1) ^ __MLN_AES_MULTIB_09(_2) ^ __MLN_AES_MULTIB_0e(_3))) << ((sizeof(mln_u32_t)-1-i) << 3));
     }
 }
 
