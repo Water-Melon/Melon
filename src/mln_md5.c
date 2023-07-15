@@ -131,8 +131,7 @@ static inline void mln_md5_calc_block(mln_md5_t *m)
         group[j] |= (m->buf[i++] & 0xff);
         group[j] |= ((m->buf[i++] & 0xff) << 8);
         group[j] |= ((m->buf[i++] & 0xff) << 16);
-        group[j] |= ((m->buf[i++] & 0xff) << 24);
-        ++j;
+        group[j++] |= ((m->buf[i++] & 0xff) << 24);
     }
 
     __M_MD5_FF(a, b, c, d, group[0], s[0][0], ti[0][0]);

@@ -91,7 +91,7 @@ void mln_sha1_calc(mln_sha1_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t 
     mln_uauto_t size;
 
     s->length += len;
-    while (len+s->pos > __M_SHA_BUFLEN) {
+    while (len + s->pos > __M_SHA_BUFLEN) {
         size = __M_SHA_BUFLEN - s->pos;
         memcpy(&(s->buf[s->pos]), input, size);
         len -= size;
@@ -145,8 +145,7 @@ static inline void mln_sha1_calc_block(mln_sha1_t *s)
         group[j] |= ((s->buf[i++] & 0xff) << 24);
         group[j] |= ((s->buf[i++] & 0xff) << 16);
         group[j] |= ((s->buf[i++] & 0xff) << 8);
-        group[j] |= ((s->buf[i++] & 0xff));
-        ++j;
+        group[j++] |= ((s->buf[i++] & 0xff));
     }
 
     __M_SHA1_FF1(a, b, c, d, e, group[0], k[0]);

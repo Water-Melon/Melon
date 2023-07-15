@@ -18,11 +18,11 @@ static int mln_json_rbtree_cmp(const void *data1, const void *data2);
 static inline void mln_json_jumpoff_blank(char **jstr, int *len);
 static inline int
 mln_json_parse_json(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
-static int
+static inline int
 mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index);
-static int
+static inline int
 mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index);
-static int
+static inline int
 mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
 static mln_u8ptr_t
 mln_json_parse_string_fetch(mln_u8ptr_t jstr, int *len);
@@ -30,11 +30,11 @@ static int
 mln_json_parse_digit(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
 static inline int
 mln_json_digit_process(double *val, char *s, int len);
-static int
+static inline int
 mln_json_parse_true(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
-static int
+static inline int
 mln_json_parse_false(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
-static int
+static inline int
 mln_json_parse_null(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
 
 static int mln_json_dump_hash_iterate_handler(void *key, void *val, void *data);
@@ -146,7 +146,7 @@ mln_json_parse_json(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     return mln_json_parse_null(j, jstr, len, index);
 }
 
-static int
+static inline int
 mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
 {
     int left;
@@ -155,8 +155,7 @@ mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
 
     /*jump off '{'*/
     ++jstr;
-    --len;
-    if (len <= 0) {
+    if (--len <= 0) {
         return -1;
     }
 
@@ -220,8 +219,7 @@ again:
             return -1;
         }
         ++jstr;
-        --len;
-        if (len <= 0) {
+        if (--len <= 0) {
             return -1;
         }
 
@@ -244,8 +242,7 @@ again:
 
     if (jstr[0] == ',') {
         ++jstr;
-        --len;
-        if (len <= 0) {
+        if (--len <= 0) {
             return -1;
         }
         goto again;
@@ -259,7 +256,7 @@ again:
     return -1;
 }
 
-static int
+static inline int
 mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
 {
     int left;
@@ -281,8 +278,7 @@ mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
     }
 
     ++jstr;
-    --len;
-    if (len <= 0) {
+    if (--len <= 0) {
         return -1;
     }
 
@@ -318,14 +314,15 @@ again:
     }
 
     if (jstr[0] == ',') {
-        ++jstr; --len;
-        if (len <= 0) {
+        ++jstr;
+        if (--len <= 0) {
             return -1;
         }
         goto again;
     }
     if (jstr[0] == ']') {
-        ++jstr; --len;
+        ++jstr;
+        --len;
         mln_json_jumpoff_blank(&jstr, &len);
         return len;
     }
@@ -333,7 +330,7 @@ again:
     return -1;
 }
 
-static int
+static inline int
 mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
     mln_u8_t *p, flag = 0;
@@ -342,8 +339,7 @@ mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     mln_u8ptr_t buf;
 
     ++jstr;
-    --len;
-    if (len <= 0) {
+    if (--len <= 0) {
         return -1;
     }
 
@@ -512,8 +508,8 @@ mln_json_parse_digit(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 
     if (jstr[0] == '-') {
         sub_flag = 1;
-        ++jstr; --len;
-        if (len <= 0) {
+        ++jstr;
+        if (--len <= 0) {
             return -1;
         }
     }
@@ -539,8 +535,8 @@ mln_json_digit_process(double *val, char *s, int len)
     if (!isdigit(*s)) return -1;
 
     if (s[0] == '0') {
-        ++s; --len;
-        if (len <= 0) return 0;
+        ++s;
+        if (--len <= 0) return 0;
         if (isdigit(*s)) return -1;
     } else {
         for (; len > 0; --len, ++s) {
@@ -552,8 +548,8 @@ mln_json_digit_process(double *val, char *s, int len)
     }
 
     if (*s == '.') {
-        ++s; --len;
-        if (len <= 0) return -1;
+        ++s;
+        if (--len <= 0) return -1;
         for (i = 1; len > 0; --len, ++s, ++i) {
             if (!isdigit(*s)) break;
             f = *s - '0';
@@ -566,16 +562,16 @@ mln_json_digit_process(double *val, char *s, int len)
     }
 
     if (*s == 'e' || *s == 'E') {
-        ++s; --len;
-        if (len <= 0) return -1;
+        ++s;
+        if (--len <= 0) return -1;
 
         if (*s == '+') {
-            ++s; --len;
-            if (len <= 0) return 0;
+            ++s;
+            if (--len <= 0) return 0;
         } else if (*s == '-') {
             dir = 0;
-            ++s; --len;
-            if (len <= 0) return 0;
+            ++s;
+            if (--len <= 0) return 0;
         }
 
         for (i = 0; len > 0; --len, ++s) {
@@ -595,7 +591,7 @@ mln_json_digit_process(double *val, char *s, int len)
     return len;
 }
 
-static int
+static inline int
 mln_json_parse_true(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
     if (len < 4) {
@@ -613,7 +609,7 @@ mln_json_parse_true(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     return len - 4;
 }
 
-static int
+static inline int
 mln_json_parse_false(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
     if (len < 5) {
@@ -631,7 +627,7 @@ mln_json_parse_false(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     return len - 5;
 }
 
-static int
+static inline int
 mln_json_parse_null(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
 {
     if (len < 4) {
@@ -686,7 +682,8 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
 
     switch (j->type) {
         case M_JSON_OBJECT:
-            *buf++ = '{'; ++length;
+            *buf++ = '{';
+            ++length;
             tmp.length = &length;
             tmp.buf = &buf;
             save = length;
@@ -695,13 +692,16 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
                                   mln_json_write_content_hash_iterate_handler, \
                                   &tmp);
             if (save < length) {
-                --buf; --length;
+                --buf;
+                --length;
                 *buf = 0;
             }
-            *buf++ = '}'; ++length;
+            *buf++ = '}';
+            ++length;
             break;
         case M_JSON_ARRAY:
-            *buf++ = '['; ++length;
+            *buf++ = '[';
+            ++length;
             tmp.length = &length;
             tmp.buf = &buf;
             save = length;
@@ -710,13 +710,16 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
                                     mln_json_write_content_rbtree_iterate_handler, \
                                     &tmp);
             if (save < length) {
-                --buf; --length;
+                --buf;
+                --length;
                 *buf = 0;
             }
-            *buf++ = ']'; ++length;
+            *buf++ = ']';
+            ++length;
             break;
         case M_JSON_STRING:
-            *buf++ = '\"'; ++length;
+            *buf++ = '\"';
+            ++length;
             if ((s = j->data.m_j_string) != NULL) {
                 p = j->data.m_j_string->data;
                 end = p + j->data.m_j_string->len;
@@ -729,7 +732,8 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
                     ++length;
                 }
             }
-            *buf++ = '\"'; ++length;
+            *buf++ = '\"';
+            ++length;
             break;
         case M_JSON_NUM:
         {
