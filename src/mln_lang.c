@@ -1102,7 +1102,7 @@ __mln_lang_var_create_obj(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *in_set, ml
         mln_lang_object_free(obj);
         return NULL;
     }
-    if ((var = __mln_lang_var_new_ref_string(ctx, NULL, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+    if ((var = __mln_lang_var_new_ref_string(ctx, name, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
         __mln_lang_val_free(val);
         return NULL;
     }

@@ -102,6 +102,18 @@ Return value: user-defined data pointer
 
 
 
+#### mln_lang_ctx_data_set
+
+```c
+mln_lang_ctx_data_set(ctx, d)
+```
+
+Description: Set user-defined data 'd' to script task `ctx`.
+
+Return value: none
+
+
+
 #### mln_lang_launcher_get
 
 ```c

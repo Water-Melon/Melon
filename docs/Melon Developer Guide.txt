@@ -2689,7 +2689,10 @@ Their definitions can be found in melon/include/mln_types.h.
       v) mln_lang_ctx_data_get(ctx);
          Get user data from task 'ctx'.
 
-      w) mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...);
+      w) mln_lang_ctx_data_set(ctx, d);
+         Set user data 'd' to task 'ctx'.
+
+      x) mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...);
          Send message to script layer that can be received by 'Pipe' in Melang.
          'ctx' is a specified script task.
          'fmt' contains four characters:
@@ -2698,13 +2701,13 @@ Their definitions can be found in melon/include/mln_types.h.
              s - string, it should be a pointer of char
              S - string, it should be a pointer of mln_string_t.
 
-      x) void mln_lang_func_detail_arg_append(mln_lang_func_detail_t *func, mln_lang_var_t *var);
+      y) void mln_lang_func_detail_arg_append(mln_lang_func_detail_t *func, mln_lang_var_t *var);
          Append argument 'var' to the argument list of function definition 'func'.
 
-      y) mln_lang_ctx_is_quit(ctx);
+      z) mln_lang_ctx_is_quit(ctx);
          Indicates whether the program exited without completion.
 
-      z) int mln_lang_ctx_pipe_recv_handler_set(mln_lang_ctx_t *ctx, mln_lang_ctx_pipe_recv_cb_t recv_handler);
+      aa) int mln_lang_ctx_pipe_recv_handler_set(mln_lang_ctx_t *ctx, mln_lang_ctx_pipe_recv_cb_t recv_handler);
          Set receive handler that is used to receive data from script layer.
          The prototype of 'recv_handler' is:
              typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_val_t *);

@@ -102,6 +102,18 @@ mln_lang_ctx_data_get(ctx)
 
 
 
+#### mln_lang_ctx_data_set
+
+```c
+mln_lang_ctx_data_set(ctx, d)
+```
+
+描述：为脚本任务`ctx`设置用户自定义数据`d`。
+
+返回值：无
+
+
+
 #### mln_lang_launcher_get
 
 ```c

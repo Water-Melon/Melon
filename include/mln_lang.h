@@ -432,15 +432,16 @@ struct mln_lang_ctx_pipe_elem_s {
 extern mln_lang_method_t *mln_lang_methods[];
 
 
-#define mln_lang_ctx_is_quit(ctx)   ((ctx)->quit)
-#define mln_lang_mutex_lock(lang)   pthread_mutex_lock(&(lang)->lock)
-#define mln_lang_mutex_unlock(lang) pthread_mutex_unlock(&(lang)->lock)
-#define mln_lang_task_empty(lang)   ((lang)->run_head == NULL && (lang)->wait_head == NULL)
-#define mln_lang_signal_get(lang)   ((lang)->signal)
-#define mln_lang_event_get(lang)    ((lang)->ev)
-#define mln_lang_launcher_get(lang) ((lang)->launcher)
-#define mln_lang_cache_set(lang)    ((lang)->cache = 1)
-#define mln_lang_ctx_data_get(ctx)  ((ctx)->data)
+#define mln_lang_ctx_is_quit(ctx)    ((ctx)->quit)
+#define mln_lang_mutex_lock(lang)    pthread_mutex_lock(&(lang)->lock)
+#define mln_lang_mutex_unlock(lang)  pthread_mutex_unlock(&(lang)->lock)
+#define mln_lang_task_empty(lang)    ((lang)->run_head == NULL && (lang)->wait_head == NULL)
+#define mln_lang_signal_get(lang)    ((lang)->signal)
+#define mln_lang_event_get(lang)     ((lang)->ev)
+#define mln_lang_launcher_get(lang)  ((lang)->launcher)
+#define mln_lang_cache_set(lang)     ((lang)->cache = 1)
+#define mln_lang_ctx_data_get(ctx)   ((ctx)->data)
+#define mln_lang_ctx_data_set(ctx,d) ((ctx)->data = (d))
 extern void mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg) __NONNULL2(1,2);
 extern mln_lang_t *mln_lang_new(mln_event_t *ev, mln_lang_run_ctl_t signal, mln_lang_run_ctl_t clear) __NONNULL3(1,2,3);
 extern void mln_lang_free(mln_lang_t *lang);
