@@ -26,6 +26,7 @@
 #define MLN_LANG_PIPE_LIST_NALLOC  1024
 #define MLN_LANG_PIPE_ELEM_NALLOC  6
 #define MLN_LANG_IMPORT_FREE_COUNT 65535
+#define MLN_LANG_STM_CACHE_USEC    30000000
 
 #define M_LANG_VAL_TYPE_NIL       0
 #define M_LANG_VAL_TYPE_INT       1
@@ -84,7 +85,9 @@ struct mln_lang_hash_bucket_s {
 struct mln_lang_ast_cache_s {
     mln_lang_stm_t                  *stm;
     mln_string_t                    *code;
-    mln_u64_t                        ref;
+    mln_u64_t                        ref:63;
+    mln_u64_t                        expire:1;
+    mln_u64_t                        timestamp;
     struct mln_lang_ast_cache_s     *prev;
     struct mln_lang_ast_cache_s     *next;
 };

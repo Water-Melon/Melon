@@ -101,7 +101,7 @@ __mln_lang_job_new(mln_lang_t *lang, \
 static inline void __mln_lang_job_free(mln_lang_ctx_t *ctx);
 static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data);
 static inline mln_lang_ast_cache_t *
-mln_lang_ast_cache_new(mln_lang_t *lang, mln_lang_stm_t *stm, mln_string_t *code);
+mln_lang_ast_cache_new(mln_lang_t *lang, mln_lang_stm_t *stm, mln_string_t *code, mln_u64_t timestamp);
 static inline void
 mln_lang_ast_cache_free(mln_lang_ast_cache_t *cache);
 static inline mln_lang_ctx_t *
@@ -664,7 +664,7 @@ out:
 
 
 static inline mln_lang_ast_cache_t *
-mln_lang_ast_cache_new(mln_lang_t *lang, mln_lang_stm_t *stm, mln_string_t *code)
+mln_lang_ast_cache_new(mln_lang_t *lang, mln_lang_stm_t *stm, mln_string_t *code, mln_u64_t timestamp)
 {
     mln_lang_ast_cache_t *cache;
     if ((cache = mln_alloc_m(lang->pool, sizeof(mln_lang_ast_cache_t))) == NULL) {
@@ -677,6 +677,8 @@ mln_lang_ast_cache_new(mln_lang_t *lang, mln_lang_stm_t *stm, mln_string_t *code
         return NULL;
     }
     cache->ref = 0;
+    cache->expire = 0;
+    cache->timestamp = timestamp;
     cache->prev = cache->next = NULL;
     return cache;
 }
@@ -701,6 +703,11 @@ mln_lang_ast_cache_search(mln_lang_t *lang, mln_u32_t type, mln_string_t *conten
     mln_lang_stm_t *stm;
     int fd;
     struct stat st;
+    mln_u64_t now;
+    struct timeval tv;
+
+    gettimeofday(&tv, NULL);
+    now = tv.tv_sec * 1000000 + tv.tv_usec;
 
     if (type == M_INPUT_T_FILE) {
         if (content->len >= 1 && content->data[0] == (mln_u8_t)'/') {
@@ -730,6 +737,11 @@ mln_lang_ast_cache_search(mln_lang_t *lang, mln_u32_t type, mln_string_t *conten
     }
 
     for (cache = lang->cache_head; cache != NULL; cache = cache->next) {
+        if (cache->expire) continue;
+        if (now - cache->timestamp >= MLN_LANG_STM_CACHE_USEC) {
+            cache->expire = 1;
+            continue;
+        }
         if (cache->code->len == data.len && !memcmp(cache->code->data, data.data, data.len)) {
             if (buf != NULL) free(buf);
             return cache;
@@ -742,7 +754,7 @@ mln_lang_ast_cache_search(mln_lang_t *lang, mln_u32_t type, mln_string_t *conten
         return NULL;
     }
 
-    cache = mln_lang_ast_cache_new(lang, stm, &data);
+    cache = mln_lang_ast_cache_new(lang, stm, &data, now);
     if (buf != NULL) free(buf);
     if (cache == NULL) {
         mln_lang_ast_free(stm);
