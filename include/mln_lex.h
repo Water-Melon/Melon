@@ -139,6 +139,7 @@ typedef struct {
     mln_u32_t           type;
     int                 fd;
     mln_string_t       *data;
+    mln_string_t       *dir;
     mln_u8ptr_t         buf;
     mln_u8ptr_t         pos;
     mln_u64_t           buf_len;

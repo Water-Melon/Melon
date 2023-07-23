@@ -544,7 +544,7 @@ Use this code to generate an executable program, and then parse the following te
 
 ```ini
 //a.txt
-#include "b.txt"
+#include "b.txt" // Note: here must use " not '
 test_mode = on
 log_level = 'debug'
 proc_num = 10

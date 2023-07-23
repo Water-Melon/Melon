@@ -53,9 +53,30 @@ void mln_lex_preprocess_data_free(mln_lex_preprocess_data_t *lpd)
     mln_alloc_free(lpd);
 }
 
+static inline int mln_lex_base_dir(mln_lex_t *lex, mln_lex_input_t *input, char *path, int *err)
+{
+    char *p = strrchr(path, '/');
+    char tmp[1024] = {0};
+    int n;
+    mln_string_t dir;
+
+    if (p == NULL) {
+        n = snprintf(tmp, sizeof(tmp) - 1, ".");
+        mln_string_nset(&dir, tmp, n);
+    } else {
+        mln_string_nset(&dir, path, p - path);
+    }
+    if ((input->dir = mln_string_pool_dup(lex->pool, &dir)) == NULL) {
+        *err = MLN_LEX_ENMEM;
+        return -1;
+    }
+    return 0;
+}
+
 mln_lex_input_t *
 mln_lex_input_new(mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line)
 {
+    int r;
     mln_lex_input_t *li;
     if ((li = (mln_lex_input_t *)mln_alloc_m(lex->pool, sizeof(mln_lex_input_t))) == NULL) {
         *err = MLN_LEX_ENMEM;
@@ -68,27 +89,40 @@ mln_lex_input_new(mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, 
         *err = MLN_LEX_ENMEM;
         return NULL;
     }
+    li->dir = NULL;
     if (type == M_INPUT_T_BUF) {
         li->fd = -1;
         li->pos = li->buf = li->data->data;
         li->buf_len = data->len;
     } else if (type == M_INPUT_T_FILE) {
         int n;
+        mln_u32_t len;
         char path[1024] = {0};
         char tmp_path[1024];
         char *melang_path = NULL;
-        mln_u32_t len = data->len >= 1024? 1023: data->len;
-        memcpy(path, data->data, len);
-        path[len] = 0;
+
+        if (data->len && data->data[0] == (mln_u8_t)'@') {
+            if (lex->cur == NULL || lex->cur->dir == NULL)
+                n = snprintf(path, sizeof(path) - 1, "./");
+            else
+                n = snprintf(path, sizeof(path) - 1, "%s/", lex->cur->dir->data);
+            len = (data->len - 1) >= 1024? 1023: (data->len - 1);
+            memcpy(path + n, data->data + 1, len);
+        } else {
+            len = data->len >= 1024? 1023: data->len;
+            memcpy(path, data->data, len);
+        }
 #if defined(WIN32)
         if (len > 1 && path[1] == ':') {
 #else
         if (path[0] == '/') {
 #endif
             li->fd = open(path, O_RDONLY);
+            r = mln_lex_base_dir(lex, li, path, err);
         } else {
             if (!access(path, F_OK)) {
                 li->fd = open(path, O_RDONLY);
+                r = mln_lex_base_dir(lex, li, path, err);
             } else if (lex->env != NULL && (melang_path = getenv((char *)(lex->env->data))) != NULL) {
                 char *end = strchr(melang_path, ';');
                 int found = 0;
@@ -98,6 +132,7 @@ mln_lex_input_new(mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, 
                     tmp_path[n] = 0;
                     if (!access(tmp_path, F_OK)) {
                         li->fd = open(tmp_path, O_RDONLY);
+                        r = mln_lex_base_dir(lex, li, tmp_path, err);
                         found = 1;
                         break;
                     }
@@ -109,6 +144,7 @@ mln_lex_input_new(mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, 
                         n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
                         tmp_path[n] = 0;
                         li->fd = open(tmp_path, O_RDONLY);
+                        r = mln_lex_base_dir(lex, li, tmp_path, err);
                     } else {
                         goto goon;
                     }
@@ -118,9 +154,11 @@ goon:
                 n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_lib(), path);
                 tmp_path[n] = 0;
                 li->fd = open(tmp_path, O_RDONLY);
+                r = mln_lex_base_dir(lex, li, tmp_path, err);
             }
         }
-        if (li->fd < 0) {
+        if (r < 0 || li->fd < 0) {
+            if (li->fd >= 0) close(li->fd);
             mln_alloc_free(li->data);
             mln_alloc_free(li);
             *err = MLN_LEX_EREAD;
@@ -144,6 +182,7 @@ void mln_lex_input_free(void *in)
     mln_lex_input_t *input = (mln_lex_input_t *)in;
     if (input->fd >= 0) close(input->fd);
     if (input->data != NULL) mln_string_free(input->data);
+    if (input->dir != NULL) mln_string_free(input->dir);
     if (input->buf != NULL && input->type == M_INPUT_T_FILE) mln_alloc_free(input->buf);
     mln_alloc_free(input);
 }

@@ -544,7 +544,7 @@ int main(int argc, char *argv[])
 
 ```ini
 //a.txt
-#include "b.txt"
+#include "b.txt" //注意，这里必须是双引号"
 test_mode = on
 log_level = 'debug'
 proc_num = 10

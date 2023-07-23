@@ -598,6 +598,18 @@ Their definitions can be found in melon/include/mln_types.h.
              #include "a.conf"
          or
              #include "/xxx/xxx/a.conf"
+         or
+             #include "@/a.conf"
+         Note: path must be contained by `"`, not `'`.
+         `@` stands for the directory path of current file.
+         e.g.:
+             cat /xxx/yyy/a.m
+
+             #include "@/b.m"
+
+             Then we execute:
+                 $ melang /xxx/yyy/a.m
+             The file /xxx/yyy/b.m will be included in a.m.
 
          'define' is a capability to define a macro.
          Example:
