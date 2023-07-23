@@ -98,7 +98,7 @@ Please refer to [Github Pages](https://water-melon.github.io/Melon/) for more de
 
 ### Docker
 
-** Docker image will not be maintained temporarily because I cannot sign in from my country. ** 
+**Docker image will not be maintained temporarily because I cannot sign in from my country.** 
 
 You can pull the built container image to deploy the running environment.
 
