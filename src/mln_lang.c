@@ -699,30 +699,32 @@ mln_lang_ast_cache_search(mln_lang_t *lang, mln_u32_t type, mln_string_t *conten
     mln_string_t data;
     mln_u8ptr_t buf = NULL;
     mln_lang_stm_t *stm;
+    int fd;
+    struct stat st;
 
     if (type == M_INPUT_T_FILE) {
-        int fd;
-        struct stat st;
+        if (content->len >= 1 && content->data[0] == (mln_u8_t)'/') {
+            mln_string_nset(&data, content->data, content->len);
+        } else {
+            if ((fd = mln_lang_ast_file_open(content)) < 0) return NULL;
 
-        if ((fd = mln_lang_ast_file_open(content)) < 0) return NULL;
-
-        if (fstat(fd, &st) < 0) {
+            if (fstat(fd, &st) < 0) {
+                close(fd);
+                return NULL;
+            }
+            buf = (mln_u8ptr_t)malloc(st.st_size);
+            if (buf == NULL) {
+                close(fd);
+                return NULL;
+            }
+            if (read(fd, buf, st.st_size) != st.st_size) {
+                free(buf);
+                close(fd);
+                return NULL;
+            }
             close(fd);
-            return NULL;
+            mln_string_nset(&data, buf, st.st_size);
         }
-        buf = (mln_u8ptr_t)malloc(st.st_size);
-        if (buf == NULL) {
-            close(fd);
-            return NULL;
-        }
-        if (read(fd, buf, st.st_size) != st.st_size) {
-            free(buf);
-            close(fd);
-            return NULL;
-        }
-        close(fd);
-        data.data = buf;
-        data.len = st.st_size;
     } else {
         data = *content;
     }
@@ -6388,6 +6390,7 @@ static mln_lang_import_t *mln_lang_func_import_new(mln_lang_ctx_t *ctx, mln_stri
         return NULL;
     }
     i->ref = 0;
+    i->count = MLN_LANG_IMPORT_FREE_COUNT;
     i->handle = handle;
     i->node = NULL;
     i->lang = ctx->lang;
@@ -6455,6 +6458,7 @@ static void mln_lang_func_ctx_import_free(mln_lang_ctx_import_t *ci)
     mln_alloc_free(ci);
 
     if ((i->ref)-- > 1) return;
+    if ((i->count)-- > 0) return;
 
     if ((tree = mln_lang_resource_fetch(ctx->lang, "import")) != NULL) {
         mln_rbtree_delete(tree, i->node);
@@ -6532,70 +6536,70 @@ static mln_lang_var_t *mln_lang_func_import_process(mln_lang_ctx_t *ctx)
     }
     name = mln_lang_var_val_get(sym->data.var)->data.s;
 
-#if defined(WIN32)
-    if (name->len > 1 && name->data[1] == ':') {
-        n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
-#else
-    if (name->data[0] == '/') {
-        n = snprintf(path, sizeof(path)-1, "%s.so", (char *)(name->data));
-#endif
-        path[n] = 0;
-    } else {
-        if (name->len > 0 && name->data[0] != '.') {
-#if defined(WIN32)
-            n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
-#else
-            n = snprintf(path, sizeof(path)-1, "./%s.so", (char *)(name->data));
-#endif
-        } else {
-#if defined(WIN32)
-            n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
-#else
-            n = snprintf(path, sizeof(path)-1, "%s.so", (char *)(name->data));
-#endif
-        }
-        path[n] = 0;
-        if (!access(path, F_OK)) {
-            /* do nothing */
-        } else if ((melang_dy_path = getenv("MELANG_DYNAMIC_PATH")) != NULL) {
-            char *end = strchr(melang_dy_path, ';');
-            int found = 0;
-            while (end != NULL) {
-                *end = 0;
-                n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_dy_path, path);
-                if (!access(tmp_path, F_OK)) {
-                    memcpy(path, tmp_path, n);
-                    path[n] = 0;
-                    found = 1;
-                    break;
-                }
-                tmp_path[n] = 0;
-                melang_dy_path = end + 1;
-                end = strchr(melang_dy_path, ';');
-            }
-            if (!found) {
-                if (*melang_dy_path) {
-                    n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_dy_path, path);
-                    memcpy(path, tmp_path, n);
-                    path[n] = 0;
-                } else {
-                    goto goon;
-                }
-            }
-        } else {
-goon:
-            n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_dylib(), path);
-            memcpy(path, tmp_path, n);
-            path[n] = 0;
-        }
-    }
-
     i.name = name;
     tree = mln_lang_resource_fetch(ctx->lang, "import");
     rn = mln_rbtree_root_search(tree, &i);
     if (!mln_rbtree_null(rn, tree)) {
         pi = (mln_lang_import_t *)mln_rbtree_node_data(rn);
     } else {
+#if defined(WIN32)
+        if (name->len > 1 && name->data[1] == ':') {
+            n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
+#else
+        if (name->data[0] == '/') {
+            n = snprintf(path, sizeof(path)-1, "%s.so", (char *)(name->data));
+#endif
+            path[n] = 0;
+        } else {
+            if (name->len > 0 && name->data[0] != '.') {
+#if defined(WIN32)
+                n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
+#else
+                n = snprintf(path, sizeof(path)-1, "./%s.so", (char *)(name->data));
+#endif
+            } else {
+#if defined(WIN32)
+                n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
+#else
+                n = snprintf(path, sizeof(path)-1, "%s.so", (char *)(name->data));
+#endif
+            }
+            path[n] = 0;
+            if (!access(path, F_OK)) {
+                /* do nothing */
+            } else if ((melang_dy_path = getenv("MELANG_DYNAMIC_PATH")) != NULL) {
+                char *end = strchr(melang_dy_path, ';');
+                int found = 0;
+                while (end != NULL) {
+                    *end = 0;
+                    n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_dy_path, path);
+                    if (!access(tmp_path, F_OK)) {
+                        memcpy(path, tmp_path, n);
+                        path[n] = 0;
+                        found = 1;
+                        break;
+                    }
+                    tmp_path[n] = 0;
+                    melang_dy_path = end + 1;
+                    end = strchr(melang_dy_path, ';');
+                }
+                if (!found) {
+                    if (*melang_dy_path) {
+                        n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_dy_path, path);
+                        memcpy(path, tmp_path, n);
+                        path[n] = 0;
+                    } else {
+                        goto goon;
+                    }
+                }
+            } else {
+goon:
+                n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_dylib(), path);
+                memcpy(path, tmp_path, n);
+                path[n] = 0;
+            }
+        }
+
 #if defined(WIN32)
         handle = LoadLibrary(TEXT(path));
 #else

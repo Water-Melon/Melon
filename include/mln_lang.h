@@ -15,16 +15,17 @@
 #include "mln_alloc.h"
 #include "mln_array.h"
 
-#define M_LANG_CACHE_COUNT        65535
-#define M_LANG_SYMBOL_TABLE_LEN   371
-#define M_LANG_STEP_OUT           -1
-#define M_LANG_RUN_STACK_LEN      1024
-#define M_LANG_SCOPE_LEN          1024
-#define M_LANG_MAX_OPENFILE       67
-#define M_LANG_DEFAULT_STEP       1700
-#define M_LANG_HEARTBEAT_US       50000
-#define MLN_LANG_PIPE_LIST_NALLOC 1024
-#define MLN_LANG_PIPE_ELEM_NALLOC 6
+#define M_LANG_CACHE_COUNT         65535
+#define M_LANG_SYMBOL_TABLE_LEN    371
+#define M_LANG_STEP_OUT            -1
+#define M_LANG_RUN_STACK_LEN       1024
+#define M_LANG_SCOPE_LEN           1024
+#define M_LANG_MAX_OPENFILE        67
+#define M_LANG_DEFAULT_STEP        1700
+#define M_LANG_HEARTBEAT_US        50000
+#define MLN_LANG_PIPE_LIST_NALLOC  1024
+#define MLN_LANG_PIPE_ELEM_NALLOC  6
+#define MLN_LANG_IMPORT_FREE_COUNT 65535
 
 #define M_LANG_VAL_TYPE_NIL       0
 #define M_LANG_VAL_TYPE_INT       1
@@ -401,6 +402,7 @@ struct mln_lang_methods_s {
 typedef struct {
     mln_string_t                    *name;
     mln_size_t                       ref;
+    mln_size_t                       count;
     void                            *handle;
     mln_rbtree_node_t               *node;
     mln_lang_t                      *lang;
