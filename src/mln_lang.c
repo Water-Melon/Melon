@@ -783,12 +783,6 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     } else {
         ctx->stm = (mln_lang_stm_t *)mln_lang_ast_generate(ctx->pool, lang->shift_table, content, type);
     }
-    if (ctx->stm == NULL) {
-        mln_fileset_destroy(ctx->fset);
-        mln_alloc_destroy(ctx->pool);
-        mln_alloc_free(ctx);
-        return NULL;
-    }
     /* ctx->run_stack do not need to be initialized */
     ctx->run_stack_top = NULL;
     /* ctx->scopes do not need to be initialized */
@@ -845,10 +839,12 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
 
-    mln_lang_stack_node_t *node = mln_lang_stack_push(ctx, M_LSNT_STM, ctx->stm);
-    if (node == NULL) {
-        mln_lang_ctx_free(ctx);
-        return NULL;
+    if (ctx->stm != NULL) {
+        mln_lang_stack_node_t *node = mln_lang_stack_push(ctx, M_LSNT_STM, ctx->stm);
+        if (node == NULL) {
+            mln_lang_ctx_free(ctx);
+            return NULL;
+        }
     }
 
     mln_lang_scope_t *outer_scope;
