@@ -380,6 +380,7 @@ static inline mln_conf_t *mln_conf_init(void)
         }
     } else {
         fprintf(stderr, "[Warn] Configuration file [%s] not found.\n", conf_file_path);
+        cf->lex = NULL;
     }
 
     if (cf->insert(cf, default_domain) == NULL) {
