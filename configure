@@ -10,9 +10,11 @@ sysname=`uname -s`
 if ! case $sysname in MINGW*) false;; esac; then
     install_path=$HOME/libmelon
     cc="gcc"
+    tcc="gcc"
 else
     install_path=`echo "/usr/local/melon"`
     cc="cc"
+    tcc="cc"
 fi
 
 #wasm flag
@@ -49,7 +51,7 @@ if [ $wasm -eq 1 ]; then
 
     #llvm
     llvm_flag=""
-    cc --help|grep LLVM > /dev/null 2>&1
+    $tcc --help|grep LLVM > /dev/null 2>&1
     if [ $? -ne 0 ]; then
         llvm_flag="--llvm-lto 1"
     fi
@@ -62,7 +64,7 @@ fi
 #output installation path
 echo -e "Installation Path \t[$install_path]"
 echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", argv[1]);return 0;}" > .path_generator.c
-$cc -o path_generator .path_generator.c
+$tcc -o path_generator .path_generator.c
 realpath=`./path_generator $install_path`
 nullpath=`./path_generator /dev/null`
 confpath=`./path_generator $realpath/conf/melon.conf`
@@ -268,7 +270,7 @@ do
         echo "#include<stdio.h>
         #include<sys/epoll.h>
         int main(void){epoll_create(10);return 0;}" > ev_test.c
-        cc -o ev_test ev_test.c 2>/dev/null
+        $tcc -o ev_test ev_test.c 2>/dev/null
         if [ "$?" == "0" ]; then
             echo -e "event\t\t\t[EPOLL]"
             echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_EPOLL" >> Makefile
@@ -281,7 +283,7 @@ do
         #include<sys/event.h>
         #include<sys/time.h>
         int main(void){kqueue();return 0;}" > ev_test.c
-        cc -o ev_test ev_test.c 2>/dev/null
+        $tcc -o ev_test ev_test.c 2>/dev/null
         if [ "$?" == "0" ]; then
             echo -e "event\t\t\t[KQUEUE]"
             echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_KQUEUE" >> Makefile
@@ -301,7 +303,7 @@ do
         sendfile=0
         echo "#include <sys/sendfile.h>
         int main(void){sendfile(1,0,0,1);return 0;}" > sendfile_test.c
-        cc -o sendfile_test sendfile_test.c 2>/dev/null
+        $tcc -o sendfile_test sendfile_test.c 2>/dev/null
         if [ "$?" == "0" ]; then
             sendfile=1
             echo -e "sendfile\t\t[support]"
@@ -313,7 +315,7 @@ do
         #test writev
         echo -e "#include <stdio.h>\n#include <sys/uio.h>" > writev_test.c
         echo "int main(void){writev(0,NULL,0);return 0;}" >> writev_test.c
-        cc -o writev_test writev_test.c 2>/dev/null
+        $tcc -o writev_test writev_test.c 2>/dev/null
         if [ "$?" == "0" ]; then
             echo -e "writev\t\t\t[support]"
             if [ $sendfile -eq "1" ]; then
@@ -339,7 +341,7 @@ do
         unix98=0
         echo -e "#ifndef __USE_UNIX98\n#define __USE_UNIX98\n#endif\n#include <pthread.h>\n" > unix98_test.c
         echo "int main(void){pthread_setconcurrency(0);return 0;}" >> unix98_test.c
-        cc -o unix98_test unix98_test.c -lpthread 2>/dev/null
+        $tcc -o unix98_test unix98_test.c -lpthread 2>/dev/null
         if [ "$?" == "0" ]; then
             echo -e "__USE_UNIX98\t\t[support]"
             echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname -DMLN_USE_UNIX98" >> Makefile
