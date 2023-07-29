@@ -101,7 +101,7 @@ Copyright (c) 2014-present, Niklaus F. Schen
 
 ### Documentation
 
-Please refer to [Github Pages](http://doc.melonc.io/) for more details.
+Please refer to [Official Documentation Website](http://doc.melonc.io/) for more details.
 
 中文文档请参考：[中文指南](http://doc.melonc.io/cn/)
 
