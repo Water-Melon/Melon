@@ -1,0 +1,14 @@
+{
+    "title": "Melon Library",
+    "author": "Niklaus F. Schen",
+    "description": "Melon Library Documentation",
+    "gitbook": "3.2.3",
+    "plugins": [
+        "toggle-chapters"
+    ],
+    "links": {
+        "sidebar": {
+            "GitHub": "https://github.com/Water-Melon/Melon"
+        }
+    }
+}
