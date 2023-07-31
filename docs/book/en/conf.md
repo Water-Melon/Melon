@@ -2,13 +2,34 @@
 
 
 
-Since the loading of the configuration file is automatically loaded in the initialization function of Melon, most data structures and functions do not need to be concerned by developers, and only the structure definitions and function declarations required by developers are given here.
+Since the loading of the configuration file is automatically loaded in the initialization function of Melon, most data structures and functions do not need to be concerned by developers. So only the structure definitions and function declarations required by developers are given here.
 
 In Melon, configuration is divided into two layers, each layer is a `domain`. The outermost layer is the `main` domain. Subdomains extended with `name{...}` are allowed in `main`, but subdomains are not allowed in subdomains. But in the program, `main` and subdomains are actually siblings, not containment.
 
 Each domain contains several `configuration items`, which consist of `configuration command name` and `configuration parameters`.
 
 The Melon configuration file `melon.conf` will be installed in the `conf` subdirectory of the installation path.
+
+In the configuration file, unused configuration directives are allowed, that is, configuration directives are written according to the above rules, but there is no corresponding configuration directive for parsing and use in the program. Because in Melon, the configuration directives in the configuration file are only loaded into the corresponding data structure during initialization, but no verification is performed on it. For example: the configuration directive `framework` is put into the data structure during the configuration loading phase, and then it's verified and used in the subsequent initialization phase. Therefore, it is the same to user-defined configurations. Users can write their own configuration content in the configuration file, and then call the functions of configuration module in the code to operate these configurations (create, delete, update, read).
+
+Currently, the existing configuration items that have been verified and used by the Melon library are:
+
+| Configuration domains and directives | Description |
+| ---------------- | -------------------------------- ---------------------------- |
+| `log_level` | The log level. This configuration item has the following values: `"none"`, `"report"`, `"debug"`, `"warn"`, `"error"`. |
+| `user` | Set the user ID of the Melon host process and its child processes. This configuration item requires `root` permission. |
+| `daemon` | Sets whether the bootstrap should be a daemon process. There are two values: `on` and `off`. |
+| `core_file_size` | Set the core file size. If the parameter is a integer, it represents the byte size of the core file; if it is a string, its value can only be `"unlimited"`, which means unlimited. |
+| `max_nofile` | Set the maximum number of file descriptors for a process. Its value is an integer. If you need to open more than 1024 file descriptors, you need `root` permission. |
+| `worker_proc` | Set the number of worker processes. The value is an integer. This value is only used when the Melon multi-processing framework is enabled. |
+| `framework` | Sets the framework capabilities of Melon. Values are: `"multiprocess"` - multi-process framework, `"multithread"` - multi-thread framework, `off` - disable the framework. |
+| `log_path` | Log file path. The parameter is of type string. |
+| `trace_mode` | Set whether to enable dynamic trace mode. There are two parameter values: the string type is the processing script path of dynamic tracing; `off` means not enabled. |
+| `proc_exec` | This is a `domain` that manages all other processes started by Melon (started using `fork`+`exec`). |
+| `keepalive` | This configuration directive is only valid in the `proc_exec` domain, and is used to inform the main process to monitor the process status. If the process exits, it needs to be restarted. |
+| `thread_exec` | This is a `domain` used to manage all child threads pulled up by Melon. |
+| `restart` | This configuration directive is only used in thread_exec to inform the main thread that if the child thread exits, it needs to be restarted. |
+| `default` | This configuration directive is only used in `proc_exec` and `thread_exec`, and is used to inform the main process or main thread that do nothing when the process or thread exits. |
 
 
 

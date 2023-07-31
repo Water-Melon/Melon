@@ -80,7 +80,7 @@ worker_proc 1;
 framework off;
 log_path "/usr/local/melon/logs/melon.log";
 /*
- * Configurations in the 'exec_proc' are the
+ * Configurations in the 'proc_exec' are the
  * processes which are customized by user.
  *
  * Here is an example to show you how to
@@ -98,7 +98,7 @@ log_path "/usr/local/melon/logs/melon.log";
  * That is the file descriptor which is used to
  * communicate with master process.
  */
-exec_proc {
+proc_exec {
    // keepalive "/tmp/a";
 }
 thread_exec {

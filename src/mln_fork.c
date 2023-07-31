@@ -226,7 +226,7 @@ int do_fork(void)
     mln_u32_t i, n_args;
     mln_conf_item_t *arg_ci;
     mln_s8ptr_t *v_args;
-    mln_u32_t n = mln_conf_get_ncmd(cf, "exec_proc");
+    mln_u32_t n = mln_conf_get_ncmd(cf, "proc_exec");
     if (n == 0) return 1;
 
     v = (mln_conf_cmd_t **)calloc(n+1, sizeof(mln_conf_cmd_t *));
@@ -234,11 +234,11 @@ int do_fork(void)
         mln_log(error, "No memory.\n");
         return -1;
     }
-    mln_conf_get_cmds(cf, "exec_proc", v);
+    mln_conf_get_cmds(cf, "proc_exec", v);
     for (cc = v; *cc != NULL; ++cc) {
         n_args = mln_conf_get_narg(*cc);
         if (n_args == 0) {
-            mln_log(error, "Demand arguments in 'exec_proc'.\n");
+            mln_log(error, "Demand arguments in 'proc_exec'.\n");
             exit(1);
         }
         v_args = (mln_s8ptr_t *)calloc(n_args+2, sizeof(mln_s8ptr_t));
@@ -249,7 +249,7 @@ int do_fork(void)
         for (i = 0; i < n_args; ++i) {
             arg_ci = (*cc)->search(*cc, i+1);
             if (arg_ci->type != CONF_STR) {
-                mln_log(error, "Demand string arguments in 'exec_proc'.\n");
+                mln_log(error, "Demand string arguments in 'proc_exec'.\n");
                 exit(1);
             }
             v_args[i] = (char *)(arg_ci->val.s->data);
@@ -259,7 +259,7 @@ int do_fork(void)
         } else if (!mln_string_const_strcmp((*cc)->cmd_name, "default")) {
             mln_fork_spawn(M_PST_DFL, v_args, n_args, NULL);
         } else {
-            mln_log(error, "Invalid command '%S' in 'exec_proc'.\n", (*cc)->cmd_name);
+            mln_log(error, "Invalid command '%S' in 'proc_exec'.\n", (*cc)->cmd_name);
             exit(1);
         }
     }

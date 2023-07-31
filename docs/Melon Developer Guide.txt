@@ -3095,7 +3095,7 @@ Their definitions can be found in melon/include/mln_types.h.
       3) modify Melon's configuration file.
              vim /.../melon-xxx/conf/melon.conf
          We assume the new program's path is '/home/John/a'.
-         There is a domian named 'exec_proc' in configuration  file. We can add a command in it.
+         There is a domian named 'proc_exec' in configuration  file. We can add a command in it.
              keepalive/default "/home/John/a" "argument1";
          Command name indicates the process type, there are two types: keepalive and default.
          'keepalive' will restart process when the process is killed by an unexpected error or system command 'kill'.
