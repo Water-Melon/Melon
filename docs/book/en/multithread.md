@@ -138,8 +138,7 @@ Different from the thread pool described above, the multi-threaded framework is 
    core_file_size "unlimited";
    //max_nofile 1024;
    worker_proc 1;
-   thread_mode on;
-   framework on;
+   framework "multithread";
    log_path "/home/niklaus/melon/logs/melon.log";
    /*
     * Configurations in the 'exec_proc' are the
@@ -169,7 +168,7 @@ Different from the thread pool described above, the multi-threaded framework is 
    }
    ```
 
-   Here we mainly focus on the configuration items of `framework`, `thread_mode` and `thread_exec`. The `thread_exec` configuration block is specially used for modular threads, and each of its internal configuration items is a thread module.
+   Here we mainly focus on the configuration items of `framework` and `thread_exec`. The `thread_exec` configuration block is specially used for modular threads, and each of its internal configuration items is a thread module.
 
    Take hello as an example:
 

@@ -85,7 +85,6 @@ daemon off;
 core_file_size "unlimited";
 //max_nofile 1024;
 worker_proc 1;
-thread_mode off;
 framework off;
 log_path "/usr/local/melon/logs/melon.log";
 /*
@@ -192,7 +191,7 @@ static void print_handler(mln_event_t *ev, void *data)
 $ cc -o hello hello.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon
 ```
 
-接着，依旧是检查配置文件，但这一次我们要确保`framework`须为`on`，`thread_mode`为`off`。这样的配置表明，我们启用Melon的框架功能，但不启用多线程模式，那么Melon就会启用多进程模式。然后，根据需要修改`worker_proc`的数量，例如：3。
+接着，依旧是检查配置文件，但这一次我们要确保`framework`须为`"multiprocess"`。这样的配置表明，我们启用Melon的框架功能，但不启用多线程模式，那么Melon就会启用多进程模式。然后，根据需要修改`worker_proc`的数量，例如：3。
 
 ```
 log_level "none";
@@ -201,8 +200,7 @@ daemon off;
 core_file_size "unlimited";
 //max_nofile 1024;
 worker_proc 3;
-thread_mode off;
-framework on;
+framework "multiprocess";
 log_path "/usr/local/melon/logs/melon.log";
 /*
  * Configurations in the 'exec_proc' are the

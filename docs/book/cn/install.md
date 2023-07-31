@@ -15,7 +15,8 @@ Windows与UNIX环境的安装并无差异，仅需要先行安装并配置`mingw
 - `Build revision`: `0`
 
 
-执行如下命令安装Melon：
+
+安装Melon，可以执行如下命令：
 
 ```bash
 $ git clone https://github.com/Water-Melon/Melon.git
@@ -31,6 +32,14 @@ $ sudo echo "/usr/local/melon/lib/" >> /etc/ld.so.conf
 $ sudo ldconfig
 ```
 
+或者使用环境变量`LD_LIBRARY_PATH`解决运行时找不到动态库的问题：
+
+```shell
+$ export LD_LIBRARY_PATH=/path/to/melon/libdir:$LD_LIBRARY_PATH
+```
+
+
+
 默认情况下，UNIX中Melon会被安装在`/usr/local/melon`下，Windows中会安装于`$HOME/libmelon`中。
 
 
@@ -43,3 +52,17 @@ $ sudo ldconfig
 docker pull melonc/melon
 ```
 
+
+
+### Webassembly
+
+Melon支持被编译为webassembly格式库。但在此之前，需要先行安装`emsdk`，确保`emcc`和`emar`命令已被安装。
+
+随后便可执行如下命令，将Melon编译为webassembly静态库：
+
+```
+./configure --enable-wasm
+make && make install
+```
+
+安装后可以看到，在安装目录的`lib`子目录下仅会生成`libmelon.a` 静态库。

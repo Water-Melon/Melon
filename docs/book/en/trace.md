@@ -14,7 +14,7 @@ For Melang and its supporting library, please refer to [Melang Warehouse](https:
 
 > **NOTE**:
 >
-> 1. `trace_mode` in the configuration will only be valid when the framework mode is turned on (`framework` is `on`).
+> 1. `trace_mode` in the configuration will only be valid when the framework mode is turned on (`framework` is `"multiprocess"` or `"multithread"`).
 > 2. If you are in non-framework mode, or `trace_mode` is not enabled in the configuration, but you still want to use this function, you can initialize it by calling `mln_trace_init`.
 > 3. In this mode, the system has a certain performance loss, so try not to enable this mode in a production environment. If it must be enabled, you can use a separate thread to run scripts to collect data, which can effectively reduce the performance loss of worker threads.
 
@@ -138,7 +138,7 @@ Return value: returns `0` on success, otherwise returns `-1`
 
 After installing Melon, we proceed as follows:
 
-1. Enable trace mode configuration, edit `conf/melon.conf` under the installation path, set `framework` to `on`, and delete the comment (`//`) before `trace_mode`. In this example `worker_proc` is set to `1`.
+1. Enable trace mode configuration, edit `conf/melon.conf` under the installation path, set `framework` to `multiprocess`, and delete the comment (`//`) before `trace_mode`. In this example `worker_proc` is set to `1`.
 
    > If you want to disable the trace mode, you only need to comment the configuration or change the configuration item to `trace_mode off;`.
 

@@ -77,7 +77,6 @@ daemon off;
 core_file_size "unlimited";
 //max_nofile 1024;
 worker_proc 1;
-thread_mode off;
 framework off;
 log_path "/usr/local/melon/logs/melon.log";
 /*
@@ -110,7 +109,7 @@ thread_exec {
 
 我们做如下修改:
 
-- `framework off;` --> `framework on;`
+- `framework off;` --> `framework "multiprocess";`
 - `worker_proc 1;` --> `worker_proc 3;`
 
 这样，多进程框架将被启用，且会产生三个子进程。

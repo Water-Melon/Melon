@@ -4,7 +4,6 @@ daemon off;
 core_file_size "unlimited";
 //max_nofile 1024;
 worker_proc 1;
-thread_mode off;
 framework off;
 log_path "{{ROOT}}/logs/melon.log";
 /*

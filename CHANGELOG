@@ -1,3 +1,18 @@
+Changes with melon 2.7.0                                          31 Jul 2023
+    *) Optimized melang performance
+    *) Optimized configuration directives
+    *) Optimized queue performance
+    *) Fixed path and tool compilation errors
+    *) Optimized AES performance
+    *) Optimized JSON performance
+    *) Optimized MD5 performance
+    *) Optimized SHA performance
+    *) Fixed script variable name bug
+    *) Fixed empty script task bug
+    *) Fixed configuration segment fault
+    *) Added base directory character in directive 'include' of lexer
+    *) Updated docs
+
 Changes with melon 2.6.5                                          02 Feb 2023
     *) Upgraded array component
     *) Optimized pipe send of melang

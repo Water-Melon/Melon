@@ -15,7 +15,8 @@ Please select the following settings when installing [MingW-W64-builds](https://
 - `Build revision`: `0`
 
 
-Execute the following command to install Melon:
+
+To install Melon, execute the following commands:
 
 ```bash
 $ git clone https://github.com/Water-Melon/Melon.git
@@ -31,6 +32,14 @@ $ sudo echo "/usr/local/melon/lib/" >> /etc/ld.so.conf
 $ sudo ldconfig
 ```
 
+Or use the command given below to solve dynamic library not found problem:
+
+```shell
+$ export LD_LIBRARY_PATH=/path/to/melon/libdir:$LD_LIBRARY_PATH
+```
+
+
+
 By default, Melon is installed in `/usr/local/melon` on UNIX and `$HOME/libmelon` on Windows.
 
 
@@ -43,3 +52,15 @@ You can pull the built container image to deploy the running environment
 docker pull melonc/melon
 ```
 
+
+
+### Webassembly
+
+You should install `emsdk` at first, make sure `emcc` and `emar` have been installed. Then execute:
+
+```
+./configure --enable-wasm
+make && make install
+```
+
+There is only one static library `libmelon.a` to be created.

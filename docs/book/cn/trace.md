@@ -14,7 +14,7 @@
 
 > **注意事项**：
 >
-> 1. 配置中的`trace_mode`只有在开启框架模式（`framework`为`on`）时才会有效。
+> 1. 配置中的`trace_mode`只有在开启框架模式（`framework`为`"multiprocess"`或`"multithread"`）时才会有效。
 > 2. 若在非框架模式下，或在配置中未启用`trace_mode`，但仍想使用该功能，则可以通过调用`mln_trace_init`进行初始化。
 > 3. 该模式下，系统存在一定的额外开销。
 
@@ -139,7 +139,7 @@ typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_val_t *);
 
 安装Melon后，我们按如下步骤操作：
 
-1. 开启trace模式配置，编辑安装路径下的`conf/melon.conf`，将`framework`设置为`on`，且将`trace_mode`前的注释（`//`）删掉。本例中`worker_proc`设置为`1`。
+1. 开启trace模式配置，编辑安装路径下的`conf/melon.conf`，将`framework`设置为`"multiprocess"`，且将`trace_mode`前的注释（`//`）删掉。本例中`worker_proc`设置为`1`。
 
    > 如果想要禁用trace模式，只需要将配置注释或者将配置项改为 trace_mode off;即可。
 

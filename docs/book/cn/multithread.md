@@ -139,8 +139,7 @@
    core_file_size "unlimited";
    //max_nofile 1024;
    worker_proc 1;
-   thread_mode on;
-   framework on;
+   framework "multithread";
    log_path "/home/niklaus/melon/logs/melon.log";
    /*
     * Configurations in the 'exec_proc' are the
@@ -170,7 +169,7 @@
    }
    ```
 
-   这里主要关注`framework`，`thread_mode`以及`thread_exec`的配置项。`thread_exec`配置块专门用于模块化线程之用，其内部每一个配置项均为线程模块。
+   这里主要关注`framework`以及`thread_exec`的配置项。`thread_exec`配置块专门用于模块化线程之用，其内部每一个配置项均为线程模块。
 
    以 hello 为例：
 

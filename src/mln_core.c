@@ -33,7 +33,7 @@ static void mln_init_notice(void);
 static int mln_master_trace_init(mln_lang_ctx_t *ctx);
 static void mln_worker_routine(struct mln_core_attr *attr);
 static void mln_master_routine(struct mln_core_attr *attr);
-static int mln_get_framework_status(void);
+static mln_string_t *mln_get_framework_status(void);
 static void mln_sig_conf_reload(int signo);
 static int mln_conf_reload_iterate_handler(mln_event_t *ev, mln_fork_t *f, void *data);
 
@@ -140,32 +140,18 @@ static void mln_master_routine(struct mln_core_attr *attr)
 
 static void mln_worker_routine(struct mln_core_attr *attr)
 {
+    int i_thread_mode;
+    mln_string_t proc_mode = mln_string("multiprocess");
+    mln_string_t *framework_mode = mln_get_framework_status();
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     if (_ev == NULL) _ev = ev;
     mln_fork_worker_set_events(ev);
 
-    /* mln_process or mln_thread*/
-    char thread_mode[] = "thread_mode";
-    int i_thread_mode = 0;
-    mln_conf_t *cf = mln_get_conf();
-    if (cf == NULL) {
-        mln_log(error, "Configuration crashed.\n");
-        abort();
-    }
-    mln_conf_domain_t *cd = cf->search(cf, "main");
-    if (cd == NULL) {
-        mln_log(error, "Domain 'main' NOT existed.\n");
-        abort();
-    }
-    mln_conf_cmd_t *cc = cd->search(cd, thread_mode);
-    if (cc != NULL) {
-        mln_conf_item_t *ci = cc->search(cc, 1);
-        if (ci == NULL || ci->type != CONF_BOOL) {
-            mln_log(error, "Invalid item of command '%s'.\n", thread_mode);
-            exit(1);
-        }
-        i_thread_mode = ci->val.b;
+    if (!mln_string_strcmp(framework_mode, &proc_mode)) {
+        i_thread_mode = 0;
+    } else {
+        i_thread_mode = 1;
     }
 
     mln_trace_init(ev, mln_trace_path());
@@ -214,29 +200,42 @@ static int mln_conf_reload_iterate_handler(mln_event_t *ev, mln_fork_t *f, void 
     return mln_ipc_master_send_prepare(ev, M_IPC_TYPE_CONF, msg, sizeof(msg)-1, f);
 }
 
-static int mln_get_framework_status(void)
+static mln_string_t *mln_get_framework_status(void)
 {
     char framework[] = "framework";
+    mln_string_t proc_mode = mln_string("multiprocess");
+    mln_string_t thread_mode = mln_string("multithread");
     mln_conf_t *cf = mln_get_conf();
     if (cf == NULL) {
-        mln_log(error, "Configuration crashed.\n");
+        fprintf(stderr, "Configuration crashed.\n");
         abort();
     }
     mln_conf_domain_t *cd = cf->search(cf, "main");
     if (cd == NULL) {
-        mln_log(error, "Domain 'main' NOT existed.\n");
+        fprintf(stderr, "Domain 'main' NOT existed.\n");
         abort();
     }
     mln_conf_cmd_t *cc = cd->search(cd, framework);
     if (cc != NULL) {
         mln_conf_item_t *ci = cc->search(cc, 1);
-        if (ci == NULL || ci->type != CONF_BOOL) {
-            mln_log(error, "Invalid item of command '%s'.\n", framework);
+        if (ci == NULL) {
+            fprintf(stderr, "Invalid item of command '%s'.\n", framework);
             exit(1);
         }
-        if (ci->val.b) return 1;
+        if (ci->type == CONF_STR) {
+            if (mln_string_strcmp(ci->val.s, &proc_mode) && mln_string_strcmp(ci->val.s, &thread_mode)) {
+                fprintf(stderr, "Invalid framework mode '%s'.\n", (char *)(ci->val.s->data));
+                exit(1);
+            }
+            return ci->val.s;
+        }
+        if  (ci->type == CONF_BOOL && ci->val.b) {
+            fprintf(stderr, "Invalid item of command '%s'.\n", framework);
+            exit(1);
+        }
+        return NULL;
     }
-    return 0;
+    return NULL;
 }
 #endif
 

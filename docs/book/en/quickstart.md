@@ -85,7 +85,6 @@ daemon off;
 core_file_size "unlimited";
 //max_nofile 1024;
 worker_proc 1;
-thread_mode off;
 framework off;
 log_path "/usr/local/melon/logs/melon.log";
 /*
@@ -192,7 +191,7 @@ Generate executable program:
 $ cc -o hello hello.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon
 ```
 
-Next, check the configuration file again, but this time we want to make sure that `framework` is `on` and `thread_mode` is `off`. Such a configuration indicates that if we enable Melon's framework functions, but do not enable multi-threaded mode, then Melon will enable multi-process mode. Then, modify the number of `worker_proc` as needed, for example: 3.
+Next, check the configuration file again, but this time we want to make sure that `framework` is `multiprocess`. Such a configuration indicates that if we enable Melon's framework functions, but do not enable multi-threaded mode, then Melon will enable multi-process mode. Then, modify the number of `worker_proc` as needed, for example: 3.
 
 ```
 log_level "none";
@@ -201,8 +200,7 @@ daemon off;
 core_file_size "unlimited";
 //max_nofile 1024;
 worker_proc 3;
-thread_mode off;
-framework on;
+framework "multiprocess";
 log_path "/usr/local/melon/logs/melon.log";
 /*
  * Configurations in the 'exec_proc' are the

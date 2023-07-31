@@ -3061,7 +3061,7 @@ Their definitions can be found in melon/include/mln_types.h.
       'global_init' is a function to initialize some global variables. Its prototype is,
           typedef int (*mln_core_init_t)(void);
       'main_thread' is a function to process something in main thread when the configuration
-        'framework' and 'thread_mode' are set 'on'.
+        'framework' is 'multithread'.
       'master_process' is a function to process something in master process. Its prototype is,
           typedef void (*mln_core_process_t)(mln_event_t *);
         ‘mln_event_t' is the type of event object which is initialized by 'mln_event_new()'.
@@ -3290,8 +3290,7 @@ Their definitions can be found in melon/include/mln_types.h.
 
    2) modify configuration file.
         ...
-        thread_mode on;
-        framework on;
+        framework "multithread";
         ...
         thread_exec {
             //format: restart|default 'alias' ["parameter",...];
