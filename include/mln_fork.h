@@ -67,13 +67,13 @@ struct mln_fork_s {
     enum proc_state_type     stype;
 };
 
-extern int mln_pre_fork(void);
-extern int mln_set_master_ipc_handler(mln_u32_t type, ipc_handler handler, void *data) __NONNULL1(2);
-extern int mln_set_worker_ipc_handler(mln_u32_t type, ipc_handler handler, void *data) __NONNULL1(2);
+extern int mln_fork_prepare(void);
+extern int mln_fork_master_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data) __NONNULL1(2);
+extern int mln_fork_worker_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data) __NONNULL1(2);
 extern int
 mln_fork_iterate(mln_event_t *ev, fork_iterate_handler handler, void *data) __NONNULL1(1);
-extern mln_tcp_conn_t *mln_fork_get_master_connection(void);
-extern int do_fork(void);
+extern mln_tcp_conn_t *mln_fork_master_connection_get(void);
+extern int mln_fork(void);
 /*
  * Only master process can call 'mln_fork_spawn'.
  * argument 'handler()' is used to
@@ -87,17 +87,17 @@ mln_fork_spawn(enum proc_state_type stype, \
 extern int
 mln_fork_restart(mln_event_t *master_ev);
 extern void
-mln_fork_master_set_events(mln_event_t *ev) __NONNULL1(1);
+mln_fork_master_events_set(mln_event_t *ev) __NONNULL1(1);
 extern void
-mln_fork_worker_set_events(mln_event_t *ev) __NONNULL1(1);
+mln_fork_worker_events_set(mln_event_t *ev) __NONNULL1(1);
 extern void
-mln_set_resource_clear_handler(clr_handler handler, void *data);
+mln_fork_resource_clear_handler_set(clr_handler handler, void *data);
 extern void
 mln_ipc_fd_handler_master(mln_event_t *ev, int fd, void *data);
 extern void
 mln_ipc_fd_handler_worker(mln_event_t *ev, int fd, void *data);
 extern void
-mln_socketpair_close_handler(mln_event_t *ev, mln_fork_t *f, int fd) __NONNULL2(1,2);
+mln_fork_socketpair_close_handler(mln_event_t *ev, mln_fork_t *f, int fd) __NONNULL2(1,2);
 extern int
 mln_ipc_master_send_prepare(mln_event_t *ev, \
                             mln_u32_t type, \

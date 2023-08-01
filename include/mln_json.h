@@ -88,15 +88,15 @@ extern mln_json_t *mln_json_parse(mln_string_t *jstr);
 extern void mln_json_free(void *json);
 extern void mln_json_dump(mln_json_t *j, int n_space, char *prefix);
 extern mln_string_t *mln_json_generate(mln_json_t *j);
-extern mln_json_t *mln_json_search_value(mln_json_t *j, mln_string_t *key);
-extern mln_json_t *mln_json_search_element(mln_json_t *j, mln_uauto_t index);
-extern mln_uauto_t mln_json_get_array_length(mln_json_t *j);
-extern int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val);
-extern int mln_json_add_element(mln_json_t *j, mln_json_t *value);
-extern int mln_json_update_element(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
+extern mln_json_t *mln_json_value_search(mln_json_t *j, mln_string_t *key);
+extern mln_json_t *mln_json_element_search(mln_json_t *j, mln_uauto_t index);
+extern mln_uauto_t mln_json_array_length(mln_json_t *j);
+extern int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val);
+extern int mln_json_element_add(mln_json_t *j, mln_json_t *value);
+extern int mln_json_element_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
 extern void mln_json_reset(mln_json_t *j);
-extern mln_json_t *mln_json_remove_object(mln_json_t *j, mln_string_t *key);
-extern mln_json_t *mln_json_remove_element(mln_json_t *j, mln_uauto_t index);
+extern mln_json_t *mln_json_obj_remove(mln_json_t *j, mln_string_t *key);
+extern mln_json_t *mln_json_element_remove(mln_json_t *j, mln_uauto_t index);
 
 #endif
 

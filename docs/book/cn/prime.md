@@ -14,10 +14,10 @@
 
 
 
-#### mln_prime_calc
+#### mln_prime_generate
 
 ```c
-mln_u32_t mln_prime_calc(mln_u32_t n);
+mln_u32_t mln_prime_generate(mln_u32_t n);
 ```
 
 描述：生成一个大于等于`n`的素数。

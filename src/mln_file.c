@@ -166,7 +166,7 @@ static void mln_file_free(void *pfile)
     mln_alloc_free(f);
 }
 
-mln_file_t *mln_file_open_tmp(mln_alloc_t *pool)
+mln_file_t *mln_file_tmp_open(mln_alloc_t *pool)
 {
     char dir_path[512] = {0};
     char tmp_path[1024] = {0};

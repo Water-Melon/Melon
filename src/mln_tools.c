@@ -61,7 +61,7 @@ static int mln_sys_core_modify(void)
 #ifdef RLIMIT_CORE
     rlim_t core_file_size = 0;
 
-    mln_conf_t *cf = mln_get_conf();
+    mln_conf_t *cf = mln_conf();
     if (cf == NULL) {
         fprintf(stderr, "Configuration messed up.\n");
         return -1;
@@ -104,7 +104,7 @@ static int mln_sys_nofile_modify(void)
 #ifdef RLIMIT_NOFILE
     rlim_t nofile = 0;
 
-    mln_conf_t *cf = mln_get_conf();
+    mln_conf_t *cf = mln_conf();
     if (cf == NULL) {
         fprintf(stderr, "Configuration messed up.\n");
         return -1;
@@ -147,7 +147,7 @@ int mln_daemon(void)
 {
     int ret;
 
-    mln_conf_t *cf = mln_get_conf();
+    mln_conf_t *cf = mln_conf();
     if (cf == NULL) goto out;
     mln_conf_domain_t *cd = cf->search(cf, "main");
     if (cd == NULL) {
@@ -210,7 +210,7 @@ static int mln_set_id(void)
     struct passwd *pwd;
 
     /*get user name*/
-    mln_conf_t *cf = mln_get_conf();
+    mln_conf_t *cf = mln_conf();
     if (cf == NULL) {
         mln_log(error, "No configuration.\n");
         abort();
@@ -252,13 +252,13 @@ static int mln_set_id(void)
 
     /*set log files' uid & gid*/
     int rc = 1;
-    char *path = mln_log_get_dir_path();
+    char *path = mln_log_dir_path();
     if (!access(path, F_OK))
         rc = chown(path, uid, gid);
-    path = mln_log_get_log_path();
+    path = mln_log_logfile_path();
     if (!access(path, F_OK))
         rc = chown(path, uid, gid);
-    path = mln_log_get_pid_path();
+    path = mln_log_pid_path();
     if (!access(path, F_OK))
         rc = chown(path, uid, gid);
     if (rc < 0) rc = 1;/*do nothing*/
@@ -334,7 +334,7 @@ mln_boot_reload(const char *boot_str, const char *alias)
     char buf[1024] = {0};
     int fd, n, pid;
 
-    fd = open(mln_log_get_pid_path(), O_RDONLY);
+    fd = open(mln_log_pid_path(), O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "'melon.pid' not existent.\n");
         exit(1);

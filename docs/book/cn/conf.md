@@ -33,6 +33,16 @@ Melon的配置文件`melon.conf`会被安装在安装路径下的`conf`子目录
 
 
 
+### 关于配置重载
+
+配置模块支持配置重载，重载功能已经集成进Melon库的初始化流程中了。
+
+当使用Melon库的`mln_core_init`进行初始化后，就可以向库的宿主进程使用`SIGUSR2`信号触发配置重载。
+
+重载配置后，会调用开发者设置的回调函数（使用`mln_conf_hook_set`设置）来做一些处理，例如更新内存中的某些变量值。
+
+
+
 ### 头文件
 
 ```c
@@ -78,10 +88,10 @@ struct mln_conf_item_s {
 
 
 
-#### mln_get_conf
+#### mln_conf
 
 ```c
-mln_conf_t *mln_get_conf(void);
+mln_conf_t *mln_conf(void);
 ```
 
 描述：获取全局配置结构。
@@ -190,10 +200,10 @@ cmd->update(cmd, items, 1);
 
 
 
-#### mln_conf_set_hook
+#### mln_conf_hook_set
 
 ```c
-mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data);
+mln_conf_hook_t *mln_conf_hook_set(reload_handler reload, void *data);
 
 typedef int (*reload_handler)(void *);
 ```
@@ -202,19 +212,19 @@ typedef int (*reload_handler)(void *);
 
 Melon配置支持重载，重载的方式是设置重载回调函数，且允许设置多个。当执行重载时，新配置加载后，将调用这些回调函数。
 
-回调函数的参数即为`mln_conf_set_hook`的第二个参数`data`。
+回调函数的参数即为`mln_conf_hook_set`的第二个参数`data`。
 
 返回值：
 
-- `mln_conf_set_hook`：成功返回`mln_conf_hook_t`回调句柄，否则返回`NULL`。
+- `mln_conf_hook_set`：成功返回`mln_conf_hook_t`回调句柄，否则返回`NULL`。
 - 回调函数：成功返回`0`，否则返回`-1`。
 
 
 
-#### mln_conf_unset_hook
+#### mln_conf_hook_unset
 
 ```c
-void mln_conf_unset_hook(mln_conf_hook_t *hook);
+void mln_conf_hook_unset(mln_conf_hook_t *hook);
 ```
 
 描述：删除已设置的配置重载回调函数。
@@ -223,10 +233,10 @@ void mln_conf_unset_hook(mln_conf_hook_t *hook);
 
 
 
-#### mln_conf_get_ncmd
+#### mln_conf_cmd_num
 
 ```c
-mln_u32_t mln_conf_get_cmdNum(mln_conf_t *cf, char *domain);
+mln_u32_t mln_conf_cmd_num(mln_conf_t *cf, char *domain);
 ```
 
 描述：获取某个域下配置项的个数。
@@ -235,22 +245,22 @@ mln_u32_t mln_conf_get_cmdNum(mln_conf_t *cf, char *domain);
 
 
 
-#### mln_conf_get_cmds
+#### mln_conf_cmds
 
 ```c
-void mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **vector);
+void mln_conf_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **vector);
 ```
 
-描述：获取某个域内的全部配置项，这些配置项将被存放在`vector`中，`vector`需要在调用前分配好，配置项个数可以通过`mln_conf_get_ncmd`预先获取到。
+描述：获取某个域内的全部配置项，这些配置项将被存放在`vector`中，`vector`需要在调用前分配好，配置项个数可以通过`mln_conf_cmd_num`预先获取到。
 
 返回值：无
 
 
 
-#### mln_conf_get_narg
+#### mln_conf_arg_num
 
 ```c
-mln_u32_t mln_conf_get_argNum(mln_conf_cmd_t *cc);
+mln_u32_t mln_conf_arg_num(mln_conf_cmd_t *cc);
 ```
 
 描述：获取某个配置项的参数个数。
@@ -272,7 +282,7 @@ static int global_init(void)
   mln_conf_cmd_t *c;
   mln_conf_item_t *i;
   
-  cf = mln_get_conf();
+  cf = mln_conf();
   d = cf->search(cf, "main"); //如果main都不存在，那说明配追初始化有严重问题
   c = d->search(cf, "daemon"); //这里我们获取daemon配置项
   if（c == NULL) {

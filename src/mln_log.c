@@ -80,12 +80,12 @@ static inline void mln_file_unlock(int fd)
 /*
  * set/get logger
  */
-void mln_log_set_logger(mln_logger_t logger)
+void mln_log_logger_set(mln_logger_t logger)
 {
     _logger = logger;
 }
 
-mln_logger_t mln_log_get_logger(void)
+mln_logger_t mln_log_logger_get(void)
 {
     return _logger;
 }
@@ -138,14 +138,14 @@ mln_log_get_log(mln_log_t *log, int is_init)
     char buf[M_LOG_PATH_LEN] = {0}, *p;
     int fd;
 
-    cf = mln_get_conf();
+    cf = mln_conf();
     cd = cf->search(cf, "main");
     cc = cd->search(cd, log_path_cmd);
     if (cc == NULL) {
         path_len = snprintf(buf, sizeof(buf)-1, "%s", mln_path_log());
         path_str = buf;
     } else {
-        if (mln_conf_get_narg(cc) != 1) {
+        if (mln_conf_arg_num(cc) != 1) {
             fprintf(stderr, "%s(): Invalid command '%s' in domain 'main'.\n", \
                     __FUNCTION__, log_path_cmd);
             return -1;
@@ -249,7 +249,7 @@ void mln_log_destroy(void)
  */
 static int mln_log_set_level(mln_log_t *log, int is_init)
 {
-    mln_conf_t *cf = mln_get_conf();
+    mln_conf_t *cf = mln_conf();
     if (cf == NULL) return 0;
     mln_conf_domain_t *cd = cf->search(cf, "main");
     if (cd == NULL) {
@@ -550,22 +550,22 @@ _mln_sys_log_process(mln_log_t *log, \
 /*
  * get
  */
-int mln_log_get_fd(void)
+int mln_log_fd(void)
 {
     return g_log.fd;
 }
 
-char *mln_log_get_dir_path(void)
+char *mln_log_dir_path(void)
 {
     return g_log.dir_path;
 }
 
-char *mln_log_get_log_path(void)
+char *mln_log_logfile_path(void)
 {
     return g_log.log_path;
 }
 
-char *mln_log_get_pid_path(void)
+char *mln_log_pid_path(void)
 {
     return g_log.pid_path;
 }

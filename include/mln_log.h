@@ -32,8 +32,8 @@ typedef struct {
 
 typedef void (*mln_logger_t)(mln_log_t *, mln_log_level_t, const char *, const char *, int, char *, va_list);
 
-extern void mln_log_set_logger(mln_logger_t logger);
-extern mln_logger_t mln_log_get_logger(void);
+extern void mln_log_logger_set(mln_logger_t logger);
+extern mln_logger_t mln_log_logger_get(void);
 extern int mln_log_reload(void *data);
 extern int mln_log_init(int in_daemon);
 extern void mln_log_destroy(void);
@@ -46,9 +46,9 @@ extern void _mln_sys_log(mln_log_level_t level, \
 #define mln_log(err_lv,msg,...) \
     _mln_sys_log(err_lv, __FILE__, __FUNCTION__, __LINE__, msg, ## __VA_ARGS__)
 extern ssize_t mln_log_writen(void *buf, mln_size_t size);
-extern int mln_log_get_fd(void);
-extern char *mln_log_get_dir_path(void);
-extern char *mln_log_get_log_path(void);
-extern char *mln_log_get_pid_path(void);
+extern int mln_log_fd(void);
+extern char *mln_log_dir_path(void);
+extern char *mln_log_logfile_path(void);
+extern char *mln_log_pid_path(void);
 #endif
 

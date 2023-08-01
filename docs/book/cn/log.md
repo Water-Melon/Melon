@@ -48,10 +48,10 @@ log_level "none";
 
 
 
-#### mln_log_get_dir_path
+#### mln_log_dir_path
 
 ```c
-char *mln_log_get_dir_path(void);
+char *mln_log_dir_path(void);
 ```
 
 描述：获取日志文件所在目录路径。
@@ -60,10 +60,10 @@ char *mln_log_get_dir_path(void);
 
 
 
-#### mln_log_get_log_path
+#### mln_log_logfile_path
 
 ```c
-char *mln_log_get_log_path(void);
+char *mln_log_logfile_path(void);
 ```
 
 描述：获取日志文集路径。
@@ -72,10 +72,10 @@ char *mln_log_get_log_path(void);
 
 
 
-#### mln_log_get_pid_path
+#### mln_log_pid_path
 
 ```c
-char *mln_log_get_pid_path(void);
+char *mln_log_pid_path(void);
 ```
 
 描述：获取PID文件路径，该文件记录了主进程的进程ID。
@@ -84,10 +84,10 @@ char *mln_log_get_pid_path(void);
 
 
 
-#### mln_log_set_logger
+#### mln_log_logger_set
 
 ```c
-void mln_log_set_logger(mln_logger_t logger);
+void mln_log_logger_set(mln_logger_t logger);
 
 typedef void (*mln_logger_t)(mln_log_t *log, mln_log_level_t level, const char *filename, const char *funcname, int line, char *fmt, va_list args);
 ```
@@ -98,10 +98,10 @@ typedef void (*mln_logger_t)(mln_log_t *log, mln_log_level_t level, const char *
 
 
 
-#### mln_log_get_logger
+#### mln_log_logger_get
 
 ```c
-mln_logger_t mln_log_get_logger(void);
+mln_logger_t mln_log_logger_get(void);
 ```
 
 描述：获取当前日志处理函数指针，可用于在自定义处理函数时，串联处理函数。

@@ -719,7 +719,7 @@ static void mln_send(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
     mln_tcp_conn_t *connection = mln_http_get_connection(http);
-    mln_chain_t *c = mln_tcp_conn_get_head(connection, M_C_SEND);
+    mln_chain_t *c = mln_tcp_conn_head(connection, M_C_SEND);
     int ret;
 
     if (c == NULL) {
@@ -737,7 +737,7 @@ static void mln_send(mln_event_t *ev, int fd, void *data)
         mln_tcp_conn_append_chain(connection, body_head, body_tail, M_C_SEND);
     }
 
-    while ((c = mln_tcp_conn_get_head(connection, M_C_SEND)) != NULL) {
+    while ((c = mln_tcp_conn_head(connection, M_C_SEND)) != NULL) {
         ret = mln_tcp_conn_send(connection);
         if (ret == M_C_FINISH) {
             mln_quit(ev, fd, data);

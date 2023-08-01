@@ -24,7 +24,7 @@ mln_string_t *mln_trace_path(void)
     mln_conf_cmd_t *cc;
     mln_conf_item_t *ci;
 
-    cf = mln_get_conf();
+    cf = mln_conf();
     if (cf == NULL) return NULL;
 
     cd = cf->search(cf, "main");
@@ -34,7 +34,7 @@ mln_string_t *mln_trace_path(void)
     if (cc == NULL) return NULL;
 
     ci = cc->search(cc, 1);
-    if (mln_conf_get_narg(cc) != 1 || ci == NULL) return NULL;
+    if (mln_conf_arg_num(cc) != 1 || ci == NULL) return NULL;
 
     if (ci->type == CONF_STR)
         return ci->val.s;

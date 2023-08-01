@@ -13,7 +13,7 @@ static inline void seperate(mln_u32_t num, mln_u32_t *pwr, mln_u32_t *odd);
 static inline mln_u64_t modular_expoinentiation(mln_u32_t base, mln_u32_t pwr, mln_u32_t n);
 static inline mln_u32_t witness(mln_u32_t base, mln_u32_t prim);
 
-mln_u32_t mln_prime_calc(mln_u32_t n)
+mln_u32_t mln_prime_generate(mln_u32_t n)
 {
     if (n <= 2) return 2;
     if (n >= 1073741824) return 1073741827;

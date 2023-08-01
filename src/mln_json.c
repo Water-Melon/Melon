@@ -1051,7 +1051,7 @@ static int mln_json_dump_rbtree_iterate_handler(mln_rbtree_node_t *node, void *u
 /*
  * search
  */
-mln_json_t *mln_json_search_value(mln_json_t *j, mln_string_t *key)
+mln_json_t *mln_json_value_search(mln_json_t *j, mln_string_t *key)
 {
     if (j == NULL || key == NULL) return NULL;
 
@@ -1065,7 +1065,7 @@ mln_json_t *mln_json_search_value(mln_json_t *j, mln_string_t *key)
     return obj->val;
 }
 
-mln_json_t *mln_json_search_element(mln_json_t *j, mln_uauto_t index)
+mln_json_t *mln_json_element_search(mln_json_t *j, mln_uauto_t index)
 {
     if (j == NULL) return NULL;
 
@@ -1083,7 +1083,7 @@ mln_json_t *mln_json_search_element(mln_json_t *j, mln_uauto_t index)
     return (mln_json_t *)mln_rbtree_node_data(rn);
 }
 
-mln_uauto_t mln_json_get_array_length(mln_json_t *j)
+mln_uauto_t mln_json_array_length(mln_json_t *j)
 {
     if (j == NULL) return 0;
 
@@ -1098,7 +1098,7 @@ mln_uauto_t mln_json_get_array_length(mln_json_t *j)
 /*
  * add & update
  */
-int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val)
+int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val)
 {
     if (j == NULL || key == NULL) return -1;
     if (!M_JSON_IS_STRING(key)) return -1;
@@ -1158,7 +1158,7 @@ int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val)
     return 0;
 }
 
-int mln_json_add_element(mln_json_t *j, mln_json_t *value)
+int mln_json_element_add(mln_json_t *j, mln_json_t *value)
 {
     if (j == NULL || value == NULL) return -1;
 
@@ -1194,7 +1194,7 @@ int mln_json_add_element(mln_json_t *j, mln_json_t *value)
     return 0;
 }
 
-int mln_json_update_element(mln_json_t *j, mln_json_t *value, mln_uauto_t index)
+int mln_json_element_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index)
 {
     if (j == NULL || value == NULL) return -1;
     if (!M_JSON_IS_ARRAY(j)) return -1;
@@ -1251,7 +1251,7 @@ void mln_json_reset(mln_json_t *j)
     memset(j, 0, sizeof(mln_json_t));
 }
 
-mln_json_t *mln_json_remove_object(mln_json_t *j, mln_string_t *key)
+mln_json_t *mln_json_obj_remove(mln_json_t *j, mln_string_t *key)
 {
     if (j == NULL || key == NULL) return NULL;
     if (!M_JSON_IS_OBJECT(j)) return NULL;
@@ -1271,7 +1271,7 @@ mln_json_t *mln_json_remove_object(mln_json_t *j, mln_string_t *key)
     return val;
 }
 
-mln_json_t *mln_json_remove_element(mln_json_t *j, mln_uauto_t index)
+mln_json_t *mln_json_element_remove(mln_json_t *j, mln_uauto_t index)
 {
     if (j == NULL) return NULL;
     if (!M_JSON_IS_ARRAY(j)) return NULL;

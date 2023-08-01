@@ -74,10 +74,10 @@ Return value: return `mln_string_t` string pointer successfully, otherwise retur
 
 
 
-#### mln_json_search_value
+#### mln_json_value_search
 
 ```c
-mln_json_t *mln_json_search_value(mln_json_t *j, mln_string_t *key);
+mln_json_t *mln_json_value_search(mln_json_t *j, mln_string_t *key);
 ```
 
 Description: Search the value content of key `key` from node `j`. In this case, `j` must be of type object (dictionary with key:value pairs).
@@ -86,10 +86,10 @@ Return value: return value of type `mln_json_t` if successful, otherwise return 
 
 
 
-#### mln_json_search_element
+#### mln_json_element_search
 
 ```c
-mln_json_t *mln_json_search_element(mln_json_t *j, mln_uauto_t index);
+mln_json_t *mln_json_element_search(mln_json_t *j, mln_uauto_t index);
 ```
 
 Description: Search for the element content with subscript `index` from node `j`. In this case, `j` must be an array type.
@@ -98,10 +98,10 @@ Return value: If successful, return an element node of type `mln_json_t`, otherw
 
 
 
-#### mln_json_get_array_length
+#### mln_json_array_length
 
 ```c
-mln_uauto_t mln_json_get_array_length(mln_json_t *j);
+mln_uauto_t mln_json_array_length(mln_json_t *j);
 ```
 
 Description: Get the length of the array. In this case `j` must be an array type.
@@ -110,10 +110,10 @@ Return value: Array length
 
 
 
-#### mln_json_update_obj
+#### mln_json_obj_update
 
 ```c
-int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val);
+int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val);
 ```
 
 Description: Add `key` and `val` pairs to the `j` JSON node. In this case, `j` needs to be an object type. If `key` already exists, replace the original value with `val`.
@@ -122,10 +122,10 @@ Return value: return `0` if successful, otherwise return `-1`
 
 
 
-#### mln_json_add_element
+#### mln_json_element_add
 
 ```c
-int mln_json_add_element(mln_json_t *j, mln_json_t *value);
+int mln_json_element_add(mln_json_t *j, mln_json_t *value);
 ```
 
 Description: Add `value` to JSON structure `j` of array type.
@@ -134,10 +134,10 @@ Return value: return `0` if successful, otherwise return `-1`
 
 
 
-#### mln_json_update_element
+#### mln_json_element_update
 
 ```c
-int mln_json_update_element(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
+int mln_json_element_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
 ```
 
 Description: Update `value` to the position indexed `index` of the array type JSON structure `j`.
@@ -158,10 +158,10 @@ Return value: none
 
 
 
-#### mln_json_remove_object
+#### mln_json_obj_remove
 
 ```c
-mln_json_t *mln_json_remove_object(mln_json_t *j, mln_string_t *key);
+mln_json_t *mln_json_obj_remove(mln_json_t *j, mln_string_t *key);
 ```
 
 Description: Remove the key-value pair whose key value is `key` from the JSON structure `j` of the object type, and return the corresponding value.
@@ -170,10 +170,10 @@ Return value: if exists, return the JSON node corresponding to the value part, o
 
 
 
-#### mln_json_remove_element
+#### mln_json_element_remove
 
 ```c
-mln_json_t *mln_json_remove_element(mln_json_t *j, mln_uauto_t index);
+mln_json_t *mln_json_element_remove(mln_json_t *j, mln_uauto_t index);
 ```
 
 Description: Remove the element with subscript `index` from the array type JSON node and return it.
@@ -326,7 +326,7 @@ int main(int argc, char *argv[])
         mln_log(error, "init object failed\n");
         goto err;
     }
-    if (mln_json_update_obj(j, key, val) < 0) {
+    if (mln_json_obj_update(j, key, val) < 0) {
         mln_log(error, "update object failed\n");
         goto err;
     }

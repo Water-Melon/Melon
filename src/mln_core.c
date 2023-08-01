@@ -47,7 +47,7 @@ int mln_core_init(struct mln_core_attr *attr)
     if (mln_conf_load() < 0) {
         return -1;
     }
-    if (mln_conf_set_hook(mln_log_reload, NULL) == NULL) {
+    if (mln_conf_hook_set(mln_log_reload, NULL) == NULL) {
         return -1;
     }
 
@@ -73,10 +73,10 @@ int mln_core_init(struct mln_core_attr *attr)
         }
 
         /*fork*/
-        if (mln_pre_fork() < 0) {
+        if (mln_fork_prepare() < 0) {
             return -1;
         }
-        int is_master = do_fork();
+        int is_master = mln_fork();
         if (is_master < 0) {
             return -1;
         }
@@ -95,7 +95,7 @@ chl:
         mln_conf_domain_t *cd;
         mln_conf_cmd_t *cc;
         mln_conf_item_t *ci;
-        if ((cf = mln_get_conf()) == NULL) {
+        if ((cf = mln_conf()) == NULL) {
             fprintf(stderr, "configuration messed up.\n");
             return -1;
         }
@@ -105,7 +105,7 @@ chl:
         }
         /*log*/
         if ((cc = cd->search(cd, "daemon")) != NULL) {
-            if (mln_conf_get_narg(cc) != 1) {
+            if (mln_conf_arg_num(cc) != 1) {
                 fprintf(stderr, "Invalid command 'daemon'.\n");
                 return -1;
             }
@@ -131,7 +131,7 @@ static void mln_master_routine(struct mln_core_attr *attr)
 
     mln_trace_init_callback_set(mln_master_trace_init);
     mln_trace_init(ev, mln_trace_path());
-    mln_fork_master_set_events(ev);
+    mln_fork_master_events_set(ev);
     mln_event_signal_set(SIGUSR2, mln_sig_conf_reload);
     if (attr->master_process != NULL) attr->master_process(ev);
     mln_event_dispatch(ev);
@@ -146,7 +146,7 @@ static void mln_worker_routine(struct mln_core_attr *attr)
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     if (_ev == NULL) _ev = ev;
-    mln_fork_worker_set_events(ev);
+    mln_fork_worker_events_set(ev);
 
     if (!mln_string_strcmp(framework_mode, &proc_mode)) {
         i_thread_mode = 0;
@@ -205,7 +205,7 @@ static mln_string_t *mln_get_framework_status(void)
     char framework[] = "framework";
     mln_string_t proc_mode = mln_string("multiprocess");
     mln_string_t thread_mode = mln_string("multithread");
-    mln_conf_t *cf = mln_get_conf();
+    mln_conf_t *cf = mln_conf();
     if (cf == NULL) {
         fprintf(stderr, "Configuration crashed.\n");
         abort();

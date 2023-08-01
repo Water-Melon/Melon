@@ -88,10 +88,10 @@ Return value: none
 
 
 
-#### mln_file_open_tmp
+#### mln_file_tmp_open
 
 ```c
-mln_file_t *mln_file_open_tmp(mln_alloc_t *pool);
+mln_file_t *mln_file_tmp_open(mln_alloc_t *pool);
 ```
 
 Description: Open a temporary file. This file can be accessed during the runtime and it never exist in file system. 

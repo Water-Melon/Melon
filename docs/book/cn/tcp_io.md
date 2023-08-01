@@ -205,10 +205,10 @@ void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type);
 
 
 
-####mln_tcp_conn_get_head
+####mln_tcp_conn_head
 
 ```c
-mln_chain_t *mln_tcp_conn_get_head(mln_tcp_conn_t *tc, int type);
+mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type);
 ```
 
 描述：获取`tc`中指定链（队列）的头指针。`type`的值与`mln_tcp_conn_append_chain`一致。
@@ -241,10 +241,10 @@ mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type);
 
 
 
-####mln_tcp_conn_get_tail
+####mln_tcp_conn_tail
 
 ```c
-mln_chain_t *mln_tcp_conn_get_tail(mln_tcp_conn_t *tc, int type);
+mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type);
 ```
 
 描述：获取`tc`中指定链（队列）的尾指针。`type`的值与`mln_tcp_conn_append_chain`一致。
@@ -331,10 +331,10 @@ mln_tcp_conn_sent_empty(pconn)
 
 
 
-####mln_tcp_conn_get_fd
+####mln_tcp_conn_fd_get
 
 ```c
-mln_tcp_conn_get_fd(pconn)
+mln_tcp_conn_fd_get(pconn)
 ```
 
 描述：获取TCP结构中的套接字描述符。
@@ -343,10 +343,10 @@ mln_tcp_conn_get_fd(pconn)
 
 
 
-####mln_tcp_conn_set_fd
+####mln_tcp_conn_fd_set
 
 ```c
-mln_tcp_conn_set_fd(pconn,fd)
+mln_tcp_conn_fd_set(pconn,fd)
 ```
 
 描述：设置TCP结构中的套接字描述符为`fd`。
@@ -355,10 +355,10 @@ mln_tcp_conn_set_fd(pconn,fd)
 
 
 
-####mln_tcp_conn_get_pool
+####mln_tcp_conn_pool_get
 
 ```c
-mln_tcp_conn_get_pool(pconn)
+mln_tcp_conn_pool_get(pconn)
 ```
 
 描述：获取TCP结构中内存池结构。TCP结构中自行创建了内存池，因为输入输出链使用了内存池进行分配和释放。
@@ -382,7 +382,7 @@ static void mln_lang_network_tcp_send_handler(mln_event_t *ev, int fd, void *dat
 
     if (rc == M_C_FINISH || rc == M_C_NOTYET) {//发送成功
         mln_chain_pool_release_all(mln_tcp_conn_remove(&(tcp->conn), M_C_SENT));//清除已发送队列
-        if (mln_tcp_conn_get_head(&(tcp->conn), M_C_SEND) != NULL) {//判断是否还有未发送数据
+        if (mln_tcp_conn_head(&(tcp->conn), M_C_SEND) != NULL) {//判断是否还有未发送数据
             ...
         } else {
             ...
@@ -402,10 +402,10 @@ static void mln_lang_network_tcp_recv_handler(mln_event_t *ev, int fd, void *dat
     int rc = mln_tcp_conn_recv(&(tcp->conn), M_C_TYPE_MEMORY);//接收数据
     if (rc == M_C_ERROR) {//如果出错
         ...
-    } else if (rc == M_C_CLOSED && mln_tcp_conn_get_head(&(tcp->conn), M_C_RECV) == NULL) {//如果对端关闭，且本地已收到数据
+    } else if (rc == M_C_CLOSED && mln_tcp_conn_head(&(tcp->conn), M_C_RECV) == NULL) {//如果对端关闭，且本地已收到数据
         ...
     } else {
-        c = mln_tcp_conn_get_head(&(tcp->conn), M_C_RECV);//获取接收队列
+        c = mln_tcp_conn_head(&(tcp->conn), M_C_RECV);//获取接收队列
         for (; c != NULL; c = c->next) {
             if (c->buf == NULL) continue;
             size += mln_buf_left_size(c->buf);//计算接收队列数据总大小

@@ -51,9 +51,9 @@ int mln_set_ipc_handlers(void)
 {
     mln_ipc_set_t *is;
     for (is = ipcs; is != NULL; is = is->next) {
-        if (mln_set_master_ipc_handler(is->type, is->master_handler, is->master_data) < 0)
+        if (mln_fork_master_ipc_handler_set(is->type, is->master_handler, is->master_data) < 0)
             return -1;
-        if (mln_set_worker_ipc_handler(is->type, is->worker_handler, is->worker_data) < 0)
+        if (mln_fork_worker_ipc_handler_set(is->type, is->worker_handler, is->worker_data) < 0)
             return -1;
     }
     return 0;

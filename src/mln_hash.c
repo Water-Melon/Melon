@@ -41,7 +41,7 @@ mln_hash_new(struct mln_hash_attr *attr)
     h->cmp = attr->cmp;
     h->free_key = attr->free_key;
     h->free_val = attr->free_val;
-    h->len = attr->calc_prime? mln_prime_calc(attr->len_base): attr->len_base;
+    h->len = attr->calc_prime? mln_prime_generate(attr->len_base): attr->len_base;
     if (h->pool != NULL) {
         h->tbl = (mln_hash_mgr_t *)h->pool_alloc(h->pool, h->len*sizeof(mln_hash_mgr_t));
         memset(h->tbl, 0, h->len*sizeof(mln_hash_mgr_t));
@@ -54,7 +54,7 @@ mln_hash_new(struct mln_hash_attr *attr)
         return NULL;
     }
     h->nr_nodes = 0;
-    h->threshold = attr->calc_prime? mln_prime_calc(h->len << 1): h->len << 1;
+    h->threshold = attr->calc_prime? mln_prime_generate(h->len << 1): h->len << 1;
     h->expandable = attr->expandable;
     h->calc_prime = attr->calc_prime;
     if (h->len == 0 || \
@@ -147,7 +147,7 @@ static inline void mln_hash_reduce(mln_hash_t *h)
 {
     mln_hash_mgr_t *old_tbl = h->tbl;
     mln_u32_t len = h->len;
-    h->len = h->calc_prime? mln_prime_calc(h->threshold >> 2): h->threshold >> 2;
+    h->len = h->calc_prime? mln_prime_generate(h->threshold >> 2): h->threshold >> 2;
     if (h->len == 0) h->len = 1;
     if (h->pool != NULL) {
         h->tbl = (mln_hash_mgr_t *)h->pool_alloc(h->pool, h->len*sizeof(mln_hash_mgr_t));
@@ -160,7 +160,7 @@ static inline void mln_hash_reduce(mln_hash_t *h)
         h->len = len;
         return;
     }
-    h->threshold = h->calc_prime? mln_prime_calc(h->threshold >> 1): h->threshold >> 1;
+    h->threshold = h->calc_prime? mln_prime_generate(h->threshold >> 1): h->threshold >> 1;
     mln_move_hash_entry(h, old_tbl, len);
     if (h->pool != NULL) h->pool_free(old_tbl);
     else free(old_tbl);
@@ -170,7 +170,7 @@ static inline void mln_hash_expand(mln_hash_t *h)
 {
     mln_hash_mgr_t *old_tbl = h->tbl;
     mln_u32_t len = h->len;
-    h->len = h->calc_prime? mln_prime_calc(len + (len >> 1)): (len + (len >> 1));
+    h->len = h->calc_prime? mln_prime_generate(len + (len >> 1)): (len + (len >> 1));
     if (h->pool != NULL) {
         h->tbl = (mln_hash_mgr_t *)h->pool_alloc(h->pool, h->len*sizeof(mln_hash_mgr_t));
         memset(h->tbl, 0, h->len*sizeof(mln_hash_mgr_t));
@@ -182,7 +182,7 @@ static inline void mln_hash_expand(mln_hash_t *h)
         h->len = len;
         return;
     }
-    h->threshold = h->calc_prime? mln_prime_calc(h->threshold + (h->threshold >> 1)): \
+    h->threshold = h->calc_prime? mln_prime_generate(h->threshold + (h->threshold >> 1)): \
                                   (h->threshold + (h->threshold >> 1));
     mln_move_hash_entry(h, old_tbl, len);
     if (h->pool != NULL) h->pool_free(old_tbl);

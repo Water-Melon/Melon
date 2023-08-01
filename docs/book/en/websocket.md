@@ -1000,7 +1000,7 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
     ret = mln_tcp_conn_recv(connection, M_C_TYPE_MEMORY);
     /* debug info */
     printf("recv:\n");
-    mln_chain_t *cc = mln_tcp_conn_get_head(connection, M_C_RECV);
+    mln_chain_t *cc = mln_tcp_conn_head(connection, M_C_RECV);
     for (; cc != NULL; cc = cc->next) {
         if (cc->buf == NULL || mln_buf_left_size(cc->buf)==0) continue;
         write(STDOUT_FILENO, cc->buf->left_pos, mln_buf_left_size(cc->buf));
@@ -1069,7 +1069,7 @@ static void mln_send(mln_event_t *ev, int fd, void *data)
     mln_chain_t *c;
     int ret;
 
-    while ((c = mln_tcp_conn_get_head(connection, M_C_SEND)) != NULL) {
+    while ((c = mln_tcp_conn_head(connection, M_C_SEND)) != NULL) {
         ret = mln_tcp_conn_send(connection);
         if (ret == M_C_FINISH) {
             mln_quit(ev, fd, data);
@@ -1095,7 +1095,7 @@ static void mln_websocket_send(mln_event_t *ev, int fd, void *data)
     mln_chain_t *c;
     int ret;
 
-    while ((c = mln_tcp_conn_get_head(connection, M_C_SEND)) != NULL) {
+    while ((c = mln_tcp_conn_head(connection, M_C_SEND)) != NULL) {
         ret = mln_tcp_conn_send(connection);
         if (ret == M_C_FINISH) {
             continue;
@@ -1132,7 +1132,7 @@ static void mln_websocket_recv(mln_event_t *ev, int fd, void *data)
 lp:
     /* debug info */
     printf("websocket recv:[");
-    mln_chain_t *cc = mln_tcp_conn_get_head(connection, M_C_RECV);
+    mln_chain_t *cc = mln_tcp_conn_head(connection, M_C_RECV);
     mln_u8ptr_t uc;
     for (; cc != NULL; cc = cc->next) {
         if (cc->buf == NULL || mln_buf_left_size(cc->buf)==0) continue;

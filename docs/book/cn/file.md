@@ -81,10 +81,10 @@ void mln_file_close(mln_file_t *pfile);
 
 
 
-#### mln_file_open_tmp
+#### mln_file_tmp_open
 
 ```c
-mln_file_t *mln_file_open_tmp(mln_alloc_t *pool);
+mln_file_t *mln_file_tmp_open(mln_alloc_t *pool);
 ```
 
 描述：打开一个临时文件。临时文件仅在程序运行期间存在，但不会出现在文件系统中。当程序退出后，相应文件亦不会存在于文件系统中。

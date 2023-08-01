@@ -137,7 +137,7 @@ void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
     }
 }
 
-mln_chain_t *mln_tcp_conn_get_head(mln_tcp_conn_t *tc, int type)
+mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type)
 {
     mln_chain_t *rc = NULL;
 
@@ -204,7 +204,7 @@ mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type)
     return rc;
 }
 
-mln_chain_t *mln_tcp_conn_get_tail(mln_tcp_conn_t *tc, int type)
+mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type)
 {
     mln_chain_t *rc;
 
@@ -767,7 +767,7 @@ mln_tcp_conn_recv_chain(mln_tcp_conn_t *tc, mln_u32_t flag)
     int n = -1;
     mln_buf_t *b;
     mln_chain_t *c;
-    mln_alloc_t *pool = mln_tcp_conn_get_pool(tc);
+    mln_alloc_t *pool = mln_tcp_conn_pool_get(tc);
 
     c = mln_chain_new(pool);
     b = mln_buf_new(pool);
@@ -818,7 +818,7 @@ mln_tcp_conn_recv_chain_file(int sockfd, \
     if (n <= 0) return n;
 
     if (last == NULL) {
-        if ((b->file = mln_file_open_tmp(pool)) == NULL) {
+        if ((b->file = mln_file_tmp_open(pool)) == NULL) {
             return -1;
         }
         b->file_left_pos = b->file_pos = 0;

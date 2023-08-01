@@ -873,7 +873,7 @@ mln_http_t *mln_http_init(mln_tcp_conn_t *connection, void *data, mln_http_handl
 
     mln_http_t *http;
     struct mln_hash_attr hattr;
-    mln_alloc_t *pool = mln_tcp_conn_get_pool(connection);
+    mln_alloc_t *pool = mln_tcp_conn_pool_get(connection);
     if (pool == NULL) return NULL;
 
     http = (mln_http_t *)mln_alloc_m(pool, sizeof(mln_http_t));

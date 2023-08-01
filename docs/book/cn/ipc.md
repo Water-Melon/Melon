@@ -76,10 +76,10 @@ typedef int (*fork_iterate_handler)(mln_event_t *, mln_fork_t *, void *);
 
 Melon中还提供了其他函数：
 
-- mln_fork_get_master_connection
+- mln_fork_master_connection_get
 
   ```c
-  mln_tcp_conn_t *mln_fork_get_master_connection(void);
+  mln_tcp_conn_t *mln_fork_master_connection_get(void);
   ```
 
   用于在子进程中获取与主进程通信的TCP链接结构（socketpair被当作TCP处理）。
@@ -100,20 +100,20 @@ Melon中还提供了其他函数：
 
   用于子进程将长度为`len`类行为`type`的消息`buf`发送给主进程。
 
-- mln_set_master_ipc_handler
+- mln_fork_master_ipc_handler_set
 
   ```c
-  int mln_set_master_ipc_handler(mln_u32_t type, ipc_handler handler, void *data);
+  int mln_fork_master_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data);
   ```
 
   这个函数用于设置主进程的IPC处理函数。实际上，在`mln_ipc_handler_register`内部正是调用该函数进行设置的，但与之有区别的就是，本函数既可以在框架初始化前调用，也可以在框架初始化后调用。
 
   但是需要确保一点，本函数需要在主进程内被调用，在子进程中设置会出现因访问`NULL`内存而导致的段错误。
 
-- mln_set_worker_ipc_handler
+- mln_fork_worker_ipc_handler_set
 
   ```c
-  int mln_set_worker_ipc_handler(mln_u32_t type, ipc_handler handler, void *data);
+  int mln_fork_worker_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data);
   ```
 
   这个函数用于设置子进程的IPC处理函数。实际上，在`mln_ipc_handler_register`内部正是调用该函数进行设置的，但与之有区别的就是，本函数既可以在框架初始化前调用，也可以在框架初始化后调用。

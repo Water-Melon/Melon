@@ -76,10 +76,10 @@ typedef int (*fork_iterate_handler)(mln_event_t *, mln_fork_t *, void *);
 
 Other functions are also available in Melon:
 
-- mln_fork_get_master_connection
+- mln_fork_master_connection_get
 
   ```c
-  mln_tcp_conn_t *mln_fork_get_master_connection(void);
+  mln_tcp_conn_t *mln_fork_master_connection_get(void);
   ```
 
   The TCP link structure used in the child process to communicate with the main process (socketpair is treated as TCP).
@@ -100,20 +100,20 @@ Other functions are also available in Melon:
 
   Used by the child process to send a message `buf` of length `len` class behavior `type` to the main process.
 
-- mln_set_master_ipc_handler
+- mln_fork_master_ipc_handler_set
 
   ```c
-  int mln_set_master_ipc_handler(mln_u32_t type, ipc_handler handler, void *data);
+  int mln_fork_master_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data);
   ```
 
   This function is used to set the IPC handler of the main process. In fact, this function is called inside `mln_ipc_handler_register` for setting, but the difference is that this function can be called either before or after the framework is initialized.
 
   But you need to make sure that this function needs to be called in the main process, and a segmentation fault caused by accessing `NULL` memory will occur in the child process.
 
-- mln_set_worker_ipc_handler
+- mln_fork_worker_ipc_handler_set
 
   ```c
-  int mln_set_worker_ipc_handler(mln_u32_t type, ipc_handler handler, void *data);
+  int mln_fork_worker_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data);
   ```
 
   This function is used to set the IPC handler for the child process. In fact, this function is called inside `mln_ipc_handler_register` for setting, but the difference is that this function can be called either before or after the framework is initialized.

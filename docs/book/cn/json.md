@@ -74,10 +74,10 @@ mln_string_t *mln_json_generate(mln_json_t *j);
 
 
 
-#### mln_json_search_value
+#### mln_json_value_search
 
 ```c
-mln_json_t *mln_json_search_value(mln_json_t *j, mln_string_t *key);
+mln_json_t *mln_json_value_search(mln_json_t *j, mln_string_t *key);
 ```
 
 描述：从节点`j`中搜索key为`key`的value内容。此时，`j`必须为对象类型（有key: value对的字典）。
@@ -86,10 +86,10 @@ mln_json_t *mln_json_search_value(mln_json_t *j, mln_string_t *key);
 
 
 
-#### mln_json_search_element
+#### mln_json_element_search
 
 ```c
-mln_json_t *mln_json_search_element(mln_json_t *j, mln_uauto_t index);
+mln_json_t *mln_json_element_search(mln_json_t *j, mln_uauto_t index);
 ```
 
 描述：从节点`j`中搜索下标为`index`的元素内容。此时，`j`必须为数组类型。
@@ -98,10 +98,10 @@ mln_json_t *mln_json_search_element(mln_json_t *j, mln_uauto_t index);
 
 
 
-#### mln_json_get_array_length
+#### mln_json_array_length
 
 ```c
-mln_uauto_t mln_json_get_array_length(mln_json_t *j);
+mln_uauto_t mln_json_array_length(mln_json_t *j);
 ```
 
 描述：获取数组的长度。此时`j`必须为数组类型。
@@ -110,10 +110,10 @@ mln_uauto_t mln_json_get_array_length(mln_json_t *j);
 
 
 
-#### mln_json_update_obj
+#### mln_json_obj_update
 
 ```c
-int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val);
+int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val);
 ```
 
 描述：将`key`与`val`对添加到`j` JSON节点中。此时，`j`需为对象类型。若`key`已经存在，则将原本value替换为`val`。
@@ -122,10 +122,10 @@ int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val);
 
 
 
-#### mln_json_add_element
+#### mln_json_element_add
 
 ```c
-int mln_json_add_element(mln_json_t *j, mln_json_t *value);
+int mln_json_element_add(mln_json_t *j, mln_json_t *value);
 ```
 
 描述：将`value`加入到数组类型的JSON结构`j`中。
@@ -134,10 +134,10 @@ int mln_json_add_element(mln_json_t *j, mln_json_t *value);
 
 
 
-#### mln_json_update_element
+#### mln_json_element_update
 
 ```c
-int mln_json_update_element(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
+int mln_json_element_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
 ```
 
 描述：将`value`更新到数组类型JSON结构`j`的下标为`index`的位置上。
@@ -158,10 +158,10 @@ void mln_json_reset(mln_json_t *j);
 
 
 
-#### mln_json_remove_object
+#### mln_json_obj_remove
 
 ```c
-mln_json_t *mln_json_remove_object(mln_json_t *j, mln_string_t *key);
+mln_json_t *mln_json_obj_remove(mln_json_t *j, mln_string_t *key);
 ```
 
 描述：将key值为`key`的键值对从对象类型的JSON结构`j`中删除，并将相应value返回。
@@ -170,10 +170,10 @@ mln_json_t *mln_json_remove_object(mln_json_t *j, mln_string_t *key);
 
 
 
-#### mln_json_remove_element
+#### mln_json_element_remove
 
 ```c
-mln_json_t *mln_json_remove_element(mln_json_t *j, mln_uauto_t index);
+mln_json_t *mln_json_element_remove(mln_json_t *j, mln_uauto_t index);
 ```
 
 描述：将下标为`index`的元素从数组类型JSON节点上删除并返回。
@@ -326,7 +326,7 @@ int main(int argc, char *argv[])
         mln_log(error, "init object failed\n");
         goto err;
     }
-    if (mln_json_update_obj(j, key, val) < 0) {
+    if (mln_json_obj_update(j, key, val) < 0) {
         mln_log(error, "update object failed\n");
         goto err;
     }

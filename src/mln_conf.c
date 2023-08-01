@@ -99,7 +99,7 @@ static mln_conf_item_t *
 mln_conf_item_search(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
 static int
 mln_conf_item_update(mln_conf_cmd_t *cmd, mln_conf_item_t *items, mln_u32_t nitems);
-static int mln_conf_get_cmds_iterate_handler(mln_rbtree_node_t *node, void *udata);
+static int mln_conf_cmds_iterate_handler(mln_rbtree_node_t *node, void *udata);
 static int mln_conf_dump_conf_iterate_handler(mln_rbtree_node_t *node, void *udata);
 static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *udata);
 /*for hook*/
@@ -914,7 +914,7 @@ static void mln_conf_hook_destroy(mln_conf_hook_t *ch)
     free(ch);
 }
 
-mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data)
+mln_conf_hook_t *mln_conf_hook_set(reload_handler reload, void *data)
 {
     mln_conf_hook_t *ch = mln_conf_hook_init();
     if (ch == NULL) return NULL;
@@ -924,14 +924,14 @@ mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data)
     return ch;
 }
 
-void mln_conf_unset_hook(mln_conf_hook_t *hook)
+void mln_conf_hook_unset(mln_conf_hook_t *hook)
 {
     if (hook == NULL) return;
     conf_hook_chain_del(&g_conf_hook_head, &g_conf_hook_tail, hook);
     mln_conf_hook_destroy(hook);
 }
 
-void mln_conf_free_hook(void)
+void mln_conf_hook_free(void)
 {
     mln_conf_hook_t *ch;
     while ((ch = g_conf_hook_head) != NULL) {
@@ -958,12 +958,12 @@ int mln_conf_reload(void)
 /*
  * misc
  */
-mln_conf_t *mln_get_conf(void)
+mln_conf_t *mln_conf(void)
 {
     return g_conf;
 }
 
-mln_u32_t mln_conf_get_ncmd(mln_conf_t *cf, char *domain)
+mln_u32_t mln_conf_cmd_num(mln_conf_t *cf, char *domain)
 {
     mln_conf_domain_t *cd = cf->search(cf, domain);
     if (cd == NULL) return 0;
@@ -975,27 +975,27 @@ struct conf_cmds_scan_s {
     mln_u32_t        pos;
 };
 
-void mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **v)
+void mln_conf_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **v)
 {
     mln_conf_domain_t *cd = cf->search(cf, domain);
     if (cd == NULL) return;
     struct conf_cmds_scan_s ccs;
     ccs.cc = v;
     ccs.pos = 0;
-    if (mln_rbtree_iterate(cd->cmd, mln_conf_get_cmds_iterate_handler, (void *)&ccs) < 0) {
+    if (mln_rbtree_iterate(cd->cmd, mln_conf_cmds_iterate_handler, (void *)&ccs) < 0) {
         mln_log(error, "Shouldn't be here.\n");
         abort();
     }
 }
 
-static int mln_conf_get_cmds_iterate_handler(mln_rbtree_node_t *node, void *udata)
+static int mln_conf_cmds_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     struct conf_cmds_scan_s *ccs = (struct conf_cmds_scan_s *)udata;
     ccs->cc[(ccs->pos)++] = (mln_conf_cmd_t *)mln_rbtree_node_data(node);
     return 0;
 }
 
-mln_u32_t mln_conf_get_narg(mln_conf_cmd_t *cc)
+mln_u32_t mln_conf_arg_num(mln_conf_cmd_t *cc)
 {
     return cc->n_args;
 }

@@ -33,6 +33,16 @@ Currently, the existing configuration items that have been verified and used by 
 
 
 
+### About configuration overloading
+
+The configuration module supports configuration overloading, and the overloading function has been integrated into the initialization process of the Melon library.
+
+After initialization using the `mln_core_init` of the Melon library, the `SIGUSR2` signal can be used to trigger configuration reloading to the host process of the library.
+
+After the configuration is reloaded, the callback function set by the developer (using `mln_conf_hook_set`) will be called to do some processing, such as updating some variable values in memory.
+
+
+
 ### Header file
 
 ```c
@@ -78,10 +88,10 @@ struct mln_conf_item_s {
 
 
 
-#### mln_get_conf
+#### mln_conf
 
 ```c
-mln_conf_t *mln_get_conf(void);
+mln_conf_t *mln_conf(void);
 ```
 
 Description: Get the global configuration structure.
@@ -190,10 +200,10 @@ Return value:
 
 
 
-#### mln_conf_set_hook
+#### mln_conf_hook_set
 
 ```c
-mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data);
+mln_conf_hook_t *mln_conf_hook_set(reload_handler reload, void *data);
 
 typedef int (*reload_handler)(void *);
 ```
@@ -202,19 +212,19 @@ Description:
 
 Melon configuration supports overloading. The overloading method is to set overloaded callback functions, and multiple settings are allowed. When the reload is performed, these callback functions are called after the new configuration is loaded.
 
-The parameter of the callback function is the second parameter `data` of `mln_conf_set_hook`.
+The parameter of the callback function is the second parameter `data` of `mln_conf_hook_set`.
 
 return value:
 
-- `mln_conf_set_hook`: Returns the `mln_conf_hook_t` callback handle on success, otherwise returns `NULL`.
+- `mln_conf_hook_set`: Returns the `mln_conf_hook_t` callback handle on success, otherwise returns `NULL`.
 - Callback function: return `0` on success, otherwise return `-1`.
 
 
 
-#### mln_conf_unset_hook
+#### mln_conf_hook_unset
 
 ```c
-void mln_conf_unset_hook(mln_conf_hook_t *hook);
+void mln_conf_hook_unset(mln_conf_hook_t *hook);
 ```
 
 Description: Remove the set configuration overload callback function.
@@ -223,10 +233,10 @@ Return value: none
 
 
 
-#### mln_conf_get_ncmd
+#### mln_conf_cmd_num
 
 ```c
-mln_u32_t mln_conf_get_cmdNum(mln_conf_t *cf, char *domain);
+mln_u32_t mln_conf_cmd_num(mln_conf_t *cf, char *domain);
 ```
 
 Description: Get the number of configuration items in a domain.
@@ -235,22 +245,22 @@ Return value: the number of configuration items
 
 
 
-#### mln_conf_get_cmds
+#### mln_conf_cmds
 
 ```c
-void mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **vector);
+void mln_conf_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **vector);
 ```
 
-Description: Get all configuration items in a domain. These configuration items will be stored in `vector`. The `vector` needs to be allocated before calling. The number of configuration items can be obtained in advance through `mln_conf_get_ncmd`.
+Description: Get all configuration items in a domain. These configuration items will be stored in `vector`. The `vector` needs to be allocated before calling. The number of configuration items can be obtained in advance through `mln_conf_cmd_num`.
 
 Return value: none
 
 
 
-#### mln_conf_get_narg
+#### mln_conf_arg_num
 
 ```c
-mln_u32_t mln_conf_get_argNum(mln_conf_cmd_t *cc);
+mln_u32_t mln_conf_arg_num(mln_conf_cmd_t *cc);
 ```
 
 Description: Get the number of parameters of a configuration item.
@@ -272,7 +282,7 @@ static int global_init(void)
   mln_conf_cmd_t *c;
   mln_conf_item_t *i;
   
-  cf = mln_get_conf();
+  cf = mln_conf();
   d = cf->search(cf, "main"); //If the main does not exist, it means that there is a serious problem with the configuration initialization.
   c = d->search(cf, "daemon"); //Here we get the configuration item daemon
   if（c == NULL) {

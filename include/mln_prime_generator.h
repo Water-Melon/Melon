@@ -8,7 +8,7 @@
 
 #include "mln_types.h"
 
-extern mln_u32_t mln_prime_calc(mln_u32_t n);
+extern mln_u32_t mln_prime_generate(mln_u32_t n);
 
 #endif
 

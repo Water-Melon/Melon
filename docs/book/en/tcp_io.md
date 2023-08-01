@@ -203,10 +203,10 @@ Return value: none
 
 
 
-#### mln_tcp_conn_get_head
+#### mln_tcp_conn_head
 
 ```c
-mln_chain_t *mln_tcp_conn_get_head(mln_tcp_conn_t *tc, int type);
+mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type);
 ```
 
 Description: Get the head pointer of the specified chain (queue) in `tc`. The value of `type` is the same as `mln_tcp_conn_append_chain`.
@@ -239,10 +239,10 @@ Return value: If there is data, it is the chain node pointer, if there is no dat
 
 
 
-#### mln_tcp_conn_get_tail
+#### mln_tcp_conn_tail
 
 ```c
-mln_chain_t *mln_tcp_conn_get_tail(mln_tcp_conn_t *tc, int type);
+mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type);
 ```
 
 Description: Get the tail pointer of the specified chain (queue) in `tc`. The value of `type` is the same as `mln_tcp_conn_append_chain`.
@@ -329,10 +329,10 @@ Return value: if empty, return `non-0`, otherwise return `0`
 
 
 
-#### mln_tcp_conn_get_fd
+#### mln_tcp_conn_fd_get
 
 ```c
-mln_tcp_conn_get_fd(pconn)
+mln_tcp_conn_fd_get(pconn)
 ```
 
 Description: Get the socket descriptor in the TCP structure.
@@ -341,10 +341,10 @@ Return value: socket descriptor
 
 
 
-#### mln_tcp_conn_set_fd
+#### mln_tcp_conn_fd_set
 
 ```c
-mln_tcp_conn_set_fd(pconn,fd)
+mln_tcp_conn_fd_set(pconn,fd)
 ```
 
 Description: Set the socket descriptor in the TCP structure to `fd`.
@@ -353,10 +353,10 @@ Return value: none
 
 
 
-#### mln_tcp_conn_get_pool
+#### mln_tcp_conn_pool_get
 
 ```c
-mln_tcp_conn_get_pool(pconn)
+mln_tcp_conn_pool_get(pconn)
 ```
 
 Description: Get the memory pool structure in the TCP structure. The memory pool is created by itself in the TCP structure, because the input and output chain uses the memory pool for allocation and release.
@@ -380,7 +380,7 @@ static void mln_lang_network_tcp_send_handler(mln_event_t *ev, int fd, void *dat
 
     if (rc == M_C_FINISH || rc == M_C_NOTYET) {//on success
         mln_chain_pool_release_all(mln_tcp_conn_remove(&(tcp->conn), M_C_SENT));//clean sent queue
-        if (mln_tcp_conn_get_head(&(tcp->conn), M_C_SEND) != NULL) {//any data not sent
+        if (mln_tcp_conn_head(&(tcp->conn), M_C_SEND) != NULL) {//any data not sent
             ...
         } else {
             ...
@@ -400,10 +400,10 @@ static void mln_lang_network_tcp_recv_handler(mln_event_t *ev, int fd, void *dat
     int rc = mln_tcp_conn_recv(&(tcp->conn), M_C_TYPE_MEMORY);//receive
     if (rc == M_C_ERROR) {//on error
         ...
-    } else if (rc == M_C_CLOSED && mln_tcp_conn_get_head(&(tcp->conn), M_C_RECV) == NULL) {//closed
+    } else if (rc == M_C_CLOSED && mln_tcp_conn_head(&(tcp->conn), M_C_RECV) == NULL) {//closed
         ...
     } else {
-        c = mln_tcp_conn_get_head(&(tcp->conn), M_C_RECV);//get receive queue
+        c = mln_tcp_conn_head(&(tcp->conn), M_C_RECV);//get receive queue
         for (; c != NULL; c = c->next) {
             if (c->buf == NULL) continue;
             size += mln_buf_left_size(c->buf);//calculate queue size in byte

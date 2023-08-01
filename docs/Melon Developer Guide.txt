@@ -459,7 +459,7 @@ Their definitions can be found in melon/include/mln_types.h.
        Set path hook to customize every path as shown above.
 
   6) Prime number Generator
-    a) mln_u32_t mln_prime_calc(mln_u32_t n);
+    a) mln_u32_t mln_prime_generate(mln_u32_t n);
        It returns a prime number which is equal to or greater than n.
 
   7) Lock
@@ -498,17 +498,17 @@ Their definitions can be found in melon/include/mln_types.h.
            %ld in 64-bit) and %I (=%llu in 32-bit or =%lu in 64-bit).
        Depending on the format control characters in msg, the rest arguments can be none or even more than one.
 
-    b) char *mln_log_get_dir_path(void);
+    b) char *mln_log_dir_path(void);
        It returns the path of log files' directory.
 
-    c) char *mln_log_get_log_path(void);
+    c) char *mln_log_logfile_path(void);
        It returns the path of a log file.
 
-    d) char *mln_log_get_pid_path(void);
+    d) char *mln_log_pid_path(void);
        It returns the path of a pid file.
        The pid of the parent process is recorded in this file.
 
-    e) void mln_log_set_logger(mln_logger_t logger);
+    e) void mln_log_logger_set(mln_logger_t logger);
        Customize logger. `logger`'s prototype is:
            typedef void (*mln_logger_t)(mln_log_t *log,
                                         mln_log_level_t level,
@@ -520,7 +520,7 @@ Their definitions can be found in melon/include/mln_types.h.
        Some infomation and file descriptor `fd` can be found in `log`.
        Developer can customize log file and log format through this function and path hook functions.
 
-    f) mln_logger_t mln_log_get_logger(void);
+    f) mln_logger_t mln_log_logger_get(void);
        Get current logger function pointer.
 
   9) Lexer
@@ -742,7 +742,7 @@ Their definitions can be found in melon/include/mln_types.h.
 
      In mln_conf_t, there are three function pointers named insert, remove and search. Their prototype is
          typedef mln_conf_domain_t *(*mln_conf_domain_cb_t)(mln_conf_t *, char *);
-     The first argument is a configuration object returned by mln_get_conf().
+     The first argument is a configuration object returned by mln_conf().
      The second argument is a string indicating the domain name.
      If domain is created or existent, the domain object (mln_conf_domain_t) will be returned. Otherwise, the return value is
      NULL.
@@ -810,28 +810,28 @@ Their definitions can be found in melon/include/mln_types.h.
             Their value is 1 and 0 (type CONF_BOOL) recorded in variable 'b' of union 'val' in an item object.
 
      There are some other interfaces we need to know.
-     a) mln_conf_t *mln_get_conf(void);
+     a) mln_conf_t *mln_conf(void);
         It gets a 'mln_conf_t' object.
         Then we can use its 'search' to find out the domain that we need.
         The return value won't be NULL until Melon crashed.
 
-     b) mln_u32_t mln_conf_get_ncmd(mln_conf_t *cf, char *domain);
+     b) mln_u32_t mln_conf_cmd_num(mln_conf_t *cf, char *domain);
         It returns the number of commands in the domain.
         If domain is not existent, NULL will be returned.
 
-     c) void mln_conf_get_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **vector);
+     c) void mln_conf_cmds(mln_conf_t *cf, char *domain, mln_conf_cmd_t **vector);
         It puts all commands in the domain into the third argument.
         Vector should be allocated before calling.
 
-     d) mln_u32_t mln_conf_get_narg(mln_conf_cmd_t *cc);
+     d) mln_u32_t mln_conf_arg_num(mln_conf_cmd_t *cc);
         It returns the number of items which belong to 'cc'.
 
-     e) mln_conf_hook_t *mln_conf_set_hook(reload_handler reload, void *data);
+     e) mln_conf_hook_t *mln_conf_hook_set(reload_handler reload, void *data);
         This interface is used to set a callback function which is used to reload one or more configuration items.
         The return value is a pointer indicating a chain node, which can be used to unset the hook.
         If memory is not enough, NULL will be returned.
 
-     f) void mln_conf_unset_hook(mln_conf_hook_t *hook);
+     f) void mln_conf_hook_unset(mln_conf_hook_t *hook);
         This interface is used to unset a callback function which has been set in the global reload chain.
 
   11) Event
@@ -938,14 +938,14 @@ Their definitions can be found in melon/include/mln_types.h.
             III. M_C_SENT
                  Indicating the sent chain.
 
-     d) mln_chain_t *mln_tcp_conn_get_head(mln_tcp_conn_t *tc, int type);
+     d) mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type);
         Get the first chain node pointer from a chain in 'tc'.
         'type' is the same as 'mln_tcp_conn_set'.
 
      e) mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type);
         Remove and return the chain that 'type' indicates in 'tc'.
 
-     f) mln_chain_t *mln_tcp_conn_get_tail(mln_tcp_conn_t *tc, int type);
+     f) mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type);
         Get the last chain node from the chain that is indicated by 'type' from 'tc'.
 
      g) void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chain_t *c_tail, int type);
@@ -967,13 +967,13 @@ Their definitions can be found in melon/include/mln_types.h.
             III. M_C_TYPE_FILE
                  Store the receive data in a temporary file.
 
-     k) mln_tcp_conn_get_fd(pconn);
+     k) mln_tcp_conn_fd_get(pconn);
         Return the socket file descriptor of 'pconn' (its type is mln_tcp_conn_t).
 
-     l) mln_tcp_conn_set_fd(pconn, fd);
+     l) mln_tcp_conn_fd_set(pconn, fd);
         Set 'fd' to the socket file descriptor in 'pconn'.
 
-     m) mln_tcp_conn_get_pool(pconn);
+     m) mln_tcp_conn_pool_get(pconn);
         Return the pool object pointer of 'pconn'.
 
      n) mln_tcp_conn_send_empty(pconn);
@@ -1350,7 +1350,7 @@ Their definitions can be found in melon/include/mln_types.h.
      d) void mln_file_close(mln_file_t *pfile);
         Close a file. If 'pfile' is a regular file, it will be cached in its file set. Otherwise, it will be freed.
 
-     e) mln_file_t *mln_file_open_tmp(mln_alloc_t *pool);
+     e) mln_file_t *mln_file_tmp_open(mln_alloc_t *pool);
         Open a temporary file. This file will be created and opened with 'O_RDWR'.
 
      f) mln_file_fd(pfile);
@@ -1568,25 +1568,25 @@ Their definitions can be found in melon/include/mln_types.h.
      d) mln_string_t *mln_json_generate(mln_json_t *j);
         Generate a JSON string.
 
-     e) mln_json_t *mln_json_search_value(mln_json_t *j, mln_string_t *key);
+     e) mln_json_t *mln_json_value_search(mln_json_t *j, mln_string_t *key);
         Search the JSON object value via 'key'.
 
-     f) mln_json_t *mln_json_search_element(mln_json_t *j, mln_uauto_t index);
+     f) mln_json_t *mln_json_element_search(mln_json_t *j, mln_uauto_t index);
         Search the element from a JSON array.
 
-     g) mln_uauto_t mln_json_get_array_length(mln_json_t *j);
+     g) mln_uauto_t mln_json_array_length(mln_json_t *j);
         Get JSON array length.
 
-     h) int mln_json_update_obj(mln_json_t *j, mln_json_t *key, mln_json_t *val);
+     h) int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val);
         Update JSON object key-value.
         If 'key' is existent, the old value will be replaced by 'val' and freed.
         The type of 'j' should be M_JSON_OBJECT or M_JSON_NONE.
 
-     i) int mln_json_add_element(mln_json_t *j, mln_json_t *value);
+     i) int mln_json_element_add(mln_json_t *j, mln_json_t *value);
         Add an element into a JSON array.
         The type of 'j' should be M_JSON_ARRAY or M_JSON_NONE.
 
-     j) int mln_json_update_element(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
+     j) int mln_json_element_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
         Update JSON array element.
         The old value where is located by 'index' will be replaced by 'value' and free if it is existent.
         The type of 'j' must be M_JSON_ARRAY.
@@ -1594,11 +1594,11 @@ Their definitions can be found in melon/include/mln_types.h.
      k) void mln_json_reset(mln_json_t *j);
         Reset a JSON object.
 
-     l) mln_json_t *mln_json_remove_object(mln_json_t *j, mln_string_t *key);
+     l) mln_json_t *mln_json_obj_remove(mln_json_t *j, mln_string_t *key);
         Remove a key-value couple from a JSON object.
         The type of 'j' must be M_JSON_OBJECT.
 
-     m) mln_json_t *mln_json_remove_element(mln_json_t *j, mln_uauto_t index);
+     m) mln_json_t *mln_json_element_remove(mln_json_t *j, mln_uauto_t index);
         Remove an element from a JSON object.
         The type of 'j' must be M_JSON_ARRAY.
 
@@ -3141,7 +3141,7 @@ Their definitions can be found in melon/include/mln_types.h.
        handler -- is a callback function to process everyone child process object.
        data -- is a user data.
    Melon also provides other interfaces:
-       1) mln_tcp_conn_t *mln_fork_get_master_connection(void);
+       1) mln_tcp_conn_t *mln_fork_master_connection_get(void);
           Get the connection that is used to communicate with master process.
 
        2) int mln_ipc_master_send_prepare(mln_event_t *ev,
@@ -3162,11 +3162,11 @@ Their definitions can be found in melon/include/mln_types.h.
           The functionality is the same as 'mln_ipc_master_send_prepare', but is provided for worker process.
           This function do not have argument 'f_child' cause worker process do not need it to locate master process.
 
-       4) int mln_set_master_ipc_handler(mln_u32_t type, ipc_handler handler, void *data);
+       4) int mln_fork_master_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data);
           This function allow you to register an IPC handler on master process.
           Note: if workers are forked, this function should be call by master process.
 
-       5) int mln_set_worker_ipc_handler(mln_u32_t type, ipc_handler handler, void *data);
+       5) int mln_fork_worker_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data);
           This function allow you to register an IPC handler on worker process.
           Note: if workers are forked, this function should be call by worker process.
 

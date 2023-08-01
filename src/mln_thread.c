@@ -135,11 +135,11 @@ mln_thread_destroy(mln_thread_t *t)
         }
         mln_log(report, "child thread pthread_join's exit code: %l\n", (intptr_t)tret);
     }
-    if (mln_tcp_conn_get_fd(&(t->conn)) >= 0)
-        mln_socket_close(mln_tcp_conn_get_fd(&(t->conn)));
-    c = mln_tcp_conn_get_head(&(t->conn), M_C_SEND);
+    if (mln_tcp_conn_fd_get(&(t->conn)) >= 0)
+        mln_socket_close(mln_tcp_conn_fd_get(&(t->conn)));
+    c = mln_tcp_conn_head(&(t->conn), M_C_SEND);
     mln_thread_itc_chain_release_msg(c);
-    c = mln_tcp_conn_get_head(&(t->conn), M_C_RECV);
+    c = mln_tcp_conn_head(&(t->conn), M_C_RECV);
     mln_thread_itc_chain_release_msg(c);
     mln_tcp_conn_destroy(&(t->conn));
     mln_thread_clear_msg_queue(t->ev, t);
@@ -196,13 +196,13 @@ int mln_load_thread(mln_event_t *ev)
         mln_log(error, "No memory.\n");
         return -1;
     }
-    mln_conf_t *cf = mln_get_conf();
+    mln_conf_t *cf = mln_conf();
     if (cf == NULL) {
         mln_log(error, "configuration messed up!\n");
         abort();
     }
 
-    mln_u32_t nr_cmds = mln_conf_get_ncmd(cf, thread_domain);
+    mln_u32_t nr_cmds = mln_conf_cmd_num(cf, thread_domain);
     if (nr_cmds == 0) return 0;
 
     mln_conf_cmd_t **v = (mln_conf_cmd_t **)calloc(nr_cmds, sizeof(mln_conf_cmd_t *));
@@ -212,7 +212,7 @@ int mln_load_thread(mln_event_t *ev)
         thread_tree = NULL;
         return -1;
     }
-    mln_conf_get_cmds(cf, thread_domain, v);
+    mln_conf_cmds(cf, thread_domain, v);
 
     mln_u32_t i;
     for (i = 0; i < nr_cmds; ++i) {
@@ -239,7 +239,7 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
                 cc->cmd_name, thread_domain);
         return;
     }
-    nr_args = mln_conf_get_narg(cc);
+    nr_args = mln_conf_arg_num(cc);
     if (nr_args < 1) {
         mln_log(error, "Invalid arguments in domain '%s'.\n", thread_domain);
         return;
@@ -355,7 +355,7 @@ static inline int __mln_thread_create(mln_thread_t *t)
     }
     mln_rbtree_insert(thread_tree, rn);
     if (mln_event_fd_set(t->ev, \
-                         mln_tcp_conn_get_fd(&(t->conn)), \
+                         mln_tcp_conn_fd_get(&(t->conn)), \
                          M_EV_RECV|M_EV_NONBLOCK, \
                          M_EV_UNLIMITED, \
                          t, \
@@ -371,7 +371,7 @@ static inline int __mln_thread_create(mln_thread_t *t)
     if ((err = pthread_create(&(t->tid), NULL, mln_thread_launcher, t)) != 0) {
         mln_log(error, "pthread_create error. %s\n", strerror(err));
         mln_event_fd_set(t->ev, \
-                         mln_tcp_conn_get_fd(&(t->conn)), \
+                         mln_tcp_conn_fd_get(&(t->conn)), \
                          M_EV_CLR, \
                          M_EV_UNLIMITED, \
                          NULL, \
@@ -394,7 +394,7 @@ mln_itc_get_buf_with_len(mln_tcp_conn_t *tc, void *buf, mln_size_t len)
     mln_buf_t *b;
     mln_u8ptr_t pos;
 
-    c = mln_tcp_conn_get_head(tc, M_C_RECV);
+    c = mln_tcp_conn_head(tc, M_C_RECV);
     for (; c != NULL; c = c->next) {
         if (c->buf == NULL || c->buf->pos == NULL) continue;
         size += mln_buf_left_size(c->buf);
@@ -403,7 +403,7 @@ mln_itc_get_buf_with_len(mln_tcp_conn_t *tc, void *buf, mln_size_t len)
     if (c == NULL) return -1;
 
     pos = buf;
-    while ((c = mln_tcp_conn_get_head(tc, M_C_RECV)) != NULL) {
+    while ((c = mln_tcp_conn_head(tc, M_C_RECV)) != NULL) {
         b = c->buf;
         if (b == NULL || b->pos == NULL) {
             mln_chain_pool_release(mln_tcp_conn_pop(tc, M_C_RECV));
@@ -508,7 +508,7 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
         target = (mln_thread_t *)mln_rbtree_node_data(rn);
         if (target->dest_head == NULL) {
             mln_event_fd_set(ev, \
-                             mln_tcp_conn_get_fd(&(target->conn)), \
+                             mln_tcp_conn_fd_get(&(target->conn)), \
                              M_EV_SEND|M_EV_ONESHOT|M_EV_NONBLOCK|M_EV_APPEND, \
                              M_EV_UNLIMITED, \
                              target, \
@@ -526,21 +526,21 @@ mln_main_thread_itc_send_handler(mln_event_t *ev, int fd, void *data)
     mln_thread_t *t = (mln_thread_t *)data;
     mln_thread_msgq_t *tmq;
     mln_tcp_conn_t *conn = &(t->conn);
-    mln_alloc_t *pool = mln_tcp_conn_get_pool(conn);
+    mln_alloc_t *pool = mln_tcp_conn_pool_get(conn);
     mln_chain_t *c;
     mln_buf_t *b;
     mln_u8ptr_t buf;
     int ret;
 
 again:
-    while ((c = mln_tcp_conn_get_head(conn, M_C_SEND)) != NULL) {
+    while ((c = mln_tcp_conn_head(conn, M_C_SEND)) != NULL) {
         ret = mln_tcp_conn_send(conn);
         if (ret == M_C_FINISH) {
             continue;
         } else if (ret == M_C_NOTYET) {
             mln_chain_pool_release_all(mln_tcp_conn_remove(conn, M_C_SENT));
             mln_event_fd_set(ev, \
-                             mln_tcp_conn_get_fd(&(t->conn)), \
+                             mln_tcp_conn_fd_get(&(t->conn)), \
                              M_EV_SEND|M_EV_ONESHOT|M_EV_NONBLOCK|M_EV_APPEND, \
                              M_EV_UNLIMITED, \
                              t, \
@@ -611,7 +611,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
     mln_rbtree_node_free(thread_tree, t->node);
     t->node = NULL;
     mln_event_fd_set(ev, \
-                     mln_tcp_conn_get_fd(&(t->conn)), \
+                     mln_tcp_conn_fd_get(&(t->conn)), \
                      M_EV_CLR, \
                      M_EV_UNLIMITED, \
                      NULL, \
@@ -637,7 +637,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
         t->argv[t->argc-1] = NULL;
     }
 
-    mln_socket_close(mln_tcp_conn_get_fd(&(t->conn)));
+    mln_socket_close(mln_tcp_conn_fd_get(&(t->conn)));
     c = mln_tcp_conn_remove(&(t->conn), M_C_SEND);
     mln_thread_itc_chain_release_msg(c);
     mln_chain_pool_release_all(c);
@@ -654,7 +654,7 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
         mln_thread_destroy(t);
         return -1;
     }
-    mln_tcp_conn_set_fd(&(t->conn), fds[0]);
+    mln_tcp_conn_fd_set(&(t->conn), fds[0]);
     t->peerfd = fds[1];
     if (__mln_thread_create(t) < 0) {
         mln_thread_destroy(t);
