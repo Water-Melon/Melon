@@ -981,7 +981,7 @@ static void mln_accept(mln_event_t *ev, int fd, void *data)
 static void mln_quit(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
-    mln_tcp_conn_t *connection = mln_http_get_connection(http);
+    mln_tcp_conn_t *connection = mln_http_connection_get(http);
 
     mln_event_fd_set(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     mln_http_destroy(http);
@@ -993,7 +993,7 @@ static void mln_quit(mln_event_t *ev, int fd, void *data)
 static void mln_recv(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
-    mln_tcp_conn_t *connection = mln_http_get_connection(http);
+    mln_tcp_conn_t *connection = mln_http_connection_get(http);
     int ret, rc = M_HTTP_RET_DONE;
     mln_chain_t *c;
 
@@ -1022,7 +1022,7 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
 
     if (mln_websocket_is_websocket(http) == M_WS_RET_OK) {
         mln_string_t ext = mln_string("Sec-WebSocket-Extensions");
-        mln_http_drop_field(http, &ext);
+        mln_http_field_remove(http, &ext);
         mln_websocket_t *ws = mln_websocket_new(http);
         if (ws == NULL) {
             mln_quit(ev, fd, data);
@@ -1038,13 +1038,13 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
         mln_websocket_send(ev, fd, ws);
     } else {
         mln_http_reset(http);
-        mln_http_set_status(http, M_HTTP_OK);
-        mln_http_set_version(http, M_HTTP_VERSION_1_1);
-        mln_http_set_type(http, M_HTTP_RESPONSE);
-        mln_http_set_handler(http, mln_http_send_body_handler);
+        mln_http_status_set(http, M_HTTP_OK);
+        mln_http_version_set(http, M_HTTP_VERSION_1_1);
+        mln_http_type_set(http, M_HTTP_RESPONSE);
+        mln_http_handler_set(http, mln_http_send_body_handler);
         mln_chain_t *body_head = NULL, *body_tail = NULL;
         if (mln_http_generate(http, &body_head, &body_tail) == M_HTTP_RET_ERROR) {
-            fprintf(stderr, "mln_http_generate() failed. %u\n", mln_http_get_error(http));
+            fprintf(stderr, "mln_http_generate() failed. %u\n", mln_http_error_get(http));
             mln_quit(ev, fd, data);
             return;
         }
@@ -1055,17 +1055,17 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
 
 static int mln_http_recv_body_handler(mln_http_t *http, mln_chain_t **in, mln_chain_t **nil)
 {
-    mln_u32_t method = mln_http_get_method(http);
+    mln_u32_t method = mln_http_method_get(http);
     if (method == M_HTTP_GET)
         return M_HTTP_RET_DONE;
-    mln_http_set_error(http, M_HTTP_NOT_IMPLEMENTED);
+    mln_http_error_set(http, M_HTTP_NOT_IMPLEMENTED);
     return M_HTTP_RET_ERROR;
 }
 
 static void mln_send(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
-    mln_tcp_conn_t *connection = mln_http_get_connection(http);
+    mln_tcp_conn_t *connection = mln_http_connection_get(http);
     mln_chain_t *c;
     int ret;
 
@@ -1124,7 +1124,7 @@ static void mln_websocket_recv(mln_event_t *ev, int fd, void *data)
 {
     mln_websocket_t *ws = (mln_websocket_t *)data;
     mln_http_t *http = mln_websocket_get_http(ws);
-    mln_tcp_conn_t *connection = mln_http_get_connection(ws);
+    mln_tcp_conn_t *connection = mln_http_connection_get(ws);
     int ret, rc;
     mln_chain_t *c;
 
@@ -1242,38 +1242,38 @@ lp:
 static int mln_http_send_body_handler(mln_http_t *http, mln_chain_t **body_head, mln_chain_t **body_tail)
 {
     mln_u8ptr_t buf;
-    mln_alloc_t *pool = mln_http_get_pool(http);
+    mln_alloc_t *pool = mln_http_pool_get(http);
     mln_string_t cttype_key = mln_string("Content-Type");
     mln_string_t cttype_val = mln_string("text/html");
 
     buf = mln_alloc_m(pool, 5);
     if (buf == NULL) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     memcpy(buf, "hello", 5);
 
-    if (mln_http_set_field(http, &cttype_key, &cttype_val) == M_HTTP_RET_ERROR) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+    if (mln_http_field_set(http, &cttype_key, &cttype_val) == M_HTTP_RET_ERROR) {
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
 
     mln_string_t ctlen_key = mln_string("Content-Length");
     mln_string_t ctlen_val = mln_string("5");
-    if (mln_http_set_field(http, &ctlen_key, &ctlen_val) == M_HTTP_RET_ERROR) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+    if (mln_http_field_set(http, &ctlen_key, &ctlen_val) == M_HTTP_RET_ERROR) {
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
 
     mln_chain_t *c = mln_chain_new(pool);
     if (c == NULL) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     mln_buf_t *b = mln_buf_new(pool);
     if (b == NULL) {
         mln_chain_pool_release(c);
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     c->buf = b;

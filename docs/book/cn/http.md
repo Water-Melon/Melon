@@ -84,10 +84,10 @@ int mln_http_generate(mln_http_t *http, mln_chain_t **out_head, mln_chain_t **ou
 
 
 
-#### mln_http_set_field
+#### mln_http_field_set
 
 ```c
-int mln_http_set_field(mln_http_t *http, mln_string_t *key, mln_string_t *val);
+int mln_http_field_set(mln_http_t *http, mln_string_t *key, mln_string_t *val);
 ```
 
 描述：设置HTTP头字段。若头字段`key`存在，则会将`val`替换原有值。
@@ -99,10 +99,10 @@ int mln_http_set_field(mln_http_t *http, mln_string_t *key, mln_string_t *val);
 
 
 
-#### mln_http_get_field
+#### mln_http_field_get
 
 ```c
-mln_string_t *mln_http_get_field(mln_http_t *http, mln_string_t *key);
+mln_string_t *mln_http_field_get(mln_http_t *http, mln_string_t *key);
 ```
 
 描述：获取HTTP头字段中键为`key`的值。
@@ -123,10 +123,10 @@ mln_string_t *mln_http_field_iterator(mln_http_t *http, mln_string_t *key);
 
 
 
-#### mln_http_drop_field
+#### mln_http_field_remove
 
 ```c
-void mln_http_drop_field(mln_http_t *http, mln_string_t *key);
+void mln_http_field_remove(mln_http_t *http, mln_string_t *key);
 ```
 
 描述：移除头字段`key`及其值。
@@ -147,10 +147,10 @@ void mln_http_dump(mln_http_t *http);
 
 
 
-#### mln_http_get_connection
+#### mln_http_connection_get
 
 ```c
-mln_http_get_connection(h)
+mln_http_connection_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中TCP链接结构。
@@ -159,10 +159,10 @@ mln_http_get_connection(h)
 
 
 
-#### mln_http_set_connection
+#### mln_http_connection_set
 
 ```c
-mln_http_set_connection(h,c)
+mln_http_connection_set(h,c)
 ```
 
 描述：将`mln_http_t`类型的`h`中TCP链接结构设置为`mln_tcp_conn_t`类型的`c`。
@@ -171,10 +171,10 @@ mln_http_set_connection(h,c)
 
 
 
-#### mln_http_get_pool
+#### mln_http_pool_get
 
 ```c
-mln_http_get_pool(h)
+mln_http_pool_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中内存池结构。
@@ -183,10 +183,10 @@ mln_http_get_pool(h)
 
 
 
-#### mln_http_set_pool
+#### mln_http_pool_set
 
 ```c
-mln_http_set_pool(h,p)
+mln_http_pool_set(h,p)
 ```
 
 描述：将`mln_http_t`类型的`h`中内存池设置为`mln_alloc_t`类型的`p`。
@@ -195,10 +195,10 @@ mln_http_set_pool(h,p)
 
 
 
-#### mln_http_get_data
+#### mln_http_data_get
 
 ```c
-mln_http_get_data(h)
+mln_http_data_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中辅助体处理函数的用户自定义数据。
@@ -207,10 +207,10 @@ mln_http_get_data(h)
 
 
 
-#### mln_http_set_data
+#### mln_http_data_set
 
 ```c
-mln_http_set_data(h,d)
+mln_http_data_set(h,d)
 ```
 
 描述：将`mln_http_t`类型的`h`中辅助体处理函数的用户自定义数据设置为`d`。
@@ -219,10 +219,10 @@ mln_http_set_data(h,d)
 
 
 
-#### mln_http_get_uri
+#### mln_http_uri_get
 
 ```c
-mln_http_get_uri(h)
+mln_http_uri_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中URI字符串。
@@ -231,10 +231,10 @@ mln_http_get_uri(h)
 
 
 
-#### mln_http_set_uri
+#### mln_http_uri_set
 
 ```c
-mln_http_set_uri(h,u)
+mln_http_uri_set(h,u)
 ```
 
 描述：将`mln_http_t`类型的`h`中URI设置为`mln_string_t`类型指针的`u`。
@@ -243,10 +243,10 @@ mln_http_set_uri(h,u)
 
 
 
-#### mln_http_get_args
+#### mln_http_args_get
 
 ```c
-mln_http_get_args(h)
+mln_http_args_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中参数字符串。
@@ -255,10 +255,10 @@ mln_http_get_args(h)
 
 
 
-#### mln_http_set_args
+#### mln_http_args_set
 
 ```c
-mln_http_set_args(h,a)
+mln_http_args_set(h,a)
 ```
 
 描述：将`mln_http_t`类型的`h`中参数设置为`mln_string_t`类型指针的`a`。
@@ -267,10 +267,10 @@ mln_http_set_args(h,a)
 
 
 
-#### mln_http_get_status
+#### mln_http_status_get
 
 ```c
-mln_http_get_status(h)
+mln_http_status_get(h)
 
 
 ```
@@ -281,10 +281,10 @@ mln_http_get_status(h)
 
 
 
-#### mln_http_set_status
+#### mln_http_status_set
 
 ```c
-mln_http_set_status(h,s)
+mln_http_status_set(h,s)
 ```
 
 描述：将`mln_http_t`类型的`h`中响应状态字设置为整型的`s`。
@@ -293,10 +293,10 @@ mln_http_set_status(h,s)
 
 
 
-#### mln_http_get_method
+#### mln_http_method_get
 
 ```c
-mln_http_get_method(h)
+mln_http_method_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中方法字段
@@ -314,10 +314,10 @@ mln_http_get_method(h)
 
 
 
-#### mln_http_set_method
+#### mln_http_method_set
 
 ```c
-mln_http_set_method(h,m)
+mln_http_method_set(h,m)
 ```
 
 描述：将`mln_http_t`类型的`h`中请求方法设置为`m`，`m`的可用值参考`mln_http_get_method`的返回值部分。
@@ -326,10 +326,10 @@ mln_http_set_method(h,m)
 
 
 
-#### mln_http_get_version
+#### mln_http_version_get
 
 ```c
-mln_http_get_version(h)
+mln_http_version_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中HTTP版本
@@ -341,22 +341,22 @@ mln_http_get_version(h)
 
 
 
-#### mln_http_set_version
+#### mln_http_version_set
 
 ```c
-mln_http_set_version(h,v)
+mln_http_version_set(h,v)
 ```
 
-描述：将`mln_http_t`类型的`h`中的HTTP版本号为`v`，`v`的取值参考`mln_http_get_version`的返回值。
+描述：将`mln_http_t`类型的`h`中的HTTP版本号为`v`，`v`的取值参考`mln_http_version_get`的返回值。
 
 返回值：无
 
 
 
-#### mln_http_get_type
+#### mln_http_type_get
 
 ```c
-mln_http_get_type(h)
+mln_http_type_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中HTTP类型，即请求还是响应。
@@ -369,22 +369,22 @@ mln_http_get_type(h)
 
 
 
-#### mln_http_set_type
+#### mln_http_type_set
 
 ```c
-mln_http_set_type(h,t)
+mln_http_type_set(h,t)
 ```
 
-描述：将`mln_http_t`类型的`h`中报文类型设置为`t`，`t`的取值参考`mln_http_get_type`的返回值。
+描述：将`mln_http_t`类型的`h`中报文类型设置为`t`，`t`的取值参考`mln_http_type_get`的返回值。
 
 返回值：无
 
 
 
-#### mln_http_get_handler
+#### mln_http_handler_get
 
 ```c
-mln_http_get_handler(h)
+mln_http_handler_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中体处理函数指针。
@@ -393,10 +393,10 @@ mln_http_get_handler(h)
 
 
 
-#### mln_http_set_handler
+#### mln_http_handler_set
 
 ```c
-mln_http_set_handler(h,hlr)
+mln_http_handler_set(h,hlr)
 ```
 
 描述：将`mln_http_t`类型的`h`中提处理函数设置为`mln_http_handler`类型的`hlr`。
@@ -405,10 +405,10 @@ mln_http_set_handler(h,hlr)
 
 
 
-#### mln_http_get_response_msg
+#### mln_http_response_msg_get
 
 ```c
-mln_http_get_response_msg(h)
+mln_http_response_msg_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中响应信息，即类似：Bad Request 或 Internal Server Error等字符串。
@@ -417,10 +417,10 @@ mln_http_get_response_msg(h)
 
 
 
-#### mln_http_set_response_msg
+#### mln_http_response_msg_set
 
 ```c
-mln_http_set_response_msg(h,m)
+mln_http_response_msg_set(h,m)
 ```
 
 描述：将`mln_http_t`类型的`h`中响应信息设置为`mln_string_t`类型指针的`m`。
@@ -429,10 +429,10 @@ mln_http_set_response_msg(h,m)
 
 
 
-#### mln_http_get_error
+#### mln_http_error_get
 
 ```c
-mln_http_get_error(h)
+mln_http_error_get(h)
 
 #define M_HTTP_CONTINUE                        100
 #define M_HTTP_SWITCHING_PROTOCOLS             101
@@ -497,22 +497,22 @@ mln_http_get_error(h)
 
 
 
-#### mln_http_set_error
+#### mln_http_error_set
 
 ```c
-mln_http_set_error(h,e)
+mln_http_error_set(h,e)
 ```
 
-描述：将`mln_http_t`类型的`h`中错误信息设置为`e`，`e`的取值参见`mln_http_get_error`中的宏定义。
+描述：将`mln_http_t`类型的`h`中错误信息设置为`e`，`e`的取值参见`mln_http_error_get`中的宏定义。
 
 返回值：无
 
 
 
-#### mln_http_get_header
+#### mln_http_header_get
 
 ```c
-mln_http_get_header(h)
+mln_http_header_get(h)
 ```
 
 描述：获取类型为`mln_http_t`的`h`中头字段结构。
@@ -648,7 +648,7 @@ static void mln_accept(mln_event_t *ev, int fd, void *data)
 static void mln_quit(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
-    mln_tcp_conn_t *connection = mln_http_get_connection(http);
+    mln_tcp_conn_t *connection = mln_http_connection_get(http);
 
     mln_event_fd_set(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     mln_http_destroy(http);
@@ -660,7 +660,7 @@ static void mln_quit(mln_event_t *ev, int fd, void *data)
 static void mln_recv(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
-    mln_tcp_conn_t *connection = mln_http_get_connection(http);
+    mln_tcp_conn_t *connection = mln_http_connection_get(http);
     int ret, rc;
     mln_chain_t *c;
 
@@ -680,7 +680,7 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
                 } else if (rc == M_HTTP_RET_DONE) {
                     mln_send(ev, fd, data);
                 } else {
-                    fprintf(stderr, "Http parse error. error_code:%u\n", mln_http_get_error(http));
+                    fprintf(stderr, "Http parse error. error_code:%u\n", mln_http_error_get(http));
                     mln_quit(ev, fd, data);
                     return;
                 }
@@ -694,7 +694,7 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
                     mln_tcp_conn_append_chain(connection, c, NULL, M_C_RECV);
                 }
                 if (rc == M_HTTP_RET_ERROR) {
-                    fprintf(stderr, "Http parse error. error_code:%u\n", mln_http_get_error(http));
+                    fprintf(stderr, "Http parse error. error_code:%u\n", mln_http_error_get(http));
                 }
             }
             mln_quit(ev, fd, data);
@@ -708,29 +708,29 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
 
 static int mln_http_recv_body_handler(mln_http_t *http, mln_chain_t **in, mln_chain_t **nil)
 {
-    mln_u32_t method = mln_http_get_method(http);
+    mln_u32_t method = mln_http_method_get(http);
     if (method == M_HTTP_GET)
         return M_HTTP_RET_DONE;
-    mln_http_set_error(http, M_HTTP_NOT_IMPLEMENTED);
+    mln_http_error_set(http, M_HTTP_NOT_IMPLEMENTED);
     return M_HTTP_RET_ERROR;
 }
 
 static void mln_send(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
-    mln_tcp_conn_t *connection = mln_http_get_connection(http);
+    mln_tcp_conn_t *connection = mln_http_connection_get(http);
     mln_chain_t *c = mln_tcp_conn_head(connection, M_C_SEND);
     int ret;
 
     if (c == NULL) {
         mln_http_reset(http);
-        mln_http_set_status(http, M_HTTP_OK);
-        mln_http_set_version(http, M_HTTP_VERSION_1_0);
-        mln_http_set_type(http, M_HTTP_RESPONSE);
-        mln_http_set_handler(http, mln_http_send_body_handler);
+        mln_http_status_set(http, M_HTTP_OK);
+        mln_http_version_set(http, M_HTTP_VERSION_1_0);
+        mln_http_type_set(http, M_HTTP_RESPONSE);
+        mln_http_handler_set(http, mln_http_send_body_handler);
         mln_chain_t *body_head = NULL, *body_tail = NULL;
         if (mln_http_generate(http, &body_head, &body_tail) == M_HTTP_RET_ERROR) {
-            fprintf(stderr, "mln_http_generate() failed. %u\n", mln_http_get_error(http));
+            fprintf(stderr, "mln_http_generate() failed. %u\n", mln_http_error_get(http));
             mln_quit(ev, fd, data);
             return;
         }
@@ -759,38 +759,38 @@ static void mln_send(mln_event_t *ev, int fd, void *data)
 static int mln_http_send_body_handler(mln_http_t *http, mln_chain_t **body_head, mln_chain_t **body_tail)
 {
     mln_u8ptr_t buf;
-    mln_alloc_t *pool = mln_http_get_pool(http);
+    mln_alloc_t *pool = mln_http_pool_get(http);
     mln_string_t cttype_key = mln_string("Content-Type");
     mln_string_t cttype_val = mln_string("text/html");
 
     buf = mln_alloc_m(pool, 5);
     if (buf == NULL) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     memcpy(buf, "hello", 5);
 
-    if (mln_http_set_field(http, &cttype_key, &cttype_val) == M_HTTP_RET_ERROR) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+    if (mln_http_field_set(http, &cttype_key, &cttype_val) == M_HTTP_RET_ERROR) {
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
 
     mln_string_t ctlen_key = mln_string("Content-Length");
     mln_string_t ctlen_val = mln_string("5");
-    if (mln_http_set_field(http, &ctlen_key, &ctlen_val) == M_HTTP_RET_ERROR) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+    if (mln_http_field_set(http, &ctlen_key, &ctlen_val) == M_HTTP_RET_ERROR) {
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
 
     mln_chain_t *c = mln_chain_new(pool);
     if (c == NULL) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     mln_buf_t *b = mln_buf_new(pool);
     if (b == NULL) {
         mln_chain_pool_release(c);
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     c->buf = b;

@@ -84,10 +84,10 @@ return value:
 
 
 
-#### mln_http_set_field
+#### mln_http_field_set
 
 ```c
-int mln_http_set_field(mln_http_t *http, mln_string_t *key, mln_string_t *val);
+int mln_http_field_set(mln_http_t *http, mln_string_t *key, mln_string_t *val);
 ```
 
 Description: Set the HTTP header field. If the header field `key` exists, `val` will be replaced with the original value.
@@ -99,10 +99,10 @@ return value:
 
 
 
-#### mln_http_get_field
+#### mln_http_field_get
 
 ```c
-mln_string_t *mln_http_get_field(mln_http_t *http, mln_string_t *key);
+mln_string_t *mln_http_field_get(mln_http_t *http, mln_string_t *key);
 ```
 
 Description: Get the value of the key `key` in the HTTP header field.
@@ -123,10 +123,10 @@ Return value: return value string structure pointer if successful, otherwise ret
 
 
 
-#### mln_http_drop_field
+#### mln_http_field_remove
 
 ```c
-void mln_http_drop_field(mln_http_t *http, mln_string_t *key);
+void mln_http_field_remove(mln_http_t *http, mln_string_t *key);
 ```
 
 Description: Remove header field `key` and its value.
@@ -147,10 +147,10 @@ Return value: none
 
 
 
-#### mln_http_get_connection
+#### mln_http_connection_get
 
 ```c
-mln_http_get_connection(h)
+mln_http_connection_get(h)
 ```
 
 Description: Get the TCP link structure in `h` of type `mln_http_t`.
@@ -159,10 +159,10 @@ Return value: `mln_tcp_conn_t` type pointer
 
 
 
-#### mln_http_set_connection
+#### mln_http_connection_set
 
 ```c
-mln_http_set_connection(h,c)
+mln_http_connection_set(h,c)
 ```
 
 Description: Set the TCP connection structure in `h` of type `mln_http_t` to `c` of type `mln_tcp_conn_t`.
@@ -171,10 +171,10 @@ Return value: none
 
 
 
-#### mln_http_get_pool
+#### mln_http_pool_get
 
 ```c
-mln_http_get_pool(h)
+mln_http_pool_get(h)
 ```
 
 Description: Get the memory pool structure in `h` of type `mln_http_t`.
@@ -183,10 +183,10 @@ Return value: pointer of type `mln_alloc_t`
 
 
 
-#### mln_http_set_pool
+#### mln_http_pool_set
 
 ```c
-mln_http_set_pool(h,p)
+mln_http_pool_set(h,p)
 ```
 
 Description: Set the memory pool in `h` of type `mln_http_t` to `p` of type `mln_alloc_t`.
@@ -195,10 +195,10 @@ Return value: none
 
 
 
-#### mln_http_get_data
+#### mln_http_data_get
 
 ```c
-mln_http_get_data(h)
+mln_http_data_get(h)
 ```
 
 Description: Get the user-defined data of the auxiliary body handler function in `h` of type `mln_http_t`.
@@ -207,10 +207,10 @@ Return value: user-defined data pointer
 
 
 
-#### mln_http_set_data
+#### mln_http_data_set
 
 ```c
-mln_http_set_data(h,d)
+mln_http_data_set(h,d)
 ```
 
 Description: Set the user-defined data of the auxiliary body handler in `h` of type `mln_http_t` to `d`.
@@ -219,10 +219,10 @@ Return value: none
 
 
 
-#### mln_http_get_uri
+#### mln_http_uri_get
 
 ```c
-mln_http_get_uri(h)
+mln_http_uri_get(h)
 ```
 
 Description: Get the URI string in `h` of type `mln_http_t`.
@@ -231,10 +231,10 @@ Return value: pointer of type `mln_string_t`
 
 
 
-#### mln_http_set_uri
+#### mln_http_uri_set
 
 ```c
-mln_http_set_uri(h,u)
+mln_http_uri_set(h,u)
 ```
 
 Description: Set the URI in `h` of type `mln_http_t` to `u` of pointer of type `mln_string_t`.
@@ -243,10 +243,10 @@ Return value: none
 
 
 
-#### mln_http_get_args
+#### mln_http_args_get
 
 ```c
-mln_http_get_args(h)
+mln_http_args_get(h)
 ```
 
 Description: Get the parameter string in `h` of type `mln_http_t`.
@@ -255,10 +255,10 @@ Return value: pointer of type `mln_string_t`
 
 
 
-#### mln_http_set_args
+#### mln_http_args_set
 
 ```c
-mln_http_set_args(h,a)
+mln_http_args_set(h,a)
 ```
 
 Description: Set the parameter in `h` of type `mln_http_t` to `a` of type pointer of `mln_string_t`.
@@ -267,10 +267,10 @@ Return value: none
 
 
 
-#### mln_http_get_status
+#### mln_http_status_get
 
 ```c
-mln_http_get_status(h)
+mln_http_status_get(h)
 
 
 ```
@@ -281,10 +281,10 @@ Return value: Integer status word
 
 
 
-#### mln_http_set_status
+#### mln_http_status_set
 
 ```c
-mln_http_set_status(h,s)
+mln_http_status_set(h,s)
 ```
 
 Description: Set the response status word in `h` of type `mln_http_t` to `s` of type integer.
@@ -293,10 +293,10 @@ Return value: none
 
 
 
-#### mln_http_get_method
+#### mln_http_method_get
 
 ```c
-mln_http_get_method(h)
+mln_http_method_get(h)
 ```
 
 Description: Get the method field in `h` of type `mln_http_t`
@@ -326,10 +326,10 @@ Return value: none
 
 
 
-#### mln_http_get_version
+#### mln_http_version_get
 
 ```c
-mln_http_get_version(h)
+mln_http_version_get(h)
 ```
 
 Description: Get the HTTP version in `h` of type `mln_http_t`
@@ -341,22 +341,22 @@ return value:
 
 
 
-#### mln_http_set_version
+#### mln_http_version_set
 
 ```c
-mln_http_set_version(h,v)
+mln_http_version_set(h,v)
 ```
 
-Description: Set the HTTP version number in `h` of type `mln_http_t` to `v`, and refer to the return value of `mln_http_get_version` for the value of `v`.
+Description: Set the HTTP version number in `h` of type `mln_http_t` to `v`, and refer to the return value of `mln_http_version_get` for the value of `v`.
 
 Return value: none
 
 
 
-#### mln_http_get_type
+#### mln_http_type_get
 
 ```c
-mln_http_get_type(h)
+mln_http_type_get(h)
 ```
 
 Description: Get the HTTP type in `h` of type `mln_http_t`, that is, request or response.
@@ -369,22 +369,22 @@ return value:
 
 
 
-#### mln_http_set_type
+#### mln_http_type_set
 
 ```c
-mln_http_set_type(h,t)
+mln_http_type_set(h,t)
 ```
 
-Description: Set the packet type in `h` of type `mln_http_t` to `t`. The value of `t` refers to the return value of `mln_http_get_type`.
+Description: Set the packet type in `h` of type `mln_http_t` to `t`. The value of `t` refers to the return value of `mln_http_type_get`.
 
 Return value: none
 
 
 
-#### mln_http_get_handler
+#### mln_http_handler_get
 
 ```c
-mln_http_get_handler(h)
+mln_http_handler_get(h)
 ```
 
 Description: Get the `h` body handler pointer of type `mln_http_t`.
@@ -393,10 +393,10 @@ Return value: function pointer of type `mln_http_handler`
 
 
 
-#### mln_http_set_handler
+#### mln_http_handler_set
 
 ```c
-mln_http_set_handler(h,hlr)
+mln_http_handler_set(h,hlr)
 ```
 
 Description: Set the `h` handler function of type `mln_http_t` to `hlr` of type `mln_http_handler`.
@@ -405,10 +405,10 @@ Return value: none
 
 
 
-#### mln_http_get_response_msg
+#### mln_http_response_msg_get
 
 ```c
-mln_http_get_response_msg(h)
+mln_http_response_msg_get(h)
 ```
 
 Description: Get the response information in `h` of type `mln_http_t`, that is, strings like: Bad Request or Internal Server Error.
@@ -417,10 +417,10 @@ Return value: pointer of type `mln_string_t`
 
 
 
-#### mln_http_set_response_msg
+#### mln_http_response_msg_set
 
 ```c
-mln_http_set_response_msg(h,m)
+mln_http_response_msg_set(h,m)
 ```
 
 Description: Set the response information in `h` of type `mln_http_t` to `m` of type `mln_string_t` pointer.
@@ -429,10 +429,10 @@ Return value: none
 
 
 
-#### mln_http_get_error
+#### mln_http_error_get
 
 ```c
-mln_http_get_error(h)
+mln_http_error_get(h)
 
 #define M_HTTP_CONTINUE                        100
 #define M_HTTP_SWITCHING_PROTOCOLS             101
@@ -497,22 +497,22 @@ Return value: the error value defined by the macro
 
 
 
-#### mln_http_set_error
+#### mln_http_error_set
 
 ```c
-mln_http_set_error(h,e)
+mln_http_error_set(h,e)
 ```
 
-Description: Set the error message in `h` of type `mln_http_t` to `e`. For the value of `e`, see the macro definition in `mln_http_get_error`.
+Description: Set the error message in `h` of type `mln_http_t` to `e`. For the value of `e`, see the macro definition in `mln_http_error_get`.
 
 Return value: none
 
 
 
-#### mln_http_get_header
+#### mln_http_header_get
 
 ```c
-mln_http_get_header(h)
+mln_http_header_get(h)
 ```
 
 Description: Get the header field structure in `h` of type `mln_http_t`.
@@ -648,7 +648,7 @@ static void mln_accept(mln_event_t *ev, int fd, void *data)
 static void mln_quit(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
-    mln_tcp_conn_t *connection = mln_http_get_connection(http);
+    mln_tcp_conn_t *connection = mln_http_connection_get(http);
 
     mln_event_fd_set(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     mln_http_destroy(http);
@@ -660,7 +660,7 @@ static void mln_quit(mln_event_t *ev, int fd, void *data)
 static void mln_recv(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
-    mln_tcp_conn_t *connection = mln_http_get_connection(http);
+    mln_tcp_conn_t *connection = mln_http_connection_get(http);
     int ret, rc;
     mln_chain_t *c;
 
@@ -680,7 +680,7 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
                 } else if (rc == M_HTTP_RET_DONE) {
                     mln_send(ev, fd, data);
                 } else {
-                    fprintf(stderr, "Http parse error. error_code:%u\n", mln_http_get_error(http));
+                    fprintf(stderr, "Http parse error. error_code:%u\n", mln_http_error_get(http));
                     mln_quit(ev, fd, data);
                     return;
                 }
@@ -694,7 +694,7 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
                     mln_tcp_conn_append_chain(connection, c, NULL, M_C_RECV);
                 }
                 if (rc == M_HTTP_RET_ERROR) {
-                    fprintf(stderr, "Http parse error. error_code:%u\n", mln_http_get_error(http));
+                    fprintf(stderr, "Http parse error. error_code:%u\n", mln_http_error_get(http));
                 }
             }
             mln_quit(ev, fd, data);
@@ -708,29 +708,29 @@ static void mln_recv(mln_event_t *ev, int fd, void *data)
 
 static int mln_http_recv_body_handler(mln_http_t *http, mln_chain_t **in, mln_chain_t **nil)
 {
-    mln_u32_t method = mln_http_get_method(http);
+    mln_u32_t method = mln_http_method_get(http);
     if (method == M_HTTP_GET)
         return M_HTTP_RET_DONE;
-    mln_http_set_error(http, M_HTTP_NOT_IMPLEMENTED);
+    mln_http_error_set(http, M_HTTP_NOT_IMPLEMENTED);
     return M_HTTP_RET_ERROR;
 }
 
 static void mln_send(mln_event_t *ev, int fd, void *data)
 {
     mln_http_t *http = (mln_http_t *)data;
-    mln_tcp_conn_t *connection = mln_http_get_connection(http);
+    mln_tcp_conn_t *connection = mln_http_connection_get(http);
     mln_chain_t *c = mln_tcp_conn_head(connection, M_C_SEND);
     int ret;
 
     if (c == NULL) {
         mln_http_reset(http);
-        mln_http_set_status(http, M_HTTP_OK);
-        mln_http_set_version(http, M_HTTP_VERSION_1_0);
-        mln_http_set_type(http, M_HTTP_RESPONSE);
-        mln_http_set_handler(http, mln_http_send_body_handler);
+        mln_http_status_set(http, M_HTTP_OK);
+        mln_http_version_set(http, M_HTTP_VERSION_1_0);
+        mln_http_type_set(http, M_HTTP_RESPONSE);
+        mln_http_handler_set(http, mln_http_send_body_handler);
         mln_chain_t *body_head = NULL, *body_tail = NULL;
         if (mln_http_generate(http, &body_head, &body_tail) == M_HTTP_RET_ERROR) {
-            fprintf(stderr, "mln_http_generate() failed. %u\n", mln_http_get_error(http));
+            fprintf(stderr, "mln_http_generate() failed. %u\n", mln_http_error_get(http));
             mln_quit(ev, fd, data);
             return;
         }
@@ -759,38 +759,38 @@ static void mln_send(mln_event_t *ev, int fd, void *data)
 static int mln_http_send_body_handler(mln_http_t *http, mln_chain_t **body_head, mln_chain_t **body_tail)
 {
     mln_u8ptr_t buf;
-    mln_alloc_t *pool = mln_http_get_pool(http);
+    mln_alloc_t *pool = mln_http_pool_get(http);
     mln_string_t cttype_key = mln_string("Content-Type");
     mln_string_t cttype_val = mln_string("text/html");
 
     buf = mln_alloc_m(pool, 5);
     if (buf == NULL) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     memcpy(buf, "hello", 5);
 
-    if (mln_http_set_field(http, &cttype_key, &cttype_val) == M_HTTP_RET_ERROR) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+    if (mln_http_field_set(http, &cttype_key, &cttype_val) == M_HTTP_RET_ERROR) {
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
 
     mln_string_t ctlen_key = mln_string("Content-Length");
     mln_string_t ctlen_val = mln_string("5");
-    if (mln_http_set_field(http, &ctlen_key, &ctlen_val) == M_HTTP_RET_ERROR) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+    if (mln_http_field_set(http, &ctlen_key, &ctlen_val) == M_HTTP_RET_ERROR) {
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
 
     mln_chain_t *c = mln_chain_new(pool);
     if (c == NULL) {
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     mln_buf_t *b = mln_buf_new(pool);
     if (b == NULL) {
         mln_chain_pool_release(c);
-        mln_http_set_error(http, M_HTTP_INTERNAL_SERVER_ERROR);
+        mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
         return M_HTTP_RET_ERROR;
     }
     c->buf = b;

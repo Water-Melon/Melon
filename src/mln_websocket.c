@@ -26,7 +26,7 @@ static mln_u32_t mln_websocket_masking_key_generate(void);
 int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
 {
     struct mln_hash_attr hattr;
-    hattr.pool = mln_http_get_pool(http);
+    hattr.pool = mln_http_pool_get(http);
     hattr.pool_alloc = (hash_pool_alloc_handler)mln_alloc_m;
     hattr.pool_free = (hash_pool_free_handler)mln_alloc_free;
     hattr.hash = mln_websocket_hash_calc;
@@ -38,8 +38,8 @@ int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
     hattr.calc_prime = 0;
 
     ws->http = http;
-    ws->pool = mln_http_get_pool(http);
-    ws->connection = mln_http_get_connection(http);
+    ws->pool = mln_http_pool_get(http);
+    ws->connection = mln_http_connection_get(http);
     if ((ws->fields = mln_hash_new(&hattr)) == NULL) return -1;
     ws->uri = ws->args = ws->key = NULL;
 
@@ -84,7 +84,7 @@ static void mln_websocket_hash_free(void *data)
 
 mln_websocket_t *mln_websocket_new(mln_http_t *http)
 {
-    mln_websocket_t *ws = (mln_websocket_t *)mln_alloc_m(mln_http_get_pool(http), sizeof(mln_websocket_t));
+    mln_websocket_t *ws = (mln_websocket_t *)mln_alloc_m(mln_http_pool_get(http), sizeof(mln_websocket_t));
     if (ws == NULL) return NULL;
     if (mln_websocket_init(ws, http) < 0) {
         free(ws);
@@ -151,29 +151,29 @@ int mln_websocket_is_websocket(mln_http_t *http)
 {
     mln_string_t key = mln_string("Upgrade");
     mln_string_t val = mln_string("websocket");
-    mln_string_t *tmp = mln_http_get_field(http, &key);
+    mln_string_t *tmp = mln_http_field_get(http, &key);
     if (tmp == NULL || mln_string_strcasecmp(&val, tmp)) return M_WS_RET_NOTWS;
-    if (mln_http_get_type(http) != M_HTTP_REQUEST) return M_WS_RET_ERROR;
+    if (mln_http_type_get(http) != M_HTTP_REQUEST) return M_WS_RET_ERROR;
     return M_WS_RET_OK;
 }
 
 int mln_websocket_validate(mln_websocket_t *ws)
 {
     mln_http_t *http = ws->http;
-    if (mln_http_get_status(http) != M_HTTP_SWITCHING_PROTOCOLS) return M_WS_RET_NOTWS;
+    if (mln_http_status_get(http) != M_HTTP_SWITCHING_PROTOCOLS) return M_WS_RET_NOTWS;
 
     mln_string_t upgrade_key = mln_string("Upgrade");
     mln_string_t upgrade_val = mln_string("websocket");
     mln_string_t connection_key = mln_string("Connection");
     mln_string_t *tmp;
 
-    tmp = mln_http_get_field(http, &upgrade_key);
+    tmp = mln_http_field_get(http, &upgrade_key);
     if (tmp == NULL || mln_string_strcasecmp(tmp, &upgrade_val)) return M_WS_RET_NOTWS;
-    tmp = mln_http_get_field(http, &connection_key);
+    tmp = mln_http_field_get(http, &connection_key);
     if (tmp == NULL || mln_string_strcasecmp(tmp, &upgrade_key)) return M_WS_RET_NOTWS;
     int ret = mln_websocket_validate_accept(http, ws->key);
     if (ret != M_WS_RET_OK) return ret;
-    if (mln_http_get_type(http) != M_HTTP_RESPONSE) return M_WS_RET_ERROR;
+    if (mln_http_type_get(http) != M_HTTP_RESPONSE) return M_WS_RET_ERROR;
 
     return M_WS_RET_OK;
 }
@@ -182,9 +182,9 @@ static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey)
 {
     mln_sha1_t s;
     mln_sha1_init(&s);
-    mln_alloc_t *pool = mln_http_get_pool(http);
+    mln_alloc_t *pool = mln_http_pool_get(http);
     mln_string_t key = mln_string("Sec-WebSocket-Accept");
-    mln_string_t *val = mln_http_get_field(http, &key);
+    mln_string_t *val = mln_http_field_get(http, &key);
     if (val == NULL) return M_WS_RET_NOTWS;
     char guid[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -235,7 +235,7 @@ int mln_websocket_match(mln_websocket_t *ws)
 
 static int mln_websocket_match_iterate_handler(void *key, void *val, void *data)
 {
-    mln_string_t *tmp = mln_http_get_field((mln_http_t *)data, (mln_string_t *)key);
+    mln_string_t *tmp = mln_http_field_get((mln_http_t *)data, (mln_string_t *)key);
     if (tmp == NULL) return -1;
     if (val != NULL && mln_reg_match(val, tmp, NULL, NULL) <= 0) return -1;
     return 0;
@@ -273,10 +273,10 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
     }
 
     mln_http_reset(http);
-    mln_http_set_status(http, M_HTTP_SWITCHING_PROTOCOLS);
-    mln_http_set_version(http, M_HTTP_VERSION_1_1);
-    mln_http_set_type(http, M_HTTP_RESPONSE);
-    mln_http_set_handler(http, NULL);
+    mln_http_status_set(http, M_HTTP_SWITCHING_PROTOCOLS);
+    mln_http_version_set(http, M_HTTP_VERSION_1_1);
+    mln_http_type_set(http, M_HTTP_RESPONSE);
+    mln_http_handler_set(http, NULL);
 
     mln_string_t upgrade_key = mln_string("Upgrade");
     mln_string_t upgrade_val = mln_string("websocket");
@@ -285,7 +285,7 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
 
 
     if (protocol_val != NULL) {
-        if (mln_http_set_field(http, &protocol_key, protocol_val) != M_HTTP_RET_OK) {
+        if (mln_http_field_set(http, &protocol_key, protocol_val) != M_HTTP_RET_OK) {
             if (protocol_val != NULL) mln_string_free(protocol_val);
             if (extension_val != NULL) mln_string_free(extension_val);
             if (accept != NULL) mln_string_free(accept);
@@ -293,18 +293,18 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
         }
     }
     if (extension_val != NULL) {
-        if (mln_http_set_field(http, &extension_key, extension_val) != M_HTTP_RET_OK) {
+        if (mln_http_field_set(http, &extension_key, extension_val) != M_HTTP_RET_OK) {
             if (extension_val != NULL) mln_string_free(extension_val);
             if (accept != NULL) mln_string_free(accept);
             return M_WS_RET_FAILED;
         }
     }
-    if (mln_http_set_field(http, &accept_key, accept) != M_HTTP_RET_OK) {
+    if (mln_http_field_set(http, &accept_key, accept) != M_HTTP_RET_OK) {
         mln_string_free(accept);
         return M_WS_RET_FAILED;
     }
-    if (mln_http_set_field(http, &upgrade_key, &upgrade_val) != M_HTTP_RET_OK) return M_WS_RET_FAILED;
-    if (mln_http_set_field(http, &connection_key, &upgrade_key) != M_HTTP_RET_OK) return M_WS_RET_FAILED;
+    if (mln_http_field_set(http, &upgrade_key, &upgrade_val) != M_HTTP_RET_OK) return M_WS_RET_FAILED;
+    if (mln_http_field_set(http, &connection_key, &upgrade_key) != M_HTTP_RET_OK) return M_WS_RET_FAILED;
 
     if (mln_hash_iterate(ws->fields, mln_websocket_iterate_set_fields, http) < 0)
         return M_WS_RET_FAILED;
@@ -363,16 +363,16 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
 
 static int mln_websocket_iterate_set_fields(void *key, void *val, void *data)
 {
-    return mln_http_set_field((mln_http_t *)data, (mln_string_t *)key, (mln_string_t *)val)==M_HTTP_RET_OK?0:-1;
+    return mln_http_field_set((mln_http_t *)data, (mln_string_t *)key, (mln_string_t *)val)==M_HTTP_RET_OK?0:-1;
 }
 
 static mln_string_t *mln_websocket_accept_field(mln_http_t *http)
 {
     mln_sha1_t s;
     mln_sha1_init(&s);
-    mln_alloc_t *pool = mln_http_get_pool(http);
+    mln_alloc_t *pool = mln_http_pool_get(http);
     mln_string_t key = mln_string("Sec-WebSocket-Key");
-    mln_string_t *val = mln_http_get_field(http, &key);
+    mln_string_t *val = mln_http_field_get(http, &key);
     char guid[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     mln_u8ptr_t buf = (mln_u8ptr_t)mln_alloc_m(pool, val->len+sizeof(guid));
@@ -415,12 +415,12 @@ int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **
     }
 
     mln_http_reset(http);
-    mln_http_set_method(http, M_HTTP_GET);
-    mln_http_set_version(http, M_HTTP_VERSION_1_1);
-    mln_http_set_type(http, M_HTTP_REQUEST);
-    mln_http_set_uri(http, dup_uri);
-    if (dup_args != NULL) mln_http_set_args(http, dup_args);
-    mln_http_set_handler(http, NULL);
+    mln_http_method_set(http, M_HTTP_GET);
+    mln_http_version_set(http, M_HTTP_VERSION_1_1);
+    mln_http_type_set(http, M_HTTP_REQUEST);
+    mln_http_uri_set(http, dup_uri);
+    if (dup_args != NULL) mln_http_args_set(http, dup_args);
+    mln_http_handler_set(http, NULL);
 
     mln_string_t upgrade_key = mln_string("Upgrade");
     mln_string_t upgrade_val = mln_string("websocket");
@@ -430,13 +430,13 @@ int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **
     mln_string_t key_key = mln_string("Sec-WebSocket-Key");
     mln_string_t *key_val = mln_websocket_client_handshake_key_generate(pool);
     if (key_val == NULL) return M_WS_RET_FAILED;
-    if (mln_http_set_field(http, &key_key, key_val) < 0) {
+    if (mln_http_field_set(http, &key_key, key_val) < 0) {
         mln_string_free(key_val);
         return M_WS_RET_FAILED;
     }
-    if (mln_http_set_field(http, &upgrade_key, &upgrade_val) < 0) return M_WS_RET_FAILED;
-    if (mln_http_set_field(http, &connection_key, &upgrade_key) < 0) return M_WS_RET_FAILED;
-    if (mln_http_set_field(http, &version_key, &version_val) < 0) return M_WS_RET_FAILED;
+    if (mln_http_field_set(http, &upgrade_key, &upgrade_val) < 0) return M_WS_RET_FAILED;
+    if (mln_http_field_set(http, &connection_key, &upgrade_key) < 0) return M_WS_RET_FAILED;
+    if (mln_http_field_set(http, &version_key, &version_val) < 0) return M_WS_RET_FAILED;
 
     if (mln_hash_iterate(ws->fields, mln_websocket_iterate_set_fields, http) < 0)
         return M_WS_RET_FAILED;

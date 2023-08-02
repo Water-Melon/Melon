@@ -60,20 +60,20 @@ struct mln_asn1_deresult_s {
     mln_u32_t                   free:1;
 };
 
-#define mln_asn1_deresult_get_pool(pres)         ((pres)->pool)
-#define mln_asn1_deresult_get_class(pres)        ((pres)->_class)
-#define mln_asn1_deresult_get_ident(pres)        ((pres)->ident)
-#define mln_asn1_deresult_set_ident(pres,id)     ((pres)->ident = (id))
-#define mln_asn1_deresult_get_isstruct(pres)     ((pres)->is_struct)
-#define mln_asn1_deresult_get_code(pres)         ((pres)->code_buf)
-#define mln_asn1_deresult_get_code_length(pres)  ((pres)->code_len)
+#define mln_asn1_deresult_pool_get(pres)         ((pres)->pool)
+#define mln_asn1_deresult_class_get(pres)        ((pres)->_class)
+#define mln_asn1_deresult_ident_get(pres)        ((pres)->ident)
+#define mln_asn1_deresult_ident_set(pres,id)     ((pres)->ident = (id))
+#define mln_asn1_deresult_isstruct_get(pres)     ((pres)->is_struct)
+#define mln_asn1_deresult_code_get(pres)         ((pres)->code_buf)
+#define mln_asn1_deresult_code_length_get(pres)  ((pres)->code_len)
 #define mln_asn1_deresult_content_num(pres)      ((pres)->pos)
 
 extern mln_asn1_deresult_t *mln_asn1_decode_chain(mln_chain_t *in, int *err, mln_alloc_t *pool) __NONNULL3(1,2,3);
 extern mln_asn1_deresult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_alloc_t *pool) __NONNULL3(1,3,4);
 extern mln_asn1_deresult_t *mln_asn1_decode_ref(void *data, mln_u64_t len, int *err, mln_alloc_t *pool) __NONNULL3(1,3,4);
 extern void mln_asn1_deresult_free(mln_asn1_deresult_t *res);
-extern mln_asn1_deresult_t *mln_asn1_deresult_get_content(mln_asn1_deresult_t *res, mln_u32_t index) __NONNULL1(1);
+extern mln_asn1_deresult_t *mln_asn1_deresult_content_get(mln_asn1_deresult_t *res, mln_u32_t index) __NONNULL1(1);
 extern void mln_asn1_deresult_dump(mln_asn1_deresult_t *res);
 
 
@@ -88,15 +88,15 @@ typedef struct {
     mln_u32_t                ident:29;
 } mln_asn1_enresult_t;
 
-#define mln_asn1_enresult_set_pool(pres,p)             ((pres)->pool = (p))
-#define mln_asn1_enresult_get_pool(pres)               ((pres)->pool)
-#define mln_asn1_enresult_set_class(pres,c)            ((pres)->_class = (c))
-#define mln_asn1_enresult_get_class(pres)              ((pres)->_class)
-#define mln_asn1_enresult_set_isstruct(pres)           ((pres)->is_struct = 1)
-#define mln_asn1_enresult_reset_isstruct(pres)         ((pres)->is_struct = 0)
-#define mln_asn1_enresult_get_isstruct(pres)           ((pres)->is_struct)
-#define mln_asn1_enresult_set_ident(pres,id)           ((pres)->ident = (id))
-#define mln_asn1_enresult_get_ident(pres)              ((pres)->ident)
+#define mln_asn1_enresult_pool_set(pres,p)             ((pres)->pool = (p))
+#define mln_asn1_enresult_pool_get(pres)               ((pres)->pool)
+#define mln_asn1_enresult_class_set(pres,c)            ((pres)->_class = (c))
+#define mln_asn1_enresult_class_get(pres)              ((pres)->_class)
+#define mln_asn1_enresult_isstruct_set(pres)           ((pres)->is_struct = 1)
+#define mln_asn1_enresult_isstruct_reset(pres)         ((pres)->is_struct = 0)
+#define mln_asn1_enresult_isstruct_get(pres)           ((pres)->is_struct)
+#define mln_asn1_enresult_ident_set(pres,id)           ((pres)->ident = (id))
+#define mln_asn1_enresult_ident_get(pres)              ((pres)->ident)
 
 extern int mln_asn1_enresult_init(mln_asn1_enresult_t *res, mln_alloc_t *pool) __NONNULL2(1,2);
 extern void mln_asn1_enresult_destroy(mln_asn1_enresult_t *res);

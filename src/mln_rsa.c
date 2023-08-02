@@ -668,7 +668,7 @@ static inline mln_string_t *mln_EMSAPKCS1V15_decode(mln_alloc_t *pool, mln_strin
         return NULL;
     }
 
-    if (mln_asn1_deresult_get_ident(res) != M_ASN1_ID_SEQUENCE || \
+    if (mln_asn1_deresult_ident_get(res) != M_ASN1_ID_SEQUENCE || \
         mln_asn1_deresult_content_num(res) != 2)
     {
 err:
@@ -677,21 +677,21 @@ err:
     }
 
 
-    sub_res = mln_asn1_deresult_get_content(res, 0);
-    if (mln_asn1_deresult_get_ident(sub_res) != M_ASN1_ID_SEQUENCE || \
+    sub_res = mln_asn1_deresult_content_get(res, 0);
+    if (mln_asn1_deresult_ident_get(sub_res) != M_ASN1_ID_SEQUENCE || \
         mln_asn1_deresult_content_num(sub_res) != 2)
     {
         goto err;
     }
-    ssub_res = mln_asn1_deresult_get_content(sub_res, 0);
-    if (mln_asn1_deresult_get_ident(ssub_res) != M_ASN1_ID_OBJECT_IDENTIFIER) {
+    ssub_res = mln_asn1_deresult_content_get(sub_res, 0);
+    if (mln_asn1_deresult_ident_get(ssub_res) != M_ASN1_ID_OBJECT_IDENTIFIER) {
         goto err;
     }
-    if ((ssub_res = mln_asn1_deresult_get_content(ssub_res, 0)) == NULL) {
+    if ((ssub_res = mln_asn1_deresult_content_get(ssub_res, 0)) == NULL) {
         goto err;
     }
-    code_buf = mln_asn1_deresult_get_code(ssub_res);
-    code_len = mln_asn1_deresult_get_code_length(ssub_res);
+    code_buf = mln_asn1_deresult_code_get(ssub_res);
+    code_len = mln_asn1_deresult_code_length_get(ssub_res);
     mln_string_nset(&tmp, code_buf, code_len);
     p = EMSAPKCS1V15_HASH;
     end = EMSAPKCS1V15_HASH + sizeof(EMSAPKCS1V15_HASH)/sizeof(struct mln_EMSAPKCS1V15_HASH_s);
@@ -702,26 +702,26 @@ err:
     if (p >= end) goto err;
     *hash_type = p - EMSAPKCS1V15_HASH;
 
-    ssub_res = mln_asn1_deresult_get_content(sub_res, 1);
-    if (mln_asn1_deresult_get_ident(ssub_res) != M_ASN1_ID_NULL || \
+    ssub_res = mln_asn1_deresult_content_get(sub_res, 1);
+    if (mln_asn1_deresult_ident_get(ssub_res) != M_ASN1_ID_NULL || \
         mln_asn1_deresult_content_num(ssub_res) != 1)
     {
         goto err;
     }
-    ssub_res = mln_asn1_deresult_get_content(ssub_res, 0);
-    if (mln_asn1_deresult_get_code_length(ssub_res) != 0) {
+    ssub_res = mln_asn1_deresult_content_get(ssub_res, 0);
+    if (mln_asn1_deresult_code_length_get(ssub_res) != 0) {
         goto err;
     }
     
 
-    sub_res = mln_asn1_deresult_get_content(res, 1);
-    if (mln_asn1_deresult_get_ident(sub_res) != M_ASN1_ID_OCTET_STRING || \
+    sub_res = mln_asn1_deresult_content_get(res, 1);
+    if (mln_asn1_deresult_ident_get(sub_res) != M_ASN1_ID_OCTET_STRING || \
         mln_asn1_deresult_content_num(sub_res) != 1)
     {
         goto err;
     }
-    sub_res = mln_asn1_deresult_get_content(sub_res, 0);
-    mln_string_nset(&tmp, mln_asn1_deresult_get_code(sub_res), mln_asn1_deresult_get_code_length(sub_res));
+    sub_res = mln_asn1_deresult_content_get(sub_res, 0);
+    mln_string_nset(&tmp, mln_asn1_deresult_code_get(sub_res), mln_asn1_deresult_code_length_get(sub_res));
     ret = mln_string_dup(&tmp);
     mln_asn1_deresult_free(res);
 

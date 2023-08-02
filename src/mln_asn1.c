@@ -203,7 +203,7 @@ inc:
     return res;
 }
 
-mln_asn1_deresult_t *mln_asn1_deresult_get_content(mln_asn1_deresult_t *res, mln_u32_t index)
+mln_asn1_deresult_t *mln_asn1_deresult_content_get(mln_asn1_deresult_t *res, mln_u32_t index)
 {
     if (res->contents == NULL) return NULL;
     if (res->pos <= index) return NULL;
@@ -487,7 +487,7 @@ int mln_asn1_encode_sequence(mln_asn1_enresult_t *res)
 
     mln_asn1_encode_length_calc(res->size, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -519,7 +519,7 @@ int mln_asn1_encode_boolean(mln_asn1_enresult_t *res, mln_u8_t val)
 
     mln_asn1_encode_length_calc(1, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -546,7 +546,7 @@ int mln_asn1_encode_integer(mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_
 
     mln_asn1_encode_length_calc(nints, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -573,7 +573,7 @@ int mln_asn1_encode_bitstring(mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u6
 
     mln_asn1_encode_length_calc(bytes, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -606,7 +606,7 @@ int mln_asn1_encode_octetstring(mln_asn1_enresult_t *res, mln_u8ptr_t octets, ml
 
     mln_asn1_encode_length_calc(n, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -627,7 +627,7 @@ int mln_asn1_encode_octetstring(mln_asn1_enresult_t *res, mln_u8ptr_t octets, ml
 int mln_asn1_encode_null(mln_asn1_enresult_t *res)
 {
     mln_u8ptr_t buf;
-    mln_alloc_t *pool = mln_asn1_enresult_get_pool(res);
+    mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
 
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, 2)) == NULL) {
         return M_ASN1_RET_ERROR;
@@ -652,7 +652,7 @@ int mln_asn1_encode_object_identifier(mln_asn1_enresult_t *res, mln_u8ptr_t oid,
 
     mln_asn1_encode_length_calc(n, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -678,7 +678,7 @@ int mln_asn1_encode_utf8string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_
 
     mln_asn1_encode_length_calc(slen, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -709,7 +709,7 @@ int mln_asn1_encode_printablestring(mln_asn1_enresult_t *res, mln_s8ptr_t s, mln
 
     mln_asn1_encode_length_calc(slen, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -735,7 +735,7 @@ int mln_asn1_encode_t61string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t
 
     mln_asn1_encode_length_calc(slen, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -761,7 +761,7 @@ int mln_asn1_encode_ia5string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t
 
     mln_asn1_encode_length_calc(slen, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -792,7 +792,7 @@ int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time)
 
     mln_asn1_encode_length_calc(13, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -833,7 +833,7 @@ int mln_asn1_encode_generalized_time(mln_asn1_enresult_t *res, time_t time)
 
     mln_asn1_encode_length_calc(15, len);
 
-    pool = mln_asn1_enresult_get_pool(res);
+    pool = mln_asn1_enresult_pool_get(res);
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
@@ -869,7 +869,7 @@ int mln_asn1_encode_set(mln_asn1_enresult_t *res)
 {
     mln_u64_t len = 0;
     mln_u8ptr_t buf = NULL, p;
-    mln_alloc_t *pool = mln_asn1_enresult_get_pool(res);
+    mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
     mln_string_t *s, *send;
 
     mln_asn1_encode_length_calc(res->size, len);
@@ -908,7 +908,7 @@ int mln_asn1_encode_setof(mln_asn1_enresult_t *res)
 {
     mln_u64_t len = 0;
     mln_u8ptr_t buf = NULL, p;
-    mln_alloc_t *pool = mln_asn1_enresult_get_pool(res);
+    mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
     mln_string_t *s, *send;
 
     mln_asn1_encode_length_calc(res->size, len);
@@ -950,7 +950,7 @@ static int mln_encode_setof_cmp(const void *data1, const void *data2)
 int mln_asn1_encode_merge(mln_asn1_enresult_t *dest, mln_asn1_enresult_t *src)
 {
     mln_string_t *s, *send;
-    mln_alloc_t *pool = mln_asn1_enresult_get_pool(dest);
+    mln_alloc_t *pool = mln_asn1_enresult_pool_get(dest);
     mln_u8ptr_t buf;
 
     send = src->contents + src->pos;
@@ -971,7 +971,7 @@ int mln_asn1_encode_trans_chain_once(mln_asn1_enresult_t *res, mln_chain_t **hea
     mln_chain_t *c;
     mln_buf_t *b;
     mln_string_t *s, *send;
-    mln_alloc_t *pool = mln_asn1_enresult_get_pool(res);
+    mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
 
     send = res->contents + res->pos;
     for (s = res->contents; s < send; ++s) {

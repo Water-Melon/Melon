@@ -1383,100 +1383,100 @@ Their definitions can be found in melon/include/mln_types.h.
            M_HTTP_RET_DONE:  parse complete and no error.
            M_HTTP_RET_OK:    parse incomplete and no error.
            M_HTTP_RET_ERROR: parse error.
-        If an error ocurred, we can get the error code via mln_http_get_error().
+        If an error ocurred, we can get the error code via mln_http_error_get().
         All parsed entries can be found in 'http'. we can use these functions below here to operate there entries.
 
      e) int mln_http_generate(mln_http_t *http, mln_chain_t **out_head, mln_chain_t **out_tail);
         Generate a HTTP packet.
         Return value: see mln_http_parse().
 
-     f) int mln_http_set_field(mln_http_t *http, mln_string_t *key, mln_string_t *val);
+     f) int mln_http_field_set(mln_http_t *http, mln_string_t *key, mln_string_t *val);
         Set a field in a HTTP header.
 
-     g) mln_string_t *mln_http_get_field(mln_http_t *http, mln_string_t *key);
+     g) mln_string_t *mln_http_field_get(mln_http_t *http, mln_string_t *key);
         Get a field from a HTTP header.
 
      h) mln_string_t *mln_http_field_iterator(mln_http_t *http, mln_string_t *key);
         Get all values from some fields those keys are the same one.
 
-     i) void mln_http_drop_field(mln_http_t *http, mln_string_t *key);
+     i) void mln_http_field_remove(mln_http_t *http, mln_string_t *key);
         Remove the field from the HTTP header field, which is indicated by 'key'.
 
-     j) mln_http_get_connection(h);
+     j) mln_http_connection_get(h);
         Get the tcp connection.
 
-     k) mln_http_set_connection(h,c);
+     k) mln_http_connection_set(h,c);
         Set the tcp connection.
 
-     l) mln_http_get_pool(h);
+     l) mln_http_pool_get(h);
         Get the memory pool.
 
-     m) mln_http_set_pool(h,p);
+     m) mln_http_pool_set(h,p);
         Set the memory pool.
 
-     n) mln_http_get_data(h);
+     n) mln_http_data_get(h);
         Get the user data.
 
-     o) mln_http_set_data(h,d);
+     o) mln_http_data_set(h,d);
         Set the user data.
 
-     p) mln_http_get_uri(h);
+     p) mln_http_uri_get(h);
         Get the URI.
 
-     q) mln_http_set_uri(h,u);
+     q) mln_http_uri_set(h,u);
         Set the URI.
 
-     r) mln_http_get_args(h);
+     r) mln_http_args_get(h);
         Get the arguments.
 
-     s) mln_http_set_args(h,a);
+     s) mln_http_args_set(h,a);
         Set the arguments.
 
-     t) mln_http_get_status(h);
+     t) mln_http_status_get(h);
         Get the response status.
 
-     u) mln_http_set_status(h,s);
+     u) mln_http_status_set(h,s);
         Set the response status.
 
-     v) mln_http_get_method(h);
+     v) mln_http_method_get(h);
         Get the request method.
 
-     w) mln_http_set_method(h,m);
+     w) mln_http_method_set(h,m);
         Set the request method.
 
-     x) mln_http_get_version(h);
+     x) mln_http_version_get(h);
         Get the HTTP version.
 
-     y) mln_http_set_version(h,v);
+     y) mln_http_version_set(h,v);
         Set the HTTP version.
 
-     z) mln_http_get_type(h);
+     z) mln_http_type_get(h);
         Get the type of a HTTP packet.
 
-     aa) mln_http_set_type(h,t);
+     aa) mln_http_type_set(h,t);
          Set the type of a HTTP packet.
 
-     ab) mln_http_get_handler(h);
+     ab) mln_http_handler_get(h);
          Get the callback handler.
 
-     ac) mln_http_set_handler(h,hlr);
+     ac) mln_http_handler_set(h,hlr);
          Set the callback handler.
 
-     ad) mln_http_get_response_msg(h);
+     ad) mln_http_response_msg_get(h);
          Get the response status string.
 
-     ae) mln_http_set_response_msg(h,m);
+     ae) mln_http_response_msg_set(h,m);
          Set the response status string.
          Actually, this function is not very useful. Because mln_http_generate() will generate a HTTP response
          status string depending on the status code.
 
-     af) mln_http_get_error(h);
+     af) mln_http_error_get(h);
          Get the error code.
 
-     ag) mln_http_set_error(h,e);
+     ag) mln_http_error_set(h,e);
          Set the error code.
 
-     ah) mln_http_get_header(h);
+     ah) mln_http_header_get(h);
          Get the header hash table object.
 
      ai) typedef int (*mln_http_handler)(mln_http_t *, mln_chain_t **, mln_chain_t **);
@@ -1492,7 +1492,7 @@ Their definitions can be found in melon/include/mln_types.h.
          Finally, we discuss the return value.
          The return values are the same as mln_http_parse().
          But there is a thing we should know. If there is an error occured, we should set the error code via
-         mln_http_set_error().
+         mln_http_error_set().
 
   21) Regular Expression
      Melon, now, has already support regular expression. And this capability is not relying on library pcre, but its
@@ -2372,22 +2372,22 @@ Their definitions can be found in melon/include/mln_types.h.
   33) ASN.1
       There are two parts, one is about decode, the other one is about encode.
       I. decode
-      a) mln_asn1_deresult_get_class(pres);
+      a) mln_asn1_deresult_class_get(pres);
          Get the class of decoded ASN.1 string.
 
-      b) mln_asn1_deresult_get_ident(pres);
+      b) mln_asn1_deresult_ident_get(pres);
          Get the identifier of decoded ASN1.1 string.
 
-      c) mln_asn1_deresult_set_ident(pres,id);
+      c) mln_asn1_deresult_ident_set(pres,id);
          Set the identifier.
 
-      d) mln_asn1_deresult_get_isstruct(pres);
+      d) mln_asn1_deresult_isstruct_get(pres);
          Test whether the decoded result is a structure or not.
 
-      e) mln_asn1_deresult_get_code(pres);
+      e) mln_asn1_deresult_code_get(pres);
          Get the ASN.1 code which is relative to the decoded result.
 
-      f) mln_asn1_deresult_get_code_length(pres);
+      f) mln_asn1_deresult_code_length_get(pres);
          Get the length of ASN.1 code which is relative to the decoded result.
 
       g) mln_asn1_deresult_content_num(pres);
@@ -2407,38 +2407,38 @@ Their definitions can be found in melon/include/mln_types.h.
       k) void mln_asn1_deresult_free(mln_asn1_deresult_t *res);
          Free 'mln_asn1_deresult_t' data.
 
-      l) mln_asn1_deresult_t *mln_asn1_deresult_get_content(mln_asn1_deresult_t *res, mln_u32_t index);
+      l) mln_asn1_deresult_t *mln_asn1_deresult_content_get(mln_asn1_deresult_t *res, mln_u32_t index);
          Get the sub-result which is indicated by 'index' from 'res'.
 
       m) void mln_asn1_deresult_dump(mln_asn1_deresult_t *res);
          Dump decoded result and its sub-results.
 
       II. encode
-      a) mln_asn1_enresult_set_pool(pres,p);
+      a) mln_asn1_enresult_pool_set(pres,p);
          Set a memory pool into a encode-result object.
 
-      b) mln_asn1_enresult_get_pool(pres);
+      b) mln_asn1_enresult_pool_get(pres);
          Get the memory from 'pres'.
 
-      c) mln_asn1_enresult_set_class(pres,c);
+      c) mln_asn1_enresult_class_set(pres,c);
          Set a class into 'pres'.
 
-      d) mln_asn1_enresult_get_class(pres);
+      d) mln_asn1_enresult_class_get(pres);
          Get the class from 'pres'.
 
-      e) mln_asn1_enresult_set_isstruct(pres);
+      e) mln_asn1_enresult_isstruct_set(pres);
          Set 'pres' to be a structure.
 
-      f) mln_asn1_enresult_reset_isstruct(pres);
+      f) mln_asn1_enresult_isstruct_reset(pres);
          Set 'pres' to be a non-structure.
 
-      g) mln_asn1_enresult_get_isstruct(pres);
+      g) mln_asn1_enresult_isstruct_get(pres);
          Get the flag of 'is_struct' for testing whether 'pres' is structure or not.
 
-      h) mln_asn1_enresult_set_ident(pres,id);
+      h) mln_asn1_enresult_ident_set(pres,id);
          Set an identifier into 'pres'.
 
-      i) mln_asn1_enresult_get_ident(pres);
+      i) mln_asn1_enresult_ident_get(pres);
          Get the identifier of 'pres'.
 
       j) int mln_asn1_enresult_init(mln_asn1_enresult_t *res, mln_alloc_t *pool);
