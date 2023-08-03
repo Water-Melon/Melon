@@ -284,7 +284,7 @@ static int global_init(void)
   
   cf = mln_conf();
   d = cf->search(cf, "main"); //如果main都不存在，那说明配追初始化有严重问题
-  c = d->search(cf, "daemon"); //这里我们获取daemon配置项
+  c = d->search(d, "daemon"); //这里我们获取daemon配置项
   if（c == NULL) {
     mln_log(error, "daemon not exist.\n");
     return -1;//出错返回

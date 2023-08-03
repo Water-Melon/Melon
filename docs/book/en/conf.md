@@ -284,7 +284,7 @@ static int global_init(void)
   
   cf = mln_conf();
   d = cf->search(cf, "main"); //If the main does not exist, it means that there is a serious problem with the configuration initialization.
-  c = d->search(cf, "daemon"); //Here we get the configuration item daemon
+  c = d->search(d, "daemon"); //Here we get the configuration item daemon
   if（c == NULL) {
     mln_log(error, "daemon not exist.\n");
     return -1;//return error
