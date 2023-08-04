@@ -274,6 +274,8 @@ Return value: the number of command item parameters
 ```c
 #include <stdio.h>
 #include "mln_core.h"
+#include "mln_conf.h"
+#include "mln_log.h"
 
 static int global_init(void)
 {
@@ -281,24 +283,24 @@ static int global_init(void)
   mln_conf_domain_t *d;
   mln_conf_cmd_t *c;
   mln_conf_item_t *i;
-  
+
   cf = mln_conf();
-  d = cf->search(cf, "main"); //If the main does not exist, it means that there is a serious problem with the configuration initialization.
-  c = d->search(d, "daemon"); //Here we get the configuration item daemon
-  if（c == NULL) {
+  d = cf->search(cf, "main"); //如果main都不存在，那说明配追初始化有严重问题
+  c = d->search(d, "daemon"); //这里我们获取daemon配置项
+  if (c == NULL) {
     mln_log(error, "daemon not exist.\n");
-    return -1;//return error
+    return -1;//出错返回
   }
-  i = c->search(c, 1); //The daemon has only one parameter in the configuration file, and the subscript of the configuration parameter starts from 1
+  i = c->search(c, 1); //daemon在配置文件中只有一个参数，配置参数的下标从1开始
   if (i == NULL) {
     mln_log(error, "Invalid daemon argument.\n");
     return -1;
   }
-  if (i->type != CONF_BOOL) { //daemon The parameter should be boolean
+  if (i->type != CONF_BOOL) { //daemon 参数应该为布尔开关量
     mln_log(error, "Invalid type of daemon argument.\n");
     return -1;
   }
-  mln_log(debug, "%u\n", i->val.b); //output boolean value
+  mln_log(debug, "%u\n", i->val.b); //输出布尔量的值
 
   return 0;
 }

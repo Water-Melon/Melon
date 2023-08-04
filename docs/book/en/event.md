@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    ev = mln_event_init(1);
+    ev = mln_event_new();
     if (ev == NULL) {
         mln_log(error, "event init failed.\n");
         return -1;

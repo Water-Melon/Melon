@@ -274,6 +274,8 @@ mln_u32_t mln_conf_arg_num(mln_conf_cmd_t *cc);
 ```c
 #include <stdio.h>
 #include "mln_core.h"
+#include "mln_conf.h"
+#include "mln_log.h"
 
 static int global_init(void)
 {
@@ -281,11 +283,11 @@ static int global_init(void)
   mln_conf_domain_t *d;
   mln_conf_cmd_t *c;
   mln_conf_item_t *i;
-  
+
   cf = mln_conf();
   d = cf->search(cf, "main"); //如果main都不存在，那说明配追初始化有严重问题
   c = d->search(d, "daemon"); //这里我们获取daemon配置项
-  if（c == NULL) {
+  if (c == NULL) {
     mln_log(error, "daemon not exist.\n");
     return -1;//出错返回
   }
