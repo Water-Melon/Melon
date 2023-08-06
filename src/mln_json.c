@@ -1077,7 +1077,7 @@ mln_json_t *mln_json_element_search(mln_json_t *j, mln_uauto_t index)
     mln_json_t json;
     mln_rbtree_node_t *rn;
     json.index = index;
-    rn = mln_rbtree_root_search(t, &json);
+    rn = mln_rbtree_search(t, &json);
     if (mln_rbtree_null(rn, t)) return NULL;
 
     return (mln_json_t *)mln_rbtree_node_data(rn);
@@ -1205,7 +1205,7 @@ int mln_json_element_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index)
     mln_rbtree_t *t = j->data.m_j_array;
 
     tmp.index = index;
-    rn = mln_rbtree_root_search(t, &tmp);
+    rn = mln_rbtree_search(t, &tmp);
     if (mln_rbtree_null(rn, t)) {
         M_JSON_SET_INDEX(value, index);
         rn = mln_rbtree_node_new(t, value);
@@ -1282,7 +1282,7 @@ mln_json_t *mln_json_element_remove(mln_json_t *j, mln_uauto_t index)
     if (t == NULL) return NULL;
 
     tmp.index = index;
-    rn = mln_rbtree_root_search(t, &tmp);
+    rn = mln_rbtree_search(t, &tmp);
     if (mln_rbtree_null(rn, t)) return NULL;
 
     mln_rbtree_delete(t, rn);

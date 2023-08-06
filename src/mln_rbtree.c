@@ -8,22 +8,7 @@
 #include<string.h>
 #include"mln_rbtree.h"
 
-MLN_CHAIN_FUNC_DECLARE(mln_rbtree, \
-                       mln_rbtree_node_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_rbtree, \
-                      mln_rbtree_node_t, \
-                      static inline void, \
-                      prev, \
-                      next);
-
 /*static declarations*/
-static inline void
-left_rotate(mln_rbtree_t *t, mln_rbtree_node_t *n) __NONNULL2(1,2);
-static inline void
-right_rotate(mln_rbtree_t *t, mln_rbtree_node_t *n) __NONNULL2(1,2);
-static inline void
-rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n) __NONNULL2(1,2);
 static inline mln_rbtree_node_t *
 rbtree_minimum(mln_rbtree_t *t, mln_rbtree_node_t *n) __NONNULL2(1,2);
 static inline void
@@ -36,15 +21,25 @@ mln_rbtree_t *
 mln_rbtree_new(struct mln_rbtree_attr *attr)
 {
     mln_rbtree_t *t;
-    if (attr->pool == NULL) {
+    if (attr == NULL || attr->pool == NULL) {
         t = (mln_rbtree_t *)malloc(sizeof(mln_rbtree_t));
     } else {
         t = (mln_rbtree_t *)attr->pool_alloc(attr->pool, sizeof(mln_rbtree_t));
     }
     if (t == NULL) return NULL;
-    t->pool = attr->pool;
-    t->pool_alloc = attr->pool_alloc;
-    t->pool_free = attr->pool_free;
+    if (attr == NULL) {
+        t->pool = NULL;
+        t->pool_alloc = NULL;
+        t->pool_free = NULL;
+        t->cmp = NULL;
+        t->data_free = NULL;
+    } else {
+        t->pool = attr->pool;
+        t->pool_alloc = attr->pool_alloc;
+        t->pool_free = attr->pool_free;
+        t->cmp = attr->cmp;
+        t->data_free = attr->data_free;
+    }
     t->nil.data = NULL;
     t->nil.parent = &(t->nil);
     t->nil.left = &(t->nil);
@@ -54,50 +49,33 @@ mln_rbtree_new(struct mln_rbtree_attr *attr)
     t->min = &(t->nil);
     t->head = t->tail = NULL;
     t->iter = NULL;
-    t->cmp = attr->cmp;
-    t->data_free = attr->data_free;
     t->nr_node = 0;
     t->del = 0;
     return t;
 }
 
-/*rbtree_destroy*/
-void
-mln_rbtree_free(mln_rbtree_t *t)
+/*rbtree free*/
+void mln_rbtree_free(mln_rbtree_t *t)
 {
-    if (t == NULL) return;
-
-    mln_rbtree_node_t *fr;
-
-    /*
-     * Warning: mln_lang_sys.c: mln_import is very dependent on this release order.
-     * This release order ensures that the resources of the dynamic extension library
-     * are released first, and then the import resources are released.
-     * If the import resource is released before the dynamic library resource,
-     * the function in the dynamic library cannot be read when the dynamic extension
-     * resource is released, and the program terminates abnormally.
-     */
-    while ((fr = t->tail) != NULL) {
-        mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
-        mln_rbtree_node_free(t, fr);
-    }
-    if (t->pool != NULL) t->pool_free(t);
-    else free(t);
+    mln_rbtree_inline_free(t, NULL);
 }
 
+/*rbtree reset*/
 void mln_rbtree_reset(mln_rbtree_t *t)
 {
-    mln_rbtree_node_t *fr;
-    while ((fr = t->tail) != NULL) {
-        mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
-        mln_rbtree_node_free(t, fr);
-    }
+    mln_rbtree_inline_reset(t, NULL);
+}
 
-    t->root = &(t->nil);
-    t->min = &(t->nil);
-    t->iter = NULL;
-    t->nr_node = 0;
-    t->del = 0;
+/*rbtree insert*/
+void mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *node)
+{
+    mln_rbtree_inline_insert(t, node, NULL);
+}
+
+/*rbtree search*/
+mln_rbtree_node_t *mln_rbtree_search(mln_rbtree_t *t, void *key)
+{
+    return mln_rbtree_inline_search(t, key, NULL);
 }
 
 /*rbtree successor*/
@@ -113,7 +91,7 @@ mln_rbtree_successor(mln_rbtree_t *t, mln_rbtree_node_t *n)
     return tmp;
 }
 
-/*rbtree new node*/
+/*rbtree node new*/
 mln_rbtree_node_t *
 mln_rbtree_node_new(mln_rbtree_t *t, void *data)
 {
@@ -125,119 +103,13 @@ mln_rbtree_node_new(mln_rbtree_t *t, void *data)
         n = (mln_rbtree_node_t *)t->pool_alloc(t->pool, sizeof(mln_rbtree_node_t));
     if (n == NULL) return NULL;
     n->data = data;
-    n->prev = n->next = NULL;
-    n->parent = &(t->nil);
-    n->left = &(t->nil);
-    n->right = &(t->nil);
     return n;
 }
 
-/*rbtree free node*/
-void
-mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n)
+/*rbtree node free*/
+void mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n)
 {
-    if (n->data != NULL && t->data_free != NULL)
-        t->data_free(n->data);
-    if (t->pool != NULL) t->pool_free(n);
-    else free(n);
-}
-
-/*Left rotate*/
-static inline void
-left_rotate(mln_rbtree_t *t, mln_rbtree_node_t *n)
-{
-    if (n->right == &(t->nil)) return;
-    mln_rbtree_node_t *tmp = n->right;
-    n->right = tmp->left;
-    if (tmp->left != &(t->nil)) tmp->left->parent = n;
-    tmp->parent = n->parent;
-    if (n->parent == &(t->nil)) t->root = tmp;
-    else if (n == n->parent->left) n->parent->left = tmp;
-    else n->parent->right = tmp;
-    tmp->left = n;
-    n->parent = tmp;
-}
-
-/*Right rotate*/
-static inline void
-right_rotate(mln_rbtree_t *t, mln_rbtree_node_t *n)
-{
-    if (n->left == &(t->nil)) return;
-    mln_rbtree_node_t *tmp = n->left;
-    n->left = tmp->right;
-    if (tmp->right != &(t->nil)) tmp->right->parent = n;
-    tmp->parent = n->parent;
-    if (n->parent == &(t->nil)) t->root = tmp;
-    else if (n==n->parent->right) n->parent->right = tmp;
-    else n->parent->left = tmp;
-    tmp->right = n;
-    n->parent = tmp;
-}
-
-/*Insert*/
-void
-mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *n)
-{
-    mln_rbtree_node_t *y = &(t->nil);
-    mln_rbtree_node_t *x = t->root;
-    while (x != &(t->nil)) {
-        y = x;
-        if (t->cmp(n->data, x->data) < 0) x = x->left;
-        else x = x->right;
-    }
-    n->parent = y;
-    if (y == &(t->nil)) t->root = n;
-    else if (t->cmp(n->data, y->data) < 0) y->left = n;
-    else y->right = n;
-    n->left = &(t->nil);
-    n->right = &(t->nil);
-    n->color = M_RB_RED;
-    rbtree_insert_fixup(t, n);
-    if (t->min == &(t->nil)) t->min = n;
-    else if (t->cmp(n->data, t->min->data) < 0) t->min = n;
-    ++(t->nr_node);
-    mln_rbtree_chain_add(&(t->head), &(t->tail), n);
-}
-
-/*insert fixup*/
-static inline void
-rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
-{
-    mln_rbtree_node_t *tmp;
-    while (n->parent->color == M_RB_RED) {
-        if (n->parent == n->parent->parent->left) {
-            tmp = n->parent->parent->right;
-            if (tmp->color == M_RB_RED) {
-                n->parent->color = M_RB_BLACK;
-                tmp->color = M_RB_BLACK;
-                n->parent->parent->color = M_RB_RED;
-                n = n->parent->parent;
-                continue;
-            } else if (n == n->parent->right) {
-                n = n->parent;
-                left_rotate(t, n);
-            }
-            n->parent->color = M_RB_BLACK;
-            n->parent->parent->color = M_RB_RED;
-            right_rotate(t, n->parent->parent);
-        } else {
-            tmp = n->parent->parent->left;
-            if (tmp->color == M_RB_RED) {
-                n->parent->color = M_RB_BLACK;
-                tmp->color = M_RB_BLACK;
-                n->parent->parent->color = M_RB_RED;
-                n = n->parent->parent;
-                continue;
-            } else if (n == n->parent->left) {
-                n = n->parent;
-                right_rotate(t, n);
-            }
-            n->parent->color = M_RB_BLACK;
-            n->parent->parent->color = M_RB_RED;
-            left_rotate(t, n->parent->parent);
-        }
-    }
-    t->root->color = M_RB_BLACK;
+    mln_rbtree_node_inline_free(t, n, NULL);
 }
 
 /*Tree Minimum*/
@@ -310,7 +182,7 @@ rbtree_delete_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
             if (tmp->color == M_RB_RED) {
                 tmp->color = M_RB_BLACK;
                 n->parent->color = M_RB_RED;
-                left_rotate(t, n->parent);
+                mln_rbtree_left_rotate(t, n->parent);
                 tmp = n->parent->right;
             }
             if ((tmp->left->color == M_RB_BLACK) && (tmp->right->color == M_RB_BLACK)) {
@@ -320,20 +192,20 @@ rbtree_delete_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
             } else if (tmp->right->color == M_RB_BLACK) {
                 tmp->left->color = M_RB_BLACK;
                 tmp->color = M_RB_RED;
-                right_rotate(t, tmp);
+                mln_rbtree_right_rotate(t, tmp);
                 tmp = n->parent->right;
             }
             tmp->color = n->parent->color;
             n->parent->color = M_RB_BLACK;
             tmp->right->color = M_RB_BLACK;
-            left_rotate(t, n->parent);
+            mln_rbtree_left_rotate(t, n->parent);
             n = t->root;
         } else {
             tmp = n->parent->left;
             if (tmp->color == M_RB_RED) {
                 tmp->color = M_RB_BLACK;
                 n->parent->color = M_RB_RED;
-                right_rotate(t, n->parent);
+                mln_rbtree_right_rotate(t, n->parent);
                 tmp = n->parent->left;
             }
             if ((tmp->right->color == M_RB_BLACK) && (tmp->left->color == M_RB_BLACK)) {
@@ -343,29 +215,17 @@ rbtree_delete_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
             } else if (tmp->left->color == M_RB_BLACK) {
                 tmp->right->color = M_RB_BLACK;
                 tmp->color = M_RB_RED;
-                left_rotate(t, tmp);
+                mln_rbtree_left_rotate(t, tmp);
                 tmp = n->parent->left;
             }
             tmp->color = n->parent->color;
             n->parent->color = M_RB_BLACK;
             tmp->left->color = M_RB_BLACK;
-            right_rotate(t, n->parent);
+            mln_rbtree_right_rotate(t, n->parent);
             n = t->root;
         }
     }
     n->color = M_RB_BLACK;
-}
-
-/*search*/
-mln_rbtree_node_t *
-mln_rbtree_search(mln_rbtree_t *t, mln_rbtree_node_t *root, const void *key)
-{
-    int ret;
-    while ((root != &(t->nil)) && ((ret = t->cmp(key, root->data)) != 0)) {
-        if (ret < 0) root = root->left;
-        else root = root->right;
-    }
-    return root;
 }
 
 /*min*/

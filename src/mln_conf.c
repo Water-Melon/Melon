@@ -476,7 +476,7 @@ mln_conf_domain_search(mln_conf_t *cf, char *domain_name)
     mln_conf_domain_t tmp;
     mln_string_set(&str, domain_name);
     tmp.domain_name = &str;
-    rn = mln_rbtree_root_search(cf->domain, &tmp);
+    rn = mln_rbtree_search(cf->domain, &tmp);
     if (mln_rbtree_null(rn, cf->domain)) return NULL;
     return (mln_conf_domain_t *)mln_rbtree_node_data(rn);
 }
@@ -510,7 +510,7 @@ mln_conf_domain_remove(mln_conf_t *cf, char *domain_name)
 
     mln_string_set(&dname, domain_name);
     cd.domain_name = &dname;
-    rn = mln_rbtree_root_search(cf->domain, &cd);
+    rn = mln_rbtree_search(cf->domain, &cd);
     if (!mln_rbtree_null(rn, cf->domain)) {
         mln_rbtree_delete(cf->domain, rn);
         mln_rbtree_node_free(cf->domain, rn);
@@ -580,7 +580,7 @@ mln_conf_cmd_search(mln_conf_domain_t *cd, char *cmd_name)
 
     cmd.cmd_name = &str;
     mln_string_set(&str, cmd_name);
-    rn = mln_rbtree_root_search(cd->cmd, &cmd);
+    rn = mln_rbtree_search(cd->cmd, &cmd);
     if (mln_rbtree_null(rn, cd->cmd)) return NULL;
     return (mln_conf_cmd_t *)mln_rbtree_node_data(rn);
 }
@@ -616,7 +616,7 @@ mln_conf_cmd_remove(mln_conf_domain_t *cd, char *cmd_name)
 
     mln_string_set(&cname, cmd_name);
     cmd.cmd_name = &cname;
-    rn = mln_rbtree_root_search(cd->cmd, &cmd);
+    rn = mln_rbtree_search(cd->cmd, &cmd);
     if (!mln_rbtree_null(rn, cd->cmd)) {
         mln_rbtree_delete(cd->cmd, rn);
         mln_rbtree_node_free(cd->cmd, rn);
@@ -865,7 +865,7 @@ int mln_conf_load(void)
 
     mln_string_set(&dname, default_domain);
     tmp.domain_name = &dname;
-    rn = mln_rbtree_root_search(g_conf->domain, &tmp);
+    rn = mln_rbtree_search(g_conf->domain, &tmp);
 
     cd = (mln_conf_domain_t *)mln_rbtree_node_data(rn);
     if (g_conf->lex != NULL) {

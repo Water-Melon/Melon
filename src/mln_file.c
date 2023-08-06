@@ -78,7 +78,7 @@ mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
 
     mln_string_set(&path, filepath);
     tmpf.file_path = &path;
-    rn = mln_rbtree_root_search(fs->reg_file_tree, &tmpf);
+    rn = mln_rbtree_search(fs->reg_file_tree, &tmpf);
     if (mln_rbtree_null(rn, fs->reg_file_tree)) {
         struct stat st;
 

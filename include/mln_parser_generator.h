@@ -402,7 +402,7 @@ PREFIX_NAME##_pg_create_token(struct PREFIX_NAME##_preprocess_attr *attr, PREFIX
 \
     mln_pg_token_t *tk, token;\
     token.type = *type_val;\
-    mln_rbtree_node_t *rn = mln_rbtree_root_search(attr->token_tree, &token);\
+    mln_rbtree_node_t *rn = mln_rbtree_search(attr->token_tree, &token);\
     if (mln_rbtree_null(rn, attr->token_tree)) {\
         tk = mln_pg_token_new(pgs->text, attr->nr_prod);\
         if (tk == NULL) {\

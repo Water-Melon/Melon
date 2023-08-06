@@ -542,7 +542,7 @@ int mln_lex_condition_test(mln_lex_t *lex)
     mln_lex_result_get(lex, &tmp);
     lm.key = &tmp;
     lm.val = NULL;
-    rn = mln_rbtree_root_search(lex->macros, &lm);
+    rn = mln_rbtree_search(lex->macros, &lm);
     mln_lex_result_clean(lex);
     if (mln_rbtree_null(rn, lex->macros)) {
         return reverse? 1: 0;

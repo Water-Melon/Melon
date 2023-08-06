@@ -409,7 +409,7 @@ int mln_fork_master_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *d
     mln_ipc_handler_t *ih = mln_ipc_handler_new(type, handler, data);
     if (ih == NULL) return -1;
 
-    mln_rbtree_node_t *rn = mln_rbtree_root_search(master_ipc_tree, ih);
+    mln_rbtree_node_t *rn = mln_rbtree_search(master_ipc_tree, ih);
     if (mln_rbtree_node_data(rn) != NULL) {
         mln_rbtree_delete(master_ipc_tree, rn);
         mln_rbtree_node_free(master_ipc_tree, rn);
@@ -428,7 +428,7 @@ int mln_fork_worker_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *d
     mln_ipc_handler_t *ih = mln_ipc_handler_new(type, handler, data);
     if (ih == NULL) return -1;
 
-    mln_rbtree_node_t *rn = mln_rbtree_root_search(worker_ipc_tree, ih);
+    mln_rbtree_node_t *rn = mln_rbtree_search(worker_ipc_tree, ih);
     if (mln_rbtree_node_data(rn) != NULL) {
         mln_rbtree_delete(worker_ipc_tree, rn);
         mln_rbtree_node_free(worker_ipc_tree, rn);
@@ -650,7 +650,7 @@ mln_ipc_fd_handler_master_process(mln_event_t *ev, mln_fork_t *f)
                 f->state = STATE_IDLE;
                 mln_ipc_handler_t ih;
                 ih.type = f->msg_type;
-                mln_rbtree_node_t *rn = mln_rbtree_root_search(master_ipc_tree, &ih);
+                mln_rbtree_node_t *rn = mln_rbtree_search(master_ipc_tree, &ih);
                 if (!mln_rbtree_null(rn, master_ipc_tree)) {
                     mln_ipc_handler_t *ihp = (mln_ipc_handler_t *)mln_rbtree_node_data(rn);
                     if (ihp->handler != NULL)
@@ -757,7 +757,7 @@ mln_ipc_fd_handler_worker_process(mln_event_t *ev, mln_tcp_conn_t *tc)
                 child_state = STATE_IDLE;
                 mln_ipc_handler_t ih;
                 ih.type = cur_msg_type;
-                mln_rbtree_node_t *rn = mln_rbtree_root_search(worker_ipc_tree, &ih);
+                mln_rbtree_node_t *rn = mln_rbtree_search(worker_ipc_tree, &ih);
                 if (!mln_rbtree_null(rn, worker_ipc_tree)) {
                     mln_ipc_handler_t *ihp = (mln_ipc_handler_t *)mln_rbtree_node_data(rn);
                     if (ihp->handler != NULL)

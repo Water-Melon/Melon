@@ -323,7 +323,7 @@ void mln_event_fd_timeout_handler_set(mln_event_t *event, \
     memset(&tmp, 0, sizeof(tmp));
     tmp.type = M_EV_FD;
     tmp.data.fd.fd = fd;
-    mln_rbtree_node_t *rn = mln_rbtree_root_search(event->ev_fd_tree, &tmp);
+    mln_rbtree_node_t *rn = mln_rbtree_search(event->ev_fd_tree, &tmp);
     if (mln_rbtree_null(rn, event->ev_fd_tree)) {
         mln_log(error, "No such file descriptor in RB-Tree.\n");
         abort();
@@ -360,7 +360,7 @@ int mln_event_fd_set(mln_event_t *event, \
     tmp.type = M_EV_FD;
     tmp.data.fd.fd = fd;
     mln_rbtree_node_t *rn;
-    rn = mln_rbtree_root_search(event->ev_fd_tree, &tmp);
+    rn = mln_rbtree_search(event->ev_fd_tree, &tmp);
     if (!mln_rbtree_null(rn, event->ev_fd_tree)) {
         if (flag & M_EV_APPEND) {
             if (flag & M_EV_NONBLOCK) mln_event_fd_nonblock_set(fd);
@@ -692,7 +692,7 @@ mln_event_fd_clr_set(mln_event_t *event, int fd)
     tmp.type = M_EV_FD;
     tmp.data.fd.fd = fd;
     mln_rbtree_node_t *rn;
-    rn = mln_rbtree_root_search(event->ev_fd_tree, &tmp);
+    rn = mln_rbtree_search(event->ev_fd_tree, &tmp);
     if (mln_rbtree_null(rn, event->ev_fd_tree)) {
         return;
     }

@@ -497,7 +497,7 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
         }
 
         tmp.alias = m->dest;
-        rn = mln_rbtree_root_search(thread_tree, &tmp);
+        rn = mln_rbtree_search(thread_tree, &tmp);
         if (mln_rbtree_null(rn, thread_tree)) {
             mln_log(report, "No such thread named '%s'.\n", (char *)(m->dest->data));
             mln_thread_clear_msg(&(tmq->msg));
@@ -728,7 +728,7 @@ void mln_thread_kill(mln_string_t *alias)
     mln_thread_t *t, tmp;
     mln_rbtree_node_t *rn;
     tmp.alias = alias;
-    rn = mln_rbtree_root_search(thread_tree, &tmp);
+    rn = mln_rbtree_search(thread_tree, &tmp);
     if (mln_rbtree_null(rn, thread_tree)) return;
     t = (mln_thread_t *)mln_rbtree_node_data(rn);
     mln_socket_close(t->peerfd);

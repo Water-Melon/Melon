@@ -677,7 +677,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         mln_rbtree_node_t *rn;\
         mln_string_nset(&tmp, p, diff);\
         lk.keyword = &tmp;\
-        rn = mln_rbtree_root_search(lex->keywords, &lk);\
+        rn = mln_rbtree_search(lex->keywords, &lk);\
         if (!mln_rbtree_null(rn, lex->keywords)) {\
             plk = (mln_lex_keyword_t *)mln_rbtree_node_data(rn);\
             return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_KEYWORD_BEGIN+plk->val+1);\
@@ -941,7 +941,7 @@ lp:\
         }\
         tmp.key = k;\
         tmp.val = NULL;\
-        rn = mln_rbtree_root_search(lex->macros, &tmp);\
+        rn = mln_rbtree_search(lex->macros, &tmp);\
         if (!mln_rbtree_null(rn, lex->macros)) {\
             mln_string_free(k);\
             return NULL;\
@@ -1078,7 +1078,7 @@ goon:\
         mln_lex_result_get(lex, &str);\
         tmp.key = &str;\
         tmp.val = NULL;\
-        rn = mln_rbtree_root_search(lex->macros, &tmp);\
+        rn = mln_rbtree_search(lex->macros, &tmp);\
         if (!mln_rbtree_null(rn, lex->macros)) {\
             mln_rbtree_delete(lex->macros, rn);\
             mln_rbtree_node_free(lex->macros, rn);\
@@ -1125,7 +1125,7 @@ goon:\
         mln_lex_result_get(lex, &tmp);\
         lm.key = &tmp;\
         lm.val = NULL;\
-        rn = mln_rbtree_root_search(lex->macros, &lm);\
+        rn = mln_rbtree_search(lex->macros, &lm);\
         if (!mln_rbtree_null(rn, lex->macros)) {\
             mln_lex_macro_t *ltmp = (mln_lex_macro_t *)mln_rbtree_node_data(rn);\
             if (ltmp->val != NULL && mln_lex_push_input_buf_stream(lex, ltmp->val) < 0) {\
