@@ -679,7 +679,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         lk.keyword = &tmp;\
         rn = mln_rbtree_search(lex->keywords, &lk);\
         if (!mln_rbtree_null(rn, lex->keywords)) {\
-            plk = (mln_lex_keyword_t *)mln_rbtree_node_data(rn);\
+            plk = (mln_lex_keyword_t *)mln_rbtree_node_data_get(rn);\
             return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_KEYWORD_BEGIN+plk->val+1);\
         }\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_ID);\
@@ -1127,7 +1127,7 @@ goon:\
         lm.val = NULL;\
         rn = mln_rbtree_search(lex->macros, &lm);\
         if (!mln_rbtree_null(rn, lex->macros)) {\
-            mln_lex_macro_t *ltmp = (mln_lex_macro_t *)mln_rbtree_node_data(rn);\
+            mln_lex_macro_t *ltmp = (mln_lex_macro_t *)mln_rbtree_node_data_get(rn);\
             if (ltmp->val != NULL && mln_lex_push_input_buf_stream(lex, ltmp->val) < 0) {\
                 mln_lex_error_set(lex, MLN_LEX_ENMEM);\
                 return NULL;\

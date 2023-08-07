@@ -1528,7 +1528,7 @@ int mln_lang_set_member_add(mln_alloc_t *pool, mln_rbtree_t *members, mln_lang_v
     mln_rbtree_node_t *rn;
     rn = mln_rbtree_search(members, var);
     if (!mln_rbtree_null(rn, members)) {
-        mln_lang_var_t *tmp = (mln_lang_var_t *)mln_rbtree_node_data(rn);
+        mln_lang_var_t *tmp = (mln_lang_var_t *)mln_rbtree_node_data_get(rn);
         __mln_lang_var_assign(tmp, var->val);
         __mln_lang_var_free(var);
         return 0;
@@ -1553,12 +1553,12 @@ __mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name)
     var.name = name;
     rn = mln_rbtree_search(members, &var);
     if (mln_rbtree_null(rn, members)) return NULL;
-    return (mln_lang_var_t *)mln_rbtree_node_data(rn);
+    return (mln_lang_var_t *)mln_rbtree_node_data_get(rn);
 }
 
 static int mln_lang_set_member_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
-    mln_lang_var_t *var, *lv = (mln_lang_var_t *)mln_rbtree_node_data(node);
+    mln_lang_var_t *var, *lv = (mln_lang_var_t *)mln_rbtree_node_data_get(node);
     struct mln_lang_scan_s *ls = (struct mln_lang_scan_s *)udata;
     mln_rbtree_t *tree = ls->tree;
     mln_rbtree_node_t *rn;
@@ -2560,7 +2560,7 @@ mln_lang_array_get_int(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_va
     rn = mln_rbtree_search(tree, elem);
     if (!mln_rbtree_null(rn, tree)) {
         mln_lang_array_elem_free(elem);
-        ret = ((mln_lang_array_elem_t *)mln_rbtree_node_data(rn))->value;
+        ret = ((mln_lang_array_elem_t *)mln_rbtree_node_data_get(rn))->value;
     } else {
         if ((rn = mln_rbtree_node_new(tree, elem)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
@@ -2601,7 +2601,7 @@ mln_lang_array_get_other(mln_lang_ctx_t *ctx, mln_lang_array_t *array, mln_lang_
     rn = mln_rbtree_search(tree, elem);
     if (!mln_rbtree_null(rn, tree)) {
         mln_lang_array_elem_free(elem);
-        ret = ((mln_lang_array_elem_t *)mln_rbtree_node_data(rn))->value;
+        ret = ((mln_lang_array_elem_t *)mln_rbtree_node_data_get(rn))->value;
     } else {
         if ((rn = mln_rbtree_node_new(tree, elem)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
@@ -5977,7 +5977,7 @@ static void mln_lang_dump_object(mln_lang_object_t *obj, int cnt, mln_rbtree_t *
 static int mln_lang_dump_var_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     struct mln_lang_scan_s *ls = (struct mln_lang_scan_s *)udata;
-    mln_lang_dump_var((mln_lang_var_t *)mln_rbtree_node_data(node), *(ls->cnt)+2, ls->tree);
+    mln_lang_dump_var((mln_lang_var_t *)mln_rbtree_node_data_get(node), *(ls->cnt)+2, ls->tree);
     return 0;
 }
 
@@ -6029,7 +6029,7 @@ static void mln_lang_dump_array(mln_lang_array_t *array, int cnt, mln_rbtree_t *
 
 static int mln_lang_dump_array_elem(mln_rbtree_node_t *node, void *udata)
 {
-    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)mln_rbtree_node_data(node);
+    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)mln_rbtree_node_data_get(node);
     struct mln_lang_scan_s *ls = (struct mln_lang_scan_s *)udata;
     int cnt = *(ls->cnt);
     blank();
@@ -6552,7 +6552,7 @@ static mln_lang_var_t *mln_lang_func_import_process(mln_lang_ctx_t *ctx)
     tree = mln_lang_resource_fetch(ctx->lang, "import");
     rn = mln_rbtree_search(tree, &i);
     if (!mln_rbtree_null(rn, tree)) {
-        pi = (mln_lang_import_t *)mln_rbtree_node_data(rn);
+        pi = (mln_lang_import_t *)mln_rbtree_node_data_get(rn);
     } else {
 #if defined(WIN32)
         if (name->len > 1 && name->data[1] == ':') {
@@ -6983,7 +6983,7 @@ static void mln_lang_gc_item_member_setter_recursive(struct mln_lang_gc_setter_s
 static int mln_lang_gc_item_member_setter_obj_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     mln_lang_val_t *val;
-    mln_lang_var_t *var = (mln_lang_var_t *)mln_rbtree_node_data(node);
+    mln_lang_var_t *var = (mln_lang_var_t *)mln_rbtree_node_data_get(node);
     struct mln_lang_gc_setter_s *lgs = (struct mln_lang_gc_setter_s *)udata;
     mln_s32_t type = mln_lang_var_val_type_get(var);
     val = mln_lang_var_val_get(var);
@@ -7000,7 +7000,7 @@ static int mln_lang_gc_item_member_setter_obj_iterate_handler(mln_rbtree_node_t 
 static int mln_lang_gc_item_member_setter_array_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     mln_lang_val_t *val;
-    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)mln_rbtree_node_data(node);
+    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)mln_rbtree_node_data_get(node);
     struct mln_lang_gc_setter_s *lgs = (struct mln_lang_gc_setter_s *)udata;
     mln_s32_t type;
     if (elem->key != NULL) {
@@ -7078,7 +7078,7 @@ static void mln_lang_gc_item_clean_searcher(mln_gc_t *gc, mln_lang_gc_item_t *gc
 static int mln_lang_gc_item_clean_searcher_obj_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     mln_lang_val_t *val;
-    mln_lang_var_t *var = (mln_lang_var_t *)mln_rbtree_node_data(node);
+    mln_lang_var_t *var = (mln_lang_var_t *)mln_rbtree_node_data_get(node);
     struct mln_lang_gc_scan_s *gs = (struct mln_lang_gc_scan_s *)udata;
     mln_s32_t type = mln_lang_var_val_type_get(var);
     val = mln_lang_var_val_get(var);
@@ -7107,7 +7107,7 @@ static int mln_lang_gc_item_clean_searcher_obj_iterate_handler(mln_rbtree_node_t
 static int mln_lang_gc_item_clean_searcher_array_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     mln_lang_val_t *val;
-    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)mln_rbtree_node_data(node);
+    mln_lang_array_elem_t *elem = (mln_lang_array_elem_t *)mln_rbtree_node_data_get(node);
     struct mln_lang_gc_scan_s *gs = (struct mln_lang_gc_scan_s *)udata;
     mln_s32_t type;
     int need_to_free = 0;
@@ -7206,7 +7206,7 @@ void *mln_lang_ctx_resource_fetch(mln_lang_ctx_t *ctx, const char *name)
     lr.name = &s;
     rn = mln_rbtree_search(ctx->resource_set, &lr);
     if (mln_rbtree_null(rn, ctx->resource_set)) return NULL;
-    return ((mln_lang_resource_t *)mln_rbtree_node_data(rn))->data;
+    return ((mln_lang_resource_t *)mln_rbtree_node_data_get(rn))->data;
 }
 
 
@@ -7268,7 +7268,7 @@ void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name)
     lr.name = &s;
     rn = mln_rbtree_search(lang->resource_set, &lr);
     if (mln_rbtree_null(rn, lang->resource_set)) return NULL;
-    return ((mln_lang_resource_t *)mln_rbtree_node_data(rn))->data;
+    return ((mln_lang_resource_t *)mln_rbtree_node_data_get(rn))->data;
 }
 
 /*

@@ -312,7 +312,7 @@ void mln_event_fd_timeout_handler_set(mln_event_t *event, \
         mln_log(error, "No such file descriptor in RB-Tree.\n");
         abort();
     }
-    mln_event_desc_t *ed = (mln_event_desc_t *)mln_rbtree_node_data(rn);
+    mln_event_desc_t *ed = (mln_event_desc_t *)mln_rbtree_node_data_get(rn);
     ed->data.fd.timeout_data = data;
     ed->data.fd.timeout_handler = timeout_handler;
     pthread_mutex_unlock(&event->fd_lock);
@@ -349,12 +349,12 @@ int mln_event_fd_set(mln_event_t *event, \
         if (flag & M_EV_APPEND) {
             if (flag & M_EV_NONBLOCK) mln_event_fd_nonblock_set(fd);
             if (flag & M_EV_BLOCK) mln_event_fd_block_set(fd);
-            if (((mln_event_desc_t *)mln_rbtree_node_data(rn))->data.fd.is_clear) {
+            if (((mln_event_desc_t *)mln_rbtree_node_data_get(rn))->data.fd.is_clear) {
                 mln_log(error, "Append fd already clear.\n");
                 abort();
             }
             if (mln_event_fd_append_set(event, \
-                                        (mln_event_desc_t *)mln_rbtree_node_data(rn), \
+                                        (mln_event_desc_t *)mln_rbtree_node_data_get(rn), \
                                         fd, \
                                         flag, \
                                         timeout_ms, \
@@ -680,7 +680,7 @@ mln_event_fd_clr_set(mln_event_t *event, int fd)
     if (mln_rbtree_null(rn, event->ev_fd_tree)) {
         return;
     }
-    ed = (mln_event_desc_t *)mln_rbtree_node_data(rn);
+    ed = (mln_event_desc_t *)mln_rbtree_node_data_get(rn);
     if (ed->data.fd.timeout_node != NULL) {
         mln_fheap_inline_delete(event->ev_fd_timeout_heap, ed->data.fd.timeout_node, mln_event_fd_timeout_copy, mln_event_fd_timeout_cmp);
         mln_fheap_inline_node_free(event->ev_fd_timeout_heap, ed->data.fd.timeout_node, NULL);

@@ -1,5 +1,12 @@
 ## 红黑树
 
+本文档对红黑树组件如何使用进行说明。
+
+在红黑树组件中，有两种使用模式：
+
+- 基础用法
+- 内联用法
+
 
 
 ### 头文件
@@ -12,54 +19,34 @@
 
 ### 相关结构
 
-```c
-typedef struct rbtree_s {
-    void                      *pool; //内存池结构，若未使用内存池则为NULL
-    rbtree_pool_alloc_handler  pool_alloc; //内存池分配函数
-    rbtree_pool_free_handler   pool_free; //内存池释放函数
-    mln_rbtree_node_t          nil; //空节点
-    mln_rbtree_node_t         *root; //根节点
-    mln_rbtree_node_t         *min; //最小节点
-    mln_rbtree_node_t         *head;
-    mln_rbtree_node_t         *tail;
-    mln_rbtree_node_t         *iter;
-    rbtree_cmp                 cmp; //节点比较函数
-    rbtree_free_data           data_free; //节点内数据释放函数
-    mln_uauto_t                nr_node; //节点总个数
-    mln_u32_t                  del:1;
-    mln_u32_t                  padding:31;
-} mln_rbtree_t;
+在红黑树组件中，使用者不需要了解树和结点结构，只需要利用本组件提供的函数或者宏获取到对应信息。
 
-struct mln_rbtree_node_s {
-    void                      *data;//存放了用户数据
-    struct mln_rbtree_node_s  *prev;
-    struct mln_rbtree_node_s  *next;
-    struct mln_rbtree_node_s  *parent;
-    struct mln_rbtree_node_s  *left;
-    struct mln_rbtree_node_s  *right;
-    enum rbtree_color          color;
-};
-```
 
-第一个结构为红黑树结构，这个结构中我们只需要关注`root`和`nr_node`即可。并且这里所有的变量无需外部修改，均会在红黑树操作时自行修改。
 
-第二个结构为红黑树节点结构。在这个结构中，我们仅关注`data`字段，该字段存放了红黑树中存放的数据。
+## 基本用法
+
+基本用法中，包含了如下函数和宏：
+
+- mln_rbtree_new
+- mln_rbtree_free
+- mln_rbtree_insert
+- mln_rbtree_search
+- mln_rbtree_delete
+- mln_rbtree_successor
+- mln_rbtree_min
+- mln_rbtree_reset
+- mln_rbtree_node_new
+- mln_rbtree_node_free
+- mln_rbtree_iterate
+- mln_rbtree_node_num
+- mln_rbtree_null
+- mln_rbtree_root
+- mln_rbtree_node_data_get
+- mln_rbtree_node_data_set
 
 
 
 ### 函数/宏
-
-
-
-#### mln_rbtree_null
-
-```c
-mln_rbtree_null(mln_rbtree_node_t *ptr, mln_rbtree_t *ptree)
-```
-
-描述：用于检测红黑树节点`ptr`是否是空。
-
-返回值：这个检测主要用于`mln_rbtree_search`操作，当查找不到节点时，返回`非0`，否则返回`0`。
 
 
 
@@ -72,8 +59,8 @@ struct mln_rbtree_attr {
     void                      *pool; //内存池结构，若未使用内存池则为NULL
     rbtree_pool_alloc_handler  pool_alloc; //内存池分配函数
     rbtree_pool_free_handler   pool_free; //内存池释放函数
-    rbtree_cmp                 cmp;//红黑树节点比较函数
-    rbtree_free_data           data_free;//红黑树节点的用户数据释放函数
+    rbtree_cmp                 cmp;//红黑树结点比较函数
+    rbtree_free_data           data_free;//红黑树结点的用户数据释放函数
 };
 
 typedef int (*rbtree_cmp)(const void *, const void *);
@@ -84,15 +71,17 @@ typedef void (*rbtree_free_data)(void *);
 
 初始化红黑树。
 
-`pool`为可选项，若不需要使用内存池分配内存，则置`NULL`。
+`attr`为初始化属性参数，若不提供，则默认为所有属性均为`NULL`。
 
-`cmp`为节点比较函数，在红黑树的各类操作中几乎都会被调用。该函数的两个参数均为与`mln_rbtree_node_t`中`data`相同数据结构的用户数据，函数的返回值为：
+`attr`中的`pool`、`pool_alloc`和`pool_free`是用来支持用户自定义内存池实现的。即可以从用户指定的内存池中分配红黑树结构及树结点结构。
+
+`attr`中的`cmp`为结点比较函数，在红黑树的各类操作中几乎都会被调用。该函数的两个参数均为用户自定义数据结构指针（由`mln_rbtree_node_new`函数第二个参数指定），函数的返回值为：
 
 - `-1` 第一个参数小于第二个参数
 -  `0`  两个参数相同
 -  `1`  第一个参数大于第二个参数
 
-`data_free`用于释放`mln_rbtree_node_t`结构中`data`所指向的用户资源。若不需要释放用户资源，则置`NULL`。该函数仅有一个参数为`mln_rbtree_node_t`中`data`同类型结构。
+`data_free`用于释放红黑树结点中的用户自定义数据结构。这个回调函数会在`mln_rbtree_node_free`以及`mln_rbtree_free`函数中被调用。即对树结构或者树结点结构进行释放时被调用，将结点中的用户自定义数据一同清理。若不需要释放用户资源，则置`NULL`。
 
 返回值：成功返回`mln_rbtree_t`指针，否则返回`NULL`
 
@@ -104,7 +93,7 @@ typedef void (*rbtree_free_data)(void *);
 void mln_rbtree_free(mln_rbtree_t *t);
 ```
 
-描述：销毁红黑树，并释放其上每个节点内存放的资源。
+描述：销毁红黑树，并释放其上每个结点内存放的资源。
 
 返回值：无
 
@@ -116,7 +105,7 @@ void mln_rbtree_free(mln_rbtree_t *t);
 void mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *n);
 ```
 
-描述：将红黑树节点插入红黑树。
+描述：将红黑树结点插入红黑树。第二个参数可由`mln_rbtree_node_new`函数创建。
 
 返回值：无
 
@@ -128,7 +117,7 @@ void mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *n);
 void mln_rbtree_delete(mln_rbtree_t *t, mln_rbtree_node_t *n);
 ```
 
-描述：将红黑树节点从红黑树中移除。**注意**，本操作不会释放节点中存放的用户数据资源。
+描述：将红黑树结点从红黑树中移除。**注意**，本操作不会释放树结点以及结点中存放的用户自定义数据。
 
 返回值：无
 
@@ -140,21 +129,21 @@ void mln_rbtree_delete(mln_rbtree_t *t, mln_rbtree_node_t *n);
 mln_rbtree_node_t *mln_rbtree_successor(mln_rbtree_t *t, mln_rbtree_node_t *n);
 ```
 
-描述：获取指定节点`n`的后继节点，即比节点`n`中数据大的下一节点。
+描述：获取指定结点`n`的后继结点，即比结点`n`中数据大的下一结点。
 
-返回值：红黑树节点指针，需要以宏`mln_rbtree_null`来确认是否存在后继节点
+返回值：红黑树结点指针，需要以宏`mln_rbtree_null`来确认是否存在后继结点
 
 
 
 #### mln_rbtree_search
 
 ```c
-mln_rbtree_node_t *mln_rbtree_search(mln_rbtree_t *t, mln_rbtree_node_t *root, const void *key);
+mln_rbtree_node_t *mln_rbtree_search(mln_rbtree_t *t, const void *key);
 ```
 
-描述：从红黑树`t`的`root`节点开始查找是否存在与`key`相同的节点。**注意**，`key`应与用户数据属于同一数据结构。
+描述：从红黑树`t`的根结点开始查找是否存在与`key`相同的结点。**注意**，`key`应当与用户自定义数据属于同一数据类型。
 
-返回值：红黑树节点指针，需要以宏`mln_rbtree_null`来确认是否找到节点
+返回值：红黑树结点指针，需要以宏`mln_rbtree_null`来确认是否找到结点
 
 
 
@@ -164,9 +153,9 @@ mln_rbtree_node_t *mln_rbtree_search(mln_rbtree_t *t, mln_rbtree_node_t *root, c
 mln_rbtree_node_t *mln_rbtree_min(mln_rbtree_t *t);
 ```
 
-描述：获取红黑树`t`内用户数据最小的节点。
+描述：获取红黑树`t`内用户数据最小的结点。
 
-返回值：红黑树节点指针，需要以宏`mln_rbtree_null`来确认是否存在该节点
+返回值：红黑树结点指针，需要以宏`mln_rbtree_null`来确认是否存在该结点
 
 
 
@@ -176,7 +165,7 @@ mln_rbtree_node_t *mln_rbtree_min(mln_rbtree_t *t);
 mln_rbtree_node_t *mln_rbtree_node_new(mln_rbtree_t *t, void *data);
 ```
 
-描述：创建红黑树节点，节点所需内存由`t`中的`pool`决定如何分配。`data`为与该节点关联的用户数据。
+描述：创建红黑树结点。`data`为与该结点关联的用户自定义数据。
 
 返回值：成功则返回`mln_rbtree_node_t`指针，否则为`NULL`
 
@@ -188,11 +177,7 @@ mln_rbtree_node_t *mln_rbtree_node_new(mln_rbtree_t *t, void *data);
 void mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n);
 ```
 
-描述：
-
-释放红黑树节点`n`。
-
-释放时会根据红黑树`t`中的`pool`来决定节点内存如何回收，并且用户数据将由`data_free`回调函数决定如何释放。
+描述：释放红黑树结点`n`的资源，并可能会释放其关联的用户自定义数据（由`mln_rbtree_new`时给定的属性决定）。
 
 返回值：无
 
@@ -208,14 +193,14 @@ typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *udata);
 
 描述：
 
-遍历红黑树`t`中每一个节点。且支持在遍历时删除树节点。
+遍历红黑树`t`中每一个结点。且支持在遍历时删除树结点。
 
-·`handler`为遍历每个节点的访问函数，该函数的三个参数含义依次为：
+`handler`为遍历每个结点的访问函数，该函数的两个参数含义依次为：
 
-- `node` 当前访问的树节点结构
+- `node` 当前访问的树结点结构
 - `udata`为`mln_rbtree_iterate`的第三个参数，是由用户传入的参数，若不需要则可以置`NULL`
 
-之所以额外给出node节点，是因为可能存在需求：在遍历中替换节点内的数据（不建议如此做，因为会违反红黑树节点现有有序性），但需要**慎重**使用。
+之所以额外给出node结点，是因为可能存在需求：在遍历中替换结点内的数据（不建议如此做，因为会违反红黑树结点现有有序性），或将树结点的用户自定义数据置`NULL`从而临时避免数据被释放。需要**慎重**使用。
 
 返回值：
 
@@ -230,9 +215,7 @@ typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *udata);
 void mln_rbtree_reset(mln_rbtree_t *t);
 ```
 
-描述：
-
-重制整个红黑树`t`，将其中全部节点释放。
+描述：重置整个红黑树`t`，将其中全部结点释放。
 
 返回值：无
 
@@ -244,11 +227,21 @@ void mln_rbtree_reset(mln_rbtree_t *t);
 mln_rbtree_node_num(ptree)
 ```
 
-描述：
-
-获取当前树中结点个数。
+描述：获取当前树中结点个数。
 
 返回值：整型结点数
+
+
+
+#### mln_rbtree_null
+
+```c
+mln_rbtree_null(mln_rbtree_node_t *ptr, mln_rbtree_t *ptree)
+```
+
+描述：用于检测红黑树结点`ptr`是否是空。
+
+返回值：这个检测主要用于`mln_rbtree_search`操作，当查找不到结点时，返回`非0`，否则返回`0`。
 
 
 
@@ -258,25 +251,33 @@ mln_rbtree_node_num(ptree)
 mln_rbtree_root(ptree)
 ```
 
-描述：
-
-获取树结构的根结点指针。
+描述：获取树结构的根结点指针。
 
 返回值：根结点指针
 
 
 
-#### mln_rbtree_root_search
+#### mln_rbtree_node_data_get
 
 ```c
-mln_rbtree_root_search(ptree,key)
+mln_rbtree_node_data_get(node)
 ```
 
-描述：
+描述：获取树结点`node`关联的用户自定义数据。
 
-`mln_rbtree_search`的一个封装，默认从树的根结点开始搜索指定的`key`值结点。
+返回值：用户自定义数据
 
-返回值：结点指针
+
+
+#### mln_rbtree_node_data_set
+
+```c
+mln_rbtree_node_data_set(node, ud)
+```
+
+描述：设置树结点`node`关联的用户自定义数据为`ud`。
+
+返回值：无
 
 
 
@@ -331,17 +332,189 @@ int main(int argc, char *argv[])
     }
     mln_rbtree_insert(t, rn);
 
-    rn = mln_rbtree_root_search(t, &n);
+    rn = mln_rbtree_search(t, &n);
     if (mln_rbtree_null(rn, t)) {
         mln_log(error, "node not found\n");
         return -1;
     }
-    mln_log(debug, "%d\n", *((int *)mln_rbtree_node_data(rn)));
+    mln_log(debug, "%d\n", *((int *)mln_rbtree_node_data_get(rn)));
 
     mln_rbtree_delete(t, rn);
     mln_rbtree_node_free(t, rn);
 
     mln_rbtree_free(t);
+
+    return 0;
+}
+```
+
+
+
+## 内联用法
+
+内联用法目的是为了提升红黑树各个操作的执行效率。其与基本用法的核心区别在于，避免了回调函数的存在（例如，`cmp`，`data_free`）。即将回调函数变为内联函数，利用编译器优化消除函数调用。
+
+这种使用方法虽然高效，但也存在一些使用场景限制。
+
+> 场景假设：
+>
+> 我们首先创建了一棵红黑树，这棵树在未来可能要被插入非常多的结点。而每一个树结点，又都是一棵红黑树（我们暂时称之为子树），这棵子树的相关操作被其关联的代码文件独立维护，与其他子树都无关联。
+>
+> 我们的需求是：红黑树（非子树）执行`mln_rbtree_free`时，将所有子树一同释放销毁。
+
+在基本用法的情况下，我们只需要将红黑树的`data_free`属性设置为`mln_rbtree_free`，就可以自动释放每一棵子树，而不需要考虑每棵子树结点关联的数据类型是什么，以及如何释放这些数据类型。因为这些数据类型都会被子树的`data_free`属性所设置的回调函数正确的释放。
+
+但在内联用法下，结点数据的比较和释放操作都是需要明确指定是由哪个函数处理的。结合我们上面的场景假设，也就意味着，红黑树必须知道每棵子树的数据类型，然后显示调用指定类型对应的释放函数来释放资源。但当资源如上述场景一般，不断在多个数据结构间和代码模块间嵌套时，我们很难在某一个代码模块内得知其他模块的数据类型，也就无法正确释放这些数据类型资源了。这便是内联用法无法完美解决的场景。
+
+内联用法额外提供了一组宏语句表达式来取代基本用法中的部分函数：
+
+- mln_rbtree_inline_insert
+- mln_rbtree_inline_root_search
+- mln_rbtree_inline_search
+- mln_rbtree_inline_node_free
+- mln_rbtree_inline_free
+- mln_rbtree_inline_reset
+
+
+
+### 函数/宏
+
+
+
+#### mln_rbtree_inline_insert
+
+```c
+mln_rbtree_inline_insert(t, n, compare)
+```
+
+描述：与`mln_rbtree_insert`功能一致。`compare`是基本用法中`struct mln_rbtree_attr`中的`cmp`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`compare`为`NULL`，则会试图获取红黑树`t`的`cmp`回调函数。
+
+返回值：与`mln_rbtree_insert`一样
+
+
+
+#### mln_rbtree_inline_search
+
+```c
+mln_rbtree_inline_search(t, key, compare)
+```
+
+描述：与`mln_rbtree_search`功能一致。`compare`是基本用法中`struct mln_rbtree_attr`中的`cmp`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`compare`为`NULL`，则会试图获取红黑树`t`的`cmp`回调函数。
+
+返回值：与`mln_rbtree_search`一样
+
+
+
+#### mln_rbtree_inline_root_search
+
+```c
+mln_rbtree_inline_root_search(t, root, key, compare)
+```
+
+描述：与`mln_rbtree_inline_search`的功能相似，差异仅是本操作是从指定树结点`root`开始进行搜索，而不仅仅只是整棵树的根结点。如果`compare`为`NULL`，则会试图获取红黑树`t`的`cmp`回调函数。
+
+返回值：与`mln_rbtree_inline_search`一样
+
+
+
+#### mln_rbtree_inline_node_free
+
+```c
+mln_rbtree_inline_node_free(t, n, freer)
+```
+
+描述：与`mln_rbtree_node_free`功能一致。`freer`是基本用法中`struct mln_rbtree_attr`中的`data_free`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`freer`为`NULL`，则会试图获取红黑树`t`的`data_free`回调函数。
+
+返回值：与`mln_rbtree_node_free`一样
+
+
+
+#### mln_rbtree_inline_free
+
+```c
+mln_rbtree_inline_free(t, freer)
+```
+
+描述：与`mln_rbtree_free`功能一致。`freer`是基本用法中`struct mln_rbtree_attr`中的`data_free`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`freer`为`NULL`，则会试图获取红黑树`t`的`data_free`回调函数。
+
+返回值：与`mln_rbtree_free`一样
+
+
+
+#### mln_rbtree_inline_reset
+
+```
+mln_rbtree_inline_reset(t, freer)
+```
+
+描述：与`mln_rbtree_reset`功能一致。`freer`是基本用法中`struct mln_rbtree_attr`中的`data_free`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`freer`为`NULL`，则会试图获取红黑树`t`的`data_free`回调函数。
+
+返回值：与`mln_rbtree_reset`一样
+
+
+
+可以看到，这些新的API都新增了一些参数，而这些参数恰好是`struct mln_rbtree_attr`中的回调函数。因此，在内联用法情况下，`mln_rbtree_new`创建红黑树时可以将参数设置为`NULL`（如果不存在自定义内存池的话），因为这些回调函数都在上述这些红黑树操作接口中给出了。
+
+
+
+### 示例
+
+我们将基本用法中的示例进行一下改造：
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include "mln_core.h"
+#include "mln_log.h"
+#include "mln_rbtree.h"
+
+//被声明为inline
+static inline int cmp_handler(const void *data1, const void *data2)
+{
+    return *(int *)data1 - *(int *)data2;
+}
+
+int main(int argc, char *argv[])
+{
+    int n = 10;
+    mln_rbtree_t *t;
+    mln_rbtree_node_t *rn;
+    struct mln_core_attr cattr;
+
+    cattr.argc = argc;
+    cattr.argv = argv;
+    cattr.global_init = NULL;
+    cattr.main_thread = NULL;
+    cattr.master_process = NULL;
+    cattr.worker_process = NULL;
+    if (mln_core_init(&cattr) < 0) {
+        fprintf(stderr, "init failed\n");
+        return -1;
+    }
+
+    if ((t = mln_rbtree_new(NULL)) == NULL) { //attr参数为NULL
+        mln_log(error, "rbtree init failed.\n");
+        return -1;
+    }
+
+    rn = mln_rbtree_node_new(t, &n);
+    if (rn == NULL) {
+        mln_log(error, "rbtree node init failed.\n");
+        return -1;
+    }
+    mln_rbtree_inline_insert(t, rn, cmp_handler); //inline insert
+
+    rn = mln_rbtree_inline_search(t, &n, cmp_handler); //inline search
+    if (mln_rbtree_null(rn, t)) {
+        mln_log(error, "node not found\n");
+        return -1;
+    }
+    mln_log(debug, "%d\n", *((int *)mln_rbtree_node_data_get(rn)));
+
+    mln_rbtree_delete(t, rn);
+    mln_rbtree_inline_node_free(t, rn, NULL); //inline node free
+
+    mln_rbtree_inline_free(t, NULL); //inline free
 
     return 0;
 }

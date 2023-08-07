@@ -58,11 +58,6 @@ typedef struct rbtree_s {
     mln_u32_t                  del:1;
 } mln_rbtree_t;
 
-#define mln_rbtree_node_num(ptree)            ((ptree)->nr_node)
-#define mln_rbtree_null(ptr,ptree)            ((ptr)==&((ptree)->nil))
-#define mln_rbtree_node_data(node)            ((node)->data)
-#define mln_rbtree_root(ptree)                ((ptree)->root)
-
 
 MLN_CHAIN_FUNC_DECLARE(mln_rbtree, \
                        mln_rbtree_node_t, \
@@ -72,7 +67,6 @@ MLN_CHAIN_FUNC_DEFINE(mln_rbtree, \
                       static inline void, \
                       prev, \
                       next);
-
 
 /*Left rotate*/
 static inline void
@@ -241,6 +235,12 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
     (t)->del = 0;\
 })
 
+
+#define mln_rbtree_node_num(ptree)            ((ptree)->nr_node)
+#define mln_rbtree_null(ptr,ptree)            ((ptr)==&((ptree)->nil))
+#define mln_rbtree_node_data_get(node)        ((node)->data)
+#define mln_rbtree_node_data_set(node,ud)     ((node)->data = (ud))
+#define mln_rbtree_root(ptree)                ((ptree)->root)
 
 extern mln_rbtree_t *mln_rbtree_new(struct mln_rbtree_attr *attr);
 extern void mln_rbtree_free(mln_rbtree_t *t);
