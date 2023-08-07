@@ -160,7 +160,7 @@ mln_event_timer_set(mln_event_t *event, \
                     mln_u32_t msec, \
                     void *data, \
                     ev_tm_handler tm_handler) __NONNULL1(1);
-extern void mln_event_timer_cancel(mln_event_t *event, mln_event_timer_t *timer) __NONNULL2(1,2);
+extern void mln_event_timer_cancel(mln_event_t *event, mln_event_timer_t *timer) __NONNULL1(1);
 extern void
 mln_event_fd_timeout_handler_set(mln_event_t *event, \
                                  int fd, \
