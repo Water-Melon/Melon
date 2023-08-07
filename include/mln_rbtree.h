@@ -197,7 +197,7 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
 })
 
 /*rbtree free node*/
-#define mln_rbtree_node_inline_free(t, n, freer) ({\
+#define mln_rbtree_inline_node_free(t, n, freer) ({\
     rbtree_free_data f = (freer) == NULL? (t)->data_free: (rbtree_free_data)(freer);\
     if ((n)->data != NULL && f != NULL)\
         f((n)->data);\
@@ -220,7 +220,7 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
         mln_rbtree_node_t *fr;\
         while ((fr = (t)->tail) != NULL) {\
             mln_rbtree_chain_del(&((t)->head), &((t)->tail), fr);\
-            mln_rbtree_node_inline_free((t), fr, (freer));\
+            mln_rbtree_inline_node_free((t), fr, (freer));\
         }\
         if ((t)->pool != NULL) (t)->pool_free((t));\
         else free((t));\
@@ -232,7 +232,7 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
     mln_rbtree_node_t *fr;\
     while ((fr = (t)->tail) != NULL) {\
         mln_rbtree_chain_del(&((t)->head), &((t)->tail), fr);\
-        mln_rbtree_node_inline_free((t), fr, (freer));\
+        mln_rbtree_inline_node_free((t), fr, (freer));\
     }\
     (t)->root = &((t)->nil);\
     (t)->min = &((t)->nil);\

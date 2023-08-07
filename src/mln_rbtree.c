@@ -109,7 +109,7 @@ mln_rbtree_node_new(mln_rbtree_t *t, void *data)
 /*rbtree node free*/
 void mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n)
 {
-    mln_rbtree_node_inline_free(t, n, NULL);
+    mln_rbtree_inline_node_free(t, n, NULL);
 }
 
 /*Tree Minimum*/
