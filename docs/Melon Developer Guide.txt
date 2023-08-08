@@ -361,7 +361,7 @@ Their definitions can be found in melon/include/mln_types.h.
     cmp -- is a function pointer to compare with two RB-tree
     data. Its prototype is
         typedef int (*rbtree_cmp)(const void *, const void *);
-    The type of two arguments is custom.
+    The type of two arguments is user-defined.
     And the return value is: >0 -- the first one is greater than the second; ==0 -- equal; <0 -- less.
     data_free -- is a function pointer to free data in a tree node. This pointer can be NULL. Its prototype is
         typedef void (*rbtree_free_data)(void *);
@@ -373,43 +373,46 @@ Their definitions can be found in melon/include/mln_types.h.
        The second one is a user data pointer.
        If memory is not enough, NULL will be returned.
 
-    b) void mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n);
+    b) mln_rbtree_node_t *mln_rbtree_node_init(mln_rbtree_node_t *node, void *data);
+       Initialize tree node 'node' with the associated user-defined data 'data'.
+
+    c) void mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n);
        This function destroys RB-tree node and frees its resources.
        If RB-tree's 'data_free' is not NULL, the user data in the node will be freed by calling function data_free().
 
-    c) mln_rbtree_t *mln_rbtree_new(struct mln_rbtree_attr *attr);
+    d) mln_rbtree_t *mln_rbtree_new(struct mln_rbtree_attr *attr);
        It initializes an RB-tree.
        If memory is not enough, NULL will be returned.
 
-    d) void mln_rbtree_free(mln_rbtree_t *t);
+    e) void mln_rbtree_free(mln_rbtree_t *t);
        It destroys an RB-tree.
        If 'data_free' is not NULL, all user data in the whole tree will be freed.
 
-    e) void mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *n);
+    f) void mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *n);
        It inserts an RB-tree node into a tree.
 
-    f) void mln_rbtree_delete(mln_rbtree_t *t, mln_rbtree_node_t *n);
+    g) void mln_rbtree_delete(mln_rbtree_t *t, mln_rbtree_node_t *n);
        It removes an RB-tree node from a tree.
 
-    g) mln_rbtree_node_t* mln_rbtree_successor(mln_rbtree_t *t, mln_rbtree_node_t *n);
-    It finds n's successor.
-    If nothing can be found, &(t->nil) will be returned.
-    This return value is the address of tree's variable 'nil', we can use mln_rbtree_null() to test it.
+    h) mln_rbtree_node_t* mln_rbtree_successor(mln_rbtree_t *t, mln_rbtree_node_t *n);
+       It finds n's successor.
+       If nothing can be found, &(t->nil) will be returned.
+       This return value is the address of tree's variable 'nil', we can use mln_rbtree_null() to test it.
 
-    h) mln_rbtree_node_t* mln_rbtree_search(mln_rbtree_t *t, mln_rbtree_node_t *root, const void *key);
+    i) mln_rbtree_search(ptree,key)
        It searches an RB-tree node whose key is equal to the 'key'.
-       The routine will start from 'root'. If nothing can be found, &(t->nil) will be returned.
+       The routine will start from tree root. If nothing can be found, &(t->nil) will be returned.
 
-    i) mln_rbtree_node_t* mln_rbtree_min(mln_rbtree_t *t);
+    j) mln_rbtree_node_t* mln_rbtree_min(mln_rbtree_t *t);
        It returns the node whose user data is minimum in a tree.
        If the tree is empty, &(t->nil) will be returned.
 
-    j) mln_rbtree_null(ptr,ptree);
+    k) mln_rbtree_null(ptr,ptree);
        This function is used to test the return value of most rbtree interfaces.
        If function returns !0, the 'ptr' is pointing to the address of ptree's 'nil'.
        Otherwise, the data that is pointed by 'ptr' is valid.
 
-    k) int mln_rbtree_iterate(mln_rbtree_t *t, rbtree_iterate_handler handler, void *udata);
+    l) int mln_rbtree_iterate(mln_rbtree_t *t, rbtree_iterate_handler handler, void *udata);
        This function is used to visit all rbtree nodes and process them by the callback function 'handler'.
        t -- is a rbtree pointer.
        handler -- is a callback function which is defined by the caller. Its prototype is
@@ -417,17 +420,34 @@ Their definitions can be found in melon/include/mln_types.h.
        The first argument is the rbtree node. Second one is the data of rbtree node. And the last one is an user
        data passed by the third argument of mln_rbtree_iterate().
 
-    l) void mln_rbtree_reset(mln_rbtree_t *t);
+    m) void mln_rbtree_reset(mln_rbtree_t *t);
        Reset rbtree. Every node in the tree will be freed.
 
-    m) mln_rbtree_node_num(ptree)
+    n) mln_rbtree_node_num(ptree)
        The macro for getting current node numbers from tree 'ptree'.
 
-    n) mln_rbtree_root(ptree)
+    o) mln_rbtree_root(ptree)
        Get root node of tree 'ptree'.
 
-    o) mln_rbtree_root_search(ptree,key)
-       The wrapper of 'mln_rbtree_search' with 'mln_rbtree_root'.
+    p) mln_rbtree_inline_insert(t, n, compare)
+       The inline version of 'mln_rbtree_insert', 'compare' is the comparison function.
+ 
+    q) mln_rbtree_inline_root_search(t, root, key, compare)
+       It is the same as 'mln_rbtree_inline_search' but find node from a specific tree node 'root'.
+
+    s) mln_rbtree_inline_search(t, key, compare)
+       The inline version of 'mln_rbtree_search', 'compare' is the comparison function.
+
+    t) mln_rbtree_inline_node_free(t, n, freer)
+       The inline version of 'mln_rbtree_node_free', 'freer' is the 'data_free' callback in `mln_rbtree_attr`.
+
+    u) mln_rbtree_inline_free(t, freer)
+       The inline version of 'mln_rbtree_free', 'freer' is the 'data_free' callback in `mln_rbtree_attr`.
+
+    v) mln_rbtree_inline_reset(t, freer)
+       The inline version of 'mln_rbtree_reset', 'freer' is the 'data_free' callback in `mln_rbtree_attr`.
+
+
 
   5) Path
     a) char *mln_path(void);

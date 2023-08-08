@@ -6,6 +6,7 @@
 
 - 基础用法
 - 内联用法
+- 容器用法
 
 
 
@@ -515,6 +516,118 @@ int main(int argc, char *argv[])
     mln_rbtree_inline_node_free(t, rn, NULL); //inline node free
 
     mln_rbtree_inline_free(t, NULL); //inline free
+
+    return 0;
+}
+```
+
+
+
+## 容器用法
+
+容器用法与上述两种用法并不冲突，相反容器用法需要使用上述两种用法的函数/宏来操作红黑树。容器的意思是指，将红黑树结点结构作为用户自定义数据结构中的一个属性。例如：
+
+```c
+struct user_defined_s {
+    int int_val;
+    ...
+    mln_rbtree_node_t node; //注意，这里不是指针
+    ...
+};
+```
+
+这段结构定义中，`node`是红黑树结点类型，它是结构体`user_defined_s`中的一个成员变量。
+
+
+
+### 函数/宏
+
+容器用法中，我们使用`mln_rbtree_node_init`来取代`mln_rbtree_node_new`对红黑树结点的初始化工作。这两个接口的差异是，`mln_rbtree_node_init`并不会动态创建结点结构（因为已经在其他自定义结构体内定义，并在自定义结构体实例化时被一同创建出来了）。
+
+#### mln_rbtree_node_init
+
+```c
+mln_rbtree_node_init(n, ud)
+```
+
+描述：对树结点指针`n`进行初始化，将用户自定义数据`ud`与结点结构`n`进行关联。
+
+返回值：树结点结构指针`n`
+
+
+
+### 示例
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include "mln_core.h"
+#include "mln_log.h"
+#include "mln_rbtree.h"
+
+typedef struct user_defined_s {
+    int val;
+    mln_rbtree_node_t node; //结点作为成员
+} ud_t; //用户自定义结构
+
+static int cmp_handler(const void *data1, const void *data2)
+{
+    return ((ud_t *)data1)->val - ((ud_t *)data2)->val;
+}
+
+int main(int argc, char *argv[])
+{
+    mln_rbtree_t *t;
+    ud_t data1, data2; //此时，node已经被创建
+    mln_rbtree_node_t *rn;
+    struct mln_core_attr cattr;
+    struct mln_rbtree_attr rbattr;
+
+    cattr.argc = argc;
+    cattr.argv = argv;
+    cattr.global_init = NULL;
+    cattr.main_thread = NULL;
+    cattr.master_process = NULL;
+    cattr.worker_process = NULL;
+    if (mln_core_init(&cattr) < 0) {
+        fprintf(stderr, "init failed\n");
+        return -1;
+    }
+
+    rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
+    rbattr.cmp = cmp_handler;
+    rbattr.data_free = NULL;
+
+    if ((t = mln_rbtree_new(&rbattr)) == NULL) {
+        mln_log(error, "rbtree init failed.\n");
+        return -1;
+    }
+
+    data1.val = 1; //对自定义数据进行初始化赋值
+    data2.val = 2;
+
+    mln_rbtree_node_init(&data1.node, &data1); //初始化自定义结构中的node结点，并将自定义结构作为结点关联数据
+    mln_rbtree_node_init(&data2.node, &data2);
+
+    mln_rbtree_insert(t, &data1.node);
+    mln_rbtree_insert(t, &data2.node);
+
+    rn = mln_rbtree_search(t, &data1);
+    if (mln_rbtree_null(rn, t)) {
+        mln_log(error, "node not found\n");
+        return -1;
+    }
+
+    //这里给出了两种获取自定义数据结构指针的方法
+    mln_log(debug, "%d\n", ((ud_t *)mln_rbtree_node_data_get(rn))->val);
+    mln_log(debug, "%d\n", mln_container_of(rn, ud_t, node)->val);
+
+    mln_rbtree_delete(t, &data1.node);
+    mln_rbtree_node_free(t, &data1.node);
+
+    mln_rbtree_free(t);
 
     return 0;
 }

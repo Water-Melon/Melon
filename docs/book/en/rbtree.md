@@ -4,8 +4,9 @@ This document explains how to use the red-black tree component.
 
 In the red-black tree component, there are two usage modes:
 
-- Basic usage
-- Inline usage
+- Basic Usage
+- Inline Usage
+- Container Usage
 
 
 
@@ -350,7 +351,7 @@ int main(int argc, char *argv[])
 
 
 
-## Inline usage
+## Inline Usage
 
 The purpose of inline usage is to improve the execution efficiency of each operation of the red-black tree. The core difference between it and the basic usage is that the existence of callback functions (eg, `cmp`, `data_free`) is avoided. That is, the callback function is turned into an inline function, and the function call is eliminated by using compiler optimization.
 
@@ -515,6 +516,120 @@ int main(int argc, char *argv[])
     mln_rbtree_inline_node_free(t, rn, NULL); //inline node free
 
     mln_rbtree_inline_free(t, NULL); //inline free
+
+    return 0;
+}
+```
+
+
+
+
+
+## Container Usage
+
+The container usage does not conflict with the above two usages, on the contrary, the container usage needs to use the functions/macros of the above two usages to operate the red-black tree. The meaning of the container is to use the red-black tree node structure as an attribute in the user-defined data structure. For example:
+
+```c
+struct user_defined_s {
+    int int_val;
+    ...
+    mln_rbtree_node_t node; //Note that this is not a pointer
+    ...
+};
+```
+
+In this structure definition, `node` is a red-black tree node type, which is a member variable in the structure `user_defined_s`.
+
+
+
+### Functions/Macros
+
+In container usage, we use `mln_rbtree_node_init` to replace `mln_rbtree_node_new` to initialize red-black tree nodes. The difference between these two interfaces is that `mln_rbtree_node_init` does not dynamically allocate the node structure (because it has been defined in other custom structures and is allocated together when the custom structure is instantiated).
+
+#### mln_rbtree_node_init
+
+```c
+mln_rbtree_node_init(n, ud)
+```
+
+Description: Initialize the tree node pointer `n`, and associate the user-defined data `ud` with the node structure `n`.
+
+Return value: tree node structure pointer `n`
+
+
+
+### Example
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include "mln_core.h"
+#include "mln_log.h"
+#include "mln_rbtree.h"
+
+typedef struct user_defined_s {
+    int val;
+    mln_rbtree_node_t node; //node as member
+} ud_t; //user-defined structure
+
+static int cmp_handler(const void *data1, const void *data2)
+{
+    return ((ud_t *)data1)->val - ((ud_t *)data2)->val;
+}
+
+int main(int argc, char *argv[])
+{
+    mln_rbtree_t *t;
+    ud_t data1, data2; //at this point, node has been allocated
+    mln_rbtree_node_t *rn;
+    struct mln_core_attr cattr;
+    struct mln_rbtree_attr rbattr;
+
+    cattr.argc = argc;
+    cattr.argv = argv;
+    cattr.global_init = NULL;
+    cattr.main_thread = NULL;
+    cattr.master_process = NULL;
+    cattr.worker_process = NULL;
+    if (mln_core_init(&cattr) < 0) {
+        fprintf(stderr, "init failed\n");
+        return -1;
+    }
+
+    rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
+    rbattr.cmp = cmp_handler;
+    rbattr.data_free = NULL;
+
+    if ((t = mln_rbtree_new(&rbattr)) == NULL) {
+        mln_log(error, "rbtree init failed.\n");
+        return -1;
+    }
+
+    //Initialize and assign custom data
+    data1.val = 1;
+    data2.val = 2;
+    mln_rbtree_node_init(&data1.node, &data1); //Initialize the node node in the custom structure, and use the custom structure as node associated data
+    mln_rbtree_node_init(&data2.node, &data2);
+
+    mln_rbtree_insert(t, &data1.node);
+    mln_rbtree_insert(t, &data2.node);
+
+    rn = mln_rbtree_search(t, &data1);
+    if (mln_rbtree_null(rn, t)) {
+        mln_log(error, "node not found\n");
+        return -1;
+    }
+
+    //Here are two ways to get a pointer to a custom data structure
+    mln_log(debug, "%d\n", ((ud_t *)mln_rbtree_node_data_get(rn))->val);
+    mln_log(debug, "%d\n", mln_container_of(rn, ud_t, node)->val);
+
+    mln_rbtree_delete(t, &data1.node);
+    mln_rbtree_node_free(t, &data1.node);
+
+    mln_rbtree_free(t);
 
     return 0;
 }

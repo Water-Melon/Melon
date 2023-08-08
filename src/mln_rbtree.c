@@ -103,6 +103,7 @@ mln_rbtree_node_new(mln_rbtree_t *t, void *data)
         n = (mln_rbtree_node_t *)t->pool_alloc(t->pool, sizeof(mln_rbtree_node_t));
     if (n == NULL) return NULL;
     n->data = data;
+    n->nofree = 0;
     return n;
 }
 

@@ -20,7 +20,7 @@ typedef void *(*rbtree_pool_alloc_handler)(void *, mln_size_t);
 typedef void (*rbtree_pool_free_handler)(void *);
 
 enum rbtree_color {
-    M_RB_RED,
+    M_RB_RED = 0,
     M_RB_BLACK
 };
 
@@ -39,7 +39,8 @@ struct mln_rbtree_node_s {
     struct mln_rbtree_node_s  *parent;
     struct mln_rbtree_node_s  *left;
     struct mln_rbtree_node_s  *right;
-    enum rbtree_color          color;
+    mln_u32_t                  nofree:1;
+    mln_u32_t                  color:31;
 };
 
 typedef struct rbtree_s {
@@ -195,8 +196,10 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
     rbtree_free_data f = (freer) == NULL? (t)->data_free: (rbtree_free_data)(freer);\
     if ((n)->data != NULL && f != NULL)\
         f((n)->data);\
-    if ((t)->pool != NULL) (t)->pool_free((n));\
-    else free((n));\
+    if (!(n)->nofree) {\
+        if ((t)->pool != NULL) (t)->pool_free((n));\
+        else free((n));\
+    }\
 })
 
 
@@ -233,6 +236,12 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
     (t)->iter = NULL;\
     (t)->nr_node = 0;\
     (t)->del = 0;\
+})
+
+#define mln_rbtree_node_init(n, ud) ({\
+    (n)->data = (ud);\
+    (n)->nofree = 1;\
+    (n);\
 })
 
 
