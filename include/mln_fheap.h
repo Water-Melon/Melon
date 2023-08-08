@@ -16,7 +16,7 @@
 #endif
 
 enum mln_fheap_mark {
-    FHEAP_FALSE,
+    FHEAP_FALSE = 0,
     FHEAP_TRUE
 };
 
@@ -40,7 +40,6 @@ struct mln_fheap_attr {
     fheap_cmp                 cmp;
     fheap_copy                copy;
     fheap_key_free            key_free;
-    void                     *min_val;
 };
 
 typedef struct mln_fheap_node_s {
@@ -50,7 +49,8 @@ typedef struct mln_fheap_node_s {
     struct mln_fheap_node_s  *left;
     struct mln_fheap_node_s  *right;
     mln_size_t                degree;
-    enum mln_fheap_mark       mark;
+    mln_u32_t                 nofree:1;
+    mln_u32_t                 mark:31;
 } mln_fheap_node_t;
 
 typedef struct {
@@ -262,8 +262,10 @@ mln_fheap_remove_child(mln_fheap_node_t **root)
     if ((fn) != NULL) {\
         if (f != NULL && (fn)->key != NULL)\
             f((fn)->key);\
-        if ((fh)->pool != NULL) (fh)->pool_free((fn));\
-        else free((fn));\
+        if (!(fn)->nofree) {\
+           if ((fh)->pool != NULL) (fh)->pool_free((fn));\
+           else free((fn));\
+        }\
     }\
 })
 
@@ -273,13 +275,21 @@ mln_fheap_remove_child(mln_fheap_node_t **root)
         while ((fn = mln_fheap_inline_extract_min((fh), (compare))) != NULL) {\
             mln_fheap_inline_node_free((fh), fn, freer);\
         }\
-        if ((fh)->min_val != NULL) {\
-            if ((fh)->pool != NULL) (fh)->pool_free((fh)->min_val);\
-            else free((fh)->min_val);\
-        }\
         if ((fh)->pool != NULL) (fh)->pool_free((fh));\
         else free((fh));\
     }\
+})
+
+#define mln_fheap_node_init(fn, k) ({\
+    (fn)->key = (k);\
+    (fn)->parent = NULL;\
+    (fn)->child = NULL;\
+    (fn)->left = (fn);\
+    (fn)->right = (fn);\
+    (fn)->degree = 0;\
+    (fn)->nofree = 1;\
+    (fn)->mark = FHEAP_FALSE;\
+    (fn);\
 })
 
 

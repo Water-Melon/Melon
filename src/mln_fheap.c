@@ -86,6 +86,7 @@ mln_fheap_node_t *mln_fheap_node_new(mln_fheap_t *fh, void *key)
     fn->left = fn;
     fn->right = fn;
     fn->degree = 0;
+    fn->nofree = 0;
     fn->mark = FHEAP_FALSE;
     return fn;
 }

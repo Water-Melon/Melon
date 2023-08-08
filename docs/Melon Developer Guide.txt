@@ -289,8 +289,6 @@ Their definitions can be found in melon/include/mln_types.h.
         fheap_cmp                 cmp;
         fheap_copy                copy;
         fheap_key_free            key_free;
-        void                     *min_val;
-        mln_size_t                min_val_size;
     };
     pool -- is a memory pool given by caller. You can set it NULL if you don't want to allocate fib-heap node from memory pool.
     pool_alloc -- is the corresponding allocation function pointer of 'pool'.
@@ -305,8 +303,6 @@ Their definitions can be found in melon/include/mln_types.h.
     key_free -- is a function pointer to free key's value in a heap node. Its prototype is
         typedef void (*fheap_key_free)(void *);
     This pointer can be NULL.
-    min_val -- is a key's value actually. This is the minimum value in the heap.
-    min_val_size -- is the size of 'min_val' structure.
 
     a) mln_fheap_node_t* mln_fheap_node_new(mln_fheap_t *fh, void *key);
        It initializes a fibonacci heap node.
@@ -314,36 +310,58 @@ Their definitions can be found in melon/include/mln_types.h.
        The second one is a user data.
        If memory is not enough, NULL will be returned.
 
-    b) void mln_fheap_node_free(mln_fheap_t *fh, mln_fheap_node_t *fn);
+    b) mln_fheap_node_t* mln_fheap_node_init(mln_fheap_node_t *fn, void *key);
+       Initialize a fibonacci heap node. It will always be successful.
+
+    c) void mln_fheap_node_free(mln_fheap_t *fh, mln_fheap_node_t *fn);
        It destroys a heap node and frees its system resources.
        The second argument is the pointer that mln_fheap_node_new() returned.
        If key_free isn't NULL, the key's value in the heap node will be freed.
 
-    c) mln_fheap_t *mln_fheap_new(struct mln_fheap_attr *attr);
+    d) mln_fheap_t *mln_fheap_new(struct mln_fheap_attr *attr);
        It initializes and returns a fibonacci heap.
 
-    d) void mln_fheap_free(mln_fheap_t *fh);
+    e) void mln_fheap_free(mln_fheap_t *fh);
        It destroys a fibonacci heap. If 'key_free' is not NULL, the key's value in every heap node will be freed by
        the function 'key_free' at the same time.
 
-    e) void mln_fheap_insert(mln_fheap_t *fh, mln_fheap_node_t *fn);
+    f) void mln_fheap_insert(mln_fheap_t *fh, mln_fheap_node_t *fn);
        This interface inserts a heap node.
 
-    f) void mln_fheap_delete(mln_fheap_t *fh, mln_fheap_node_t *node);
+    g) void mln_fheap_delete(mln_fheap_t *fh, mln_fheap_node_t *node);
        This interface removes a heap node.
 
-    g) mln_fheap_node_t* mln_fheap_minimum(mln_fheap_t *fh);
+    h) mln_fheap_node_t* mln_fheap_minimum(mln_fheap_t *fh);
        It retrieves a minimum heap node.
        If the heap is empty, NULL will be returned.
 
-    h) mln_fheap_node_t* mln_fheap_extract_min(mln_fheap_t *fh);
+    i) mln_fheap_node_t* mln_fheap_extract_min(mln_fheap_t *fh);
        Extract the node whose key value is minimum in the heap.
        If the heap is empty, NULL will be returned.
 
-    i) int mln_fheap_decrease_key(mln_fheap_t *fh, mln_fheap_node_t *node, void *key);
+    j) int mln_fheap_decrease_key(mln_fheap_t *fh, mln_fheap_node_t *node, void *key);
        It decreases the key's value of the specified node to the key.
        The type of key must be identical with the type of keys in heap nodes.
        The return value is: -1 - key error, 0 - succeed.
+
+    k) mln_fheap_inline_insert(fh, fn, compare)
+       Inline version of 'mln_fheap_insert'. 'compare' is the callback function 'cmp' in 'attr'.
+
+    l) mln_fheap_inline_extract_min(fh, compare)
+       Inline version of 'mln_fheap_insert'. 'compare' is the callback function 'cmp' in 'attr'.
+
+    m) mln_fheap_inline_decrease_key(fh, node, k, cpy, compare)
+       Inline version of 'mln_fheap_decrease_key'. 'compare' is the callback function 'cmp' in 'attr'.
+
+    n) mln_fheap_inline_delete(fh, node, cpy, compare)
+       Inline version of 'mln_fheap_delelte'. 'compare' is the callback function 'cmp' in 'attr'.
+       'cpy' is the callback function 'copy' in 'attr'.
+
+    o) mln_fheap_inline_node_free(fh, fn, freer)
+       Inline version of 'mln_fheap_node_free'. 'freer' is the callback function 'key_free' in 'attr'.
+
+    p) mln_fheap_inline_free(fh, compare, freer)
+       Inline version of 'mln_fheap_free'. 'freer' is the callback function 'key_free' in 'attr'.
 
   4) Red-Black Tree
     struct mln_rbtree_attr {

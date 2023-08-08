@@ -546,6 +546,8 @@ In this structure definition, `node` is a red-black tree node type, which is a m
 
 In container usage, we use `mln_rbtree_node_init` to replace `mln_rbtree_node_new` to initialize red-black tree nodes. The difference between these two interfaces is that `mln_rbtree_node_init` does not dynamically allocate the node structure (because it has been defined in other custom structures and is allocated together when the custom structure is instantiated).
 
+
+
 #### mln_rbtree_node_init
 
 ```c

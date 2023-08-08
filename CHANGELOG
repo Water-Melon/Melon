@@ -1,3 +1,21 @@
+Changes with melon 2.7.1                                          08 Aug 2023
+    *) Updated configuration directives
+    *) Updated functions' name of conf module
+    *) Updated functions' name of json module
+    *) Updated functions' name of log module
+    *) Updated functions' name of prime module
+    *) Updated functions' name of connection module
+    *) Updated functions' name of file module
+    *) Updated functions' name of fork module
+    *) Updated functions' name of asn1 module
+    *) Updated functions' name of http module
+    *) Updated functions' name of rbtree module
+    *) Fixed import bug in melang
+    *) Optimized red-black tree performance
+    *) Optimized fibonacci heap performance
+    *) Fixed nonnull error of event module
+    *) Updated docs
+
 Changes with melon 2.7.0                                          31 Jul 2023
     *) Optimized melang performance
     *) Optimized configuration directives

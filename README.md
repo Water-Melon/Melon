@@ -91,6 +91,8 @@ make
 make install
 ```
 
+
+
 ### License
 
 [BSD-3-Clause License](https://github.com/Water-Melon/Melang/blob/master/LICENSE)
@@ -111,9 +113,12 @@ Please refer to [Official Documentation Website](http://doc.melonc.io/) for more
 
 You can pull the built container image to deploy the running environment.
 
+**Docker image will not be maintained temporarily because I cannot sign in docker hub from my country.** 
+
 ```shell
 docker pull melonc/melon
 ```
+
 
 
 ### Webassembly
@@ -126,6 +131,7 @@ make && make install
 ```
 
 There is only one static library `libmelon.a` to be created.
+
 
 
 ### Contact
