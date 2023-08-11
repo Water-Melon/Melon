@@ -6,7 +6,7 @@
 
 At the beginning of Melon's development, it was necessary to support the multi-process model, which was mainly due to Nginx and previous user-mode network program development experience. Therefore, multiprocessing in Melon also continues the asynchronous event pattern similar to Nginx.
 
-Let's use Melon to complete a multi-process example. Although this example is simple, users will find that in fact Melon does not interfere or even is based on the user's great freedom of play.
+Let's use Melon to complete a multi-process example. Although this example is simple, users will find that in fact Melon does not interfere or even gives to the user great freedom of development.
 
 
 
