@@ -32,7 +32,7 @@ Return value: timestamp of time_t type, or 0 if there is an error.
 
 int main(void)
 {
-    char p[] = "* * * * *;
+    char p[] = "* * * * *";
     mln_string_t s;
     mln_string_nset(&s, p, sizeof(p)-1);
     time_t now = time(NULL);

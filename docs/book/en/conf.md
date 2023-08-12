@@ -112,8 +112,10 @@ Description:
 
 In Melon, all configuration is loaded into the `mln_conf_t` structure, and subsequent retrieval is done through these three search functions. The three search function pointers are respectively `mln_conf_t`, `mln_conf_domain_t` and the `search` member in `mln_conf_cmd_t`. Therefore, when using it, it looks like this:
 
-```
-mln_conf_domain_t *d = conf->search(conf, "main");
+```c
+mln_conf_domain_t *d = conf->search(conf, "main"); //Look for a configuration domain named main
+mln_conf_cmd_t *cc = d->search(d, "framework"); //Look for a configuration command named framework
+mln_conf_item_t *ci = cc->search(cc, 1); //Find the first parameter item of the framework command
 ```
 
 The three search functions are:
@@ -143,8 +145,9 @@ Description:
 
 In Melon configuration, developers are allowed to insert configuration items into `mln_conf_t` and `mln_conf_domain_t` areas. You can directly call the `insert` function pointer in these two structures to implement the insertion of configuration items. E.g:
 
-```
-mln_conf_domain_t *d = conf->insert(conf, "domain1");
+```c
+mln_conf_domain_t *d = conf->insert(conf, "domain1"); //Insert a configuration domain called domain1 into the configuration
+mln_conf_cmd_t *c = d->insert(d, "test_cmd"); //Insert a configuration command named test_cmd into the domain1 configuration domain
 ```
 
 return value:
@@ -164,8 +167,9 @@ Description:
 
 In Melon configuration, developers are allowed to delete configuration items from `mln_conf_t` and `mln_conf_domain_t` areas. You can directly call the `remove` function pointer in these two structures to delete configuration items. E.g
 
-```
-conf->remove(conf, "domain1");
+```c
+d->remove(d, "test_cmd"); //Delete the configuration command named test_cmd from configuration domain d
+conf->remove(conf, "domain1"); //Delete the configuration domain named domain1 from the configuration
 ```
 
 return value:
@@ -184,7 +188,7 @@ Description:
 
 In Melon configuration, allows developers to update the argument list in `mln_conf_cmd_t`. The first argument is `mln_conf_cmd_t` pointer, the second argument is `mln_conf_item_t` type array, and the third argument is the number of array elements. Argument 2 can be the memory on the stack, because in this function, it will be duplicated.
 
-```
+```c
 mln_conf_item_t items[] = {
   {
     CONF_BOOL,

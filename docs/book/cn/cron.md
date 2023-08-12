@@ -32,7 +32,7 @@ time_t mln_cron_parse(mln_string_t *exp, time_t base);
 
 int main(void)
 {
-    char p[] = "* * * * *;
+    char p[] = "* * * * *";
     mln_string_t s;
     mln_string_nset(&s, p, sizeof(p)-1);
     time_t now = time(NULL);

@@ -112,8 +112,10 @@ typedef mln_conf_item_t   *(*mln_conf_item_cb_t)   (mln_conf_cmd_t *, mln_u32_t)
 
 在Melon中，所有配置都会被加载进`mln_conf_t`结构中，随后的获取则是通过这三个search函数进行的。这三个search函数指针依次分别为`mln_conf_t`，`mln_conf_domain_t`以及`mln_conf_cmd_t`中的`search`成员。故在使用时，则是形如：
 
-```
-mln_conf_domain_t *d = conf->search(conf, "main");
+```c
+mln_conf_domain_t *d = conf->search(conf, "main"); //查找名为main的配置域
+mln_conf_cmd_t *cc = d->search(d, "framework"); //查找名为framework的配置命令
+mln_conf_item_t *ci = cc->search(cc, 1); //查找framework命令的第一个参数项
 ```
 
 这三个search函数分别是：
@@ -143,8 +145,9 @@ typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)    (mln_conf_domain_t *, char *)
 
 在Melon配置中，允许开发者向`mln_conf_t`和`mln_conf_domain_t`区域中插入配置项。可以直接调用这两个结构中的`insert`函数指针成员来实现配置项的插入。例如：
 
-```
-mln_conf_domain_t *d = conf->insert(conf, "domain1");
+```c
+mln_conf_domain_t *d = conf->insert(conf, "domain1"); //向配置中插入一个名为domain1的配置域
+mln_conf_cmd_t *c = d->insert(d, "test_cmd"); //向domain1这个配置域里面插入一个名为test_cmd的配置命令
 ```
 
 返回值：
@@ -164,8 +167,9 @@ typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)    (mln_conf_domain_t *, char *)
 
 在Melon配置中，允许开发者从`mln_conf_t`和`mln_conf_domain_t`区域中删除配置项。可以直接调用这两个结构中的`remove`函数指针成员来实现配置项的删除。例如：
 
-```
-conf->remove(conf, "domain1");
+```c
+d->remove(d, "test_cmd"); //从配置域d中删除名为test_cmd的配置命令
+conf->remove(conf, "domain1"); //从配置中删除名为domain1的配置域
 ```
 
 返回值：
@@ -184,7 +188,7 @@ typedef int (*mln_conf_item_update_cb_t) (mln_conf_cmd_t *, mln_conf_item_t *, m
 
 在Melon配置中，允许开发者更新`mln_conf_cmd_t`中的参数列表。第一个参数为`mln_conf_cmd_t`指针，第二个参数为`mln_conf_item_t`类型数组，第三个参数为数组元素个数。参数二可以为栈上内存，因为在该函数中会自行复制一份参数二的数据进行保存和维护。
 
-```
+```c
 mln_conf_item_t items[] = {
   {
     CONF_BOOL,
