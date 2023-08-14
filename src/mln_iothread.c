@@ -180,6 +180,7 @@ static inline mln_iothread_msg_t *mln_iothread_msg_new(mln_u32_t type, void *dat
         return NULL;
 
     msg->feedback = feedback;
+    msg->hold = 0;
     msg->type = type;
     msg->data = data;
     msg->prev = msg->next = NULL;
