@@ -20,7 +20,7 @@
 int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http);
 ```
 
-描述：初始化websocket结构`ws`，其依赖于`mln_http_t`结构`http`。ws可能是动态分配而来，也可能是栈内自动变亮。
+描述：初始化websocket结构`ws`，其依赖于`mln_http_t`结构`http`。ws可能是动态分配而来，也可能是栈内自动变量。
 
 返回值：成功则返回`0`，否则返回`-1`
 

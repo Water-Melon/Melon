@@ -20,7 +20,7 @@
 int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http);
 ```
 
-Description: Initialize the websocket structure `ws`, which depends on the `mln_http_t` structure `http`. ws may be dynamically allocated, or it may be automatically brightened in the stack.
+Description: Initialize the websocket structure `ws`, which depends on the `mln_http_t` structure `http`. ws may be dynamically allocated, or it may be an automatic variable on the stack.
 
 Return value: return `0` if successful, otherwise return `-1`
 
