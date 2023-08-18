@@ -341,9 +341,13 @@ err:
     lex->error = MLN_LEX_SUCCEED;
     lex->preprocess = attr->preprocess;
     lex->ignore = 0;
-    if ((lex->env = mln_string_pool_dup(lex->pool, attr->env)) == NULL) {
-        mln_lex_destroy(lex);
-        return NULL;
+    if (attr->env != NULL) {
+        if ((lex->env = mln_string_pool_dup(lex->pool, attr->env)) == NULL) {
+            mln_lex_destroy(lex);
+            return NULL;
+        }
+    } else {
+        lex->env = NULL;
     }
 
     if (attr->data != NULL) {
