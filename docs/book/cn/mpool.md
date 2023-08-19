@@ -11,7 +11,7 @@ Melon中，内存池分为两类：
 
 ### 视频介绍
 
-<iframe src="//player.bilibili.com/player.html?bvid=BV1CP411W76u&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="500px"> </iframe>
+<iframe src="//player.bilibili.com/player.html?bvid=BV1CP411W76u&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
 
 
 
