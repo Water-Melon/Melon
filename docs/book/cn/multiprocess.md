@@ -6,6 +6,16 @@
 
 Melon开发之初便是要支持多进程模型的，这一点也主要源于Nginx以及以往用户态网络程序开发经历。因此，Melon中的多进程也延续了类似Nginx的异步事件模式。
 
+
+
+### 视频介绍
+
+<iframe src="//player.bilibili.com/player.html?bvid=BV1294y1k7kd&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="500px"> </iframe>
+
+
+
+
+
 下面我们来使用Melon来完成一个多进程例子。这个例子虽然简单，但用户会发现，事实上Melon并不干涉甚至是给予用户极大的自由发挥空间。
 
 
