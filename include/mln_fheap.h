@@ -198,7 +198,8 @@ mln_fheap_remove_child(mln_fheap_node_t **root)
 }
 
 #define mln_fheap_inline_insert(fh, fn, compare) ({\
-    fheap_cmp cmp = (compare) == NULL? (fh)->cmp: (compare);\
+    fheap_cmp cmp = (fheap_cmp)(compare);\
+    if (cmp == NULL) cmp = (fh)->cmp;\
     mln_fheap_add_child(&((fh)->root_list), (fn));\
     (fn)->parent = NULL;\
     if ((fh)->min == NULL) {\
@@ -211,7 +212,8 @@ mln_fheap_remove_child(mln_fheap_node_t **root)
 })
 
 #define mln_fheap_inline_extract_min(fh, compare) ({\
-    fheap_cmp cmp = (compare) == NULL? (fh)->cmp: (compare);\
+    fheap_cmp cmp = (fheap_cmp)(compare);\
+    if (cmp == NULL) cmp = (fh)->cmp;\
     mln_fheap_node_t *z = (fh)->min;\
     if (z != NULL) {\
         mln_fheap_node_t *child;\
@@ -233,8 +235,10 @@ mln_fheap_remove_child(mln_fheap_node_t **root)
 })
 
 #define mln_fheap_inline_decrease_key(fh, node, k, cpy, compare) ({\
-    fheap_cmp cmp = (compare) == NULL? (fh)->cmp: (compare);\
-    fheap_copy cp = (cpy) == NULL? (fh)->copy: (cpy);\
+    fheap_cmp cmp = (fheap_cmp)(compare);\
+    if (cmp == NULL) cmp = (fh)->cmp;\
+    fheap_copy cp = (fheap_copy)(cpy);\
+    if (cp == NULL) cp = (fh)->copy;\
     int r = 0;\
     if (!cmp((node)->key, (k))) {\
         r = -1;\
@@ -258,7 +262,8 @@ mln_fheap_remove_child(mln_fheap_node_t **root)
 })
 
 #define mln_fheap_inline_node_free(fh, fn, freer) ({\
-    fheap_key_free f = (freer) == NULL? (fh)->key_free: (freer);\
+    fheap_key_free f = (fheap_key_free)(freer);\
+    if (f == NULL) f = (fh)->key_free;\
     if ((fn) != NULL) {\
         if (f != NULL && (fn)->key != NULL)\
             f((fn)->key);\

@@ -147,7 +147,8 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
     mln_rbtree_node_t *y = &((t)->nil);\
     mln_rbtree_node_t *x = (t)->root;\
     mln_rbtree_node_t *nil = &(t->nil);\
-    rbtree_cmp cmp = (compare) == NULL? (t)->cmp: (rbtree_cmp)(compare);\
+    rbtree_cmp cmp = (rbtree_cmp)(compare);\
+    if (cmp == NULL) cmp = (t)->cmp;\
     while (x != nil) {\
         y = x;\
         if (cmp((n)->data, x->data) < 0) x = x->left;\
@@ -171,7 +172,8 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
 /*search*/
 #define mln_rbtree_inline_root_search(t, root, key, compare) ({\
     mln_rbtree_node_t *ret_node = (root);\
-    rbtree_cmp cmp = (compare) == NULL? (t)->cmp: (rbtree_cmp)(compare);\
+    rbtree_cmp cmp = (rbtree_cmp)(compare);\
+    if (cmp == NULL) cmp = (t)->cmp;\
     int ret;\
     while ((ret_node != &(t->nil)) && ((ret = cmp(key, ret_node->data)) != 0)) {\
         if (ret < 0) ret_node = ret_node->left;\
@@ -182,7 +184,8 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
 
 #define mln_rbtree_inline_search(t, key, compare) ({\
     mln_rbtree_node_t *ret_node = (t)->root;\
-    rbtree_cmp cmp = (compare) == NULL? (t)->cmp: (rbtree_cmp)(compare);\
+    rbtree_cmp cmp = (rbtree_cmp)(compare);\
+    if (cmp == NULL) cmp = (t)->cmp;\
     int ret;\
     while ((ret_node != &(t->nil)) && ((ret = cmp(key, ret_node->data)) != 0)) {\
         if (ret < 0) ret_node = ret_node->left;\
@@ -193,7 +196,8 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
 
 /*rbtree free node*/
 #define mln_rbtree_inline_node_free(t, n, freer) ({\
-    rbtree_free_data f = (freer) == NULL? (t)->data_free: (rbtree_free_data)(freer);\
+    rbtree_free_data f = (rbtree_free_data)(freer);\
+    if (f == NULL) f = (t)->data_free;\
     if ((n)->data != NULL && f != NULL)\
         f((n)->data);\
     if (!(n)->nofree) {\
