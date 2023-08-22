@@ -28,7 +28,7 @@
 #include <netdb.h>
 #endif
 
-static void mln_init_notice(void);
+static void mln_init_notice(int argc, char *argv[]);
 #if !defined(WIN32)
 static int mln_master_trace_init(mln_lang_ctx_t *ctx);
 static void mln_worker_routine(struct mln_core_attr *attr);
@@ -55,7 +55,7 @@ int mln_core_init(struct mln_core_attr *attr)
     if (attr->global_init != NULL && attr->global_init() < 0)
         return -1;
 
-    mln_init_notice();
+    mln_init_notice(attr->argc, attr->argv);
 #if !defined(WIN32)
     if (mln_get_framework_status()) {
         if (mln_boot_params(attr->argc, attr->argv) < 0)
@@ -239,8 +239,13 @@ static mln_string_t *mln_get_framework_status(void)
 }
 #endif
 
-static void mln_init_notice(void)
+static void mln_init_notice(int argc, char *argv[])
 {
+    for (--argc; argc > 0; --argc) {
+        if (!strcmp(argv[argc], "--no-report")) {
+            return;
+        }
+    }
     mln_u8_t buf[] = {
         0x84, 0xff, 0x8a, 0x62, 0xee, 0x6a, 0xcc, 0x3e, 0x7b, 0x74,
         0xfa, 0x25, 0xfd, 0x48, 0xa6, 0xca, 0xc0, 0xbd, 0xf5, 0xae,

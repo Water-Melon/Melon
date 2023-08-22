@@ -6,6 +6,9 @@
 #  test system type
 sysname=`uname -s`
 
+#melang_script_path
+melang_script_path=/usr/local/lib/melang
+
 #installation path
 if ! case $sysname in MINGW*) false;; esac; then
     install_path=$HOME/libmelon
@@ -37,6 +40,9 @@ do
     if [ $param_prefix == "--prefix" ]; then
         install_path=$param_suffix
     fi
+    if [ $param_prefix == "--melang-prefix" ]; then
+        melang_script_path=$param_suffix
+    fi
     if [ $param_prefix == "--cc" ]; then
         cc=$param_suffix
     fi
@@ -63,6 +69,7 @@ fi
 
 #output installation path
 echo -e "Installation Path \t[$install_path]"
+echo -e "Melang script Path \t[$melang_script_path]"
 echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", argv[1]);return 0;}" > .path_generator.c
 $tcc -o path_generator .path_generator.c
 realpath=`./path_generator $install_path`
@@ -71,12 +78,13 @@ confpath=`./path_generator $realpath/conf/melon.conf`
 tmpfilepath=`./path_generator $realpath/tmp`
 pidpath=`./path_generator $realpath/logs/melon.pid`
 logpath=`./path_generator $realpath/logs/melon.log`
+melang_script_path=`./path_generator $melang_script_path`
 if ! case $sysname in MINGW*) false;; esac; then
     melanglibpath=`./path_generator $HOME/lib/melang`
     melangdylibpath=`./path_generator $HOME/lib/melang_dynamic`
 else
-    melanglibpath=`./path_generator /usr/local/lib/melang`
-    melangdylibpath=`./path_generator /usr/local/lib/melang_dynamic`
+    melanglibpath=`./path_generator $melang_script_path`
+    melangdylibpath=`./path_generator $melang_script_path`
 fi
 rm -f path_generator .path_generator.c
 #build path.c & h
