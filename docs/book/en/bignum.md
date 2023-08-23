@@ -159,7 +159,7 @@ Return value: none
 int mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bignum_t *quotient);
 ```
 
-Description: For division of big numbers, the chamber of commerce is put into `dest`, and if `quotient` is not empty, the remainder will be put into it.
+Description: Large number division, the remainder will be put into `dest`, if `quotient` is not empty, the quotient will be put into it.
 
 Return value: return `0` if successful, otherwise return `-1`
 

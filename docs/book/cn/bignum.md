@@ -159,7 +159,7 @@ void mln_bignum_mul(mln_bignum_t *dest, mln_bignum_t *src);
 int mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bignum_t *quotient);
 ```
 
-描述：大数除法，商会放入`dest`中，若`quotient`不为空，则余数将放入其中。
+描述：大数除法，余数会放入`dest`中，若`quotient`不为空，则商将放入其中。
 
 返回值：成功则返回`0`，否则返回`-1`
 
