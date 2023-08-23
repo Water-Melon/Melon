@@ -1,6 +1,6 @@
 ## 安装
 
-Windows与UNIX环境的安装并无差异，仅需要先行安装并配置`mingw`、`git bash`以及`make`即可。
+Windows与UNIX环境的安装并无差异，仅需要先行安装并配置`mingw`、`git bash`以及`make`，后续步骤与UNIX的完全一致。
 
 安装[MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds)时请选择如下设置：
 
@@ -16,7 +16,7 @@ Windows与UNIX环境的安装并无差异，仅需要先行安装并配置`mingw
 
 
 
-安装Melon，可以执行如下命令：
+UNIX环境下Melon的安装执行如下命令：
 
 ```bash
 $ git clone https://github.com/Water-Melon/Melon.git
@@ -24,6 +24,20 @@ $ ./configure
 $ make
 $ sudo make install
 ```
+
+`configure`脚本支持如下参数：
+
+- `--prefix` 设置Melon的安装路径
+
+- `--melang-prefix` 设置Melon库中使用到的Melang脚本的安装路径
+
+- `--cc` 设置Melon组件编译时所使用的C编译器
+
+- `--enable-wasm` 启用webassembly模式，会编译安装webassembly格式的Melon库
+
+- `--help` 显示`configure`脚本的帮助信息
+
+
 
 Melon会同时生成动态库与静态库。对于Linux系统，在使用Melon的动态库时，需要将该库的路径加入到系统配置中：
 

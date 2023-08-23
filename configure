@@ -31,6 +31,7 @@ do
         echo "Copyright (C) Niklaus F.Schen."
         echo "Options:"
         echo -e "\t--prefix=INSTALL_PATH"
+        echo -e "\t--melang-prefix=MELANG_SCRIPT_PATH"
         echo -e "\t--cc=C compiler"
         echo -e "\t--enable-wasm"
         exit 0

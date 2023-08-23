@@ -33,10 +33,10 @@ The implementation of large numbers in Melon is fixed-length, that is, large num
 
 
 
-#### mln_bignum_init
+#### mln_bignum_new
 
 ```c
-mln_bignum_t *mln_bignum_init(void);
+mln_bignum_t *mln_bignum_new(void);
 ```
 
 Description: Create and initialize the big number structure `mln_bignum_t` allocated by `malloc`.
@@ -45,10 +45,10 @@ Return value: If successful, return a pointer to a big number structure, otherwi
 
 
 
-#### mln_bignum_pool_init
+#### mln_bignum_pool_new
 
 ```c
-mln_bignum_t *mln_bignum_pool_init(mln_alloc_t *pool);
+mln_bignum_t *mln_bignum_pool_new(mln_alloc_t *pool);
 ```
 
 Description: Create and initialize the big number structure `mln_bignum_t`, which is allocated from the memory pool specified by `pool`.
@@ -63,7 +63,7 @@ Return value: If successful, return a pointer to a big number structure, otherwi
 void mln_bignum_free(mln_bignum_t *bn);
 ```
 
-Description: Free the big number structure `bn`, which should have been allocated by `mln_bignum_init`.
+Description: Free the big number structure `bn`, which should have been allocated by `mln_bignum_new`.
 
 Return value: none
 
@@ -75,7 +75,7 @@ Return value: none
 void mln_bignum_pool_free(mln_bignum_t *bn);
 ```
 
-Description: Free the big number structure `bn`, which should have been allocated by `mln_bignum_pool_init`.
+Description: Free the big number structure `bn`, which should have been allocated by `mln_bignum_pool_new`.
 
 Return value: none
 
@@ -293,27 +293,15 @@ Return value: return `0` if successful, otherwise return `-1`
 
 
 
-#### mln_bignum_i2s
+#### mln_bignum_tostring
 
 ```c
-int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len);
+mln_string_t *mln_bignum_tostring(mln_bignum_t *n);
 ```
 
-Description: It has the same function as `mln_bignum_i2osp`. It is recommended to use mln_bignum_i2osp.
+Description: Convert a big number n to a decimal string format. Do not forget to free the returned string by `mln_string_free`.
 
-Return value: return `0` if successful, otherwise return `-1`
-
-
-
-#### mln_bignum_s2i
-
-```c
-int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len);
-```
-
-Description: Same function as `mln_bignum_os2ip`, `mln_bignum_os2ip` is recommended.
-
-Return value: return `0` if successful, otherwise return `-1`
+Return value: return the string if successful, otherwise return `NULL`
 
 
 
@@ -415,8 +403,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    n1 = mln_bignum_init();
-    n2 = mln_bignum_init();
+    n1 = mln_bignum_new();
+    n2 = mln_bignum_new();
     if (n1 == NULL || n2 == NULL) {
         mln_log(error, "init bignum failed\n");
         goto err;

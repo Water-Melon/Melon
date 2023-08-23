@@ -28,8 +28,8 @@ typedef struct {
 #define mln_bignum_is_negative(pbn) ((pbn)->tag == M_BIGNUM_NEGATIVE)
 #define mln_bignum_get_length(pbn)  ((pbn)->length)
 #define mln_bignum_zero()           {M_BIGNUM_POSITIVE, 0, {0}}
-extern mln_bignum_t *mln_bignum_init(void);
-extern mln_bignum_t *mln_bignum_pool_init(mln_alloc_t *pool) __NONNULL1(1);
+extern mln_bignum_t *mln_bignum_new(void);
+extern mln_bignum_t *mln_bignum_pool_new(mln_alloc_t *pool) __NONNULL1(1);
 extern void mln_bignum_free(mln_bignum_t *bn);
 extern void mln_bignum_pool_free(mln_bignum_t *bn);
 extern mln_bignum_t *mln_bignum_dup(mln_bignum_t *bn) __NONNULL1(1);
@@ -50,7 +50,6 @@ extern int mln_bignum_extend_eulid(mln_bignum_t *a, mln_bignum_t *b, mln_bignum_
 extern void mln_bignum_dump(mln_bignum_t *bn);
 extern int mln_bignum_i2osp(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len) __NONNULL2(1,2);
 extern int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len) __NONNULL2(1,2);
-extern int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len) __NONNULL2(1,2);
-extern int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len) __NONNULL1(1);
+extern mln_string_t *mln_bignum_tostring(mln_bignum_t *n) __NONNULL1(1);
 
 #endif

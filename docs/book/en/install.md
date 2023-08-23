@@ -16,7 +16,7 @@ Please select the following settings when installing [MingW-W64-builds](https://
 
 
 
-To install Melon, execute the following commands:
+To install Melon on UNIX, execute the following commands:
 
 ```bash
 $ git clone https://github.com/Water-Melon/Melon.git
@@ -24,6 +24,20 @@ $ ./configure
 $ make
 $ sudo make install
 ```
+
+Shell script `configure` has the following parameters:
+
+- `--prefix` The installation path of Melon library
+
+- `--melang-prefix` The installation path of the Melang script files that Melon used
+
+- `--cc` Set the C compiler that used to compile Melon
+
+- `--enable-wasm` Enable webassembly mode to generate webassembly format library
+
+- `--help` Show help information
+
+
 
 Melon generates both dynamic and static libraries at the same time. For Linux systems, when using Melon's dynamic library, the path to the library needs to be added to the system configuration:
 

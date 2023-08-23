@@ -33,10 +33,10 @@ Melon中大数的实现是定长的，即大数是有上限的，目前支持到
 
 
 
-#### mln_bignum_init
+#### mln_bignum_new
 
 ```c
-mln_bignum_t *mln_bignum_init(void);
+mln_bignum_t *mln_bignum_new(void);
 ```
 
 描述：创建并初始化大数结构`mln_bignum_t`，该结构由`malloc`分配而来。
@@ -45,10 +45,10 @@ mln_bignum_t *mln_bignum_init(void);
 
 
 
-#### mln_bignum_pool_init
+#### mln_bignum_pool_new
 
 ```c
-mln_bignum_t *mln_bignum_pool_init(mln_alloc_t *pool);
+mln_bignum_t *mln_bignum_pool_new(mln_alloc_t *pool);
 ```
 
 描述：创建并初始化大数结构`mln_bignum_t`，该结构由`pool`指定的内存池分配而来。
@@ -63,7 +63,7 @@ mln_bignum_t *mln_bignum_pool_init(mln_alloc_t *pool);
 void mln_bignum_free(mln_bignum_t *bn);
 ```
 
-描述：释放大数结构`bn`，该结构应由`mln_bignum_init`分配而来。
+描述：释放大数结构`bn`，该结构应由`mln_bignum_new`分配而来。
 
 返回值：无
 
@@ -75,7 +75,7 @@ void mln_bignum_free(mln_bignum_t *bn);
 void mln_bignum_pool_free(mln_bignum_t *bn);
 ```
 
-描述：释放大数结构`bn`，该结构应由`mln_bignum_pool_init`分配而来。
+描述：释放大数结构`bn`，该结构应由`mln_bignum_pool_new`分配而来。
 
 返回值：无
 
@@ -293,27 +293,15 @@ int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len);
 
 
 
-#### mln_bignum_i2s
+#### mln_bignum_tostring
 
 ```c
-int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len);
+mln_string_t *mln_bignum_tostring(mln_bignum_t *n);
 ```
 
-描述：与`mln_bignum_i2osp`功能相同，推荐使用mln_bignum_i2osp。
+描述：将大数`n`转换成十进制字符串。本函数因其性能较低，故应仅用于调试。不要忘记使用后将返回值使用`mln_string_free`进行释放。
 
-返回值：成功则返回`0`，否则返回`-1`
-
-
-
-#### mln_bignum_s2i
-
-```c
-int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len);
-```
-
-描述：与`mln_bignum_os2ip`功能相同，推荐使用`mln_bignum_os2ip`。
-
-返回值：成功则返回`0`，否则返回`-1`
+返回值：成功则返回十进制数字符串，否则返回`NULL`
 
 
 
@@ -415,8 +403,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    n1 = mln_bignum_init();
-    n2 = mln_bignum_init();
+    n1 = mln_bignum_new();
+    n2 = mln_bignum_new();
     if (n1 == NULL || n2 == NULL) {
         mln_log(error, "init bignum failed\n");
         goto err;

@@ -57,12 +57,12 @@ static inline void
 mln_bignum_random_scope(mln_bignum_t *bn, mln_u32_t bitwidth, mln_bignum_t *max);
 
 
-mln_bignum_t *mln_bignum_init(void)
+mln_bignum_t *mln_bignum_new(void)
 {
     return (mln_bignum_t *)calloc(1, sizeof(mln_bignum_t));
 }
 
-mln_bignum_t *mln_bignum_pool_init(mln_alloc_t *pool)
+mln_bignum_t *mln_bignum_pool_new(mln_alloc_t *pool)
 {
     return (mln_bignum_t *)mln_alloc_c(pool, sizeof(mln_bignum_t));
 }
@@ -1216,106 +1216,46 @@ int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
 }
 #endif
 
-#if 1
-int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
+mln_string_t *mln_bignum_tostring(mln_bignum_t *n)
 {
-    mln_u64_t *p, *end;
-    int pos = 3, length = n->length << 2;
-    p = n->data + n->length - 1;
-    if (!(((*p) >> 24) & 0xff)) {
-        --pos, --length;
-        if (!(((*p) >> 16) & 0xff)) {
-            --pos, --length;
-            if (!(((*p) >> 8) & 0xff)) {
-                --pos, --length;
-            }
+    mln_string_t *ret;
+    mln_u8ptr_t buf, p;
+    mln_u8_t tmp;
+    mln_u32_t i, size = (n->length << 6);
+    mln_bignum_t zero = mln_bignum_zero(), quotient;
+    mln_u32_t neg = mln_bignum_is_negative(n);
+    mln_bignum_t dup = *n;
+
+    if (!size) ++size;
+    if ((buf = (mln_u8ptr_t)malloc(size + 1)) == NULL) {
+        return NULL;
+    }
+
+    p = buf;
+    while (mln_bignum_compare(&dup, &zero)) {
+        if (__mln_bignum_div_word(&dup, 10, &quotient) < 0) {
+            free(buf);
+            return NULL;
         }
+        *p++ = (mln_u8_t)(dup.data[0]) + (mln_u8_t)'0';
+        dup = quotient;
+    }
+    if (neg) *p++ = (mln_u8_t)'-';
+
+    size = p - buf;
+    for (i = 0; i < (size >> 1); ++i) {
+        tmp = buf[i];
+        buf[i] = buf[size - i - 1];
+        buf[size - i - 1] = tmp;
+    }
+    if (p == buf) *p++ = '0';
+    *p = 0;
+
+    if ((ret = mln_string_buf_new(buf, p - buf)) == NULL) {
+        free(buf);
+        return NULL;
     }
 
-    if (((*p) >> (pos << 3)) & 0x80) *buf++ = 0, ++length;
-
-    for (end = n->data; len > 0 && p >= end; --len) {
-        *buf++ = ((*p) >> (pos << 3)) & 0xff;
-        if (--pos < 0) {
-            --p;
-            pos = 3;
-        }
-    }
-
-    return length;
+    return ret;
 }
-
-int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
-{
-    if (buf == NULL || len == 0) return 0;
-    if (*buf == 0) --len, ++buf;
-    if (len > (M_BIGNUM_SIZE<<2)) return -1;
-    *n = (mln_bignum_t)mln_bignum_zero();
-
-    mln_u8ptr_t p = buf + len - 1;
-    mln_u64_t *data = n->data;
-    mln_size_t i = 0;
-    while (p >= buf) {
-        *data |= ((*p--) << i);
-        if (i >= 24) {
-            i = 0;
-            *data &= 0xffffffff;
-            ++data;
-            continue;
-        }
-        i += 8;
-    }
-    n->length = i? (data-n->data+1): (data-n->data);
-    return 0;
-}
-#else
-int mln_bignum_i2s(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
-{
-    if (len == 0 || buf == NULL) return 0;
-
-    mln_u8ptr_t save = buf;
-    mln_u64_t *p = n->data;
-    mln_u64_t *end = n->data + n->length;
-    if (p[0] & 0x80) {
-        *buf++ = 0;
-        --len;
-        if (len <= 0) return buf-save;
-    }
-    for (; p < end; ++p) {
-        *buf++ = (*p & 0xff);
-        if (--len <= 0) return buf-save;
-        *buf++ = ((*p >> 8) & 0xff);
-        if (--len <= 0) return buf-save;
-        *buf++ = ((*p >> 16) & 0xff);
-        if (--len <= 0) return buf-save;
-        *buf++ = ((*p >> 24) & 0xff);
-        if (--len <= 0) return buf-save;
-    }
-
-    return buf-save;
-}
-
-int mln_bignum_s2i(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len)
-{
-    if (buf == NULL || len == 0) return 0;
-    if (*buf == 0) --len, ++buf;
-    if (len > (M_BIGNUM_SIZE<<2)) return -1;
-    *n = (mln_bignum_t)mln_bignum_zero();
-
-    mln_u64_t *p = n->data;
-    mln_size_t i;
-    for (i = 0; len; --len) {
-        (*p) |= ((*buf++) << i);
-        if (i >= 24) {
-            (*p++) &= 0xffffffff;
-            i = 0;
-            continue;
-        }
-        i += 8;
-    }
-    n->length = i? (p-n->data+1): (p-n->data);
-
-    return 0;
-}
-#endif
 

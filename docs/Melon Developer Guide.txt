@@ -1736,10 +1736,10 @@ Their definitions can be found in melon/include/mln_types.h.
       b) mln_bignum_negative(pbn);
          Switch big number's tag to be negative.
 
-      c) mln_bignum_t *mln_bignum_init(void);
+      c) mln_bignum_t *mln_bignum_new(void);
          Create and initialize a big number.
 
-      d) mln_bignum_t *mln_bignum_pool_init(mln_alloc_t *pool);
+      d) mln_bignum_t *mln_bignum_pool_new(mln_alloc_t *pool);
          Create and initialize a big number on 'pool'.
 
       e) void mln_bignum_free(mln_bignum_t *bn);
@@ -1845,6 +1845,9 @@ Their definitions can be found in melon/include/mln_types.h.
 
       aa) int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len);
          Transform 'n' into an octet string 'buf'.
+
+      ab) mln_string_t *mln_bignum_tostring(mln_bignum_t *n);
+         Convert 'n' into a string.
 
   24) MD5
       a) void mln_md5_init(mln_md5_t *m);

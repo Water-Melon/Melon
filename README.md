@@ -86,7 +86,7 @@ Then execute these shell commands on git bash or terminal (on UNIX).
 ```
 git clone https://github.com/Water-Melon/Melon.git
 cd Melon
-./configure [--prefix=LIB_INSTALL_PATH]
+./configure [--prefix=LIB_INSTALL_PATH | ...]
 make
 make install
 ```
