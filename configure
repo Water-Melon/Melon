@@ -23,6 +23,12 @@ fi
 #wasm flag
 wasm=0
 
+#debug
+debug=1
+
+#optimization level
+olevel='-O3'
+
 #get all parameters
 for param in $@
 do
@@ -34,21 +40,28 @@ do
         echo -e "\t--melang-prefix=MELANG_SCRIPT_PATH"
         echo -e "\t--cc=C compiler"
         echo -e "\t--enable-wasm"
+        echo -e "\t--no-debug"
+        echo -e "\t--olevel=O|O1|O2|O3"
         exit 0
     fi
     param_prefix=`echo $param|cut -d '=' -f 1`
     param_suffix=`echo $param|cut -d '=' -f 2`
     if [ $param_prefix == "--prefix" ]; then
         install_path=$param_suffix
-    fi
-    if [ $param_prefix == "--melang-prefix" ]; then
+    elif [ $param_prefix == "--melang-prefix" ]; then
         melang_script_path=$param_suffix
-    fi
-    if [ $param_prefix == "--cc" ]; then
+    elif [ $param_prefix == "--cc" ]; then
         cc=$param_suffix
-    fi
-    if [ $param_prefix == "--enable-wasm" ]; then
+    elif [ $param_prefix == "--enable-wasm" ]; then
         wasm=1
+    elif [ $param_prefix == "--no-debug" ]; then
+        debug=0
+    elif [ $param_prefix == "--olevel" ]; then
+        if [ -z $param_suffix ]; then
+            olevel=''
+        else
+            olevel='-'$param_suffix
+        fi
     fi
 done
 
@@ -66,6 +79,17 @@ fi
 
 if [[ "$install_path" == ~* ]]; then
     install_path=$HOME/${install_path:1}
+fi
+
+#debug
+if [ $debug -ne 0 ]; then
+    if [ $wasm -eq 1 ]; then
+        debug='-g'
+    else
+        debug='-ggdb'
+    fi
+else
+    debug=''
 fi
 
 #output installation path
@@ -172,13 +196,10 @@ if [ $wasm -eq 1 ]; then
 else
     echo -e "CC\t\t= $cc" >> Makefile
 fi
-gccver=`gcc -dumpversion|cut -d '.' -f 1`
 if [ $wasm -eq 1 ]; then
-    echo -e "FLAGS\t\t= -Iinclude -c -g -O3 $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc" >> Makefile
-elif [ $sysname != 'Darwin' -a "$?" == "0" -a $gccver -ge 11 ]; then
-    echo -e "FLAGS\t\t= -Iinclude -c -Wall -ggdb -Werror -O2 -fPIC" >> Makefile
+    echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc" >> Makefile
 else
-    echo -e "FLAGS\t\t= -Iinclude -c -Wall -ggdb -Werror -O3 -fPIC" >> Makefile
+    echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $olevel -fPIC" >> Makefile
 fi
 if ! case $sysname in MINGW*) false;; esac; then
     if [ $wasm -eq 0 ]; then
@@ -233,11 +254,11 @@ fi
 if [ $wasm -eq 0 ]; then
     echo "\$(MELONSO) : \$(OBJS)" >> Makefile
     if [ $sysname = 'Linux' ]; then
-        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
+        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
     elif ! case $sysname in MINGW*) false;; esac; then
-        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC" >> Makefile
+        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC" >> Makefile
     else
-        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) -ggdb -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
+        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
     fi
 fi
 echo "install:" >> Makefile
