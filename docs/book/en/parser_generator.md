@@ -187,6 +187,8 @@ int main(int argc, char *argv[])
     lattr.type = M_INPUT_T_FILE;
     //If type is M_INPUT_T_FILE, data is the file path, otherwise it is a custom language string.
     lattr.data = &path;
+    //Set the environment variable to find the location of the included file
+    lattr.env = NULL;
     //Initialize the lexer
     mln_lex_init_with_hooks(test, lex, &lattr);
     if (lex == NULL) {
@@ -195,7 +197,7 @@ int main(int argc, char *argv[])
     }
 
     //Generate state transition table
-    ptr = test_parser_generate(prod_tbl, sizeof(prod_tbl)/sizeof(mln_production_t));
+    ptr = test_parser_generate(prod_tbl, sizeof(prod_tbl)/sizeof(mln_production_t), NULL);
     if (ptr == NULL) {
         mln_log(error, "generate state shift table failed.\n");
         return -1;

@@ -173,6 +173,8 @@ int main(int argc, char *argv[])
     lattr.type = M_INPUT_T_FILE;
     //若type为M_INPUT_T_FILE，则data为文件路径，否则为自定义语言字符串。
     lattr.data = &path;
+    //设置词法分析器include时，查找文件位置的环境变量
+    lattr.env = NULL;
     //初始化词法分析器
     mln_lex_init_with_hooks(test, lex, &lattr);
     if (lex == NULL) {
@@ -181,7 +183,7 @@ int main(int argc, char *argv[])
     }
 
     //生成状态转换表
-    ptr = test_parser_generate(prod_tbl, sizeof(prod_tbl)/sizeof(mln_production_t));
+    ptr = test_parser_generate(prod_tbl, sizeof(prod_tbl)/sizeof(mln_production_t), NULL);
     if (ptr == NULL) {
         mln_log(error, "generate state shift table failed.\n");
         return -1;
