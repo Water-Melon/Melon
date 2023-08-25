@@ -135,7 +135,7 @@ Return value: none
 void mln_bignum_sub(mln_bignum_t *dest, mln_bignum_t *src);
 ```
 
-Description: Subtract big numbers, the result of the calculation will be put into `dest`.
+Description: Large number subtraction, minuend `dest`, subtrahend `src`, the calculation result will be put into `dest`.
 
 Return value: none
 
@@ -159,7 +159,7 @@ Return value: none
 int mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bignum_t *quotient);
 ```
 
-Description: Large number division, the remainder will be put into `dest`, if `quotient` is not empty, the quotient will be put into it.
+Description: Large number division, the dividend `dest`, the divisor `src`, the remainder will be put in `dest`, if `quotient` is not empty, the quotient will be put in it.
 
 Return value: return `0` if successful, otherwise return `-1`
 
@@ -380,17 +380,14 @@ Return value: constant with a big value of `0`
 ### Example
 
 ```c
-#include <stdio.h>
-#include <errno.h>
-#include <stdlib.h>
 #include "mln_core.h"
 #include "mln_log.h"
 #include "mln_bignum.h"
 
 int main(int argc, char *argv[])
 {
-    mln_bignum_t *n1 = NULL, *n2 = NULL;
     struct mln_core_attr cattr;
+    mln_bignum_t n1, n2 = mln_bignum_zero();
 
     cattr.argc = argc;
     cattr.argv = argv;
@@ -403,28 +400,14 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    n1 = mln_bignum_new();
-    n2 = mln_bignum_new();
-    if (n1 == NULL || n2 == NULL) {
-        mln_log(error, "init bignum failed\n");
-        goto err;
-    }
+    mln_bignum_init(n1); //same as mln_bignum_zero
 
-    if (mln_bignum_assign(n1, "10", 2) < 0) {
-        mln_log(error, "assign failed\n");
-        goto err;
-    }
-    if (mln_bignum_assign(n2, "20", 2) < 0) {
-        mln_log(error, "assign failed\n");
-        goto err;
-    }
+    mln_bignum_assign(&n1, "10", 2);
+    mln_bignum_assign(&n2, "30", 2);
 
-    mln_bignum_add(n1, n2);
-    mln_bignum_dump(n1);
+    mln_bignum_pwr(&n1, &n2, NULL);
+    mln_log(debug, "%S\n", mln_bignum_tostring(&n1));
 
-err:
-    if (n1 != NULL) mln_bignum_free(n1);
-    if (n2 != NULL) mln_bignum_free(n2);
     return 0;
 }
 ```

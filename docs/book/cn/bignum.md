@@ -135,7 +135,7 @@ void mln_bignum_add(mln_bignum_t *dest, mln_bignum_t *src);
 void mln_bignum_sub(mln_bignum_t *dest, mln_bignum_t *src);
 ```
 
-描述：大数减法，计算结果会放入`dest`中。
+描述：大数减法，被减数`dest`，减数`src`，计算结果会放入`dest`中。
 
 返回值：无
 
@@ -159,7 +159,7 @@ void mln_bignum_mul(mln_bignum_t *dest, mln_bignum_t *src);
 int mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bignum_t *quotient);
 ```
 
-描述：大数除法，余数会放入`dest`中，若`quotient`不为空，则商将放入其中。
+描述：大数除法，被除数`dest`, 除数`src`，余数会放入`dest`中，若`quotient`不为空，则商将放入其中。
 
 返回值：成功则返回`0`，否则返回`-1`
 
@@ -380,17 +380,14 @@ mln_bignum_zero()
 ### 示例
 
 ```c
-#include <stdio.h>
-#include <errno.h>
-#include <stdlib.h>
 #include "mln_core.h"
 #include "mln_log.h"
 #include "mln_bignum.h"
 
 int main(int argc, char *argv[])
 {
-    mln_bignum_t *n1 = NULL, *n2 = NULL;
     struct mln_core_attr cattr;
+    mln_bignum_t n1, n2 = mln_bignum_zero();
 
     cattr.argc = argc;
     cattr.argv = argv;
@@ -403,28 +400,14 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    n1 = mln_bignum_new();
-    n2 = mln_bignum_new();
-    if (n1 == NULL || n2 == NULL) {
-        mln_log(error, "init bignum failed\n");
-        goto err;
-    }
+    mln_bignum_init(n1); //same as mln_bignum_zero
 
-    if (mln_bignum_assign(n1, "10", 2) < 0) {
-        mln_log(error, "assign failed\n");
-        goto err;
-    }
-    if (mln_bignum_assign(n2, "20", 2) < 0) {
-        mln_log(error, "assign failed\n");
-        goto err;
-    }
+    mln_bignum_assign(&n1, "10", 2);
+    mln_bignum_assign(&n2, "30", 2);
 
-    mln_bignum_add(n1, n2);
-    mln_bignum_dump(n1);
+    mln_bignum_pwr(&n1, &n2, NULL);
+    mln_log(debug, "%S\n", mln_bignum_tostring(&n1));
 
-err:
-    if (n1 != NULL) mln_bignum_free(n1);
-    if (n2 != NULL) mln_bignum_free(n2);
     return 0;
 }
 ```

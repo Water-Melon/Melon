@@ -22,6 +22,11 @@ typedef struct {
     mln_u64_t data[M_BIGNUM_SIZE];
 } mln_bignum_t;
 
+#define mln_bignum_init(bn)         ({\
+    bn.tag = M_BIGNUM_POSITIVE;\
+    bn.length = 0;\
+    memset((bn).data, 0, sizeof(mln_u64_t)*M_BIGNUM_SIZE);\
+})
 #define mln_bignum_positive(pbn)    ((pbn)->tag = M_BIGNUM_POSITIVE)
 #define mln_bignum_negative(pbn)    ((pbn)->tag = M_BIGNUM_NEGATIVE)
 #define mln_bignum_is_positive(pbn) ((pbn)->tag == M_BIGNUM_POSITIVE)
