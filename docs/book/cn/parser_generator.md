@@ -4,6 +4,14 @@
 
 后续将给出一个简单的使用例子，较为完整的应用可参考`mln_lang_ast.c/h`中melang的实现。或者加入官方群咨询了解。
 
+
+
+### 视频介绍
+
+<iframe src="//player.bilibili.com/player.html?bvid=BV1br4y1R7B3&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
+
+
+
 ### 头文件
 
 ```c
