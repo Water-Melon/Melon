@@ -6,8 +6,14 @@
 #  test system type
 sysname=`uname -s`
 
-#melang_script_path
-melang_script_path=/usr/local/lib/melang
+#melang_script_path & melang_dylib_path
+if ! case $sysname in MINGW*) false;; esac; then
+    melang_script_path=$HOME/lib/melang
+    melang_dylib_path=$HOME/lib/melang_dynamic
+else
+    melang_script_path=/usr/local/lib/melang
+    melang_dylib_path=/usr/local/lib/melang_dynamic
+fi
 
 #installation path
 if ! case $sysname in MINGW*) false;; esac; then
@@ -38,6 +44,7 @@ do
         echo "Options:"
         echo -e "\t--prefix=INSTALL_PATH"
         echo -e "\t--melang-prefix=MELANG_SCRIPT_PATH"
+        echo -e "\t--melang-dylib-prefix=MELANG_DYLIB_PATH"
         echo -e "\t--cc=C compiler"
         echo -e "\t--enable-wasm"
         echo -e "\t--no-debug"
@@ -50,6 +57,8 @@ do
         install_path=$param_suffix
     elif [ $param_prefix == "--melang-prefix" ]; then
         melang_script_path=$param_suffix
+    elif [ $param_prefix == "--melang-dylib-prefix" ]; then
+        melang_dylib_path=$param_suffix
     elif [ $param_prefix == "--cc" ]; then
         cc=$param_suffix
     elif [ $param_prefix == "--enable-wasm" ]; then
@@ -95,6 +104,7 @@ fi
 #output installation path
 echo -e "Installation Path \t[$install_path]"
 echo -e "Melang script Path \t[$melang_script_path]"
+echo -e "Melang dylib Path \t[$melang_dylib_path]"
 echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", argv[1]);return 0;}" > .path_generator.c
 $tcc -o path_generator .path_generator.c
 realpath=`./path_generator $install_path`
@@ -104,13 +114,9 @@ tmpfilepath=`./path_generator $realpath/tmp`
 pidpath=`./path_generator $realpath/logs/melon.pid`
 logpath=`./path_generator $realpath/logs/melon.log`
 melang_script_path=`./path_generator $melang_script_path`
-if ! case $sysname in MINGW*) false;; esac; then
-    melanglibpath=`./path_generator $HOME/lib/melang`
-    melangdylibpath=`./path_generator $HOME/lib/melang_dynamic`
-else
-    melanglibpath=`./path_generator $melang_script_path`
-    melangdylibpath=`./path_generator $melang_script_path`
-fi
+melang_script_path=`./path_generator $melang_script_path`
+melang_dylib_path=`./path_generator $melang_dylib_path`
+
 rm -f path_generator .path_generator.c
 #build path.c & h
 echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
@@ -137,8 +143,8 @@ echo -e "\nstatic char tmpfile_path[] = \"$tmpfilepath\";" >> src/mln_path.c
 echo -e "\nstatic char pid_path[] = \"$pidpath\";" >> src/mln_path.c
 echo -e "\nstatic char log_path[] = \"$logpath\";" >> src/mln_path.c
 echo -e "\nstatic char null_path[] = \"$nullpath\";" >> src/mln_path.c
-echo -e "\nstatic char melang_lib_path[] = \"$melanglibpath\";" >> src/mln_path.c
-echo -e "\nstatic char melang_dylib_path[] = \"$melangdylibpath\";" >> src/mln_path.c
+echo -e "\nstatic char melang_lib_path[] = \"$melang_script_path\";" >> src/mln_path.c
+echo -e "\nstatic char melang_dylib_path[] = \"$melang_dylib_path\";" >> src/mln_path.c
 echo -e "\nstatic mln_path_hook_t _install_path = NULL;" >> src/mln_path.c
 echo -e "\nstatic mln_path_hook_t _null_path = NULL;" >> src/mln_path.c
 echo -e "\nstatic mln_path_hook_t _melang_lib_path = NULL;" >> src/mln_path.c
@@ -262,12 +268,12 @@ if [ $wasm -eq 0 ]; then
     fi
 fi
 echo "install:" >> Makefile
-echo -e "\ttest -d $melanglibpath || mkdir -p $melanglibpath" >> Makefile
+echo -e "\ttest -d $melang_script_path || mkdir -p $melang_script_path" >> Makefile
 echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
 echo -e "\tcp -fr lib $install_path" >> Makefile
 echo -e "\tcp -fr include $install_path" >> Makefile
 echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
-echo -e "\ttest -d $melanglibpath/trace || cp -fr trace $melanglibpath" >> Makefile
+echo -e "\ttest -d $melang_script_path/trace || cp -fr trace $melang_script_path" >> Makefile
 
 
 for fname in `find . -name "*.c"`
