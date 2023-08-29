@@ -2,7 +2,7 @@
 
 The script tasks are divided into the use of C-related functions, and the use of the script's own syntax and function library. Details of the latter can be found at: [Melang.org](https://melang.org).
 
-This script is a synchronously written but purely asynchronous script. Scripts can implement multitasking preemptive scheduling and execution in a single thread without affecting the processing of other asynchronous events in the thread. In other words, scripts can be processed in the same thread as asynchronous network IO.
+This script is a synchronously written but purely asynchronous script. Scripts can implement multitasking step-sharing scheduling and execution in a single thread without affecting the processing of other asynchronous events in the thread. In other words, scripts can be processed in the same thread as asynchronous network IO.
 
 This article only provides functions for creating script tasks and scheduling script tasks. For extended functions, please refer to the subsequent script development articles.
 
