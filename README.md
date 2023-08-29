@@ -113,8 +113,6 @@ Please refer to [Official Documentation Website](http://doc.melonc.io/) for more
 
 You can pull the built container image to deploy the running environment.
 
-**Docker image will not be maintained temporarily because I cannot sign in docker hub from my country.** 
-
 ```shell
 docker pull melonc/melon
 ```
