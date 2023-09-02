@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "mln_connection.h"
-#include "mln_log.h"
+#include "mln_defs.h"
 #include "mln_file.h"
 #if defined(MLN_WRITEV)
 #include <sys/uio.h>
@@ -45,11 +45,8 @@ static inline int mln_fd_is_nonblock(int fd)
 #if defined(WIN32)
     return 0; /* no useful API for getting this flag from socket */
 #else
-    int flg;
-    if ((flg = fcntl(fd, F_GETFL, NULL)) < 0) {
-        mln_log(error, "fcntl F_GETFL failed. %s\n", strerror(errno));
-        abort();
-    }
+    int flg = fcntl(fd, F_GETFL, NULL);
+    ASSERT(flg >= 0);
     return flg & O_NONBLOCK;
 #endif
 }
@@ -84,7 +81,7 @@ void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chai
 {
     if (c_head == NULL) return;
 
-    mln_chain_t **head, **tail;
+    mln_chain_t **head = NULL, **tail = NULL;
     if (type == M_C_SEND) {
         head = &(tc->snd_head);
         tail = &(tc->snd_tail);
@@ -95,8 +92,7 @@ void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chai
         head = &(tc->sent_head);
         tail = &(tc->sent_tail);
     } else {
-        mln_log(error, "flag error.\n");
-        abort();
+        ASSERT(0);
     }
 
     if (c_tail == NULL) {
@@ -114,7 +110,7 @@ void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chai
 
 void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
 {
-    mln_chain_t **head, **tail;
+    mln_chain_t **head = NULL, **tail = NULL;
     if (type == M_C_SEND) {
         head = &(tc->snd_head);
         tail = &(tc->snd_tail);
@@ -125,8 +121,7 @@ void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
         head = &(tc->sent_head);
         tail = &(tc->sent_tail);
     } else {
-        mln_log(error, "flag error.\n");
-        abort();
+        ASSERT(0);
     }
 
     if (*head == NULL) {
@@ -148,8 +143,7 @@ mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type)
     } else if (type == M_C_SENT) {
         rc = tc->sent_head;
     } else {
-        mln_log(error, "flag error.\n");
-        abort();
+        ASSERT(0);
     }
 
     return rc;
@@ -157,7 +151,7 @@ mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type)
 
 mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type)
 {
-    mln_chain_t *rc;
+    mln_chain_t *rc = NULL;
 
     if (type == M_C_SEND) {
         rc = tc->snd_head;
@@ -169,8 +163,7 @@ mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type)
         rc = tc->sent_head;
         tc->sent_head = tc->sent_tail = NULL;
     } else {
-        mln_log(error, "flag error.\n");
-        abort();
+        ASSERT(0);
     }
 
     return rc;
@@ -178,7 +171,7 @@ mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type)
 
 mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type)
 {
-    mln_chain_t **head, **tail;
+    mln_chain_t **head = NULL, **tail = NULL;
     if (type == M_C_SEND) {
         head = &(tc->snd_head);
         tail = &(tc->snd_tail);
@@ -189,8 +182,7 @@ mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type)
         head = &(tc->sent_head);
         tail = &(tc->sent_tail);
     } else {
-        mln_log(error, "flag error.\n");
-        abort();
+        ASSERT(0);
     }
 
     mln_chain_t *rc = *head;
@@ -206,7 +198,7 @@ mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type)
 
 mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type)
 {
-    mln_chain_t *rc;
+    mln_chain_t *rc = NULL;
 
     if (type == M_C_SEND) {
         rc = tc->snd_tail;
@@ -215,8 +207,7 @@ mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type)
     } else if (type == M_C_SENT) {
         rc = tc->sent_tail;
     } else {
-        mln_log(error, "flag error.\n");
-        abort();
+        ASSERT(0);
     }
 
     return rc;
@@ -697,7 +688,7 @@ blk_snd:
 static inline mln_chain_t *
 mln_tcp_conn_pop_inline(mln_tcp_conn_t *tc, int type)
 {
-    mln_chain_t **head, **tail;
+    mln_chain_t **head = NULL, **tail = NULL;
     if (type == M_C_SEND) {
         head = &(tc->snd_head);
         tail = &(tc->snd_tail);
@@ -708,8 +699,7 @@ mln_tcp_conn_pop_inline(mln_tcp_conn_t *tc, int type)
         head = &(tc->sent_head);
         tail = &(tc->sent_tail);
     } else {
-        mln_log(error, "flag error.\n");
-        abort();
+        ASSERT(0);
     }
 
     mln_chain_t *rc = *head;
@@ -725,10 +715,7 @@ mln_tcp_conn_pop_inline(mln_tcp_conn_t *tc, int type)
 
 int mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag)
 {
-    if (flag != M_C_TYPE_MEMORY && flag != M_C_TYPE_FILE) {
-        mln_log(error, "Flag error.\n");
-        abort();
-    }
+    ASSERT(flag == M_C_TYPE_MEMORY || flag == M_C_TYPE_FILE);
 
     int n;
 
@@ -788,8 +775,7 @@ mln_tcp_conn_recv_chain(mln_tcp_conn_t *tc, mln_u32_t flag)
     } else if (flag & M_C_TYPE_MEMORY) {
         n = mln_tcp_conn_recv_chain_mem(tc->sockfd, pool, b);
     } else {
-        mln_log(error, "Flag error.\n");
-        abort();
+        ASSERT(0);
     }
 
     if (n <= 0) {

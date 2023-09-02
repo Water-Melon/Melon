@@ -110,9 +110,7 @@ struct mln_thread_pool_info {
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "mln_core.h"
 #include "mln_thread_pool.h"
-#include "mln_log.h"
 
 static int main_process_handler(void *data);
 static int child_process_handler(void *data);
@@ -120,18 +118,7 @@ static void free_handler(void *data);
 
 int main(int argc, char *argv[])
 {
-    struct mln_core_attr cattr;
     struct mln_thread_pool_attr tpattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        return -1;
-    }
 
     tpattr.main_data = NULL;
     tpattr.child_process_handler = child_process_handler;
@@ -145,7 +132,7 @@ int main(int argc, char *argv[])
 
 static int child_process_handler(void *data)
 {
-    mln_log(none, "%s\n", (char *)data);
+    printf("%s\n", (char *)data);
     return 0;
 }
 

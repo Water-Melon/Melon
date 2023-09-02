@@ -16,6 +16,7 @@
 #include <signal.h>
 #include "mln_tools.h"
 #include "mln_global.h"
+#include "mln_conf.h"
 #include "mln_log.h"
 
 static int
@@ -145,32 +146,9 @@ static int mln_sys_nofile_modify(void)
 #if !defined(WIN32)
 int mln_daemon(void)
 {
-    int ret;
-
-    mln_conf_t *cf = mln_conf();
-    if (cf == NULL) goto out;
-    mln_conf_domain_t *cd = cf->search(cf, "main");
-    if (cd == NULL) {
-        fprintf(stderr, "No such domain named 'main'\n");
-        abort();
-    }
-    mln_conf_cmd_t *cc = cd->search(cd, "daemon");
-    if (cc == NULL) goto out;
-    mln_conf_item_t *ci = cc->search(cc, 1);
-    if (ci == NULL) {
-        fprintf(stderr, "Command 'daemon' need a parameter.\n");
-        return -1;
-    }
-    if (ci->type != CONF_BOOL) {
-        fprintf(stderr, "Parameter type of command 'daemon' error.\n");
-        return -1;
-    }
-    if (!ci->val.b) {
-out:
-        ret = mln_log_init(0);
-        if (ret < 0) return ret;
-        return mln_set_id();
-    }
+    int ret = mln_log_init(NULL);
+    if (ret < 0) return ret;
+    if (!mln_log_in_daemon()) return mln_set_id();
 
     pid_t pid;
     if ((pid = fork()) < 0) {
@@ -196,8 +174,6 @@ out:
     {
         fprintf(stderr, "Unexpected file descriptors %d %d %d\n", fd0, fd1, fd2);
     }
-    ret = mln_log_init(1);
-    if (ret < 0) return ret;
     return mln_set_id();
 }
 
@@ -321,7 +297,7 @@ static int
 mln_boot_version(const char *boot_str, const char *alias)
 {
     printf("Melon Platform.\n");
-    printf("Version 2.7.1.\n");
+    printf("Version 2.8.0.\n");
     printf("Copyright (C) Niklaus F.Schen.\n");
     exit(0);
     return 0;

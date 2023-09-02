@@ -288,7 +288,7 @@ mln_rs_matrix_co_inverse_matrix(uint8_t **data_vector, size_t len, size_t n, siz
     mln_rs_matrix_t *matrix, *inverse;
     mln_u8ptr_t p, *pend, data;
 
-    if ((data = (mln_u8ptr_t)malloc(n*len)) == NULL) {
+    if ((data = (mln_u8ptr_t)malloc((n + k) * len)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }

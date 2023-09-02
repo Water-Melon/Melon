@@ -20,7 +20,7 @@
    #include <assert.h>
    #include <string.h>
    #include <errno.h>
-   #include "mln_core.h"
+   #include "mln_framework.h"
    #include "mln_log.h"
    #include "mln_thread.h"
 
@@ -96,7 +96,7 @@
          {"hello", hello},
        };
 
-       struct mln_core_attr cattr;
+       struct mln_framework_attr cattr;
 
        cattr.argc = argc;
        cattr.argv = argv;
@@ -107,7 +107,7 @@
 
        mln_thread_module_set(modules, 2);
 
-       if (mln_core_init(&cattr) < 0) {
+       if (mln_framework_init(&cattr) < 0) {
           fprintf(stderr, "Melon init failed.\n");
           return -1;
        }
@@ -119,7 +119,7 @@
    这段代码中有几个注意事项：
 
    - 在main中，我们使用`mln_thread_module_set`函数将每个线程模块的入口与线程模块名映射关系加载到Melon库中。
-   - 在`mln_core_init`会根据下面步骤中对配置文件的设置来自动初始化子线程，并进入线程开始运行。
+   - 在`mln_framework_init`会根据下面步骤中对配置文件的设置来自动初始化子线程，并进入线程开始运行。
    - 可以看到，两个线程模块之间是可以通信的，通信的方式是使用最后一个参数（`argv`的最后一个），来向主线程发送消息，消息中包含了目的线程的名字。这里注意，`argv`是在后面步骤中在配置文件中给出的，但是最后一个参数是程序自动在配置项后增加的一个参数，为主子线程间的通信套接字文件描述符。
    - 在 hello 这个模块中，调用了`mln_thread_cleanup_set`函数，这个函数的作用是：在从当前线程模块的入口函数返回至上层函数后，将会被调用，用于清理自定义资源。每一个线程模块的清理函数只能被设置一个，多次设置会被覆盖，清理函数是线程独立的，因此不会出现覆盖其他线程处理函数的情况（当然，你也可以故意这样来构造，比如传一个处理函数指针给别的模块，然后那个模块再进行设置）。
 
@@ -215,7 +215,7 @@
 ```c
 #include <stdio.h>
 #include <errno.h>
-#include "mln_core.h"
+#include "mln_framework.h"
 #include "mln_log.h"
 #include "mln_thread.h"
 #include <unistd.h>
@@ -260,7 +260,7 @@ static void main_thread(mln_event_t *ev)
 
 int main(int argc, char *argv[])
 {
-    struct mln_core_attr cattr;
+    struct mln_framework_attr cattr;
 
     cattr.argc = argc;
     cattr.argv = argv;
@@ -269,7 +269,7 @@ int main(int argc, char *argv[])
     cattr.worker_process = NULL;
     cattr.master_process = NULL;
 
-    if (mln_core_init(&cattr) < 0) {
+    if (mln_framework_init(&cattr) < 0) {
        fprintf(stderr, "Melon init failed.\n");
        return -1;
     }

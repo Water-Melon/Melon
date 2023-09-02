@@ -531,7 +531,7 @@ mln_http_header_get(h)
 #include <errno.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
-#include "mln_core.h"
+#include "mln_framework.h"
 #include "mln_log.h"
 #include "mln_http.h"
 #include "mln_file.h"
@@ -812,7 +812,7 @@ static int mln_http_send_body_handler(mln_http_t *http, mln_chain_t **body_head,
 
 int main(int argc, char *argv[])
 {
-    struct mln_core_attr cattr;
+    struct mln_framework_attr cattr;
 
     cattr.argc = argc;
     cattr.argv = argv;
@@ -820,7 +820,7 @@ int main(int argc, char *argv[])
     cattr.main_thread = NULL;
     cattr.master_process = NULL;
     cattr.worker_process = worker_process;
-    return mln_core_init(&cattr);
+    return mln_framework_init(&cattr);
 }
 ```
 

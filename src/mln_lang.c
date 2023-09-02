@@ -28,12 +28,6 @@
 #include <dlfcn.h>
 #endif
 
-#ifdef __DEBUG__
-#include <assert.h>
-#define ASSERT(x) assert(x)
-#else
-#define ASSERT(x);
-#endif
 
 struct mln_lang_scan_s {
     int              *cnt;
@@ -3475,7 +3469,6 @@ static void mln_lang_stack_handler_while(mln_lang_ctx_t *ctx)
         }
     } else {
 goon1:
-        ASSERT(ctx->ret_var->type == M_LANG_RETEXP_VAR);
         if (__mln_lang_condition_is_true(ctx->ret_var)) {
             node->step = 0;
             if (w->blockstm != NULL) {
@@ -6674,7 +6667,7 @@ goon:
         return NULL;
     }
 
-    if ((ret_var = init(ctx)) == NULL) {
+    if ((ret_var = init(ctx, mln_conf())) == NULL) {
         n = snprintf(tmp_path, sizeof(tmp_path)-1, "Init dynamic library [%s] failed.", path);
         tmp_path[n] = 0;
         mln_lang_errmsg(ctx, tmp_path);

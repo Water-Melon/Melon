@@ -16,7 +16,7 @@
 #include "mln_log.h"
 #include "mln_string.h"
 #include "mln_conf.h"
-#include "mln_core.h"
+#include "mln_framework.h"
 #include "mln_rc.h"
 #include "mln_trace.h"
 #if defined(WIN32)
@@ -31,8 +31,8 @@
 static void mln_init_notice(int argc, char *argv[]);
 #if !defined(WIN32)
 static int mln_master_trace_init(mln_lang_ctx_t *ctx);
-static void mln_worker_routine(struct mln_core_attr *attr);
-static void mln_master_routine(struct mln_core_attr *attr);
+static void mln_worker_routine(struct mln_framework_attr *attr);
+static void mln_master_routine(struct mln_framework_attr *attr);
 static mln_string_t *mln_get_framework_status(void);
 static void mln_sig_conf_reload(int signo);
 static int mln_conf_reload_iterate_handler(mln_event_t *ev, mln_fork_t *f, void *data);
@@ -41,7 +41,7 @@ static mln_event_t *_ev = NULL;
 #endif
 
 
-int mln_core_init(struct mln_core_attr *attr)
+int mln_framework_init(struct mln_framework_attr *attr)
 {
     /*Init configurations*/
     if (mln_conf_load() < 0) {
@@ -90,32 +90,7 @@ chl:
         }
     } else {
 #endif
-        int daemon = 0;
-        mln_conf_t *cf;
-        mln_conf_domain_t *cd;
-        mln_conf_cmd_t *cc;
-        mln_conf_item_t *ci;
-        if ((cf = mln_conf()) == NULL) {
-            fprintf(stderr, "configuration messed up.\n");
-            return -1;
-        }
-        if ((cd = cf->search(cf, "main")) == NULL) {
-            fprintf(stderr, "No such domain named 'main'.\n");
-            return -1;
-        }
-        /*log*/
-        if ((cc = cd->search(cd, "daemon")) != NULL) {
-            if (mln_conf_arg_num(cc) != 1) {
-                fprintf(stderr, "Invalid command 'daemon'.\n");
-                return -1;
-            }
-            if ((ci = cc->search(cc, 1)) == NULL || ci->type != CONF_BOOL) {
-                fprintf(stderr, "Invalid command 'daemon'.\n");
-                return -1;
-            }
-            daemon = ci->val.b;
-        }
-        if (mln_log_init(daemon) < 0) return -1;
+        if (mln_log_init(NULL) < 0) return -1;
 #if !defined(WIN32)
     }
 #endif
@@ -123,7 +98,7 @@ chl:
 }
 
 #if !defined(WIN32)
-static void mln_master_routine(struct mln_core_attr *attr)
+static void mln_master_routine(struct mln_framework_attr *attr)
 {
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
@@ -138,7 +113,7 @@ static void mln_master_routine(struct mln_core_attr *attr)
     mln_event_free(ev);
 }
 
-static void mln_worker_routine(struct mln_core_attr *attr)
+static void mln_worker_routine(struct mln_framework_attr *attr)
 {
     int i_thread_mode;
     mln_string_t proc_mode = mln_string("multiprocess");

@@ -136,42 +136,28 @@ Return value: none
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_alloc.h"
 
 int main(int argc, char *argv[])
 {
     char *p;
     mln_alloc_t *pool;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     pool = mln_alloc_init(NULL);
     if (pool == NULL) {
-        mln_log(error, "pool init failed\n");
+        fprintf(stderr, "pool init failed\n");
         return -1;
     }
 
     p = (char *)mln_alloc_m(pool, 6);
     if (p == NULL) {
-        mln_log(error, "alloc failed\n");
+        fprintf(stderr, "alloc failed\n");
         return -1;
     }
 
     memcpy(p, "hello", 5);
     p[5] = 0;
-    mln_log(debug, "%s\n", p);
+    printf("%s\n", p);
 
     mln_alloc_free(p);
 

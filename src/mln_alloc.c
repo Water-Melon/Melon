@@ -5,7 +5,6 @@
 
 #include "mln_alloc.h"
 #include "mln_defs.h"
-#include "mln_log.h"
 
 
 MLN_CHAIN_FUNC_DECLARE(mln_blk, \
@@ -388,10 +387,7 @@ void mln_alloc_free(void *ptr)
 
     blk = (mln_alloc_blk_t *)((mln_u8ptr_t)ptr - sizeof(mln_alloc_blk_t));
 
-    if (!blk->in_used) {
-        mln_log(error, "Double free.\n");
-        abort();
-    }
+    ASSERT(blk->in_used);
 
     pool = blk->pool;
     if (pool->mem) {

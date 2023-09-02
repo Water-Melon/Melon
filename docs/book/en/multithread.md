@@ -19,7 +19,7 @@ Different from the thread pool described above, the multi-threaded framework is 
    #include <assert.h>
    #include <string.h>
    #include <errno.h>
-   #include "mln_core.h"
+   #include "mln_framework.h"
    #include "mln_log.h"
    #include "mln_thread.h"
    
@@ -95,7 +95,7 @@ Different from the thread pool described above, the multi-threaded framework is 
          {"hello", hello},
        };
    
-       struct mln_core_attr cattr;
+       struct mln_framework_attr cattr;
    
        cattr.argc = argc;
        cattr.argv = argv;
@@ -106,7 +106,7 @@ Different from the thread pool described above, the multi-threaded framework is 
    
        mln_thread_module_set(modules, 2);
    
-       if (mln_core_init(&cattr) < 0) {
+       if (mln_framework_init(&cattr) < 0) {
           fprintf(stderr, "Melon init failed.\n");
           return -1;
        }
@@ -118,7 +118,7 @@ Different from the thread pool described above, the multi-threaded framework is 
    There are a few caveats in this code:
 
    - In main, we use the `mln_thread_module_set` function to load the mapping between the entry of each thread module and the thread module name into the Melon library.
-   - In `mln_core_init`, the child thread will be automatically initialized according to the settings of the configuration file in the following steps, and enter the thread to start running.
+   - In `mln_framework_init`, the child thread will be automatically initialized according to the settings of the configuration file in the following steps, and enter the thread to start running.
    - It can be seen that the two thread modules can communicate. The way of communication is to use the last parameter (the last of `argv`) to send a message to the main thread, and the message contains the name of the destination thread. Note here that `argv` is given in the configuration file in the following steps, but the last parameter is a parameter automatically added by the program after the configuration item, which is the communication socket file descriptor between the main and child threads.
    - In the hello module, the `mln_thread_cleanup_set` function is called. The function of this function is: after returning from the entry function of the current thread module to the upper-level function, it will be called to clean up custom resources. Only one cleanup function can be set for each thread module, and multiple settings will be overwritten. The cleanup function is thread-independent, so it will not overwrite other thread processing functions (of course, you can also construct it on purpose, such as Pass a handler function pointer to another module, and then that module will set it).
 
@@ -214,7 +214,7 @@ Let's look at a simple example:
 ```c
 #include <stdio.h>
 #include <errno.h>
-#include "mln_core.h"
+#include "mln_framework.h"
 #include "mln_log.h"
 #include "mln_thread.h"
 #include <unistd.h>
@@ -259,7 +259,7 @@ static void main_thread(mln_event_t *ev)
 
 int main(int argc, char *argv[])
 {
-    struct mln_core_attr cattr;
+    struct mln_framework_attr cattr;
 
     cattr.argc = argc;
     cattr.argv = argv;
@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
     cattr.worker_process = NULL;
     cattr.master_process = NULL;
 
-    if (mln_core_init(&cattr) < 0) {
+    if (mln_framework_init(&cattr) < 0) {
        fprintf(stderr, "Melon init failed.\n");
        return -1;
     }

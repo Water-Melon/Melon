@@ -859,6 +859,9 @@ int mln_conf_load(void)
     mln_string_t dname;
     mln_rbtree_node_t *rn;
     mln_conf_domain_t *cd, tmp;
+
+    if (g_conf != NULL) return 0;
+
     g_conf = mln_conf_init();
 
     if (g_conf == NULL) return -1;

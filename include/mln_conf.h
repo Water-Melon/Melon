@@ -77,8 +77,11 @@ typedef struct mln_conf_hook_s {
     struct mln_conf_hook_s        *next;
 } mln_conf_hook_t;
 
-extern int mln_conf_reload(void);
+/*
+ * mln_conf_load should be called before any pthread_create
+ */
 extern int mln_conf_load(void);
+extern int mln_conf_reload(void);
 extern void mln_conf_free(void);
 extern mln_conf_t *mln_conf(void);
 extern void mln_conf_dump(void);

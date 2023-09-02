@@ -293,8 +293,6 @@ mln_rbtree_node_data_set(node, ud)
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_rbtree.h"
 
 static int cmp_handler(const void *data1, const void *data2)
@@ -308,18 +306,6 @@ int main(int argc, char *argv[])
     mln_rbtree_t *t;
     mln_rbtree_node_t *rn;
     struct mln_rbtree_attr rbattr;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     rbattr.pool = NULL;
     rbattr.pool_alloc = NULL;
@@ -328,23 +314,23 @@ int main(int argc, char *argv[])
     rbattr.data_free = NULL;
 
     if ((t = mln_rbtree_new(&rbattr)) == NULL) {
-        mln_log(error, "rbtree init failed.\n");
+        fprintf(stderr, "rbtree init failed.\n");
         return -1;
     }
 
     rn = mln_rbtree_node_new(t, &n);
     if (rn == NULL) {
-        mln_log(error, "rbtree node init failed.\n");
+        fprintf(stderr, "rbtree node init failed.\n");
         return -1;
     }
     mln_rbtree_insert(t, rn);
 
     rn = mln_rbtree_search(t, &n);
     if (mln_rbtree_null(rn, t)) {
-        mln_log(error, "node not found\n");
+        fprintf(stderr, "node not found\n");
         return -1;
     }
-    mln_log(debug, "%d\n", *((int *)mln_rbtree_node_data_get(rn)));
+    printf("%d\n", *((int *)mln_rbtree_node_data_get(rn)));
 
     mln_rbtree_delete(t, rn);
     mln_rbtree_node_free(t, rn);
@@ -471,8 +457,6 @@ mln_rbtree_inline_reset(t, freer)
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_rbtree.h"
 
 //被声明为inline
@@ -486,37 +470,25 @@ int main(int argc, char *argv[])
     int n = 10;
     mln_rbtree_t *t;
     mln_rbtree_node_t *rn;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     if ((t = mln_rbtree_new(NULL)) == NULL) { //attr参数为NULL
-        mln_log(error, "rbtree init failed.\n");
+        fprintf(stderr, "rbtree init failed.\n");
         return -1;
     }
 
     rn = mln_rbtree_node_new(t, &n);
     if (rn == NULL) {
-        mln_log(error, "rbtree node init failed.\n");
+        fprintf(stderr, "rbtree node init failed.\n");
         return -1;
     }
     mln_rbtree_inline_insert(t, rn, cmp_handler); //inline insert
 
     rn = mln_rbtree_inline_search(t, &n, cmp_handler); //inline search
     if (mln_rbtree_null(rn, t)) {
-        mln_log(error, "node not found\n");
+        fprintf(stderr, "node not found\n");
         return -1;
     }
-    mln_log(debug, "%d\n", *((int *)mln_rbtree_node_data_get(rn)));
+    printf("%d\n", *((int *)mln_rbtree_node_data_get(rn)));
 
     mln_rbtree_delete(t, rn);
     mln_rbtree_inline_node_free(t, rn, NULL); //inline node free
@@ -566,9 +538,6 @@ mln_rbtree_node_init(n, ud)
 
 ```c
 #include <stdio.h>
-#include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_rbtree.h"
 
 typedef struct user_defined_s {
@@ -586,19 +555,7 @@ int main(int argc, char *argv[])
     mln_rbtree_t *t;
     ud_t data1, data2; //此时，node已经被创建
     mln_rbtree_node_t *rn;
-    struct mln_core_attr cattr;
     struct mln_rbtree_attr rbattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     rbattr.pool = NULL;
     rbattr.pool_alloc = NULL;
@@ -607,7 +564,7 @@ int main(int argc, char *argv[])
     rbattr.data_free = NULL;
 
     if ((t = mln_rbtree_new(&rbattr)) == NULL) {
-        mln_log(error, "rbtree init failed.\n");
+        fprintf(stderr, "rbtree init failed.\n");
         return -1;
     }
 
@@ -622,13 +579,13 @@ int main(int argc, char *argv[])
 
     rn = mln_rbtree_search(t, &data1);
     if (mln_rbtree_null(rn, t)) {
-        mln_log(error, "node not found\n");
+        fprintf(stderr, "node not found\n");
         return -1;
     }
 
     //这里给出了两种获取自定义数据结构指针的方法
-    mln_log(debug, "%d\n", ((ud_t *)mln_rbtree_node_data_get(rn))->val);
-    mln_log(debug, "%d\n", mln_container_of(rn, ud_t, node)->val);
+    printf("%d\n", ((ud_t *)mln_rbtree_node_data_get(rn))->val);
+    printf("%d\n", mln_container_of(rn, ud_t, node)->val);
 
     mln_rbtree_delete(t, &data1.node);
     mln_rbtree_node_free(t, &data1.node);

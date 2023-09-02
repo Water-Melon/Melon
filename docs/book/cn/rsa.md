@@ -227,8 +227,6 @@ mln_RSA_public_value_set(pkey,modulus,exponent);
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_rsa.h"
 
 int main(int argc, char *argv[])
@@ -236,45 +234,35 @@ int main(int argc, char *argv[])
     char s[] = "Hello";
     mln_string_t tmp, *cipher = NULL, *text = NULL;
     mln_rsa_key_t *pub = NULL, *pri = NULL;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     pub = mln_rsa_key_new();
     pri = mln_rsa_key_new();
     if (pri == NULL || pub == NULL) {
-        mln_log(error, "new pub/pri key failed\n");
+        fprintf(stderr, "new pub/pri key failed\n");
         goto failed;
     }
 
     if (mln_rsa_key_generate(pub, pri, 1024) < 0) {
-        mln_log(error, "key generate failed\n");
+        fprintf(stderr, "key generate failed\n");
         goto failed;
     }
 
     mln_string_set(&tmp, s);
     cipher = mln_RSAESPKCS1V15_public_encrypt(pub, &tmp);
     if (cipher == NULL) {
-        mln_log(error, "pub key encrypt failed\n");
+        fprintf(stderr, "pub key encrypt failed\n");
         goto failed;
     }
-    mln_log(debug, "%S\n", cipher);
+    write(STDOUT_FILENO, cipher->data, cipher->len);
+    write(STDOUT_FILENO, "\n", 1);
 
     text = mln_RSAESPKCS1V15_private_decrypt(pri, cipher);
     if (text == NULL) {
-        mln_log(error, "pri key decrypt failed\n");
+        fprintf(stderr, "pri key decrypt failed\n");
         goto failed;
     }
-    mln_log(debug, "%S\n", text);
+    write(STDOUT_FILENO, text->data, text->len);
+    write(STDOUT_FILENO, "\n", 1);
 
 failed:
     if (pub != NULL) mln_rsa_key_free(pub);

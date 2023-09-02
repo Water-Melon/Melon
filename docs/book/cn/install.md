@@ -35,7 +35,7 @@ $ sudo make install
 
 - `--enable-wasm` 启用webassembly模式，会编译安装webassembly格式的Melon库
 
-- `--no-debug` 编译生成的库不包含符号信息
+- `--debug` 开启debug模式，若不开启，则生成的库不包含符号信息，也不会启用`__DEBUG__`宏
 
 - `--olevel=[O|O1|O2|O3|...]` 编译优化的级别，默认是`O3`。如果`=`后不写内容则为不开启优化
 

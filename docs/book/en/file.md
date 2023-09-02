@@ -115,43 +115,26 @@ Return value: the file descriptor
 ### Example
 
 ```c
-//a.c
-
 #include <stdio.h>
-#include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_file.h"
 
 int main(int argc, char *argv[])
 {
     mln_fileset_t *fset;
     mln_file_t *file;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     fset = mln_fileset_init(100);
     if (fset == NULL) {
-        mln_log(error, "fset init failed\n");
+        fprintf(stderr, "fset init failed\n");
         return -1;
     }
 
-    file = mln_file_open(fset, "a.c");//open a.c
+    file = mln_file_open(fset, "a.c");//打开本文件
     if (file == NULL) {
-        mln_log(error, "file open failed\n");
+        fprintf(stderr, "file open failed\n");
         return -1;
     }
-    mln_log(debug, "filename: %S size:%U\n", file->file_path, (unsigned long)(file->size));
+    printf("filename: %s size:%lu\n", file->file_path->data, (unsigned long)(file->size));
 
     mln_fileset_destroy(fset);
 

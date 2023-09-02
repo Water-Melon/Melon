@@ -12,32 +12,17 @@ Melon的使用并不繁琐，大致步骤可分为：
 
 ```c
 #include <stdio.h>
-#include "mln_core.h"
 #include "mln_alloc.h"
-#include <mln_log.h>
 
 int main(int argc, char *argv[])
 {
     char *ptr;
     mln_alloc_t *pool;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-
-    if (mln_core_init(&cattr) < 0) {
-       fprintf(stderr, "Melon init failed.\n");
-       return -1;
-    }
 
     pool = mln_alloc_init(NULL);
 
     ptr = mln_alloc_m(pool, 1024);
-    mln_log(debug, "%X\n", ptr);
+    printf("%p\n", ptr);
     mln_alloc_free(ptr);
 
     mln_alloc_destroy(pool);
@@ -45,18 +30,12 @@ int main(int argc, char *argv[])
 }
 ```
 
-其中，`mln_core_init`就是Melon库的初始化函数，函数参数是一个结构体，该结构体用于传入`程序参数`、`全局变量初始化函数`以及`工作进程处理函数`。由于这个例子中并不打算启用多进程框架，也不需要初始化一些全局变量，因此两个函数指针都被置空了。
-
-随后的代码中：
-
 - `mln_alloc_init`：用于创建内存池
 - `mln_alloc_m`： 用于从内存池中分配一块指定大小的内存
 - `mln_alloc_free`：用于将内存池分配的内存释放回池中
 - `mln_alloc_destroy`：用于销毁内存池并释放资源
 
 内存池相关的函数及结构定义都在`mln_alloc.h`中。
-
-`mln_log`为Melon的日志输出函数，本例中以十六进制输出内存池分配的内存起始地址。
 
 
 
@@ -72,54 +51,7 @@ Windows用户也可以在git bash中执行：
 $ gcc -o test test.c -I $HOME/libmelon/include/ -L $HOME/libmelon/lib/ -llibmelon -lWs2_32
 ```
 
-
-
-此时，还不可以启动这个`test`程序，因为我们先要检查Melon库的配置文件，确保配置不会使得程序启动多进程或者多线程框架（Windows用户可以忽略此步骤）。
-
-```
-$ vim /usr/local/melon/conf/melon.conf
-
-log_level "none";
-//user "root";
-daemon off;
-core_file_size "unlimited";
-//max_nofile 1024;
-worker_proc 1;
-framework off;
-log_path "/usr/local/melon/logs/melon.log";
-/*
- * Configurations in the 'proc_exec' are the
- * processes which are customized by user.
- *
- * Here is an example to show you how to
- * spawn a program.
- *     keepalive "/tmp/a.out" ["arg1" "arg2" ...]
- * The command in this example is 'keepalive' that
- * indicate master process to supervise this
- * process. If process is killed, master process
- * would restart this program.
- * If you don't want master to restart it, you can
- *     default "/tmp/a.out" ["arg1" "arg2" ...]
- *
- * But you should know that there is another
- * arugment after the last argument you write here.
- * That is the file descriptor which is used to
- * communicate with master process.
- */
-proc_exec {
-   // keepalive "/tmp/a";
-}
-thread_exec {
-//    restart "hello" "hello" "world";
-//    default "haha";
-}
-```
-
-这里我们需要确保`framework`这一项为`off`，因为本例不需要启动框架功能。
-
-
-
-此时，我们就可以执行这个例子了。
+此时，我们执行这个例子
 
 ```bash
 $ ./test
@@ -128,7 +60,7 @@ $ ./test
 此时可以看到类似如下输出内容：
 
 ```
-03/27/2021 04:36:26 GMT DEBUG: test.c:main:25: PID:24077 1e29950
+0xaaaad0ea57d0
 ```
 
 
@@ -139,7 +71,7 @@ $ ./test
 
 ```c
 #include <stdio.h>
-#include "mln_core.h"
+#include "mln_framework.h"
 #include "mln_log.h"
 #include "mln_event.h"
 
@@ -151,14 +83,14 @@ static void print_handler(mln_event_t *ev, void *data);
 
 int main(int argc, char *argv[])
 {
-    struct mln_core_attr cattr;
+    struct mln_framework_attr cattr;
     cattr.argc = argc;
     cattr.argv = argv;
     cattr.global_init = global_init;
     cattr.main_thread = NULL;
     cattr.master_process = NULL;
     cattr.worker_process = worker_process;
-    return mln_core_init(&cattr);
+    return mln_framework_init(&cattr);
 }
 
 static int global_init(void)
@@ -182,6 +114,8 @@ static void print_handler(mln_event_t *ev, void *data)
     mln_event_timer_set(ev, 1000, data, print_handler);
 }
 ```
+
+其中，`mln_framework_init`就是Melon库的初始化函数，函数参数是一个结构体，该结构体用于传入`程序参数`、`全局变量初始化函数`以及`工作进程处理函数`。
 
 在本例中，我们增加了`global_init`和`worker_process`的处理函数。`global_init`用于初始化一个全局的字符数组`text`。而`worker_process`则是子进程（或称为工作进程）的处理函数。在工作进程处理函数中，我们使用到了Melon事件模块的定时器函数，用于每1秒中（1000毫秒），调用一次`print_handler`函数将字符数组`text`中的内容进行日志输出。
 

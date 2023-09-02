@@ -92,31 +92,17 @@ Return value: none
 ```c
 #include <stdio.h>
 #include <errno.h>
-#include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
+#include <string.h>
 #include "mln_matrix.h"
 
 int main(int argc, char *argv[])
 {
     mln_matrix_t *a, *b;
     double data[] = {1, 1, 1, 1, 2, 4, 2, 8, 64};
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     a = mln_matrix_new(3, 3, data, 1);
     if (a == NULL) {
-        mln_log(error, "init matrix failed\n");
+        fprintf(stderr, "init matrix failed\n");
         return -1;
     }
     mln_matrix_dump(a);
@@ -124,7 +110,7 @@ int main(int argc, char *argv[])
     b = mln_matrix_inverse(a);
     mln_matrix_free(a);
     if (b == NULL) {
-        mln_log(error, "inverse failed: %s\n", strerror(errno));
+        fprintf(stderr, "inverse failed: %s\n", strerror(errno));
         return -1;
     }
     mln_matrix_dump(b);

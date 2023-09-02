@@ -1,3 +1,21 @@
+Changes with melon 2.8.0                                          02 Sep 2023
+    *) Updated configure to support more parameters and OS environment
+    *) Fixed the bug of iothread msg
+    *) Fixed env bug in lexer init
+    *) Created CODE_OF_CONDUCT.md
+    *) Updated callback pointers in rbtree and fheap to avoid compiler's warning
+    *) Fixed log path bug
+    *) Added tostring function and init macro to bignum for debugging
+    *) Renamed core module to framework module
+    *) Added assert macro for debugging
+    *) Updated init function prototype for melang import api
+    *) Updated the log module so that it can be used regardless of whether it is initialized or not
+    *) Updated the conf module to make sure it will be initialized only once even init function called multiple times
+    *) Removed log from connection, event, thread pool, garbage collection and memory pool modules
+    *) Fixed bug of reed-solomon module
+    *) Optimized framework initialization
+    *) Updated docs
+
 Changes with melon 2.7.1                                          08 Aug 2023
     *) Updated configuration directives
     *) Updated functions' name of conf module

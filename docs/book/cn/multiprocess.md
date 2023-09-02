@@ -24,7 +24,7 @@ Melon开发之初便是要支持多进程模型的，这一点也主要源于Ngi
 
 ```cpp
 #include <stdio.h>
-#include "mln_core.h"
+#include "mln_framework.h"
 #include "mln_log.h"
 #include "mln_event.h"
 
@@ -36,14 +36,14 @@ static void print_handler(mln_event_t *ev, void *data);
 
 int main(int argc, char *argv[])
 {
-    struct mln_core_attr cattr;
+    struct mln_framework_attr cattr;
     cattr.argc = argc;
     cattr.argv = argv;
     cattr.global_init = global_init;
     cattr.main_thread = NULL;
     cattr.master_process = NULL;
     cattr.worker_process = worker_process;
-    return mln_core_init(&cattr);
+    return mln_framework_init(&cattr);
 }
 
 static int global_init(void)

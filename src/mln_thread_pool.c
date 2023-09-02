@@ -8,7 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
-#include "mln_log.h"
+#include "mln_defs.h"
 
 /*
  * There is a problem in linux.
@@ -92,10 +92,8 @@ mln_thread_pool_member_join(mln_thread_pool_t *tp, mln_u32_t child)
 
 static void mln_thread_pool_member_exit(void *arg)
 {
-    if (arg == NULL) {
-        mln_log(error, "Fatal error, thread messed up.\n");
-        abort();
-    }
+    ASSERT(arg != NULL); /*Fatal error, thread messed up*/
+
     mln_thread_pool_member_t *tpm = (mln_thread_pool_member_t *)arg;
     mln_u32_t forked = tpm->forked, child = tpm->child;
     mln_thread_pool_t *tpool = tpm->pool;
@@ -229,10 +227,7 @@ static void mln_thread_pool_free(mln_thread_pool_t *tp)
         if (tp->free_handler != NULL) tp->free_handler(tpr->data);
         free(tpr);
     }
-    if (tp->child_head != NULL || tp->counter || tp->idle) {
-        mln_log(error, "fatal error, thread pool messed up.\n");
-        abort();
-    }
+    ASSERT(tp->child_head == NULL && !tp->counter && !tp->idle);
     pthread_mutex_destroy(&(tp->mutex));
     pthread_cond_destroy(&(tp->cond));
     pthread_attr_destroy(&(tp->attr));
@@ -248,10 +243,8 @@ int mln_thread_pool_resource_add(void *data)
     /*
      * Only main thread can call this function
      */
-    if (m_thread_pool_self == NULL) {
-        mln_log(error, "Fatal error, thread messed up.\n");
-        abort();
-    }
+    ASSERT(m_thread_pool_self != NULL);
+
     mln_thread_pool_resource_t *tpr;
     mln_thread_pool_t *tpool = m_thread_pool_self->pool;
 
@@ -300,10 +293,8 @@ static void *mln_thread_pool_resource_remove(void)
      * Only child threads can call this function
      * @ the lock will be locked by caller.
      */
-    if (m_thread_pool_self == NULL) {
-        mln_log(error, "Fatal error, thread messed up.\n");
-        abort();
-    }
+    ASSERT(m_thread_pool_self != NULL);
+
     mln_thread_pool_resource_t *tpr;
     mln_thread_pool_t *tpool = m_thread_pool_self->pool;
 again:
@@ -402,9 +393,7 @@ again:
         pthread_mutex_unlock(&(tpool->mutex));
         tpm->locked = 0;
         timeout = 0;
-        if ((rc = tpool->process_handler(tpm->data)) != 0) {
-            mln_log(error, "child process return %d, %s\n", rc, strerror(rc));
-        }
+        rc = tpool->process_handler(tpm->data);
         tpm->data = NULL;
     }
 
@@ -417,10 +406,8 @@ again:
 
 void mln_thread_quit(void)
 {
-    if (m_thread_pool_self == NULL) {
-        mln_log(error, "Fatal error, thread messed up.\n");
-        abort();
-    }
+    ASSERT(m_thread_pool_self != NULL);
+
     mln_thread_pool_t *tpool = m_thread_pool_self->pool;
     m_thread_pool_self->locked = 1;
     pthread_mutex_lock(&(tpool->mutex));
@@ -432,10 +419,9 @@ void mln_thread_quit(void)
 void mln_thread_resource_info(struct mln_thread_pool_info *info)
 {
     if (info == NULL) return;
-    if (m_thread_pool_self == NULL) {
-        mln_log(error, "Fatal error, thread messed up.\n");
-        abort();
-    }
+
+    ASSERT(m_thread_pool_self != NULL);
+
     mln_thread_pool_t *tpool = m_thread_pool_self->pool;
     m_thread_pool_self->locked = 1;
     pthread_mutex_lock(&(tpool->mutex));

@@ -4,7 +4,6 @@
  */
 #if !defined(WIN32)
 #include "mln_ipc.h"
-#include "mln_log.h"
 
 /*
  * IPC only act on A child process and the parent process.

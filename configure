@@ -37,7 +37,7 @@ rm -fr .xcode .xcode.c
 wasm=0
 
 #debug
-debug=1
+debug=0
 
 #optimization level
 olevel='-O3'
@@ -54,7 +54,7 @@ do
         echo -e "\t--melang-dylib-prefix=MELANG_DYLIB_PATH"
         echo -e "\t--cc=C compiler"
         echo -e "\t--enable-wasm"
-        echo -e "\t--no-debug"
+        echo -e "\t--debug"
         echo -e "\t--olevel=O|O1|O2|O3"
         exit 0
     fi
@@ -70,8 +70,8 @@ do
         cc=$param_suffix
     elif [ $param_prefix == "--enable-wasm" ]; then
         wasm=1
-    elif [ $param_prefix == "--no-debug" ]; then
-        debug=0
+    elif [ $param_prefix == "--debug" ]; then
+        debug=1
     elif [ $param_prefix == "--olevel" ]; then
         if [ -z $param_suffix ]; then
             olevel=''
@@ -100,9 +100,9 @@ fi
 #debug
 if [ $debug -ne 0 ]; then
     if [ $wasm -eq 1 ]; then
-        debug='-g'
+        debug='-g -D__DEBUG__'
     else
-        debug='-ggdb'
+        debug='-ggdb -D__DEBUG__'
     fi
 else
     debug=''

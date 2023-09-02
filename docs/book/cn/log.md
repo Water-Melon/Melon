@@ -14,6 +14,18 @@
 
 
 
+#### mln_log_init
+
+```c
+int mln_log_init(mln_conf_t *cf);
+```
+
+描述：初始化全局日志模块，`cf`若为`NULL`，则使用Melon配置文件中配置进行初始化，否则将使用参数`cf`的配置对日志进行初始化。
+
+返回值：成功则返回`0`，否则返回`-1`
+
+
+
 #### mln_log
 
 ```c
@@ -44,7 +56,7 @@ log_level "none";
 
 `none`与其他级别有所不同，该级别下，所有日志输出的内容完全为`msg`的内容，而不带有任何前缀信息，如：日期、进程号、文件名、函数名、行号等。
 
-该函数需要在`mln_core_init`之后或其回调函数中使用，在`mln_core_init`之前使用将会出错，因为此时日志相关组件尚未被初始化。
+该函数需要在`mln_framework_init`之后或其回调函数中使用，在`mln_framework_init`之前使用将会出错，因为此时日志相关组件尚未被初始化。
 
 
 
@@ -107,3 +119,21 @@ mln_logger_t mln_log_logger_get(void);
 描述：获取当前日志处理函数指针，可用于在自定义处理函数时，串联处理函数。
 
 返回值：返回当前日志处理函数指针
+
+
+
+
+### 示例
+
+```c
+#include "mln_log.h"
+
+int main(int argc, char *argv[])
+{
+    mln_log(debug, "This will be outputted to stderr\n");
+    mln_log_init(NULL);
+    mln_log(debug, "This will be outputted to stderr and log file\n");
+    return 0;
+}
+```
+

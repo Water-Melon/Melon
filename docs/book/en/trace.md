@@ -147,7 +147,7 @@ After installing Melon, we proceed as follows:
    ```c
    #include <stdio.h>
    #include "mln_log.h"
-   #include "mln_core.h"
+   #include "mln_framework.h"
    #include "mln_trace.h"
    #include "mln_conf.h"
    
@@ -171,7 +171,7 @@ After installing Melon, we proceed as follows:
    
    int main(int argc, char *argv[])
    {
-       struct mln_core_attr cattr;
+       struct mln_framework_attr cattr;
    
        cattr.argc = argc;
        cattr.argv = argv;
@@ -180,7 +180,7 @@ After installing Melon, we proceed as follows:
        cattr.master_process = NULL;
        cattr.worker_process = worker_process;
    
-       if (mln_core_init(&cattr) < 0) {
+       if (mln_framework_init(&cattr) < 0) {
           fprintf(stderr, "Melon init failed.\n");
           return -1;
        }

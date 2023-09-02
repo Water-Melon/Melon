@@ -14,6 +14,18 @@
 
 
 
+#### mln_log_init
+
+```c
+int mln_log_init(mln_conf_t *cf);
+```
+
+Description: Initialize global log module. If `cf` is `NULL`, log will be initialized with Melon configuration file. Otherwise, log will be initialized with given `cf`.
+
+Return value: `0` on success, otherwise `-1` returned
+
+
+
 #### mln_log
 
 ```c
@@ -44,7 +56,7 @@ Defaults to the lowest level `none`.
 
 `none` is different from other levels. Under this level, the content of all log output is completely the content of `msg` without any prefix information, such as: date, process number, file name, function name, line number Wait.
 
-This function needs to be used after `mln_core_init` or its callback function. It will be an error to use it before `mln_core_init`, because the log related components have not been initialized at this time.
+This function needs to be used after `mln_framework_init` or its callback function. It will be an error to use it before `mln_framework_init`, because the log related components have not been initialized at this time.
 
 
 
@@ -107,3 +119,21 @@ mln_logger_t mln_log_logger_get(void);
 Description: Get the current log processing function pointer, which can be used to link processing functions when customizing processing functions.
 
 Return value: Returns the current log processing function pointer
+
+
+
+
+### 示例
+
+```c
+#include "mln_log.h"
+
+int main(int argc, char *argv[])
+{
+    mln_log(debug, "This will be outputted to stderr\n");
+    mln_log_init(NULL);
+    mln_log(debug, "This will be outputted to stderr and log file\n");
+    return 0;
+}
+```
+

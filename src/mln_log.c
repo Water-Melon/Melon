@@ -14,7 +14,6 @@
 #include <sys/time.h>
 #include <errno.h>
 #include "mln_log.h"
-#include "mln_conf.h"
 #include "mln_path.h"
 #include "mln_tools.h"
 
@@ -31,13 +30,13 @@ _mln_sys_log_process(mln_log_t *log, \
                      va_list arg);
 static inline void mln_file_lock(int fd);
 static inline void mln_file_unlock(int fd);
-static int mln_log_set_level(mln_log_t *log, int is_init);
+static int mln_log_set_level(mln_log_t *log, mln_conf_t *cf, int is_init);
 static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
 #if !defined(WIN32)
 static void mln_log_atfork_lock(void);
 static void mln_log_atfork_unlock(void);
 #endif
-static int mln_log_get_log(mln_log_t *log, int is_init);
+static int mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init);
 static mln_logger_t _logger = _mln_sys_log_process;
 
 /*
@@ -46,7 +45,7 @@ static mln_logger_t _logger = _mln_sys_log_process;
 char log_err_level[] = "Log level permission deny.";
 char log_err_fmt[] = "Log message format error.";
 char log_path_cmd[] = "log_path";
-mln_log_t g_log = {{0},{0},{0},STDERR_FILENO,0,none,(mln_spin_t)0};
+mln_log_t g_log = {{0},{0},{0},STDERR_FILENO,0,0,none,(mln_spin_t)0};
 
 /*
  * file lock
@@ -93,10 +92,41 @@ mln_logger_t mln_log_logger_get(void)
 /*
  * g_log
  */
-int mln_log_init(int in_daemon)
+int mln_log_init(mln_conf_t *cf)
 {
+    mln_u32_t in_daemon = 0;
+    mln_conf_domain_t *cd;
+    mln_conf_cmd_t *cc;
+    mln_conf_item_t *ci;
     mln_log_t *log = &g_log;
+    if (log->init) return 0;
+
+    if (cf == NULL) {
+        if (mln_conf_load() < 0) {
+            fprintf(stderr, "load configuration failed.\n");
+            return -1;
+        }
+        cf = mln_conf();
+    }
+
+    if ((cd = cf->search(cf, "main")) == NULL) {
+        fprintf(stderr, "No such domain named 'main'\n");
+        return -1;
+    }
+    if ((cc = cd->search(cd, "daemon")) != NULL) {
+        if ((ci = cc->search(cc, 1)) == NULL) {
+            fprintf(stderr, "Command 'daemon' need a parameter.\n");
+            return -1;
+        }
+        if (ci->type != CONF_BOOL) {
+            fprintf(stderr, "Parameter type of command 'daemon' error.\n");
+            return -1;
+        }
+        if (ci->val.b) in_daemon = 1;
+    }
+
     log->in_daemon = in_daemon;
+    log->init = 1;
     log->level = none;
     int ret = 0;
     if ((ret = mln_spin_init(&(log->thread_lock))) != 0) {
@@ -112,13 +142,13 @@ int mln_log_init(int in_daemon)
         return -1;
     }
 
-    if (mln_log_get_log(log, 1) < 0) {
+    if (mln_log_get_log(log, cf, 1) < 0) {
         fprintf(stderr, "%s(): Get log file failed.\n", __FUNCTION__);
         mln_log_destroy();
         return -1;
     }
 
-    if (mln_log_set_level(log, 1) < 0) {
+    if (mln_log_set_level(log, cf, 1) < 0) {
         fprintf(stderr, "%s(): Set log level failed.\n", __FUNCTION__);
         mln_log_destroy();
         return -1;
@@ -127,9 +157,10 @@ int mln_log_init(int in_daemon)
 }
 
 static int
-mln_log_get_log(mln_log_t *log, int is_init)
+mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
 {
-    mln_conf_t *cf;
+    if (cf == NULL) return -1;
+
     mln_conf_domain_t *cd;
     mln_conf_cmd_t *cc;
     mln_conf_item_t *ci;
@@ -138,7 +169,6 @@ mln_log_get_log(mln_log_t *log, int is_init)
     char buf[M_LOG_PATH_LEN] = {0}, *p;
     int fd;
 
-    cf = mln_conf();
     cd = cf->search(cf, "main");
     cc = cd->search(cd, log_path_cmd);
     if (cc == NULL) {
@@ -247,10 +277,10 @@ void mln_log_destroy(void)
 /*
  * mln_log_set_level
  */
-static int mln_log_set_level(mln_log_t *log, int is_init)
+static int mln_log_set_level(mln_log_t *log, mln_conf_t *cf, int is_init)
 {
-    mln_conf_t *cf = mln_conf();
     if (cf == NULL) return 0;
+
     mln_conf_domain_t *cd = cf->search(cf, "main");
     if (cd == NULL) {
         if (is_init)
@@ -302,9 +332,9 @@ static int mln_log_set_level(mln_log_t *log, int is_init)
 int mln_log_reload(void *data)
 {
     mln_spin_lock(&(g_log.thread_lock));
-    mln_log_get_log(&g_log, 0);
+    mln_log_get_log(&g_log, mln_conf(), 0);
     mln_file_lock(g_log.fd);
-    int ret = mln_log_set_level(&g_log, 0);
+    int ret = mln_log_set_level(&g_log, mln_conf(), 0);
     mln_file_unlock(g_log.fd);
     mln_spin_unlock(&(g_log.thread_lock));
     return ret;
@@ -334,7 +364,7 @@ void _mln_sys_log(mln_log_level_t level, \
 static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
 {
     ssize_t ret = write(log->fd, buf, size);
-    if (!log->in_daemon) {
+    if (log->init && !log->in_daemon) {
         int rc = write(STDERR_FILENO, buf, size);
         if (rc < 0) rc = 1;/*do nothing*/
     }

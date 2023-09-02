@@ -125,8 +125,6 @@ int mln_aes_decrypt(mln_aes_t *a, mln_u8ptr_t cipher);
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_string.h"
 #include "mln_aes.h"
 
@@ -135,36 +133,26 @@ int main(int argc, char *argv[])
     mln_aes_t a;
     char p[] = "1234567890123456";//128-bit 这里如果将char p[] 改为 char *p，则字符串内存区为只读，会导致段错误
     mln_string_t s;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     if (mln_aes_init(&a, (mln_u8ptr_t)"abcdefghijklmnop", M_AES_128) < 0) {
-        mln_log(error, "aes init failed\n");
+        fprintf(stderr, "aes init failed\n");
         return -1;
     }
 
     mln_string_set(&s, p);
     if (mln_aes_encrypt(&a, s.data) < 0) {
-        mln_log(error, "aes encrypt failed\n");
+        fprintf(stderr, "aes encrypt failed\n");
         return -1;
     }
-    mln_log(debug, "%S\n", &s);
+    write(STDOUT_FILENO, s.data, s.len);
+    write(STDOUT_FILENO, "\n", 1);
 
     if (mln_aes_decrypt(&a, s.data) < 0) {
-        mln_log(error, "aes decrypt failed\n");
+        fprintf(stderr, "aes decrypt failed\n");
         return -1;
     }
-    mln_log(debug, "%S\n", &s);
+    write(STDOUT_FILENO, s.data, s.len);
+    write(STDOUT_FILENO, "\n", 1);
 
     return 0;
 }

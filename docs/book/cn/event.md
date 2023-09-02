@@ -210,19 +210,17 @@ typedef void (*dispatch_callback) (mln_event_t *, void *);
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_event.h"
 
 static void timer_handler(mln_event_t *ev, void *data)
 {
-    mln_log(debug, "timer\n");
+    printf("timer\n");
     mln_event_timer_set(ev, 1000, NULL, timer_handler);
 }
 
 static void mln_fd_write(mln_event_t *ev, int fd, void *data)
 {
-    mln_log(debug, "write handler\n");
+    printf("write handler\n");
     write(fd, "hello\n", 6);
     mln_event_fd_set(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
 }
@@ -230,32 +228,20 @@ static void mln_fd_write(mln_event_t *ev, int fd, void *data)
 int main(int argc, char *argv[])
 {
     mln_event_t *ev;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     ev = mln_event_new();
     if (ev == NULL) {
-        mln_log(error, "event init failed.\n");
+        fprintf(stderr, "event init failed.\n");
         return -1;
     }
 
     if (mln_event_timer_set(ev, 1000, NULL, timer_handler) < 0) {
-        mln_log(error, "timer set failed.\n");
+        fprintf(stderr, "timer set failed.\n");
         return -1;
     }
 
     if (mln_event_fd_set(ev, STDOUT_FILENO, M_EV_SEND, M_EV_UNLIMITED, NULL, mln_fd_write) < 0) {
-        mln_log(error, "fd handler set failed.\n");
+        fprintf(stderr, "fd handler set failed.\n");
         return -1;
     }
 

@@ -133,9 +133,6 @@ void mln_md5_dump(mln_md5_t *m);
 
 ```c
 #include <stdio.h>
-#include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_md5.h"
 
 int main(int argc, char *argv[])
@@ -143,23 +140,11 @@ int main(int argc, char *argv[])
     mln_md5_t m;
     char text[] = "Hello";
     char output[33] = {0};//MD5计算结果一共16字节，改为字符串输出则是二进制的两倍，因此是32字节，多一字节用于\0
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     mln_md5_init(&m);
     mln_md5_calc(&m, (mln_u8ptr_t)text, sizeof(text)-1, 1);
     mln_md5_tostring(&m, output, sizeof(output));
-    mln_log(debug, "%s\n", output);
+    printf("%s\n", output);
 
     return 0;
 }

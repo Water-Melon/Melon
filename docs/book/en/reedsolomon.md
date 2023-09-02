@@ -90,52 +90,38 @@ Return value: result data memory address
 
 ```c
 #include <stdio.h>
-#include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_string.h"
 #include "mln_rs.h"
 
 int main(int argc, char *argv[])
 {
     mln_rs_result_t *res, *dres;
-    char origin[] = "AAABBBCCCDDD";
+    char origin[] = "AAAABBBBCCCCDDDD";
     uint8_t *err[6] = {0};
     mln_string_t tmp;
-    struct mln_core_attr cattr;
 
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
-
-    res = mln_rs_encode((uint8_t *)origin, 3, 4, 2);
+    res = mln_rs_encode((uint8_t *)origin, 4, 4, 2);
     if (res == NULL) {
-        mln_log(error, "rs encode failed.\n");
+        fprintf(stderr, "rs encode failed.\n");
         return -1;
     }
 
     err[0] = NULL;
     err[1] = NULL;
-    err[2] = (uint8_t *)origin+6;
-    err[3] = (uint8_t *)origin+9;
+    err[2] = (uint8_t *)origin+8;
+    err[3] = (uint8_t *)origin+12;
     err[4] = mln_rs_result_get_data_by_index(res, 4);
     err[5] = mln_rs_result_get_data_by_index(res, 5);
 
-    dres = mln_rs_decode(err, 3, 4, 2);
+    dres = mln_rs_decode(err, 4, 4, 2);
     if (dres == NULL) {
-        mln_log(error, "rs decode failed.\n");
+        fprintf(stderr, "rs decode failed.\n");
         return -1;
     }
 
-    mln_string_nset(&tmp, mln_rs_result_get_data_by_index(dres, 1), 3);
-    mln_log(debug, "%S\n", &tmp);
+    mln_string_nset(&tmp, mln_rs_result_get_data_by_index(dres, 1), 4);
+    write(STDOUT_FILENO, tmp.data, tmp.len);
+    write(STDOUT_FILENO, "\n", 1);
 
     mln_rs_result_free(res);
     mln_rs_result_free(dres);

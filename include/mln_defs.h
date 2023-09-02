@@ -7,6 +7,13 @@
 
 #include <pthread.h>
 
+#ifdef __DEBUG__
+#include <assert.h>
+#define ASSERT(x) assert(x)
+#else
+#define ASSERT(x);
+#endif
+
 /*
  * container_of and offsetof
  */

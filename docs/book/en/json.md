@@ -281,8 +281,6 @@ Return value: none
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_string.h"
 #include "mln_json.h"
 
@@ -292,42 +290,30 @@ int main(int argc, char *argv[])
     mln_string_t s1 = mln_string("name");
     mln_string_t s2 = mln_string("Tom");
     mln_string_t *res;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     key = mln_json_new();
     if (key == NULL) {
-        mln_log(error, "init key failed\n");
+        fprintf(stderr, "init key failed\n");
         goto err;
     }
     M_JSON_SET_TYPE_STRING(key);
-    M_JSON_SET_DATA_STRING(key, mln_string_dup(&s1));//Note that the memory must be allocated by itself, and the memory in the stack cannot be used directly
+    M_JSON_SET_DATA_STRING(key, mln_string_dup(&s1));//注意，一定是要自行分配内存，不可直接使用栈中内存
 
     val = mln_json_new();
     if (val == NULL) {
-        mln_log(error, "init val failed\n");
+        fprintf(stderr, "init val failed\n");
         goto err;
     }
     M_JSON_SET_TYPE_STRING(val);
-    M_JSON_SET_DATA_STRING(val, mln_string_dup(&s2));//Note that the memory must be allocated by itself, and the memory in the stack cannot be used directly
+    M_JSON_SET_DATA_STRING(val, mln_string_dup(&s2));//注意，一定是要自行分配内存，不可直接使用栈中内存
 
     j = mln_json_new();
     if (j == NULL) {
-        mln_log(error, "init object failed\n");
+        fprintf(stderr, "init object failed\n");
         goto err;
     }
     if (mln_json_obj_update(j, key, val) < 0) {
-        mln_log(error, "update object failed\n");
+        fprintf(stderr, "update object failed\n");
         goto err;
     }
     key = val = NULL;
@@ -335,10 +321,11 @@ int main(int argc, char *argv[])
     res = mln_json_generate(j);
     mln_json_free(j);
     if (res == NULL) {
-        mln_log(error, "generate failed\n");
+        fprintf(stderr, "generate failed\n");
         goto err;
     }
-    mln_log(debug, "%S\n", res);
+    write(STDOUT_FILENO, res->data, res->len);
+    write(STDOUT_FILENO, "\n", 1);
 
     j = mln_json_parse(res);
     mln_string_free(res);

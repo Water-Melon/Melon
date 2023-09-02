@@ -88,6 +88,18 @@ struct mln_conf_item_s {
 
 
 
+#### mln_conf_load
+
+```c
+int mln_conf_load(void);
+```
+
+Description: Load Melon configuration from config file. If you need to load configuration, please make sure this function to be called before any `pthread_create`.
+
+Return value: `0` on success, otherwise `-1` returned.
+
+
+
 #### mln_conf
 
 ```c
@@ -277,48 +289,36 @@ Return value: the number of command item parameters
 
 ```c
 #include <stdio.h>
-#include "mln_core.h"
 #include "mln_conf.h"
-#include "mln_log.h"
-
-static int global_init(void)
-{
-  mln_conf_t *cf;
-  mln_conf_domain_t *d;
-  mln_conf_cmd_t *c;
-  mln_conf_item_t *i;
-
-  cf = mln_conf();
-  d = cf->search(cf, "main"); //如果main都不存在，那说明配追初始化有严重问题
-  c = d->search(d, "daemon"); //这里我们获取daemon配置项
-  if (c == NULL) {
-    mln_log(error, "daemon not exist.\n");
-    return -1;//出错返回
-  }
-  i = c->search(c, 1); //daemon在配置文件中只有一个参数，配置参数的下标从1开始
-  if (i == NULL) {
-    mln_log(error, "Invalid daemon argument.\n");
-    return -1;
-  }
-  if (i->type != CONF_BOOL) { //daemon 参数应该为布尔开关量
-    mln_log(error, "Invalid type of daemon argument.\n");
-    return -1;
-  }
-  mln_log(debug, "%u\n", i->val.b); //输出布尔量的值
-
-  return 0;
-}
 
 int main(int argc, char *argv[])
 {
-    struct mln_core_attr cattr;
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = global_init;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    return mln_core_init(&cattr);
+    mln_conf_t *cf;
+    mln_conf_domain_t *cd;
+    mln_conf_cmd_t *cc;
+    mln_conf_item_t *ci;
+
+    if (mln_conf_load() < 0) {
+        fprintf(stderr, "Load configuration failed.\n");
+        return -1;
+    }
+
+    cf = mln_conf();
+    cd = cf->search(cf, "main");
+    cc = cd->search(cd, "framework");
+    if (cc == NULL) {
+        fprintf(stderr, "framework not found.\n");
+        return -1;
+    }
+    ci = cc->search(cc, 1);
+    if (ci->type == CONF_BOOL && !ci->val.b) {
+        printf("framework off\n");
+    } else if (ci->type == CONF_STR) {
+        printf("framework %s\n", ci->val.s->data);
+    } else {
+        fprintf(stderr, "Invalid framework value.\n");
+    }
+    return 0;
 }
 ```
 

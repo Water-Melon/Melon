@@ -262,8 +262,6 @@ typedef enum mln_hash_flag {
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_hash.h"
 
 typedef struct mln_hash_test_s {
@@ -290,19 +288,7 @@ int main(int argc, char *argv[])
 {
     mln_hash_t *h;
     struct mln_hash_attr hattr;
-    struct mln_core_attr cattr;
     mln_hash_test_t *item, *ret;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     hattr.pool = NULL;
     hattr.pool_alloc = NULL;
@@ -316,24 +302,24 @@ int main(int argc, char *argv[])
     hattr.calc_prime = 0;
 
     if ((h = mln_hash_new(&hattr)) == NULL) {
-        mln_log(error, "Hash init failed.\n");
+        fprintf(stderr, "Hash init failed.\n");
         return -1;
     }
 
     item = (mln_hash_test_t *)malloc(sizeof(mln_hash_test_t));
     if (item == NULL) {
-        mln_log(error, "malloc failed.\n");
+        fprintf(stderr, "malloc failed.\n");
         return -1;
     }
     item->key = 1;
     item->val = 10;
     if (mln_hash_insert(h, &(item->key), item) < 0) {
-        mln_log(error, "insert failed.\n");
+        fprintf(stderr, "insert failed.\n");
         return -1;
     }
 
     ret = mln_hash_search(h, &(item->key));
-    mln_log(debug, "%X %X\n", ret, item);
+    printf("%p %p\n", ret, item);
 
     mln_hash_free(h, M_HASH_F_VAL);
 

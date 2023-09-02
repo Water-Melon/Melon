@@ -109,7 +109,6 @@ _b + a;
 //test.c
 #include <stdio.h>
 #include <string.h>
-#include "mln_core.h"
 #include "mln_log.h"
 #include "mln_lex.h"
 #include "mln_alloc.h"
@@ -137,7 +136,6 @@ static mln_production_t prod_tbl[] = {
 
 int main(int argc, char *argv[])
 {
-    struct mln_core_attr cattr;
     mln_lex_t *lex = NULL;
     struct mln_lex_attr lattr;
     mln_alloc_t *pool;
@@ -145,18 +143,6 @@ int main(int argc, char *argv[])
     struct mln_parse_attr pattr;
     mln_u8ptr_t ptr, ast;
     mln_lex_hooks_t hooks;
-
-    //框架初始化
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-       fprintf(stderr, "Melon init failed.\n");
-       return -1;
-    }
 
     //设置自定义语言文本文件路径
     mln_string_set(&path, argv[1]);

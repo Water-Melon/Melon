@@ -72,9 +72,6 @@ void mln_reg_match_result_free(mln_reg_match_t *results);
 
 ```c
 #include <stdio.h>
-#include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_regexp.h"
 
 int main(int argc, char *argv[])
@@ -83,23 +80,12 @@ int main(int argc, char *argv[])
     mln_string_t text = mln_string("Hello world");
     mln_string_t exp = mln_string(".*ello");
     int n;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     n = mln_reg_match(&exp, &text, &head, &tail);
-    mln_log(debug, "matched: %d\n", n);
+    printf("matched: %d\n", n);
     for (match = head; match != NULL; match = match->next) {
-        mln_log(debug, "[%S]\n", &(match->data));
+        write(STDOUT_FILENO, match->data.data, match->data.len);
+        write(STDOUT_FILENO, "\n", 1);
     }
     mln_reg_match_result_free(head);
 

@@ -525,7 +525,11 @@ Their definitions can be found in melon/include/mln_types.h.
     There are some interfaces about log files, but not all of them are useful for developers. So we just discuss a
     part of them.
 
-    a) mln_log(err_lv,msg,...);
+    a) mln_log_init(mln_conf_t *cf);
+       Initialize log. If cf is NULL, log will be initialized with the current Melon configuration file.
+       Otherwise, log will be initialized with the given 'cf'.
+
+    b) mln_log(err_lv,msg,...);
        This interface is widely used in Melon.
        We use it to record log message.
        The first argument is log level. There are five levels:
@@ -536,17 +540,17 @@ Their definitions can be found in melon/include/mln_types.h.
            %ld in 64-bit) and %I (=%llu in 32-bit or =%lu in 64-bit).
        Depending on the format control characters in msg, the rest arguments can be none or even more than one.
 
-    b) char *mln_log_dir_path(void);
+    c) char *mln_log_dir_path(void);
        It returns the path of log files' directory.
 
-    c) char *mln_log_logfile_path(void);
+    d) char *mln_log_logfile_path(void);
        It returns the path of a log file.
 
-    d) char *mln_log_pid_path(void);
+    e) char *mln_log_pid_path(void);
        It returns the path of a pid file.
        The pid of the parent process is recorded in this file.
 
-    e) void mln_log_logger_set(mln_logger_t logger);
+    f) void mln_log_logger_set(mln_logger_t logger);
        Customize logger. `logger`'s prototype is:
            typedef void (*mln_logger_t)(mln_log_t *log,
                                         mln_log_level_t level,
@@ -558,7 +562,7 @@ Their definitions can be found in melon/include/mln_types.h.
        Some infomation and file descriptor `fd` can be found in `log`.
        Developer can customize log file and log format through this function and path hook functions.
 
-    f) mln_logger_t mln_log_logger_get(void);
+    g) mln_logger_t mln_log_logger_get(void);
        Get current logger function pointer.
 
   9) Lexer
@@ -3083,34 +3087,34 @@ Their definitions can be found in melon/include/mln_types.h.
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.
-       #include "mln_core.h"
+       #include "mln_framework.h"
    2) initilize argument of init-function.
-       struct mln_core_attr attr;
+       struct mln_framework_attr attr;
        attr.argc = ...;
        ...
-      The prototype of 'struct mln_core_attr' is,
-       struct mln_core_attr {
-           int                       argc;
-           char                    **argv;
-           mln_core_init_t           global_init;
-           mln_core_process_t        main_thread;
-           mln_core_process_t        master_process;
-           mln_core_process_t        worker_process;
+      The prototype of 'struct mln_framework_attr' is,
+       struct mln_framework_attr {
+           int                            argc;
+           char                         **argv;
+           mln_framework_init_t           global_init;
+           mln_framework_process_t        main_thread;
+           mln_framework_process_t        master_process;
+           mln_framework_process_t        worker_process;
        };
       'argc' normally equals to the first argument of 'main'.
       'argv' normally equals to the second argument of 'main'.
       'global_init' is a function to initialize some global variables. Its prototype is,
-          typedef int (*mln_core_init_t)(void);
+          typedef int (*mln_framework_init_t)(void);
       'main_thread' is a function to process something in main thread when the configuration
         'framework' is 'multithread'.
       'master_process' is a function to process something in master process. Its prototype is,
-          typedef void (*mln_core_process_t)(mln_event_t *);
+          typedef void (*mln_framework_process_t)(mln_event_t *);
         ‘mln_event_t' is the type of event object which is initialized by 'mln_event_new()'.
       'worker_process' is a function to process something in worker process. Its prototype is,
-          typedef void (*mln_core_process_t)(mln_event_t *);
+          typedef void (*mln_framework_process_t)(mln_event_t *);
         ‘mln_event_t' is the type of event object which is initialized by 'mln_event_new()'.
    3) call init-function.
-      if (mln_core_init(&attr) < 0) {
+      if (mln_framework_init(&attr) < 0) {
           ...
       }
    That's all what we need to do.
@@ -3229,7 +3233,7 @@ Their definitions can be found in melon/include/mln_types.h.
       #include <assert.h>
       #include <string.h>
       #include <errno.h>
-      #include "mln_core.h"
+      #include "mln_framework.h"
       #include "mln_log.h"
       #include "mln_thread.h"
 
@@ -3305,7 +3309,7 @@ Their definitions can be found in melon/include/mln_types.h.
             {"hello", hello},
           };
 
-          struct mln_core_attr cattr;
+          struct mln_framework_attr cattr;
 
           cattr.argc = argc;
           cattr.argv = argv;
@@ -3316,7 +3320,7 @@ Their definitions can be found in melon/include/mln_types.h.
 
           mln_thread_module_set(modules, 2);
 
-          if (mln_core_init(&cattr) < 0) {
+          if (mln_framework_init(&cattr) < 0) {
              fprintf(stderr, "Melon init failed.\n");
              return -1;
           }

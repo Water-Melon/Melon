@@ -7,9 +7,8 @@
 #define __MLN_GLOBAL_H
 #include <stdio.h>
 #include "mln_types.h"
-#include "mln_conf.h"
 
-#ifndef __MLN_DEFINE
+#ifndef __MLN_GLOBAL
 #define EXTERN extern
 #else
 #define EXTERN

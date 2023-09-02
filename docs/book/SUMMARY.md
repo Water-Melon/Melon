@@ -4,7 +4,7 @@
    - [Installation](en/install.md)
    - [Quickstart](en/quickstart.md)
    - [Components](en/components.md)
-     - [Library Initialization](en/core_init.md);
+     - [Library Initialization](en/framework_init.md);
      - [Configuration](en/conf.md)
      - [Log](en/log.md)
      - [Error Code Management](en/error.md)
@@ -55,7 +55,7 @@
    - [安装](cn/install.md)
    - [快速入门](cn/quickstart.md)
    - [组件](cn/components.md)
-     - [初始化](cn/core_init.md);
+     - [初始化](cn/framework_init.md);
      - [配置](cn/conf.md)
      - [日志](cn/log.md)
      - [返回值管理](cn/error.md)

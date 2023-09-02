@@ -11,7 +11,6 @@
 #include <signal.h>
 #include "mln_defs.h"
 #include "mln_event.h"
-#include "mln_log.h"
 #include "mln_global.h"
 #if !defined(WIN32)
 #include <sys/socket.h>
@@ -80,14 +79,12 @@ mln_event_t *mln_event_new(void)
     mln_event_t *ev;
     ev = (mln_event_t *)malloc(sizeof(mln_event_t));
     if (ev == NULL) {
-        mln_log(error, "No memory.\n");
         return NULL;
     }
     ev->callback = NULL;
     ev->callback_data = NULL;
     ev->ev_fd_tree = mln_rbtree_new(NULL);
     if (ev->ev_fd_tree == NULL) {
-        mln_log(error, "No memory.\n");
         goto err1;
     }
     ev->ev_fd_wait_head = NULL;
@@ -97,7 +94,6 @@ mln_event_t *mln_event_new(void)
 
     ev->ev_fd_timeout_heap = mln_fheap_new(&fheap_min, NULL);
     if (ev->ev_fd_timeout_heap == NULL) {
-        mln_log(error, "No memory.\n");
         goto err2;
     }
     /*timer heap*/
@@ -110,32 +106,27 @@ mln_event_t *mln_event_new(void)
     fattr.key_free = mln_event_desc_free;
     ev->ev_timer_heap = mln_fheap_new(&fheap_min, &fattr);
     if (ev->ev_timer_heap == NULL) {
-        mln_log(error, "No memory.\n");
         goto err3;
     }
     ev->is_break = 0;
 #if defined(MLN_EPOLL)
     ev->epollfd = epoll_create(M_EV_EPOLL_SIZE);
     if (ev->epollfd < 0) {
-        mln_log(error, "epoll_create error. %s\n", strerror(errno));
         goto err4;
     }
     ev->unusedfd = epoll_create(M_EV_EPOLL_SIZE);
     if (ev->unusedfd < 0) {
         close(ev->epollfd);
-        mln_log(error, "epoll_create error. %s\n", strerror(errno));
         goto err4;
     }
 #elif defined(MLN_KQUEUE)
     ev->kqfd = kqueue();
     if (ev->kqfd < 0) {
-        mln_log(error, "kqueue error. %s\n", strerror(errno));
         goto err4;
     }
     ev->unusedfd = kqueue();
     if (ev->unusedfd < 0) {
         close(ev->kqfd);
-        mln_log(error, "epoll_create error. %s\n", strerror(errno));
         goto err4;
     }
 #else
@@ -224,7 +215,6 @@ mln_event_timer_t *mln_event_timer_set(mln_event_t *event, \
     mln_event_desc_t *ed;
     ed = (mln_event_desc_t *)malloc(sizeof(mln_event_desc_t));
     if (ed == NULL) {
-        mln_log(error, "No memory.\n");
         return NULL;
     }
     ed->type = M_EV_TM;
@@ -238,7 +228,6 @@ mln_event_timer_t *mln_event_timer_set(mln_event_t *event, \
     ed->act_next = NULL;
     mln_fheap_node_t *fn = mln_fheap_node_new(event->ev_timer_heap, ed);
     if (fn == NULL) {
-        mln_log(error, "No memory.\n");
         free(ed);
         return NULL;
     }
@@ -308,10 +297,7 @@ void mln_event_fd_timeout_handler_set(mln_event_t *event, \
     tmp.type = M_EV_FD;
     tmp.data.fd.fd = fd;
     mln_rbtree_node_t *rn = mln_rbtree_inline_search(event->ev_fd_tree, &tmp, mln_event_rbtree_fd_cmp);
-    if (mln_rbtree_null(rn, event->ev_fd_tree)) {
-        mln_log(error, "No such file descriptor in RB-Tree.\n");
-        abort();
-    }
+    ASSERT(!mln_rbtree_null(rn, event->ev_fd_tree));
     mln_event_desc_t *ed = (mln_event_desc_t *)mln_rbtree_node_data_get(rn);
     ed->data.fd.timeout_data = data;
     ed->data.fd.timeout_handler = timeout_handler;
@@ -325,14 +311,8 @@ int mln_event_fd_set(mln_event_t *event, \
                      void *data, \
                      ev_fd_handler fd_handler)
 {
-    if (fd < 0 || \
-        (flag & ~M_EV_FD_MASK) || \
-        flag > M_EV_CLR || \
-        ((flag & M_EV_NONBLOCK) && (flag & M_EV_BLOCK)))
-    {
-        mln_log(error, "fd or flag error.\n");
-        abort();
-    }
+    ASSERT(fd >= 0 && !(flag & ~M_EV_FD_MASK) && flag <= M_EV_CLR && !((flag & M_EV_NONBLOCK) && (flag & M_EV_BLOCK)));
+
     pthread_mutex_lock(&event->fd_lock);
     if (flag == M_EV_CLR) {
         mln_event_fd_clr_set(event, fd);
@@ -349,10 +329,9 @@ int mln_event_fd_set(mln_event_t *event, \
         if (flag & M_EV_APPEND) {
             if (flag & M_EV_NONBLOCK) mln_event_fd_nonblock_set(fd);
             if (flag & M_EV_BLOCK) mln_event_fd_block_set(fd);
-            if (((mln_event_desc_t *)mln_rbtree_node_data_get(rn))->data.fd.is_clear) {
-                mln_log(error, "Append fd already clear.\n");
-                abort();
-            }
+
+            ASSERT(!(((mln_event_desc_t *)mln_rbtree_node_data_get(rn))->data.fd.is_clear));
+
             if (mln_event_fd_append_set(event, \
                                         (mln_event_desc_t *)mln_rbtree_node_data_get(rn), \
                                         fd, \
@@ -413,7 +392,6 @@ mln_event_fd_normal_set(mln_event_t *event, \
     if (ed == NULL) {
         ed = (mln_event_desc_t *)malloc(sizeof(mln_event_desc_t));
         if (ed == NULL) {
-            mln_log(error, "No memory.\n");
             return -1;
         }
         ed->type = M_EV_FD;
@@ -427,7 +405,6 @@ mln_event_fd_normal_set(mln_event_t *event, \
         mln_rbtree_node_t *rn;
         rn = mln_rbtree_node_new(event->ev_fd_tree, ed);
         if (rn == NULL) {
-            mln_log(error, "No memory.\n");
             free(ed);
             return -1;
         }
@@ -562,13 +539,11 @@ mln_event_fd_append_set(mln_event_t *event, \
     if (!other_mark) {
         EV_SET(&ev, fd, EVFILT_READ, EV_ADD|EV_ERROR|EV_DISABLE, 0, 0, ed);
         if (kevent(event->kqfd, &ev, 1, NULL, 0, NULL) < 0) {
-            mln_log(error, "kevent error. %s\n", strerror(errno));
-            abort();
+            ASSERT(0);
         }
         EV_SET(&ev, fd, EVFILT_WRITE, EV_ADD|EV_ERROR|EV_DISABLE, 0, 0, ed);
         if (kevent(event->kqfd, &ev, 1, NULL, 0, NULL) < 0) {
-            mln_log(error, "kevent error. %s\n", strerror(errno));
-            abort();
+            ASSERT(0);
         }
     }
     if (flag & M_EV_RECV) {
@@ -576,8 +551,7 @@ mln_event_fd_append_set(mln_event_t *event, \
         if (oneshot) ed->data.fd.rd_oneshot = 1;
         EV_SET(&ev, fd, EVFILT_READ, EV_ENABLE, 0, 0, ed);
         if (kevent(event->kqfd, &ev, 1, NULL, 0, NULL) < 0) {
-            mln_log(error, "kevent error. %s\n", strerror(errno));
-            abort();
+            ASSERT(0);
         }
         ed->data.fd.rcv_data = data;
         ed->data.fd.rcv_handler = fd_handler;
@@ -587,8 +561,7 @@ mln_event_fd_append_set(mln_event_t *event, \
         if (oneshot) ed->data.fd.wr_oneshot = 1;
         EV_SET(&ev, fd, EVFILT_WRITE, EV_ENABLE, 0, 0, ed);
         if (kevent(event->kqfd, &ev, 1, NULL, 0, NULL) < 0) {
-            mln_log(error, "kevent error. %s\n", strerror(errno));
-            abort();
+            ASSERT(0);
         }
         ed->data.fd.snd_data = data;
         ed->data.fd.snd_handler = fd_handler;
@@ -654,7 +627,6 @@ mln_event_fd_timeout_set(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms)
         ef->end_us = tv.tv_sec*1000000+tv.tv_usec+timeout_ms*1000;
         fn = mln_fheap_node_new(ev->ev_fd_timeout_heap, ed);
         if (fn == NULL) {
-            mln_log(error, "No memory.\n");
             return -1;
         }
         ef->timeout_node = fn;
@@ -749,14 +721,9 @@ mln_event_fd_nonblock_set(int fd)
 #else
     int flg;
     flg = fcntl(fd, F_GETFL, NULL);
-    if (flg < 0) {
-        mln_log(error, "fcntl F_GETFL failed. %s\n", strerror(errno));
-        abort();
-    }
-    if (fcntl(fd, F_SETFL, flg | O_NONBLOCK) < 0) {
-        mln_log(error, "fcntl F_SETFL failed. %s\n", strerror(errno));
-        abort();
-    }
+    ASSERT(flg >= 0);
+    flg = fcntl(fd, F_SETFL, flg | O_NONBLOCK);
+    ASSERT(flg >= 0);
 #endif
 }
 
@@ -769,14 +736,9 @@ mln_event_fd_block_set(int fd)
 #else
     int flg;
     flg = fcntl(fd, F_GETFL, NULL);
-    if (flg < 0) {
-        mln_log(error, "fcntl F_GETFL failed. %s\n", strerror(errno));
-        abort();
-    }
-    if (fcntl(fd, F_SETFL, flg & ~(O_NONBLOCK)) < 0) {
-        mln_log(error, "fcntl F_SETFL failed. %s\n", strerror(errno));
-        abort();
-    }
+    ASSERT(flg >= 0);
+    flg = fcntl(fd, F_SETFL, flg & ~(O_NONBLOCK));
+    ASSERT(flg >= 0);
 #endif
 }
 
@@ -825,8 +787,7 @@ void mln_event_dispatch(mln_event_t *event)
                     pthread_mutex_unlock(&event->fd_lock);
                     continue;
                 } else {
-                    mln_log(error, "epoll_wait error. %s\n", strerror(errno));
-                    abort();
+                    ASSERT(0);
                 }
             } else if (nfds == 0) {
                 pthread_mutex_unlock(&event->fd_lock);
@@ -980,8 +941,7 @@ void mln_event_dispatch(mln_event_t *event)
                     pthread_mutex_unlock(&event->fd_lock);
                     continue;
                 } else {
-                    mln_log(error, "kevent error. %s\n", strerror(errno));
-                    abort();
+                    ASSERT(0);
                 }
             } else if (nfds == 0) {
                 pthread_mutex_unlock(&event->fd_lock);
@@ -1012,8 +972,7 @@ void mln_event_dispatch(mln_event_t *event)
                             ed->data.fd.rd_oneshot = 0;
                             EV_SET(&mod, ed->data.fd.fd, EVFILT_READ, EV_DISABLE, 0, 0, ed);
                             if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
-                                mln_log(error, "kevent error. %s\n", strerror(errno));
-                                abort();
+                                ASSERT(0);
                             }
                             ed->flag &= (~M_EV_RECV);
                         }
@@ -1037,8 +996,7 @@ void mln_event_dispatch(mln_event_t *event)
                             ed->data.fd.wr_oneshot = 0;
                             EV_SET(&mod, ed->data.fd.fd, EVFILT_WRITE, EV_DISABLE, 0, 0, ed);
                             if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
-                                mln_log(error, "kevent error. %s\n", strerror(errno));
-                                abort();
+                                ASSERT(0);
                             }
                             ed->flag &= (~M_EV_SEND);
                         }
@@ -1141,8 +1099,7 @@ void mln_event_dispatch(mln_event_t *event)
                     continue;
 #if !defined(WIN32)
                 } else {
-                    mln_log(error, "select error. %s\n", strerror(errno));
-                    abort();
+                    ASSERT(0);
                 }
 #endif
             } else if (nfds == 0) {

@@ -45,32 +45,18 @@ Return value: none
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_rc.h"
 
 int main(int argc, char *argv[])
 {
     mln_u8_t s[256] = {0};
     mln_u8_t text[] = "Hello";
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     mln_rc4_init(s, (mln_u8ptr_t)"this is a key", sizeof("this is a key")-1);
     mln_rc4_calc(s, text, sizeof(text)-1);
-    mln_log(debug, "%s\n", text);
+    printf("%s\n", text);
     mln_rc4_calc(s, text, sizeof(text)-1);
-    mln_log(debug, "%s\n", text);
+    printf("%s\n", text);
 
     return 0;
 }

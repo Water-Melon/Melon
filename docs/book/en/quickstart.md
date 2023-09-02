@@ -12,40 +12,23 @@ Here's an example of using a memory pool:
 
 ```c
 #include <stdio.h>
-#include "mln_core.h"
 #include "mln_alloc.h"
-#include <mln_log.h>
 
 int main(int argc, char *argv[])
 {
     char *ptr;
     mln_alloc_t *pool;
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-
-    if (mln_core_init(&cattr) < 0) {
-       fprintf(stderr, "Melon init failed.\n");
-       return -1;
-    }
 
     pool = mln_alloc_init(NULL);
 
     ptr = mln_alloc_m(pool, 1024);
-    mln_log(debug, "%X\n", ptr);
+    printf("%p\n", ptr);
     mln_alloc_free(ptr);
 
     mln_alloc_destroy(pool);
     return 0;
 }
 ```
-
-Among them, `mln_core_init` is the initialization function of the Melon library, and the function parameter is a structure, which is used to pass in `program parameters`, `global variable initialization function` and `worker process processing function`. Since this example does not intend to enable the multi-process framework and does not need to initialize some global variables, both function pointers are nulled.
 
 In the code that follows:
 
@@ -72,63 +55,16 @@ On Windows, users can also execute in git bash:
 $ gcc -o test test.c -I $HOME/libmelon/include/ -L $HOME/libmelon/lib/ -llibmelon -lWs2_32
 ```
 
-
-
-At this point, the `test` program cannot be started yet, because we first need to check the configuration file of the Melon library to ensure that the configuration does not cause the program to start a multi-process or multi-threaded framework (Windows users can ignore this step).
-
-```
-$ vim /usr/local/melon/conf/melon.conf
-
-log_level "none";
-//user "root";
-daemon off;
-core_file_size "unlimited";
-//max_nofile 1024;
-worker_proc 1;
-framework off;
-log_path "/usr/local/melon/logs/melon.log";
-/*
- * Configurations in the 'proc_exec' are the
- * processes which are customized by user.
- *
- * Here is an example to show you how to
- * spawn a program.
- *     keepalive "/tmp/a.out" ["arg1" "arg2" ...]
- * The command in this example is 'keepalive' that
- * indicate master process to supervise this
- * process. If process is killed, master process
- * would restart this program.
- * If you don't want master to restart it, you can
- *     default "/tmp/a.out" ["arg1" "arg2" ...]
- *
- * But you should know that there is another
- * arugment after the last argument you write here.
- * That is the file descriptor which is used to
- * communicate with master process.
- */
-proc_exec {
-   // keepalive "/tmp/a";
-}
-thread_exec {
-//    restart "hello" "hello" "world";
-//    default "haha";
-}
-```
-
-Here we need to make sure that the `framework` item is `off`, because this example does not need to start the framework function.
-
-
-
-At this point, we can execute the example.
+Let's execute the example.
 
 ```bash
 $ ./test
 ```
 
-You should see output similar to the following:
+The output can be seen on terminal:
 
 ```
-03/27/2021 04:36:26 GMT DEBUG: test.c:main:25: PID:24077 1e29950
+0xaaaad0ea57d0
 ```
 
 
@@ -139,7 +75,7 @@ The framework function is not supported in Windows temporarily, this example wil
 
 ```c
 #include <stdio.h>
-#include "mln_core.h"
+#include "mln_framework.h"
 #include "mln_log.h"
 #include "mln_event.h"
 
@@ -151,14 +87,14 @@ static void print_handler(mln_event_t *ev, void *data);
 
 int main(int argc, char *argv[])
 {
-    struct mln_core_attr cattr;
+    struct mln_framework_attr cattr;
     cattr.argc = argc;
     cattr.argv = argv;
     cattr.global_init = global_init;
     cattr.main_thread = NULL;
     cattr.master_process = NULL;
     cattr.worker_process = worker_process;
-    return mln_core_init(&cattr);
+    return mln_framework_init(&cattr);
 }
 
 static int global_init(void)
@@ -182,6 +118,8 @@ static void print_handler(mln_event_t *ev, void *data)
     mln_event_timer_set(ev, 1000, data, print_handler);
 }
 ```
+
+Among them, `mln_framework_init` is the initialization function of the Melon library, and the function parameter is a structure, which is used to pass in `program parameters`, `global variable initialization function` and `worker process processing function`.
 
 In this example, we add handlers for `global_init` and `worker_process`. `global_init` is used to initialize a global character array `text`. And `worker_process` is the processing function of the child process (or called the worker process). In the worker process processing function, we use the timer function of the Melon event module to call the `print_handler` function every 1 second (1000 milliseconds) to log the contents of the character array `text`.
 

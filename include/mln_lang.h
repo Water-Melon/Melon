@@ -4,8 +4,9 @@
  */
 #ifndef __MLN_LANG_H
 #define __MLN_LANG_H
-#include "mln_types.h"
 #include "mln_event.h"
+#include "mln_types.h"
+#include "mln_conf.h"
 #include "mln_connection.h"
 #include "mln_file.h"
 #include "mln_rbtree.h"
@@ -66,7 +67,7 @@ typedef int (*mln_msg_c_handler)(mln_lang_ctx_t *, const mln_lang_val_t *);
 typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 typedef void (*mln_lang_resource_free)(void *data);
 /* import init */
-typedef mln_lang_var_t *(* import_init_t)(mln_lang_ctx_t *);
+typedef mln_lang_var_t *(* import_init_t)(mln_lang_ctx_t *, mln_conf_t *cf);
 typedef void (* import_destroy_t)(mln_lang_t *);
 /* pipe */
 typedef int (*mln_lang_ctx_pipe_recv_cb_t)(mln_lang_ctx_t *, mln_lang_val_t *);
@@ -497,7 +498,7 @@ extern void mln_lang_var_set_string(mln_lang_var_t *var, mln_string_t *s) __NONN
 extern mln_lang_var_t *mln_lang_var_dup(mln_lang_ctx_t *ctx, mln_lang_var_t *var) __NONNULL2(1,2);
 extern void mln_lang_var_assign(mln_lang_var_t *var, mln_lang_val_t *val) __NONNULL2(1,2);
 extern int mln_lang_var_value_set(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
-extern int mln_lang_var_value_set_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL3(1,2,3);
+extern int mln_lang_var_value_set_string_ref(mln_lang_ctx_t *ctx, mln_lang_var_t *dest, mln_lang_var_t *src) __NONNULL1(1);
 extern mln_lang_func_detail_t *
 mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                          mln_lang_func_type_t type, \

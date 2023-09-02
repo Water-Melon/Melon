@@ -3,7 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_gc.h"
-#include "mln_log.h"
+#include "mln_defs.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -52,17 +52,13 @@ static inline void mln_gc_item_free(mln_gc_item_t *item)
  */
 mln_gc_t *mln_gc_new(struct mln_gc_attr *attr)
 {
-    if (attr->item_getter == NULL || \
-        attr->item_setter == NULL || \
-        attr->item_freer == NULL || \
-        attr->member_setter == NULL || \
-        attr->move_handler == NULL || \
-        attr->clean_searcher == NULL || \
-        attr->free_handler == NULL)
-    {
-        mln_log(error, "Invalid arguments.\n");
-        abort();
-    }
+    ASSERT(attr->item_getter != NULL && \
+        attr->item_setter != NULL && \
+        attr->item_freer != NULL && \
+        attr->member_setter != NULL && \
+        attr->move_handler != NULL && \
+        attr->clean_searcher != NULL && \
+        attr->free_handler != NULL);
 
     mln_gc_t *gc;
     if ((gc = (mln_gc_t *)mln_alloc_m(attr->pool, sizeof(mln_gc_t))) == NULL) {
@@ -118,14 +114,11 @@ void mln_gc_suspect(mln_gc_t *gc, void *data)
 
 void mln_gc_merge(mln_gc_t *dest, mln_gc_t *src)
 {
-    if (dest == src) {
-        mln_log(error, "GC must NOT be identical.\n");
-        abort();
-    }
-    if (dest->pool != src->pool) {
-        mln_log(error, "Pool must be identical.\n");
-        abort();
-    }
+    /*
+     * GC must NOT be identical
+     * Pool must be identical
+     */
+    ASSERT(dest != src && dest->pool == src->pool);
     mln_gc_item_t *item;
     while ((item = src->item_head) != NULL) {
         mln_gc_item_chain_del(&(src->item_head), &(src->item_tail), item);
@@ -139,10 +132,7 @@ void mln_gc_collect_add(mln_gc_t *gc, void *data)
 {
     if (data == NULL) return;
     mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
-    if (item == NULL) {
-        mln_log(error, "'data' has NOT been added.\n");
-        abort();
-    }
+    ASSERT(item != NULL); /* 'data' has NOT been added. */
     if (item->proc_prev != NULL || \
         item->proc_next != NULL || \
         (gc->proc_head == gc->proc_tail && gc->proc_head == item))
@@ -157,10 +147,7 @@ void mln_gc_collect_add(mln_gc_t *gc, void *data)
 int mln_gc_clean_add(mln_gc_t *gc, void *data)
 {
     mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
-    if (item == NULL) {
-        mln_log(error, "'data' has NOT been added.\n");
-        abort();
-    }
+    ASSERT(item != NULL); /* 'data' has NOT been added. */
     if (item->proc_prev != NULL || \
         item->proc_next != NULL || \
         (gc->proc_head == gc->proc_tail && gc->proc_head == item))
@@ -248,10 +235,7 @@ void mln_gc_collect(mln_gc_t *gc, void *root_data)
 void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *proc_gc)
 {
     mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
-    if (item == NULL) {
-        mln_log(error, "'data' has NOT been added.\n");
-        abort();
-    }
+    ASSERT(item != NULL); /* 'data' has NOT been added. */
     if (proc_gc == NULL) proc_gc = gc;
     if (item->proc_prev != NULL || \
         item->proc_next != NULL || \

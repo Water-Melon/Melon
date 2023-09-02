@@ -234,32 +234,17 @@ void mln_sha256_dump(mln_sha256_t *s);
 
 ```c
 #include <stdio.h>
-#include <stdlib.h>
-#include "mln_core.h"
-#include "mln_log.h"
 #include "mln_sha.h"
 
 int main(int argc, char *argv[])
 {
     mln_sha256_t s;
     char text[1024] = {0};
-    struct mln_core_attr cattr;
-
-    cattr.argc = argc;
-    cattr.argv = argv;
-    cattr.global_init = NULL;
-    cattr.main_thread = NULL;
-    cattr.master_process = NULL;
-    cattr.worker_process = NULL;
-    if (mln_core_init(&cattr) < 0) {
-        fprintf(stderr, "init failed\n");
-        return -1;
-    }
 
     mln_sha256_init(&s);
     mln_sha256_calc(&s, (mln_u8ptr_t)"Hello", sizeof("Hello")-1, 1);
     mln_sha256_tostring(&s, text, sizeof(text)-1);
-    mln_log(debug, "%s\n", text);
+    printf("%s\n", text);
 
     return 0;
 }

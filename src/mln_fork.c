@@ -12,6 +12,7 @@
 #include "mln_fork.h"
 #include "mln_rbtree.h"
 #include "mln_log.h"
+#include "mln_conf.h"
 #include "mln_global.h"
 #include "mln_ipc.h"
 #include "mln_alloc.h"

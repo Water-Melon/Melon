@@ -35,7 +35,7 @@ Shell script `configure` has the following parameters:
 
 - `--enable-wasm` Enable webassembly mode to generate webassembly format library
 
-- `--no-debug` The compiled library will not contain symbol information
+- `--debug` Enable debug mode. If omited the generated library will not contain symbol information and macro `__DEBUG__`
 
 - `--olevel=[O|O1|O2|O3|...]` The level of compilation optimization, the default is `O3`. The optimization is disabled if no content after `=`.
 
