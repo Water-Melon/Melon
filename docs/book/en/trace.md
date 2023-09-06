@@ -195,15 +195,15 @@ After installing Melon, we proceed as follows:
 
    ```
    Start up worker process No.1
-   02/02/2023 07:08:54 GMT DEBUG: a.c:worker_process:22: PID:58451 0
+   02/02/2023 07:08:54 UTC DEBUG: a.c:worker_process:22: PID:58451 0
    master process
    worker process
    [Hello, 58451, 3.100000, ]
-   02/02/2023 07:08:56 GMT DEBUG: a.c:recv_handler:15: PID:58451 1
+   02/02/2023 07:08:56 UTC DEBUG: a.c:recv_handler:15: PID:58451 1
    [Hello, 58451, 3.100000, ]
-   02/02/2023 07:08:57 GMT DEBUG: a.c:recv_handler:15: PID:58451 1
+   02/02/2023 07:08:57 UTC DEBUG: a.c:recv_handler:15: PID:58451 1
    [Hello, 58451, 3.100000, ]
-   02/02/2023 07:08:58 GMT DEBUG: a.c:recv_handler:15: PID:58451 1
+   02/02/2023 07:08:58 UTC DEBUG: a.c:recv_handler:15: PID:58451 1
    ...
    ```
 

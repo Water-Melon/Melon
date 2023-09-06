@@ -365,8 +365,38 @@ static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
 {
     ssize_t ret = write(log->fd, buf, size);
     if (log->init && !log->in_daemon) {
-        int rc = write(STDERR_FILENO, buf, size);
-        if (rc < 0) rc = 1;/*do nothing*/
+        ret = write(STDERR_FILENO, buf, size);
+    }
+    return ret;
+}
+
+static inline ssize_t mln_log_level_write(mln_log_t *log, mln_log_level_t level)
+{
+    ssize_t ret = 0;
+
+    switch (level) {
+        case report:
+            ret = write(log->fd, (void *)"REPORT: ", 8);
+            if (log->init && !log->in_daemon)
+                ret = write(STDERR_FILENO, (void *)"\e[34mREPORT\e[0m: ", 17);
+            break;
+        case debug:
+            ret = write(log->fd, (void *)"DEBUG: ", 7);
+            if (log->init && !log->in_daemon)
+                ret = write(STDERR_FILENO, (void *)"\e[32mDEBUG\e[0m: ", 16);
+            break;
+        case warn:
+            ret = write(log->fd, (void *)"WARN: ", 6);
+            if (log->init && !log->in_daemon)
+                ret = write(STDERR_FILENO, (void *)"\e[33mWARN\e[0m: ", 15);
+            break;
+        case error:
+            ret = write(log->fd, (void *)"ERROR: ", 7);
+            if (log->init && !log->in_daemon)
+                ret = write(STDERR_FILENO, (void *)"\e[31mERROR\e[0m: ", 16);
+            break;
+        default:
+            break;
     }
     return ret;
 }
@@ -399,29 +429,12 @@ _mln_sys_log_process(mln_log_t *log, \
     char line_str[256] = {0};
     if (level > none) {
         n = snprintf(line_str, sizeof(line_str)-1, \
-                         "%02ld/%02ld/%ld %02ld:%02ld:%02ld GMT ", \
+                         "%02ld/%02ld/%ld %02ld:%02ld:%02ld UTC ", \
                          uc.month, uc.day, uc.year, \
                          uc.hour, uc.minute, uc.second);
         mln_log_write(log, (void *)line_str, n);
     }
-    switch (level) {
-        case none:
-            break;
-        case report:
-            mln_log_write(log, (void *)"REPORT: ", 8);
-            break;
-        case debug:
-            mln_log_write(log, (void *)"DEBUG: ", 7);
-            break;
-        case warn:
-            mln_log_write(log, (void *)"WARN: ", 6);
-            break;
-        case error:
-            mln_log_write(log, (void *)"ERROR: ", 7);
-            break;
-        default: 
-            return ;
-    }
+    mln_log_level_write(log, level);
     if (level >= debug) {
         memset(line_str, 0, sizeof(line_str));
         mln_log_write(log, (void *)file, strlen(file));

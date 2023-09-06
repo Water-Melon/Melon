@@ -180,17 +180,17 @@ We can see output similar to the following:
 Start up worker process No.1
 Start up worker process No.2
 Start up worker process No.3
-03/27/2021 04:53:44 GMT DEBUG: d.c:print_handler:39: PID:27620 hello world
+03/27/2021 04:53:44 UTC DEBUG: d.c:print_handler:39: PID:27620 hello world
 
-03/27/2021 04:53:44 GMT DEBUG: d.c:print_handler:39: PID:27621 hello world
+03/27/2021 04:53:44 UTC DEBUG: d.c:print_handler:39: PID:27621 hello world
 
-03/27/2021 04:53:44 GMT DEBUG: d.c:print_handler:39: PID:27622 hello world
+03/27/2021 04:53:44 UTC DEBUG: d.c:print_handler:39: PID:27622 hello world
 
-03/27/2021 04:53:45 GMT DEBUG: d.c:print_handler:39: PID:27620 hello world
+03/27/2021 04:53:45 UTC DEBUG: d.c:print_handler:39: PID:27620 hello world
 
-03/27/2021 04:53:45 GMT DEBUG: d.c:print_handler:39: PID:27621 hello world
+03/27/2021 04:53:45 UTC DEBUG: d.c:print_handler:39: PID:27621 hello world
 
-03/27/2021 04:53:45 GMT DEBUG: d.c:print_handler:39: PID:27622 hello world
+03/27/2021 04:53:45 UTC DEBUG: d.c:print_handler:39: PID:27622 hello world
 
 ...
 ```

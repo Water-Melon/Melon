@@ -121,17 +121,17 @@ $ ./hello
 Start up worker process No.1
 Start up worker process No.2
 Start up worker process No.3
-02/08/2021 09:34:46 GMT DEBUG: hello.c:print_handler:39: PID:25322 hello world
+02/08/2021 09:34:46 UTC DEBUG: hello.c:print_handler:39: PID:25322 hello world
 
-02/08/2021 09:34:46 GMT DEBUG: hello.c:print_handler:39: PID:25323 hello world
+02/08/2021 09:34:46 UTC DEBUG: hello.c:print_handler:39: PID:25323 hello world
 
-02/08/2021 09:34:46 GMT DEBUG: hello.c:print_handler:39: PID:25324 hello world
+02/08/2021 09:34:46 UTC DEBUG: hello.c:print_handler:39: PID:25324 hello world
 
-02/08/2021 09:34:47 GMT DEBUG: hello.c:print_handler:39: PID:25322 hello world
+02/08/2021 09:34:47 UTC DEBUG: hello.c:print_handler:39: PID:25322 hello world
 
-02/08/2021 09:34:47 GMT DEBUG: hello.c:print_handler:39: PID:25323 hello world
+02/08/2021 09:34:47 UTC DEBUG: hello.c:print_handler:39: PID:25323 hello world
 
-02/08/2021 09:34:47 GMT DEBUG: hello.c:print_handler:39: PID:25324 hello world
+02/08/2021 09:34:47 UTC DEBUG: hello.c:print_handler:39: PID:25324 hello world
 
 ...
 ```

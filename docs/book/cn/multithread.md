@@ -186,21 +186,21 @@
    Start up worker process No.1
    Start thread 'hello'
    Start thread 'haha'
-   04/14/2022 14:50:16 GMT DEBUG: a.c:haha:34: PID:552165 !!!src:hello auto:9736 char:N
-   04/14/2022 14:50:16 GMT DEBUG: a.c:hello_cleanup:42: PID:552165 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-   04/14/2022 14:50:16 GMT REPORT: PID:552165 Thread 'hello' return 0.
-   04/14/2022 14:50:16 GMT REPORT: PID:552165 Child thread 'hello' exit.
-   04/14/2022 14:50:16 GMT REPORT: PID:552165 child thread pthread_join's exit code: 0
-   04/14/2022 14:50:16 GMT DEBUG: a.c:haha:34: PID:552165 !!!src:hello auto:9736 char:N
-   04/14/2022 14:50:16 GMT DEBUG: a.c:hello_cleanup:42: PID:552165 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-   04/14/2022 14:50:16 GMT REPORT: PID:552165 Thread 'hello' return 0.
-   04/14/2022 14:50:16 GMT REPORT: PID:552165 Child thread 'hello' exit.
-   04/14/2022 14:50:16 GMT REPORT: PID:552165 child thread pthread_join's exit code: 0
-   04/14/2022 14:50:16 GMT DEBUG: a.c:haha:34: PID:552165 !!!src:hello auto:9736 char:N
-   04/14/2022 14:50:17 GMT DEBUG: a.c:hello_cleanup:42: PID:552165 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-   04/14/2022 14:50:17 GMT REPORT: PID:552165 Thread 'hello' return 0.
-   04/14/2022 14:50:17 GMT REPORT: PID:552165 Child thread 'hello' exit.
-   04/14/2022 14:50:17 GMT REPORT: PID:552165 child thread pthread_join's exit code: 0
+   04/14/2022 14:50:16 UTC DEBUG: a.c:haha:34: PID:552165 !!!src:hello auto:9736 char:N
+   04/14/2022 14:50:16 UTC DEBUG: a.c:hello_cleanup:42: PID:552165 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+   04/14/2022 14:50:16 UTC REPORT: PID:552165 Thread 'hello' return 0.
+   04/14/2022 14:50:16 UTC REPORT: PID:552165 Child thread 'hello' exit.
+   04/14/2022 14:50:16 UTC REPORT: PID:552165 child thread pthread_join's exit code: 0
+   04/14/2022 14:50:16 UTC DEBUG: a.c:haha:34: PID:552165 !!!src:hello auto:9736 char:N
+   04/14/2022 14:50:16 UTC DEBUG: a.c:hello_cleanup:42: PID:552165 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+   04/14/2022 14:50:16 UTC REPORT: PID:552165 Thread 'hello' return 0.
+   04/14/2022 14:50:16 UTC REPORT: PID:552165 Child thread 'hello' exit.
+   04/14/2022 14:50:16 UTC REPORT: PID:552165 child thread pthread_join's exit code: 0
+   04/14/2022 14:50:16 UTC DEBUG: a.c:haha:34: PID:552165 !!!src:hello auto:9736 char:N
+   04/14/2022 14:50:17 UTC DEBUG: a.c:hello_cleanup:42: PID:552165 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+   04/14/2022 14:50:17 UTC REPORT: PID:552165 Thread 'hello' return 0.
+   04/14/2022 14:50:17 UTC REPORT: PID:552165 Child thread 'hello' exit.
+   04/14/2022 14:50:17 UTC REPORT: PID:552165 child thread pthread_join's exit code: 0
    ...
    ```
 
