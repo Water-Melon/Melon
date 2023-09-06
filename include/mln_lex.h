@@ -250,7 +250,7 @@ static inline char mln_lex_getchar(mln_lex_t *lex)
     int n;
     mln_lex_input_t *in;
 lp:
-    if (lex->cur == NULL && (lex->cur = mln_stack_pop(lex->stack)) == NULL) {
+    if (lex->cur == NULL && (lex->cur = (mln_lex_input_t *)mln_stack_pop(lex->stack)) == NULL) {
         return MLN_EOF;
     }
     in = lex->cur;

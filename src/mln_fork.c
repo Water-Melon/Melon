@@ -91,14 +91,14 @@ int mln_fork_prepare(void)
     rbattr.pool_free = NULL;
     rbattr.cmp = mln_fork_rbtree_cmp;
     rbattr.data_free = (rbtree_free_data)mln_ipc_handler_free;
-    if ((master_ipc_tree = mln_rbtree_new(&rbattr)) < 0) {
+    if ((master_ipc_tree = mln_rbtree_new(&rbattr)) != NULL) {
         mln_log(error, "No memory.\n");
         if (mln_tcp_conn_fd_get(&master_conn) >= 0)
             mln_socket_close(mln_tcp_conn_fd_get(&master_conn));
         mln_tcp_conn_destroy(&master_conn);
         return -1;
     }
-    if ((worker_ipc_tree = mln_rbtree_new(&rbattr)) < 0) {
+    if ((worker_ipc_tree = mln_rbtree_new(&rbattr)) != NULL) {
         mln_log(error, "No memory.\n");
         mln_rbtree_free(master_ipc_tree);
         master_ipc_tree = NULL;

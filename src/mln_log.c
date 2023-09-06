@@ -45,7 +45,7 @@ static mln_logger_t _logger = _mln_sys_log_process;
 char log_err_level[] = "Log level permission deny.";
 char log_err_fmt[] = "Log message format error.";
 char log_path_cmd[] = "log_path";
-mln_log_t g_log = {{0},{0},{0},STDERR_FILENO,0,0,none,(mln_spin_t)0};
+mln_log_t g_log = {{0},{0},{0},STDERR_FILENO,0,0,0,none,(mln_spin_t)0};
 
 /*
  * file lock

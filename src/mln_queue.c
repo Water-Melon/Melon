@@ -11,7 +11,7 @@ mln_queue_t *mln_queue_init(struct mln_queue_attr *attr)
     q->qlen = attr->qlen;
     q->nr_element = 0;
     q->free_handler = attr->free_handler;
-    q->queue = calloc(q->qlen, sizeof(void *));
+    q->queue = (void **)calloc(q->qlen, sizeof(void *));
     if (q->queue == NULL) {
         free(q);
         return NULL;

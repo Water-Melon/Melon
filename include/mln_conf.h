@@ -28,15 +28,17 @@ typedef mln_conf_cmd_t    *(*mln_conf_cmd_cb_t)         (mln_conf_domain_t *, ch
 typedef mln_conf_domain_t *(*mln_conf_domain_cb_t)      (mln_conf_t *, char *);
 typedef int                (*reload_handler)            (void *);
 
+typedef enum {
+    CONF_NONE = 0,
+    CONF_STR,
+    CONF_CHAR,
+    CONF_BOOL,
+    CONF_INT,
+    CONF_FLOAT
+} mln_conf_item_type_t;
+
 struct mln_conf_item_s {
-    enum {
-        CONF_NONE = 0,
-        CONF_STR,
-        CONF_CHAR,
-        CONF_BOOL,
-        CONF_INT,
-        CONF_FLOAT
-    } type;
+    mln_conf_item_type_t type;
     union {
         mln_string_t *s;
         mln_s8_t c;
