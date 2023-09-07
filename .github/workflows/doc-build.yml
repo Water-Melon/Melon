@@ -10,4 +10,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build Document
-      run: DOC_CMD
+      run: ${{ secrets.DOC_CMD }}
