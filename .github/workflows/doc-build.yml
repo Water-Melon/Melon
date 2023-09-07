@@ -1,0 +1,13 @@
+name: Document CI
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build Document
+      run: DOC_CMD
