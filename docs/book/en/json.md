@@ -2,7 +2,7 @@
 
 
 
-### Header
+### Header file
 
 ```c
 #include "mln_json.h"
@@ -14,39 +14,132 @@
 
 
 
-#### mln_json_new
+#### mln_json_init
 
 ```c
-mln_json_t *mln_json_new(void);
+mln_json_init(j)
 ```
 
-Description: Create a new json node for generating json strings.
+Description: Initialize JSON type node `j`, the node type is `NONE`.
 
-Return value: return `mln_json_t` pointer if successful, otherwise return `NULL`
+Return value: None
 
 
 
-#### mln_json_parse
+#### mln_json_string_init
 
 ```c
-mln_json_t *mln_json_parse(mln_string_t *jstr);
+mln_json_string_init(j, s)
 ```
 
-Description: Parse the JSON string `jstr` into a data structure.
+Description: Initialize JSON type node `j` to string type and assign value `s` of type `mln_string_t *`. `s` will be taken over by the JSON structure. The caller needs to ensure the memory life cycle of `s` and cannot modify the content of `s`.
 
-Return value: return `mln_json_t` pointer if successful, otherwise return `NULL`
+Return value: None
 
 
 
-#### mln_json_free
+#### mln_json_number_init
 
 ```c
-void mln_json_free(void *json);
+mln_json_number_init(j, n)
 ```
 
-Description: Free `json` node memory of type `mln_json_t`.
+Description: Initialize the JSON type node `j` to a numeric type and assign a value `n` of type `double`.
 
-Return value: none
+Return value: None
+
+
+
+#### mln_json_true_init
+
+```c
+mln_json_true_init(j)
+```
+
+Description: Initialize JSON type node `j` to type `true`.
+
+Return value: None
+
+
+
+#### mln_json_false_init
+
+```c
+mln_json_false_init(j)
+```
+
+Description: Initialize the JSON type node `j` to the `false` type.
+
+Return value: None
+
+
+
+#### mln_json_null_init
+
+```c
+mln_json_null_init(j)
+```
+
+Description: Initialize JSON type node `j` to `null` type.
+
+Return value: None
+
+
+
+#### mln_json_obj_init
+
+```c
+int mln_json_obj_init(mln_json_t *j);
+```
+
+Description: Initialize JSON type node `j` to object type.
+
+Return value:
+
+- `0` - Success
+- `-1` - failed
+
+
+
+#### mln_json_array_init
+
+```c
+int mln_json_array_init(mln_json_t *j);
+```
+
+Description: Initialize JSON type node `j` to array type.
+
+Return value:
+
+- `0` - Success
+- `-1` - failed
+
+
+
+#### mln_json_decode
+
+```c
+int mln_json_decode(mln_string_t *jstr, mln_json_t *out);
+```
+
+Description: Parse the JSON string `jstr` into a data structure, and the result will be put into the parameter `out`.
+
+Return value:
+
+- `0` - Success
+- `-1` - failed
+
+
+
+#### mln_json_destroy
+
+```c
+void mln_json_destroy(mln_json_t *j;
+```
+
+Description: Release the `j` node memory of type `mln_json_t`.
+
+Return value: None
 
 
 
@@ -56,45 +149,45 @@ Return value: none
 void mln_json_dump(mln_json_t *j, int n_space, char *prefix);
 ```
 
-Description: Print the details of the json node `j` to standard output. `n_space` indicates the current number of indented spaces, and `prefix` is the prefix of the output content.
+Description: Output the details of json node `j` to standard output. `n_space` represents the current number of indented spaces, and `prefix` is the prefix of the output content.
 
-Return value: none
-
-
-
-#### mln_json_generate
-
-```c
-mln_string_t *mln_json_generate(mln_json_t *j);
-```
-
-Description: Generate JSON string from `mln_json_t` node structure.
-
-Return value: return `mln_string_t` string pointer successfully, otherwise return `NULL`
+Return value: None
 
 
 
-#### mln_json_value_search
+#### mln_json_encode
 
 ```c
-mln_json_t *mln_json_value_search(mln_json_t *j, mln_string_t *key);
+mln_string_t *mln_json_encode(mln_json_t *j);
 ```
 
-Description: Search the value content of key `key` from node `j`. In this case, `j` must be of type object (dictionary with key:value pairs).
+Description: Generate a JSON string from the `mln_json_t` node structure. The return value needs to be released by calling `mln_string_free` after use.
 
-Return value: return value of type `mln_json_t` if successful, otherwise return `NULL`
+Return value: `mln_string_t` string pointer is returned successfully, otherwise `NULL` is returned
 
 
 
-#### mln_json_element_search
+#### mln_json_obj_search
 
 ```c
-mln_json_t *mln_json_element_search(mln_json_t *j, mln_uauto_t index);
+mln_json_t *mln_json_obj_search(mln_json_t *j, mln_string_t *key);
 ```
 
-Description: Search for the element content with subscript `index` from node `j`. In this case, `j` must be an array type.
+Description: Search the value content with key `key` from object type node `j`.
 
-Return value: If successful, return an element node of type `mln_json_t`, otherwise return `NULL`
+Return value: If successful, return a value of type `mln_json_t`, otherwise return `NULL`
+
+
+
+#### mln_json_array_search
+
+```c
+mln_json_t *mln_json_array_search(mln_json_t *j, mln_uauto_t index);
+```
+
+Description: Search the element content with subscript `index` from array type node `j`.
+
+Return value: If successful, an element node of type `mln_json_t` is returned, otherwise `NULL` is returned.
 
 
 
@@ -104,9 +197,9 @@ Return value: If successful, return an element node of type `mln_json_t`, otherw
 mln_uauto_t mln_json_array_length(mln_json_t *j);
 ```
 
-Description: Get the length of the array. In this case `j` must be an array type.
+Description: Get the length of the array. At this time `j` must be of array type.
 
-Return value: Array length
+Return value: array length
 
 
 
@@ -116,33 +209,33 @@ Return value: Array length
 int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val);
 ```
 
-Description: Add `key` and `val` pairs to the `j` JSON node. In this case, `j` needs to be an object type. If `key` already exists, replace the original value with `val`.
+Description: Add the `key` and `val` pairs to the `j` JSON node. At this time, `j` needs to be an object type. If `key` already exists, the original `key` and `value` will be replaced by the new parameters. Therefore the parameters `key` and `val` will be taken over by `j` after the call.
 
-Return value: return `0` if successful, otherwise return `-1`
-
-
-
-#### mln_json_element_add
-
-```c
-int mln_json_element_add(mln_json_t *j, mln_json_t *value);
-```
-
-Description: Add `value` to JSON structure `j` of array type.
-
-Return value: return `0` if successful, otherwise return `-1`
+Return value: Returns `0` on success, otherwise returns `-1`
 
 
 
-#### mln_json_element_update
+#### mln_json_array_append
 
 ```c
-int mln_json_element_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
+int mln_json_array_append(mln_json_t *j, mln_json_t *value);
 ```
 
-Description: Update `value` to the position indexed `index` of the array type JSON structure `j`.
+Description: Add `value` to the JSON structure `j` of array type.
 
-Return value: return `0` if successful, otherwise return `-1`
+Return value: Returns `0` on success, otherwise returns `-1`
+
+
+
+#### mln_json_array_update
+
+```c
+int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
+```
+
+Description: Update `value` to the position where the index is `index` of the array type JSON structure `j`. If the subscript does not exist, it will fail.
+
+Return value: Returns `0` on success, otherwise returns `-1`
 
 
 
@@ -152,31 +245,31 @@ Return value: return `0` if successful, otherwise return `-1`
 void mln_json_reset(mln_json_t *j);
 ```
 
-Description: Reset the JSON node `j` data structure, freeing its memory.
+Description: Reset the JSON node `j` data structure and release its original data.
 
-Return value: none
+Return value: None
 
 
 
 #### mln_json_obj_remove
 
 ```c
-mln_json_t *mln_json_obj_remove(mln_json_t *j, mln_string_t *key);
+void mln_json_obj_remove(mln_json_t *j, mln_string_t *key);
 ```
 
-Description: Remove the key-value pair whose key value is `key` from the JSON structure `j` of the object type, and return the corresponding value.
+Description: Delete and release the key-value pair with key value `key` from the JSON structure `j` of the object type.
 
-Return value: if exists, return the JSON node corresponding to the value part, otherwise return `NULL`
+Return value: If it exists, return the JSON node corresponding to the value part, otherwise return `NULL`
 
 
 
-#### mln_json_element_remove
+#### mln_json_array_remove
 
 ```c
-mln_json_t *mln_json_element_remove(mln_json_t *j, mln_uauto_t index);
+void mln_json_array_remove(mln_json_t *j, mln_uauto_t index);
 ```
 
-Description: Remove the element with subscript `index` from the array type JSON node and return it.
+Description: Delete and release the element with index `index` from the array type JSON node.
 
 Return value: Returns the element pointer if it exists, otherwise returns `NULL`
 
@@ -195,9 +288,9 @@ M_JSON_IS_NULL(json)
 M_JSON_IS_NONE(json)
 ```
 
-Description: Determine the `json` type of the `mln_json_t` structure, in order: object, array, string, number, boolean true, boolean false, NULL, no type.
+Description: Determine the `json` type of the `mln_json_t` structure, which are: object, array, string, number, Boolean true, Boolean false, NULL, and no type.
 
-Return value: return `not 0` if the condition is met, otherwise return `0`
+Return value: Returns `non-0` if the conditions are met, otherwise returns `0`
 
 
 
@@ -214,9 +307,9 @@ M_JSON_SET_TYPE_FALSE(json)
 M_JSON_SET_TYPE_NULL(json)
 ```
 
-Description: Set the type for the `json` node of type `mln_json_t`, in order: no type, object, array, string, number, boolean true, boolean false, NULL.
+Description: Set the type for the `json` node of type `mln_json_t`, in order: no type, object, array, string, number, Boolean true, Boolean false, NULL.
 
-Return value: none
+Return value: None
 
 
 
@@ -232,47 +325,17 @@ M_JSON_GET_DATA_FALSE(json)
 M_JSON_GET_DATA_NULL(json)
 ```
 
-Description: Get the data part of the corresponding type in the `json` node of type `mln_json_t`. The types are: object, array, string, number, boolean true, boolean false, NULL.
+Description: Get the data part of the corresponding type in the `json` node of type `mln_json_t`. The types are: object, array, string, number, Boolean true, Boolean false, and NULL.
 
-return value:
+Return value:
 
-- the object type is a pointer of type `mln_hash_t`
-- The array type is a pointer of type `mln_rbtree_t`
-- The string type is a pointer of type `mln_string_t`
-- the numeric type is a value of type `double`
-- boolean true value of type `mln_u8_t`
-- boolean false for a value of type `mln_u8_t`
+- The object type is `mln_hash_t` type pointer
+- The array type is `mln_rbtree_t` type pointer
+- The string type is `mln_string_t` type pointer
+- The number type is a `double` type value
+- Boolean true for `mln_u8_t` type value
+- Boolean false for `mln_u8_t` type value
 - NULL type is a NULL value of type `mln_u8ptr_t`
-
-
-
-#### set_data
-
-```c
-M_JSON_SET_DATA_STRING(json,str)
-M_JSON_SET_DATA_NUMBER(json,num)
-M_JSON_SET_DATA_TRUE(json)
-M_JSON_SET_DATA_FALSE(json)
-M_JSON_SET_DATA_NULL(json)
-```
-
-Description: Set data values for different types of JSON nodes `json`. Object and array types are manipulated using hash table and red-black tree functions, respectively, and the rest of the types are set with the above macros.
-
-**Note**: The string set here must be the memory allocated from the memory pool or the heap. The memory in the stack will have a segmentation fault, because the assignment will not automatically copy a copy in the macro but use it directly.
-
-Return value: none
-
-
-
-#### M_JSON_SET_INDEX
-
-```c
-M_JSON_SET_INDEX(json,i)
-```
-
-Description: Set the subscript of `mln_json_t` type node `json` to `index`. This macro is used to generate part of an array in a JSON string.
-
-Return value: none
 
 
 
@@ -280,66 +343,32 @@ Return value: none
 
 ```c
 #include <stdio.h>
-#include <stdlib.h>
 #include "mln_string.h"
 #include "mln_json.h"
 
 int main(int argc, char *argv[])
 {
-    mln_json_t *j = NULL, *key = NULL, *val = NULL;
-    mln_string_t s1 = mln_string("name");
-    mln_string_t s2 = mln_string("Tom");
+    mln_json_t j;
     mln_string_t *res;
+    mln_string_t tmp = mln_string("{\"paths\":[\"/mock\"],\"methods\":null,\"sources\":null,\"destinations\":null,\"name\":\"example_route\",\"headers\":null,\"hosts\":null,\"preserve_host\":false,\"regex_priority\":0,\"snis\":null,\"https_redirect_status_code\":426,\"tags\":null,\"protocols\":[\"http\",\"https\"],\"path_handling\":\"v0\",\"id\":\"52d58293-ae25-4c69-acc8-6dd729718a61\",\"updated_at\":1661345592,\"service\":{\"id\":\"c1e98b2b-6e77-476c-82ca-a5f1fb877e07\"},\"response_buffering\":true,\"strip_path\":true,\"request_buffering\":true,\"created_at\":1661345592}");
 
-    key = mln_json_new();
-    if (key == NULL) {
-        fprintf(stderr, "init key failed\n");
-        goto err;
+    if (mln_json_decode(&tmp, &j) < 0) {
+        fprintf(stderr, "decode error\n");
+        return -1;
     }
-    M_JSON_SET_TYPE_STRING(key);
-    M_JSON_SET_DATA_STRING(key, mln_string_dup(&s1));//注意，一定是要自行分配内存，不可直接使用栈中内存
+    mln_json_dump(&j, 0, NULL);
 
-    val = mln_json_new();
-    if (val == NULL) {
-        fprintf(stderr, "init val failed\n");
-        goto err;
-    }
-    M_JSON_SET_TYPE_STRING(val);
-    M_JSON_SET_DATA_STRING(val, mln_string_dup(&s2));//注意，一定是要自行分配内存，不可直接使用栈中内存
-
-    j = mln_json_new();
-    if (j == NULL) {
-        fprintf(stderr, "init object failed\n");
-        goto err;
-    }
-    if (mln_json_obj_update(j, key, val) < 0) {
-        fprintf(stderr, "update object failed\n");
-        goto err;
-    }
-    key = val = NULL;
-
-    res = mln_json_generate(j);
-    mln_json_free(j);
+    res = mln_json_encode(&j);
+    mln_json_destroy(&j);
     if (res == NULL) {
-        fprintf(stderr, "generate failed\n");
-        goto err;
+        fprintf(stderr, "encode failed\n");
+        return -1;
     }
     write(STDOUT_FILENO, res->data, res->len);
     write(STDOUT_FILENO, "\n", 1);
-
-    j = mln_json_parse(res);
     mln_string_free(res);
-    mln_json_dump(j, 0, NULL);
-
-    mln_json_free(j);
 
     return 0;
-
-err:
-    if (j != NULL) mln_json_free(j);
-    if (key != NULL) mln_json_free(key);
-    if (val != NULL) mln_json_free(val);
-    return -1;
 }
 ```
 

@@ -1598,138 +1598,141 @@ Their definitions can be found in melon/include/mln_types.h.
   22) JSON
      Melon, now, support JSON without relying on any json libraries.
      Here are the functions:
-     a) mln_json_t *mln_json_new(void);
-        Initialize a JSON object.
+     a) mln_json_init(j);
+        Initialize JSON object 'j'.
 
-     b) void mln_json_free(void *json);
+     b) mln_json_string_init(j, s);
+        Initialize a String JSON object. 's' will be taken.
+
+     c) mln_json_number_init(j, n);
+        Initialize a number JSON object.
+
+     d) mln_json_true_init(j);
+        Initialize a 'true' JSON object.
+
+     e) mln_json_false_init(j);
+        Initialize a 'false' JSON object.
+
+     f) mln_json_null_init(j);
+        Initialize a 'null' JSON object.
+
+     g) int mln_json_obj_init(mln_json_t *j);
+        Initialize a 'object' JSON object.
+
+     h) int mln_json_array_init(mln_json_t *j);
+        Initialize an 'array' JSON object.
+
+     i) void mln_json_destroy(mln_json_t *j);
         Destroy a JSON object.
 
-     c) mln_json_t *mln_json_parse(mln_string_t *jstr);
-        Parse JSON string.
+     j) int mln_json_decode(mln_string_t *jstr, mln_json_t *out);
+        Decode JSON string, the result is stored in 'out'.
 
-     d) mln_string_t *mln_json_generate(mln_json_t *j);
-        Generate a JSON string.
+     k) mln_string_t *mln_json_encode(mln_json_t *j);
+        Encode JSON to a string.
 
-     e) mln_json_t *mln_json_value_search(mln_json_t *j, mln_string_t *key);
-        Search the JSON object value via 'key'.
+     l) mln_json_t *mln_json_obj_search(mln_json_t *j, mln_string_t *key);
+        Search value by 'key' in the JSON object 'j'.
 
-     f) mln_json_t *mln_json_element_search(mln_json_t *j, mln_uauto_t index);
-        Search the element from a JSON array.
+     m) mln_json_t *mln_json_array_search(mln_json_t *j, mln_uauto_t index);
+        Search the array element located by 'index' from the JSON array 'j'.
 
-     g) mln_uauto_t mln_json_array_length(mln_json_t *j);
+     n) mln_uauto_t mln_json_array_length(mln_json_t *j);
         Get JSON array length.
 
-     h) int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val);
+     o) int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val);
         Update JSON object key-value.
-        If 'key' is existent, the old value will be replaced by 'val' and freed.
-        The type of 'j' should be M_JSON_OBJECT or M_JSON_NONE.
+        If 'key' is existent, the old key and value will be replaced by the given arguments and freed.
+        The type of 'j' must be M_JSON_OBJECT.
 
-     i) int mln_json_element_add(mln_json_t *j, mln_json_t *value);
-        Add an element into a JSON array.
-        The type of 'j' should be M_JSON_ARRAY or M_JSON_NONE.
-
-     j) int mln_json_element_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
-        Update JSON array element.
-        The old value where is located by 'index' will be replaced by 'value' and free if it is existent.
+     p) int mln_json_array_append(mln_json_t *j, mln_json_t *value);
+        Add an array element to a JSON array.
         The type of 'j' must be M_JSON_ARRAY.
 
-     k) void mln_json_reset(mln_json_t *j);
+     q) int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
+        Update JSON array element.
+        The old value located by 'index' will be replaced by 'value' and free if it is existent.
+        The type of 'j' must be M_JSON_ARRAY.
+
+     r) void mln_json_reset(mln_json_t *j);
         Reset a JSON object.
 
-     l) mln_json_t *mln_json_obj_remove(mln_json_t *j, mln_string_t *key);
+     s) void mln_json_obj_remove(mln_json_t *j, mln_string_t *key);
         Remove a key-value couple from a JSON object.
         The type of 'j' must be M_JSON_OBJECT.
 
-     m) mln_json_t *mln_json_element_remove(mln_json_t *j, mln_uauto_t index);
+     t) void mln_json_array_remove(mln_json_t *j, mln_uauto_t index);
         Remove an element from a JSON object.
         The type of 'j' must be M_JSON_ARRAY.
 
-     n) M_JSON_IS_OBJECT(json);
+     u) M_JSON_IS_OBJECT(json);
         Test whether the type of 'json' is M_JSON_OBJECT.
 
-     o) M_JSON_IS_ARRAY(json);
+     v) M_JSON_IS_ARRAY(json);
         Test whether the type of 'json' is M_JSON_ARRAY.
 
-     p) M_JSON_IS_STRING(json);
+     w) M_JSON_IS_STRING(json);
         Test whether the type of 'json' is M_JSON_STRING.
 
-     q) M_JSON_IS_NUMBER(json);
+     x) M_JSON_IS_NUMBER(json);
         Test whether the type of 'json' is M_JSON_NUM.
 
-     r) M_JSON_IS_TRUE(json);
+     y) M_JSON_IS_TRUE(json);
         Test whether the type of 'json' is M_JSON_TRUE.
 
-     s) M_JSON_IS_FALSE(json);
+     z) M_JSON_IS_FALSE(json);
         Test whether the type of 'json' is M_JSON_FALSE.
 
-     t) M_JSON_IS_NULL(json);
+     aa) M_JSON_IS_NULL(json);
         Test whether the type of 'json' is M_JSON_NULL.
 
-     u) M_JSON_IS_NONE(json);
+     ab) M_JSON_IS_NONE(json);
         Test whether the type of 'json' is M_JSON_NONE.
 
-     v) M_JSON_GET_DATA_OBJECT(json);
+     ac) M_JSON_GET_DATA_OBJECT(json);
         Get the object hash table if the type of 'json' is M_JSON_OBJECT.
 
-     w) M_JSON_GET_DATA_ARRAY(json);
+     ad) M_JSON_GET_DATA_ARRAY(json);
         Get the array red-black tree if the type of 'json' is M_JSON_ARRAY.
 
-     x) M_JSON_GET_DATA_STRING(json);
+     ae) M_JSON_GET_DATA_STRING(json);
         Get the string if the type of 'json' is M_JSON_STRING.
 
-     y) M_JSON_GET_DATA_NUMBER(json);
+     af) M_JSON_GET_DATA_NUMBER(json);
         Get the number if the type of 'json' is M_JSON_NUM.
 
-     z) M_JSON_GET_DATA_TRUE(json);
+     ag) M_JSON_GET_DATA_TRUE(json);
         Get the binary flag of TRUE if the type of 'json' is M_JSON_TRUE.
 
-     aa) M_JSON_GET_DATA_FALSE(json);
+     ah) M_JSON_GET_DATA_FALSE(json);
          Get the binary flag of FALSE if the type of 'json' is M_JSON_FALSE.
 
-     ab) M_JSON_GET_DATA_NULL(json);
+     ai) M_JSON_GET_DATA_NULL(json);
          Get the variable of NULL if the type of 'json' is M_JSON_NULL.
 
-     ac) M_JSON_SET_INDEX(json,i);
-         Set the index of 'json' to be 'i'.
-
-     ad) M_JSON_SET_TYPE_NONE(json);
+     aj) M_JSON_SET_TYPE_NONE(json);
          Set the type of 'json' to be M_JSON_NONE.
 
-     ae) M_JSON_SET_TYPE_OBJECT(json);
+     ak) M_JSON_SET_TYPE_OBJECT(json);
          Set the type of 'json' to be M_JSON_OBJECT.
 
-     af) M_JSON_SET_TYPE_ARRAY(json);
+     al) M_JSON_SET_TYPE_ARRAY(json);
          Set the type of 'json' to be M_JSON_ARRAY.
 
-     ag) M_JSON_SET_TYPE_STRING(json);
+     am) M_JSON_SET_TYPE_STRING(json);
          Set the type of 'json' to be M_JSON_STRING.
 
-     ah) M_JSON_SET_TYPE_NUMBER(json);
+     an) M_JSON_SET_TYPE_NUMBER(json);
          Set the type of 'json' to be M_JSON_NUM.
 
-     ai) M_JSON_SET_TYPE_TRUE(json);
+     ao) M_JSON_SET_TYPE_TRUE(json);
          Set the type of 'json' to be M_JSON_TRUE.
 
-     aj) M_JSON_SET_TYPE_FALSE(json);
+     ap) M_JSON_SET_TYPE_FALSE(json);
          Set the type of 'json' to be M_JSON_FALSE.
 
-     ak) M_JSON_SET_TYPE_NULL(json);
+     aq) M_JSON_SET_TYPE_NULL(json);
          Set the type of 'json' to be M_JSON_NULL.
-
-     al) M_JSON_SET_DATA_STRING(json,str);
-         Set the string value of 'json' to be 'str'.
-
-     am) M_JSON_SET_DATA_NUMBER(json,num);
-         Set the number of 'json' to be 'num'.
-
-     an) M_JSON_SET_DATA_TRUE(json);
-         Set the binary flag of TRUE in 'json'.
-
-     ao) M_JSON_SET_DATA_FALSE(json);
-         Set the binary flag of FALSE in 'json'.
-
-     ap) M_JSON_SET_DATA_NULL(json);
-         Set the variable of NULL in 'json'.
 
   23) Big Number
       For now, big number only can represent the number which is smaller than 2048-bit number.
