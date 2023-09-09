@@ -18,6 +18,7 @@
 #define M_JSON_V_NULL           NULL
 
 typedef struct mln_json_s mln_json_t;
+typedef int (*mln_json_iterator_t)(mln_json_t *, void *);
 
 enum json_type {
     M_JSON_NONE = 0,
@@ -57,8 +58,8 @@ typedef struct {
 #define M_JSON_IS_NULL(json)                   ((json)->type == M_JSON_NULL)
 #define M_JSON_IS_NONE(json)                   ((json)->type == M_JSON_NONE)
 
-#define M_JSON_GET_DATA_OBJECT(json)           ((json)->data.m_j_obj)
-#define M_JSON_GET_DATA_ARRAY(json)            ((json)->data.m_j_array)
+#define M_JSON_GET_DATA_OBJECT(json)           (&((json)->data.m_j_obj))
+#define M_JSON_GET_DATA_ARRAY(json)            (&((json)->data.m_j_array))
 #define M_JSON_GET_DATA_STRING(json)           ((json)->data.m_j_string)
 #define M_JSON_GET_DATA_NUMBER(json)           ((json)->data.m_j_number)
 #define M_JSON_GET_DATA_TRUE(json)             ((json)->data.m_j_true)
@@ -119,6 +120,8 @@ extern int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t i
 extern void mln_json_array_remove(mln_json_t *j, mln_uauto_t index);
 extern int mln_json_decode(mln_string_t *jstr, mln_json_t *out);
 extern mln_string_t *mln_json_encode(mln_json_t *j);
+extern int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data) __NONNULL2(1,2);
+extern int mln_json_generate(mln_json_t *j, char *fmt, ...) __NONNULL2(1,2);
 
 #endif
 

@@ -1734,6 +1734,16 @@ Their definitions can be found in melon/include/mln_types.h.
      aq) M_JSON_SET_TYPE_NULL(json);
          Set the type of 'json' to be M_JSON_NULL.
 
+     ar) int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data);
+         Get and process from a decoded JSON object.
+         'exp' is the property chain, such as: 'a.0.b.2'.
+         If 'exp' matched, 'iterator' will be called with 'data' and matched JSON object.
+
+     as) int mln_json_generate(mln_json_t *j, char *fmt, ...);
+         Generate a JSON object which will be used to 'mln_json_encode'.
+         'fmt' supports: d, D, u, U, F, t, f, n, s, S.
+         If use 'S', string life cycle should be very careful, because its reference is used in 'j'.
+
   23) Big Number
       For now, big number only can represent the number which is smaller than 2048-bit number.
 

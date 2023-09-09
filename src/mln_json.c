@@ -5,6 +5,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include "mln_json.h"
 
 static int mln_json_dump_hash_iterate_handler(void *key, void *val, void *data);
@@ -38,6 +39,9 @@ static inline mln_size_t
 mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf);
 static int
 mln_json_write_content_hash_iterate_handler(void *key, void *val, void *data);
+static inline int mln_json_parse_is_index(mln_string_t *s, mln_size_t *idx);
+static inline int mln_json_obj_generate(mln_json_t *j, char **fmt, va_list arg);
+static inline int mln_json_array_generate(mln_json_t *j, char **fmt, va_list arg);
 
 
 static mln_u64_t mln_json_kv_calc(mln_hash_t *h, mln_string_t *str)
@@ -1043,5 +1047,317 @@ mln_json_write_content_hash_iterate_handler(void *key, void *val, void *data)
     (*length) += 1;
 
     return 0;
+}
+
+
+int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data)
+{
+    mln_size_t idx = 0;
+    mln_string_t *p, *arr = mln_string_slice(exp, ".");
+    if (arr == NULL) return -1;
+
+    for (p = arr; p->len != 0; ++p) {
+        if (M_JSON_IS_OBJECT(j)) {
+            j = mln_json_obj_search(j, p);
+            if (j == NULL) goto err;
+        } else if (M_JSON_IS_ARRAY(j)) {
+            if (!mln_json_parse_is_index(p, &idx)) goto err;
+            j = mln_json_array_search(j, idx);
+            if (j == NULL) goto err;
+        } else {
+err:
+            mln_string_slice_free(arr);
+            return -1;
+        }
+    }
+    mln_string_slice_free(arr);
+    if (iterator != NULL)
+        return iterator(j, data);
+    return 0;
+}
+
+static inline int mln_json_parse_is_index(mln_string_t *s, mln_size_t *idx)
+{
+    mln_u8ptr_t p = s->data, pend = s->data + s->len - 1;
+    mln_size_t sum = 0;
+
+    for (; pend >= p; --pend) {
+        if (*pend < (mln_u8_t)'0' || *pend > (mln_u8_t)'9')
+           return 0;
+        sum = sum * 10 + (*pend - (mln_u8_t)'0');
+    }
+    *idx = sum;
+    return 1;
+}
+
+
+int mln_json_generate(mln_json_t *j, char *fmt, ...)
+{
+    int rc = 0;
+    va_list arg;
+
+    va_start(arg, fmt);
+
+    if (*fmt == '{') {
+        rc = mln_json_obj_generate(j, &fmt, arg);
+    } else if (*fmt == '[') {
+        rc = mln_json_array_generate(j, &fmt, arg);
+    } else {
+        rc = -1;
+    }
+
+    va_end(arg);
+    return rc;
+}
+
+static inline int mln_json_obj_generate(mln_json_t *j, char **fmt, va_list arg)
+{
+    int rc = 0;
+    mln_json_t k, v;
+
+    if (mln_json_obj_init(j) < 0) return -1;
+    ++(*fmt);
+
+again:
+    mln_json_init(&k);
+    mln_json_init(&v);
+    switch (*(*fmt)++) {
+        case 's':
+        {
+            mln_string_t tmp, *dup;
+            char *s = va_arg(arg, char *);
+            mln_string_set(&tmp, s);
+            dup = mln_string_dup(&tmp);
+            if (dup == NULL) goto err;
+            mln_json_string_init(&k, dup);
+            break;
+        }
+        case 'S':
+        {
+            mln_string_t *s = va_arg(arg, mln_string_t *);
+            mln_json_string_init(&k, mln_string_ref(s));
+            break;
+        }
+        case '}':
+        {
+            goto out;
+        }
+        default:
+            goto err;
+    }
+
+    if (*(*fmt)++ != ':') {
+        goto err;
+    }
+
+    switch (*(*fmt)++) {
+        case 'd':
+        {
+            mln_s32_t n = va_arg(arg, mln_s32_t);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 'D':
+        {
+            mln_s64_t n = va_arg(arg, mln_s64_t);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 'u':
+        {
+            mln_u32_t n = va_arg(arg, mln_u32_t);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 'U':
+        {
+            mln_u64_t n = va_arg(arg, mln_u64_t);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 'F':
+        {
+            double n = va_arg(arg, double);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 't':
+        {
+            mln_json_true_init(&v);
+            break;
+        }
+        case 'f':
+        {
+            mln_json_false_init(&v);
+            break;
+        }
+        case 'n':
+        {
+            mln_json_null_init(&v);
+            break;
+        }
+        case 's':
+        {
+            mln_string_t tmp, *dup;
+            char *s = va_arg(arg, char *);
+            mln_string_set(&tmp, s);
+            dup = mln_string_dup(&tmp);
+            if (dup == NULL) {
+                goto err;
+            }
+            mln_json_string_init(&v, dup);
+            break;
+        }
+        case 'S':
+        {
+            mln_string_t *s = va_arg(arg, mln_string_t *);
+            mln_json_string_init(&v, mln_string_ref(s));
+            break;
+        }
+        case '{':
+            --(*fmt);
+            if (mln_json_obj_generate(&v, fmt, arg) < 0) goto err;
+            break;
+        case '[':
+            --(*fmt);
+            if (mln_json_array_generate(&v, fmt, arg) < 0) goto err;
+            break;
+        default:
+            goto err;
+    }
+
+    if (mln_json_obj_update(j, &k, &v) < 0) {
+        goto err;
+    }
+
+    if (**fmt == '}') {
+        ++(*fmt);
+        goto out;
+    }
+    if (*(*fmt)++ != ',') {
+        goto error;
+    }
+
+    goto again;
+
+err:
+    mln_json_destroy(&k);
+    mln_json_destroy(&v);
+error:
+    rc = -1;
+    mln_json_reset(j);
+
+out:
+    return rc;
+}
+
+static inline int mln_json_array_generate(mln_json_t *j, char **fmt, va_list arg)
+{
+    int rc = 0;
+    mln_json_t v;
+
+    if (mln_json_array_init(j) < 0) return -1;
+    ++(*fmt);
+
+again:
+    mln_json_init(&v);
+    switch (*(*fmt)++) {
+        case 'd':
+        {
+            mln_s32_t n = va_arg(arg, mln_s32_t);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 'D':
+        {
+            mln_s64_t n = va_arg(arg, mln_s64_t);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 'u':
+        {
+            mln_u32_t n = va_arg(arg, mln_u32_t);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 'U':
+        {
+            mln_u64_t n = va_arg(arg, mln_u64_t);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 'F':
+        {
+            double n = va_arg(arg, double);
+            mln_json_number_init(&v, n);
+            break;
+        }
+        case 't':
+        {
+            mln_json_true_init(&v);
+            break;
+        }
+        case 'f':
+        {
+            mln_json_false_init(&v);
+            break;
+        }
+        case 'n':
+        {
+            mln_json_null_init(&v);
+            break;
+        }
+        case 's':
+        {
+            mln_string_t tmp, *dup;
+            char *s = va_arg(arg, char *);
+            mln_string_set(&tmp, s);
+            dup = mln_string_dup(&tmp);
+            if (dup == NULL) {
+                goto err;
+            }
+            mln_json_string_init(&v, dup);
+            break;
+        }
+        case 'S':
+        {
+            mln_string_t *s = va_arg(arg, mln_string_t *);
+            mln_json_string_init(&v, mln_string_ref(s));
+            break;
+        }
+        case '{':
+            --(*fmt);
+            if (mln_json_obj_generate(&v, fmt, arg) < 0) goto err;
+            break;
+        case '[':
+            --(*fmt);
+            if (mln_json_array_generate(&v, fmt, arg) < 0) goto err;
+            break;
+        default:
+            goto err;
+    }
+
+    if (mln_json_array_append(j, &v) < 0) {
+        goto err;
+    }
+
+    if (**fmt == ']') {
+        ++(*fmt);
+        goto out;
+    }
+    if (*(*fmt)++ != ',') {
+        goto error;
+    }
+
+    goto again;
+
+err:
+    mln_json_destroy(&v);
+error:
+    rc = -1;
+    mln_json_reset(j);
+
+out:
+    return rc;
 }
 

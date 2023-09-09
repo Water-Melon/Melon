@@ -339,6 +339,71 @@ Return value:
 
 
 
+#### mln_json_parse
+
+```c
+int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data)
+
+typedef int (*mln_json_iterator_t)(mln_json_t *, void *);
+```
+
+Description:
+
+From the decoded `j` node, obtain the matching `mln_json_t` node based on `exp`. If there is a matching node, the `iterator` callback function will be called for processing. `data` is user-defined data, passed in when `iterator` is called.
+
+If we have the following JSON:
+
+```
+{
+  "a": [1, {
+    "c": 3
+  }],
+  "b": 2
+}
+```
+
+`exp` is written in the form:
+
+```
+a
+b
+a.0
+a.2.c
+```
+
+返回值：
+
+- `0` - succeed
+- `-1` - failed
+
+
+
+#### mln_json_generate
+
+```c
+int mln_json_generate(mln_json_t *j, char *fmt, ...);
+```
+
+Description:
+
+According to the format given by `fmt`, fill it into `j` with subsequent arguments.
+
+For example:
+
+```c
+mln_json_generate(&j, "[{s:d,s:d,s:{s:d}},d]", "a", 1, "b", 3, "c", "d", 4, 5);
+mln_string_t *res = mln_json_encode(&j);
+
+// the content of res is: [{"b":3,"c":{"d":4},"a":1},5]
+```
+
+Return value:
+
+- `0` - succeed
+- `-1` - failed
+
+
+
 ### Example
 
 ```c
@@ -346,18 +411,29 @@ Return value:
 #include "mln_string.h"
 #include "mln_json.h"
 
+static int handler(mln_json_t *j, void *data)
+{
+    mln_json_dump(j, 0, "");
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     mln_json_t j;
-    mln_string_t *res;
+    mln_string_t *res, exp = mln_string("protocols.0");
     mln_string_t tmp = mln_string("{\"paths\":[\"/mock\"],\"methods\":null,\"sources\":null,\"destinations\":null,\"name\":\"example_route\",\"headers\":null,\"hosts\":null,\"preserve_host\":false,\"regex_priority\":0,\"snis\":null,\"https_redirect_status_code\":426,\"tags\":null,\"protocols\":[\"http\",\"https\"],\"path_handling\":\"v0\",\"id\":\"52d58293-ae25-4c69-acc8-6dd729718a61\",\"updated_at\":1661345592,\"service\":{\"id\":\"c1e98b2b-6e77-476c-82ca-a5f1fb877e07\"},\"response_buffering\":true,\"strip_path\":true,\"request_buffering\":true,\"created_at\":1661345592}");
 
     if (mln_json_decode(&tmp, &j) < 0) {
         fprintf(stderr, "decode error\n");
         return -1;
     }
-    mln_json_dump(&j, 0, NULL);
 
+    mln_json_parse(&j, &exp, handler, NULL);
+    mln_json_destroy(&j);
+    if (mln_json_generate(&j, "[{s:d,s:d,s:{s:d}},d]", "a", 1, "b", 3, "c", "d", 4, 5) < 0) {
+        fprintf(stderr, "generate failed\n");
+        return -1;
+    }
     res = mln_json_encode(&j);
     mln_json_destroy(&j);
     if (res == NULL) {
