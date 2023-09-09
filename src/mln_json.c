@@ -1325,6 +1325,10 @@ again:
             mln_json_string_init(&v, mln_string_ref(s));
             break;
         }
+        case ']':
+        {
+            goto out;
+        }
         case '{':
             --(*fmt);
             if (mln_json_obj_generate(&v, fmt, arg) < 0) goto err;
