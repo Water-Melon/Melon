@@ -452,10 +452,12 @@ int main(int argc, char *argv[])
     mln_json_parse(&j, &exp, handler, NULL); //Get the first element of the array whose key is protocols in the JSON and hand it to the handler for processing
 
     //Generate JSON structure using format characters
+    mln_json_init(&k);//Uninitialized json variables must be initialized before mln_json_generate
     if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j]", "a", 1, "b", 3, "c", "d", 4, 5,&j) < 0) {
         fprintf(stderr, "generate failed\n");
         return -1;
     }
+    mln_json_generate(&k, "[s,d]", "g", 99);//These two elements will be added to the k array
     res = mln_json_encode(&k); //Generate corresponding JSON string for the generated structure
 
     mln_json_destroy(&k); //Note, do not release j here, because k will release the memory in j
@@ -476,7 +478,7 @@ The output of this example:
 
 ```
  type:string val:[http]
-[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}}]
+[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}},"g",99]
 ```
 
 The first line is the output of `mln_dump` called in `handler`. The second line is the JSON string encoded by `mln_json_encode`.

@@ -452,10 +452,12 @@ int main(int argc, char *argv[])
     mln_json_parse(&j, &exp, handler, NULL); //获取该JSON中key为protocols的数组的第1个元素，并交给handler处理
 
     //利用格式符生成JSON结构
-    if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j]", "a", 1, "b", 3, "c", "d", 4, 5,&j) < 0) {
+    mln_json_init(&k);//mln_json_generate前一定要对未初始化的json变量进行初始化
+    if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j]", "a", 1, "b", 3, "c", "d", 4, 5, &j) < 0) {
         fprintf(stderr, "generate failed\n");
         return -1;
     }
+    mln_json_generate(&k, "[s,d]", "g", 99);//这两个元素会被加入到k数组中
     res = mln_json_encode(&k); //对生成的结构生成相应的JSON字符串
 
     mln_json_destroy(&k); //注意，这里不要释放j，因为k会释放j中的内存
@@ -476,7 +478,7 @@ int main(int argc, char *argv[])
 
 ```
  type:string val:[http]
-[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}}]
+[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}},"g",99]
 ```
 
 第一行为`handler`中的`mln_dump`输出，第二行为`mln_json_encode`生成的字符串。
