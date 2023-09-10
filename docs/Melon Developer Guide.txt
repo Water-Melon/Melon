@@ -1741,7 +1741,7 @@ Their definitions can be found in melon/include/mln_types.h.
 
      as) int mln_json_generate(mln_json_t *j, char *fmt, ...);
          Generate a JSON object which will be used to 'mln_json_encode'.
-         'fmt' supports: d, D, u, U, F, t, f, n, s, S.
+         'fmt' supports: j, d, D, u, U, F, t, f, n, s, S.
          If use 'S', string life cycle should be very careful, because its reference is used in 'j'.
 
   23) Big Number

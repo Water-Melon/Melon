@@ -1151,6 +1151,12 @@ again:
     }
 
     switch (*(*fmt)++) {
+        case 'j':
+        {
+            mln_json_t *json = va_arg(arg, mln_json_t *);
+            v = *json;
+            break;
+        }
         case 'd':
         {
             mln_s32_t n = va_arg(arg, mln_s32_t);
@@ -1262,6 +1268,12 @@ static inline int mln_json_array_generate(mln_json_t *j, char **fmt, va_list arg
 again:
     mln_json_init(&v);
     switch (*(*fmt)++) {
+        case 'j':
+        {
+            mln_json_t *json = va_arg(arg, mln_json_t *);
+            v = *json;
+            break;
+        }
         case 'd':
         {
             mln_s32_t n = va_arg(arg, mln_s32_t);

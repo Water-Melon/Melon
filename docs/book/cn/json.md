@@ -349,7 +349,7 @@ typedef int (*mln_json_iterator_t)(mln_json_t *, void *);
 
 描述：
 
-从已解码的`j`结点中，根据`exp`获取其中的匹配的`mln_json_t`结点，如果存在匹配结点，则会调用`iterator`回调函数进行处理，`data`为用户自定义数据，在`iterator`调用时被传入。
+从`j`结点管理的JSON中，根据`exp`获取其中的匹配的`mln_json_t`子结点，如果存在匹配的子结点，则会调用`iterator`回调函数进行处理，`data`为用户自定义数据，在`iterator`调用时被传入。
 
 如果我们有如下JSON
 
@@ -364,12 +364,12 @@ typedef int (*mln_json_iterator_t)(mln_json_t *, void *);
 
 `exp`的写法形如：
 
-```
-a
-b
-a.0
-a.2.c
-```
+| 写法    | 含义                                                         |
+| ------- | ------------------------------------------------------------ |
+| `a`     | 获取key为`a`的值（每个值都保存在`mln_json_t`结构中）         |
+| `b`     | 获取key为`b`的值                                             |
+| `a.0`   | 获取key为`a`，且其值应为数组，再获取数组的第`0`个下标的元素  |
+| `a.2.c` | 获取key为`a`的值对应的数组，再获取其下标为`2`的数组元素，该元素应为一个对象，最后获取该元素对象的key为`c`的值，这个表达式在本例中会导致`mln_json_parse`返回-1，因为下标为`2`的数组元素不存在 |
 
 返回值：
 
@@ -387,6 +387,27 @@ int mln_json_generate(mln_json_t *j, char *fmt, ...);
 描述：
 
 根据`fmt`给出的格式，利用后续参数填充至`j`中。
+
+其中，`fmt`支持如下格式符：
+
+- `{}` - 表示大括号内的是一个对象类型，对象的key与value之间使用`:`分隔，每组key-value之间以`,`分隔
+- `[]` - 表示中括号内的是一个数组类型，每个数组元素之间以`,`分隔
+- `j` - 表示可变参部分传入的是一个`mln_json_t`指针
+- `d` - 表示可变参部分传入的是一个32位有符号值，例如`int`或`mln_s32_t`
+- `D` - 表示可变参部分传入的是一个64位有符号值，例如`long long`或`mln_s64_t`
+- `u` - 表示可变参部分传入的是一个32位无符号值，例如`unsigned int`或`mln_u32_t`
+- `U` - 表示可变参部分传入的是一个64位无符号值，例如`unsigned long long`或`mln_u64_t`
+- `F` - 表示可变参部分传入的是一个`double`类型的值
+- `t` - 表示这个位置填入一个`true`，这个占位符无需传入对应的可变参数
+- `f` - 表示这个位置填入一个`false`，这个占位符无需传入对应的可变参数
+- `n` - 表示这个位置填入一个`null`，这个占位符无需传入对应的可变参数
+- `s` - 表示可变参部分传入的是一个`char *`类型字符串，例如`"Hello"`
+- `S` - 表示可变参部分传入的是一个`mln_string_t *`类型字符串
+
+这里有如下注意事项：
+
+1. `fmt`中仅可出现上述格式符号，不可存在任何的空格、制表符或者换行符等其他类型符号
+2. 在成功执行本函数后，不可对格式符`j`对应的可变参数进行释放（即`mln_json_destroy`或`mln_json_reset`）
 
 例如：
 
@@ -419,23 +440,26 @@ static int handler(mln_json_t *j, void *data)
 
 int main(int argc, char *argv[])
 {
-    mln_json_t j;
+    mln_json_t j, k;
     mln_string_t *res, exp = mln_string("protocols.0");
     mln_string_t tmp = mln_string("{\"paths\":[\"/mock\"],\"methods\":null,\"sources\":null,\"destinations\":null,\"name\":\"example_route\",\"headers\":null,\"hosts\":null,\"preserve_host\":false,\"regex_priority\":0,\"snis\":null,\"https_redirect_status_code\":426,\"tags\":null,\"protocols\":[\"http\",\"https\"],\"path_handling\":\"v0\",\"id\":\"52d58293-ae25-4c69-acc8-6dd729718a61\",\"updated_at\":1661345592,\"service\":{\"id\":\"c1e98b2b-6e77-476c-82ca-a5f1fb877e07\"},\"response_buffering\":true,\"strip_path\":true,\"request_buffering\":true,\"created_at\":1661345592}");
 
-    if (mln_json_decode(&tmp, &j) < 0) {
+    if (mln_json_decode(&tmp, &j) < 0) { //解码字符串，生成mln_json_t的结点
         fprintf(stderr, "decode error\n");
         return -1;
     }
 
-    mln_json_parse(&j, &exp, handler, NULL);
-    mln_json_destroy(&j);
-    if (mln_json_generate(&j, "[{s:d,s:d,s:{s:d}},d]", "a", 1, "b", 3, "c", "d", 4, 5) < 0) {
+    mln_json_parse(&j, &exp, handler, NULL); //获取该JSON中key为protocols的数组的第1个元素，并交给handler处理
+
+    //利用格式符生成JSON结构
+    if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j]", "a", 1, "b", 3, "c", "d", 4, 5,&j) < 0) {
         fprintf(stderr, "generate failed\n");
         return -1;
     }
-    res = mln_json_encode(&j);
-    mln_json_destroy(&j);
+    res = mln_json_encode(&k); //对生成的结构生成相应的JSON字符串
+
+    mln_json_destroy(&k); //注意，这里不要释放j，因为k会释放j中的内存
+
     if (res == NULL) {
         fprintf(stderr, "encode failed\n");
         return -1;
@@ -448,3 +472,11 @@ int main(int argc, char *argv[])
 }
 ```
 
+本例的执行结果如下：
+
+```
+ type:string val:[http]
+[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}}]
+```
+
+第一行为`handler`中的`mln_dump`输出，第二行为`mln_json_encode`生成的字符串。

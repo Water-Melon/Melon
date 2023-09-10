@@ -349,9 +349,9 @@ typedef int (*mln_json_iterator_t)(mln_json_t *, void *);
 
 Description:
 
-From the decoded `j` node, obtain the matching `mln_json_t` node based on `exp`. If there is a matching node, the `iterator` callback function will be called for processing. `data` is user-defined data, passed in when `iterator` is called.
+From the JSON managed by the `j` node, obtain the matching `mln_json_t` child node according to `exp`. If there is a matching child node, the `iterator` callback function will be called for processing. `data` is User-defined data is passed in when `iterator` is called.
 
-If we have the following JSON:
+Suppose we have the following JSON：
 
 ```
 {
@@ -362,16 +362,16 @@ If we have the following JSON:
 }
 ```
 
-`exp` is written in the form:
+The content of `exp` is as follows:
 
-```
-a
-b
-a.0
-a.2.c
-```
+| Content | Meaning                                                      |
+| ------- | ------------------------------------------------------------ |
+| `a`     | Get the value with key a (each value is saved in the `mln_json_t` structure) |
+| `b`     | Get the value with key b                                     |
+| `a.0`   | Get the key a, and its value should be an array, and then get the 0th subscript element of the array |
+| `a.2.c` | Get the array corresponding to the value with key `a`, then get the array element with subscript `2`, which should be an object, and finally get the value with key `c` of the element object. This expression will cause `mln_json_parse` in this case returns `-1` because the array element with index `2` does not exist |
 
-返回值：
+Return value：
 
 - `0` - succeed
 - `-1` - failed
@@ -386,7 +386,28 @@ int mln_json_generate(mln_json_t *j, char *fmt, ...);
 
 Description:
 
-According to the format given by `fmt`, fill it into `j` with subsequent arguments.
+According to the format given by `fmt`, fill the subsequent arguments into `j`.
+
+`fmt` supports the following format characters:
+
+- `{}` - Indicates that what is inside the curly brackets is an object type. The key and value of the object are separated by `:`, and each group of key-value is separated by `,`.
+- `[]` - Indicates that what is in the square brackets is an array type, and each array element is separated by `,`.
+- `j` - Indicates that the variable parameter part is passed in a `mln_json_t` pointer.
+- `d` - Indicates that the variable parameter part is passed in a 32-bit signed value, such as `int` or `mln_s32_t`.
+- `D` - Indicates that the variable parameter part is passed in a 64-bit signed value, such as `long long` or `mln_s64_t`.
+- `u` - Indicates that the variable parameter part is passed in a 32-bit unsigned value, such as `unsigned int` or `mln_u32_t`.
+- `U` - Indicates that the variable parameter part is passed in a 64-bit unsigned value, such as `unsigned long long` or `mln_u64_t`.
+- `F` - Indicates that the variable parameter part is passed in a value of type `double`.
+- `t` - Indicates that a `true` is filled in at this position. This placeholder does not need to pass in the corresponding variable parameters.
+- `f` - Indicates that a `false` is filled in at this position. This placeholder does not need to pass in the corresponding variable parameters.
+- `n` - Indicates that a `null` is filled in at this position. This placeholder does not need to pass in the corresponding variable parameters.
+- `s` - Indicates that the variable parameter part is passed in a `char *` type string, such as `"Hello"`.
+- `S` - Indicates that the variable parameter part is passed in a `mln_string_t *` type string.
+
+Notes:
+
+1. Only the above format symbols can appear in `fmt`, and there cannot be any other types of symbols such as spaces, tabs, or enters.
+2. After successfully executing this function, the variable parameter corresponding to the format symbol `j` cannot be released, i.e. `mln_json_destroy` or `mln_json_reset`.
 
 For example:
 
@@ -394,7 +415,7 @@ For example:
 mln_json_generate(&j, "[{s:d,s:d,s:{s:d}},d]", "a", 1, "b", 3, "c", "d", 4, 5);
 mln_string_t *res = mln_json_encode(&j);
 
-// the content of res is: [{"b":3,"c":{"d":4},"a":1},5]
+// 得到res中的内容为： [{"b":3,"c":{"d":4},"a":1},5]
 ```
 
 Return value:
@@ -419,23 +440,26 @@ static int handler(mln_json_t *j, void *data)
 
 int main(int argc, char *argv[])
 {
-    mln_json_t j;
+    mln_json_t j, k;
     mln_string_t *res, exp = mln_string("protocols.0");
     mln_string_t tmp = mln_string("{\"paths\":[\"/mock\"],\"methods\":null,\"sources\":null,\"destinations\":null,\"name\":\"example_route\",\"headers\":null,\"hosts\":null,\"preserve_host\":false,\"regex_priority\":0,\"snis\":null,\"https_redirect_status_code\":426,\"tags\":null,\"protocols\":[\"http\",\"https\"],\"path_handling\":\"v0\",\"id\":\"52d58293-ae25-4c69-acc8-6dd729718a61\",\"updated_at\":1661345592,\"service\":{\"id\":\"c1e98b2b-6e77-476c-82ca-a5f1fb877e07\"},\"response_buffering\":true,\"strip_path\":true,\"request_buffering\":true,\"created_at\":1661345592}");
 
-    if (mln_json_decode(&tmp, &j) < 0) {
+    if (mln_json_decode(&tmp, &j) < 0) { //Decode the string and generate the node of mln_json_t
         fprintf(stderr, "decode error\n");
         return -1;
     }
 
-    mln_json_parse(&j, &exp, handler, NULL);
-    mln_json_destroy(&j);
-    if (mln_json_generate(&j, "[{s:d,s:d,s:{s:d}},d]", "a", 1, "b", 3, "c", "d", 4, 5) < 0) {
+    mln_json_parse(&j, &exp, handler, NULL); //Get the first element of the array whose key is protocols in the JSON and hand it to the handler for processing
+
+    //Generate JSON structure using format characters
+    if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j]", "a", 1, "b", 3, "c", "d", 4, 5,&j) < 0) {
         fprintf(stderr, "generate failed\n");
         return -1;
     }
-    res = mln_json_encode(&j);
-    mln_json_destroy(&j);
+    res = mln_json_encode(&k); //Generate corresponding JSON string for the generated structure
+
+    mln_json_destroy(&k); //Note, do not release j here, because k will release the memory in j
+
     if (res == NULL) {
         fprintf(stderr, "encode failed\n");
         return -1;
@@ -448,3 +472,11 @@ int main(int argc, char *argv[])
 }
 ```
 
+The output of this example:
+
+```
+ type:string val:[http]
+[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}}]
+```
+
+The first line is the output of `mln_dump` called in `handler`. The second line is the JSON string encoded by `mln_json_encode`.
