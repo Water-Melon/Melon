@@ -42,6 +42,9 @@ mln_json_write_content_hash_iterate_handler(void *key, void *val, void *data);
 static inline int mln_json_parse_is_index(mln_string_t *s, mln_size_t *idx);
 static inline int mln_json_obj_generate(mln_json_t *j, char **fmt, va_list *arg);
 static inline int mln_json_array_generate(mln_json_t *j, char **fmt, va_list *arg);
+static inline int __mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val);
+static inline int __mln_json_array_append(mln_json_t *j, mln_json_t *value);
+static inline int mln_json_object_iterator(mln_string_t *key, mln_json_kv_t *kv, void *data);
 
 
 static mln_u64_t mln_json_kv_calc(mln_hash_t *h, mln_string_t *str)
@@ -92,6 +95,11 @@ int mln_json_obj_init(mln_json_t *j)
 }
 
 int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val)
+{
+    return __mln_json_obj_update(j, key, val);
+}
+
+static inline int __mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val)
 {
     mln_json_kv_t *kv;
 
@@ -174,6 +182,11 @@ mln_uauto_t mln_json_array_length(mln_json_t *j)
 }
 
 int mln_json_array_append(mln_json_t *j, mln_json_t *value)
+{
+    return __mln_json_array_append(j, value);
+}
+
+static inline int __mln_json_array_append(mln_json_t *j, mln_json_t *value)
 {
     mln_json_t *elem;
 
@@ -431,7 +444,7 @@ again:
             return -1;
         }
 
-        if (mln_json_obj_update(val, &key, &v) < 0) {
+        if (__mln_json_obj_update(val, &key, &v) < 0) {
             mln_json_destroy(&key);
             mln_json_destroy(&v);
             return -1;
@@ -484,7 +497,7 @@ again:
         }
     }
 
-    if (mln_json_array_append(val, &j) < 0) {
+    if (__mln_json_array_append(val, &j) < 0) {
         mln_json_destroy(&j);
         return -1;
     }
@@ -908,8 +921,8 @@ mln_json_get_length_hash_iterate_handler(void *key, void *val, void *data)
 }
 
 struct mln_json_tmp_s {
-    mln_size_t  *length;
-    mln_s8ptr_t *buf;
+    void *ptr1;
+    void *ptr2;
 };
 
 static inline mln_size_t
@@ -927,8 +940,8 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
         case M_JSON_OBJECT:
             *buf++ = '{';
             ++length;
-            tmp.length = &length;
-            tmp.buf = &buf;
+            tmp.ptr1 = &length;
+            tmp.ptr2 = &buf;
             save = length;
             mln_hash_iterate(&(j->data.m_j_obj), \
                               mln_json_write_content_hash_iterate_handler, \
@@ -1028,8 +1041,8 @@ mln_json_write_content_hash_iterate_handler(void *key, void *val, void *data)
 {
     mln_json_kv_t *kv = (mln_json_kv_t *)val;
     struct mln_json_tmp_s *tmp = (struct mln_json_tmp_s *)data;
-    mln_s8ptr_t *buf = tmp->buf;
-    mln_size_t *length = tmp->length;
+    mln_size_t *length = (mln_size_t *)(tmp->ptr1);
+    mln_s8ptr_t *buf = (mln_s8ptr_t *)(tmp->ptr2);
     mln_size_t n;
 
     if (kv == NULL) return 0;
@@ -1113,30 +1126,36 @@ int mln_json_generate(mln_json_t *j, char *fmt, ...)
 static inline int mln_json_obj_generate(mln_json_t *j, char **fmt, va_list *arg)
 {
     int rc = 0;
-    mln_json_t k, v;
+    mln_json_t k, v, *json;
+    char *s, *f = *fmt;
+    mln_string_t *str, tmp;
+    mln_s32_t s32;
+    mln_u32_t u32;
+    mln_s64_t s64;
+    mln_u64_t u64;
+    double d;
 
     if (M_JSON_IS_NONE(j) && mln_json_obj_init(j) < 0) return -1;
     if (!M_JSON_IS_OBJECT(j)) return -1;
-    ++(*fmt);
+    ++f;
 
 again:
     mln_json_init(&k);
     mln_json_init(&v);
-    switch (*(*fmt)++) {
+    switch (*f++) {
         case 's':
         {
-            mln_string_t tmp, *dup;
-            char *s = va_arg(*arg, char *);
+            s = va_arg(*arg, char *);
             mln_string_set(&tmp, s);
-            dup = mln_string_dup(&tmp);
-            if (dup == NULL) goto err;
-            mln_json_string_init(&k, dup);
+            str = mln_string_dup(&tmp);
+            if (str == NULL) goto err;
+            mln_json_string_init(&k, str);
             break;
         }
         case 'S':
         {
-            mln_string_t *s = va_arg(*arg, mln_string_t *);
-            mln_json_string_init(&k, mln_string_ref(s));
+            str = va_arg(*arg, mln_string_t *);
+            mln_json_string_init(&k, mln_string_ref(str));
             break;
         }
         case '}':
@@ -1147,45 +1166,45 @@ again:
             goto err;
     }
 
-    if (*(*fmt)++ != ':') {
+    if (*f++ != ':') {
         goto err;
     }
 
-    switch (*(*fmt)++) {
+    switch (*f++) {
         case 'j':
         {
-            mln_json_t *json = va_arg(*arg, mln_json_t *);
+            json = va_arg(*arg, mln_json_t *);
             v = *json;
             break;
         }
         case 'd':
         {
-            mln_s32_t n = va_arg(*arg, mln_s32_t);
-            mln_json_number_init(&v, n);
+            s32 = va_arg(*arg, mln_s32_t);
+            mln_json_number_init(&v, s32);
             break;
         }
         case 'D':
         {
-            mln_s64_t n = va_arg(*arg, mln_s64_t);
-            mln_json_number_init(&v, n);
+            s64 = va_arg(*arg, mln_s64_t);
+            mln_json_number_init(&v, s64);
             break;
         }
         case 'u':
         {
-            mln_u32_t n = va_arg(*arg, mln_u32_t);
-            mln_json_number_init(&v, n);
+            u32 = va_arg(*arg, mln_u32_t);
+            mln_json_number_init(&v, u32);
             break;
         }
         case 'U':
         {
-            mln_u64_t n = va_arg(*arg, mln_u64_t);
-            mln_json_number_init(&v, n);
+            u64 = va_arg(*arg, mln_u64_t);
+            mln_json_number_init(&v, u64);
             break;
         }
         case 'F':
         {
-            double n = va_arg(*arg, double);
-            mln_json_number_init(&v, n);
+            d = va_arg(*arg, double);
+            mln_json_number_init(&v, d);
             break;
         }
         case 't':
@@ -1205,43 +1224,42 @@ again:
         }
         case 's':
         {
-            mln_string_t tmp, *dup;
-            char *s = va_arg(*arg, char *);
+            s = va_arg(*arg, char *);
             mln_string_set(&tmp, s);
-            dup = mln_string_dup(&tmp);
-            if (dup == NULL) {
+            str = mln_string_dup(&tmp);
+            if (str == NULL) {
                 goto err;
             }
-            mln_json_string_init(&v, dup);
+            mln_json_string_init(&v, str);
             break;
         }
         case 'S':
         {
-            mln_string_t *s = va_arg(*arg, mln_string_t *);
-            mln_json_string_init(&v, mln_string_ref(s));
+            str = va_arg(*arg, mln_string_t *);
+            mln_json_string_init(&v, mln_string_ref(str));
             break;
         }
         case '{':
-            --(*fmt);
-            if (mln_json_obj_generate(&v, fmt, arg) < 0) goto err;
+            --f;
+            if (mln_json_obj_generate(&v, &f, arg) < 0) goto err;
             break;
         case '[':
-            --(*fmt);
-            if (mln_json_array_generate(&v, fmt, arg) < 0) goto err;
+            --f;
+            if (mln_json_array_generate(&v, &f, arg) < 0) goto err;
             break;
         default:
             goto err;
     }
 
-    if (mln_json_obj_update(j, &k, &v) < 0) {
+    if (__mln_json_obj_update(j, &k, &v) < 0) {
         goto err;
     }
 
-    if (**fmt == '}') {
-        ++(*fmt);
+    if (*f == '}') {
+        ++f;
         goto out;
     }
-    if (*(*fmt)++ != ',') {
+    if (*f++ != ',') {
         goto error;
     }
 
@@ -1255,55 +1273,63 @@ error:
     mln_json_reset(j);
 
 out:
+    *fmt = f;
     return rc;
 }
 
 static inline int mln_json_array_generate(mln_json_t *j, char **fmt, va_list *arg)
 {
     int rc = 0;
-    mln_json_t v;
+    mln_json_t v, *json;
+    char *s, *f = *fmt;
+    mln_string_t *str, tmp;
+    mln_s32_t s32;
+    mln_u32_t u32;
+    mln_s64_t s64;
+    mln_u64_t u64;
+    double d;
 
     if (M_JSON_IS_NONE(j) && mln_json_array_init(j) < 0) return -1;
     if (!M_JSON_IS_ARRAY(j)) return -1;
-    ++(*fmt);
+    ++f;
 
 again:
     mln_json_init(&v);
-    switch (*(*fmt)++) {
+    switch (*f++) {
         case 'j':
         {
-            mln_json_t *json = va_arg(*arg, mln_json_t *);
+            json = va_arg(*arg, mln_json_t *);
             v = *json;
             break;
         }
         case 'd':
         {
-            mln_s32_t n = va_arg(*arg, mln_s32_t);
-            mln_json_number_init(&v, n);
+            s32 = va_arg(*arg, mln_s32_t);
+            mln_json_number_init(&v, s32);
             break;
         }
         case 'D':
         {
-            mln_s64_t n = va_arg(*arg, mln_s64_t);
-            mln_json_number_init(&v, n);
+            s64 = va_arg(*arg, mln_s64_t);
+            mln_json_number_init(&v, s64);
             break;
         }
         case 'u':
         {
-            mln_u32_t n = va_arg(*arg, mln_u32_t);
-            mln_json_number_init(&v, n);
+            u32 = va_arg(*arg, mln_u32_t);
+            mln_json_number_init(&v, u32);
             break;
         }
         case 'U':
         {
-            mln_u64_t n = va_arg(*arg, mln_u64_t);
-            mln_json_number_init(&v, n);
+            u64 = va_arg(*arg, mln_u64_t);
+            mln_json_number_init(&v, u64);
             break;
         }
         case 'F':
         {
-            double n = va_arg(*arg, double);
-            mln_json_number_init(&v, n);
+            d = va_arg(*arg, double);
+            mln_json_number_init(&v, d);
             break;
         }
         case 't':
@@ -1323,20 +1349,19 @@ again:
         }
         case 's':
         {
-            mln_string_t tmp, *dup;
-            char *s = va_arg(*arg, char *);
+            s = va_arg(*arg, char *);
             mln_string_set(&tmp, s);
-            dup = mln_string_dup(&tmp);
-            if (dup == NULL) {
+            str = mln_string_dup(&tmp);
+            if (str == NULL) {
                 goto err;
             }
-            mln_json_string_init(&v, dup);
+            mln_json_string_init(&v, str);
             break;
         }
         case 'S':
         {
-            mln_string_t *s = va_arg(*arg, mln_string_t *);
-            mln_json_string_init(&v, mln_string_ref(s));
+            str = va_arg(*arg, mln_string_t *);
+            mln_json_string_init(&v, mln_string_ref(str));
             break;
         }
         case ']':
@@ -1344,26 +1369,26 @@ again:
             goto out;
         }
         case '{':
-            --(*fmt);
-            if (mln_json_obj_generate(&v, fmt, arg) < 0) goto err;
+            --f;
+            if (mln_json_obj_generate(&v, &f, arg) < 0) goto err;
             break;
         case '[':
-            --(*fmt);
-            if (mln_json_array_generate(&v, fmt, arg) < 0) goto err;
+            --f;
+            if (mln_json_array_generate(&v, &f, arg) < 0) goto err;
             break;
         default:
             goto err;
     }
 
-    if (mln_json_array_append(j, &v) < 0) {
+    if (__mln_json_array_append(j, &v) < 0) {
         goto err;
     }
 
-    if (**fmt == ']') {
-        ++(*fmt);
+    if (*f == ']') {
+        ++f;
         goto out;
     }
-    if (*(*fmt)++ != ',') {
+    if (*f++ != ',') {
         goto error;
     }
 
@@ -1376,6 +1401,24 @@ error:
     mln_json_reset(j);
 
 out:
+    *fmt = f;
     return rc;
+}
+
+int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *data)
+{
+    if (!M_JSON_IS_OBJECT(j)) return -1;
+
+    struct mln_json_tmp_s tmp;
+    tmp.ptr1 = it;
+    tmp.ptr2 = data;
+    return mln_hash_iterate(M_JSON_GET_DATA_OBJECT(j), (hash_iterate_handler)mln_json_object_iterator, &tmp);
+}
+
+static inline int mln_json_object_iterator(mln_string_t *key, mln_json_kv_t *kv, void *data)
+{
+    struct mln_json_tmp_s *tmp = (struct mln_json_tmp_s *)data;
+    mln_json_object_iterator_t it = (mln_json_object_iterator_t)(tmp->ptr1);
+    return it(&kv->key, &kv->val, tmp->ptr2);
 }
 

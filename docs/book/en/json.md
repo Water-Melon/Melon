@@ -425,7 +425,42 @@ Return value:
 
 
 
+#### mln_json_object_iterate
+
+```c
+int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *data);
+
+typedef int (*mln_json_object_iterator_t)(mln_json_t * /*key*/, mln_json_t * /*val*/, void *);
+```
+
+Description: Traverse each `key`-`value` pair in object `j`, and use `it` to process the key-value pair. `data` is user-defined data, which will be processed when `it` is called. and passed in.
+
+Return value
+
+- `0` - Success
+- `-1` - failed
+
+
+#### mln_json_array_iterate
+
+```c
+mln_json_array_iterate(j, it, data);
+
+typedef int (*mln_json_array_iterator_t)(mln_json_t *, void *);
+```
+
+Description: Traverse each element in the array `j`, and use `it` to process the array elements. `data` is user-defined data, which will be passed in when `it` is called.
+
+Return value
+
+- `0` - Success
+- `-1` - failed
+
+
+
 ### Example
+
+#### Example 1
 
 ```c
 #include <stdio.h>
@@ -482,3 +517,52 @@ The output of this example:
 ```
 
 The first line is the output of `mln_dump` called in `handler`. The second line is the JSON string encoded by `mln_json_encode`.
+
+
+#### Example 2
+
+```c
+#include "mln_json.h"
+#include "mln_log.h"
+
+static int obj_iterator(mln_json_t *k, mln_json_t *v, void *data)
+{
+    mln_string_t *s = M_JSON_GET_DATA_STRING(k);
+    int i = (int)M_JSON_GET_DATA_NUMBER(v);
+    mln_log(none, "%S: %d\n", s, i);
+    return 0;
+}
+
+static int array_iterator(mln_json_t *j, void *data)
+{
+    return mln_json_object_iterate(j, obj_iterator, data);
+}
+
+static int handler(mln_json_t *j, void *data)
+{
+    return mln_json_array_iterate(j, array_iterator, data);
+}
+
+static void parse(mln_string_t *p)
+{
+    mln_json_t j;
+    mln_string_t exp = mln_string("resolutions");
+    mln_json_decode(p, &j);
+    mln_json_parse(&j, &exp, handler, NULL);
+    mln_json_destroy(&j);
+}
+
+int main(void)
+{
+    mln_string_t p = mln_string("{\"name\":\"Awesome 4K\",\"resolutions\":[{\"width\":1280,\"height\":720}]}");
+    parse(&p);
+    return 0;
+}
+```
+
+The running result is:
+
+```
+width: 1280
+height: 720
+```

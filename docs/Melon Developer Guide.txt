@@ -1744,6 +1744,12 @@ Their definitions can be found in melon/include/mln_types.h.
          'fmt' supports: j, d, D, u, U, F, t, f, n, s, S.
          If use 'S', string life cycle should be very careful, because its reference is used in 'j'.
 
+     at) int mln_json_object_foreach(mln_json_t *j, mln_json_object_iterator_t it, void *data);
+         Iterate and process each key-value in object 'j' with the handler 'it' and user data 'data'.
+
+     au) mln_json_array_foreach(j, it, data);
+         Iterate and process each element in array 'j' with the handler 'it' and user data 'data'.
+
   23) Big Number
       For now, big number only can represent the number which is smaller than 2048-bit number.
 

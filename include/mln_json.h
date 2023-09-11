@@ -19,6 +19,8 @@
 
 typedef struct mln_json_s mln_json_t;
 typedef int (*mln_json_iterator_t)(mln_json_t *, void *);
+typedef int (*mln_json_object_iterator_t)(mln_json_t * /*key*/, mln_json_t * /*val*/, void *);
+typedef int (*mln_json_array_iterator_t)(mln_json_t *, void *);
 
 enum json_type {
     M_JSON_NONE = 0,
@@ -122,6 +124,23 @@ extern int mln_json_decode(mln_string_t *jstr, mln_json_t *out);
 extern mln_string_t *mln_json_encode(mln_json_t *j);
 extern int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data) __NONNULL2(1,2);
 extern int mln_json_generate(mln_json_t *j, char *fmt, ...) __NONNULL2(1,2);
+extern int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *data) __NONNULL2(1,2);
+
+#define mln_json_array_iterate(j, it, data) ({\
+    mln_json_t *json = (mln_json_t *)(j), *end;\
+    mln_json_array_iterator_t iterator = (mln_json_array_iterator_t)(it);\
+    int rc = -1;\
+    mln_array_t *a = M_JSON_GET_DATA_ARRAY(j);\
+    if (M_JSON_IS_ARRAY(json)) {\
+        json = mln_array_elts(a);\
+        end = json + mln_array_nelts(a);\
+        for (; json < end; ++json) {\
+            rc = iterator(json, data);\
+            if (rc < 0) break;\
+        }\
+    }\
+    rc;\
+})
 
 #endif
 

@@ -425,7 +425,43 @@ mln_string_t *res = mln_json_encode(&j);
 
 
 
+#### mln_json_object_iterate
+
+```c
+int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *data);
+
+typedef int (*mln_json_object_iterator_t)(mln_json_t * /*key*/, mln_json_t * /*val*/, void *);
+```
+
+描述：遍历对象`j`中的每一对`key`-`value`对，并使用`it`对键值对进行处理，`data`是用户自定义数据，会在`it`调用时一并传入。
+
+返回值：
+
+- `0` - 成功
+- `-1` - 失败
+
+
+
+#### mln_json_array_iterate
+
+```c
+mln_json_array_iterate(j, it, data);
+
+typedef int (*mln_json_array_iterator_t)(mln_json_t *, void *);
+```
+
+描述：遍历数组`j`中的每一个元素，并使用`it`对数组元素进行处理，`data`是用户自定义数据，会在`it`调用时一并传入。
+
+返回值：
+
+- `0` - 成功
+- `-1` - 失败
+
+
+
 ### 示例
+
+#### 示例1
 
 ```c
 #include <stdio.h>
@@ -482,3 +518,52 @@ int main(int argc, char *argv[])
 ```
 
 第一行为`handler`中的`mln_dump`输出，第二行为`mln_json_encode`生成的字符串。
+
+
+#### 示例2
+
+```c
+#include "mln_json.h"
+#include "mln_log.h"
+
+static int obj_iterator(mln_json_t *k, mln_json_t *v, void *data)
+{
+    mln_string_t *s = M_JSON_GET_DATA_STRING(k);
+    int i = (int)M_JSON_GET_DATA_NUMBER(v);
+    mln_log(none, "%S: %d\n", s, i);
+    return 0;
+}
+
+static int array_iterator(mln_json_t *j, void *data)
+{
+    return mln_json_object_iterate(j, obj_iterator, data);
+}
+
+static int handler(mln_json_t *j, void *data)
+{
+    return mln_json_array_iterate(j, array_iterator, data);
+}
+
+static void parse(mln_string_t *p)
+{
+    mln_json_t j;
+    mln_string_t exp = mln_string("resolutions");
+    mln_json_decode(p, &j);
+    mln_json_parse(&j, &exp, handler, NULL);
+    mln_json_destroy(&j);
+}
+
+int main(void)
+{
+    mln_string_t p = mln_string("{\"name\":\"Awesome 4K\",\"resolutions\":[{\"width\":1280,\"height\":720}]}");
+    parse(&p);
+    return 0;
+}
+```
+
+运行结果如下：
+
+```
+width: 1280
+height: 720
+```
