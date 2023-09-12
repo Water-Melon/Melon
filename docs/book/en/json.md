@@ -278,14 +278,14 @@ Return value: Returns the element pointer if it exists, otherwise returns `NULL`
 #### is_type
 
 ```c
-M_JSON_IS_OBJECT(json)
-M_JSON_IS_ARRAY(json)
-M_JSON_IS_STRING(json)
-M_JSON_IS_NUMBER(json)
-M_JSON_IS_TRUE(json)
-M_JSON_IS_FALSE(json)
-M_JSON_IS_NULL(json)
-M_JSON_IS_NONE(json)
+mln_json_is_object(json)
+mln_json_is_array(json)
+mln_json_is_string(json)
+mln_json_is_number(json)
+mln_json_is_true(json)
+mln_json_is_false(json)
+mln_json_is_null(json)
+mln_json_is_none(json)
 ```
 
 Description: Determine the `json` type of the `mln_json_t` structure, which are: object, array, string, number, Boolean true, Boolean false, NULL, and no type.
@@ -297,14 +297,14 @@ Return value: Returns `non-0` if the conditions are met, otherwise returns `0`
 #### set_type
 
 ```c
-M_JSON_SET_TYPE_NONE(json)
-M_JSON_SET_TYPE_OBJECT(json)
-M_JSON_SET_TYPE_ARRAY(json)
-M_JSON_SET_TYPE_STRING(json)
-M_JSON_SET_TYPE_NUMBER(json)
-M_JSON_SET_TYPE_TRUE(json)
-M_JSON_SET_TYPE_FALSE(json)
-M_JSON_SET_TYPE_NULL(json)
+mln_json_none_type_set(json)
+mln_json_object_type_set(json)
+mln_json_array_type_set(json)
+mln_json_string_type_set(json)
+mln_json_number_type_set(json)
+mln_json_true_type_set(json)
+mln_json_false_type_set(json)
+mln_json_null_type_set(json)
 ```
 
 Description: Set the type for the `json` node of type `mln_json_t`, in order: no type, object, array, string, number, Boolean true, Boolean false, NULL.
@@ -316,13 +316,13 @@ Return value: None
 #### get_data
 
 ```c
-M_JSON_GET_DATA_OBJECT(json)
-M_JSON_GET_DATA_ARRAY(json)
-M_JSON_GET_DATA_STRING(json)
-M_JSON_GET_DATA_NUMBER(json)
-M_JSON_GET_DATA_TRUE(json)
-M_JSON_GET_DATA_FALSE(json)
-M_JSON_GET_DATA_NULL(json)
+mln_json_object_data_get(json)
+mln_json_array_data_get(json)
+mln_json_string_data_get(json)
+mln_json_number_data_get(json)
+mln_json_true_data_get(json)
+mln_json_false_data_get(json)
+mln_json_null_data_get(json)
 ```
 
 Description: Get the data part of the corresponding type in the `json` node of type `mln_json_t`. The types are: object, array, string, number, Boolean true, Boolean false, and NULL.
@@ -403,6 +403,7 @@ According to the format given by `fmt`, fill the subsequent arguments into `j`.
 - `n` - Indicates that a `null` is filled in at this position. This placeholder does not need to pass in the corresponding variable parameters.
 - `s` - Indicates that the variable parameter part is passed in a `char *` type string, such as `"Hello"`.
 - `S` - Indicates that the variable parameter part is passed in a `mln_string_t *` type string.
+- 'c' - Indicates that the variable parameter part is passed in a `struct mln_json_call_attr *` type structure. This structure contains two members `callback` and `data`. The meaning is: the value at this position is parsed by the function `callback` with user-defined `data`.
 
 Notes:
 
@@ -415,7 +416,7 @@ For example:
 mln_json_generate(&j, "[{s:d,s:d,s:{s:d}},d]", "a", 1, "b", 3, "c", "d", 4, 5);
 mln_string_t *res = mln_json_encode(&j);
 
-// 得到res中的内容为： [{"b":3,"c":{"d":4},"a":1},5]
+// The result is: [{"b":3,"c":{"d":4},"a":1},5]
 ```
 
 Return value:
@@ -467,6 +468,12 @@ Return value
 #include "mln_string.h"
 #include "mln_json.h"
 
+static int callback(mln_json_t *j, void *data)
+{
+    mln_json_number_init(j, *(int *)data);
+    return 0;
+}
+
 static int handler(mln_json_t *j, void *data)
 {
     mln_json_dump(j, 0, "");
@@ -476,6 +483,7 @@ static int handler(mln_json_t *j, void *data)
 int main(int argc, char *argv[])
 {
     mln_json_t j, k;
+    struct mln_json_call_attr ca;
     mln_string_t *res, exp = mln_string("protocols.0");
     mln_string_t tmp = mln_string("{\"paths\":[\"/mock\"],\"methods\":null,\"sources\":null,\"destinations\":null,\"name\":\"example_route\",\"headers\":null,\"hosts\":null,\"preserve_host\":false,\"regex_priority\":0,\"snis\":null,\"https_redirect_status_code\":426,\"tags\":null,\"protocols\":[\"http\",\"https\"],\"path_handling\":\"v0\",\"id\":\"52d58293-ae25-4c69-acc8-6dd729718a61\",\"updated_at\":1661345592,\"service\":{\"id\":\"c1e98b2b-6e77-476c-82ca-a5f1fb877e07\"},\"response_buffering\":true,\"strip_path\":true,\"request_buffering\":true,\"created_at\":1661345592}");
 
@@ -486,9 +494,12 @@ int main(int argc, char *argv[])
 
     mln_json_parse(&j, &exp, handler, NULL); //Get the first element of the array whose key is protocols in the JSON and hand it to the handler for processing
 
+    //Fill in user-defined data parsing structure
+    ca.callback = callback;
+    ca.data = &i;
     //Generate JSON structure using format characters
     mln_json_init(&k);//Uninitialized json variables must be initialized before mln_json_generate
-    if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j]", "a", 1, "b", 3, "c", "d", 4, 5,&j) < 0) {
+    if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j,c]", "a", 1, "b", 3, "c", "d", 4, 5, &j, &ca) < 0) {
         fprintf(stderr, "generate failed\n");
         return -1;
     }
@@ -513,7 +524,7 @@ The output of this example:
 
 ```
  type:string val:[http]
-[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}},"g",99]
+[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}},1024,"g",99]
 ```
 
 The first line is the output of `mln_dump` called in `handler`. The second line is the JSON string encoded by `mln_json_encode`.
@@ -527,8 +538,8 @@ The first line is the output of `mln_dump` called in `handler`. The second line 
 
 static int obj_iterator(mln_json_t *k, mln_json_t *v, void *data)
 {
-    mln_string_t *s = M_JSON_GET_DATA_STRING(k);
-    int i = (int)M_JSON_GET_DATA_NUMBER(v);
+    mln_string_t *s = mln_json_string_data_get(k);
+    int i = (int)mln_json_number_data_get(v);
     mln_log(none, "%S: %d\n", s, i);
     return 0;
 }

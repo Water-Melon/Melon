@@ -278,14 +278,14 @@ void mln_json_array_remove(mln_json_t *j, mln_uauto_t index);
 #### is_type
 
 ```c
-M_JSON_IS_OBJECT(json)
-M_JSON_IS_ARRAY(json)
-M_JSON_IS_STRING(json)
-M_JSON_IS_NUMBER(json)
-M_JSON_IS_TRUE(json)
-M_JSON_IS_FALSE(json)
-M_JSON_IS_NULL(json)
-M_JSON_IS_NONE(json)
+mln_json_is_object(json)
+mln_json_is_array(json)
+mln_json_is_string(json)
+mln_json_is_number(json)
+mln_json_is_true(json)
+mln_json_is_false(json)
+mln_json_is_null(json)
+mln_json_is_none(json)
 ```
 
 描述：判断`mln_json_t`结构的`json`类型，依次分别为：对象、数组、字符串、数字、布尔真、布尔假、NULL、无类型。
@@ -297,14 +297,14 @@ M_JSON_IS_NONE(json)
 #### set_type
 
 ```c
-M_JSON_SET_TYPE_NONE(json)
-M_JSON_SET_TYPE_OBJECT(json)
-M_JSON_SET_TYPE_ARRAY(json)
-M_JSON_SET_TYPE_STRING(json)
-M_JSON_SET_TYPE_NUMBER(json)
-M_JSON_SET_TYPE_TRUE(json)
-M_JSON_SET_TYPE_FALSE(json)
-M_JSON_SET_TYPE_NULL(json)
+mln_json_none_type_set(json)
+mln_json_object_type_set(json)
+mln_json_array_type_set(json)
+mln_json_string_type_set(json)
+mln_json_number_type_set(json)
+mln_json_true_type_set(json)
+mln_json_false_type_set(json)
+mln_json_null_type_set(json)
 ```
 
 描述：给`mln_json_t`类型的`json`节点设置类型，依次分别为：无类型、对象、数组、字符串、数字、布尔真、布尔假、NULL。
@@ -316,13 +316,13 @@ M_JSON_SET_TYPE_NULL(json)
 #### get_data
 
 ```c
-M_JSON_GET_DATA_OBJECT(json)
-M_JSON_GET_DATA_ARRAY(json)
-M_JSON_GET_DATA_STRING(json)
-M_JSON_GET_DATA_NUMBER(json)
-M_JSON_GET_DATA_TRUE(json)
-M_JSON_GET_DATA_FALSE(json)
-M_JSON_GET_DATA_NULL(json)
+mln_json_object_data_get(json)
+mln_json_array_data_get(json)
+mln_json_string_data_get(json)
+mln_json_number_data_get(json)
+mln_json_true_data_get(json)
+mln_json_false_data_get(json)
+mln_json_null_data_get(json)
 ```
 
 描述：获取`mln_json_t`类型的`json`节点中对应类型的数据部分。类型依次为：对象、数组、字符串、数字、布尔真、布尔假、NULL。
@@ -403,6 +403,7 @@ int mln_json_generate(mln_json_t *j, char *fmt, ...);
 - `n` - 表示这个位置填入一个`null`，这个占位符无需传入对应的可变参数
 - `s` - 表示可变参部分传入的是一个`char *`类型字符串，例如`"Hello"`
 - `S` - 表示可变参部分传入的是一个`mln_string_t *`类型字符串
+- 'c' - 表示可变参部分传入的是一个`struct mln_json_call_attr *`类型结构，这个结构包含两个成员`callback`和`data`，含义是：这个位置的值是由函数`callback`对`data`解析而来的
 
 这里有如下注意事项：
 
@@ -468,6 +469,12 @@ typedef int (*mln_json_array_iterator_t)(mln_json_t *, void *);
 #include "mln_string.h"
 #include "mln_json.h"
 
+static int callback(mln_json_t *j, void *data)
+{
+    mln_json_number_init(j, *(int *)data);
+    return 0;
+}
+
 static int handler(mln_json_t *j, void *data)
 {
     mln_json_dump(j, 0, "");
@@ -476,7 +483,9 @@ static int handler(mln_json_t *j, void *data)
 
 int main(int argc, char *argv[])
 {
+    int i = 1024;
     mln_json_t j, k;
+    struct mln_json_call_attr ca;
     mln_string_t *res, exp = mln_string("protocols.0");
     mln_string_t tmp = mln_string("{\"paths\":[\"/mock\"],\"methods\":null,\"sources\":null,\"destinations\":null,\"name\":\"example_route\",\"headers\":null,\"hosts\":null,\"preserve_host\":false,\"regex_priority\":0,\"snis\":null,\"https_redirect_status_code\":426,\"tags\":null,\"protocols\":[\"http\",\"https\"],\"path_handling\":\"v0\",\"id\":\"52d58293-ae25-4c69-acc8-6dd729718a61\",\"updated_at\":1661345592,\"service\":{\"id\":\"c1e98b2b-6e77-476c-82ca-a5f1fb877e07\"},\"response_buffering\":true,\"strip_path\":true,\"request_buffering\":true,\"created_at\":1661345592}");
 
@@ -487,9 +496,12 @@ int main(int argc, char *argv[])
 
     mln_json_parse(&j, &exp, handler, NULL); //获取该JSON中key为protocols的数组的第1个元素，并交给handler处理
 
+    //填充用户自定义数据解析结构
+    ca.callback = callback;
+    ca.data = &i;
     //利用格式符生成JSON结构
     mln_json_init(&k);//mln_json_generate前一定要对未初始化的json变量进行初始化
-    if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j]", "a", 1, "b", 3, "c", "d", 4, 5, &j) < 0) {
+    if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j,c]", "a", 1, "b", 3, "c", "d", 4, 5, &j, &ca) < 0) {
         fprintf(stderr, "generate failed\n");
         return -1;
     }
@@ -514,7 +526,7 @@ int main(int argc, char *argv[])
 
 ```
  type:string val:[http]
-[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}},"g",99]
+[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}},1024,"g",99]
 ```
 
 第一行为`handler`中的`mln_dump`输出，第二行为`mln_json_encode`生成的字符串。
@@ -528,8 +540,8 @@ int main(int argc, char *argv[])
 
 static int obj_iterator(mln_json_t *k, mln_json_t *v, void *data)
 {
-    mln_string_t *s = M_JSON_GET_DATA_STRING(k);
-    int i = (int)M_JSON_GET_DATA_NUMBER(v);
+    mln_string_t *s = mln_json_string_data_get(k);
+    int i = (int)mln_json_number_data_get(v);
     mln_log(none, "%S: %d\n", s, i);
     return 0;
 }

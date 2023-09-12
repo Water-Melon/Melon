@@ -80,7 +80,7 @@ int mln_json_obj_init(mln_json_t *j)
     struct mln_hash_attr hattr;
 
     mln_json_init(j);
-    M_JSON_SET_TYPE_OBJECT(j);
+    mln_json_object_type_set(j);
     hattr.pool = NULL;
     hattr.pool_alloc = NULL;
     hattr.pool_free = NULL;
@@ -103,7 +103,7 @@ static inline int __mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json
 {
     mln_json_kv_t *kv;
 
-    if (!M_JSON_IS_STRING(key) || !M_JSON_IS_OBJECT(j)) return -1;
+    if (!mln_json_is_string(key) || !mln_json_is_object(j)) return -1;
 
     kv = (mln_json_kv_t *)mln_hash_search(&(j->data.m_j_obj), key->data.m_j_string);
     if (kv == NULL) {
@@ -128,7 +128,7 @@ static inline int __mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json
 
 mln_json_t *mln_json_obj_search(mln_json_t *j, mln_string_t *key)
 {
-    if (!M_JSON_IS_OBJECT(j)) return NULL;
+    if (!mln_json_is_object(j)) return NULL;
 
     mln_hash_t *h = &(j->data.m_j_obj);
     mln_json_kv_t *kv = (mln_json_kv_t *)mln_hash_search(h, key);
@@ -137,7 +137,7 @@ mln_json_t *mln_json_obj_search(mln_json_t *j, mln_string_t *key)
 
 void mln_json_obj_remove(mln_json_t *j, mln_string_t *key)
 {
-    if (!M_JSON_IS_OBJECT(j)) return;
+    if (!mln_json_is_object(j)) return;
 
     mln_json_kv_t *kv;
     mln_hash_t *h = &(j->data.m_j_obj);
@@ -154,7 +154,7 @@ int mln_json_array_init(mln_json_t *j)
     struct mln_array_attr attr;
 
     mln_json_init(j);
-    M_JSON_SET_TYPE_ARRAY(j);
+    mln_json_array_type_set(j);
     attr.pool = NULL;
     attr.pool_alloc = NULL;
     attr.pool_free = NULL;
@@ -166,7 +166,7 @@ int mln_json_array_init(mln_json_t *j)
 
 mln_json_t *mln_json_array_search(mln_json_t *j, mln_uauto_t index)
 {
-    if (!M_JSON_IS_ARRAY(j)) return NULL;
+    if (!mln_json_is_array(j)) return NULL;
 
     mln_array_t *arr = &(j->data.m_j_array);
 
@@ -177,7 +177,7 @@ mln_json_t *mln_json_array_search(mln_json_t *j, mln_uauto_t index)
 
 mln_uauto_t mln_json_array_length(mln_json_t *j)
 {
-    if (!M_JSON_IS_ARRAY(j)) return 0;
+    if (!mln_json_is_array(j)) return 0;
     return mln_array_nelts(&(j->data.m_j_array));
 }
 
@@ -190,7 +190,7 @@ static inline int __mln_json_array_append(mln_json_t *j, mln_json_t *value)
 {
     mln_json_t *elem;
 
-    if (!M_JSON_IS_ARRAY(j)) return -1;
+    if (!mln_json_is_array(j)) return -1;
 
     if ((elem = (mln_json_t *)mln_array_push(&(j->data.m_j_array))) == NULL)
         return -1;
@@ -200,7 +200,7 @@ static inline int __mln_json_array_append(mln_json_t *j, mln_json_t *value)
 
 int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index)
 {
-    if (!M_JSON_IS_ARRAY(j)) return -1;
+    if (!mln_json_is_array(j)) return -1;
 
     mln_array_t *arr = &(j->data.m_j_array);
     if (index >= mln_array_nelts(arr)) return -1;
@@ -212,7 +212,7 @@ int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index)
 
 void mln_json_array_remove(mln_json_t *j, mln_uauto_t index)
 {
-    if (j == NULL || !M_JSON_IS_ARRAY(j)) return;
+    if (j == NULL || !mln_json_is_array(j)) return;
 
     mln_array_t *arr = &(j->data.m_j_array);
 
@@ -306,8 +306,8 @@ static int mln_json_dump_hash_iterate_handler(void *key, void *val, void *data)
 
     if (kv == NULL) return 0;
 
-    if (!M_JSON_IS_NONE(&(kv->key))) mln_json_dump(&(kv->key), *space, "Object key:");
-    if (!M_JSON_IS_NONE(&(kv->val))) mln_json_dump(&(kv->val), *space, "Object value:");
+    if (!mln_json_is_none(&(kv->key))) mln_json_dump(&(kv->key), *space, "Object key:");
+    if (!mln_json_is_none(&(kv->val))) mln_json_dump(&(kv->val), *space, "Object value:");
 
     return 0;
 }
@@ -328,7 +328,7 @@ int mln_json_decode(mln_string_t *jstr, mln_json_t *out)
         mln_json_destroy(out);
         return -1;
     }
-    if (!M_JSON_IS_OBJECT(out) && !M_JSON_IS_ARRAY(out)) {
+    if (!mln_json_is_object(out) && !mln_json_is_array(out)) {
         mln_json_destroy(out);
         return -1;
     }
@@ -395,7 +395,7 @@ again:
             mln_json_destroy(&v);
             return -1;
         }
-        if (!M_JSON_IS_STRING(&key)) {
+        if (!mln_json_is_string(&key)) {
             mln_json_destroy(&key);
             mln_json_destroy(&v);
             return -1;
@@ -1070,10 +1070,10 @@ int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterato
     if (arr == NULL) return -1;
 
     for (p = arr; p->len != 0; ++p) {
-        if (M_JSON_IS_OBJECT(j)) {
+        if (mln_json_is_object(j)) {
             j = mln_json_obj_search(j, p);
             if (j == NULL) goto err;
-        } else if (M_JSON_IS_ARRAY(j)) {
+        } else if (mln_json_is_array(j)) {
             if (!mln_json_parse_is_index(p, &idx)) goto err;
             j = mln_json_array_search(j, idx);
             if (j == NULL) goto err;
@@ -1134,9 +1134,10 @@ static inline int mln_json_obj_generate(mln_json_t *j, char **fmt, va_list *arg)
     mln_s64_t s64;
     mln_u64_t u64;
     double d;
+    struct mln_json_call_attr *ca;
 
-    if (M_JSON_IS_NONE(j) && mln_json_obj_init(j) < 0) return -1;
-    if (!M_JSON_IS_OBJECT(j)) return -1;
+    if (mln_json_is_none(j) && mln_json_obj_init(j) < 0) return -1;
+    if (!mln_json_is_object(j)) return -1;
     ++f;
 
 again:
@@ -1156,6 +1157,12 @@ again:
         {
             str = va_arg(*arg, mln_string_t *);
             mln_json_string_init(&k, mln_string_ref(str));
+            break;
+        }
+        case 'c':
+        {
+            ca = va_arg(*arg, struct mln_json_call_attr *);
+            if (ca->callback(&k, ca->data) < 0) goto err;
             break;
         }
         case '}':
@@ -1239,6 +1246,12 @@ again:
             mln_json_string_init(&v, mln_string_ref(str));
             break;
         }
+        case 'c':
+        {
+            ca = va_arg(*arg, struct mln_json_call_attr *);
+            if (ca->callback(&v, ca->data) < 0) goto err;
+            break;
+        }
         case '{':
             --f;
             if (mln_json_obj_generate(&v, &f, arg) < 0) goto err;
@@ -1288,9 +1301,10 @@ static inline int mln_json_array_generate(mln_json_t *j, char **fmt, va_list *ar
     mln_s64_t s64;
     mln_u64_t u64;
     double d;
+    struct mln_json_call_attr *ca;
 
-    if (M_JSON_IS_NONE(j) && mln_json_array_init(j) < 0) return -1;
-    if (!M_JSON_IS_ARRAY(j)) return -1;
+    if (mln_json_is_none(j) && mln_json_array_init(j) < 0) return -1;
+    if (!mln_json_is_array(j)) return -1;
     ++f;
 
 again:
@@ -1364,6 +1378,12 @@ again:
             mln_json_string_init(&v, mln_string_ref(str));
             break;
         }
+        case 'c':
+        {
+            ca = va_arg(*arg, struct mln_json_call_attr *);
+            if (ca->callback(&v, ca->data) < 0) goto err;
+            break;
+        }
         case ']':
         {
             goto out;
@@ -1407,12 +1427,12 @@ out:
 
 int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *data)
 {
-    if (!M_JSON_IS_OBJECT(j)) return -1;
+    if (!mln_json_is_object(j)) return -1;
 
     struct mln_json_tmp_s tmp;
     tmp.ptr1 = it;
     tmp.ptr2 = data;
-    return mln_hash_iterate(M_JSON_GET_DATA_OBJECT(j), (hash_iterate_handler)mln_json_object_iterator, &tmp);
+    return mln_hash_iterate(mln_json_object_data_get(j), (hash_iterate_handler)mln_json_object_iterator, &tmp);
 }
 
 static inline int mln_json_object_iterator(mln_string_t *key, mln_json_kv_t *kv, void *data)

@@ -1665,73 +1665,73 @@ Their definitions can be found in melon/include/mln_types.h.
         Remove an element from a JSON object.
         The type of 'j' must be M_JSON_ARRAY.
 
-     u) M_JSON_IS_OBJECT(json);
+     u) mln_json_is_object(json);
         Test whether the type of 'json' is M_JSON_OBJECT.
 
-     v) M_JSON_IS_ARRAY(json);
+     v) mln_json_is_array(json);
         Test whether the type of 'json' is M_JSON_ARRAY.
 
-     w) M_JSON_IS_STRING(json);
+     w) mln_json_is_string(json);
         Test whether the type of 'json' is M_JSON_STRING.
 
-     x) M_JSON_IS_NUMBER(json);
+     x) mln_json_is_number(json);
         Test whether the type of 'json' is M_JSON_NUM.
 
-     y) M_JSON_IS_TRUE(json);
+     y) mln_json_is_true(json);
         Test whether the type of 'json' is M_JSON_TRUE.
 
-     z) M_JSON_IS_FALSE(json);
+     z) mln_json_is_false(json);
         Test whether the type of 'json' is M_JSON_FALSE.
 
-     aa) M_JSON_IS_NULL(json);
+     aa) mln_json_is_null(json);
         Test whether the type of 'json' is M_JSON_NULL.
 
-     ab) M_JSON_IS_NONE(json);
+     ab) mln_json_is_none(json);
         Test whether the type of 'json' is M_JSON_NONE.
 
-     ac) M_JSON_GET_DATA_OBJECT(json);
+     ac) mln_json_object_data_get(json);
         Get the object hash table if the type of 'json' is M_JSON_OBJECT.
 
-     ad) M_JSON_GET_DATA_ARRAY(json);
+     ad) mln_json_array_data_get(json);
         Get the array red-black tree if the type of 'json' is M_JSON_ARRAY.
 
-     ae) M_JSON_GET_DATA_STRING(json);
+     ae) mln_json_string_data_get(json);
         Get the string if the type of 'json' is M_JSON_STRING.
 
-     af) M_JSON_GET_DATA_NUMBER(json);
+     af) mln_json_number_data_get(json);
         Get the number if the type of 'json' is M_JSON_NUM.
 
-     ag) M_JSON_GET_DATA_TRUE(json);
+     ag) mln_json_true_data_get(json);
         Get the binary flag of TRUE if the type of 'json' is M_JSON_TRUE.
 
-     ah) M_JSON_GET_DATA_FALSE(json);
+     ah) mln_json_false_data_get(json);
          Get the binary flag of FALSE if the type of 'json' is M_JSON_FALSE.
 
-     ai) M_JSON_GET_DATA_NULL(json);
+     ai) mln_json_null_data_get(json);
          Get the variable of NULL if the type of 'json' is M_JSON_NULL.
 
-     aj) M_JSON_SET_TYPE_NONE(json);
+     aj) mln_json_none_type_set(json);
          Set the type of 'json' to be M_JSON_NONE.
 
-     ak) M_JSON_SET_TYPE_OBJECT(json);
+     ak) mln_json_object_type_set(json);
          Set the type of 'json' to be M_JSON_OBJECT.
 
-     al) M_JSON_SET_TYPE_ARRAY(json);
+     al) mln_json_array_type_set(json);
          Set the type of 'json' to be M_JSON_ARRAY.
 
-     am) M_JSON_SET_TYPE_STRING(json);
+     am) mln_json_string_type_set(json);
          Set the type of 'json' to be M_JSON_STRING.
 
-     an) M_JSON_SET_TYPE_NUMBER(json);
+     an) mln_json_number_type_set(json);
          Set the type of 'json' to be M_JSON_NUM.
 
-     ao) M_JSON_SET_TYPE_TRUE(json);
+     ao) mln_json_true_type_set(json);
          Set the type of 'json' to be M_JSON_TRUE.
 
-     ap) M_JSON_SET_TYPE_FALSE(json);
+     ap) mln_json_false_type_set(json);
          Set the type of 'json' to be M_JSON_FALSE.
 
-     aq) M_JSON_SET_TYPE_NULL(json);
+     aq) mln_json_null_type_set(json);
          Set the type of 'json' to be M_JSON_NULL.
 
      ar) int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data);
@@ -1741,13 +1741,14 @@ Their definitions can be found in melon/include/mln_types.h.
 
      as) int mln_json_generate(mln_json_t *j, char *fmt, ...);
          Generate a JSON object which will be used to 'mln_json_encode'.
-         'fmt' supports: j, d, D, u, U, F, t, f, n, s, S.
+         'fmt' supports: j, d, D, u, U, F, t, f, n, s, S, c.
          If use 'S', string life cycle should be very careful, because its reference is used in 'j'.
+         'c' is user-defined call that allow user to parse a user-defined data into a 'mln_json_t'.
 
-     at) int mln_json_object_foreach(mln_json_t *j, mln_json_object_iterator_t it, void *data);
+     at) int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *data);
          Iterate and process each key-value in object 'j' with the handler 'it' and user data 'data'.
 
-     au) mln_json_array_foreach(j, it, data);
+     au) mln_json_array_iterate(j, it, data);
          Iterate and process each element in array 'j' with the handler 'it' and user data 'data'.
 
   23) Big Number

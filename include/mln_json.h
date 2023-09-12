@@ -21,6 +21,7 @@ typedef struct mln_json_s mln_json_t;
 typedef int (*mln_json_iterator_t)(mln_json_t *, void *);
 typedef int (*mln_json_object_iterator_t)(mln_json_t * /*key*/, mln_json_t * /*val*/, void *);
 typedef int (*mln_json_array_iterator_t)(mln_json_t *, void *);
+typedef mln_json_array_iterator_t mln_json_call_func_t;
 
 enum json_type {
     M_JSON_NONE = 0,
@@ -51,56 +52,61 @@ typedef struct {
     mln_json_t                   val;
 } mln_json_kv_t;
 
-#define M_JSON_IS_OBJECT(json)                 ((json)->type == M_JSON_OBJECT)
-#define M_JSON_IS_ARRAY(json)                  ((json)->type == M_JSON_ARRAY)
-#define M_JSON_IS_STRING(json)                 ((json)->type == M_JSON_STRING)
-#define M_JSON_IS_NUMBER(json)                 ((json)->type == M_JSON_NUM)
-#define M_JSON_IS_TRUE(json)                   ((json)->type == M_JSON_TRUE)
-#define M_JSON_IS_FALSE(json)                  ((json)->type == M_JSON_FALSE)
-#define M_JSON_IS_NULL(json)                   ((json)->type == M_JSON_NULL)
-#define M_JSON_IS_NONE(json)                   ((json)->type == M_JSON_NONE)
+struct mln_json_call_attr {
+    mln_json_call_func_t         callback;
+    void                        *data;
+};
 
-#define M_JSON_GET_DATA_OBJECT(json)           (&((json)->data.m_j_obj))
-#define M_JSON_GET_DATA_ARRAY(json)            (&((json)->data.m_j_array))
-#define M_JSON_GET_DATA_STRING(json)           ((json)->data.m_j_string)
-#define M_JSON_GET_DATA_NUMBER(json)           ((json)->data.m_j_number)
-#define M_JSON_GET_DATA_TRUE(json)             ((json)->data.m_j_true)
-#define M_JSON_GET_DATA_FALSE(json)            ((json)->data.m_j_false)
-#define M_JSON_GET_DATA_NULL(json)             ((json)->data.m_j_null)
+#define mln_json_is_object(json)                 ((json)->type == M_JSON_OBJECT)
+#define mln_json_is_array(json)                  ((json)->type == M_JSON_ARRAY)
+#define mln_json_is_string(json)                 ((json)->type == M_JSON_STRING)
+#define mln_json_is_number(json)                 ((json)->type == M_JSON_NUM)
+#define mln_json_is_true(json)                   ((json)->type == M_JSON_TRUE)
+#define mln_json_is_false(json)                  ((json)->type == M_JSON_FALSE)
+#define mln_json_is_null(json)                   ((json)->type == M_JSON_NULL)
+#define mln_json_is_none(json)                   ((json)->type == M_JSON_NONE)
 
-#define M_JSON_SET_TYPE_NONE(json)             (json)->type = M_JSON_NONE
-#define M_JSON_SET_TYPE_OBJECT(json)           (json)->type = M_JSON_OBJECT
-#define M_JSON_SET_TYPE_ARRAY(json)            (json)->type = M_JSON_ARRAY
-#define M_JSON_SET_TYPE_STRING(json)           (json)->type = M_JSON_STRING
-#define M_JSON_SET_TYPE_NUMBER(json)           (json)->type = M_JSON_NUM
-#define M_JSON_SET_TYPE_TRUE(json)             (json)->type = M_JSON_TRUE
-#define M_JSON_SET_TYPE_FALSE(json)            (json)->type = M_JSON_FALSE
-#define M_JSON_SET_TYPE_NULL(json)             (json)->type = M_JSON_NULL
+#define mln_json_object_data_get(json)           (&((json)->data.m_j_obj))
+#define mln_json_array_data_get(json)            (&((json)->data.m_j_array))
+#define mln_json_string_data_get(json)           ((json)->data.m_j_string)
+#define mln_json_number_data_get(json)           ((json)->data.m_j_number)
+#define mln_json_true_data_get(json)             ((json)->data.m_j_true)
+#define mln_json_false_data_get(json)            ((json)->data.m_j_false)
+#define mln_json_null_data_get(json)             ((json)->data.m_j_null)
 
-#define mln_json_init(j)                       M_JSON_SET_TYPE_NONE(j)
+#define mln_json_none_type_set(json)             (json)->type = M_JSON_NONE
+#define mln_json_object_type_set(json)           (json)->type = M_JSON_OBJECT
+#define mln_json_array_type_set(json)            (json)->type = M_JSON_ARRAY
+#define mln_json_string_type_set(json)           (json)->type = M_JSON_STRING
+#define mln_json_number_type_set(json)           (json)->type = M_JSON_NUM
+#define mln_json_true_type_set(json)             (json)->type = M_JSON_TRUE
+#define mln_json_false_type_set(json)            (json)->type = M_JSON_FALSE
+#define mln_json_null_type_set(json)             (json)->type = M_JSON_NULL
+
+#define mln_json_init(j)                       mln_json_none_type_set(j)
 #define mln_json_string_init(j, s)             ({\
     mln_json_t *json = (j);\
-    M_JSON_SET_TYPE_STRING(json);\
+    mln_json_string_type_set(json);\
     json->data.m_j_string = (s);\
 })
 #define mln_json_number_init(j, n)             ({\
     mln_json_t *json = (j);\
-    M_JSON_SET_TYPE_NUMBER(json);\
+    mln_json_number_type_set(json);\
     json->data.m_j_number = (double)(n);\
 })
 #define mln_json_true_init(j)                  ({\
     mln_json_t *json = (j);\
-    M_JSON_SET_TYPE_TRUE(json);\
+    mln_json_true_type_set(json);\
     json->data.m_j_true = 1;\
 })
 #define mln_json_false_init(j)                 ({\
     mln_json_t *json = (j);\
-    M_JSON_SET_TYPE_FALSE(json);\
+    mln_json_false_type_set(json);\
     json->data.m_j_false = 1;\
 })
 #define mln_json_null_init(j)                  ({\
     mln_json_t *json = (j);\
-    M_JSON_SET_TYPE_NULL(json);\
+    mln_json_null_type_set(json);\
     json->data.m_j_null = NULL;\
 })
 extern int mln_json_obj_init(mln_json_t *j) __NONNULL1(1);
@@ -109,7 +115,7 @@ extern void mln_json_destroy(mln_json_t *j);
 #define mln_json_reset(j)                      ({\
     mln_json_t *json = (j);\
     mln_json_destroy(json);\
-    M_JSON_SET_TYPE_NONE((json));\
+    mln_json_none_type_set((json));\
 })
 extern void mln_json_dump(mln_json_t *j, int n_space, char *prefix);
 extern int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val) __NONNULL3(1,2,3);
@@ -130,8 +136,8 @@ extern int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it,
     mln_json_t *json = (mln_json_t *)(j), *end;\
     mln_json_array_iterator_t iterator = (mln_json_array_iterator_t)(it);\
     int rc = -1;\
-    mln_array_t *a = M_JSON_GET_DATA_ARRAY(j);\
-    if (M_JSON_IS_ARRAY(json)) {\
+    mln_array_t *a = mln_json_array_data_get(j);\
+    if (mln_json_is_array(json)) {\
         json = mln_array_elts(a);\
         end = json + mln_array_nelts(a);\
         for (; json < end; ++json) {\
