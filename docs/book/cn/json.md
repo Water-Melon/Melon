@@ -456,7 +456,7 @@ typedef int (*mln_json_array_iterator_t)(mln_json_t *, void *);
 返回值：
 
 - `0` - 成功
-- `-1` - 失败
+- `非0` - 失败或者其他含义，`it`返回任何`非0`值都将中断对数组的遍历
 
 
 

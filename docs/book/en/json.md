@@ -455,7 +455,7 @@ Description: Traverse each element in the array `j`, and use `it` to process the
 Return value
 
 - `0` - Success
-- `-1` - failed
+- `non-zero` - Failed or other meaning. Any `non-zero` value returned by `it` will interrupt the traversal of the array
 
 
 

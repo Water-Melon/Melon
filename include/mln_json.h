@@ -142,7 +142,7 @@ extern int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it,
         end = json + mln_array_nelts(a);\
         for (; json < end; ++json) {\
             rc = iterator(json, data);\
-            if (rc < 0) break;\
+            if (rc) break;\
         }\
     }\
     rc;\
