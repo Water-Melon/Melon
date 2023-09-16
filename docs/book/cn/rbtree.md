@@ -491,9 +491,9 @@ int main(int argc, char *argv[])
     printf("%d\n", *((int *)mln_rbtree_node_data_get(rn)));
 
     mln_rbtree_delete(t, rn);
-    mln_rbtree_inline_node_free(t, rn, NULL); //inline node free
+    mln_rbtree_node_free(t, rn); //不能用mln_rbtree_inline_node_free，因为最后一个参数不能为NULL
 
-    mln_rbtree_inline_free(t, NULL); //inline free
+    mln_rbtree_free(t); //不能用mln_rbtree_inline_free，因为最后一个参数不能为NULL
 
     return 0;
 }

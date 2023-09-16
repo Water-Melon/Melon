@@ -453,7 +453,7 @@ Let's modify the example in the basic usage:
 #include <stdlib.h>
 #include "mln_rbtree.h"
 
-//inline declared
+//inline function
 static inline int cmp_handler(const void *data1, const void *data2)
 {
     return *(int *)data1 - *(int *)data2;
@@ -465,7 +465,7 @@ int main(int argc, char *argv[])
     mln_rbtree_t *t;
     mln_rbtree_node_t *rn;
 
-    if ((t = mln_rbtree_new(NULL)) == NULL) { //attr is NULL
+    if ((t = mln_rbtree_new(NULL)) == NULL) { //attr can be NULL
         fprintf(stderr, "rbtree init failed.\n");
         return -1;
     }
@@ -485,9 +485,9 @@ int main(int argc, char *argv[])
     printf("%d\n", *((int *)mln_rbtree_node_data_get(rn)));
 
     mln_rbtree_delete(t, rn);
-    mln_rbtree_inline_node_free(t, rn, NULL); //inline node free
+    mln_rbtree_node_free(t, rn); //cannot use mln_rbtree_inline_node_free cause the last argument can not be NULL
 
-    mln_rbtree_inline_free(t, NULL); //inline free
+    mln_rbtree_free(t); //mln_rbtree_inline_free cannot be used cause the last argument can not be NULL
 
     return 0;
 }
