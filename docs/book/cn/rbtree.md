@@ -380,7 +380,7 @@ int main(int argc, char *argv[])
 mln_rbtree_inline_insert(t, n, compare)
 ```
 
-描述：与`mln_rbtree_insert`功能一致。`compare`是基本用法中`struct mln_rbtree_attr`中的`cmp`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`compare`为`NULL`，则会试图获取红黑树`t`的`cmp`回调函数。
+描述：与`mln_rbtree_insert`功能一致。`compare`是基本用法中`struct mln_rbtree_attr`中的`cmp`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。
 
 返回值：与`mln_rbtree_insert`一样
 
@@ -392,7 +392,7 @@ mln_rbtree_inline_insert(t, n, compare)
 mln_rbtree_inline_search(t, key, compare)
 ```
 
-描述：与`mln_rbtree_search`功能一致。`compare`是基本用法中`struct mln_rbtree_attr`中的`cmp`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`compare`为`NULL`，则会试图获取红黑树`t`的`cmp`回调函数。
+描述：与`mln_rbtree_search`功能一致。`compare`是基本用法中`struct mln_rbtree_attr`中的`cmp`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。
 
 返回值：与`mln_rbtree_search`一样
 
@@ -404,7 +404,7 @@ mln_rbtree_inline_search(t, key, compare)
 mln_rbtree_inline_root_search(t, root, key, compare)
 ```
 
-描述：与`mln_rbtree_inline_search`的功能相似，差异仅是本操作是从指定树结点`root`开始进行搜索，而不仅仅只是整棵树的根结点。如果`compare`为`NULL`，则会试图获取红黑树`t`的`cmp`回调函数。
+描述：与`mln_rbtree_inline_search`的功能相似，差异仅是本操作是从指定树结点`root`开始进行搜索，而不仅仅只是整棵树的根结点。
 
 返回值：与`mln_rbtree_inline_search`一样
 
@@ -416,7 +416,7 @@ mln_rbtree_inline_root_search(t, root, key, compare)
 mln_rbtree_inline_node_free(t, n, freer)
 ```
 
-描述：与`mln_rbtree_node_free`功能一致。`freer`是基本用法中`struct mln_rbtree_attr`中的`data_free`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`freer`为`NULL`，则会试图获取红黑树`t`的`data_free`回调函数。
+描述：与`mln_rbtree_node_free`功能一致。`freer`是基本用法中`struct mln_rbtree_attr`中的`data_free`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。
 
 返回值：与`mln_rbtree_node_free`一样
 
@@ -428,7 +428,7 @@ mln_rbtree_inline_node_free(t, n, freer)
 mln_rbtree_inline_free(t, freer)
 ```
 
-描述：与`mln_rbtree_free`功能一致。`freer`是基本用法中`struct mln_rbtree_attr`中的`data_free`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`freer`为`NULL`，则会试图获取红黑树`t`的`data_free`回调函数。
+描述：与`mln_rbtree_free`功能一致。`freer`是基本用法中`struct mln_rbtree_attr`中的`data_free`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。
 
 返回值：与`mln_rbtree_free`一样
 
@@ -440,7 +440,7 @@ mln_rbtree_inline_free(t, freer)
 mln_rbtree_inline_reset(t, freer)
 ```
 
-描述：与`mln_rbtree_reset`功能一致。`freer`是基本用法中`struct mln_rbtree_attr`中的`data_free`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。如果`freer`为`NULL`，则会试图获取红黑树`t`的`data_free`回调函数。
+描述：与`mln_rbtree_reset`功能一致。`freer`是基本用法中`struct mln_rbtree_attr`中的`data_free`函数，但此时该函数可以被声明为`inline`，并在开启编译优化后被内联。
 
 返回值：与`mln_rbtree_reset`一样
 

@@ -374,7 +374,7 @@ The inline usage additionally provides a set of macro statement expressions to r
 mln_rbtree_inline_insert(t, n, compare)
 ```
 
-Description: Same as `mln_rbtree_insert`. `compare` is the `cmp` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline`, and it will be inlined after compiler optimization is turned on. If `compare` is `NULL`, it will try to get the `cmp` callback function of the red-black tree `t`.
+Description: Same as `mln_rbtree_insert`. `compare` is the `cmp` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline`, and it will be inlined after compiler optimization is turned on.
 
 Return value: same as `mln_rbtree_insert`
 
@@ -386,7 +386,7 @@ Return value: same as `mln_rbtree_insert`
 mln_rbtree_inline_search(t, key, compare)
 ```
 
-Description: Same as `mln_rbtree_search`. `compare` is the `cmp` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline`, and it will be inlined after compiler optimization is turned on. If `compare` is `NULL`, it will try to get the `cmp` callback function of the red-black tree `t`.
+Description: Same as `mln_rbtree_search`. `compare` is the `cmp` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline`, and it will be inlined after compiler optimization is turned on.
 
 Return value: same as `mln_rbtree_search`
 
@@ -398,7 +398,7 @@ Return value: same as `mln_rbtree_search`
 mln_rbtree_inline_root_search(t, root, key, compare)
 ```
 
-Description: Similar to the function of `mln_rbtree_inline_search`, the only difference is that this operation is to search from the specified tree node `root`, not just the root node of the entire tree. If `compare` is `NULL`, it will try to get the `cmp` callback function of the red-black tree `t`.
+Description: Similar to the function of `mln_rbtree_inline_search`, the only difference is that this operation is to search from the specified tree node `root`, not just the root node of the entire tree.
 
 Return value: same as `mln_rbtree_inline_search`
 
@@ -410,7 +410,7 @@ Return value: same as `mln_rbtree_inline_search`
 mln_rbtree_inline_node_free(t, n, freer)
 ```
 
-Description: Same as `mln_rbtree_node_free`. `freer` is the `data_free` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline` and be inlined after compiler optimization is turned on. If `freer` is `NULL`, it will try to get the `data_free` callback function of the red-black tree `t`.
+Description: Same as `mln_rbtree_node_free`. `freer` is the `data_free` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline` and be inlined after compiler optimization is turned on.
 
 Return value: same as `mln_rbtree_node_free`
 
@@ -422,7 +422,7 @@ Return value: same as `mln_rbtree_node_free`
 mln_rbtree_inline_free(t, freer)
 ```
 
-Description: Same as `mln_rbtree_free`. `freer` is the `data_free` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline` and be inlined after compiler optimization is turned on. If `freer` is `NULL`, it will try to get the `data_free` callback function of the red-black tree `t`.
+Description: Same as `mln_rbtree_free`. `freer` is the `data_free` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline` and be inlined after compiler optimization is turned on.
 
 Return value: same as `mln_rbtree_free`
 
@@ -434,7 +434,7 @@ Return value: same as `mln_rbtree_free`
 mln_rbtree_inline_reset(t, freer)
 ```
 
-Description: Same as `mln_rbtree_reset`. `freer` is the `data_free` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline` and be inlined after compiler optimization is turned on. If `freer` is `NULL`, it will try to get the `data_free` callback function of the red-black tree `t`.
+Description: Same as `mln_rbtree_reset`. `freer` is the `data_free` function in `struct mln_rbtree_attr` in the basic usage, but at this time the function can be declared as `inline` and be inlined after compiler optimization is turned on.
 
 Return value: same as `mln_rbtree_reset`
 

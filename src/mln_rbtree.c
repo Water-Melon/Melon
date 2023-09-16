@@ -57,25 +57,66 @@ mln_rbtree_new(struct mln_rbtree_attr *attr)
 /*rbtree free*/
 void mln_rbtree_free(mln_rbtree_t *t)
 {
-    mln_rbtree_inline_free(t, NULL);
+    if (t == NULL) return;
+
+    mln_rbtree_node_t *fr;
+    while ((fr = t->tail) != NULL) {
+        mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
+        mln_rbtree_inline_node_free(t, fr, t->data_free);
+    }
+    if (t->pool != NULL) t->pool_free(t);
+    else free(t);
 }
 
 /*rbtree reset*/
 void mln_rbtree_reset(mln_rbtree_t *t)
 {
-    mln_rbtree_inline_reset(t, NULL);
+    mln_rbtree_node_t *fr;
+    while ((fr = t->tail) != NULL) {
+        mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
+        mln_rbtree_inline_node_free(t, fr, t->data_free);
+    }
+    t->root = &(t->nil);
+    t->min = &(t->nil);
+    t->iter = NULL;
+    t->nr_node = 0;
+    t->del = 0;
 }
 
 /*rbtree insert*/
 void mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *node)
 {
-    mln_rbtree_inline_insert(t, node, NULL);
+    mln_rbtree_node_t *y = &(t->nil);
+    mln_rbtree_node_t *x = t->root;
+    mln_rbtree_node_t *nil = &(t->nil);
+    while (x != nil) {
+        y = x;
+        if (t->cmp(node->data, x->data) < 0) x = x->left;
+        else x = x->right;
+    }
+    node->parent = y;
+    if (y == nil) t->root = node;
+    else if (t->cmp(node->data, y->data) < 0) y->left = node;
+    else y->right = node;
+    node->left = node->right = nil;
+    node->color = M_RB_RED;
+    rbtree_insert_fixup(t, node);
+    if (t->min == nil) t->min = node;
+    else if (t->cmp(node->data, t->min->data) < 0) t->min = node;
+    ++(t->nr_node);
+    mln_rbtree_chain_add(&(t->head), &(t->tail), node);
 }
 
 /*rbtree search*/
 mln_rbtree_node_t *mln_rbtree_search(mln_rbtree_t *t, void *key)
 {
-    return mln_rbtree_inline_search(t, key, NULL);
+    mln_rbtree_node_t *ret_node = t->root;
+    int ret;
+    while ((ret_node != &(t->nil)) && ((ret = t->cmp(key, ret_node->data)) != 0)) {
+        if (ret < 0) ret_node = ret_node->left;
+        else ret_node = ret_node->right;
+    }
+    return ret_node;
 }
 
 /*rbtree successor*/
@@ -110,7 +151,13 @@ mln_rbtree_node_new(mln_rbtree_t *t, void *data)
 /*rbtree node free*/
 void mln_rbtree_node_free(mln_rbtree_t *t, mln_rbtree_node_t *n)
 {
-    mln_rbtree_inline_node_free(t, n, NULL);
+    mln_u32_t nofree = n->nofree;
+    if (n->data != NULL && t->data_free != NULL)
+        t->data_free(n->data);
+    if (!nofree) {
+        if (t->pool != NULL) t->pool_free(n);
+        else free(n);
+    }
 }
 
 /*Tree Minimum*/

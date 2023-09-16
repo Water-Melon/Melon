@@ -160,7 +160,7 @@ err4:
 err3:
     mln_fheap_inline_free(ev->ev_fd_timeout_heap, mln_event_fd_timeout_cmp, NULL);
 err2:
-    mln_rbtree_inline_free(ev->ev_fd_tree, NULL);
+    mln_rbtree_free(ev->ev_fd_tree);
 err1:
     free(ev);
     return NULL;
@@ -171,7 +171,7 @@ void mln_event_free(mln_event_t *ev)
     if (ev == NULL) return;
     mln_event_desc_t *ed;
     mln_fheap_inline_free(ev->ev_fd_timeout_heap, mln_event_fd_timeout_cmp, NULL);
-    mln_rbtree_inline_free(ev->ev_fd_tree, NULL);
+    mln_rbtree_free(ev->ev_fd_tree);
     while ((ed = ev->ev_fd_wait_head) != NULL) {
         ev_fd_wait_chain_del(&(ev->ev_fd_wait_head), \
                              &(ev->ev_fd_wait_tail), \
@@ -682,7 +682,7 @@ mln_event_fd_clr_set(mln_event_t *event, int fd)
         return;
     }
     mln_rbtree_delete(event->ev_fd_tree, rn);
-    mln_rbtree_inline_node_free(event->ev_fd_tree, rn, NULL);
+    mln_rbtree_node_free(event->ev_fd_tree, rn);
     if (ed->data.fd.in_active) {
         ev_fd_active_chain_del(&(event->ev_fd_active_head), \
                                &(event->ev_fd_active_tail), \

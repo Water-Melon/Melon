@@ -8,8 +8,8 @@
 
 #include <stdlib.h>
 #include "mln_string.h"
-#include "mln_hash.h"
 #include "mln_array.h"
+#include "mln_rbtree.h"
 
 #define M_JSON_LEN              31
 
@@ -37,8 +37,8 @@ enum json_type {
 struct mln_json_s {
     enum json_type               type;
     union {
-        mln_hash_t        m_j_obj;
-        mln_array_t       m_j_array;
+        mln_rbtree_t     *m_j_obj;
+        mln_array_t      *m_j_array;
         mln_string_t     *m_j_string;
         double            m_j_number;
         mln_u8_t          m_j_true;
@@ -50,6 +50,7 @@ struct mln_json_s {
 typedef struct {
     mln_json_t                   key;
     mln_json_t                   val;
+    mln_rbtree_node_t            node;
 } mln_json_kv_t;
 
 struct mln_json_call_attr {
@@ -66,8 +67,8 @@ struct mln_json_call_attr {
 #define mln_json_is_null(json)                   ((json)->type == M_JSON_NULL)
 #define mln_json_is_none(json)                   ((json)->type == M_JSON_NONE)
 
-#define mln_json_object_data_get(json)           (&((json)->data.m_j_obj))
-#define mln_json_array_data_get(json)            (&((json)->data.m_j_array))
+#define mln_json_object_data_get(json)           ((json)->data.m_j_obj)
+#define mln_json_array_data_get(json)            ((json)->data.m_j_array)
 #define mln_json_string_data_get(json)           ((json)->data.m_j_string)
 #define mln_json_number_data_get(json)           ((json)->data.m_j_number)
 #define mln_json_true_data_get(json)             ((json)->data.m_j_true)
