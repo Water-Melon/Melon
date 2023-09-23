@@ -7,7 +7,7 @@ The spinlock in Melon will use different implementations according to different 
 ### Header file
 
 ```c
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include "mln_types.h"
 ```
 
@@ -84,7 +84,7 @@ Return value: none
 his is only to show the use, and the rationality of the example single thread is not considered for the time being.
 
 ```c
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include "mln_types.h"
 
 int main(int argc, char *argv[])

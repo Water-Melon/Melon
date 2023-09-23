@@ -4,7 +4,7 @@
  */
 
 #include "mln_list.h"
-#include "mln_defs.h"
+#include "mln_utils.h"
 
 MLN_CHAIN_FUNC_DECLARE(mln_list, mln_list_t, static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_list, mln_list_t, static inline void, prev, next);

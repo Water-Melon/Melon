@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "mln_connection.h"
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include "mln_file.h"
 #if defined(MLN_WRITEV)
 #include <sys/uio.h>

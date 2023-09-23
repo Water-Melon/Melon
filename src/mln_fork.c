@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include "mln_fork.h"
 #include "mln_rbtree.h"
 #include "mln_log.h"

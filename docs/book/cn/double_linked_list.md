@@ -10,7 +10,7 @@ Melon中有两个双向链表实现，读者可自行选用所需的一种。下
 ### 头文件
 
 ```c
-#include "mln_defs.h"
+#include "mln_utils.h"
 ```
 
 
@@ -64,7 +64,7 @@ ret_attr prefix##_chain_del(type **head, type **tail, type *node);
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_defs.h"
+#include "mln_utils.h"
 
 typedef struct chain_s {
   int             val;
@@ -204,7 +204,7 @@ mln_list_null()
 
 ```c
 #include "mln_list.h"
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include <stdlib.h>
 
 typedef struct {
@@ -235,5 +235,5 @@ int main(void)
 }
 ```
 
-这里使用了`mln_defs.h`中定义的`mln_container_of`来获取链结点所属的自定义结构体`test_t`的指针。
+这里使用了`mln_utils.h`中定义的`mln_container_of`来获取链结点所属的自定义结构体`test_t`的指针。
 

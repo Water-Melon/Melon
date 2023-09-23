@@ -5,7 +5,7 @@
 #ifndef __MLN_ERROR_H
 #define __MLN_ERROR_H
 
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include "mln_string.h"
 
 extern mln_string_t *mln_error_filenames;

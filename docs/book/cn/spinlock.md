@@ -7,7 +7,7 @@ Melon中的自旋锁会根据不同编译器和不同CPU架构选用不同的实
 ### 头文件
 
 ```c
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include "mln_types.h"
 ```
 
@@ -84,7 +84,7 @@ mln_spin_unlock(lock_ptr)
 这里仅展示使用，暂不考虑示例单线程合理性。
 
 ```c
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include "mln_types.h"
 
 int main(int argc, char *argv[])

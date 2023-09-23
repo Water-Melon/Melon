@@ -4,7 +4,7 @@
  */
 
 #include "mln_alloc.h"
-#include "mln_defs.h"
+#include "mln_utils.h"
 
 
 MLN_CHAIN_FUNC_DECLARE(mln_blk, \

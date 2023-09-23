@@ -196,7 +196,7 @@ return value:
 
 - `M_WS_RET_ERROR` data is wrong
 - `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
-- `M_WS_RET_OK` succeeded
+- `M_WS_RET_OK` on success
 
 
 
@@ -218,7 +218,7 @@ return value:
 
 - `M_WS_RET_ERROR` data is wrong
 - `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
-- `M_WS_RET_OK` succeeded
+- `M_WS_RET_OK` on success
 
 
 
@@ -256,7 +256,7 @@ return value:
 
 - `M_WS_RET_ERROR` data is wrong
 - `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
-- `M_WS_RET_OK` succeeded
+- `M_WS_RET_OK` on success
 
 
 
@@ -278,7 +278,7 @@ return value:
 
 - `M_WS_RET_ERROR` data is wrong
 - `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
-- `M_WS_RET_OK` succeeded
+- `M_WS_RET_OK` on success
 
 
 
@@ -300,7 +300,7 @@ return value:
 
 - `M_WS_RET_ERROR` data is wrong
 - `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
-- `M_WS_RET_OK` succeeded
+- `M_WS_RET_OK` on success
 
 
 
@@ -316,7 +316,7 @@ return value:
 
 - `M_WS_RET_ERROR` data is wrong
 - `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
-- `M_WS_RET_OK` succeeded
+- `M_WS_RET_OK` on success
 
 
 
@@ -333,7 +333,7 @@ return value:
 - `M_WS_RET_ERROR` message error
 - `M_WS_RET_OK` parsed successfully
 - `M_WS_RET_FAILED` failed to parse, such as out of memory, etc.
-- `M_WS_RET_NOTYET` succeeded but the data is incomplete and needs to continue processing
+- `M_WS_RET_NOTYET` successful but the data is incomplete and needs to continue processing
 
 
 

@@ -11,7 +11,7 @@
 #include "mln_file.h"
 #include "mln_rbtree.h"
 #include "mln_lang_ast.h"
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include "mln_gc.h"
 #include "mln_alloc.h"
 #include "mln_array.h"

@@ -9,7 +9,7 @@ There are two doubly linked list implementations in Melon. We introduce them res
 ### Header file
 
 ```c
-#include "mln_defs.h"
+#include "mln_utils.h"
 ```
 
 
@@ -63,7 +63,7 @@ Description: This macro is used to define the insert and remove operation functi
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include "mln_defs.h"
+#include "mln_utils.h"
 
 typedef struct chain_s {
   int             val;
@@ -203,7 +203,7 @@ Return value: None
 
 ```c
 #include "mln_list.h"
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include <stdlib.h>
 
 typedef struct {
@@ -234,4 +234,4 @@ int main(void)
 }
 ```
 
-Here, `mln_container_of` defined in `mln_defs.h` is used to obtain the pointer of the custom structure `test_t` to which the link point belongs.
+Here, `mln_container_of` defined in `mln_utils.h` is used to obtain the pointer of the custom structure `test_t` to which the link point belongs.

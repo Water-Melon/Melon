@@ -342,7 +342,7 @@ Their definitions can be found in melon/include/mln_types.h.
     j) int mln_fheap_decrease_key(mln_fheap_t *fh, mln_fheap_node_t *node, void *key);
        It decreases the key's value of the specified node to the key.
        The type of key must be identical with the type of keys in heap nodes.
-       The return value is: -1 - key error, 0 - succeed.
+       The return value is: -1 - key error, 0 - on success.
 
     k) mln_fheap_inline_insert(fh, fn, compare)
        Inline version of 'mln_fheap_insert'. 'compare' is the callback function 'cmp' in 'attr'.

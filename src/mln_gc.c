@@ -3,7 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_gc.h"
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include <stdlib.h>
 #include <stdio.h>
 

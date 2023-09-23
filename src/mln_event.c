@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
-#include "mln_defs.h"
+#include "mln_utils.h"
 #include "mln_event.h"
 #include "mln_global.h"
 #if !defined(WIN32)

@@ -8,7 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
-#include "mln_defs.h"
+#include "mln_utils.h"
 
 /*
  * There is a problem in linux.

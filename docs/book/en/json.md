@@ -373,7 +373,7 @@ The content of `exp` is as follows:
 
 Return value：
 
-- `0` - succeed
+- `0` - on success
 - `-1` - failed
 
 
@@ -421,7 +421,7 @@ mln_string_t *res = mln_json_encode(&j);
 
 Return value:
 
-- `0` - succeed
+- `0` - on success
 - `-1` - failed
 
 

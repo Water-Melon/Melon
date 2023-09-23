@@ -407,7 +407,7 @@ mln_lex_init_with_hooks(PREFIX_NAME,lex_ptr,attr_ptr)
 
 Description: This macro encapsulates the `mln_lex_init` function, which avoids the process of manually writing code to complete custom preprocessing, callback functions, etc.
 
-Return value: There is no return value, but it is necessary to judge whether `lex_ptr` is `NULL` after use, `NULL` indicates failure, otherwise it succeeds.
+Return value: There is no return value, but it should be checked whether `lex_ptr` is `NULL` after called. `NULL` on failed, otherwise on success.
 
 
 

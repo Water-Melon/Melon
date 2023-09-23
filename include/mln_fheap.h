@@ -313,7 +313,7 @@ mln_fheap_insert(mln_fheap_t *fh, mln_fheap_node_t *fn) __NONNULL2(1,2);
 extern mln_fheap_node_t *
 mln_fheap_extract_min(mln_fheap_t *fh) __NONNULL1(1);
 /*
- * return value: -1 - key error   0 - succeed
+ * return value: -1 - key error   0 - on success
  */
 extern int
 mln_fheap_decrease_key(mln_fheap_t *fh, mln_fheap_node_t *node, void *key) __NONNULL3(1,2,3);
