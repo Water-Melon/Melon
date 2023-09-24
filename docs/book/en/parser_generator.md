@@ -14,6 +14,12 @@ A simple usage example will be given later. For a more complete application, ple
 
 
 
+### Module
+
+`parser_generator`
+
+
+
 ### Functions/Macros
 
 

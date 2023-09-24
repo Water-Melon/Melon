@@ -14,6 +14,12 @@ There are two doubly linked list implementations in Melon. We introduce them res
 
 
 
+### Module
+
+`utils`
+
+
+
 ### Functions/Macros
 
 
@@ -108,6 +114,12 @@ int main(void)
 ```
 
 Besides functions and macros, we only need to know that if we want to use the doubly linked list, we have to add a `mln_list_t` member (not a pointer) to the custom structure.
+
+
+
+### Module
+
+`list`
 
 
 

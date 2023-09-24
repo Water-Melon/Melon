@@ -12,6 +12,12 @@ This article will introduce how to develop a dynamic extension library for scrip
 
 
 
+### Module
+
+`lang`
+
+
+
 ### Development steps
 
 The development steps of dynamic extension library is as follows:

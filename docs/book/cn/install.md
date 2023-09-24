@@ -39,6 +39,8 @@ $ sudo make install
 
 - `--olevel=[O|O1|O2|O3|...]` 编译优化的级别，默认是`O3`。如果`=`后不写内容则为不开启优化
 
+- `--select=[all | module1,module2,...]` 选择性编译部分模块，默认为`all`表示编译全部模块。模块名称可在各模块文档中给出。
+
 - `--help` 显示`configure`脚本的帮助信息
 
 

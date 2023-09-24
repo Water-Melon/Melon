@@ -2,6 +2,20 @@
 
 
 
+### Header file
+
+```c
+#include "mln_ipc.h"
+```
+
+
+
+### Module
+
+`ipc`
+
+
+
 **Note**: This function is temporarily not supported under Windows.
 
 Melon supports a multi-process framework, so naturally there will be communication issues between the main and sub-processes, and this part is handled by IPC.

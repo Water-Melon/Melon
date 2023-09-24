@@ -18,6 +18,12 @@ In the red-black tree component, there are two usage modes:
 
 
 
+### Module
+
+`rbtree`
+
+
+
 ### Structures
 
 In the red-black tree component, users do not need to learn the tree and node structure, but only need to use the functions or macros provided by this component to obtain the corresponding information.

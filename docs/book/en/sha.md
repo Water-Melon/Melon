@@ -10,6 +10,12 @@
 
 
 
+### Module
+
+`sha`
+
+
+
 ### Functions
 
 

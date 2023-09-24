@@ -91,6 +91,8 @@ make
 make install
 ```
 
+For more `configure` options, please refer to [Official Document: Installation](http://doc.melonc.io/en/install.html).
+
 
 
 ### License

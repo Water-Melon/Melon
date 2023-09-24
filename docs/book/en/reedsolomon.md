@@ -10,6 +10,12 @@
 
 
 
+### Module
+
+`rs`
+
+
+
 ### Functions/Macros
 
 

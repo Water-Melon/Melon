@@ -10,6 +10,12 @@
 
 
 
+### Module
+
+`base64`
+
+
+
 ### Functions
 
 

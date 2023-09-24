@@ -10,6 +10,12 @@ mln_string.h
 
 
 
+### Module
+
+`string`
+
+
+
 ### Structure
 
 ```c

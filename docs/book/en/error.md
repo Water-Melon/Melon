@@ -21,6 +21,12 @@ When this limit is exceeded, the program will not generate any exception or repo
 
 
 
+### Module
+
+`error`
+
+
+
 ### Functions/Macros
 
 

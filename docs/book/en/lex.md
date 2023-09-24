@@ -12,6 +12,12 @@ The lexical analyzer can extract the morphemes in the text according to certain 
 
 
 
+### Module
+
+`lex`
+
+
+
 ### Structures
 
 ```c

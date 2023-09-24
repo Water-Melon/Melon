@@ -18,6 +18,12 @@ Similar to the red-black tree component, the Fibonacci heap component has three 
 
 
 
+### Module
+
+`fheap`
+
+
+
 ### Data Structures
 
 The Fibonacci heap and its heap node structure are used internally by the component. Developers don't need to care about the composition of these two data structures. Just use the functions/macros provided in this chapter to operate the heap and nodes.

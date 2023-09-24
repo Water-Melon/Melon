@@ -10,6 +10,12 @@
 
 
 
+### Module
+
+`hash`
+
+
+
 ### Structure
 
 ```c

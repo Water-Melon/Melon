@@ -39,6 +39,8 @@ Shell script `configure` has the following parameters:
 
 - `--olevel=[O|O1|O2|O3|...]` The level of compilation optimization, the default is `O3`. The optimization is disabled if no content after `=`.
 
+- `--select=[all | module1,module2,...]` Selectively compile some modules. The default is `all` which means compiling all modules. Module names can be given in the document for each module.
+
 - `--help` Show help information
 
 
