@@ -42,6 +42,9 @@ debug=0
 #optimization level
 olevel='-O3'
 
+#selected source files
+select_files='all'
+
 #get all parameters
 for param in $@
 do
@@ -56,6 +59,7 @@ do
         echo -e "\t--enable-wasm"
         echo -e "\t--debug"
         echo -e "\t--olevel=O|O1|O2|O3"
+        echo -e "\t--select=[all|module1,module2,...]"
         exit 0
     fi
     param_prefix=`echo $param|cut -d '=' -f 1`
@@ -72,6 +76,8 @@ do
         wasm=1
     elif [ $param_prefix == "--debug" ]; then
         debug=1
+    elif [ $param_prefix == "--select" ]; then
+        select_files=$param_suffix
     elif [ $param_prefix == "--olevel" ]; then
         if [ -z $param_suffix ]; then
             olevel=''
@@ -201,6 +207,47 @@ echo "}" >> src/mln_path.c
 
 
 #  build makefile content
+get_source_files() {
+    files=()
+    if [ $1 = 'all' ]; then
+        for f in `find src/ -name "*.c"`
+        do
+            files+=$f" "
+        done
+    else
+        old_ifs=$IFS
+        IFS=','
+        for f in $select_files
+        do
+            IFS=$old_ifs
+            fname='mln_'$f'.c'
+            fname=`find src/ -name $fname`
+            if [ -z $fname ]; then
+                echo "[$f] not found"
+                exit 1
+            fi
+            files+=$fname" "
+            for header in `cpp -MM -MG $fname 2> /dev/null`
+            do
+                suffix=`echo $header | cut -d '.' -f 2`
+                if [ $suffix == 'h' ]; then
+                    source_file=`echo $header | cut -d '.' -f 1`'.c'
+                    source_file=`find src/ -name $source_file`
+                    if [ ! -z $source_file ]; then
+                        if [[ ! "${files[@]}" =~ $source_file ]]; then
+                            files+=$source_file" "
+                        fi
+                    fi
+                fi
+            done
+        done
+        IFS=$old_ifs
+    fi
+    select_files=$files
+}
+
+get_source_files $select_files
+
 echo "# " > Makefile
 echo "# Copyright (C) Niklaus F.Schen." >> Makefile
 echo "# " >> Makefile
@@ -225,22 +272,14 @@ else
     fi
     echo -e "MELONA\t\t= libmelon.a" >> Makefile
 fi
+
 echo -e "OBJS\t\t= \\" >> Makefile
-hasDot=`ls -l src/|grep "\.\."`
-cnt=2
-if [ -z $hasDot ]; then
-  cnt=0
-fi
-sum=`ls -l src/|wc -l`
-for path in `find . -name "*.c"`
+for fname in ${select_files[@]}
 do
-        fname=`basename $path`
+    fname=`basename $fname`
     objname=`echo $fname | cut -d '.' -f 1`".o"
     echo -n "        objs/"$objname >> Makefile
-    if [ $cnt -lt $sum ]; then
-        echo " \\" >> Makefile
-    fi
-    let cnt+=1 > /dev/null
+    echo " \\" >> Makefile
 done
 echo "" >> Makefile
 
@@ -282,8 +321,7 @@ echo -e "\tcp -fr include $install_path" >> Makefile
 echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
 echo -e "\ttest -d $melang_script_path/trace || cp -fr trace $melang_script_path" >> Makefile
 
-
-for fname in `find . -name "*.c"`
+for fname in ${select_files[@]}
 do
     objname=`basename $fname | cut -d '.' -f 1`".o"
     echo -n "objs/$objname :" >> Makefile
