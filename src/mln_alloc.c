@@ -5,6 +5,8 @@
 
 #include "mln_alloc.h"
 #include "mln_utils.h"
+#include <stdlib.h>
+#include <string.h>
 
 
 MLN_CHAIN_FUNC_DECLARE(mln_blk, \
@@ -119,8 +121,12 @@ mln_alloc_t *mln_alloc_shm_init(struct mln_alloc_shm_attr_s *attr)
     pool->map_handle = handle;
 #else
 
+#if defined(MLN_MMAP)
     pool = (mln_alloc_t *)mmap(NULL, attr->size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0);
     if (pool == NULL) return NULL;
+#else
+    return NULL;
+#endif
 #endif
     pool->parent = NULL;
     pool->large_used_head = pool->large_used_tail = NULL;
@@ -219,7 +225,9 @@ void mln_alloc_destroy(mln_alloc_t *pool)
         UnmapViewOfFile(pool->mem);
         CloseHandle(handle);
 #else
+#if defined(MLN_MMAP)
         munmap(pool->mem, pool->shm_size);
+#endif
 #endif
     }
     if (parent != NULL && mln_alloc_is_shm(parent))

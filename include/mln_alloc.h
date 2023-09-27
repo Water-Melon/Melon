@@ -12,9 +12,6 @@
 #else
 #include <sys/mman.h>
 #endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "mln_types.h"
 
 typedef int (*mln_alloc_shm_lock_cb_t)(void *);
