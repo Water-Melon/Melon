@@ -46,7 +46,7 @@ return value:
 
 - `0` is an exact match
 - `>0` the number of results matched
-- `<0` failed to execute, possibly due to insufficient memory
+- `<0` execute failed, possibly due to insufficient memory
 
 
 

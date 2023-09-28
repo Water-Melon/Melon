@@ -70,8 +70,8 @@ Description: Send a message with message type `type` and message data `data` to 
 
 Return value:
 
-- `0` - success
-- `-1` - failed
+- `0` - on success
+- `-1` - on failure
 - `1` - send buffer full
 
 

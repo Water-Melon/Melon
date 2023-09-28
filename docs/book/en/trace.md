@@ -47,8 +47,8 @@ mln_trace(fmt, ...);
 Description: Send some data to the specified processing script. The parameters here are exactly the same as `fmt` and its variable parameters of the `mln_lang_ctx_pipe_send` function ([see this chapter for details](https://water-melon.github.io/Melon/en/melang.html)), Because the inside of this macro is to call the function to complete the message delivery.
 
 return value:
-- `0` - success
-- `-1` - failed
+- `0` - on success
+- `-1` - on failure
 
 
 
@@ -82,8 +82,8 @@ If the tracing script is successfully initialized in the main process, a global 
 
 return value:
 
-- `0` - success
-- `-1` - failed
+- `0` - on success
+- `-1` - on failure
 
 
 

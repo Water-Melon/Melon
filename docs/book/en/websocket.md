@@ -122,7 +122,7 @@ Description: Set the HTTP header for the first interaction of the websocket. If 
 
 return value:
 
-- `M_WS_RET_FAILED` failed
+- `M_WS_RET_FAILED` on failure
 - `M_WS_RET_OK` on success
 
 
@@ -149,7 +149,7 @@ Description: Compare the header fields in the websocket with the header fields i
 
 return value:
 
-- `M_WS_RET_ERROR` failed
+- `M_WS_RET_ERROR` on failure
 - `M_WS_RET_OK` on success
 
 
@@ -164,7 +164,7 @@ Description: Generate a websocket handshake response message, the content of the
 
 return value:
 
-- `M_WS_RET_FAILED` failed
+- `M_WS_RET_FAILED` on failure
 - `M_WS_RET_OK` on success
 
 
@@ -179,7 +179,7 @@ Description: Generate a websocket handshake request message, the content of the 
 
 return value:
 
-- `M_WS_RET_FAILED` failed
+- `M_WS_RET_FAILED` on failure
 - `M_WS_RET_OK` on success
 
 
@@ -201,7 +201,7 @@ Description: Generates a text data frame. `out_cnode` is the generated frame dat
 return value:
 
 - `M_WS_RET_ERROR` data is wrong
-- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_FAILED` on failure, e.g. out of memory, etc.
 - `M_WS_RET_OK` on success
 
 
@@ -223,7 +223,7 @@ Description: Generates a binary data frame. `out_cnode` is the generated frame d
 return value:
 
 - `M_WS_RET_ERROR` data is wrong
-- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_FAILED` on failure, e.g. out of memory, etc.
 - `M_WS_RET_OK` on success
 
 
@@ -261,7 +261,7 @@ flags has several values, and these values can be assigned together using the OR
 return value:
 
 - `M_WS_RET_ERROR` data is wrong
-- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_FAILED` on failure, e.g. out of memory, etc.
 - `M_WS_RET_OK` on success
 
 
@@ -283,7 +283,7 @@ Description: Generate a ping message, `out_cnode` is the generated message, flag
 return value:
 
 - `M_WS_RET_ERROR` data is wrong
-- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_FAILED` on failure, e.g. out of memory, etc.
 - `M_WS_RET_OK` on success
 
 
@@ -305,7 +305,7 @@ Description: Generate a pong message, `out_cnode` is the generated message, flag
 return value:
 
 - `M_WS_RET_ERROR` data is wrong
-- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_FAILED` on failure, e.g. out of memory, etc.
 - `M_WS_RET_OK` on success
 
 
@@ -321,7 +321,7 @@ Description: Generate a message based on the current contents of the `ws` struct
 return value:
 
 - `M_WS_RET_ERROR` data is wrong
-- `M_WS_RET_FAILED` failed, e.g. out of memory, etc.
+- `M_WS_RET_FAILED` on failure, e.g. out of memory, etc.
 - `M_WS_RET_OK` on success
 
 
@@ -338,8 +338,8 @@ return value:
 
 - `M_WS_RET_ERROR` message error
 - `M_WS_RET_OK` parsed successfully
-- `M_WS_RET_FAILED` failed to parse, such as out of memory, etc.
-- `M_WS_RET_NOTYET` successful but the data is incomplete and needs to continue processing
+- `M_WS_RET_FAILED` parse failed, such as out of memory, etc.
+- `M_WS_RET_NOTYET` on success but the data is incomplete and needs to continue processing
 
 
 

@@ -102,8 +102,8 @@ Description: Initialize JSON type node `j` to object type.
 
 Return value:
 
-- `0` - Success
-- `-1` - failed
+- `0` - on success
+- `-1` - on failure
 
 
 
@@ -117,8 +117,8 @@ Description: Initialize JSON type node `j` to array type.
 
 Return value:
 
-- `0` - Success
-- `-1` - failed
+- `0` - on success
+- `-1` - on failure
 
 
 
@@ -132,8 +132,8 @@ Description: Parse the JSON string `jstr` into a data structure, and the result 
 
 Return value:
 
-- `0` - Success
-- `-1` - failed
+- `0` - on success
+- `-1` - on failure
 
 
 
@@ -380,7 +380,7 @@ The content of `exp` is as follows:
 Return value：
 
 - `0` - on success
-- `-1` - failed
+- `-1` - on failure
 
 
 
@@ -428,7 +428,7 @@ mln_string_t *res = mln_json_encode(&j);
 Return value:
 
 - `0` - on success
-- `-1` - failed
+- `-1` - on failure
 
 
 
@@ -444,8 +444,8 @@ Description: Traverse each `key`-`value` pair in object `j`, and use `it` to pro
 
 Return value
 
-- `0` - Success
-- `-1` - failed
+- `0` - on success
+- `-1` - on failure
 
 
 #### mln_json_array_iterate
