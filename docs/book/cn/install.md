@@ -27,21 +27,21 @@ $ sudo make install
 
 `configure`脚本支持如下参数：
 
-- `--prefix` 设置Melon的安装路径
-
-- `--melang-prefix` 设置Melon库中使用到的Melang脚本的安装路径
-
-- `--cc` 设置Melon组件编译时所使用的C编译器
-
-- `--enable-wasm` 启用webassembly模式，会编译安装webassembly格式的Melon库
-
-- `--debug` 开启debug模式，若不开启，则生成的库不包含符号信息，也不会启用`__DEBUG__`宏
-
-- `--olevel=[O|O1|O2|O3|...]` 编译优化的级别，默认是`O3`。如果`=`后不写内容则为不开启优化
-
+- `--prefix` 设置Melon的安装路径。
+- `--melang-prefix` 设置Melon库中使用到的Melang脚本的安装路径。
+- `--cc` 设置Melon组件编译时所使用的C编译器。
+- `--enable-wasm` 启用webassembly模式，会编译安装webassembly格式的Melon库。
+- `--debug` 开启debug模式，若不开启，则生成的库不包含符号信息，也不会启用`__DEBUG__`宏。
+- `--olevel=[O|O1|O2|O3|...]` 编译优化的级别，默认是`O3`。如果`=`后不写内容则为不开启优化。
 - `--select=[all | module1,module2,...]` 选择性编译部分模块，默认为`all`表示编译全部模块。模块名称可在各模块文档中给出。
+- `--disable-macro=[macro1,macro2,...]` 禁用`configure`检测到的当前操作系统支持的系统调用或宏，目前仅支持如下内容：
+  - `event`：用于控制是否禁对特定操作系统平台支持的事件相关系统调用的检测。若禁用，则默认使用`select`。
+  - `sendfile`：控制是否禁用`sendfile`系统调用。
+  - `writev`：控制是否禁用`writev`系统调用。
+  - `unix98`：控制是否禁用`__USE_UNIX98`宏。
+  - `mmap`：控制是否禁用`mmap`和`munmap`系统调用。
 
-- `--help` 显示`configure`脚本的帮助信息
+- `--help` 显示`configure`脚本的帮助信息。
 
 
 

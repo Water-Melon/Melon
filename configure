@@ -45,6 +45,9 @@ olevel='-O3'
 #selected source files
 select_files='all'
 
+#disabled macros
+disabled_macros=""
+
 #get all parameters
 for param in $@
 do
@@ -60,6 +63,7 @@ do
         echo -e "\t--debug"
         echo -e "\t--olevel=O|O1|O2|O3"
         echo -e "\t--select=[all|module1,module2,...]"
+        echo -e "\t--disable-macro=[macro1,macro2,...]"
         exit 0
     fi
     param_prefix=`echo $param|cut -d '=' -f 1`
@@ -78,6 +82,8 @@ do
         debug=1
     elif [ $param_prefix == "--select" ]; then
         select_files=$param_suffix
+    elif [ $param_prefix == "--disable-macro" ]; then
+        disabled_macros=$param_suffix
     elif [ $param_prefix == "--olevel" ]; then
         if [ -z $param_suffix ]; then
             olevel=''
@@ -114,89 +120,113 @@ else
     debug=''
 fi
 
+#  disabled macros
+get_disabled_macros() {
+    macros=()
+    old_ifs=$IFS
+    IFS=','
+    for m in $disabled_macros
+    do
+        macros+=$m"_flag "
+    done
+    IFS=$old_ifs
+    disabled_macros=$macros
+}
 
-#event
-event_flag="-DMLN_SELECT"
+if [ $wasm -eq 0 ]; then
+    get_disabled_macros
 
-echo "#include<stdio.h>
-#include<sys/epoll.h>
-int main(void){epoll_create(10);return 0;}" > ev_test.c
-$cc -o ev_test ev_test.c 2>/dev/null
-if [ "$?" == "0" ]; then
-    event_flag="-DMLN_EPOLL"
-    echo -e "event\t\t\t[EPOLL]"
+    #event
+    event_flag="-DMLN_SELECT"
+    output="event\t\t\t[SELECT]"
+    if [[ ! "${disabled_macros[@]}" =~ "event_flag" ]]; then
+        echo "#include<stdio.h>
+        #include<sys/types.h>
+        #include<sys/event.h>
+        #include<sys/time.h>
+        int main(void){kqueue();return 0;}" > ev_test.c
+        $cc -o ev_test ev_test.c 2>/dev/null
+        if [ "$?" == "0" ]; then
+            event_flag="-DMLN_KQUEUE"
+            output="event\t\t\t[KQUEUE]"
+        fi
+
+        echo "#include<stdio.h>
+        #include<sys/epoll.h>
+        int main(void){epoll_create(10);return 0;}" > ev_test.c
+        $cc -o ev_test ev_test.c 2>/dev/null
+        if [ "$?" == "0" ]; then
+            event_flag="-DMLN_EPOLL"
+            output="event\t\t\t[EPOLL]"
+        fi
+    fi
     rm -f ev_test ev_test.c
+    echo -e $output
+
+
+    #sendfile
+    sendfile_flag=""
+    output="sendfile\t\t[NOT support]"
+    if [[ ! "${disabled_macros[@]}" =~ "sendfile_flag" ]]; then
+        echo "#include <sys/sendfile.h>
+        int main(void){sendfile(1,0,0,1);return 0;}" > sendfile_test.c
+        $cc -o sendfile_test sendfile_test.c 2>/dev/null
+        if [ "$?" == "0" ]; then
+            sendfile_flag="-DMLN_SENDFILE"
+            output="sendfile\t\t[support]"
+        fi
+        rm -f sendfile_test sendfile_test.c
+    fi
+    echo -e $output
+
+
+    #writev
+    writev_flag=""
+    output="writev\t\t\t[NOT support]"
+    if [[ ! "${disabled_macros[@]}" =~ "writev_flag" ]]; then
+        echo -e "#include <stdio.h>\n#include <sys/uio.h>" > writev_test.c
+        echo "int main(void){writev(0,NULL,0);return 0;}" >> writev_test.c
+        $cc -o writev_test writev_test.c 2>/dev/null
+        if [ "$?" == "0" ]; then
+            writev_flag="-DMLN_WRITEV"
+            output="writev\t\t\t[support]"
+        fi
+        rm -f writev_test writev_test.c
+    fi
+    echo -e $output
+
+
+    #unix98
+    unix98_flag=""
+    output="__USE_UNIX98\t\t[not support]"
+    if [[ ! "${disabled_macros[@]}" =~ "unix98_flag" ]]; then
+        echo -e "#ifndef __USE_UNIX98\n#define __USE_UNIX98\n#endif\n#include <pthread.h>\n" > unix98_test.c
+        echo "int main(void){pthread_setconcurrency(0);return 0;}" >> unix98_test.c
+        $cc -o unix98_test unix98_test.c -lpthread 2>/dev/null
+        if [ "$?" == "0" ]; then
+            output="__USE_UNIX98\t\t[support]"
+            unix98_flag="-DMLN_USE_UNIX98"
+        fi
+        rm -fr unix98_test unix98_test.c
+    fi
+    echo -e $output
+
+
+    #mmap
+    mmap_flag=""
+    output="mmap\t\t\t[NOT support]"
+    if [[ ! "${disabled_macros[@]}" =~ "mmap_flag" ]]; then
+        echo -e "#include <stdio.h>\n#include <sys/mman.h>" >> mmap_test.c
+        echo "int main(void){mmap(NULL, 0, PROT_READ, MAP_PRIVATE, 0, 0);return 0;}" >> mmap_test.c
+        $cc -o mmap_test mmap_test.c 2>/dev/null
+        if [ "$?" == "0" ]; then
+            mmap_flag="-DMLN_MMAP"
+            output="mmap\t\t\t[support]"
+        fi
+        rm -f mmap_test mmap_test.c
+    fi
+    echo -e $output
 fi
-
-echo "#include<stdio.h>
-#include<sys/types.h>
-#include<sys/event.h>
-#include<sys/time.h>
-int main(void){kqueue();return 0;}" > ev_test.c
-$cc -o ev_test ev_test.c 2>/dev/null
-if [ "$?" == "0" ]; then
-    event_flag="-DMLN_KQUEUE"
-    echo -e "event\t\t\t[KQUEUE]"
-    rm -f ev_test ev_test.c
-fi
-rm -f ev_test ev_test.c
-echo -e "event\t\t\t[SELECT]"
-
-
-#sendfile
-sendfile_flag=""
-echo "#include <sys/sendfile.h>
-int main(void){sendfile(1,0,0,1);return 0;}" > sendfile_test.c
-$cc -o sendfile_test sendfile_test.c 2>/dev/null
-if [ "$?" == "0" ]; then
-    sendfile_flag="-DMLN_SENDFILE"
-    echo -e "sendfile\t\t[support]"
-else
-    echo -e "sendfile\t\t[NOT support]"
-fi
-rm -f sendfile_test sendfile_test.c
-
-
-#writev
-writev_flag=""
-echo -e "#include <stdio.h>\n#include <sys/uio.h>" > writev_test.c
-echo "int main(void){writev(0,NULL,0);return 0;}" >> writev_test.c
-$cc -o writev_test writev_test.c 2>/dev/null
-if [ "$?" == "0" ]; then
-    writev_flag="-DMLN_WRITEV"
-    echo -e "writev\t\t\t[support]"
-else
-    echo -e "writev\t\t\t[NOT support]"
-fi
-rm -f writev_test writev_test.c
-
-
-#unix98
-unix98_flag=""
-echo -e "#ifndef __USE_UNIX98\n#define __USE_UNIX98\n#endif\n#include <pthread.h>\n" > unix98_test.c
-echo "int main(void){pthread_setconcurrency(0);return 0;}" >> unix98_test.c
-$cc -o unix98_test unix98_test.c -lpthread 2>/dev/null
-if [ "$?" == "0" ]; then
-    echo -e "__USE_UNIX98\t\t[support]"
-    unix98_flag="-DMLN_USE_UNIX98"
-else
-    echo -e "__USE_UNIX98\t\t[not support]"
-fi
-rm -fr unix98_test unix98_test.c
-
-
-#mmap
-mmap_flag=""
-echo -e "#include <stdio.h>\n#include <sys/mman.h>" >> mmap_test.c
-echo "int main(void){mmap(NULL, 0, PROT_READ, MAP_PRIVATE, 0, 0);return 0;}" >> mmap_test.c
-$cc -o mmap_test mmap_test.c 2>/dev/null
-if [ "$?" == "0" ]; then
-    mmap_flag="-DMLN_MMAP"
-    echo -e "mmap\t\t\t[support]"
-else
-    echo -e "mmap\t\t\t[NOT support]"
-fi
-rm -f mmap_test mmap_test.c
 
 #output installation path
 echo -e "Installation Path \t[$install_path]"
@@ -343,7 +373,7 @@ fi
 if [ $wasm -eq 1 ]; then
     echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc" >> Makefile
 else
-    echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $olevel -fPIC" >> Makefile
+    echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $olevel -fPIC $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag" >> Makefile
 fi
 if ! case $sysname in MINGW*) false;; esac; then
     if [ $wasm -eq 0 ]; then
@@ -424,11 +454,7 @@ do
     done
     echo "" >> Makefile
 
-    if [ $wasm -eq 1 ]; then
-        echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
-    else
-        echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag" >> Makefile
-    fi
+    echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
 done
 
 #generate conf file
