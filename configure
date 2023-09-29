@@ -3,124 +3,176 @@
 # Copyright (C) Niklaus F.Schen.
 #
 
-#  test system type
+#Global Variables
+# test system type
 sysname=`uname -s`
 
-#melang_script_path & melang_dylib_path
-if ! case $sysname in MINGW*) false;; esac; then
-    melang_script_path=$HOME/lib/melang
-    melang_dylib_path=$HOME/lib/melang_dynamic
-else
-    melang_script_path=/usr/local/lib/melang
-    melang_dylib_path=/usr/local/lib/melang_dynamic
-fi
+# paths
+realpath=""
+nullpath=""
+confpath=""
+tmpfilepath=""
+pidpath=""
+logpath=""
+melang_script_path=""
+melang_script_path=""
+melang_dylib_path=""
 
-#installation path
-if ! case $sysname in MINGW*) false;; esac; then
-    install_path=$HOME/libmelon
-    cc="gcc"
-    tcc="gcc"
-else
-    install_path=`echo "/usr/local/melon"`
-    cc="cc"
-    tcc="cc"
-fi
-echo -e "#include <stdio.h>\nint main(void) {printf(\"1\");return 0;}" > .xcode.c
-$tcc -o .xcode .xcode.c 2>/dev/null 1>&2
-if [ $? -ne 0 ]; then
-    tcc="$tcc -isysroot `xcrun --show-sdk-path`"
-    cc="$cc -isysroot `xcrun --show-sdk-path`"
-fi
-rm -fr .xcode .xcode.c
-
-#wasm flag
+# wasm flag
 wasm=0
 
-#debug
+# debug
 debug=0
 
-#optimization level
+# optimization level
 olevel='-O3'
 
-#selected source files
+# selected source files
 select_files='all'
 
-#disabled macros
+# disabled macros
 disabled_macros=""
 
-#get all parameters
-for param in $@
-do
-    if [ $param == "--help" ]; then
-        echo -e "\nMelon platform."
-        echo "Copyright (C) Niklaus F.Schen."
-        echo "Options:"
-        echo -e "\t--prefix=INSTALL_PATH"
-        echo -e "\t--melang-prefix=MELANG_SCRIPT_PATH"
-        echo -e "\t--melang-dylib-prefix=MELANG_DYLIB_PATH"
-        echo -e "\t--cc=C compiler"
-        echo -e "\t--enable-wasm"
-        echo -e "\t--debug"
-        echo -e "\t--olevel=O|O1|O2|O3"
-        echo -e "\t--select=[all|module1,module2,...]"
-        echo -e "\t--disable-macro=[macro1,macro2,...]"
-        exit 0
+# llvm
+llvm_flag=""
+
+# event
+event_flag="-DMLN_SELECT"
+
+# sendfile
+sendfile_flag=""
+
+# writev
+writev_flag=""
+
+# unix98
+unix98_flag=""
+
+# mmap
+mmap_flag=""
+
+
+#Functions
+set_melang_default_paths() {
+    if ! case $sysname in MINGW*) false;; esac; then
+        melang_script_path=$HOME/lib/melang
+        melang_dylib_path=$HOME/lib/melang_dynamic
+    else
+        melang_script_path=/usr/local/lib/melang
+        melang_dylib_path=/usr/local/lib/melang_dynamic
     fi
-    param_prefix=`echo $param|cut -d '=' -f 1`
-    param_suffix=`echo $param|cut -d '=' -f 2`
-    if [ $param_prefix == "--prefix" ]; then
-        install_path=$param_suffix
-    elif [ $param_prefix == "--melang-prefix" ]; then
-        melang_script_path=$param_suffix
-    elif [ $param_prefix == "--melang-dylib-prefix" ]; then
-        melang_dylib_path=$param_suffix
-    elif [ $param_prefix == "--cc" ]; then
-        cc=$param_suffix
-    elif [ $param_prefix == "--enable-wasm" ]; then
-        wasm=1
-    elif [ $param_prefix == "--debug" ]; then
-        debug=1
-    elif [ $param_prefix == "--select" ]; then
-        select_files=$param_suffix
-    elif [ $param_prefix == "--disable-macro" ]; then
-        disabled_macros=$param_suffix
-    elif [ $param_prefix == "--olevel" ]; then
-        if [ -z $param_suffix ]; then
-            olevel=''
-        else
-            olevel='-'$param_suffix
+}
+
+set_c_compilers() {
+    if ! case $sysname in MINGW*) false;; esac; then
+        install_path=$HOME/libmelon
+        cc="gcc"
+        tcc="gcc"
+    else
+        install_path=`echo "/usr/local/melon"`
+        cc="cc"
+        tcc="cc"
+    fi
+    echo -e "#include <stdio.h>\nint main(void) {printf(\"1\");return 0;}" > .xcode.c
+    $tcc -o .xcode .xcode.c 2>/dev/null 1>&2
+    if [ $? -ne 0 ]; then
+        tcc="$tcc -isysroot `xcrun --show-sdk-path`"
+        cc="$cc -isysroot `xcrun --show-sdk-path`"
+    fi
+    rm -fr .xcode .xcode.c
+}
+
+send_install_request() {
+    curl http://register.melang.org/ -H "Referer: Melon Installation" 2> /dev/null 1>&2
+}
+
+before_get_params() {
+    send_install_request
+    set_melang_default_paths
+    set_c_compilers
+}
+
+get_params() {
+    for param in $@
+    do
+        if [ $param == "--help" ]; then
+            echo -e "\nMelon platform."
+            echo "Copyright (C) Niklaus F.Schen."
+            echo "Options:"
+            echo -e "\t--prefix=INSTALL_PATH"
+            echo -e "\t--melang-prefix=MELANG_SCRIPT_PATH"
+            echo -e "\t--melang-dylib-prefix=MELANG_DYLIB_PATH"
+            echo -e "\t--cc=C compiler"
+            echo -e "\t--enable-wasm"
+            echo -e "\t--debug"
+            echo -e "\t--olevel=O|O1|O2|O3"
+            echo -e "\t--select=[all|module1,module2,...]"
+            echo -e "\t--disable-macro=[macro1,macro2,...]"
+            exit 0
+        fi
+        param_prefix=`echo $param|cut -d '=' -f 1`
+        param_suffix=`echo $param|cut -d '=' -f 2`
+        if [ $param_prefix == "--prefix" ]; then
+            install_path=$param_suffix
+        elif [ $param_prefix == "--melang-prefix" ]; then
+            melang_script_path=$param_suffix
+        elif [ $param_prefix == "--melang-dylib-prefix" ]; then
+            melang_dylib_path=$param_suffix
+        elif [ $param_prefix == "--cc" ]; then
+            cc=$param_suffix
+        elif [ $param_prefix == "--enable-wasm" ]; then
+            wasm=1
+        elif [ $param_prefix == "--debug" ]; then
+            debug=1
+        elif [ $param_prefix == "--select" ]; then
+            select_files=$param_suffix
+        elif [ $param_prefix == "--disable-macro" ]; then
+            disabled_macros=$param_suffix
+        elif [ $param_prefix == "--olevel" ]; then
+            if [ -z $param_suffix ]; then
+                olevel=''
+            else
+                olevel='-'$param_suffix
+            fi
+        fi
+    done
+}
+
+update_llvm_flag() {
+    if [ $wasm -eq 1 ]; then
+        echo -e "Webassembly\t\t[enable]"
+
+        $cc --help|grep LLVM > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            llvm_flag="--llvm-lto 1"
         fi
     fi
-done
+}
 
-#wasm
-if [ $wasm -eq 1 ]; then
-    echo -e "Webassembly\t\t[enable]"
-
-    #llvm
-    llvm_flag=""
-    $cc --help|grep LLVM > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        llvm_flag="--llvm-lto 1"
+relocate_install_path() {
+    if [[ "$install_path" == ~* ]]; then
+        install_path=$HOME/${install_path:1}
     fi
-fi
+    if [[ "$melang_script_path" == ~* ]]; then
+        melang_script_path=$HOME/${melang_script_path:1}
+    fi
+    if [[ "$melang_dylib_path" == ~* ]]; then
+        melang_dylib_path=$HOME/${melang_dylib_path:1}
+    fi
+}
 
-if [[ "$install_path" == ~* ]]; then
-    install_path=$HOME/${install_path:1}
-fi
-
-#debug
-if [ $debug -ne 0 ]; then
-    if [ $wasm -eq 1 ]; then
-        debug='-g -D__DEBUG__'
+update_debug_flag() {
+    if [ $debug -ne 0 ]; then
+        if [ $wasm -eq 1 ]; then
+            debug='-g -D__DEBUG__'
+        else
+            debug='-ggdb -D__DEBUG__'
+        fi
     else
-        debug='-ggdb -D__DEBUG__'
+        debug=''
     fi
-else
-    debug=''
-fi
+}
 
-#  disabled macros
 get_disabled_macros() {
     macros=()
     old_ifs=$IFS
@@ -133,11 +185,7 @@ get_disabled_macros() {
     disabled_macros=$macros
 }
 
-if [ $wasm -eq 0 ]; then
-    get_disabled_macros
-
-    #event
-    event_flag="-DMLN_SELECT"
+detect_operating_system_event_support() {
     output="event\t\t\t[SELECT]"
     if [[ ! "${disabled_macros[@]}" =~ "event_flag" ]]; then
         echo "#include<stdio.h>
@@ -162,10 +210,9 @@ if [ $wasm -eq 0 ]; then
     fi
     rm -f ev_test ev_test.c
     echo -e $output
+}
 
-
-    #sendfile
-    sendfile_flag=""
+detect_operating_system_sendfile_support() {
     output="sendfile\t\t[NOT support]"
     if [[ ! "${disabled_macros[@]}" =~ "sendfile_flag" ]]; then
         echo "#include <sys/sendfile.h>
@@ -178,10 +225,9 @@ if [ $wasm -eq 0 ]; then
         rm -f sendfile_test sendfile_test.c
     fi
     echo -e $output
+}
 
-
-    #writev
-    writev_flag=""
+detect_operating_system_writev_support() {
     output="writev\t\t\t[NOT support]"
     if [[ ! "${disabled_macros[@]}" =~ "writev_flag" ]]; then
         echo -e "#include <stdio.h>\n#include <sys/uio.h>" > writev_test.c
@@ -194,10 +240,9 @@ if [ $wasm -eq 0 ]; then
         rm -f writev_test writev_test.c
     fi
     echo -e $output
+}
 
-
-    #unix98
-    unix98_flag=""
+detect_operating_system_unix98_support() {
     output="__USE_UNIX98\t\t[not support]"
     if [[ ! "${disabled_macros[@]}" =~ "unix98_flag" ]]; then
         echo -e "#ifndef __USE_UNIX98\n#define __USE_UNIX98\n#endif\n#include <pthread.h>\n" > unix98_test.c
@@ -210,10 +255,9 @@ if [ $wasm -eq 0 ]; then
         rm -fr unix98_test unix98_test.c
     fi
     echo -e $output
+}
 
-
-    #mmap
-    mmap_flag=""
+detect_operating_system_mmap_support() {
     output="mmap\t\t\t[NOT support]"
     if [[ ! "${disabled_macros[@]}" =~ "mmap_flag" ]]; then
         echo -e "#include <stdio.h>\n#include <sys/mman.h>" >> mmap_test.c
@@ -226,101 +270,112 @@ if [ $wasm -eq 0 ]; then
         rm -f mmap_test mmap_test.c
     fi
     echo -e $output
-fi
+}
 
-#output installation path
-echo -e "Installation Path \t[$install_path]"
-echo -e "Melang script Path \t[$melang_script_path]"
-echo -e "Melang dylib Path \t[$melang_dylib_path]"
-echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", argv[1]);return 0;}" > .path_generator.c
-$tcc -o path_generator .path_generator.c
-realpath=`./path_generator $install_path`
-nullpath=`./path_generator /dev/null`
-confpath=`./path_generator $realpath/conf/melon.conf`
-tmpfilepath=`./path_generator $realpath/tmp`
-pidpath=`./path_generator $realpath/logs/melon.pid`
-logpath=`./path_generator $realpath/logs/melon.log`
-melang_script_path=`./path_generator $melang_script_path`
-melang_script_path=`./path_generator $melang_script_path`
-melang_dylib_path=`./path_generator $melang_dylib_path`
+detect_operating_system_support() {
+    if [ $wasm -eq 0 ]; then
+        get_disabled_macros
+        detect_operating_system_event_support
+        detect_operating_system_sendfile_support
+        detect_operating_system_writev_support
+        detect_operating_system_unix98_support
+        detect_operating_system_mmap_support
+    fi
+}
 
-rm -f path_generator .path_generator.c
-#build path.c & h
-echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
-echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
-echo -e "\ntypedef enum {\n    m_p_install,\n    m_p_conf,\n    m_p_tmpfile,\n    m_p_pid,\n    m_p_log,\n    m_p_null,\n    m_p_melang_lib,\n    m_p_melang_dylib\n} mln_path_type_t;" >> include/mln_path.h
-echo -e "\ntypedef char *(*mln_path_hook_t)(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_path(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_path_null(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_path_melang_lib(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_path_melang_dylib(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_path_conf(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_path_tmpfile(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_path_pid(void);" >> include/mln_path.h
-echo -e "\nextern char *mln_path_log(void);" >> include/mln_path.h
-echo -e "\nextern void mln_path_hook_set(mln_path_type_t type, mln_path_hook_t hook);" >> include/mln_path.h
-echo -e "\n#endif\n" >> include/mln_path.h
+update_paths() {
+    echo -e "Installation Path \t[$install_path]"
+    echo -e "Melang script Path \t[$melang_script_path]"
+    echo -e "Melang dylib Path \t[$melang_dylib_path]"
+    echo -e "#include <stdio.h>\nint main(int argc, char *argv[]) {printf(\"%s\", argv[1]);return 0;}" > .path_generator.c
+    $tcc -o path_generator .path_generator.c
+    realpath=`./path_generator $install_path`
+    nullpath=`./path_generator /dev/null`
+    confpath=`./path_generator $realpath/conf/melon.conf`
+    tmpfilepath=`./path_generator $realpath/tmp`
+    pidpath=`./path_generator $realpath/logs/melon.pid`
+    logpath=`./path_generator $realpath/logs/melon.log`
+    melang_script_path=`./path_generator $melang_script_path`
+    melang_script_path=`./path_generator $melang_script_path`
+    melang_dylib_path=`./path_generator $melang_dylib_path`
+    rm -f path_generator .path_generator.c
+}
 
-echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > src/mln_path.c
-echo "#include <stdio.h>" >> src/mln_path.c
-echo "#include \"mln_path.h\"" >> src/mln_path.c
-echo -e "\nstatic char install_path[] = \"$realpath\";" >> src/mln_path.c
-echo -e "\nstatic char conf_path[] = \"$confpath\";" >> src/mln_path.c
-echo -e "\nstatic char tmpfile_path[] = \"$tmpfilepath\";" >> src/mln_path.c
-echo -e "\nstatic char pid_path[] = \"$pidpath\";" >> src/mln_path.c
-echo -e "\nstatic char log_path[] = \"$logpath\";" >> src/mln_path.c
-echo -e "\nstatic char null_path[] = \"$nullpath\";" >> src/mln_path.c
-echo -e "\nstatic char melang_lib_path[] = \"$melang_script_path\";" >> src/mln_path.c
-echo -e "\nstatic char melang_dylib_path[] = \"$melang_dylib_path\";" >> src/mln_path.c
-echo -e "\nstatic mln_path_hook_t _install_path = NULL;" >> src/mln_path.c
-echo -e "\nstatic mln_path_hook_t _null_path = NULL;" >> src/mln_path.c
-echo -e "\nstatic mln_path_hook_t _melang_lib_path = NULL;" >> src/mln_path.c
-echo -e "\nstatic mln_path_hook_t _melang_dylib_path = NULL;" >> src/mln_path.c
-echo -e "\nstatic mln_path_hook_t _conf_path = NULL;" >> src/mln_path.c
-echo -e "\nstatic mln_path_hook_t _tmpfile_path = NULL;" >> src/mln_path.c
-echo -e "\nstatic mln_path_hook_t _pid_path = NULL;" >> src/mln_path.c
-echo -e "\nstatic mln_path_hook_t _log_path = NULL;" >> src/mln_path.c
-echo -e "\nvoid mln_path_hook_set(mln_path_type_t type, mln_path_hook_t hook)\n{" >> src/mln_path.c
-echo -e "    switch (type) {\n" >> src/mln_path.c
-echo -e "        case m_p_install:\n            _install_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case m_p_conf:\n            _conf_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case m_p_tmpfile:\n            _tmpfile_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case m_p_pid:\n            _pid_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case m_p_log:\n            _log_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case m_p_null:\n            _null_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case m_p_melang_lib:\n            _melang_lib_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        case m_p_melang_dylib:\n            _melang_dylib_path = hook;\n            break;" >> src/mln_path.c
-echo -e "        default:\n            break;" >> src/mln_path.c
-echo -e "    }" >> src/mln_path.c
-echo -e "}" >> src/mln_path.c
-echo -e "\nchar *mln_path(void)\n{" >> src/mln_path.c
-echo "    return _install_path == NULL? install_path: _install_path();" >> src/mln_path.c
-echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_path_conf(void)\n{" >> src/mln_path.c
-echo "    return _conf_path == NULL? conf_path: _conf_path();" >> src/mln_path.c
-echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_path_tmpfile(void)\n{" >> src/mln_path.c
-echo "    return _tmpfile_path == NULL? tmpfile_path: _tmpfile_path();" >> src/mln_path.c
-echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_path_pid(void)\n{" >> src/mln_path.c
-echo "    return _pid_path == NULL? pid_path: _pid_path();" >> src/mln_path.c
-echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_path_log(void)\n{" >> src/mln_path.c
-echo "    return _log_path == NULL? log_path: _log_path();" >> src/mln_path.c
-echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_path_null(void)\n{" >> src/mln_path.c
-echo "    return _null_path == NULL? null_path: _null_path();" >> src/mln_path.c
-echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_path_melang_lib(void)\n{" >> src/mln_path.c
-echo "    return _melang_lib_path == NULL? melang_lib_path: _melang_lib_path();" >> src/mln_path.c
-echo "}" >> src/mln_path.c
-echo -e "\nchar *mln_path_melang_dylib(void)\n{" >> src/mln_path.c
-echo "    return _melang_dylib_path == NULL? melang_dylib_path: _melang_dylib_path();" >> src/mln_path.c
-echo "}" >> src/mln_path.c
+generate_path_module() {
+    echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
+    echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
+    echo -e "\ntypedef enum {\n    m_p_install,\n    m_p_conf,\n    m_p_tmpfile,\n    m_p_pid,\n    m_p_log,\n    m_p_null,\n    m_p_melang_lib,\n    m_p_melang_dylib\n} mln_path_type_t;" >> include/mln_path.h
+    echo -e "\ntypedef char *(*mln_path_hook_t)(void);" >> include/mln_path.h
+    echo -e "\nextern char *mln_path(void);" >> include/mln_path.h
+    echo -e "\nextern char *mln_path_null(void);" >> include/mln_path.h
+    echo -e "\nextern char *mln_path_melang_lib(void);" >> include/mln_path.h
+    echo -e "\nextern char *mln_path_melang_dylib(void);" >> include/mln_path.h
+    echo -e "\nextern char *mln_path_conf(void);" >> include/mln_path.h
+    echo -e "\nextern char *mln_path_tmpfile(void);" >> include/mln_path.h
+    echo -e "\nextern char *mln_path_pid(void);" >> include/mln_path.h
+    echo -e "\nextern char *mln_path_log(void);" >> include/mln_path.h
+    echo -e "\nextern void mln_path_hook_set(mln_path_type_t type, mln_path_hook_t hook);" >> include/mln_path.h
+    echo -e "\n#endif\n" >> include/mln_path.h
 
+    echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > src/mln_path.c
+    echo "#include <stdio.h>" >> src/mln_path.c
+    echo "#include \"mln_path.h\"" >> src/mln_path.c
+    echo -e "\nstatic char install_path[] = \"$realpath\";" >> src/mln_path.c
+    echo -e "\nstatic char conf_path[] = \"$confpath\";" >> src/mln_path.c
+    echo -e "\nstatic char tmpfile_path[] = \"$tmpfilepath\";" >> src/mln_path.c
+    echo -e "\nstatic char pid_path[] = \"$pidpath\";" >> src/mln_path.c
+    echo -e "\nstatic char log_path[] = \"$logpath\";" >> src/mln_path.c
+    echo -e "\nstatic char null_path[] = \"$nullpath\";" >> src/mln_path.c
+    echo -e "\nstatic char melang_lib_path[] = \"$melang_script_path\";" >> src/mln_path.c
+    echo -e "\nstatic char melang_dylib_path[] = \"$melang_dylib_path\";" >> src/mln_path.c
+    echo -e "\nstatic mln_path_hook_t _install_path = NULL;" >> src/mln_path.c
+    echo -e "\nstatic mln_path_hook_t _null_path = NULL;" >> src/mln_path.c
+    echo -e "\nstatic mln_path_hook_t _melang_lib_path = NULL;" >> src/mln_path.c
+    echo -e "\nstatic mln_path_hook_t _melang_dylib_path = NULL;" >> src/mln_path.c
+    echo -e "\nstatic mln_path_hook_t _conf_path = NULL;" >> src/mln_path.c
+    echo -e "\nstatic mln_path_hook_t _tmpfile_path = NULL;" >> src/mln_path.c
+    echo -e "\nstatic mln_path_hook_t _pid_path = NULL;" >> src/mln_path.c
+    echo -e "\nstatic mln_path_hook_t _log_path = NULL;" >> src/mln_path.c
+    echo -e "\nvoid mln_path_hook_set(mln_path_type_t type, mln_path_hook_t hook)\n{" >> src/mln_path.c
+    echo -e "    switch (type) {\n" >> src/mln_path.c
+    echo -e "        case m_p_install:\n            _install_path = hook;\n            break;" >> src/mln_path.c
+    echo -e "        case m_p_conf:\n            _conf_path = hook;\n            break;" >> src/mln_path.c
+    echo -e "        case m_p_tmpfile:\n            _tmpfile_path = hook;\n            break;" >> src/mln_path.c
+    echo -e "        case m_p_pid:\n            _pid_path = hook;\n            break;" >> src/mln_path.c
+    echo -e "        case m_p_log:\n            _log_path = hook;\n            break;" >> src/mln_path.c
+    echo -e "        case m_p_null:\n            _null_path = hook;\n            break;" >> src/mln_path.c
+    echo -e "        case m_p_melang_lib:\n            _melang_lib_path = hook;\n            break;" >> src/mln_path.c
+    echo -e "        case m_p_melang_dylib:\n            _melang_dylib_path = hook;\n            break;" >> src/mln_path.c
+    echo -e "        default:\n            break;" >> src/mln_path.c
+    echo -e "    }" >> src/mln_path.c
+    echo -e "}" >> src/mln_path.c
+    echo -e "\nchar *mln_path(void)\n{" >> src/mln_path.c
+    echo "    return _install_path == NULL? install_path: _install_path();" >> src/mln_path.c
+    echo "}" >> src/mln_path.c
+    echo -e "\nchar *mln_path_conf(void)\n{" >> src/mln_path.c
+    echo "    return _conf_path == NULL? conf_path: _conf_path();" >> src/mln_path.c
+    echo "}" >> src/mln_path.c
+    echo -e "\nchar *mln_path_tmpfile(void)\n{" >> src/mln_path.c
+    echo "    return _tmpfile_path == NULL? tmpfile_path: _tmpfile_path();" >> src/mln_path.c
+    echo "}" >> src/mln_path.c
+    echo -e "\nchar *mln_path_pid(void)\n{" >> src/mln_path.c
+    echo "    return _pid_path == NULL? pid_path: _pid_path();" >> src/mln_path.c
+    echo "}" >> src/mln_path.c
+    echo -e "\nchar *mln_path_log(void)\n{" >> src/mln_path.c
+    echo "    return _log_path == NULL? log_path: _log_path();" >> src/mln_path.c
+    echo "}" >> src/mln_path.c
+    echo -e "\nchar *mln_path_null(void)\n{" >> src/mln_path.c
+    echo "    return _null_path == NULL? null_path: _null_path();" >> src/mln_path.c
+    echo "}" >> src/mln_path.c
+    echo -e "\nchar *mln_path_melang_lib(void)\n{" >> src/mln_path.c
+    echo "    return _melang_lib_path == NULL? melang_lib_path: _melang_lib_path();" >> src/mln_path.c
+    echo "}" >> src/mln_path.c
+    echo -e "\nchar *mln_path_melang_dylib(void)\n{" >> src/mln_path.c
+    echo "    return _melang_dylib_path == NULL? melang_dylib_path: _melang_dylib_path();" >> src/mln_path.c
+    echo "}" >> src/mln_path.c
+}
 
-
-#  build makefile content
+# build makefile content
 get_source_files() {
     files=()
     if [ $1 = 'all' ]; then
@@ -360,105 +415,121 @@ get_source_files() {
     select_files=$files
 }
 
-get_source_files $select_files
-
-echo "# " > Makefile
-echo "# Copyright (C) Niklaus F.Schen." >> Makefile
-echo "# " >> Makefile
-if [ $wasm -eq 1 ]; then
-    echo -e "CC\t\t= emcc" >> Makefile
-else
-    echo -e "CC\t\t= $cc" >> Makefile
-fi
-if [ $wasm -eq 1 ]; then
-    echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc" >> Makefile
-else
-    echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $olevel -fPIC $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag" >> Makefile
-fi
-if ! case $sysname in MINGW*) false;; esac; then
-    if [ $wasm -eq 0 ]; then
-        echo -e "MELONSO\t\t= libmelon.dll" >> Makefile
-    fi
-    echo -e "MELONA\t\t= libmelon.lib" >> Makefile
-else
-    if [ $wasm -eq 0 ]; then
-        echo -e "MELONSO\t\t= libmelon.so" >> Makefile
-    fi
-    echo -e "MELONA\t\t= libmelon.a" >> Makefile
-fi
-
-echo -e "OBJS\t\t= \\" >> Makefile
-for fname in ${select_files[@]}
-do
-    fname=`basename $fname`
-    objname=`echo $fname | cut -d '.' -f 1`".o"
-    echo -n "        objs/"$objname >> Makefile
-    echo " \\" >> Makefile
-done
-echo "" >> Makefile
-
-echo -e ".PHONY :\tcompile install clean" >> Makefile
-
-if [ $wasm -eq 1 ]; then
-    echo "compile: MKDIR \$(OBJS) \$(MELONA)" >> Makefile
-else
-    echo "compile: MKDIR \$(OBJS) \$(MELONSO) \$(MELONA)" >> Makefile
-fi
-echo "clean:" >> Makefile
-echo -e "\trm -fr objs lib Makefile" >> Makefile
-echo "MKDIR :" >> Makefile
-echo -e "\ttest -d objs || mkdir objs" >> Makefile
-echo -e "\ttest -d lib || mkdir lib" >> Makefile
-
-echo "\$(MELONA) : \$(OBJS)" >> Makefile
-if [ $wasm -eq 1 ]; then
-    echo -e "\temar rcs lib/\$(MELONA) \$(OBJS)" >> Makefile
-else
-    echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile
-fi
-
-if [ $wasm -eq 0 ]; then
-    echo "\$(MELONSO) : \$(OBJS)" >> Makefile
-    if [ $sysname = 'Linux' ]; then
-        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
-    elif ! case $sysname in MINGW*) false;; esac; then
-        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC" >> Makefile
+generate_Makefile() {
+    echo "# " > Makefile
+    echo "# Copyright (C) Niklaus F.Schen." >> Makefile
+    echo "# " >> Makefile
+    if [ $wasm -eq 1 ]; then
+        echo -e "CC\t\t= emcc" >> Makefile
     else
-        echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
+        echo -e "CC\t\t= $cc" >> Makefile
     fi
-fi
-echo "install:" >> Makefile
-echo -e "\ttest -d $melang_script_path || mkdir -p $melang_script_path" >> Makefile
-echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
-echo -e "\tcp -fr lib $install_path" >> Makefile
-echo -e "\tcp -fr include $install_path" >> Makefile
-echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
-echo -e "\ttest -d $melang_script_path/trace || cp -fr trace $melang_script_path" >> Makefile
+    if [ $wasm -eq 1 ]; then
+        echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc" >> Makefile
+    else
+        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $olevel -fPIC $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag" >> Makefile
+    fi
+    if ! case $sysname in MINGW*) false;; esac; then
+        if [ $wasm -eq 0 ]; then
+            echo -e "MELONSO\t\t= libmelon.dll" >> Makefile
+        fi
+        echo -e "MELONA\t\t= libmelon.lib" >> Makefile
+    else
+        if [ $wasm -eq 0 ]; then
+            echo -e "MELONSO\t\t= libmelon.so" >> Makefile
+        fi
+        echo -e "MELONA\t\t= libmelon.a" >> Makefile
+    fi
 
-for fname in ${select_files[@]}
-do
-    objname=`basename $fname | cut -d '.' -f 1`".o"
-    echo -n "objs/$objname :" >> Makefile
-    for header in `cpp -MM -MG $fname 2> /dev/null`
+    echo -e "OBJS\t\t= \\" >> Makefile
+    for fname in ${select_files[@]}
     do
-        suffix=`echo $header | cut -d '.' -f 2`
-        if [ $suffix = 'c' ]; then
-            echo -n $header >> Makefile
-            echo -n " " >> Makefile
-            continue
-        fi
-        if [ $suffix != 'h' ]; then
-            continue
-        fi
-        test -e include/$header && echo -n "include/$header " >> Makefile
+        fname=`basename $fname`
+        objname=`echo $fname | cut -d '.' -f 1`".o"
+        echo -n "        objs/"$objname >> Makefile
+        echo " \\" >> Makefile
     done
     echo "" >> Makefile
 
-    echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
-done
+    echo -e ".PHONY :\tcompile install clean" >> Makefile
 
-#generate conf file
-sed -e "s#{{ROOT}}#${realpath}#g" conf/melon.conf.template > conf/melon.conf
+    if [ $wasm -eq 1 ]; then
+        echo "compile: MKDIR \$(OBJS) \$(MELONA)" >> Makefile
+    else
+        echo "compile: MKDIR \$(OBJS) \$(MELONSO) \$(MELONA)" >> Makefile
+    fi
+    echo "clean:" >> Makefile
+    echo -e "\trm -fr objs lib Makefile" >> Makefile
+    echo "MKDIR :" >> Makefile
+    echo -e "\ttest -d objs || mkdir objs" >> Makefile
+    echo -e "\ttest -d lib || mkdir lib" >> Makefile
 
+    echo "\$(MELONA) : \$(OBJS)" >> Makefile
+    if [ $wasm -eq 1 ]; then
+        echo -e "\temar rcs lib/\$(MELONA) \$(OBJS)" >> Makefile
+    else
+        echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile
+    fi
+
+    if [ $wasm -eq 0 ]; then
+        echo "\$(MELONSO) : \$(OBJS)" >> Makefile
+        if [ $sysname = 'Linux' ]; then
+            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
+        elif ! case $sysname in MINGW*) false;; esac; then
+            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC" >> Makefile
+        else
+            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
+        fi
+    fi
+    echo "install:" >> Makefile
+    echo -e "\ttest -d $melang_script_path || mkdir -p $melang_script_path" >> Makefile
+    echo -e "\ttest -d $install_path || mkdir -p $install_path" >> Makefile
+    echo -e "\tcp -fr lib $install_path" >> Makefile
+    echo -e "\tcp -fr include $install_path" >> Makefile
+    echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
+    echo -e "\ttest -d $melang_script_path/trace || cp -fr trace $melang_script_path" >> Makefile
+
+    for fname in ${select_files[@]}
+    do
+        objname=`basename $fname | cut -d '.' -f 1`".o"
+        echo -n "objs/$objname :" >> Makefile
+        for header in `cpp -MM -MG $fname 2> /dev/null`
+        do
+            suffix=`echo $header | cut -d '.' -f 2`
+            if [ $suffix = 'c' ]; then
+                echo -n $header >> Makefile
+                echo -n " " >> Makefile
+                continue
+            fi
+            if [ $suffix != 'h' ]; then
+                continue
+            fi
+            test -e include/$header && echo -n "include/$header " >> Makefile
+        done
+        echo "" >> Makefile
+
+        echo -e "\t\$(CC) \$(FLAGS) -o \$@ $fname" >> Makefile
+    done
+}
+
+generate_conf_file() {
+    sed -e "s#{{ROOT}}#${realpath}#g" conf/melon.conf.template > conf/melon.conf
+}
+
+after_get_params() {
+    update_llvm_flag
+    relocate_install_path
+    update_debug_flag
+    detect_operating_system_support
+    update_paths
+    generate_path_module
+    get_source_files $select_files
+    generate_Makefile
+    generate_conf_file
+}
+
+before_get_params
+get_params $@
+after_get_params
 echo "Configure done!"
 
