@@ -1,5 +1,12 @@
 ## 安装
 
+
+### 视频介绍
+
+<iframe src="//player.bilibili.com/player.html?bvid=BV1Lu411u7Z1&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
+
+
+
 Windows与UNIX环境的安装并无差异，仅需要先行安装并配置`mingw`、`git bash`以及`make`，后续步骤与UNIX的完全一致。
 
 安装[MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds)时请选择如下设置：

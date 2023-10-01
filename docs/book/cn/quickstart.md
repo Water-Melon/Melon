@@ -1,5 +1,12 @@
 ## 快速入门
 
+
+### 视频介绍
+
+<iframe src="//player.bilibili.com/player.html?bvid=BV1L94y1Y7vu&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
+
+
+
 Melon的使用并不繁琐，大致步骤可分为：
 
 1. 在使用前初始化库

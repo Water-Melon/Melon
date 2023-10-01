@@ -1,5 +1,12 @@
 ## 跟踪模式
 
+
+### 视频介绍
+
+<iframe src="//player.bilibili.com/player.html?bvid=BV1p34y1V7FH&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
+
+
+
 跟踪模式用于收集使用Melon库的程序信息。大致过程如下：
 
 1. 在程序中使用指定函数设置跟踪点

@@ -1,5 +1,9 @@
 ## Installation
 
+
+<iframe width="100%" height="480px" src="https://www.youtube.com/embed/d0G-8BwLi30?si=XzbFCEcPADefc6_8" title="YouTube video player" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+
 On Windows, there is no difference between the installation of Windows and UNIX environments, you only need to install and configure `mingw`, `git bash` and `make` first.
 
 Please select the following settings when installing [MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds):
