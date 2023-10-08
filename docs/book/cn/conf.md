@@ -2,6 +2,13 @@
 
 
 
+### 视频介绍
+
+<iframe src="//player.bilibili.com/player.html?bvid=BV1ih4y1B7Fi&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
+
+
+
+### 说明
 这里仅给出开发者所需要的结构定义和函数声明。
 
 在Melon中，配置被划分为两层，每一层为一个`域`。最外层为`main`域，在`main`中允许出现以`名称{...}`扩住的子域，然而子域中不允许再出现子域。但在程序中，`main`与子域其实为同级关系，而非包含关系。
@@ -37,7 +44,7 @@ Melon的配置文件`melon.conf`会被安装在安装路径下的`conf`子目录
 
 配置模块支持配置重载，重载功能已经集成进Melon库的初始化流程中了。
 
-当使用Melon库的`mln_core_init`进行初始化后，就可以向库的宿主进程使用`SIGUSR2`信号触发配置重载。
+当使用Melon库的`mln_framework_init`进行初始化后，就可以向库的宿主进程使用`SIGUSR2`信号触发配置重载。
 
 重载配置后，会调用开发者设置的回调函数（使用`mln_conf_hook_set`设置）来做一些处理，例如更新内存中的某些变量值。
 

@@ -37,7 +37,7 @@ Currently, the existing configuration items that have been verified and used by 
 
 The configuration module supports configuration overloading, and the overloading function has been integrated into the initialization process of the Melon library.
 
-After initialization using the `mln_core_init` of the Melon library, the `SIGUSR2` signal can be used to trigger configuration reloading to the host process of the library.
+After initialization using the `mln_framework_init` of the Melon library, the `SIGUSR2` signal can be used to trigger configuration reloading to the host process of the library.
 
 After the configuration is reloaded, the callback function set by the developer (using `mln_conf_hook_set`) will be called to do some processing, such as updating some variable values in memory.
 
