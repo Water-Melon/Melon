@@ -16,37 +16,23 @@
 
 
 
-### Structure
-
-```c
-typedef struct mln_reg_match_s {
-    mln_string_t            data;//匹配的字符串
-    struct mln_reg_match_s *prev;//上一个匹配的内容
-    struct mln_reg_match_s *next;//下一个匹配的内容
-} mln_reg_match_t;
-```
-
-
-
-### Functions
-
-
+### Functions/Macros
 
 #### mln_reg_match
 
 ```c
-int mln_reg_match(mln_string_t *exp, mln_string_t *text, mln_reg_match_t **head, mln_reg_match_t **tail);
+int mln_reg_match(mln_string_t *exp, mln_string_t *text, mln_reg_match_result_t *matches);
 ```
 
-Description: Use the regular expression `exp` in `text` to match, and store the matched string results in the doubly linked list of `head` and `tail`.
+Description: match the `text` by expression `exp`, and store the matched string results in `matches`. `matches` is created by the `mln_reg_match_result_new` function.
 
-**Note**: The memory pointed to by the `data` member in the match result `mln_reg_match_t` is the memory of the `text` directly referenced, so the memory of `text` should not be released until the match result is used up.
+**Note**: The match result `matches` is an array, where each element is of type string `mln_string_t`. The memory pointed to by the `data` member of the string is the memory of `text` that is directly referenced, so the memory of `text` should not be released before the matching results are used.
 
-return value:
+Return value:
 
-- `0` is an exact match
-- `>0` the number of results matched
-- `<0` execute failed, possibly due to insufficient memory
+- `0` an exact match
+- `>0` Number of matching results
+- `<0` Execution error failed, possibly due to insufficient memory.
 
 
 
@@ -56,21 +42,48 @@ return value:
 int mln_reg_equal(mln_string_t *exp, mln_string_t *text);
 ```
 
-Description: Determine if `text` exactly matches the regular expression `exp`.
+Description: Determine whether `text` completely matches the regular expression `exp`.
 
-Return value: return `not 0` for exact match, otherwise return `0`
+Return value: Returns `non-0` if there is a complete match, otherwise returns `0`
+
+
+
+#### mln_reg_match_result_new
+
+```c
+mln_reg_match_result_new(prealloc)；
+```
+
+Description: Create an array of matching results. `prealloc` preallocates the number of elements for the array.
+
+Return value:
+
+- Success - `mln_reg_match_result_t` pointer
+- Failure - `NULL`
 
 
 
 #### mln_reg_match_result_free
 
 ```c
-void mln_reg_match_result_free(mln_reg_match_t *results);
+mln_reg_match_result_free(res);
 ```
 
-Description: Free the memory of the match result structure returned by `mln_reg_match`.
+Description: Release the match result returned by `mln_reg_match`.
 
-Return value: none
+Return value: None
+
+
+
+#### mln_reg_match_result_get
+
+```c
+mln_reg_match_result_get(res)
+```
+
+Description: Get the starting address of the matching result array.
+
+Return value: `mln_string_t` pointer
 
 
 
@@ -82,19 +95,27 @@ Return value: none
 
 int main(int argc, char *argv[])
 {
-    mln_reg_match_t *head = NULL, *tail = NULL, *match;
+    mln_reg_match_result_t *res = NULL;
     mln_string_t text = mln_string("Hello world");
-    mln_string_t exp = mln_string(".*ello");
-    int n;
+    mln_string_t exp = mln_string("(.*e(ll)o)");
+    mln_string_t *s;
+    int i, n;
 
-    n = mln_reg_match(&exp, &text, &head, &tail);
+    if ((res = mln_reg_match_result_new(1)) == NULL) {
+        fprintf(stderr, "new match result failed.\n");
+        return -1;
+    }
+
+    n = mln_reg_match(&exp, &text, res);
     printf("matched: %d\n", n);
-    for (match = head; match != NULL; match = match->next) {
-        write(STDOUT_FILENO, match->data.data, match->data.len);
+
+    s = mln_reg_match_result_get(res);
+    for (i = 0; i < n; ++i) {
+        write(STDOUT_FILENO, s[i].data, s[i].len);
         write(STDOUT_FILENO, "\n", 1);
     }
-    mln_reg_match_result_free(head);
 
+    mln_reg_match_result_free(res);
     return 0;
 }
 ```

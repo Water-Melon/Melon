@@ -1,3 +1,21 @@
+Changes with melon 2.8.1                                          10 Oct 2023
+    *) Fixed bug in log module
+    *) Fixed return value check in fork module
+    *) Update type conversion
+    *) Added level colour to log
+    *) Updated log timezone to UTC
+    *) Added github workflows to build and publish docker images and generate docs
+    *) Refactored json module
+    *) Fixed fork bug of framework
+    *) Fixed bugs in rbtree macros
+    *) Renamed defs to utils
+    *) Supported module selective compilation
+    *) Refactored configure
+    *) Added a macro for mmap detection
+    *) Added a parameter to configure to control macros
+    *) Optimized matched results in regular expression
+    *) Updated docs
+
 Changes with melon 2.8.0                                          02 Sep 2023
     *) Updated configure to support more parameters and OS environment
     *) Fixed the bug of iothread msg

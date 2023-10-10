@@ -16,31 +16,17 @@
 
 
 
-### 相关结构
-
-```c
-typedef struct mln_reg_match_s {
-    mln_string_t            data;//匹配的字符串
-    struct mln_reg_match_s *prev;//上一个匹配的内容
-    struct mln_reg_match_s *next;//下一个匹配的内容
-} mln_reg_match_t;
-```
-
-
-
-### 函数
-
-
+### 函数/宏
 
 #### mln_reg_match
 
 ```c
-int mln_reg_match(mln_string_t *exp, mln_string_t *text, mln_reg_match_t **head, mln_reg_match_t **tail);
+int mln_reg_match(mln_string_t *exp, mln_string_t *text, mln_reg_match_result_t *matches);
 ```
 
-描述：在`text`中使用正则表达式`exp`进行匹配，并将匹配的字符串结果存放在`head`和`tail`指带的双向链表中。
+描述：在`text`中使用正则表达式`exp`进行匹配，并将匹配的字符串结果存放在`matches`中，`matches`由`mln_reg_match_result_new`函数创建。
 
-**注意**：匹配结果`mln_reg_match_t`中`data`成员指向的内存是直接引用的`text`的内存，因此在使用完匹配结果前，不应释放`text`的内存。
+**注意**：匹配结果`matches`是数组，其中每个元素都是字符串`mln_string_t`类型。字符串的`data`成员指向的内存是直接引用的`text`的内存，因此在使用完匹配结果前，不应释放`text`的内存。
 
 返回值：
 
@@ -62,15 +48,42 @@ int mln_reg_equal(mln_string_t *exp, mln_string_t *text);
 
 
 
+#### mln_reg_match_result_new
+
+```c
+mln_reg_match_result_new(prealloc)；
+```
+
+描述：创建匹配结果数组。`prealloc`为数组预分配元素个数。
+
+返回值：
+
+- 成功 - `mln_reg_match_result_t`指针
+- 失败 - `NULL`
+
+
+
 #### mln_reg_match_result_free
 
 ```c
-void mln_reg_match_result_free(mln_reg_match_t *results);
+mln_reg_match_result_free(res);
 ```
 
-描述：释放`mln_reg_match`返回的匹配结果结构内存。
+描述：释放`mln_reg_match`返回的匹配结果。
 
 返回值：无
+
+
+
+#### mln_reg_match_result_get
+
+```c
+mln_reg_match_result_get(res)
+```
+
+描述：获取匹配结果数组的起始地址。
+
+返回值：`mln_string_t`指针
 
 
 
@@ -82,19 +95,27 @@ void mln_reg_match_result_free(mln_reg_match_t *results);
 
 int main(int argc, char *argv[])
 {
-    mln_reg_match_t *head = NULL, *tail = NULL, *match;
+    mln_reg_match_result_t *res = NULL;
     mln_string_t text = mln_string("Hello world");
-    mln_string_t exp = mln_string(".*ello");
-    int n;
+    mln_string_t exp = mln_string("(.*e(ll)o)");
+    mln_string_t *s;
+    int i, n;
 
-    n = mln_reg_match(&exp, &text, &head, &tail);
+    if ((res = mln_reg_match_result_new(1)) == NULL) {
+        fprintf(stderr, "new match result failed.\n");
+        return -1;
+    }
+
+    n = mln_reg_match(&exp, &text, res);
     printf("matched: %d\n", n);
-    for (match = head; match != NULL; match = match->next) {
-        write(STDOUT_FILENO, match->data.data, match->data.len);
+
+    s = mln_reg_match_result_get(res);
+    for (i = 0; i < n; ++i) {
+        write(STDOUT_FILENO, s[i].data, s[i].len);
         write(STDOUT_FILENO, "\n", 1);
     }
-    mln_reg_match_result_free(head);
 
+    mln_reg_match_result_free(res);
     return 0;
 }
 ```
