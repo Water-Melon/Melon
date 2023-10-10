@@ -7,6 +7,9 @@
 #define __MLN_REGEXP_H
 
 #include "mln_string.h"
+#include "mln_array.h"
+
+typedef mln_array_t mln_reg_match_result_t;
 
 #define M_REGEXP_MASK_SQUARE  ((unsigned int)0x00800000)
 #define M_REGEXP_MASK_OR      ((unsigned int)0x01000000)
@@ -33,15 +36,22 @@
 #define M_REGEXP_SUB          173
 #define M_REGEXP_OR           174
 
-typedef struct mln_reg_match_s {
-    mln_string_t            data;
-    struct mln_reg_match_s *prev;
-    struct mln_reg_match_s *next;
-} mln_reg_match_t;
 
-extern int mln_reg_match(mln_string_t *exp, mln_string_t *text, mln_reg_match_t **head, mln_reg_match_t **tail);
-extern int mln_reg_equal(mln_string_t *exp, mln_string_t *text);
-extern void mln_reg_match_result_free(mln_reg_match_t *results);
+#define mln_reg_match_result_new(prealloc) ({\
+    struct mln_array_attr attr;\
+    attr.pool = NULL;\
+    attr.pool_alloc = NULL;\
+    attr.pool_free = NULL;\
+    attr.free = NULL;\
+    attr.size = sizeof(mln_string_t);\
+    attr.nalloc = (prealloc);\
+    mln_array_new(&attr);\
+})
+#define mln_reg_match_result_free(res)  mln_array_free(res)
+#define mln_reg_match_result_get(res)   (mln_string_t *)mln_array_elts(res)
+
+extern int mln_reg_match(mln_string_t *exp, mln_string_t *text, mln_reg_match_result_t *matches) __NONNULL3(1,2,3);
+extern int mln_reg_equal(mln_string_t *exp, mln_string_t *text) __NONNULL2(1,2);
 
 #endif
 
