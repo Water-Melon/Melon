@@ -68,9 +68,9 @@ mln_event_fd_timeout_set(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms);
 
 /*varliables*/
 mln_event_desc_t fheap_min = {
+    NULL, NULL, NULL, NULL,
     M_EV_TM, 0,
-    {{NULL, NULL, 0}},
-    NULL, NULL, NULL, NULL
+    {(mln_event_tm_t){NULL, NULL, 0}},
 };
 
 mln_event_t *mln_event_new(void)

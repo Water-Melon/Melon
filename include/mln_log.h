@@ -21,15 +21,15 @@ typedef enum {
 } mln_log_level_t;
 
 typedef struct {
-    char            dir_path[M_LOG_PATH_LEN/2];
-    char            pid_path[M_LOG_PATH_LEN];
-    char            log_path[M_LOG_PATH_LEN];
+    mln_spin_t      thread_lock;
     int             fd;
     mln_u32_t       in_daemon:1;
     mln_u32_t       init:1;
     mln_u32_t       padding:30;
     mln_log_level_t level;
-    mln_spin_t      thread_lock;
+    char            dir_path[M_LOG_PATH_LEN/2];
+    char            pid_path[M_LOG_PATH_LEN];
+    char            log_path[M_LOG_PATH_LEN];
 } mln_log_t;
 
 

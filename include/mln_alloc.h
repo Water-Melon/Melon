@@ -47,6 +47,8 @@ struct mln_alloc_shm_attr_s {
  * But in Linux, no such kind of problem.
  */
 typedef struct mln_alloc_blk_s {
+    struct mln_alloc_blk_s   *prev;
+    struct mln_alloc_blk_s   *next;
     mln_alloc_t              *pool;
     void                     *data;
     mln_alloc_chunk_t        *chunk;
@@ -54,8 +56,6 @@ typedef struct mln_alloc_blk_s {
     mln_size_t                is_large:1;
     mln_size_t                in_used:1;
     mln_size_t                padding:30;
-    struct mln_alloc_blk_s   *prev;
-    struct mln_alloc_blk_s   *next;
 } mln_alloc_blk_t;
 
 struct mln_alloc_chunk_s {
@@ -78,6 +78,8 @@ struct mln_alloc_mgr_s {
 };
 
 typedef struct mln_alloc_shm_s {
+    struct mln_alloc_shm_s   *prev;
+    struct mln_alloc_shm_s   *next;
     mln_alloc_t              *pool;
     void                     *addr;
     mln_size_t                size;
@@ -85,17 +87,9 @@ typedef struct mln_alloc_shm_s {
     mln_u32_t                 base:31;
     mln_u32_t                 large:1;
     mln_u8_t                  bitmap[M_ALLOC_SHM_BITMAP_LEN];
-    struct mln_alloc_shm_s   *prev;
-    struct mln_alloc_shm_s   *next;
 } mln_alloc_shm_t;
 
 struct mln_alloc_s {
-    mln_alloc_mgr_t           mgr_tbl[M_ALLOC_MGR_LEN];
-    struct mln_alloc_s       *parent;
-    mln_alloc_chunk_t        *large_used_head;
-    mln_alloc_chunk_t        *large_used_tail;
-    mln_alloc_shm_t          *shm_head;
-    mln_alloc_shm_t          *shm_tail;
     void                     *mem;
     mln_size_t                shm_size;
     void                     *locker;
@@ -104,6 +98,12 @@ struct mln_alloc_s {
 #if defined(WIN32)
     HANDLE                    map_handle;
 #endif
+    struct mln_alloc_s       *parent;
+    mln_alloc_mgr_t           mgr_tbl[M_ALLOC_MGR_LEN];
+    mln_alloc_chunk_t        *large_used_head;
+    mln_alloc_chunk_t        *large_used_tail;
+    mln_alloc_shm_t          *shm_head;
+    mln_alloc_shm_t          *shm_tail;
 };
 
 

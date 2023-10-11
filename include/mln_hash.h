@@ -28,9 +28,6 @@ typedef enum mln_hash_flag {
 } mln_hash_flag_t;
 
 struct mln_hash_attr {
-    void                    *pool;
-    hash_pool_alloc_handler  pool_alloc;
-    hash_pool_free_handler   pool_free;
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
     hash_free_handler        free_key;
@@ -38,13 +35,16 @@ struct mln_hash_attr {
     mln_u64_t                len_base;
     mln_u32_t                expandable:1;
     mln_u32_t                calc_prime:1;
+    void                    *pool;
+    hash_pool_alloc_handler  pool_alloc;
+    hash_pool_free_handler   pool_free;
 };
 
 typedef struct mln_hash_entry_s {
-    void                    *val;
-    void                    *key;
     struct mln_hash_entry_s *prev;
     struct mln_hash_entry_s *next;
+    void                    *val;
+    void                    *key;
 } mln_hash_entry_t;
 
 typedef struct {
@@ -53,19 +53,19 @@ typedef struct {
 } mln_hash_mgr_t;
 
 struct mln_hash_s {
-    void                    *pool;
-    hash_pool_alloc_handler  pool_alloc;
-    hash_pool_free_handler   pool_free;
+    mln_hash_mgr_t          *tbl;
+    mln_u64_t                len;
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
     hash_free_handler        free_key;
     hash_free_handler        free_val;
-    mln_hash_mgr_t          *tbl;
-    mln_u64_t                len;
     mln_u32_t                nr_nodes;
     mln_u32_t                threshold;
     mln_u32_t                expandable:1;
     mln_u32_t                calc_prime:1;
+    void                    *pool;
+    hash_pool_alloc_handler  pool_alloc;
+    hash_pool_free_handler   pool_free;
 };
 
 extern int

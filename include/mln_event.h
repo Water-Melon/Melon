@@ -66,6 +66,15 @@ enum mln_event_type {
 };
 
 typedef struct mln_event_fd_s {
+    int                      fd;
+    mln_u32_t                active_flag;
+    mln_u32_t                in_process:1;
+    mln_u32_t                is_clear:1;
+    mln_u32_t                in_active:1;
+    mln_u32_t                rd_oneshot:1;
+    mln_u32_t                wr_oneshot:1;
+    mln_u32_t                err_oneshot:1;
+    mln_u32_t                padding:26;
     void                    *rcv_data;
     ev_fd_handler            rcv_handler;
     void                    *snd_data;
@@ -76,15 +85,6 @@ typedef struct mln_event_fd_s {
     ev_fd_handler            timeout_handler;
     mln_fheap_node_t        *timeout_node;
     mln_u64_t                end_us;
-    int                      fd;
-    mln_u32_t                active_flag;
-    mln_u32_t                in_process:1;
-    mln_u32_t                is_clear:1;
-    mln_u32_t                in_active:1;
-    mln_u32_t                rd_oneshot:1;
-    mln_u32_t                wr_oneshot:1;
-    mln_u32_t                err_oneshot:1;
-    mln_u32_t                padding:26;
 } mln_event_fd_t;
 
 typedef struct mln_event_tm_s {
@@ -94,35 +94,26 @@ typedef struct mln_event_tm_s {
 } mln_event_tm_t;
 
 struct mln_event_desc_s {
-    enum mln_event_type      type;
-    mln_u32_t                flag;
-    union {
-        mln_event_fd_t       fd;
-        mln_event_tm_t       tm;
-    } data;
     struct mln_event_desc_s *prev;
     struct mln_event_desc_s *next;
     struct mln_event_desc_s *act_prev;
     struct mln_event_desc_s *act_next;
+    enum mln_event_type      type;
+    mln_u32_t                flag;
+    union {
+        mln_event_tm_t       tm;
+        mln_event_fd_t       fd;
+    } data;
 };
 
 struct mln_event_s {
-    dispatch_callback        callback;
-    void                    *callback_data;
-    mln_rbtree_t            *ev_fd_tree;
-    mln_event_desc_t        *ev_fd_wait_head;
-    mln_event_desc_t        *ev_fd_wait_tail;
-    mln_event_desc_t        *ev_fd_active_head;
-    mln_event_desc_t        *ev_fd_active_tail;
-    mln_fheap_t             *ev_fd_timeout_heap;
-    mln_fheap_t             *ev_timer_heap;
-    mln_u32_t                is_break:1;
-    mln_u32_t                padding:31;
-    int                      rd_fd;
-    int                      wr_fd;
     pthread_mutex_t          fd_lock;
     pthread_mutex_t          timer_lock;
     pthread_mutex_t          cb_lock;
+    dispatch_callback        callback;
+    void                    *callback_data;
+    mln_u32_t                is_break:1;
+    mln_u32_t                padding:31;
 #if defined(MLN_EPOLL)
     int                      epollfd;
     int                      unusedfd;
@@ -135,6 +126,14 @@ struct mln_event_s {
     fd_set                   wr_set;
     fd_set                   err_set;
 #endif
+
+    mln_rbtree_t            *ev_fd_tree;
+    mln_event_desc_t        *ev_fd_wait_head;
+    mln_event_desc_t        *ev_fd_wait_tail;
+    mln_event_desc_t        *ev_fd_active_head;
+    mln_event_desc_t        *ev_fd_active_tail;
+    mln_fheap_t             *ev_fd_timeout_heap;
+    mln_fheap_t             *ev_timer_heap;
 };
 
 #define mln_event_break_set(ev) ((ev)->is_break = 1);

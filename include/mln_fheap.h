@@ -54,16 +54,16 @@ typedef struct mln_fheap_node_s {
 } mln_fheap_node_t;
 
 typedef struct {
-    void                     *pool;
-    fheap_pool_alloc_handler  pool_alloc;
-    fheap_pool_free_handler   pool_free;
-    void                     *min_val;
+    mln_fheap_node_t         *root_list;
+    mln_fheap_node_t         *min;
     fheap_cmp                 cmp;
     fheap_copy                copy;
     fheap_key_free            key_free;
-    mln_fheap_node_t         *min;
-    mln_fheap_node_t         *root_list;
     mln_size_t                num;
+    void                     *min_val;
+    void                     *pool;
+    fheap_pool_alloc_handler  pool_alloc;
+    fheap_pool_free_handler   pool_free;
 } mln_fheap_t;
 
 /*
@@ -94,7 +94,7 @@ mln_fheap_del_child(mln_fheap_node_t **root, mln_fheap_node_t *node)
             node->left->right = node->right;
         }
     } else {
- //       if (node->right == node) abort();
+        /*if (node->right == node) abort();*/
         node->right->left = node->left;
         node->left->right = node->right;
     }

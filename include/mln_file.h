@@ -14,18 +14,18 @@
 typedef struct mln_fileset_s mln_fileset_t;
 
 typedef struct mln_file_s {
-    mln_string_t      *file_path;
+    struct mln_file_s *prev;
+    struct mln_file_s *next;
     int                fd;
     mln_u32_t          is_tmp:1;
+    mln_string_t      *file_path;
+    mln_fileset_t     *fset;
+    mln_rbtree_node_t *node;
+    size_t             refer_cnt;
+    size_t             size;
     time_t             mtime;
     time_t             ctime;
     time_t             atime;
-    size_t             size;
-    size_t             refer_cnt;
-    struct mln_file_s *prev;
-    struct mln_file_s *next;
-    mln_fileset_t     *fset;
-    mln_rbtree_node_t *node;
 } mln_file_t;
 
 struct mln_fileset_s {
