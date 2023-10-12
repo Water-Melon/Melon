@@ -35,15 +35,6 @@ typedef struct {
     ((_len)=(_result)->packets[(index)]->len, (uint8_t *)((_result)->packets[(index)]->data)))
 #define mln_fec_get_result_num(_result) ((_result)->nr_packets)
 
-#ifdef __cplusplus
-extern "C" mln_fec_t *mln_fec_new(void);
-extern "C" void mln_fec_free(mln_fec_t *fec);
-extern "C" mln_fec_result_t *
-mln_fec_encode(mln_fec_t *fec, uint8_t *packets[], uint16_t packlen[], size_t n, uint16_t group_size);
-extern "C" void mln_fec_result_free(mln_fec_result_t *fr);
-extern "C" mln_fec_result_t *
-mln_fec_decode(mln_fec_t *fec, uint8_t *packets[], uint16_t *packlen, size_t n);
-#else
 extern mln_fec_t *mln_fec_new(void);
 extern void mln_fec_free(mln_fec_t *fec);
 extern mln_fec_result_t *
@@ -51,6 +42,4 @@ mln_fec_encode(mln_fec_t *fec, uint8_t *packets[], uint16_t packlen[], size_t n,
 extern void mln_fec_result_free(mln_fec_result_t *fr);
 extern mln_fec_result_t *
 mln_fec_decode(mln_fec_t *fec, uint8_t *packets[], uint16_t *packlen, size_t n);
-#endif
-
 #endif
