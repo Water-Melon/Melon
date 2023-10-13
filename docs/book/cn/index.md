@@ -98,6 +98,6 @@ make && make install
 
 ### 联系方式
 
-Twitter: @MelangInc
+Twitter: [@MelonTechnology](https://twitter.com/MelonTechnology)
 
 QQ群: 756582294

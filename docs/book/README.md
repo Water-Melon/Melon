@@ -94,6 +94,6 @@ There is only one static library `libmelon.a` to be created.
 
 ### Contact
 
-Twitter: @MelangInc
+Twitter: [@MelonTechnology](https://twitter.com/MelonTechnology)
 
 QQ: 756582294
