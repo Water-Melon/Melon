@@ -5608,9 +5608,6 @@ static inline int mln_lang_stack_handler_spec_new(mln_lang_ctx_t *ctx, mln_strin
     mln_lang_val_t *val;
     mln_lang_object_t *obj;
     mln_lang_symbol_node_t *sym;
-    char tmp[512] = {0};
-    char msg[1024] = {0};
-    mln_size_t len;
 
 again:
     sym = __mln_lang_symbol_node_search(ctx, name, 0);
@@ -5622,11 +5619,12 @@ again:
         if ((name = sym->data.var->val->data.s) == NULL) goto err;
         goto again;
 err:
-        len = name->len>(sizeof(tmp)-1)? sizeof(tmp)-1: name->len;
-        memcpy(tmp, name->data, len);
-        snprintf(msg, sizeof(msg)-1, "Invalid Set name '%s'.", tmp);
-        __mln_lang_errmsg(ctx, msg);
-        return -1;
+        if ((var = __mln_lang_var_create_nil(ctx, NULL)) == NULL) {
+            __mln_lang_errmsg(ctx, "No memory.");
+            return -1;
+        }
+        __mln_lang_ctx_set_ret_var(ctx, var);
+        return 0;
     } else {
         if (sym->type == M_LANG_SYMBOL_SET) goto goon;
         sym = mln_lang_symbol_node_id_search(ctx, name);
