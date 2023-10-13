@@ -138,5 +138,5 @@ There is only one static library `libmelon.a` to be created.
 
 Twitter: [@MelonTechnology](https://twitter.com/MelonTechnology)
 
-QQ: 756582294
+QQ: [756582294](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=4e2GRrKLo6cz7kptaU_cUHhZ3JeHQT5b&authKey=ffV3ztGX3QAZP%2BRCnbdwAUETeT8O3VIxiIeyBch0DkvxAoM3J%2Bs3Ol1sZjcZwuto&noverify=0&group_code=756582294)
 
