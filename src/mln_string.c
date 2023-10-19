@@ -114,7 +114,8 @@ mln_string_t *mln_string_dup(mln_string_t *str)
         free(s);
         return NULL;
     }
-    memcpy(s->data, str->data, str->len);
+    if (str->data != NULL)
+        memcpy(s->data, str->data, str->len);
     s->data[str->len] = 0;
     s->len = str->len;
     s->data_ref = 0;
@@ -131,7 +132,8 @@ mln_string_t *mln_string_pool_dup(mln_alloc_t *pool, mln_string_t *str)
         mln_alloc_free(s);
         return NULL;
     }
-    memcpy(s->data, str->data, str->len);
+    if (str->data != NULL)
+        memcpy(s->data, str->data, str->len);
     s->data[str->len] = 0;
     s->len = str->len;
     s->data_ref = 0;
@@ -150,7 +152,8 @@ mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size)
         free(s);
         return NULL;
     }
-    memcpy(s->data, str->data, min);
+    if (str->data != NULL)
+        memcpy(s->data, str->data, min);
     s->data[min] = 0;
     s->len = min;
     s->data_ref = 0;
