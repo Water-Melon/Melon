@@ -96,6 +96,14 @@ make && make install
 
 
 
+### 开源贡献
+我们非常期待您能够提交Pull Request（PR），我们也尽可能简化PR的流程来使开发者可以比较容易地提交PR。
+在开发Melon库之前，希望您能花费一些宝贵的时间浏览一下如下开发者相关的文档：
+
+- 开源贡献指南 ([CONTRIBUTING.md](https://github.com/Water-Melon/Melon/blob/master/CONTRIBUTING.md)：获悉如何向Melon提交您的代码贡献。
+
+
+
 ### 联系方式
 
 Twitter: [@MelonTechnology](https://twitter.com/MelonTechnology)
