@@ -138,7 +138,7 @@ There is only one static library `libmelon.a` to be created.
 We ❤️  pull requests, and we’re continually working hard to make it as easy as possible for developers to contribute.
 Before beginning development with the Melon, please familiarize yourself with the following developer resources:
 
-- Contributor Guide ([CONTRIBUTING.md](https://github.com/Water-Melon/Melon/blob/master/CONTRIBUTING.md) to learn about how to contribute to Melon.
+- Contributor Guide ([CONTRIBUTING.md](https://github.com/Water-Melon/Melon/blob/master/CONTRIBUTING.md)) to learn about how to contribute to Melon.
 
 
 
