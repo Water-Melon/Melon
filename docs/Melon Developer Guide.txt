@@ -3829,13 +3829,19 @@ Their definitions can be found in melon/include/mln_types.h.
       Dynamic library must contain the entrance function named 'init', its prototype is:
           mln_lang_var_t *init(mln_lang_ctx_t *);
 
-      <5> Eval(val, data, in_string);
+      <5> Eval(val, data, in_string, alias);
       val - a file path or a code string.
       data - the data that we want to deliver to the new coroutine.
-      on_string - a optional argument. If is set and its value is *true*, *val* is a code string.
+      in_string - a optional argument. If is set and its value is *true*, *val* is a code string.
                   Otherwise, *val* is a file path.
+      alias - the name of new coroutine task, and it can be omitted if it is not needed.
 
-      <6> Pipe(op);
+      <6> Kill(alias);
+      Kill the running coroutine task specified by 'alias'.
+      alias - the name of running coroutine task given by function 'Eval'.
+      This function always return a 'nil'.
+
+      <7> Pipe(op);
       Receive message sent by 'mln_lang_ctx_pipe_send' from C code.
       op - has three values:
           "subscribe" - subscribe message delivery.

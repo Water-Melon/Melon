@@ -55,7 +55,7 @@ int mln_trace_init(mln_event_t *ev, mln_string_t *path)
     }
     mln_lang_cache_set(trace_lang);
 
-    trace_ctx = mln_lang_job_new(trace_lang, M_INPUT_T_FILE, path, NULL, mln_trace_lang_ctx_return_handler);
+    trace_ctx = mln_lang_job_new(trace_lang, NULL, M_INPUT_T_FILE, path, NULL, mln_trace_lang_ctx_return_handler);
     if (trace_ctx == NULL) {
         goto err3;
     }

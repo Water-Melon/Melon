@@ -110,6 +110,7 @@ struct mln_lang_s {
     mln_lang_run_ctl_t               signal;
     mln_lang_run_ctl_t               clear;
     ev_fd_handler                    launcher;
+    mln_rbtree_t                    *alias_set;
     pthread_mutex_t                  lock;
 };
 
@@ -215,6 +216,7 @@ struct mln_lang_ctx_s {
     mln_lang_symbol_node_t          *sym_head;
     mln_lang_symbol_node_t          *sym_tail;
     pthread_t                        owner;
+    mln_string_t                    *alias;
     mln_u32_t                        sym_count:16;
     mln_u32_t                        ret_flag:1;
     /*flags for operator overloading*/
@@ -453,10 +455,11 @@ extern mln_lang_t *mln_lang_new(mln_event_t *ev, mln_lang_run_ctl_t signal, mln_
 extern void mln_lang_free(mln_lang_t *lang);
 extern mln_lang_ctx_t *
 mln_lang_job_new(mln_lang_t *lang, \
+                 mln_string_t *alias, \
                  mln_u32_t type, \
                  mln_string_t *data, \
                  void *udata, \
-                 mln_lang_return_handler handler) __NONNULL2(1,3);
+                 mln_lang_return_handler handler) __NONNULL2(1,4);
 extern void mln_lang_job_free(mln_lang_ctx_t *ctx);
 extern void mln_lang_funccall_val_object_add(mln_lang_funccall_val_t *func, mln_lang_val_t *obj_val) __NONNULL2(1,2);
 /*
