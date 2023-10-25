@@ -935,59 +935,61 @@ lp:\
             if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
         }\
         mln_lex_result_get(lex, &str);\
-        if ((k = mln_string_pool_dup(lex->pool, &str)) == NULL) {\
-            mln_lex_error_set(lex, MLN_LEX_ENMEM);\
-            return NULL;\
-        }\
-        tmp.key = k;\
-        tmp.val = NULL;\
-        rn = mln_rbtree_search(lex->macros, &tmp);\
-        if (!mln_rbtree_null(rn, lex->macros)) {\
-            mln_string_free(k);\
-            return NULL;\
-        }\
-        if (c != '\n') {\
-            mln_lex_result_clean(lex);\
-            while (1) {\
-                if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
-                    return NULL;\
-                }\
-                if (c == ' ' || c == '\t') continue;\
-                if (c == MLN_EOF || c == '\n') {\
-                    goto goon;\
-                }\
-                mln_lex_stepback(lex, c);\
-                break;\
+        if (!lex->ignore) {\
+            if ((k = mln_string_pool_dup(lex->pool, &str)) == NULL) {\
+                mln_lex_error_set(lex, MLN_LEX_ENMEM);\
+                return NULL;\
             }\
+            tmp.key = k;\
+            tmp.val = NULL;\
+            rn = mln_rbtree_search(lex->macros, &tmp);\
+            if (!mln_rbtree_null(rn, lex->macros)) {\
+                mln_string_free(k);\
+                return NULL;\
+            }\
+            if (c != '\n') {\
+                mln_lex_result_clean(lex);\
+                while (1) {\
+                    if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
+                        return NULL;\
+                    }\
+                    if (c == ' ' || c == '\t') continue;\
+                    if (c == MLN_EOF || c == '\n') {\
+                        goto goon;\
+                    }\
+                    mln_lex_stepback(lex, c);\
+                    break;\
+                }\
 again:\
-            while (1) {\
-                if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
-                    return NULL;\
+                while (1) {\
+                    if ((c = mln_lex_getchar(lex)) == MLN_ERR) {\
+                        return NULL;\
+                    }\
+                    if (c == MLN_EOF || c == '\n') break;\
+                    if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
                 }\
-                if (c == MLN_EOF || c == '\n') break;\
-                if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
-            }\
-            if (lex->result_pos > lex->result_buf) {\
-                if (lex->result_pos != NULL && *(lex->result_pos-1) == (mln_u8_t)'\\') {\
-                    --(lex->result_pos);\
-                    goto again;\
+                if (lex->result_pos > lex->result_buf) {\
+                    if (lex->result_pos != NULL && *(lex->result_pos-1) == (mln_u8_t)'\\') {\
+                        --(lex->result_pos);\
+                        goto again;\
+                    }\
+                    mln_lex_result_get(lex, &str);\
+                    v = &str;\
                 }\
-                mln_lex_result_get(lex, &str);\
-                v = &str;\
             }\
-        }\
 goon:\
-        if ((lm = mln_lex_macro_new(lex->pool, k, v)) == NULL) {\
+            if ((lm = mln_lex_macro_new(lex->pool, k, v)) == NULL) {\
+                mln_string_free(k);\
+                mln_lex_error_set(lex, MLN_LEX_ENMEM);\
+                return NULL;\
+            }\
             mln_string_free(k);\
-            mln_lex_error_set(lex, MLN_LEX_ENMEM);\
-            return NULL;\
+            if ((rn = mln_rbtree_node_new(lex->macros, lm)) == NULL) {\
+                mln_lex_error_set(lex, MLN_LEX_ENMEM);\
+                return NULL;\
+            }\
+            mln_rbtree_insert(lex->macros, rn);\
         }\
-        mln_string_free(k);\
-        if ((rn = mln_rbtree_node_new(lex->macros, lm)) == NULL) {\
-            mln_lex_error_set(lex, MLN_LEX_ENMEM);\
-            return NULL;\
-        }\
-        mln_rbtree_insert(lex->macros, rn);\
         mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     }\
