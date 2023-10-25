@@ -752,6 +752,9 @@ mln_get_char(mln_lex_t *lex, char c)
             case 'r':
                 if (mln_lex_putchar(lex, '\r') == MLN_ERR) return -1;
                 break;
+            case 'e':
+                if (mln_lex_putchar(lex, '\e') == MLN_ERR) return -1;
+                break;
             case 'v':
                 if (mln_lex_putchar(lex, '\v') == MLN_ERR) return -1;
                 break;
