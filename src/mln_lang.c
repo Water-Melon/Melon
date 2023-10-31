@@ -655,8 +655,16 @@ quit:
                 goto out;
             }
         }
-        if (!ctx->ref)
+        /*
+         * ctx->ref == 0 means that this task is not suspended.
+         * and the gc should not collect if the next step is
+         * assign-statement. Because the right value might not be
+         * referred now, so it might be collected and free before
+         * assigned to the left variable.
+         */
+        if (!ctx->ref && (mln_lang_stack_top(ctx) == NULL || mln_lang_stack_top(ctx)->type != M_LSNT_ASSIGN)) {
             mln_gc_collect(ctx->gc, ctx);
+        }
         pthread_mutex_lock(&lang->lock);
         ctx->owner = 0;
 out:
@@ -2764,7 +2772,9 @@ static inline void __mln_lang_funccall_val_free(mln_lang_funccall_val_t *func)
 {
     if (func == NULL) return;
     mln_lang_var_t *var, *fr;
-    if (func->name != NULL) mln_string_free(func->name);
+    if (func->name != NULL) {
+        mln_string_free(func->name);
+    }
     var = func->args_head;
     while (var != NULL) {
         fr = var;
@@ -6886,8 +6896,11 @@ static mln_lang_var_t *mln_lang_func_eval_process(mln_lang_ctx_t *ctx)
     }
     /*create job ctx*/
     if ((newctx = __mln_lang_job_new(ctx->lang, alias, job_type, val1->data.s, NULL, NULL)) == NULL) {
-        mln_lang_errmsg(ctx, "Eval failed.");
-        return NULL;
+        if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
+            mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        return ret_var;
     }
     switch (type) {
         case M_LANG_VAL_TYPE_NIL:
