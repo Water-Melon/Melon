@@ -16,6 +16,7 @@
 #include "mln_alloc.h"
 #include "mln_array.h"
 
+#define M_LANG_ARRAY_PREALLOC      32
 #define M_LANG_CACHE_COUNT         65535
 #define M_LANG_SYMBOL_TABLE_LEN    371
 #define M_LANG_STEP_OUT            -1
@@ -287,11 +288,8 @@ typedef enum {
 
 struct mln_lang_func_detail_s {
     mln_lang_exp_t                  *exp;
-    mln_lang_var_t                  *args_head;
-    mln_lang_var_t                  *args_tail;
-    mln_size_t                       nargs;
-    mln_lang_var_t                  *closure_head;
-    mln_lang_var_t                  *closure_tail;
+    mln_array_t                      args;
+    mln_array_t                      closure;
     mln_lang_func_type_t             type;
     union {
         mln_lang_internal        process;
@@ -346,9 +344,7 @@ struct mln_lang_funccall_val_s {
     mln_string_t                    *name;
     mln_lang_func_detail_t          *prototype;
     mln_lang_val_t                  *object;
-    mln_lang_var_t                  *args_head;
-    mln_lang_var_t                  *args_tail;
-    mln_size_t                       nargs;
+    mln_array_t                      args;
 };
 
 struct mln_lang_array_s {
@@ -509,14 +505,14 @@ mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                          mln_lang_exp_t *exp, \
                          mln_lang_exp_t *closure) __NONNULL2(1,3);
 extern void mln_lang_func_detail_free(mln_lang_func_detail_t *lfd);
-extern void mln_lang_func_detail_arg_append(mln_lang_func_detail_t *func, mln_lang_var_t *var) __NONNULL2(1,2);
+extern int mln_lang_func_detail_arg_append(mln_lang_func_detail_t *func, mln_lang_var_t *var) __NONNULL2(1,2);
 extern mln_lang_val_t *mln_lang_val_new(mln_lang_ctx_t *ctx, mln_s32_t type, void *data) __NONNULL1(1);
 extern void mln_lang_val_free(mln_lang_val_t *val);
 extern int mln_lang_condition_is_true(mln_lang_var_t *var) __NONNULL1(1);
 extern mln_lang_var_t *mln_lang_set_member_search(mln_rbtree_t *members, mln_string_t *name) __NONNULL2(1,2);
 extern mln_lang_funccall_val_t *mln_lang_funccall_val_new(mln_alloc_t *pool, mln_string_t *name) __NONNULL1(1);
 extern void mln_lang_funccall_val_free(mln_lang_funccall_val_t *func);
-extern void mln_lang_funccall_val_add_arg(mln_lang_funccall_val_t *func, mln_lang_var_t *var);
+extern int mln_lang_funccall_val_add_arg(mln_lang_funccall_val_t *func, mln_lang_var_t *var);
 extern int mln_lang_funccall_val_operator(mln_lang_ctx_t *ctx, mln_string_t *name, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2) __NONNULL4(1,2,3,4);
 extern int mln_lang_funccall_val_obj_operator(mln_lang_ctx_t *ctx, \
                                               mln_lang_var_t *obj, \
