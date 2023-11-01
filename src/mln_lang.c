@@ -713,10 +713,12 @@ mln_lang_ast_cache_search(mln_lang_t *lang, mln_u32_t type, mln_string_t *conten
     now = tv.tv_sec * 1000000 + tv.tv_usec;
 
     if (type == M_INPUT_T_FILE) {
-        if (content->len >= 1 && content->data[0] == (mln_u8_t)'/') {
+        if (content->len >= 1 && (content->data[0] == (mln_u8_t)'/' || content->data[0] == (mln_u8_t)'@')) {
             mln_string_nset(&data, content->data, content->len);
         } else {
-            if ((fd = mln_lang_ast_file_open(content)) < 0) return NULL;
+            if ((fd = mln_lang_ast_file_open(content)) < 0) {
+                return NULL;
+            }
 
             if (fstat(fd, &st) < 0) {
                 close(fd);
