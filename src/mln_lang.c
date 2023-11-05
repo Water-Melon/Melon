@@ -6834,13 +6834,15 @@ static mln_lang_var_t *mln_lang_func_eval_process(mln_lang_ctx_t *ctx)
     mln_string_t v2 = mln_string("data");
     mln_string_t v3 = mln_string("in_string");
     mln_string_t v4 = mln_string("alias");
-    mln_string_t data_name = mln_string("EVAL_DATA"), *dup, *alias;
+    mln_string_t data_name = mln_string("EVAL_DATA"), *dup, *alias, *path, tmp;
     mln_lang_symbol_node_t *sym;
     mln_lang_val_t *val1, *val2;
     mln_s32_t type, type3;
     mln_u32_t job_type;
     mln_u8ptr_t data;
     mln_lang_ctx_t *newctx;
+    char buf[1024], *p;
+    int n;
     /*arg1*/
     if ((sym = mln_lang_symbol_node_search(ctx, &v1, 1)) == NULL) {
         ASSERT(0);
@@ -6902,8 +6904,20 @@ static mln_lang_var_t *mln_lang_func_eval_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Invalid type of argument 4.");
         return NULL;
     }
+    path = val1->data.s;
+    if (path->len && path->data[0] == '@' && ctx->filename != NULL && (p = strrchr((const char *)(ctx->filename->data), '/')) != NULL) {
+        n = sizeof(buf) - 1;
+        if (n > p - (char *)(ctx->filename->data)) {
+            n = p - (char *)(ctx->filename->data);
+        }
+        memcpy(buf, ctx->filename->data, n);
+        n += snprintf(buf + n, sizeof(buf) - n - 1, "/%s", (char *)(&(path->data[1])));
+        buf[n] = 0;
+        mln_string_nset(&tmp, buf, n);
+        path = &tmp;
+    }
     /*create job ctx*/
-    if ((newctx = __mln_lang_job_new(ctx->lang, alias, job_type, val1->data.s, NULL, NULL)) == NULL) {
+    if ((newctx = __mln_lang_job_new(ctx->lang, alias, job_type, path, NULL, NULL)) == NULL) {
         if ((ret_var = mln_lang_var_create_false(ctx, NULL)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
             return NULL;

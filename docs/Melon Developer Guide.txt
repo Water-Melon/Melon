@@ -3830,7 +3830,8 @@ Their definitions can be found in melon/include/mln_types.h.
           mln_lang_var_t *init(mln_lang_ctx_t *);
 
       <5> Eval(val, data, in_string, alias);
-      val - a file path or a code string.
+      val - a file path or a code string. If it is a path, the path format support '@' which means
+            that the new co-routine base directory is identical with the current co-routine's.
       data - the data that we want to deliver to the new coroutine.
       in_string - a optional argument. If is set and its value is *true*, *val* is a code string.
                   Otherwise, *val* is a file path.
