@@ -3785,9 +3785,10 @@ Their definitions can be found in melon/include/mln_types.h.
       <7> >>  <<
       <8> +  -
       <9> *  /  %
-      <10> ++  --  (suffix)
-      <11> []  .
-      <12> -  ~  !  &  ++  --  $  ()
+      <10> !
+      <11> ++  --  (suffix)
+      <12> []  .
+      <13> -  ~  &  ++  --  $  ()
 
       They are not supported by all data types.
       If encountered unsupported operatior, error message would be logged.

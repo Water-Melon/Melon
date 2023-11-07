@@ -222,6 +222,7 @@ static void mln_lang_stack_handler_relativehigh(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_move(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_addsub(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_muldiv(mln_lang_ctx_t *ctx);
+static void mln_lang_stack_handler_not(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_suffix(mln_lang_ctx_t *ctx);
 static void mln_lang_stack_handler_locate(mln_lang_ctx_t *ctx);
 static inline int mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, \
@@ -376,6 +377,10 @@ static void mln_lang_ctx_pipe_elem_destroy(mln_lang_ctx_pipe_elem_t *pe);
                 n->data.muldiv = (mln_lang_muldiv_t *)(_data);\
                 n->pos = n->data.muldiv;\
                 break;\
+            case M_LSNT_NOT:\
+                n->data.not = (mln_lang_not_t *)(_data);\
+                n->pos = n->data.not;\
+                break;\
             case M_LSNT_SUFFIX:\
                 n->data.suffix = (mln_lang_suffix_t *)(_data);\
                 break;\
@@ -518,6 +523,7 @@ mln_lang_stack_handler mln_lang_stack_map[] = {
     mln_lang_stack_handler_move,
     mln_lang_stack_handler_addsub,
     mln_lang_stack_handler_muldiv,
+    mln_lang_stack_handler_not,
     mln_lang_stack_handler_suffix,
     mln_lang_stack_handler_locate,
     mln_lang_stack_handler_spec,
@@ -1992,7 +1998,9 @@ mln_lang_funcdef_args_get(mln_lang_ctx_t *ctx, mln_lang_exp_t *exp, mln_array_t 
                 spec = spec->data.spec;
                 type = M_LANG_VAR_REFER;
             }
-            if (spec->op != M_SPEC_FACTOR) return -1;
+            if (spec->op != M_SPEC_FACTOR) {
+                return -1;
+            }
 
             factor = spec->data.factor;
         } else if (scan->type == M_LSNT_FACTOR) {
@@ -2000,7 +2008,9 @@ mln_lang_funcdef_args_get(mln_lang_ctx_t *ctx, mln_lang_exp_t *exp, mln_array_t 
         } else {
             return -1;
         }
-        if (factor->type != M_FACTOR_ID) return -1;
+        if (factor->type != M_FACTOR_ID) {
+            return -1;
+        }
 
         if ((v = (mln_lang_var_t **)mln_array_push(arr)) == NULL) {
             return -1;
@@ -2998,6 +3008,10 @@ static void __mln_lang_errmsg(mln_lang_ctx_t *ctx, char *msg)
             case M_LSNT_MULDIV:
                 filename = node->data.muldiv->file;
                 line = node->data.muldiv->line;
+                break;
+            case M_LSNT_NOT:
+                filename = node->data.not->file;
+                line = node->data.not->line;
                 break;
             case M_LSNT_SUFFIX:
                 filename = node->data.suffix->file;
@@ -4007,14 +4021,34 @@ static inline void mln_lang_generate_jump_ptr(void *ptr, mln_lang_stack_node_typ
         case M_LSNT_MULDIV:
         {
             mln_lang_muldiv_t *m = (mln_lang_muldiv_t *)ptr;
-            if (m->left->op != M_SUFFIX_NONE) {
-                m->jump = m->left;
-                m->type = M_LSNT_SUFFIX;
-            } else {
+            if (m->left->op == M_NOT_NONE) {
                 if (m->left->jump == NULL)
-                    mln_lang_generate_jump_ptr(m->left, M_LSNT_SUFFIX);
+                    mln_lang_generate_jump_ptr(m->left, M_LSNT_NOT);
                 m->jump = m->left->jump;
                 m->type = m->left->type;
+            } else {
+                m->jump = m->left;
+                m->type = M_LSNT_NOT;
+            }
+            break;
+        }
+        case M_LSNT_NOT:
+        {
+            mln_lang_not_t *n = (mln_lang_not_t *)ptr;
+            if (n->op != M_NOT_NONE) {
+                ASSERT(n->op == M_NOT_NOT);
+                n->jump = n->right.not;
+                n->type = M_LSNT_NOT;
+            } else {
+                if (n->right.suffix->op != M_SUFFIX_NONE) {
+                    n->jump = n->right.suffix;
+                    n->type = M_LSNT_SUFFIX;
+                } else {
+                    if (n->right.suffix->jump == NULL)
+                        mln_lang_generate_jump_ptr(n->right.suffix, M_LSNT_SUFFIX);
+                    n->jump = n->right.suffix->jump;
+                    n->type = n->right.suffix->type;
+                }
             }
             break;
         }
@@ -4863,7 +4897,7 @@ static void mln_lang_stack_handler_muldiv(mln_lang_ctx_t *ctx)
 goon2:
         node->step = 3;
         tmp = muldiv->right;
-        if ((node = mln_lang_stack_push(ctx, M_LSNT_SUFFIX, tmp->left)) == NULL) {
+        if ((node = mln_lang_stack_push(ctx, M_LSNT_NOT, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
             ctx->quit = 1;
             return;
@@ -4934,6 +4968,75 @@ goon4:
             mln_lang_stack_popuntil(ctx);
         }
     } else {
+        mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
+        mln_lang_stack_popuntil(ctx);
+    }
+}
+
+static void mln_lang_stack_handler_not(mln_lang_ctx_t *ctx)
+{
+    mln_lang_var_t *res = NULL;
+    mln_lang_stack_node_t *node = mln_lang_stack_top(ctx);
+    mln_lang_not_t *not = node->data.not;
+
+    if (node->step == 0) {
+        mln_lang_stack_node_reset_ret_val(node);
+        mln_lang_ctx_reset_ret_var(ctx);
+        node->step = not->op == M_NOT_NONE? M_LANG_STEP_OUT: 1;
+        if (not->jump == NULL)
+            mln_lang_generate_jump_ptr(not, M_LSNT_NOT);
+        if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(not->type), not->jump)) == NULL) {
+            __mln_lang_errmsg(ctx, "Stack is full.");
+            ctx->quit = 1;
+            return;
+        }
+        return mln_lang_stack_map[node->type](ctx);
+    } else if (node->step == 1) {
+        node->step = 2;
+        mln_lang_op handler = NULL;
+        mln_lang_method_t *method;
+        method = mln_lang_methods[mln_lang_var_val_type_get(ctx->ret_var)];
+        if (method == NULL) {
+            __mln_lang_errmsg(ctx, "Operation NOT support.");
+            ctx->quit = 1;
+            return;
+        }
+        switch (not->op) {
+            case M_NOT_NOT:
+                handler = method->not_handler;
+                break;
+            default:
+                break;
+        }
+        if (handler != NULL) {
+            if (handler(ctx, &res, ctx->ret_var, NULL) < 0) {
+                ctx->quit = 1;
+                return;
+            }
+            __mln_lang_ctx_set_ret_var(ctx, res);
+            if (res->val->type == M_LANG_VAL_TYPE_CALL) {
+                node->call = 1;
+again:
+                if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
+                    ctx->quit = 1;
+                    return;
+                }
+            } else {
+                goto out;
+            }
+        }
+    } else if (node->step == 2) {
+        if (node->call) {
+            if (mln_lang_withdraw_until_func(ctx) < 0) {
+                ctx->quit = 1;
+                return;
+            }
+            res = ctx->ret_var;
+            if (ctx->ret_var->val->type == M_LANG_VAL_TYPE_CALL) goto again;
+        }
+        goto out;
+    } else {
+out:
         mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
         mln_lang_stack_popuntil(ctx);
     }
@@ -5526,7 +5629,6 @@ static void mln_lang_stack_handler_spec(mln_lang_ctx_t *ctx)
         switch (spec->op) {
             case M_SPEC_NEGATIVE:
             case M_SPEC_REVERSE:
-            case M_SPEC_NOT:
             case M_SPEC_REFER:
             case M_SPEC_INC:
             case M_SPEC_DEC:
@@ -5599,9 +5701,6 @@ again:
                     break;
                 case M_SPEC_REVERSE:
                     handler = method->reverse_handler;
-                    break;
-                case M_SPEC_NOT:
-                    handler = method->not_handler;
                     break;
                 case M_SPEC_INC:
                     handler = method->pinc_handler;

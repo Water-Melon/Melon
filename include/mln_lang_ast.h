@@ -35,6 +35,7 @@ typedef struct mln_lang_addsub_s           mln_lang_addsub_t;
 typedef struct mln_lang_addsub_tmp_s       mln_lang_addsub_tmp_t;
 typedef struct mln_lang_muldiv_s           mln_lang_muldiv_t;
 typedef struct mln_lang_muldiv_tmp_s       mln_lang_muldiv_tmp_t;
+typedef struct mln_lang_not_s              mln_lang_not_t;
 typedef struct mln_lang_suffix_s           mln_lang_suffix_t;
 typedef struct mln_lang_suffix_tmp_s       mln_lang_suffix_tmp_t;
 typedef struct mln_lang_locate_s           mln_lang_locate_t;
@@ -344,7 +345,7 @@ typedef enum mln_lang_muldiv_op_e {
 struct mln_lang_muldiv_s {
     mln_string_t                    *file;
     mln_u64_t                        line;
-    mln_lang_suffix_t               *left;
+    mln_lang_not_t                  *left;
     mln_lang_muldiv_op_t             op;
     mln_lang_muldiv_t               *right;
     void                            *jump;
@@ -354,6 +355,23 @@ struct mln_lang_muldiv_s {
 struct mln_lang_muldiv_tmp_s {
     mln_lang_muldiv_op_t             op;
     mln_lang_muldiv_t               *muldiv;
+};
+
+typedef enum mln_lang_not_op_e {
+    M_NOT_NONE = 0,
+    M_NOT_NOT
+} mln_lang_not_op_t;
+
+struct mln_lang_not_s {
+    mln_string_t                    *file;
+    mln_u64_t                        line;
+    mln_lang_not_op_t                 op;
+    union {
+        mln_lang_not_t          *not;
+        mln_lang_suffix_t       *suffix;
+    } right;
+    void                            *jump;
+    int                              type;
 };
 
 typedef enum mln_lang_suffix_op_e {
@@ -408,7 +426,6 @@ struct mln_lang_locate_tmp_s {
 typedef enum mln_lang_spec_op_e {
     M_SPEC_NEGATIVE = 0,
     M_SPEC_REVERSE,
-    M_SPEC_NOT,
     M_SPEC_REFER,
     M_SPEC_INC,
     M_SPEC_DEC,

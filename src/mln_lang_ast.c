@@ -247,7 +247,7 @@ mln_lang_addsub_tmp_new(mln_alloc_t *pool, \
 static void mln_lang_addsub_tmp_free(void *data);
 static inline mln_lang_muldiv_t *
 mln_lang_muldiv_new(mln_alloc_t *pool, \
-                    mln_lang_suffix_t *left, \
+                    mln_lang_not_t *left, \
                     mln_lang_muldiv_op_t op, \
                     mln_lang_muldiv_t *right, \
                     mln_u64_t line, \
@@ -258,6 +258,13 @@ mln_lang_muldiv_tmp_new(mln_alloc_t *pool, \
                         mln_lang_muldiv_op_t op, \
                         mln_lang_muldiv_t *muldiv);
 static void mln_lang_muldiv_tmp_free(void *data);
+static inline mln_lang_not_t *
+mln_lang_not_new(mln_alloc_t *pool, \
+                  mln_lang_not_op_t op, \
+                  void *data, \
+                  mln_u64_t line, \
+                  mln_string_t *file);
+static void mln_lang_not_free(void *data);
 static inline mln_lang_suffix_t *
 mln_lang_suffix_new(mln_alloc_t *pool, mln_lang_locate_t *left, mln_lang_suffix_op_t op, mln_u64_t line, mln_string_t *file);
 static void mln_lang_suffix_free(void *data);
@@ -359,6 +366,8 @@ static int mln_lang_semantic_muldivexp(mln_factor_t *left, mln_factor_t **right,
 static int mln_lang_semantic_muldivmul(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_muldivdiv(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_muldivmod(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_notnot(mln_factor_t *left, mln_factor_t **right, void *data);
+static int mln_lang_semantic_notsuffix(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_suffixexp(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_suffixinc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_suffixdec(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -368,7 +377,6 @@ static int mln_lang_semantic_locateproperty(mln_factor_t *left, mln_factor_t **r
 static int mln_lang_semantic_locatefunc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specnegative(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specreverse(mln_factor_t *left, mln_factor_t **right, void *data);
-static int mln_lang_semantic_specnot(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specrefer(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specinc(mln_factor_t *left, mln_factor_t **right, void *data);
 static int mln_lang_semantic_specdec(mln_factor_t *left, mln_factor_t **right, void *data);
@@ -479,11 +487,13 @@ static mln_production_t prod_tbl[] = {
 {"__addsub_exp: LANG_TK_PLUS addsub_exp", mln_lang_semantic_addsubplus},
 {"__addsub_exp: LANG_TK_SUB addsub_exp", mln_lang_semantic_addsubsub},
 {"__addsub_exp: ", NULL},
-{"muldiv_exp: suffix_exp __muldiv_exp", mln_lang_semantic_muldivexp},
+{"muldiv_exp: not_exp __muldiv_exp", mln_lang_semantic_muldivexp},
 {"__muldiv_exp: LANG_TK_AST muldiv_exp", mln_lang_semantic_muldivmul},
 {"__muldiv_exp: LANG_TK_SLASH muldiv_exp", mln_lang_semantic_muldivdiv},
 {"__muldiv_exp: LANG_TK_PERC muldiv_exp", mln_lang_semantic_muldivmod},
 {"__muldiv_exp: ", NULL},
+{"not_exp: LANG_TK_EXCL not_exp", mln_lang_semantic_notnot},
+{"not_exp: suffix_exp", mln_lang_semantic_notsuffix},
 {"suffix_exp: locate_exp __suffix_exp", mln_lang_semantic_suffixexp},
 {"__suffix_exp: LANG_TK_INC", mln_lang_semantic_suffixinc},
 {"__suffix_exp: LANG_TK_DECR", mln_lang_semantic_suffixdec},
@@ -495,7 +505,6 @@ static mln_production_t prod_tbl[] = {
 {"__locate_exp: ", NULL},
 {"spec_exp: LANG_TK_SUB spec_exp", mln_lang_semantic_specnegative},
 {"spec_exp: LANG_TK_DASH spec_exp", mln_lang_semantic_specreverse},
-{"spec_exp: LANG_TK_EXCL spec_exp", mln_lang_semantic_specnot},
 {"spec_exp: LANG_TK_AMP spec_exp", mln_lang_semantic_specrefer},
 {"spec_exp: LANG_TK_INC spec_exp", mln_lang_semantic_specinc},
 {"spec_exp: LANG_TK_DECR spec_exp", mln_lang_semantic_specdec},
@@ -1761,7 +1770,7 @@ static void mln_lang_addsub_tmp_free(void *data)
 
 static inline mln_lang_muldiv_t *
 mln_lang_muldiv_new(mln_alloc_t *pool, \
-                    mln_lang_suffix_t *left, \
+                    mln_lang_not_t *left, \
                     mln_lang_muldiv_op_t op, \
                     mln_lang_muldiv_t *right, \
                     mln_u64_t line, \
@@ -1790,7 +1799,7 @@ static void mln_lang_muldiv_free(void *data)
     mln_lang_muldiv_t *lm, *right = (mln_lang_muldiv_t *)data;
     while (right != NULL) {
         lm = right;
-        if (lm->left != NULL) mln_lang_suffix_free(lm->left);
+        if (lm->left != NULL) mln_lang_not_free(lm->left);
         right = lm->right;
         if (lm->file != NULL) mln_string_free(lm->file);
         mln_alloc_free(lm);
@@ -1818,6 +1827,58 @@ static void mln_lang_muldiv_tmp_free(void *data)
     mln_lang_muldiv_tmp_t *lmt = (mln_lang_muldiv_tmp_t *)data;
     if (lmt->muldiv != NULL) mln_lang_muldiv_free(lmt->muldiv);
     mln_alloc_free(lmt);
+}
+
+
+static inline mln_lang_not_t *
+mln_lang_not_new(mln_alloc_t *pool, \
+                  mln_lang_not_op_t op, \
+                  void *data, \
+                  mln_u64_t line, \
+                  mln_string_t *file)
+{
+    mln_lang_not_t *ln;
+    if ((ln = (mln_lang_not_t *)mln_alloc_m(pool, sizeof(mln_lang_not_t))) == NULL) {
+        return NULL;
+    }
+    ln->file = NULL;
+    if (file != NULL && (ln->file = mln_string_pool_dup(pool, file)) == NULL) {
+        mln_alloc_free(ln);
+        return NULL;
+    }
+    ln->line = line;
+    ln->op = op;
+    switch (op) {
+        case M_NOT_NOT:
+            ln->right.not = (mln_lang_not_t *)data;
+            break;
+        default: /* M_NOT_NONE */
+            ln->right.suffix = (mln_lang_suffix_t *)data;
+            break;
+    }
+    ln->jump = NULL;
+    ln->type = 0;
+    return ln;
+}
+
+static void mln_lang_not_free(void *data)
+{
+    if (data == NULL) return;
+    mln_lang_not_t *ln = (mln_lang_not_t *)data, *fr;
+
+again:
+    ASSERT(ln != NULL);
+    fr = ln;
+    if (ln->op == M_NOT_NOT) {
+        ln = ln->right.not;
+        if (fr->file != NULL) mln_string_free(fr->file);
+        mln_alloc_free(fr);
+        goto again;
+    } else {
+        mln_lang_suffix_free(fr->right.suffix);
+        if (fr->file != NULL) mln_string_free(fr->file);
+        mln_alloc_free(fr);
+    }
 }
 
 
@@ -2042,7 +2103,6 @@ mln_lang_spec_new(mln_alloc_t *pool, \
     switch (op) {
         case M_SPEC_NEGATIVE:
         case M_SPEC_REVERSE:
-        case M_SPEC_NOT:
         case M_SPEC_REFER:
         case M_SPEC_INC:
         case M_SPEC_DEC:
@@ -2072,7 +2132,6 @@ static void mln_lang_spec_free(void *data)
         switch (op) {
             case M_SPEC_NEGATIVE:
             case M_SPEC_REVERSE:
-            case M_SPEC_NOT:
             case M_SPEC_REFER:
             case M_SPEC_INC:
             case M_SPEC_DEC:
@@ -3025,7 +3084,7 @@ static int mln_lang_semantic_muldivexp(mln_factor_t *left, mln_factor_t **right,
         r = tmp->muldiv;
         tmp->muldiv = NULL;
     }
-    if ((lm = mln_lang_muldiv_new(pool, (mln_lang_suffix_t *)(right[0]->data), op, r, left->line, left->file)) == NULL) {
+    if ((lm = mln_lang_muldiv_new(pool, (mln_lang_not_t *)(right[0]->data), op, r, left->line, left->file)) == NULL) {
         return -1;
     }
     left->data = lm;
@@ -3067,6 +3126,32 @@ static int mln_lang_semantic_muldivmod(mln_factor_t *left, mln_factor_t **right,
     left->data = tmp;
     left->nonterm_free_handler = mln_lang_muldiv_tmp_free;
     right[1]->data = NULL;
+    return 0;
+}
+
+static int mln_lang_semantic_notnot(mln_factor_t *left, mln_factor_t **right, void *data)
+{
+    mln_alloc_t *pool = (mln_alloc_t *)data;
+    mln_lang_not_t *ln;
+    if ((ln = mln_lang_not_new(pool, M_NOT_NOT, right[1]->data, left->line, left->file)) == NULL) {
+        return -1;
+    }
+    left->data = ln;
+    left->nonterm_free_handler = mln_lang_not_free;
+    right[1]->data = NULL;
+    return 0;
+}
+
+static int mln_lang_semantic_notsuffix(mln_factor_t *left, mln_factor_t **right, void *data)
+{
+    mln_alloc_t *pool = (mln_alloc_t *)data;
+    mln_lang_not_t *ln;
+    if ((ln = mln_lang_not_new(pool, M_NOT_NONE, right[0]->data, left->line, left->file)) == NULL) {
+        return -1;
+    }
+    left->data = ln;
+    left->nonterm_free_handler = mln_lang_not_free;
+    right[0]->data = NULL;
     return 0;
 }
 
@@ -3235,19 +3320,6 @@ static int mln_lang_semantic_specreverse(mln_factor_t *left, mln_factor_t **righ
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
     if ((ls = mln_lang_spec_new(pool, M_SPEC_REVERSE, right[1]->data, left->line, left->file)) == NULL) {
-        return -1;
-    }
-    left->data = ls;
-    left->nonterm_free_handler = mln_lang_spec_free;
-    right[1]->data = NULL;
-    return 0;
-}
-
-static int mln_lang_semantic_specnot(mln_factor_t *left, mln_factor_t **right, void *data)
-{
-    mln_alloc_t *pool = (mln_alloc_t *)data;
-    mln_lang_spec_t *ls;
-    if ((ls = mln_lang_spec_new(pool, M_SPEC_NOT, right[1]->data, left->line, left->file)) == NULL) {
         return -1;
     }
     left->data = ls;

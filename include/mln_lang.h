@@ -135,6 +135,7 @@ typedef enum {
     M_LSNT_MOVE,
     M_LSNT_ADDSUB,
     M_LSNT_MULDIV,
+    M_LSNT_NOT,
     M_LSNT_SUFFIX,
     M_LSNT_LOCATE,
     M_LSNT_SPEC,
@@ -167,6 +168,7 @@ struct mln_lang_stack_node_s {
         mln_lang_move_t         *move;
         mln_lang_addsub_t       *addsub;
         mln_lang_muldiv_t       *muldiv;
+        mln_lang_not_t          *not;
         mln_lang_suffix_t       *suffix;
         mln_lang_locate_t       *locate;
         mln_lang_spec_t         *spec;

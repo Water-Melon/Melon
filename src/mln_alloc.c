@@ -236,6 +236,9 @@ void mln_alloc_destroy(mln_alloc_t *pool)
 
 void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
 {
+#ifdef __DEBUG__
+    return malloc(size);
+#else
     mln_alloc_blk_t *blk;
     mln_alloc_mgr_t *am;
     mln_alloc_chunk_t *ch;
@@ -325,6 +328,7 @@ out:
     blk->in_used = 1;
     ++(blk->chunk->refer);
     return blk->data;
+#endif
 }
 
 static inline mln_alloc_mgr_t *
@@ -356,14 +360,21 @@ mln_alloc_get_mgr_by_size(mln_alloc_mgr_t *tbl, mln_size_t size)
 
 void *mln_alloc_c(mln_alloc_t *pool, mln_size_t size)
 {
+#ifdef __DEBUG__
+    return calloc(1, size);
+#else
     mln_u8ptr_t ptr = mln_alloc_m(pool, size);
     if (ptr == NULL) return NULL;
     memset(ptr, 0, size);
     return ptr;
+#endif
 }
 
 void *mln_alloc_re(mln_alloc_t *pool, void *ptr, mln_size_t size)
 {
+#ifdef __DEBUG__
+    return realloc(ptr, size);
+#else
     if (size == 0) {
         mln_alloc_free(ptr);
         return NULL;
@@ -380,6 +391,7 @@ void *mln_alloc_re(mln_alloc_t *pool, void *ptr, mln_size_t size)
     mln_alloc_free(ptr);
     
     return new_ptr;
+#endif
 }
 
 void mln_alloc_free(void *ptr)
@@ -387,6 +399,9 @@ void mln_alloc_free(void *ptr)
     if (ptr == NULL) {
         return;
     }
+#ifdef __DEBUG__
+    return free(ptr);
+#else
 
     mln_alloc_t *pool;
     mln_alloc_chunk_t *ch;
@@ -442,6 +457,7 @@ void mln_alloc_free(void *ptr)
         } else
             free(ch);
     }
+#endif
 }
 
 static inline void *mln_alloc_shm_m(mln_alloc_t *pool, mln_size_t size)
