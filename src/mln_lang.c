@@ -4276,6 +4276,7 @@ static void mln_lang_stack_handler_logiclow(mln_lang_ctx_t *ctx)
                 return mln_lang_stack_map[node->type](ctx);
             }
         } else {
+again:
             if (logiclow->op == M_LOGICLOW_OR) {
                 if ((node = mln_lang_stack_push(ctx, M_LSNT_LOGICLOW, logiclow->right)) == NULL) {
                     __mln_lang_errmsg(ctx, "Stack is full.");
@@ -4283,6 +4284,11 @@ static void mln_lang_stack_handler_logiclow(mln_lang_ctx_t *ctx)
                     return;
                 }
                 return mln_lang_stack_map[node->type](ctx);
+            } else {
+                logiclow = logiclow->right;
+                if (logiclow != NULL) {
+                    goto again;
+                }
             }
         }
     } else {
