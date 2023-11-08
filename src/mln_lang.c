@@ -7010,15 +7010,25 @@ static mln_lang_var_t *mln_lang_func_eval_process(mln_lang_ctx_t *ctx)
         return NULL;
     }
     path = val1->data.s;
-    if (path->len && path->data[0] == '@' && ctx->filename != NULL && (p = strrchr((const char *)(ctx->filename->data), '/')) != NULL) {
-        n = sizeof(buf) - 1;
-        if (n > p - (char *)(ctx->filename->data)) {
-            n = p - (char *)(ctx->filename->data);
+    if (path->len && path->data[0] == '@' && ctx->filename != NULL) {
+        if ((p = strrchr((const char *)(ctx->filename->data), '/')) == NULL) {
+            if (path->len > 1 && path->data[1] == '/') {
+                tmp.data = path->data + 2;
+                tmp.len = path->len - 2;
+            } else {
+                tmp.data = path->data + 1;
+                tmp.len = path->len - 1;
+            }
+        } else {
+            n = sizeof(buf) - 1;
+            if (n > p - (char *)(ctx->filename->data)) {
+                n = p - (char *)(ctx->filename->data);
+            }
+            memcpy(buf, ctx->filename->data, n);
+            n += snprintf(buf + n, sizeof(buf) - n - 1, "/%s", (char *)(&(path->data[1])));
+            buf[n] = 0;
+            mln_string_nset(&tmp, buf, n);
         }
-        memcpy(buf, ctx->filename->data, n);
-        n += snprintf(buf + n, sizeof(buf) - n - 1, "/%s", (char *)(&(path->data[1])));
-        buf[n] = 0;
-        mln_string_nset(&tmp, buf, n);
         path = &tmp;
     }
     /*create job ctx*/
