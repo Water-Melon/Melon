@@ -79,121 +79,124 @@ Their definitions can be found in melon/include/mln_types.h.
        It duplicates the argument and returns a new object.
        The new object is allocated by malloc().
 
-    c) mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size);
-       It is the same as mln_string_dup(), but the second argument indicates the length of the duplication.
+    c) mln_string_t *mln_string_alloc(mln_s32_t size);
+       Pre-alloc size buffer and be wrappered as a mln_string_t.
 
-    d) mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size);
+    d) mln_string_t *mln_string_pool_alloc(mln_alloc_t *pool, mln_s32_t size);
+       The same as 'mln_string_alloc', just allocated from memory pool.
+
+    e) mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size);
        It is the same as mln_string_ndup(), but the type of the first argument is char *.
 
-    e) mln_string_t *mln_string_ref_dup(mln_string_t *str);
+    f) mln_string_t *mln_string_ref_dup(mln_string_t *str);
        This interface creates a new pointer which points to the same string contents that pointed by the argument.
        It won't free the string contents when mln_string_free() is called.
 
-    f) mln_string_t *mln_string_const_ref_dup(char *s);
+    g) mln_string_t *mln_string_const_ref_dup(char *s);
        It is the same as mln_string_ref_dup() but the argument type.
 
-    g) void mln_string_free(mln_string_t *str);
+    h) void mln_string_free(mln_string_t *str);
        It is used to free mln_string_t.
        If 'str' is initialized by mln_string_ref_dup() or mln_string_const_ref_dup(), the string contents will be freed
        at the same time.
 
-    h) int mln_string_strseqcmp(mln_string_t *s1, mln_string_t *s2);
+    i) int mln_string_strseqcmp(mln_string_t *s1, mln_string_t *s2);
        e.g.
            mln_string_t a = mln_string("abcd");
            mln_string_t b = mln_string("abcedasd");
            int ret = mln_string_strseqcmp(&a, &b);
        'ret' will be -1.
 
-    i) int mln_string_strcmp(mln_string_t *s1, mln_string_t *s2);
+    j) int mln_string_strcmp(mln_string_t *s1, mln_string_t *s2);
        It is the same as strcmp() but the arguments' type.
 
-    j) int mln_string_const_strcmp(mln_string_t *s1, const char *s2);
+    k) int mln_string_const_strcmp(mln_string_t *s1, const char *s2);
        This interface is the same as mln_string_strcmp() but the type of the second argument.
 
-    k) int mln_string_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
+    l) int mln_string_strncmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
        It is the same as strncmp().
 
-    l) int mln_string_const_strncmp(mln_string_t *s1, const char *s2, mln_u32_t n);
+    m) int mln_string_const_strncmp(mln_string_t *s1, const char *s2, mln_u32_t n);
        It is the same as mln_string_strncmp() but the type of the second argument.
 
-    m) int mln_string_strcasecmp(mln_string_t *s1, mln_string_t *s2);
+    n) int mln_string_strcasecmp(mln_string_t *s1, mln_string_t *s2);
        It is the same as strcasecmp().
 
-    n) int mln_string_const_strcasecmp(mln_string_t *s1, const char *s2);
+    o) int mln_string_const_strcasecmp(mln_string_t *s1, const char *s2);
        It is the same as mln_string_strcasecmp() but the type of the second argument.
 
-    o) int mln_string_const_strncasecmp(mln_string_t *s1, const char *s2, mln_u32_t n); 
+    p) int mln_string_const_strncasecmp(mln_string_t *s1, const char *s2, mln_u32_t n); 
        It is the same as strncasecmp().
 
-    p) int mln_string_strncasecmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
+    q) int mln_string_strncasecmp(mln_string_t *s1, mln_string_t *s2, mln_u32_t n);
        It is the same as mln_string_strncmp() but the type of the second argument.
 
-    q) char *mln_string_strstr(mln_string_t *text, mln_string_t *pattern);
+    r) char *mln_string_strstr(mln_string_t *text, mln_string_t *pattern);
        It is the same as strstr().
 
-    r) char *mln_string_const_strstr(mln_string_t *text, const char *pattern);
+    s) char *mln_string_const_strstr(mln_string_t *text, const char *pattern);
        It is the same as mln_string_strstr() but the type of the second argument.
 
-    s) mln_string_t *mln_string_new_strstr(mln_string_t *text, mln_string_t *pattern);
+    t) mln_string_t *mln_string_new_strstr(mln_string_t *text, mln_string_t *pattern);
        It is used to get a string which starts from the position that is matched with 'pattern'.
 
-    t) mln_string_t *mln_string_new_const_strstr(mln_string_t *text, const char *pattern);
+    u) mln_string_t *mln_string_new_const_strstr(mln_string_t *text, const char *pattern);
        The same as mln_string_new_strstr() but the type of the second argument.
 
-    u) char *mln_string_kmp(mln_string_t *text, mln_string_t *pattern);
-    v) char *mln_string_const_kmp(mln_string_t *text, const char *pattern);
-    w) mln_string_t *mln_string_new_kmp(mln_string_t *text, mln_string_t *pattern);
-    x) mln_string_t *mln_string_new_const_kmp(mln_string_t *text, const char *pattern);
+    v) char *mln_string_kmp(mln_string_t *text, mln_string_t *pattern);
+    w) char *mln_string_const_kmp(mln_string_t *text, const char *pattern);
+    x) mln_string_t *mln_string_new_kmp(mln_string_t *text, mln_string_t *pattern);
+    y) mln_string_t *mln_string_new_const_kmp(mln_string_t *text, const char *pattern);
        These four interfaces are the same as mln_string_strstr(), mln_string_const_strstr(), mln_string_new_strstr() and
        mln_string_new_const_strstr(), but implemented by KMP algorithm.
 
-    y) mln_string_t *mln_string_slice(mln_string_t *s, const char *sep_array /*ended by \0*/);
+    z) mln_string_t *mln_string_slice(mln_string_t *s, const char *sep_array /*ended by \0*/);
        Slice string into several pieces.
        Slicing characters can be given by the second argument.
        This interface has a side-effect that the string buffer will be destroyed. So you can call mln_string_dup() or
        mln_string_ndup() at first.
        The return value is a vector, and its last element length is 0.
 
-    z) void mln_string_slice_free(mln_string_t *array);
+    aa) void mln_string_slice_free(mln_string_t *array);
        This interface frees the vector that mln_string_slice() returned.
 
-    aa) mln_string(s);
+    ab) mln_string(s);
        This interface is used to create a string on stack. Its content is 's', and its length is sizeof(s)-1.
 
-    ab) mln_string_set(pstring,s);
+    ac) mln_string_set(pstring,s);
        This interface is used to set the content of 'pstring', its 'str' is 's', its length is 'strlen(s)' and its
        'data_ref' will be set 1.
 
-    ac) mln_string_nset(pstring,s,n);
+    ad) mln_string_nset(pstring,s,n);
        This interface is used to set the content of 'pstring', its 'str' is 's', its length is 'n' and its
        'data_ref' will be set 1.
 
-    ad) mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s);
+    ae) mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s);
        This interface is the same as 'mln_string_new' but allocated from a memory pool.
 
-    ae) mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2);
+    af) mln_string_t *mln_string_strcat(mln_string_t *s1, mln_string_t *s2);
        It is the same as strcat but the data type is mln_string_t.
 
-    af) mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2);
+    ag) mln_string_t *mln_string_pool_strcat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2);
        It is the same as 'mln_string_strcat' but allocated by 'pool'.
 
-    ag) mln_string_t *mln_string_trim(mln_string_t *s, mln_string_t *mask);
+    ah) mln_string_t *mln_string_trim(mln_string_t *s, mln_string_t *mask);
        Strip whitespace (or other characters) from the beginning and end of a string.
 
-    ah) mln_string_t *mln_string_pool_trim(mln_alloc_t *pool, mln_string_t *s, mln_string_t *mask);
+    ai) mln_string_t *mln_string_pool_trim(mln_alloc_t *pool, mln_string_t *s, mln_string_t *mask);
        Strip whitespace (or other characters) from the beginning and end of a string.
 
-    ai) void mln_string_upper(mln_string_t *s);
+    aj) void mln_string_upper(mln_string_t *s);
        Make character uppercase.
 
-    aj) void mln_string_lower(mln_string_t *s);
+    ak) void mln_string_lower(mln_string_t *s);
        Make character lowercase.
 
-    ak) mln_string_t *mln_string_buf_new(mln_u8ptr_t buf, mln_u64_t len);
+    al) mln_string_t *mln_string_buf_new(mln_u8ptr_t buf, mln_u64_t len);
        Allocate and initialize a new string though a given `buf`.
        The argument buf should be allocated from heap (malloc, calloc, realloc).
 
-    al) mln_string_t *mln_string_buf_pool_new(mln_alloc_t *pool, mln_u8ptr_t buf, mln_u64_t len);
+    am) mln_string_t *mln_string_buf_pool_new(mln_alloc_t *pool, mln_u8ptr_t buf, mln_u64_t len);
        Allocate and initialize a new string though a given `buf`.
        The argument buf should be allocated from the same memory pool.
 

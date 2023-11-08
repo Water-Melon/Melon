@@ -205,13 +205,25 @@ Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
 
 
 
-#### mln_string_ndup
+#### mln_string_alloc
 
 ```c
-mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size);
+mln_string_t *mln_string_alloc(mln_s32_t size);
 ```
 
-Description: Creates a new string object and copies only the first `size` bytes of data in `str`.
+Description: Create a new string object and pre-allocate a buffer of `size` bytes.
+
+Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
+
+
+
+#### mln_string_pool_alloc
+
+```c
+mln_string_t *mln_string_pool_alloc(mln_alloc_t *pool, mln_s32_t size);
+```
+
+Description: Create a new string object and pre-allocate a buffer of `size` bytes. The difference with `mln_string_alloc` is that all memory is allocated from the memory pool `pool`.
 
 Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
 

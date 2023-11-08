@@ -205,13 +205,25 @@ mln_string_t *mln_string_pool_dup(mln_alloc_t *pool, mln_string_t *str);
 
 
 
-#### mln_string_ndup
+#### mln_string_alloc
 
 ```c
-mln_string_t *mln_string_ndup(mln_string_t *str, mln_s32_t size);
+mln_string_t *mln_string_alloc(mln_s32_t size);
 ```
 
-描述：创建一个新字符串对象，并仅复制`str`中前`size`个字节数据。
+描述：创建一个新字符串对象，并预分配size字节的缓冲区。
+
+返回值：成功则返回`mln_string_t`指针，否则返回`NULL`。
+
+
+
+#### mln_string_pool_alloc
+
+```c
+mln_string_t *mln_string_pool_alloc(mln_alloc_t *pool, mln_s32_t size);
+```
+
+描述：创建一个新字符串对象，并预分配size字节的缓冲区。与`mln_string_alloc`的差异在于所有内存均从内存池`pool`中分配。
 
 返回值：成功则返回`mln_string_t`指针，否则返回`NULL`。
 
