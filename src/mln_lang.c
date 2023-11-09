@@ -806,6 +806,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
             ++(ctx->cache->ref);
         }
     } else {
+        ctx->cache = NULL;
         ctx->stm = (mln_lang_stm_t *)mln_lang_ast_generate(ctx->pool, lang->shift_table, content, type);
     }
     /* ctx->run_stack do not need to be initialized */
