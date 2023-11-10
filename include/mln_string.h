@@ -48,14 +48,15 @@ typedef struct {
 
 #define mln_string_free(pstr) \
 ({\
-    if ((pstr) != NULL) {\
-        if ((pstr)->ref-- <= 1) {\
-            if (!(pstr)->data_ref && (pstr)->data != NULL) {\
-                if ((pstr)->pool) mln_alloc_free((pstr)->data);\
-                else free((pstr)->data);\
+    mln_string_t *__s = (pstr);\
+    if (__s != NULL) {\
+        if (__s->ref-- <= 1) {\
+            if (!__s->data_ref && __s->data != NULL) {\
+                if (__s->pool) mln_alloc_free(__s->data);\
+                else free(__s->data);\
             }\
-            if ((pstr)->pool) mln_alloc_free((pstr));\
-            else free((pstr));\
+            if (__s->pool) mln_alloc_free(__s);\
+            else free(__s);\
         }\
     }\
 })

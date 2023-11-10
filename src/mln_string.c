@@ -3,6 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
+#include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -169,7 +170,7 @@ mln_string_t *mln_string_pool_alloc(mln_alloc_t *pool, mln_s32_t size)
     }
     s->len = size;
     s->data_ref = 0;
-    s->pool = 0;
+    s->pool = 1;
     s->ref = 1;
     return s;
 }
