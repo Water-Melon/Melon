@@ -157,15 +157,13 @@ goon:
                 r = mln_lex_base_dir(lex, li, tmp_path, err);
             }
         }
+        li->buf = li->pos = NULL;
+        li->buf_len = MLN_DEFAULT_BUFLEN;
         if (r < 0 || li->fd < 0) {
-            if (li->fd >= 0) close(li->fd);
-            mln_alloc_free(li->data);
-            mln_alloc_free(li);
+            mln_lex_input_free(li);
             *err = MLN_LEX_EREAD;
             return NULL;
         }
-        li->buf = li->pos = NULL;
-        li->buf_len = MLN_DEFAULT_BUFLEN;
     } else {
         mln_alloc_free(li->data);
         mln_alloc_free(li);
@@ -268,6 +266,7 @@ mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
         return NULL;
     }
     lex->pool = attr->pool;
+    lex->preprocess_data = NULL;
 
     rbattr.pool = lex->pool;
     rbattr.pool_alloc = (rbtree_pool_alloc_handler)mln_alloc_m;
@@ -383,7 +382,8 @@ void mln_lex_destroy(mln_lex_t *lex)
     if (lex->err_msg != NULL) mln_alloc_free(lex->err_msg);
     if (lex->result_buf != NULL) mln_alloc_free(lex->result_buf);
     if (lex->keywords != NULL) mln_rbtree_free(lex->keywords);
-    if (lex->env != NULL) mln_alloc_free(lex->env);
+    if (lex->env != NULL) mln_string_free(lex->env);
+    if (lex->preprocess_data != NULL) mln_lex_preprocess_data_free(lex->preprocess_data);
     mln_alloc_free(lex);
 }
 
@@ -436,12 +436,14 @@ int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
     }
     if (lex->cur != NULL) {
         if (mln_stack_push(lex->stack, lex->cur) < 0) {
+            mln_lex_input_free(in);
             lex->error = MLN_LEX_ENMEM;
             return -1;
         }
         lex->cur = NULL;
     }
     if (mln_stack_push(lex->stack, in) < 0) {
+        mln_lex_input_free(in);
         lex->error = MLN_LEX_ENMEM;
         return -1;
     }
@@ -459,12 +461,14 @@ int mln_lex_push_input_buf_stream(mln_lex_t *lex, mln_string_t *buf)
     }
     if (lex->cur != NULL) {
         if (mln_stack_push(lex->stack, lex->cur) < 0) {
+            mln_lex_input_free(in);
             lex->error = MLN_LEX_ENMEM;
             return -1;
         }
         lex->cur = NULL;
     }
     if (mln_stack_push(lex->stack, in) < 0) {
+        mln_lex_input_free(in);
         lex->error = MLN_LEX_ENMEM;
         return -1;
     }

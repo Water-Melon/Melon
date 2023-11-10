@@ -151,22 +151,28 @@ typedef struct {
     mln_uauto_t         val;
 } mln_lex_keyword_t;
 
+typedef struct {
+    mln_u64_t           if_level;
+    mln_u64_t           if_matched;
+} mln_lex_preprocess_data_t;
+
 struct mln_lex_s {
-    mln_alloc_t        *pool;
-    mln_rbtree_t       *macros;
-    mln_lex_input_t    *cur;
-    mln_stack_t        *stack;
-    mln_lex_hooks_t     hooks;
-    mln_rbtree_t       *keywords;
-    mln_s8ptr_t         err_msg;
-    mln_u8ptr_t         result_buf;
-    mln_u8ptr_t         result_pos;
-    mln_u64_t           result_buf_len;
-    mln_u64_t           line;
-    mln_s32_t           error;
-    mln_u32_t           preprocess:1;
-    mln_u32_t           ignore:1;
-    mln_string_t       *env;
+    mln_alloc_t               *pool;
+    mln_rbtree_t              *macros;
+    mln_lex_input_t           *cur;
+    mln_stack_t               *stack;
+    mln_lex_hooks_t            hooks;
+    mln_rbtree_t              *keywords;
+    mln_s8ptr_t                err_msg;
+    mln_u8ptr_t                result_buf;
+    mln_u8ptr_t                result_pos;
+    mln_u64_t                  result_buf_len;
+    mln_u64_t                  line;
+    mln_s32_t                  error;
+    mln_u32_t                  preprocess:1;
+    mln_u32_t                  ignore:1;
+    mln_string_t              *env;
+    mln_lex_preprocess_data_t *preprocess_data;
 };
 
 typedef struct {
@@ -184,11 +190,6 @@ typedef struct {
     mln_string_t       *key;
     mln_string_t       *val;
 } mln_lex_macro_t;
-
-typedef struct {
-    mln_u64_t           if_level;
-    mln_u64_t           if_matched;
-} mln_lex_preprocess_data_t;
 
 extern mln_lex_t *mln_lex_init(struct mln_lex_attr *attr) __NONNULL1(1);
 extern void mln_lex_destroy(mln_lex_t *lex);
@@ -1158,7 +1159,12 @@ goon:\
                 (attr_ptr)->hooks->nums_data = lpd;\
             }\
             (lex_ptr) = mln_lex_init((attr_ptr));\
-            if ((lex_ptr) != NULL && (attr_ptr)->hooks != NULL) PREFIX_NAME##_set_hooks((lex_ptr));\
+            if ((lex_ptr) != NULL) {\
+                if ((attr_ptr)->hooks != NULL) PREFIX_NAME##_set_hooks((lex_ptr));\
+                (lex_ptr)->preprocess_data = lpd;\
+            } else {\
+                mln_lex_preprocess_data_free(lpd);\
+            }\
         }\
     } else {\
         (lex_ptr) = mln_lex_init((attr_ptr));\
