@@ -928,11 +928,6 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
         }
         mln_string_free(ctx->alias);
     }
-    while ((sym = ctx->sym_head) != NULL) {
-        mln_lang_sym_chain_del(&ctx->sym_head, &ctx->sym_tail, sym);
-        sym->ctx = NULL;
-        mln_lang_symbol_node_free(sym);
-    }
     if (ctx->ret_var != NULL) __mln_lang_var_free(ctx->ret_var);
     if (ctx->filename != NULL) mln_string_free(ctx->filename);
     while (mln_lang_stack_top(ctx) != NULL) {
@@ -940,6 +935,11 @@ static inline void mln_lang_ctx_free(mln_lang_ctx_t *ctx)
     }
     while (mln_lang_scope_top(ctx) != NULL) {
         mln_lang_scope_pop(ctx);
+    }
+    while ((sym = ctx->sym_head) != NULL) {
+        mln_lang_sym_chain_del(&ctx->sym_head, &ctx->sym_tail, sym);
+        sym->ctx = NULL;
+        mln_lang_symbol_node_free(sym);
     }
     if (ctx->symbols != NULL) {
         mln_lang_hash_free(ctx->symbols);
