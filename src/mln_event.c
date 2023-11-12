@@ -667,6 +667,7 @@ mln_event_fd_clr_set(mln_event_t *event, int fd)
 #elif defined(MLN_KQUEUE)
     struct kevent ev;
     EV_SET(&ev, fd, EVFILT_READ, EV_DELETE, 0, 0, ed);
+    kevent(event->kqfd, &ev, 1, NULL, 0, NULL);
     EV_SET(&ev, fd, EVFILT_WRITE, EV_DELETE, 0, 0, ed);
     kevent(event->kqfd, &ev, 1, NULL, 0, NULL);
 #else
