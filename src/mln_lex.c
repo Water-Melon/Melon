@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -429,25 +430,100 @@ char *mln_lex_strerror(mln_lex_t *lex)
 int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
 {
     int err = MLN_LEX_SUCCEED;
-    mln_lex_input_t *in = mln_lex_input_new(lex, M_INPUT_T_FILE, path, &err, lex->line);
-    if (in == NULL) {
-        lex->error = err;
+    mln_lex_input_t *in;
+    char p[1024];
+    struct stat path_stat;
+    int n;
+
+    if (path->len && path->data[0] == (mln_u8_t)'@') {
+        if (lex->cur == NULL || lex->cur->dir == NULL)
+            n = snprintf(p, sizeof(p) - 1, "./");
+        else
+            n = snprintf(p, sizeof(p) - 1, "%s/", lex->cur->dir->data);
+        if (path->len - 1 >= sizeof(p) - n) {
+            memcpy(p + n, path->data + 1, sizeof(p) - n -1);
+            n += (sizeof(p) - n - 1);
+        } else {
+            memcpy(p + n, path->data + 1, path->len - 1);
+            n += (path->len - 1);
+        }
+    } else {
+        n = path->len > sizeof(p)-1? sizeof(p)-1: path->len;
+        memcpy(p, path->data, n);
+    }
+    p[n] = 0;
+    if (access(p, F_OK)) {
+        mln_lex_error_set(lex, MLN_LEX_EFPATH);
         return -1;
     }
-    if (lex->cur != NULL) {
-        if (mln_stack_push(lex->stack, lex->cur) < 0) {
+    if (stat(p, &path_stat) < 0) {
+        mln_lex_error_set(lex, MLN_LEX_EFPATH);
+        return -1;
+    }
+
+    if (S_ISDIR(path_stat.st_mode)) {
+        int m;
+        mln_string_t tmp;
+        struct dirent *entry;
+        DIR *directory;
+
+        if ((directory = opendir(p)) == NULL) {
+            mln_lex_error_set(lex, MLN_LEX_EFPATH);
+            return -1;
+        }
+        p[n++] = '/';
+        while ((entry = readdir(directory)) != NULL) {
+            if (entry->d_type != DT_REG || entry->d_name[0] == '.') {
+                continue;
+            }
+            m = strlen(entry->d_name);
+            if (sizeof(p)-1-n < m)
+                m = sizeof(p) - 1 - n;
+            memcpy(p + n, entry->d_name, m);
+            p[n + m] = 0;
+            mln_string_nset(&tmp, p, n + m);
+            path = &tmp;
+
+            if ((in = mln_lex_input_new(lex, M_INPUT_T_FILE, path, &err, lex->line)) == NULL) {
+                lex->error = err;
+                return -1;
+            }
+            if (lex->cur != NULL) {
+                if (mln_stack_push(lex->stack, lex->cur) < 0) {
+                    mln_lex_input_free(in);
+                    lex->error = MLN_LEX_ENMEM;
+                    return -1;
+                }
+                lex->cur = NULL;
+            }
+            if (mln_stack_push(lex->stack, in) < 0) {
+                mln_lex_input_free(in);
+                lex->error = MLN_LEX_ENMEM;
+                return -1;
+            }
+            lex->line = 1;
+        }
+        closedir(directory);
+    } else {
+        if ((in = mln_lex_input_new(lex, M_INPUT_T_FILE, path, &err, lex->line)) == NULL) {
+            lex->error = err;
+            return -1;
+        }
+        if (lex->cur != NULL) {
+            if (mln_stack_push(lex->stack, lex->cur) < 0) {
+                mln_lex_input_free(in);
+                lex->error = MLN_LEX_ENMEM;
+                return -1;
+            }
+            lex->cur = NULL;
+        }
+        if (mln_stack_push(lex->stack, in) < 0) {
             mln_lex_input_free(in);
             lex->error = MLN_LEX_ENMEM;
             return -1;
         }
-        lex->cur = NULL;
+        lex->line = 1;
     }
-    if (mln_stack_push(lex->stack, in) < 0) {
-        mln_lex_input_free(in);
-        lex->error = MLN_LEX_ENMEM;
-        return -1;
-    }
-    lex->line = 1;
     return 0;
 }
 
@@ -487,13 +563,79 @@ static int mln_lex_check_file_loop_iterate_handler(void *st_data, void *data)
 
 int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path)
 {
-    if (lex->cur != NULL && !mln_string_strcmp(path, lex->cur->data)) {
-        mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
+    char p[1024];
+    struct stat path_stat;
+    int n;
+
+    if (path->len && path->data[0] == (mln_u8_t)'@') {
+        if (lex->cur == NULL || lex->cur->dir == NULL)
+            n = snprintf(p, sizeof(p) - 1, "./");
+        else
+            n = snprintf(p, sizeof(p) - 1, "%s/", lex->cur->dir->data);
+        if (path->len - 1 >= sizeof(p) - n) {
+            memcpy(p + n, path->data + 1, sizeof(p) - n -1);
+            n += (sizeof(p) - n - 1);
+        } else {
+            memcpy(p + n, path->data + 1, path->len - 1);
+            n += (path->len - 1);
+        }
+    } else {
+        n = path->len > sizeof(p)-1? sizeof(p)-1: path->len;
+        memcpy(p, path->data, n);
+    }
+    p[n] = 0;
+
+    if (access(p, F_OK)) {
+        mln_lex_error_set(lex, MLN_LEX_EFPATH);
         return -1;
     }
-    if (mln_stack_iterate(lex->stack, mln_lex_check_file_loop_iterate_handler, path) < 0) {
-        mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
+    if (stat(p, &path_stat) < 0) {
+        mln_lex_error_set(lex, MLN_LEX_EFPATH);
         return -1;
+    }
+    if (S_ISDIR(path_stat.st_mode)) {
+        int m;
+        DIR *directory;
+        mln_string_t tmp;
+        struct dirent *entry;
+
+        if ((directory = opendir(p)) == NULL) {
+            mln_lex_error_set(lex, MLN_LEX_EFPATH);
+            return -1;
+        }
+
+        p[n++] = '/';
+        while ((entry = readdir(directory)) != NULL) {
+            if (entry->d_type != DT_REG || entry->d_name[0] == '.') {
+                continue;
+            }
+            m = strlen(entry->d_name);
+            if (sizeof(p)-1-n < m)
+                m = sizeof(p) - 1 - n;
+            memcpy(p + n, entry->d_name, m);
+            p[n + m] = 0;
+            mln_string_nset(&tmp, p, n + m);
+            path = &tmp;
+
+            if (lex->cur != NULL && !mln_string_strcmp(path, lex->cur->data)) {
+                mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
+                return -1;
+            }
+            if (mln_stack_iterate(lex->stack, mln_lex_check_file_loop_iterate_handler, path) < 0) {
+                mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
+                return -1;
+            }
+        }
+        closedir(directory);
+    } else {
+        if (lex->cur != NULL && !mln_string_strcmp(path, lex->cur->data)) {
+            mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
+            return -1;
+        }
+        if (mln_stack_iterate(lex->stack, mln_lex_check_file_loop_iterate_handler, path) < 0) {
+            mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
+            return -1;
+        }
     }
     return 0;
 }

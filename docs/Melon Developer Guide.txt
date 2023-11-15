@@ -645,6 +645,9 @@ Their definitions can be found in melon/include/mln_types.h.
              #include "/xxx/xxx/a.conf"
          or
              #include "@/a.conf"
+         or
+             #include "xxx" // and 'xxx' is a directory, that all files (exclude the files in sub-directories or the
+                            // name prefixed by '.') will be included.
          Note: path must be contained by `"`, not `'`.
          `@` stands for the directory path of current file.
          e.g.:
