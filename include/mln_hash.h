@@ -27,6 +27,12 @@ typedef enum mln_hash_flag {
     M_HASH_F_KV
 } mln_hash_flag_t;
 
+typedef enum mln_hash_type {
+    M_HASH_IT,
+    M_HASH_IT_BEGIN,
+    M_HASH_IT_END,
+} mln_hash_type;
+
 struct mln_hash_attr {
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
@@ -68,6 +74,12 @@ struct mln_hash_s {
     hash_pool_free_handler   pool_free;
 };
 
+typedef struct mln_hash_iterator{
+    mln_hash_entry_t*   hash_entry;
+    mln_hash_type       hash_it_type;
+    mln_hash_t*         it_belong_to;
+} mln_hash_iterator;
+
 extern int
 mln_hash_init(mln_hash_t *h, struct mln_hash_attr *attr) __NONNULL2(1,2);
 extern void mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg);
@@ -97,6 +109,18 @@ extern void *
 mln_hash_change_value(mln_hash_t *h, void *key, void *new_value) __NONNULL2(1,2);
 extern int mln_hash_key_exist(mln_hash_t *h, void *key) __NONNULL2(1,2);
 extern void mln_hash_reset(mln_hash_t *h, mln_hash_flag_t flg) __NONNULL1(1);
+
+extern int mln_hash_it_begin(mln_hash_t* h,mln_hash_iterator* user_it_addr) __NONNULL2(1,2);
+extern int mln_hash_it_end(mln_hash_t* h,mln_hash_iterator* user_it_addr) __NONNULL2(1,2);
+extern int mln_hash_it_is_begin(mln_hash_t* h,const mln_hash_iterator* user_it) __NONNULL2(1,2);
+extern int mln_hash_it_is_end(mln_hash_t* h,const mln_hash_iterator* user_it) __NONNULL2(1,2);
+extern int mln_hash_it_next(mln_hash_t* h,mln_hash_iterator* user_it) __NONNULL2(1,2);
+extern int mln_hash_it_get_next(mln_hash_t* h,const mln_hash_iterator* user_it,mln_hash_iterator* target_user_it) __NONNULL3(1,2,3);
+extern void mln_hash_it_remove(mln_hash_t* h,mln_hash_iterator* user_it, mln_hash_flag_t flg) __NONNULL2(1,2);
+extern void* mln_hash_it_change_value(mln_hash_t *h,mln_hash_iterator* it, void *new_value) __NONNULL2(1,2);
+extern void* mln_hash_it_get_key(mln_hash_iterator* it) __NONNULL1(1);
+extern void* mln_hash_it_get_value(mln_hash_iterator* it) __NONNULL1(1);
+extern void mln_hash_it_cpy(mln_hash_iterator* new_it,const mln_hash_iterator* old_it) __NONNULL2(1,2);
 
 #endif
 

@@ -412,6 +412,208 @@ void mln_hash_reset(mln_hash_t *h, mln_hash_flag_t flg)
     h->nr_nodes = 0;
 }
 
+
+//  0 success and will store the iterator into user_it_addr
+// -1 error 
+int mln_hash_it_begin(mln_hash_t* h,mln_hash_iterator* user_it_addr)
+{
+    mln_hash_mgr_t *mgr, *end;
+    mgr = h->tbl;
+    end = h->tbl + h->len;
+    int have_elem = 0;
+    mln_hash_entry_t *he;
+    for (; mgr < end; ++mgr) {
+        if ((he = mgr->head) !=NULL) {
+            have_elem = 1;
+            user_it_addr->hash_entry = he;
+            user_it_addr->hash_it_type = M_HASH_IT_BEGIN;
+            user_it_addr->it_belong_to = h;
+            break;
+        }   
+    }
+    if(have_elem ==0)
+    {
+        user_it_addr->hash_entry = NULL;
+        user_it_addr->hash_it_type = M_HASH_IT_END;
+        user_it_addr->it_belong_to = h;
+    }
+    return 0;
+}
+
+
+//  0 success and will store the iterator into user_it_addr
+// -1 error 
+int mln_hash_it_end(mln_hash_t* h,mln_hash_iterator* user_it_addr)
+{
+    user_it_addr->hash_entry = NULL;
+    user_it_addr->hash_it_type = M_HASH_IT_END;
+    user_it_addr->it_belong_to = h;
+    return 0;
+}
+
+// 1 yes
+// 0 no
+int mln_hash_it_is_begin(mln_hash_t* h,const mln_hash_iterator* user_it)
+{
+    if(user_it->hash_it_type == M_HASH_IT_BEGIN && user_it->it_belong_to == h) 
+        return 1;
+    return 0;
+}
+
+// 1 yes
+// 0 no
+int mln_hash_it_is_end(mln_hash_t* h,const mln_hash_iterator* user_it)
+{
+    if(user_it->hash_it_type == M_HASH_IT_END && user_it->it_belong_to == h) 
+        return 1;
+    return 0;
+}
+
+
+//  0 success and will store the iterator into user_target_it
+// -1 not iterator
+// -2 don't belong to h
+// -3 last iterator
+// -4 very heavy error
+int mln_hash_it_next(mln_hash_t* h,mln_hash_iterator* user_it)
+{
+    
+    if(user_it->hash_it_type != M_HASH_IT && user_it->hash_it_type != M_HASH_IT_BEGIN && user_it->hash_it_type!= M_HASH_IT_END)
+        return -1;
+    if(user_it->it_belong_to != h)
+        return -2;
+    if(user_it->hash_it_type == M_HASH_IT_END)
+        return -3;
+    // this check may be unuseful but i still want to hold it
+    // may be something will be change by user
+    if(user_it->hash_entry == NULL)
+        return -4;
+
+    mln_hash_iterator user_target_it;
+
+    if(user_it->hash_entry->next !=NULL)
+    {
+        user_target_it.hash_entry =user_it->hash_entry->next;
+        user_target_it.hash_it_type = M_HASH_IT;
+        user_target_it.it_belong_to = h;
+    }
+    else
+    {
+        mln_u32_t index = h->hash(h, user_it->hash_entry->key);
+        mln_hash_mgr_t *mgr = &(h->tbl[index])+1;
+        mln_hash_mgr_t *end = h->tbl + h->len;
+        int elem_is_last = 1;
+        mln_hash_entry_t *he;
+        for(;mgr < end; mgr++){
+            if((he = mgr->head) !=NULL){
+                elem_is_last =0;
+                user_target_it.hash_entry = he;
+                user_target_it.hash_it_type = M_HASH_IT;
+                user_target_it.it_belong_to = h;
+                break;
+            }
+        }
+        if(elem_is_last)
+            mln_hash_it_end(h,&user_target_it);
+    }
+    user_it->hash_entry = user_target_it.hash_entry;
+    user_it->hash_it_type = user_target_it.hash_it_type;
+    user_it->it_belong_to = user_target_it.it_belong_to;
+    return 0;
+}
+
+int mln_hash_it_get_next(mln_hash_t* h,const mln_hash_iterator* user_it,mln_hash_iterator* target_user_it)
+{
+    mln_hash_iterator it;
+    it.hash_entry = user_it->hash_entry;
+    it.hash_it_type = user_it->hash_it_type;
+    it.it_belong_to = user_it->it_belong_to;
+    int ret = 0;
+    if( (ret=mln_hash_it_next(h,&it))!=0 ) return ret;
+    target_user_it->hash_entry = it.hash_entry;
+    target_user_it->hash_it_type = it.hash_it_type;
+    target_user_it->it_belong_to = it.it_belong_to;
+    
+    return 0;
+}
+
+
+
+
+void mln_hash_it_remove(mln_hash_t* h,mln_hash_iterator* user_it, mln_hash_flag_t flg)
+{
+    if(!(user_it->hash_it_type == M_HASH_IT_BEGIN || user_it->hash_it_type == M_HASH_IT)) 
+        return;
+    if(user_it->it_belong_to != h)
+        return;
+    // this check may be unuseful but i still want to hold it
+    // may be something will be change by user
+    if(user_it->hash_entry == NULL)
+        return;
+
+    mln_u32_t index = h->hash(h, user_it->hash_entry->key);
+    mln_hash_mgr_t *mgr = &(h->tbl[index]);
+    mln_hash_entry_t *he = user_it->hash_entry;
+
+    mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
+    --(h->nr_nodes);
+    mln_hash_entry_free(h, he, flg);
+}
+
+
+//null error
+//not null  - value before
+void * mln_hash_it_change_value(mln_hash_t *h,mln_hash_iterator* it, void *new_value)
+{
+    if(!(it->hash_it_type == M_HASH_IT || it->hash_it_type==M_HASH_IT_BEGIN))
+        return NULL;
+    if(it->it_belong_to != h)
+        return NULL;
+    if(it->hash_entry ==NULL)
+        return NULL;
+    
+
+    mln_hash_entry_t *he= it->hash_entry;
+    mln_u8ptr_t retval = (mln_u8ptr_t)(he->val);
+    he->val = new_value;
+    return retval;
+}
+
+//null error
+//not null 
+void* mln_hash_it_get_key(mln_hash_iterator* it)
+{
+    if(!(it->hash_it_type == M_HASH_IT || it->hash_it_type == M_HASH_IT_BEGIN))
+        return NULL;
+    if(it->hash_entry == NULL)
+        return NULL;
+    
+    return it->hash_entry->key;
+
+}
+
+//null error
+//not null value
+void* mln_hash_it_get_value(mln_hash_iterator* it)
+{
+    if(!(it->hash_it_type == M_HASH_IT || it->hash_it_type == M_HASH_IT_BEGIN))
+        return NULL;
+    if(it->hash_entry == NULL)
+        return NULL;
+    
+    return it->hash_entry->val;
+
+}
+
+
+void mln_hash_it_cpy(mln_hash_iterator* new_it,const mln_hash_iterator* old_it)
+{
+    memcpy((void *)new_it,(void *)old_it,sizeof(mln_hash_iterator));
+    return;
+}
+
+
+
 MLN_CHAIN_FUNC_DEFINE(mln_hash_entry, \
                       mln_hash_entry_t, \
                       static inline void, \
