@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 #include "mln_prime_generator.h"
-#include "mln_hash.h"
+#include "../include/mln_hash.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -147,7 +147,7 @@ void mln_hash_free(mln_hash_t *h, mln_hash_flag_t flg)
     else free(h);
 }
 
-int mln_hash_replace(mln_hash_t *h, void *key, void *val)
+int mln_hash_replace(mln_hash_t *h,void *key,void *val)
 {
     void **k = (void **)key;
     void **v = (void **)val;
@@ -181,18 +181,20 @@ int mln_hash_replace(mln_hash_t *h, void *key, void *val)
     return 0;
 }
 
-int mln_hash_insert(mln_hash_t *h, void *key, void *val)
+int mln_hash_insert(mln_hash_t *h, mln_hash_iterator_t* it)
 {
+    if(it->it_belong!= h || it->it_type != M_HASH_ZOMBIE) return -1;
+    if(it->key == NULL) return -1;
     if (h->expandable && h->nr_nodes > h->threshold) {
         mln_hash_expand(h);
     }
     if (h->expandable && h->nr_nodes <= (h->threshold >> 3)) {
         mln_hash_reduce(h);
     }
-    mln_u32_t index = h->hash(h, key);
+    it->it_type = M_HASH_ITERATOR;
+    mln_u32_t index = h->hash(h, it->key);
     mln_hash_mgr_t *mgr = &(h->tbl[index]);
-    mln_hash_entry_t *he = mln_hash_entry_new(h, key, val);
-    if (he == NULL) return -1;
+    mln_hash_entry_t *he = it;
     mln_hash_entry_chain_add(&(mgr->head), &(mgr->tail), he);
     ++(h->nr_nodes);
     return 0;
@@ -276,7 +278,7 @@ void *mln_hash_change_value(mln_hash_t *h, void *key, void *new_value)
     return retval;
 }
 
-void *mln_hash_search(mln_hash_t *h, void *key)
+mln_hash_iterator_t *mln_hash_search(mln_hash_t *h, void *key)
 {
     mln_u32_t index = h->hash(h, key);
     mln_hash_mgr_t *mgr = &(h->tbl[index]);
@@ -285,10 +287,10 @@ void *mln_hash_search(mln_hash_t *h, void *key)
         if (h->cmp(h, key, he->key)) break;
     }
     if (he == NULL) return NULL;
-    return he->val;
+    return he;
 }
 
-void *mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx)
+mln_hash_iterator_t *mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx)
 {
     if (*ctx != NULL) {
         mln_hash_entry_t *he = *((mln_hash_entry_t **)ctx);
@@ -300,7 +302,7 @@ void *mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx)
             return NULL;
         }
         *ctx = (int *)(he->next);
-        return he->val;
+        return he;
     }
     mln_u32_t index = h->hash(h, key);
     mln_hash_mgr_t *mgr = &(h->tbl[index]);
@@ -310,21 +312,20 @@ void *mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx)
     }
     if (he == NULL) return NULL;
     *ctx = (int *)(he->next);
-    return he->val;
+    return he;
 }
 
-void mln_hash_remove(mln_hash_t *h, void *key, mln_hash_flag_t flg)
+//this function will not free it
+void mln_hash_remove(mln_hash_t *h, mln_hash_iterator_t * it)
 {
-    mln_u32_t index = h->hash(h, key);
+    if(it->it_belong!= h || it->it_type != M_HASH_ITERATOR)
+        return;
+    mln_u32_t index = h->hash(h, it->key);
     mln_hash_mgr_t *mgr = &(h->tbl[index]);
-    mln_hash_entry_t *he;
-    for (he = mgr->head; he != NULL; he = he->next) {
-        if (h->cmp(h, key, he->key)) break;
-    }
-    if (he == NULL) return;
+    mln_hash_entry_t *he = it;    
     mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
     --(h->nr_nodes);
-    mln_hash_entry_free(h, he, flg);
+    it->it_type = M_HASH_ZOMBIE;
 }
 
 static inline mln_hash_entry_t *
@@ -340,6 +341,8 @@ mln_hash_entry_new(mln_hash_t *h, void *key, void *val)
     he->val = val;
     he->key = key;
     he->prev = he->next = NULL;
+    he->it_belong = h;
+    he->it_type = M_HASH_ZOMBIE;
     return he;
 }
 
@@ -347,6 +350,7 @@ static inline void
 mln_hash_entry_free(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg)
 {
     if (he == NULL) return;
+    
     switch (flg) {
         case M_HASH_F_VAL:
             if (h->free_val != NULL)
@@ -366,6 +370,8 @@ mln_hash_entry_free(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg)
     }
     if (h->pool != NULL) h->pool_free(he);
     else free(he);
+    he->it_belong = NULL;
+    he->it_type = M_HASH_FREE;
 }
 
 int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata)
@@ -378,7 +384,7 @@ int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata)
 	mln_hash_entry_t* next_it;
         for (he = mgr->head; he != NULL; he = next_it) {
 	    next_it = he->next;
-            if (handler != NULL && handler(he->key, he->val, udata) < 0)
+            if (handler != NULL && handler(he, udata) < 0)
                 return -1;
         }
     }
@@ -410,6 +416,47 @@ void mln_hash_reset(mln_hash_t *h, mln_hash_flag_t flg)
     }
 
     h->nr_nodes = 0;
+}
+
+
+// null error
+// not null key
+void *mln_hash_iterator_key_get(mln_hash_iterator_t* it)
+{
+    if(it->it_type != M_HASH_ITERATOR) return NULL;
+    return it->key;
+}
+
+void* mln_hash_iterator_value_set(mln_hash_iterator_t* it,void *val)
+{
+    if(it->it_type != M_HASH_ITERATOR) return NULL;
+    void* retval = it->val;
+    it->val = val;
+    return retval;
+}
+
+// null error
+// not null value
+void *mln_hash_iterator_value_get(mln_hash_iterator_t* it)
+{
+    if(it->it_type != M_HASH_ITERATOR) return NULL;
+    return it->val;
+}
+
+
+mln_hash_iterator_t * mln_hash_iterator_new(mln_hash_t* h,void *key,void *val)
+{
+    return mln_hash_entry_new(h,key,val);
+}
+
+//free iterator
+//must be removed from chain or initalize
+void mln_hash_iterator_free(mln_hash_iterator_t *it,mln_hash_flag_t flg)
+{
+    if(it->it_type != M_HASH_ZOMBIE) return;
+    mln_hash_t* h = it->it_belong;
+    if(h == NULL) return;
+    mln_hash_entry_free(h,it,flg);
 }
 
 MLN_CHAIN_FUNC_DEFINE(mln_hash_entry, \
