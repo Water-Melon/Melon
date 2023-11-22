@@ -375,7 +375,9 @@ int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata)
     end = h->tbl + h->len;
     mln_hash_entry_t *he;
     for (; mgr < end; ++mgr) {
-        for (he = mgr->head; he != NULL; he = he->next) {
+	mln_hash_entry_t* next_it;
+        for (he = mgr->head; he != NULL; he = next_it) {
+	    next_it = he->next;
             if (handler != NULL && handler(he->key, he->val, udata) < 0)
                 return -1;
         }
