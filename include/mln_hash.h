@@ -24,7 +24,9 @@ typedef enum mln_hash_flag {
     M_HASH_F_NONE,
     M_HASH_F_VAL,
     M_HASH_F_KEY,
-    M_HASH_F_KV
+    M_HASH_F_KV,
+    M_HASH_F_NDELAY,
+    M_HASH_F_FREED,
 } mln_hash_flag_t;
 
 struct mln_hash_attr {
@@ -43,8 +45,11 @@ struct mln_hash_attr {
 typedef struct mln_hash_entry_s {
     struct mln_hash_entry_s *prev;
     struct mln_hash_entry_s *next;
+    struct mln_hash_entry_s *it_prev;
+    struct mln_hash_entry_s *it_next;
     void                    *val;
     void                    *key;
+    mln_hash_flag_t          delete_delay;
 } mln_hash_entry_t;
 
 typedef struct {
@@ -54,6 +59,9 @@ typedef struct {
 
 struct mln_hash_s {
     mln_hash_mgr_t          *tbl;
+    mln_hash_entry_t        *head;
+    mln_hash_entry_t        *tail;
+    mln_hash_entry_t        *iter;
     mln_u64_t                len;
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
