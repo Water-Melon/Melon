@@ -9,11 +9,14 @@
 #include <stdio.h>
 #include <string.h>
 
+MLN_CHAIN_FUNC_DECLARE(mln_hash_entry_iter, \
+                       mln_hash_entry_t, \
+                       static inline void,);
 MLN_CHAIN_FUNC_DECLARE(mln_hash_entry, \
                        mln_hash_entry_t, \
                        static inline void,);
 static inline mln_hash_entry_t *
-mln_hash_entry_new(mln_hash_t *h, void *key, void *val) __NONNULL3(1,2,3);
+mln_hash_entry_new(mln_hash_t *h, mln_hash_mgr_t *mgr, void *key, void *val) __NONNULL4(1,2,3,4);
 static inline void
 mln_hash_entry_free(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg) __NONNULL1(1);
 static inline void
@@ -56,6 +59,7 @@ int mln_hash_init(mln_hash_t *h, struct mln_hash_attr *attr)
         }
         return -1;
     }
+    h->iter = h->iter_head = h->iter_tail = NULL;
     return 0;
 }
 
@@ -106,6 +110,7 @@ mln_hash_new(struct mln_hash_attr *attr)
         }
         return NULL;
     }
+    h->iter = h->iter_head = h->iter_tail = NULL;
     return h;
 }
 
@@ -147,7 +152,7 @@ void mln_hash_free(mln_hash_t *h, mln_hash_flag_t flg)
     else free(h);
 }
 
-int mln_hash_replace(mln_hash_t *h, void *key, void *val)
+int mln_hash_update(mln_hash_t *h, void *key, void *val)
 {
     void **k = (void **)key;
     void **v = (void **)val;
@@ -158,6 +163,8 @@ int mln_hash_replace(mln_hash_t *h, void *key, void *val)
         if (h->cmp(h, *k, he->key)) break;
     }
     if (he != NULL) {
+        he->removed = 0;
+
         void *save_key = he->key;
         void *save_val = he->val;
         he->key = *k;
@@ -173,9 +180,10 @@ int mln_hash_replace(mln_hash_t *h, void *key, void *val)
     if (h->expandable && h->nr_nodes <= (h->threshold >> 3)) {
         mln_hash_reduce(h);
     }
-    he = mln_hash_entry_new(h, *k, *v);
+    he = mln_hash_entry_new(h, mgr, *k, *v);
     if (he == NULL) return -1;
     mln_hash_entry_chain_add(&(mgr->head), &(mgr->tail), he);
+    mln_hash_entry_iter_chain_add(&(h->iter_head), &(h->iter_tail), he);
     ++(h->nr_nodes);
     *k = *v = NULL;
     return 0;
@@ -191,9 +199,10 @@ int mln_hash_insert(mln_hash_t *h, void *key, void *val)
     }
     mln_u32_t index = h->hash(h, key);
     mln_hash_mgr_t *mgr = &(h->tbl[index]);
-    mln_hash_entry_t *he = mln_hash_entry_new(h, key, val);
+    mln_hash_entry_t *he = mln_hash_entry_new(h, mgr, key, val);
     if (he == NULL) return -1;
     mln_hash_entry_chain_add(&(mgr->head), &(mgr->tail), he);
+    mln_hash_entry_iter_chain_add(&(h->iter_head), &(h->iter_tail), he);
     ++(h->nr_nodes);
     return 0;
 }
@@ -284,7 +293,7 @@ void *mln_hash_search(mln_hash_t *h, void *key)
     for (he = mgr->head; he != NULL; he = he->next) {
         if (h->cmp(h, key, he->key)) break;
     }
-    if (he == NULL) return NULL;
+    if (he == NULL || he->removed) return NULL;
     return he->val;
 }
 
@@ -295,7 +304,7 @@ void *mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx)
         for (; he != NULL; he = he->next) {
             if (h->cmp(h, key, he->key)) break;
         }
-        if (he == NULL) {
+        if (he == NULL || he->removed) {
             *ctx = NULL;
             return NULL;
         }
@@ -308,7 +317,7 @@ void *mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx)
     for (he = mgr->head; he != NULL; he = he->next) {
         if (h->cmp(h, key, he->key)) break;
     }
-    if (he == NULL) return NULL;
+    if (he == NULL || he->removed) return NULL;
     *ctx = (int *)(he->next);
     return he->val;
 }
@@ -318,17 +327,26 @@ void mln_hash_remove(mln_hash_t *h, void *key, mln_hash_flag_t flg)
     mln_u32_t index = h->hash(h, key);
     mln_hash_mgr_t *mgr = &(h->tbl[index]);
     mln_hash_entry_t *he;
+
     for (he = mgr->head; he != NULL; he = he->next) {
         if (h->cmp(h, key, he->key)) break;
     }
     if (he == NULL) return;
+
+    if (h->iter == he) {
+        he->remove_flag = flg;
+        he->removed = 1;
+        return;
+    }
+
     mln_hash_entry_chain_del(&(mgr->head), &(mgr->tail), he);
+    mln_hash_entry_iter_chain_del(&(h->iter_head), &(h->iter_tail), he);
     --(h->nr_nodes);
     mln_hash_entry_free(h, he, flg);
 }
 
 static inline mln_hash_entry_t *
-mln_hash_entry_new(mln_hash_t *h, void *key, void *val)
+mln_hash_entry_new(mln_hash_t *h, mln_hash_mgr_t *mgr, void *key, void *val)
 {
     mln_hash_entry_t *he;
     if (h->pool != NULL) {
@@ -340,6 +358,10 @@ mln_hash_entry_new(mln_hash_t *h, void *key, void *val)
     he->val = val;
     he->key = key;
     he->prev = he->next = NULL;
+    he->iter_prev = he->iter_next = NULL;
+    he->mgr = mgr;
+    he->remove_flag = M_HASH_F_NONE;
+    he->removed = 0;
     return he;
 }
 
@@ -370,18 +392,27 @@ mln_hash_entry_free(mln_hash_t *h, mln_hash_entry_t *he, mln_hash_flag_t flg)
 
 int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata)
 {
-    mln_hash_mgr_t *mgr, *end;
-    mgr = h->tbl;
-    end = h->tbl + h->len;
-    mln_hash_entry_t *he;
-    for (; mgr < end; ++mgr) {
-	mln_hash_entry_t* next_it;
-        for (he = mgr->head; he != NULL; he = next_it) {
-	    next_it = he->next;
-            if (handler != NULL && handler(he->key, he->val, udata) < 0)
-                return -1;
+    mln_hash_entry_t *he = h->iter_head, *cur;
+
+    while (he != NULL) {
+        h->iter = cur = he;
+        he = he->iter_next;
+
+        if (cur->removed) continue;
+
+        if (handler != NULL && handler(h, cur->key, cur->val, udata) < 0) {
+            h->iter = NULL;
+            return -1;
+        }
+
+        if (cur->removed) {
+            mln_hash_entry_chain_del(&(cur->mgr->head), &(cur->mgr->tail), cur);
+            mln_hash_entry_iter_chain_del(&(h->iter_head), &(h->iter_tail), cur);
+            --(h->nr_nodes);
+            mln_hash_entry_free(h, cur, cur->remove_flag);
         }
     }
+    h->iter = NULL;
     return 0;
 }
 
@@ -391,7 +422,7 @@ int mln_hash_key_exist(mln_hash_t *h, void *key)
     mln_hash_mgr_t *mgr = &(h->tbl[index]);
     mln_hash_entry_t *he;
     for (he = mgr->head; he != NULL; he = he->next) {
-        if (h->cmp(h, key, he->key)) return 1;
+        if (!he->removed && h->cmp(h, key, he->key)) return 1;
     }
     return 0;
 }
@@ -410,6 +441,7 @@ void mln_hash_reset(mln_hash_t *h, mln_hash_flag_t flg)
     }
 
     h->nr_nodes = 0;
+    h->iter = h->iter_head = h->iter_tail = NULL;
 }
 
 MLN_CHAIN_FUNC_DEFINE(mln_hash_entry, \
@@ -417,4 +449,9 @@ MLN_CHAIN_FUNC_DEFINE(mln_hash_entry, \
                       static inline void, \
                       prev, \
                       next);
+MLN_CHAIN_FUNC_DEFINE(mln_hash_entry_iter, \
+                      mln_hash_entry_t, \
+                      static inline void, \
+                      iter_prev, \
+                      iter_next);
 

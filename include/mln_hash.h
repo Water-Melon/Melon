@@ -8,9 +8,10 @@
 
 #include "mln_types.h"
 
-typedef struct mln_hash_s mln_hash_t;
+typedef struct mln_hash_s     mln_hash_t;
+typedef struct mln_hash_mgr_s mln_hash_mgr_t;
 
-typedef int (*hash_iterate_handler)(void * /*key*/, void * /*val*/, void *);
+typedef int (*hash_iterate_handler)(mln_hash_t * /*h*/, void * /*key*/, void * /*val*/, void *);
 typedef mln_u64_t (*hash_calc_handler)(mln_hash_t *, void *);
 /*
  * cmp_handler's return value: 0 -- not matched, !0 -- matched.
@@ -45,12 +46,18 @@ typedef struct mln_hash_entry_s {
     struct mln_hash_entry_s *next;
     void                    *val;
     void                    *key;
+    struct mln_hash_entry_s *iter_prev;
+    struct mln_hash_entry_s *iter_next;
+    mln_hash_mgr_t          *mgr;
+    mln_hash_flag_t          remove_flag;
+    mln_u32_t                removed:1;
+    mln_u32_t                padding:31;
 } mln_hash_entry_t;
 
-typedef struct {
+struct mln_hash_mgr_s {
     mln_hash_entry_t        *head;
     mln_hash_entry_t        *tail;
-} mln_hash_mgr_t;
+};
 
 struct mln_hash_s {
     mln_hash_mgr_t          *tbl;
@@ -66,6 +73,9 @@ struct mln_hash_s {
     void                    *pool;
     hash_pool_alloc_handler  pool_alloc;
     hash_pool_free_handler   pool_free;
+    mln_hash_entry_t        *iter_head;
+    mln_hash_entry_t        *iter_tail;
+    mln_hash_entry_t        *iter;
 };
 
 extern int
@@ -80,13 +90,13 @@ mln_hash_search(mln_hash_t *h, void *key) __NONNULL2(1,2);
 extern void *
 mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx) __NONNULL3(1,2,3);
 /*
- * mln_hash_replace():
+ * mln_hash_update():
  * The second and third arguments are all second rank pointer variables.
  * For getting rid of the compiler's error, I have to define these two
  * types as void *.
  */
 extern int
-mln_hash_replace(mln_hash_t *h, void *key, void *val) __NONNULL3(1,2,3);
+mln_hash_update(mln_hash_t *h, void *key, void *val) __NONNULL3(1,2,3);
 extern int
 mln_hash_insert(mln_hash_t *h, void *key, void *val) __NONNULL2(1,2);
 extern void

@@ -149,10 +149,10 @@ void *mln_hash_search_iterator(mln_hash_t *h, void *key, int **ctx);
 
 
 
-#### mln_hash_replace
+#### mln_hash_update
 
 ```c
-int mln_hash_replace(mln_hash_t *h, void *key, void *val);
+int mln_hash_update(mln_hash_t *h, void *key, void *val);
 ```
 
 描述：将`key`与`value`替换哈希表`h`中相同`key`的表项。
@@ -206,12 +206,12 @@ typedef enum mln_hash_flag {
 ```c
 int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata);
 
-typedef int (*hash_iterate_handler)(void * /*key*/, void * /*val*/, void *);
+typedef int (*hash_iterate_handler)(mln_hash_t * /*h*/, void * /*key*/, void * /*val*/, void *);
 ```
 
 描述：遍历哈希表内所有表项。
 
-`handler`为表项访问函数，其第一个参数为`key`，第二个参数为`val`，第三个参数为`mln_hash_iterate`的第三个参数`udata`。
+`handler`为表项访问函数，其第一个参数为`h`也就是哈希表结构，第二个参数为`key`，第三个参数为`val`，第四个参数为`mln_hash_iterate`的第三个参数`udata`。
 
 返回值：
 
