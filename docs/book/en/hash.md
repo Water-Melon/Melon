@@ -149,10 +149,10 @@ Return value: the `value` structure associated with `key`
 
 
 
-#### mln_hash_replace
+#### mln_hash_update
 
 ```c
-int mln_hash_replace(mln_hash_t *h, void *key, void *val);
+int mln_hash_update(mln_hash_t *h, void *key, void *val);
 ```
 
 Description: Replace `key` with `value` for entries with the same `key` in the hash table `h`.
@@ -206,12 +206,12 @@ Return value: none
 ```c
 int mln_hash_iterate(mln_hash_t *h, hash_iterate_handler handler, void *udata);
 
-typedef int (*hash_iterate_handler)(void * /*key*/, void * /*val*/, void *);
+typedef int (*hash_iterate_handler)(mln_hash_t * /*h*/, void * /*key*/, void * /*val*/, void *);
 ```
 
 Description: Traverse all entries in the hash table.
 
-`handler` is a table entry access function, its first parameter is `key`, the second parameter is `val`, and the third parameter is the third parameter `udata` of `mln_hash_iterate`.
+`handler` is a table entry access function, its first parameter is the hash structure `h`, the second one is `key`, the third parameter is `val`, and the last parameter is the third parameter `udata` of `mln_hash_iterate`.
 
 return value:
 

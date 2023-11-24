@@ -278,7 +278,7 @@ Their definitions can be found in melon/include/mln_types.h.
        If flg is not M_HASH_F_NONE and 'h->free_key' and (or) 'h->free_val' are (is) not NULL, all entries will free
        their key and (or) value at the same time.
 
-    k) mln_hash_replace(mln_hash_t *h, void *key, void *val);
+    k) mln_hash_update(mln_hash_t *h, void *key, void *val);
        Replace the 'key' and 'val' to an exitent k-v entry which is located by 'key'. If k-v entry is not existent, a
        new key-val entry will be created and insert into 'h'.
        Note: The second and third arguments of this function are all second rank pointer variables. For getting rid

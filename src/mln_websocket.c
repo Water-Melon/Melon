@@ -15,10 +15,10 @@
 static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key);
 static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2);
 static void mln_websocket_hash_free(void *data);
-static int mln_websocket_match_iterate_handler(void *key, void *val, void *data);
+static int mln_websocket_match_iterate_handler(mln_hash_t *h, void *key, void *val, void *data);
 static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey);
 static mln_string_t *mln_websocket_accept_field(mln_http_t *http);
-static int mln_websocket_iterate_set_fields(void *key, void *val, void *data);
+static int mln_websocket_iterate_set_fields(mln_hash_t *h, void *key, void *val, void *data);
 static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *pool);
 static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_string_t *in);
 static mln_u32_t mln_websocket_masking_key_generate(void);
@@ -215,7 +215,7 @@ int mln_websocket_set_field(mln_websocket_t *ws, mln_string_t *key, mln_string_t
         mln_string_free(dup_key);
         return M_WS_RET_FAILED;
     }
-    int ret = mln_hash_replace(ws->fields, &dup_key, &dup_val);
+    int ret = mln_hash_update(ws->fields, &dup_key, &dup_val);
     mln_string_free(dup_key);
     mln_string_free(dup_val);
     return ret<0? M_WS_RET_FAILED: M_WS_RET_OK;
@@ -233,7 +233,7 @@ int mln_websocket_match(mln_websocket_t *ws)
     return M_WS_RET_OK;
 }
 
-static int mln_websocket_match_iterate_handler(void *key, void *val, void *data)
+static int mln_websocket_match_iterate_handler(mln_hash_t *h, void *key, void *val, void *data)
 {
     mln_reg_match_result_t *res = NULL;
     mln_string_t *tmp = mln_http_field_get((mln_http_t *)data, (mln_string_t *)key);
@@ -369,7 +369,7 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
     return tmp;
 }
 
-static int mln_websocket_iterate_set_fields(void *key, void *val, void *data)
+static int mln_websocket_iterate_set_fields(mln_hash_t *h, void *key, void *val, void *data)
 {
     return mln_http_field_set((mln_http_t *)data, (mln_string_t *)key, (mln_string_t *)val)==M_HTTP_RET_OK?0:-1;
 }
