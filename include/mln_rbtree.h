@@ -194,7 +194,7 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
 /*rbtree free node*/
 #define mln_rbtree_inline_node_free(t, n, freer) ({\
     mln_u32_t nofree = (n)->nofree;\
-    if ((n)->data != NULL && freer != NULL)\
+    if ((n)->data != NULL)\
         freer((n)->data);\
     if (!nofree) {\
         if ((t)->pool != NULL) (t)->pool_free((n));\

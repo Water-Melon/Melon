@@ -62,7 +62,10 @@ void mln_rbtree_free(mln_rbtree_t *t)
     mln_rbtree_node_t *fr;
     while ((fr = t->tail) != NULL) {
         mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
-        mln_rbtree_inline_node_free(t, fr, t->data_free);
+        if (t->data_free != NULL)
+            mln_rbtree_inline_node_free(t, fr, t->data_free);
+        else
+            mln_rbtree_node_free(t, fr);
     }
     if (t->pool != NULL) t->pool_free(t);
     else free(t);
@@ -74,7 +77,10 @@ void mln_rbtree_reset(mln_rbtree_t *t)
     mln_rbtree_node_t *fr;
     while ((fr = t->tail) != NULL) {
         mln_rbtree_chain_del(&(t->head), &(t->tail), fr);
-        mln_rbtree_inline_node_free(t, fr, t->data_free);
+        if (t->data_free != NULL)
+            mln_rbtree_inline_node_free(t, fr, t->data_free);
+        else
+            mln_rbtree_node_free(t, fr);
     }
     t->root = &(t->nil);
     t->min = &(t->nil);
