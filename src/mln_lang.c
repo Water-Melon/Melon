@@ -246,6 +246,7 @@ static void mln_lang_dump_array(mln_lang_array_t *array, int cnt, mln_rbtree_t *
 static int mln_lang_dump_array_elem(mln_rbtree_node_t *node, void *udata);
 
 static int mln_lang_func_dump(mln_lang_ctx_t *ctx);
+static int mln_lang_func_stack(mln_lang_ctx_t *ctx);
 static int mln_lang_func_watch(mln_lang_ctx_t *ctx);
 static int mln_lang_func_unwatch(mln_lang_ctx_t *ctx);
 static int mln_lang_func_eval(mln_lang_ctx_t *ctx);
@@ -254,6 +255,7 @@ static mln_lang_var_t *mln_lang_func_eval_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_kill_process(mln_lang_ctx_t *ctx);
 static int mln_lang_internal_func_installer(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_dump_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_func_stack_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_watch_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_unwatch_process(mln_lang_ctx_t *ctx);
 static int mln_lang_func_resource_register(mln_lang_ctx_t *ctx);
@@ -782,6 +784,8 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     mln_lang_ctx_t *ctx;
     struct mln_rbtree_attr rbattr;
     struct mln_gc_attr gcattr;
+    mln_lang_scope_t *outer_scope;
+    mln_string_t *base_scope, tmp = mln_string("__main__");
 
     if ((ctx = (mln_lang_ctx_t *)mln_alloc_m(lang->pool, sizeof(mln_lang_ctx_t))) == NULL) {
         return NULL;
@@ -874,11 +878,16 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         }
     }
 
-    mln_lang_scope_t *outer_scope;
-    if ((outer_scope = mln_lang_scope_push(ctx, NULL, M_LANG_SCOPE_TYPE_FUNC, NULL, ctx->stm)) == NULL) {
+    if ((base_scope = mln_string_pool_dup(ctx->pool, &tmp)) == NULL) {
         mln_lang_ctx_free(ctx);
         return NULL;
     }
+    if ((outer_scope = mln_lang_scope_push(ctx, base_scope, M_LANG_SCOPE_TYPE_FUNC, NULL, ctx->stm)) == NULL) {
+        mln_string_free(base_scope);
+        mln_lang_ctx_free(ctx);
+        return NULL;
+    }
+    mln_string_free(base_scope);
 
     if (filename != NULL) {
         if ((ctx->filename = mln_string_pool_dup(ctx->pool, filename)) == NULL) {
@@ -5331,7 +5340,7 @@ again_property:
             node->ret_var = ret_var;
             mln_lang_ctx_reset_ret_var(ctx);
         } else {
-            if ((funccall = __mln_lang_funccall_val_new(ctx->pool, NULL)) == NULL) {
+            if ((funccall = __mln_lang_funccall_val_new(ctx->pool, ctx->ret_var->name)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 ctx->quit = 1;
                 return;
@@ -6528,6 +6537,7 @@ static int mln_lang_internal_func_installer(mln_lang_ctx_t *ctx)
     if (mln_lang_func_resource_register(ctx) < 0) return -1;
     if (mln_lang_func_import_handler(ctx) < 0) return -1;
     if (mln_lang_func_dump(ctx) < 0) return -1;
+    if (mln_lang_func_stack(ctx) < 0) return -1;
     if (mln_lang_func_watch(ctx) < 0) return -1;
     if (mln_lang_func_unwatch(ctx) < 0) return -1;
     if (mln_lang_func_eval(ctx) < 0) return -1;
@@ -6576,6 +6586,58 @@ static int mln_lang_func_resource_register(mln_lang_ctx_t *ctx)
     }
 
     return 0;
+}
+
+static int mln_lang_func_stack(mln_lang_ctx_t *ctx)
+{
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t funcname = mln_string("Stack");
+    if ((func = __mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, (void *)mln_lang_func_stack_process, NULL, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = __mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_val_free(val);
+        return -1;
+    }
+    if (__mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        __mln_lang_var_free(var);
+        return -1;
+    }
+    return 0;
+}
+
+static mln_lang_var_t *mln_lang_func_stack_process(mln_lang_ctx_t *ctx)
+{
+    mln_lang_var_t *var;
+    mln_string_t *name, anony = mln_string("<anonymous>");
+    mln_string_t *file;
+    mln_u64_t line;
+    mln_lang_scope_t *s = mln_lang_scope_top(ctx);
+    int i;
+
+
+    for (i = 1, --s; s >= mln_lang_scope_base(ctx); --s, ++i) {
+        name = s->name == NULL? &anony: s->name;
+        file = s->entry == NULL? &anony: s->entry->file;
+        line = s->entry == NULL? 0: s->entry->line;
+        mln_log(none, "%d: %S %S:%I\n", i, name, file, line);
+    }
+
+    if ((var = mln_lang_var_create_nil(ctx, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return var;
 }
 
 static mln_lang_import_t *mln_lang_func_import_new(mln_lang_ctx_t *ctx, mln_string_t *name, void *handle)

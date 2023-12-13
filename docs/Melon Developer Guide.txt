@@ -3815,7 +3815,7 @@ Their definitions can be found in melon/include/mln_types.h.
         @__int_not_operaotr__(operand);
       and of course, these arguments can be reference.
 
-   H. Internal Function
+   H. Built-in Functions
       <1> Dump(var);
       Dump all details of 'var' to console and log.
 
@@ -3859,6 +3859,9 @@ Their definitions can be found in melon/include/mln_types.h.
       is a gap between unsubscribe and 'mln_lang_ctx_pipe_send'. So you can call Pipe again to clean all rest
       messages.
 
+      <8> Stack();
+      Output the function call stack of the current coroutine.
+      Currently, tracing of function names set by the function 'Watch' is not supported.
 
       For more library functions, please refer to https://melang.org/.
 
