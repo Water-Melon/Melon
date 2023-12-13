@@ -6115,6 +6115,10 @@ static void mln_lang_dump_var(mln_lang_var_t *var, int cnt, mln_rbtree_t *check)
         default: /*M_LANG_VAL_TYPE_CALL:*/
             blank();
             mln_log(none, "<CALL>\n");
+            ASSERT(var->val->data.call != NULL);
+            if (var->val->data.call->prototype != NULL) {
+                mln_lang_dump_function(var->val->data.call->prototype, cnt + 2);
+            }
             break;
     }
 }
@@ -6150,7 +6154,7 @@ static void mln_lang_dump_object(mln_lang_object_t *obj, int cnt, mln_rbtree_t *
 static int mln_lang_dump_var_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     struct mln_lang_scan_s *ls = (struct mln_lang_scan_s *)udata;
-    mln_lang_dump_var((mln_lang_var_t *)mln_rbtree_node_data_get(node), *(ls->cnt)+2, ls->tree);
+    mln_lang_dump_var((mln_lang_var_t *)mln_rbtree_node_data_get(node), *(ls->cnt) + 2, ls->tree);
     return 0;
 }
 
@@ -6158,12 +6162,26 @@ static void mln_lang_dump_function(mln_lang_func_detail_t *func, int cnt)
 {
     mln_lang_var_t *var;
     mln_size_t i, n;
+    mln_string_t *file, cfunc = mln_string("<C Function>"), unknown = mln_string("<Empty Function>");
+    mln_u64_t line = 0;
+    file = &cfunc;
+
     blank();
+
+    if (func->type == M_FUNC_EXTERNAL) {
+        if (func->data.stm != NULL) {
+            file = func->data.stm->file;
+            line = func->data.stm->line;
+        } else {
+            file = &unknown;
+        }
+    }
+
     n = mln_array_nelts(&func->args);
-    mln_log(none, "<FUNCTION> NARGS:%I\n", (mln_u64_t)n);
+    mln_log(none, "<FUNCTION> %S:%I NARGS:%I\n", file, line, (mln_u64_t)n);
     for (i = 0; i < n; ++i) {
         var = ((mln_lang_var_t **)mln_array_elts(&func->args))[i];
-        mln_lang_dump_var(var, cnt+2, NULL);
+        mln_lang_dump_var(var, cnt + 2, NULL);
     }
 }
 
@@ -6213,11 +6231,11 @@ static int mln_lang_dump_array_elem(mln_rbtree_node_t *node, void *udata)
     if (elem->key != NULL) {
         blank();
         mln_log(none, "Key:\n");
-        mln_lang_dump_var(elem->key, cnt+2, ls->tree);
+        mln_lang_dump_var(elem->key, cnt + 2, ls->tree);
     }
     blank();
     mln_log(none, "Value:\n");
-    mln_lang_dump_var(elem->value, cnt+2, ls->tree);
+    mln_lang_dump_var(elem->value, cnt + 2, ls->tree);
     return 0;
 }
 
