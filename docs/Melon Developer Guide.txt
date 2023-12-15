@@ -3843,6 +3843,7 @@ Their definitions can be found in melon/include/mln_types.h.
       in_string - a optional argument. If is set and its value is *true*, *val* is a code string.
                   Otherwise, *val* is a file path.
       alias - the name of new coroutine task, and it can be omitted if it is not needed.
+      If the first argument is nil, function will return an array contained all named coroutines.
 
       <6> Kill(alias);
       Kill the running coroutine task specified by 'alias'.

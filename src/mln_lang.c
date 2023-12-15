@@ -252,6 +252,7 @@ static int mln_lang_func_unwatch(mln_lang_ctx_t *ctx);
 static int mln_lang_func_eval(mln_lang_ctx_t *ctx);
 static int mln_lang_func_kill(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_eval_process(mln_lang_ctx_t *ctx);
+static inline mln_lang_var_t *mln_lang_func_eval_process_list(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_kill_process(mln_lang_ctx_t *ctx);
 static int mln_lang_internal_func_installer(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_dump_process(mln_lang_ctx_t *ctx);
@@ -7035,7 +7036,14 @@ static mln_lang_var_t *mln_lang_func_eval_process(mln_lang_ctx_t *ctx)
         mln_lang_errmsg(ctx, "Argument 1 missing.");
         return NULL;
     }
-    if (sym->type != M_LANG_SYMBOL_VAR || mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
+    if (sym->type != M_LANG_SYMBOL_VAR) {
+        mln_lang_errmsg(ctx, "Invalid type of argument 1.");
+        return NULL;
+    }
+    if (mln_lang_var_val_type_get(sym->data.var) == M_LANG_VAL_TYPE_NIL) {
+        return mln_lang_func_eval_process_list(ctx);
+    }
+    if (mln_lang_var_val_type_get(sym->data.var) != M_LANG_VAL_TYPE_STRING) {
         mln_lang_errmsg(ctx, "Invalid type of argument 1.");
         return NULL;
     }
@@ -7165,6 +7173,59 @@ static mln_lang_var_t *mln_lang_func_eval_process(mln_lang_ctx_t *ctx)
         __mln_lang_job_free(newctx);
         return NULL;
     }
+    return ret_var;
+}
+
+static inline mln_lang_var_t *mln_lang_func_eval_process_list(mln_lang_ctx_t *ctx)
+{
+    mln_lang_ctx_t *c;
+    mln_lang_var_t *ret_var, *var, *key;
+    mln_lang_array_t *arr;
+
+    if ((ret_var = mln_lang_var_create_array(ctx, NULL)) == NULL) {
+        __mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    arr = mln_lang_var_val_get(ret_var)->data.array;
+
+    for (c = ctx->lang->run_head; c != NULL; c = c->next) {
+        if (c->alias == NULL) continue;
+
+        if ((key = mln_lang_var_create_ref_string(ctx, c->alias, NULL)) == NULL) {
+            __mln_lang_var_free(ret_var);
+            __mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        if ((var = mln_lang_array_get(ctx, arr, key)) == NULL) {
+            __mln_lang_var_free(key);
+            __mln_lang_var_free(ret_var);
+            __mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        __mln_lang_var_free(key);
+
+        mln_lang_var_set_string(var, mln_string_ref(c->alias));
+    }
+
+    for (c = ctx->lang->wait_head; c != NULL; c = c->next) {
+        if (c->alias == NULL) continue;
+
+        if ((key = mln_lang_var_create_ref_string(ctx, c->alias, NULL)) == NULL) {
+            __mln_lang_var_free(ret_var);
+            __mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        if ((var = mln_lang_array_get(ctx, arr, key)) == NULL) {
+            __mln_lang_var_free(key);
+            __mln_lang_var_free(ret_var);
+            __mln_lang_errmsg(ctx, "No memory.");
+            return NULL;
+        }
+        __mln_lang_var_free(key);
+
+        mln_lang_var_set_string(var, mln_string_ref(c->alias));
+    }
+
     return ret_var;
 }
 
