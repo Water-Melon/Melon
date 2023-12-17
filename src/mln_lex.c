@@ -466,16 +466,15 @@ int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
         mln_string_t tmp;
         struct dirent *entry;
         DIR *directory;
-
+#if defined(WIN32)
+        WIN32_FIND_DATA fileData;
+#endif
         if ((directory = opendir(p)) == NULL) {
             mln_lex_error_set(lex, MLN_LEX_EFPATH);
             return -1;
         }
         p[n++] = '/';
         while ((entry = readdir(directory)) != NULL) {
-            if (entry->d_type != DT_REG || entry->d_name[0] == '.') {
-                continue;
-            }
             m = strlen(entry->d_name);
             if (sizeof(p)-1-n < m)
                 m = sizeof(p) - 1 - n;
@@ -483,6 +482,14 @@ int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
             p[n + m] = 0;
             mln_string_nset(&tmp, p, n + m);
             path = &tmp;
+#if defined(WIN32)
+            FindClose(FindFirstFile(p, &fileData));
+            if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY || entry->d_name[0] == '.') {
+#else
+            if (entry->d_type != DT_REG || entry->d_name[0] == '.') {
+#endif
+                continue;
+            }
 
             if ((in = mln_lex_input_new(lex, M_INPUT_T_FILE, path, &err, lex->line)) == NULL) {
                 lex->error = err;
@@ -598,6 +605,9 @@ int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path)
         DIR *directory;
         mln_string_t tmp;
         struct dirent *entry;
+#if defined(WIN32)
+        WIN32_FIND_DATA fileData;
+#endif
 
         if ((directory = opendir(p)) == NULL) {
             mln_lex_error_set(lex, MLN_LEX_EFPATH);
@@ -606,9 +616,6 @@ int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path)
 
         p[n++] = '/';
         while ((entry = readdir(directory)) != NULL) {
-            if (entry->d_type != DT_REG || entry->d_name[0] == '.') {
-                continue;
-            }
             m = strlen(entry->d_name);
             if (sizeof(p)-1-n < m)
                 m = sizeof(p) - 1 - n;
@@ -616,6 +623,14 @@ int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path)
             p[n + m] = 0;
             mln_string_nset(&tmp, p, n + m);
             path = &tmp;
+#if defined(WIN32)
+            FindClose(FindFirstFile(p, &fileData));
+            if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY || entry->d_name[0] == '.') {
+#else
+            if (entry->d_type != DT_REG || entry->d_name[0] == '.') {
+#endif
+                continue;
+            }
 
             if (lex->cur != NULL && !mln_string_strcmp(path, lex->cur->data)) {
                 mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
