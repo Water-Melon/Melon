@@ -10,7 +10,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 
 typedef struct {
     mln_size_t      row;

@@ -6,7 +6,11 @@
 #ifndef __MLN_TYPES
 #define __MLN_TYPES
 
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include "mln_utils.h"
 #include "mln_path.h"
 #if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)

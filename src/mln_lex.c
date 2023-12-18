@@ -11,7 +11,11 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include <ctype.h>
 #include "mln_string.h"
 #include "mln_lex.h"

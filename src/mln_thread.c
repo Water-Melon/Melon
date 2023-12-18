@@ -10,7 +10,11 @@
 #include <dlfcn.h>
 #endif
 #include <errno.h>
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include <pthread.h>
 #include "mln_thread.h"
 #include "mln_rbtree.h"

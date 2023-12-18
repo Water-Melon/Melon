@@ -5,7 +5,11 @@
 #if !defined(WIN32)
 #include <stdlib.h>
 #include <string.h>
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include <errno.h>
 #include <signal.h>
 #include "mln_utils.h"

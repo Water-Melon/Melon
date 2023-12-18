@@ -10,7 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include "mln_string.h"
 
 #define M_FEC_RTP_FIXEDLEN  12

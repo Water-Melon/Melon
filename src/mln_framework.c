@@ -6,7 +6,11 @@
 #include "mln_fork.h"
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>

@@ -10,7 +10,11 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <sys/types.h>
 #include <signal.h>

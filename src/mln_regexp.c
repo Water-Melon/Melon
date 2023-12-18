@@ -6,7 +6,11 @@
 #include <stdio.h> 
 #include <stdlib.h>
 #include <string.h>
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include <ctype.h>
 #include "mln_regexp.h"
 

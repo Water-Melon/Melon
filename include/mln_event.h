@@ -20,7 +20,11 @@
 #endif
 #include <sys/types.h>
 #include <sys/time.h>
+#if defined(WIN32)
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include <signal.h>
 #include "mln_rbtree.h"
 #include "mln_fheap.h"
