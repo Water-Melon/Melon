@@ -5,3 +5,6 @@ lib/
 objs/
 src/mln_path.c
 conf/melon.conf
+.vscode/
+.xmake/
+build/
