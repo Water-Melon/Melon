@@ -1,5 +1,9 @@
 add_rules("mode.debug", "mode.release")
 
+if is_plat("windows") then
+    add_requires("pthreads4w")
+end
+
 option("install_path")
     set_default("/usr/local/melon")
 option("conf_path")
@@ -22,6 +26,11 @@ target("melon")
     add_files(path.join("src", "*.c"))
     add_includedirs("include", {public = true})
     add_headerfiles(path.join("include", "*.h"))
+    if is_plat("windows") then 
+        add_defines("WIN32_LEAN_AND_MEAN")
+        add_deinfes("WIN32")
+        add_packages("pthreads4w")
+    end
     before_build(function (target)
         import("core.project.config")
         io.writefile(path.join("include", "mln_path.h"), [[
