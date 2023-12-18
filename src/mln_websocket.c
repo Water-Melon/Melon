@@ -10,7 +10,6 @@
 #include "mln_regexp.h"
 #include "mln_sha.h"
 #include "mln_base64.h"
-#include <sys/time.h>
 
 static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key);
 static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2);
