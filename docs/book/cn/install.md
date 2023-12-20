@@ -7,7 +7,9 @@
 
 
 
-Windows与UNIX环境的安装并无差异，仅需要先行安装并配置`mingw`、`git bash`以及`make`，后续步骤与UNIX的完全一致。
+Windows与UNIX环境的安装并无差异，仅需要先行安装并配置`mingw`或`msys2`。
+
+如果你安装`mingw`, 那你也许也会想要安装`git bash`以及`make`，后续步骤与UNIX的完全一致。
 
 安装[MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds)时请选择如下设置：
 
@@ -20,6 +22,8 @@ Windows与UNIX环境的安装并无差异，仅需要先行安装并配置`mingw
 - `Exception`: `dwarf`
 
 - `Build revision`: `0`
+
+如果你安装的是`msys2`，那么你可以使用`pacman`命令来安装一些你可能需要的工具，例如`git`，`make`等。
 
 
 

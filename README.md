@@ -69,7 +69,9 @@ At present, Melon has also completed the preliminary porting to Windows, so it c
 
 ### Installation
 
-On Windows, please install `mingw`, `git bash` and `make` at first. Install [MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds) with the installation settings:
+On Windows, please install `mingw` or `msys2`.
+
+If you install `mingw`, you may want to install `git bash` and `make` either. Install [MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds) with the installation settings:
 
 - `Version`: `8.1.0`
 
@@ -80,6 +82,8 @@ On Windows, please install `mingw`, `git bash` and `make` at first. Install [Min
 - `Exception`: `dwarf`
 
 - `Build revision`: `0`
+
+If you install `msys2`, you can use `pacman` to install any tool softwares you may need.
 
 Then execute these shell commands on git bash or terminal (on UNIX).
 
