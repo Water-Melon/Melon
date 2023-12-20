@@ -208,7 +208,10 @@ mln_string_t *mln_string_ref_dup(mln_string_t *str)
 mln_string_t *mln_string_const_ref_dup(char *s)
 {
     mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t));
-    if (s == NULL) return NULL;
+    if (s == NULL) {
+        free(str);
+        return NULL;
+    }
     str->data = (mln_u8ptr_t)s;
     str->len = strlen(s);
     str->data_ref = 1;
