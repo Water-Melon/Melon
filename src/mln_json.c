@@ -978,9 +978,9 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
         {
             mln_s64_t i = (mln_s64_t)(j->data.m_j_number);
             if (i == j->data.m_j_number)
-#if defined(WIN32)
+#if defined(WIN32) && defined(__pentiumpro__)
                 n = snprintf(buf, 512, "%I64d", i);
-#elif defined(i386) || defined(__arm__) || defined(__wasm__)
+#elif defined(WIN32) || defined(i386) || defined(__arm__) || defined(__wasm__)
                 n = snprintf(buf, 512, "%lld", i);
 #else
                 n = snprintf(buf, 512, "%ld", i);

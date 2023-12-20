@@ -484,8 +484,10 @@ _mln_sys_log_process(mln_log_t *log, \
 #if defined(WIN32)
   #if defined(i386) || defined(__arm__)
                 int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
-  #else
+  #elif defined(__pentiumpro__)
                 int n = snprintf(line_str, sizeof(line_str)-1, "%I64d", num);
+  #else
+                int n = snprintf(line_str, sizeof(line_str)-1, "%lld", num);
   #endif
 #else
                 int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
@@ -550,10 +552,10 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'i':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(WIN32)
+#if defined(WIN32) && defined(__pentiumpro__)
                 long long num = va_arg(arg, long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%I64d", num);
-#elif defined(i386) || defined(__arm__)
+#elif defined(WIN32) || defined(i386) || defined(__arm__)
                 long long num = va_arg(arg, long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%lld", num);
 #else
@@ -566,10 +568,10 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'I':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(WIN32)
+#if defined(WIN32) && defined(__pentiumpro__)
                 unsigned long long num = va_arg(arg, unsigned long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%I64u", num);
-#elif defined(i386) || defined(__arm__)
+#elif defined(WIN32) || defined(i386) || defined(__arm__)
                 unsigned long long num = va_arg(arg, unsigned long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%llu", num);
 #else

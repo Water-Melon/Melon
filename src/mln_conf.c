@@ -1046,8 +1046,10 @@ static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *u
 #if defined(WIN32)
   #if defined(i386) || defined(__arm__)
                 printf("INT [%ld]\n", ci->val.i);
-  #else
+  #elif defined(__pentiumpro__)
                 printf("INT [%I64d]\n", ci->val.i);
+  #else
+                printf("INT [%lld]\n", ci->val.i);
   #endif
 #else
                 printf("INT [%ld]\n", ci->val.i);

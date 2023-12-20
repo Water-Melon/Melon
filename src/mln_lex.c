@@ -406,9 +406,9 @@ char *mln_lex_strerror(mln_lex_t *lex)
     int n = 0;
     if (lex->cur != NULL && lex->cur->fd >= 0)
         n += snprintf(lex->err_msg + n, len - n, "%s:", (char *)(lex->cur->data->data));
-#if defined(WIN32)
+#if defined(WIN32) && defined(__pentiumpro__)
     n += snprintf(lex->err_msg + n, len - n, "%I64u: %s", lex->line, mln_lex_errmsg[lex->error]);
-#elif defined(i386) || defined(__arm__) || defined(__wasm__)
+#elif defined(WIN32) || defined(i386) || defined(__arm__) || defined(__wasm__)
     n += snprintf(lex->err_msg + n, len - n, "%llu: %s", lex->line, mln_lex_errmsg[lex->error]);
 #else
     n += snprintf(lex->err_msg + n, len - n, "%lu: %s", lex->line, mln_lex_errmsg[lex->error]);
