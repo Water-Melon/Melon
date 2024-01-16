@@ -1,3 +1,7 @@
+This CHANGELOG file will no longer be used.
+For details on future updates, please refer to commits and tags.
+This CHANGELOG will be kept as a historical document in the codebase.
+
 Changes with melon 2.8.1                                          10 Oct 2023
     *) Fixed bug in log module
     *) Fixed return value check in fork module

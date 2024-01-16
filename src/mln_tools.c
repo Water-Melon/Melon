@@ -21,8 +21,6 @@
 
 static int
 mln_boot_help(const char *boot_str, const char *alias);
-static int
-mln_boot_version(const char *boot_str, const char *alias);
 #if !defined(WIN32)
 static int mln_set_id(void);
 static int
@@ -39,7 +37,6 @@ long mon_days[2][12] = {
 };
 mln_boot_t boot_params[] = {
 {"--help", "-h", mln_boot_help, 0},
-{"--version", "-v", mln_boot_version, 0},
 #if !defined(WIN32)
 {"--reload", "-r", mln_boot_reload, 0},
 {"--stop", "-s", mln_boot_stop, 0}
@@ -286,19 +283,8 @@ static int
 mln_boot_help(const char *boot_str, const char *alias)
 {
     printf("Boot parameters:\n");
-    printf("\t--version -v\t\t\tshow version\n");
     printf("\t--reload  -r\t\t\treload configuration\n");
     printf("\t--stop    -s\t\t\tstop melon service.\n");
-    exit(0);
-    return 0;
-}
-
-static int
-mln_boot_version(const char *boot_str, const char *alias)
-{
-    printf("Melon Platform.\n");
-    printf("Version 2.8.1.\n");
-    printf("Copyright (C) Niklaus F.Schen.\n");
     exit(0);
     return 0;
 }
