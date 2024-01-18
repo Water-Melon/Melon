@@ -3117,6 +3117,30 @@ Their definitions can be found in melon/include/mln_types.h.
       j) mln_array_nelts(arr);
          Get the number of elements.
 
+   46) Function
+       You can use the macro provided by Melon to define a function which can be
+       traced (Call custom functions when entering and exiting functions).
+
+      a) void mln_func_entry_callback_set(mln_func_cb_t cb);
+         Set the entry callback function.
+
+      b) mln_func_cb_t mln_func_entry_callback_get(void);
+         Get the entry callback function.
+
+      c) void mln_func_exit_callback_set(mln_func_cb_t cb);
+         Set the exit callback function.
+
+      d) mln_func_cb_t mln_func_exit_callback_get(void);
+         Get the exit callback function.
+
+      e) MLN_FUNC(ret_type, name, params, args, func_body);
+         Define a function.
+         `ret_type` is the function return type including its visibility.
+         `name` is the function name.
+         `params` is a parameter list (with data type) divided by comma and quoted by parenthese.
+         `args` is a argument list (without data type) divided by comma and quoted by parenthese.
+         `func_body` is the function body.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.

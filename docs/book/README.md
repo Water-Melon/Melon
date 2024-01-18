@@ -53,6 +53,8 @@ Melon currently provides the following components:
   - MD5
   - SHA
   - Base64
+- Template
+  - Function Template
 - Scripting Language Development
 - Frameworks
   - Multi-Process Model
