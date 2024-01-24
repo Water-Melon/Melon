@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include "mln_string.h"
 #include "mln_lex.h"
+#include "mln_path.h"
 
 /*
  * error information

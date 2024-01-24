@@ -7,6 +7,7 @@
 #include "mln_conf.h"
 #include "mln_log.h"
 #include "mln_ipc.h"
+#include "mln_path.h"
 #include <stdlib.h>
 
 #define CONF_ERR(lex,TK,MSG); \

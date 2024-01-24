@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include "mln_lang_ast.h"
 #include "mln_parser_generator.h"
+#include "mln_path.h"
 
 MLN_DECLARE_PARSER_GENERATOR(static, \
                              mln_lang, \

@@ -18,6 +18,7 @@
 #include "mln_global.h"
 #include "mln_conf.h"
 #include "mln_log.h"
+#include "mln_path.h"
 
 static int
 mln_boot_help(const char *boot_str, const char *alias);

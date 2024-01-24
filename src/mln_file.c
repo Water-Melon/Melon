@@ -4,6 +4,7 @@
  */
 
 #include "mln_file.h"
+#include "mln_path.h"
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>

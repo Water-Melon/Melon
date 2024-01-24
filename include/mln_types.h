@@ -8,7 +8,6 @@
 
 #include <unistd.h>
 #include "mln_utils.h"
-#include "mln_path.h"
 #if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)
 typedef long                  mln_spin_t;
 #elif defined(i386) || defined(__x86_64)

@@ -22,6 +22,7 @@
 #include "mln_lang_real.h"
 #include "mln_lang_str.h"
 #include "mln_lang_array.h"
+#include "mln_path.h"
 #if defined(WIN32)
 #include <libloaderapi.h>
 #else

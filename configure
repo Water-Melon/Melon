@@ -384,33 +384,47 @@ get_source_files() {
             files+=$f" "
         done
     else
-        old_ifs=$IFS
-        IFS=','
-        for f in $select_files
+        while true
         do
-            IFS=$old_ifs
-            fname='mln_'$f'.c'
-            fname=`find src -name $fname`
-            if [ -z $fname ]; then
-                echo "[$f] not found"
-                exit 1
-            fi
-            files+=$fname" "
-            for header in `cpp -MM -MG $fname 2> /dev/null`
+            old_ifs=$IFS
+            IFS=','
+            current_files=$select_files
+            for f in $select_files
             do
-                suffix=`echo $header | cut -d '.' -f 2`
-                if [ $suffix == 'h' ]; then
-                    source_file=`echo $header | cut -d '.' -f 1`'.c'
-                    source_file=`find src -name $source_file`
-                    if [ ! -z $source_file ]; then
-                        if [[ ! "${files[@]}" =~ $source_file ]]; then
-                            files+=$source_file" "
+                IFS=$old_ifs
+                fname='mln_'$f'.c'
+                fname=`find src -name $fname`
+                if [ -z $fname ]; then
+                    echo "[$f] not found"
+                    exit 1
+                fi
+                if [[ ! "${files[@]}" =~ $fname ]]; then
+                    files+=$fname" "
+                fi
+                for header in `cpp -MM -MG -I include $fname 2> /dev/null`
+                do
+                    suffix=`echo $header | cut -d '.' -f 2`
+                    if [ $suffix == 'h' ]; then
+                        source_file=`echo $header | cut -d '/' -f 2`
+                        module_name=`echo $source_file | cut -d '.' -f 1`
+                        source_file='src/'$module_name'.c'
+                        module_name=$(echo "$module_name" | sed 's/mln_//')
+                        source_file=`find src -wholename "$source_file"`
+                        if [ ! -z $source_file ]; then
+                            if [[ ! "${files[@]}" =~ $source_file ]]; then
+                                files+=$source_file" "
+                                current_files+=","$module_name
+                            fi
                         fi
                     fi
-                fi
+                done
             done
+            if [ $select_files = $current_files ]; then
+                break
+            fi
+            select_files=$current_files
+            IFS=$old_ifs
         done
-        IFS=$old_ifs
     fi
     select_files=$files
 }
