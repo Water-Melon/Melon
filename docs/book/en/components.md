@@ -29,3 +29,4 @@ There are many components provided by Melon Library.
 - Cron Format Parser
 - Spin Lock
 - Prime Generator
+- Span

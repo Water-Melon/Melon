@@ -37,6 +37,7 @@ Melon currently provides the following components:
   - Cron Format Parser
   - Spin Lock
   - Prime Generator
+  - Span
 - Data Structures
   - Doubly Linked List
   - Fibonacci Heap

@@ -3141,6 +3141,28 @@ Their definitions can be found in melon/include/mln_types.h.
          `args` is a argument list (without data type) divided by comma and quoted by parenthese.
          `func_body` is the function body.
 
+   47) Span
+       This module is used to test function performance, especially time consumption.
+       This module should be used with `Function` module.
+
+      a) mln_span_start();
+         Start to collect functions' time consumption.
+
+      b) mln_span_stop();
+         Stop to collect functions' information.
+
+      c) mln_span_release();
+         Release span memory.
+
+      d) mln_span_move();
+         Get span object and reset global variable in span module used by `mln_span_start`.
+
+      e) mln_span_dump();
+         Dump all information of spans indicated by the global variable in span module.
+
+      f) void mln_span_free(mln_span_t *span);
+         Free the give span object memory.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.
