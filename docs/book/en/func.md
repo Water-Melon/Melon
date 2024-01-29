@@ -86,7 +86,27 @@ Return value: Exit function pointer
 MLN_FUNC(ret_type, name, params, args, func_body);
 ```
 
-Description: Define a function. The implementation principle is to define two functions. The name of one function is specified by `name`, and the name of the other function starts with `__`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function with `func_body`. In this way, we can call the function in the wrapper and add the logic of callback function calling before and after the function call.
+Description: Define a function with a `non-void` return type. The implementation principle is to define two functions. The name of one function is specified by `name`, and the name of the other function starts with `__`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function with `func_body`. In this way, we can call the function in the wrapper and add the logic of callback function calling before and after the function call.
+
+Parameters of this macro:
+
+- `ret_type` is the return value type of the function and includes the function scope keyword.
+- `name` is the name of the function.
+- `params` is the parameter list of the function, including the parameter name and parameter type, and the parameter list is quoted by `()`.
+- `args` is the argument list of the function, does not include the data types, and quoted by `()`. This argument list refers to the arguments passed to the function whose name is started with `__` when the wrapper calls it. The arguments names and order in this list should be identical with those in `params`.
+- `func_body` function body, use `{}` to wrapped.
+
+Return value: None
+
+
+
+#### MLN_FUNC_VOID
+
+```c
+MLN_FUNC_VOID(ret_type, name, params, args, func_body);
+```
+
+Description: Define a function with a `void` return type. The implementation principle is to define two functions. The name of one function is specified by `name`, and the name of the other function starts with `__`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function with `func_body`. In this way, we can call the function in the wrapper and add the logic of callback function calling before and after the function call.
 
 Parameters of this macro:
 

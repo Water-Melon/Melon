@@ -3134,7 +3134,15 @@ Their definitions can be found in melon/include/mln_types.h.
          Get the exit callback function.
 
       e) MLN_FUNC(ret_type, name, params, args, func_body);
-         Define a function.
+         Define a function with non-void return type.
+         `ret_type` is the function return type including its visibility.
+         `name` is the function name.
+         `params` is a parameter list (with data type) divided by comma and quoted by parenthese.
+         `args` is a argument list (without data type) divided by comma and quoted by parenthese.
+         `func_body` is the function body.
+
+      f) MLN_FUNC_VOID(ret_type, name, params, args, func_body);
+         Define a function with void return type.
          `ret_type` is the function return type including its visibility.
          `name` is the function name.
          `params` is a parameter list (with data type) divided by comma and quoted by parenthese.
