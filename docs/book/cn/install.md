@@ -41,8 +41,9 @@ $ sudo make install
 - `--prefix` 设置Melon的安装路径。
 - `--melang-prefix` 设置Melon库中使用到的Melang脚本的安装路径。
 - `--cc` 设置Melon组件编译时所使用的C编译器。
-- `--enable-wasm` 启用webassembly模式，会编译安装webassembly格式的Melon库。
-- `--debug` 开启debug模式，若不开启，则生成的库不包含符号信息，也不会启用`__DEBUG__`宏。
+- `--enable-wasm` 启用`webassembly`模式，会编译安装webassembly格式的Melon库。
+- `--debug` 开启`debug`模式，若不开启，则生成的库不包含符号信息，也不会启用`__DEBUG__`宏。
+- `--func` 开启`func`模式，开启后会将`MLN_FUNC`和`MLN_FUNC_VOID`定义的函数在调用时启用入口和出口回调。
 - `--olevel=[O|O1|O2|O3|...]` 编译优化的级别，默认是`O3`。如果`=`后不写内容则为不开启优化。
 - `--select=[all | module1,module2,...]` 选择性编译部分模块，默认为`all`表示编译全部模块。模块名称可在各模块文档中给出。
 - `--disable-macro=[macro1,macro2,...]` 禁用`configure`检测到的当前操作系统支持的系统调用或宏，目前仅支持如下内容：
