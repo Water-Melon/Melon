@@ -80,7 +80,7 @@ Return value: Exit function pointer
 
 
 
-### MLN_FUNC
+#### MLN_FUNC
 
 ```c
 MLN_FUNC(ret_type, name, params, args, func_body);

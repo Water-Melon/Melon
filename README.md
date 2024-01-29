@@ -34,6 +34,7 @@ Melon is a generic cross-platform C library. It contains many algorithms, data s
   - Cron Format Parser
   - Spin Lock
   - Prime Generator
+  - Span
 - Data Structures
   - Doubly Linked List
   - Fibonacci Heap

@@ -80,7 +80,7 @@ mln_func_cb_t mln_func_exit_callback_get(void);
 
 
 
-### MLN_FUNC
+#### MLN_FUNC
 
 ```c
 MLN_FUNC(ret_type, name, params, args, func_body);
