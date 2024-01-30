@@ -145,6 +145,7 @@ void mln_alloc_free(void *ptr);
 ```c
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "mln_alloc.h"
 
 int main(int argc, char *argv[])
@@ -169,6 +170,7 @@ int main(int argc, char *argv[])
     printf("%s\n", p);
 
     mln_alloc_free(p);
+    mln_alloc_destroy(pool);
 
     return 0;
 }
