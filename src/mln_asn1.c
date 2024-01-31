@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include "mln_asn1.h"
 #include "mln_tools.h"
+#include "mln_func.h"
 
 static mln_asn1_deresult_t *
 mln_asn1_decode_recursive(mln_u8ptr_t *code, mln_u64_t *code_len, int *err, mln_alloc_t *pool, mln_u32_t free);
@@ -19,13 +20,10 @@ static void mln_asn1_deresult_dump_recursive(mln_asn1_deresult_t *res, mln_u32_t
 /*
  * deresult
  */
-static mln_asn1_deresult_t * mln_asn1_deresult_new(mln_alloc_t *pool, \
-                                                   mln_u32_t _class, \
-                                                   mln_u32_t is_struct, \
-                                                   mln_u32_t ident, \
-                                                   mln_u8ptr_t code, \
-                                                   mln_size_t code_len, \
-                                                   mln_u32_t free)
+MLN_FUNC(static mln_asn1_deresult_t *, mln_asn1_deresult_new, \
+         (mln_alloc_t *pool, mln_u32_t _class, mln_u32_t is_struct, mln_u32_t ident, \
+          mln_u8ptr_t code, mln_size_t code_len, mln_u32_t free),
+         (pool, _class, is_struct, ident, code, code_len, free),
 {
     mln_asn1_deresult_t *res = (mln_asn1_deresult_t *)mln_alloc_m(pool, sizeof(mln_asn1_deresult_t));
     if (res == NULL) return NULL;
@@ -44,10 +42,9 @@ static mln_asn1_deresult_t * mln_asn1_deresult_new(mln_alloc_t *pool, \
     res->ident = ident;
     res->free = free;
     return res;
-}
+})
 
-void mln_asn1_deresult_free(mln_asn1_deresult_t *res)
-{
+MLN_FUNC_VOID(void, mln_asn1_deresult_free, (mln_asn1_deresult_t *res), (res), {
     if (res == NULL) return;
     if (res->contents != NULL) {
         mln_asn1_deresult_t **p, **pend;
@@ -59,12 +56,14 @@ void mln_asn1_deresult_free(mln_asn1_deresult_t *res)
     }
     if (res->free) mln_alloc_free(res->code_buf);
     mln_alloc_free(res);
-}
+})
 
 /*
  * decode
  */
-mln_asn1_deresult_t *mln_asn1_decode_chain(mln_chain_t *in, int *err, mln_alloc_t *pool)
+MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_decode_chain, \
+         (mln_chain_t *in, int *err, mln_alloc_t *pool), \
+         (in, err, pool), \
 {
     mln_u8ptr_t code, p;
     mln_u64_t code_len = 0;
@@ -106,22 +105,27 @@ mln_asn1_deresult_t *mln_asn1_decode_chain(mln_chain_t *in, int *err, mln_alloc_
     }
     *err = M_ASN1_RET_OK;
     return res;
-}
+})
 
-mln_asn1_deresult_t *mln_asn1_decode(void *data, mln_u64_t len, int *err, mln_alloc_t *pool)
+MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_decode, \
+         (void *data, mln_u64_t len, int *err, mln_alloc_t *pool), \
+         (data, len, err, pool), \
 {
     mln_u8ptr_t buf = (mln_u8ptr_t)data;
     return mln_asn1_decode_recursive(&buf, &len, err, pool, 1);
-}
+})
 
-mln_asn1_deresult_t *mln_asn1_decode_ref(void *data, mln_u64_t len, int *err, mln_alloc_t *pool)
+MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_decode_ref, \
+         (void *data, mln_u64_t len, int *err, mln_alloc_t *pool), \
+         (data, len, err, pool), \
 {
     mln_u8ptr_t buf = (mln_u8ptr_t)data;
     return mln_asn1_decode_recursive(&buf, &len, err, pool, 0);
-}
+})
 
-static mln_asn1_deresult_t *
-mln_asn1_decode_recursive(mln_u8ptr_t *code, mln_u64_t *code_len, int *err, mln_alloc_t *pool, mln_u32_t free)
+MLN_FUNC(static mln_asn1_deresult_t *, mln_asn1_decode_recursive, \
+         (mln_u8ptr_t *code, mln_u64_t *code_len, int *err, mln_alloc_t *pool, mln_u32_t free), \
+         (code, code_len, err, pool, free), \
 {
     mln_u8ptr_t p = *code, end = *code + *code_len;
     mln_u32_t _class, struc, ident;
@@ -201,22 +205,23 @@ inc:
     *code = p;
     *code_len = end - p;
     return res;
-}
+})
 
-mln_asn1_deresult_t *mln_asn1_deresult_content_get(mln_asn1_deresult_t *res, mln_u32_t index)
+MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_deresult_content_get, \
+         (mln_asn1_deresult_t *res, mln_u32_t index), (res, index), \
 {
     if (res->contents == NULL) return NULL;
     if (res->pos <= index) return NULL;
     return res->contents[index];
-}
+})
 
-void mln_asn1_deresult_dump(mln_asn1_deresult_t *res)
-{
+MLN_FUNC_VOID(void, mln_asn1_deresult_dump, (mln_asn1_deresult_t *res), (res), {
     if (res == NULL) return;
     mln_asn1_deresult_dump_recursive(res, 0);
-}
+})
 
-static void mln_asn1_deresult_dump_recursive(mln_asn1_deresult_t *res, mln_u32_t nblank)
+MLN_FUNC_VOID(static void, mln_asn1_deresult_dump_recursive, \
+              (mln_asn1_deresult_t *res, mln_u32_t nblank), (res, nblank), \
 {
     mln_asn1_deresult_t **p, **end;
     mln_u32_t i;
@@ -295,13 +300,12 @@ static void mln_asn1_deresult_dump_recursive(mln_asn1_deresult_t *res, mln_u32_t
     for (p = res->contents; p < end; ++p) {
         mln_asn1_deresult_dump_recursive(*p, nblank+2);
     }
-}
+})
 
 /*
  * enresult
  */
-int mln_asn1_enresult_init(mln_asn1_enresult_t *res, mln_alloc_t *pool)
-{
+MLN_FUNC(int, mln_asn1_enresult_init, (mln_asn1_enresult_t *res, mln_alloc_t *pool), (res, pool), {
     res->pool = pool;
     res->size = 0;
     if ((res->contents = (mln_string_t *)mln_alloc_m(pool, \
@@ -313,10 +317,9 @@ int mln_asn1_enresult_init(mln_asn1_enresult_t *res, mln_alloc_t *pool)
     res->is_struct = 0;
     res->ident = M_ASN1_ID_NONE;
     return M_ASN1_RET_OK;
-}
+})
 
-void mln_asn1_enresult_destroy(mln_asn1_enresult_t *res)
-{
+MLN_FUNC_VOID(void, mln_asn1_enresult_destroy, (mln_asn1_enresult_t *res), (res), {
     if (res == NULL) return;
     if (res->contents != NULL) {
         mln_string_t *s, *send;
@@ -326,10 +329,9 @@ void mln_asn1_enresult_destroy(mln_asn1_enresult_t *res)
         }
         mln_alloc_free(res->contents);
     }
-}
+})
 
-mln_asn1_enresult_t *mln_asn1_enresult_new(mln_alloc_t *pool)
-{
+MLN_FUNC(mln_asn1_enresult_t *, mln_asn1_enresult_new, (mln_alloc_t *pool), (pool), {
     mln_asn1_enresult_t *res = (mln_asn1_enresult_t *)mln_alloc_m(pool, sizeof(mln_asn1_enresult_t));
     if (res == NULL) return NULL;
     if (mln_asn1_enresult_init(res, pool) != M_ASN1_RET_OK) {
@@ -337,19 +339,20 @@ mln_asn1_enresult_t *mln_asn1_enresult_new(mln_alloc_t *pool)
         return NULL;
     }
     return res;
-}
+})
 
-void mln_asn1_enresult_free(mln_asn1_enresult_t *res)
-{
+MLN_FUNC_VOID(void, mln_asn1_enresult_free, (mln_asn1_enresult_t *res), (res), {
     if (res == NULL) return;
     mln_asn1_enresult_destroy(res);
     mln_alloc_free(res);
-}
+})
 
 /*
  * encode
  */
-static int mln_asn1_encode_add_content(mln_asn1_enresult_t *res, mln_u8ptr_t buf, mln_u64_t len)
+MLN_FUNC(static int, mln_asn1_encode_add_content, \
+         (mln_asn1_enresult_t *res, mln_u8ptr_t buf, mln_u64_t len), \
+         (res, buf, len), \
 {
     if (res->pos == res->max) {
         res->max += ((res->max)>>1);
@@ -365,7 +368,7 @@ static int mln_asn1_encode_add_content(mln_asn1_enresult_t *res, mln_u8ptr_t buf
     s->pool = 1;
     s->ref = 1;
     return 0;
-}
+})
 
 #define mln_asn1_encode_length_calc(bytes,len); \
 {\
@@ -478,8 +481,7 @@ static int mln_asn1_encode_add_content(mln_asn1_enresult_t *res, mln_u8ptr_t buf
     }\
 }
 
-int mln_asn1_encode_sequence(mln_asn1_enresult_t *res)
-{
+MLN_FUNC(int, mln_asn1_encode_sequence, (mln_asn1_enresult_t *res), (res), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -509,10 +511,9 @@ int mln_asn1_encode_sequence(mln_asn1_enresult_t *res)
     res->size = len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_boolean(mln_asn1_enresult_t *res, mln_u8_t val)
-{
+MLN_FUNC(int, mln_asn1_encode_boolean, (mln_asn1_enresult_t *res, mln_u8_t val), (res, val), {
     mln_u64_t len = 0;
     mln_alloc_t *pool;
     mln_u8ptr_t buf, p;
@@ -536,10 +537,9 @@ int mln_asn1_encode_boolean(mln_asn1_enresult_t *res, mln_u8_t val)
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_integer(mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_t nints)
-{
+MLN_FUNC(int, mln_asn1_encode_integer, (mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_t nints), (res, ints, nints), {
     mln_u64_t len = 0;
     mln_alloc_t *pool;
     mln_u8ptr_t buf, p;
@@ -563,10 +563,9 @@ int mln_asn1_encode_integer(mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_bitstring(mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u64_t nbits)
-{
+MLN_FUNC(int, mln_asn1_encode_bitstring, (mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u64_t nbits), (res, bits, nbits), {
     mln_u64_t len = 0, bytes = 1 + (nbits % 8? (nbits>>3)+1: (nbits>>3));
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -596,10 +595,9 @@ int mln_asn1_encode_bitstring(mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u6
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_octetstring(mln_asn1_enresult_t *res, mln_u8ptr_t octets, mln_u64_t n)
-{
+MLN_FUNC(int, mln_asn1_encode_octetstring, (mln_asn1_enresult_t *res, mln_u8ptr_t octets, mln_u64_t n), (res, octets, n), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -622,10 +620,9 @@ int mln_asn1_encode_octetstring(mln_asn1_enresult_t *res, mln_u8ptr_t octets, ml
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_null(mln_asn1_enresult_t *res)
-{
+MLN_FUNC(int, mln_asn1_encode_null, (mln_asn1_enresult_t *res), (res), {
     mln_u8ptr_t buf;
     mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
 
@@ -642,9 +639,10 @@ int mln_asn1_encode_null(mln_asn1_enresult_t *res)
     res->size += 2;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_object_identifier(mln_asn1_enresult_t *res, mln_u8ptr_t oid, mln_u64_t n)
+MLN_FUNC(int, mln_asn1_encode_object_identifier, \
+         (mln_asn1_enresult_t *res, mln_u8ptr_t oid, mln_u64_t n), (res, oid, n), \
 {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
@@ -668,10 +666,9 @@ int mln_asn1_encode_object_identifier(mln_asn1_enresult_t *res, mln_u8ptr_t oid,
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_utf8string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen)
-{
+MLN_FUNC(int, mln_asn1_encode_utf8string, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -694,10 +691,9 @@ int mln_asn1_encode_utf8string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_printablestring(mln_asn1_enresult_t *res, mln_s8ptr_t s, mln_u64_t slen)
-{
+MLN_FUNC(int, mln_asn1_encode_printablestring, (mln_asn1_enresult_t *res, mln_s8ptr_t s, mln_u64_t slen), (res, s, slen), {
     mln_s8ptr_t scan, end;
     for (scan = s, end = s+slen; scan < end; ++scan) {
         if (!isprint(*scan)) return M_ASN1_RET_ERROR;
@@ -725,10 +721,9 @@ int mln_asn1_encode_printablestring(mln_asn1_enresult_t *res, mln_s8ptr_t s, mln
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_t61string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen)
-{
+MLN_FUNC(int, mln_asn1_encode_t61string, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -751,10 +746,9 @@ int mln_asn1_encode_t61string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_ia5string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen)
-{
+MLN_FUNC(int, mln_asn1_encode_ia5string, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -777,10 +771,9 @@ int mln_asn1_encode_ia5string(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time)
-{
+MLN_FUNC(int, mln_asn1_encode_utctime, (mln_asn1_enresult_t *res, time_t time), (res, time), {
     struct utctime uc;
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
@@ -820,10 +813,9 @@ int mln_asn1_encode_utctime(mln_asn1_enresult_t *res, time_t time)
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_generalized_time(mln_asn1_enresult_t *res, time_t time)
-{
+MLN_FUNC(int, mln_asn1_encode_generalized_time, (mln_asn1_enresult_t *res, time_t time), (res, time), {
     struct utctime uc;
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
@@ -863,10 +855,9 @@ int mln_asn1_encode_generalized_time(mln_asn1_enresult_t *res, time_t time)
     res->size += len;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_set(mln_asn1_enresult_t *res)
-{
+MLN_FUNC(int, mln_asn1_encode_set, (mln_asn1_enresult_t *res), (res), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf = NULL, p;
     mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
@@ -893,19 +884,17 @@ int mln_asn1_encode_set(mln_asn1_enresult_t *res)
     res->size = len;
     
     return M_ASN1_RET_OK;
-}
+})
 
-static int mln_encode_set_cmp(const void *data1, const void *data2)
-{
+MLN_FUNC(static int, mln_encode_set_cmp, (const void *data1, const void *data2), (data1, data2), {
     mln_string_t *s1 = (mln_string_t *)data1;
     mln_string_t *s2 = (mln_string_t *)data2;
     if (s1->data[0] > s2->data[0]) return 1;
     if (s1->data[0] == s2->data[0]) return 0;
     return -1;
-}
+})
 
-int mln_asn1_encode_setof(mln_asn1_enresult_t *res)
-{
+MLN_FUNC(int, mln_asn1_encode_setof, (mln_asn1_enresult_t *res), (res), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf = NULL, p;
     mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
@@ -932,10 +921,9 @@ int mln_asn1_encode_setof(mln_asn1_enresult_t *res)
     res->size = len;
     
     return M_ASN1_RET_OK;
-}
+})
 
-static int mln_encode_setof_cmp(const void *data1, const void *data2)
-{
+MLN_FUNC(static int, mln_encode_setof_cmp, (const void *data1, const void *data2), (data1, data2), {
     mln_string_t *s1 = (mln_string_t *)data1;
     mln_string_t *s2 = (mln_string_t *)data2;
     mln_size_t len = s1->len > s2->len? s2->len: s1->len;
@@ -945,10 +933,9 @@ static int mln_encode_setof_cmp(const void *data1, const void *data2)
     if (s1->len > s2->len) return 1;
     if (s1->len < s2->len) return -1;
     return 0;
-}
+})
 
-int mln_asn1_encode_merge(mln_asn1_enresult_t *dest, mln_asn1_enresult_t *src)
-{
+MLN_FUNC(int, mln_asn1_encode_merge, (mln_asn1_enresult_t *dest, mln_asn1_enresult_t *src), (dest, src), {
     mln_string_t *s, *send;
     mln_alloc_t *pool = mln_asn1_enresult_pool_get(dest);
     mln_u8ptr_t buf;
@@ -964,9 +951,11 @@ int mln_asn1_encode_merge(mln_asn1_enresult_t *dest, mln_asn1_enresult_t *src)
     dest->size += src->size;
 
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_trans_chain_once(mln_asn1_enresult_t *res, mln_chain_t **head, mln_chain_t **tail)
+MLN_FUNC(int, mln_asn1_encode_trans_chain_once, \
+         (mln_asn1_enresult_t *res, mln_chain_t **head, mln_chain_t **tail), \
+         (res, head, tail), \
 {
     mln_chain_t *c;
     mln_buf_t *b;
@@ -995,9 +984,11 @@ int mln_asn1_encode_trans_chain_once(mln_asn1_enresult_t *res, mln_chain_t **hea
     res->pos = 0;
     res->size = 0;
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_enresult_get_content(mln_asn1_enresult_t *res, mln_u32_t index, mln_u8ptr_t *buf, mln_u64_t *len)
+MLN_FUNC(int, mln_asn1_enresult_get_content, \
+         (mln_asn1_enresult_t *res, mln_u32_t index, mln_u8ptr_t *buf, mln_u64_t *len), \
+         (res, index, buf, len), \
 {
     if (index >= res->pos) return M_ASN1_RET_ERROR;
 
@@ -1005,14 +996,16 @@ int mln_asn1_enresult_get_content(mln_asn1_enresult_t *res, mln_u32_t index, mln
     *buf = s->data;
     *len = s->len;
     return M_ASN1_RET_OK;
-}
+})
 
-int mln_asn1_encode_implicit(mln_asn1_enresult_t *res, mln_u32_t ident, mln_u32_t index)
+MLN_FUNC(int, mln_asn1_encode_implicit, \
+         (mln_asn1_enresult_t *res, mln_u32_t ident, mln_u32_t index), \
+         (res, ident, index), \
 {
     if (index >= res->pos) return M_ASN1_RET_ERROR;
     mln_string_t *s = &(res->contents[index]);
     s->data[0] &= 0x20;
     s->data[0] |= ((M_ASN1_CLASS_CONTEXT_SPECIFIC << 6)| ident);
     return M_ASN1_RET_OK;
-}
+})
 
