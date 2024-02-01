@@ -5,11 +5,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "mln_base64.h"
+#include "mln_func.h"
 
 static mln_s8_t base_map[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-int mln_base64_encode(mln_u8ptr_t in, mln_uauto_t inlen, \
-                      mln_u8ptr_t *out, mln_uauto_t *outlen)
+MLN_FUNC(int, mln_base64_encode, \
+         (mln_u8ptr_t in, mln_uauto_t inlen, mln_u8ptr_t *out, mln_uauto_t *outlen), \
+         (in, inlen, out, outlen), \
 {
     mln_uauto_t i, state, j;
 
@@ -51,11 +53,11 @@ int mln_base64_encode(mln_u8ptr_t in, mln_uauto_t inlen, \
     }
 
     return 0;
-}
+})
 
-int mln_base64_pool_encode(mln_alloc_t *pool, \
-                           mln_u8ptr_t in, mln_uauto_t inlen, \
-                           mln_u8ptr_t *out, mln_uauto_t *outlen)
+MLN_FUNC(int, mln_base64_pool_encode, \
+         (mln_alloc_t *pool, mln_u8ptr_t in, mln_uauto_t inlen, mln_u8ptr_t *out, mln_uauto_t *outlen), \
+         (pool, in, inlen, out, outlen), \
 {
     mln_uauto_t i, state, j;
 
@@ -97,10 +99,11 @@ int mln_base64_pool_encode(mln_alloc_t *pool, \
     }
 
     return 0;
-}
+})
 
-int mln_base64_decode(mln_u8ptr_t in, mln_uauto_t inlen, \
-                      mln_u8ptr_t *out, mln_uauto_t *outlen)
+MLN_FUNC(int, mln_base64_decode, \
+         (mln_u8ptr_t in, mln_uauto_t inlen, mln_u8ptr_t *out, mln_uauto_t *outlen), \
+         (in, inlen, out, outlen), \
 {
     if (inlen % 4) return -1;
 
@@ -148,11 +151,11 @@ int mln_base64_decode(mln_u8ptr_t in, mln_uauto_t inlen, \
     }
 
     return 0;
-}
+})
 
-int mln_base64_pool_decode(mln_alloc_t *pool, \
-                           mln_u8ptr_t in, mln_uauto_t inlen, \
-                           mln_u8ptr_t *out, mln_uauto_t *outlen)
+MLN_FUNC(int, mln_base64_pool_decode, \
+         (mln_alloc_t *pool, mln_u8ptr_t in, mln_uauto_t inlen, mln_u8ptr_t *out, mln_uauto_t *outlen), \
+         (pool, in, inlen, out, outlen), \
 {
     if (inlen % 4) return -1;
 
@@ -200,17 +203,15 @@ int mln_base64_pool_decode(mln_alloc_t *pool, \
     }
 
     return 0;
-}
+})
 
-void mln_base64_free(mln_u8ptr_t data)
-{
+MLN_FUNC_VOID(void, mln_base64_free, (mln_u8ptr_t data), (data), {
     if (data == NULL) return;
     free(data);
-}
+})
 
-void mln_base64_pool_free(mln_u8ptr_t data)
-{
+MLN_FUNC_VOID(void, mln_base64_pool_free, (mln_u8ptr_t data), (data), {
     if (data == NULL) return;
     mln_alloc_free(data);
-}
+})
 
