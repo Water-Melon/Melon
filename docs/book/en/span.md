@@ -130,6 +130,54 @@ Return value: None
 
 
 
+#### mln_span_file
+
+```c
+mln_span_file(s);
+```
+
+Description: Get the filename of the specified span's location.
+
+Return value: `char *` pointer to the filename.
+
+
+
+#### mln_span_func
+
+```c
+mln_span_func(s);
+```
+
+Description: Get the function name referred to by the specified span.
+
+Return value: `char *` pointer to the function name.
+
+
+
+#### mln_span_line
+
+```c
+mln_span_line(s);
+```
+
+Description: Get the line number of the file referred to by the specified span.
+
+Return value: `int` representing the line number.
+
+
+
+#### mln_span_time_cost
+
+```c
+mln_span_time_cost(s);
+```
+
+Description: Get the duration of the measurement taken by the specified span, in microseconds.
+
+Return value: `mln_u64_t` representing the duration in microseconds.
+
+
+
 ### Example
 
 This is a multi-threading example demonstrating the usage of the `mln_span` interfaces and its runtime behavior in a multi-threaded environment.

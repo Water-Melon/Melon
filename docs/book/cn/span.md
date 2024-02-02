@@ -10,6 +10,12 @@ Melon中的资源开销（span）组件是用来测量C语言函数开销的，�
 
 
 
+### 视频介绍
+
+<iframe src="//player.bilibili.com/player.html?bvid=BV1jZ4y1E7H9&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
+
+
+
 ### 头文件
 
 ```c
@@ -128,6 +134,54 @@ void mln_span_free(mln_span_t *s);
 描述：释放`mln_span_t`结构内存。
 
 返回值：无
+
+
+
+#### mln_span_file
+
+```c
+mln_span_file(s);
+```
+
+描述：获取指定span所在文件的文件名。
+
+返回值：`char *`文件名指针
+
+
+
+#### mln_span_func
+
+```c
+mln_span_func(s);
+```
+
+描述：获取指定span所针对的函数名。
+
+返回值：`char *`函数名指针
+
+
+
+#### mln_span_line
+
+```c
+mln_span_line(s);
+```
+
+描述：获取指定span所针对的文件行数。
+
+返回值：`int`类型文件行数
+
+
+
+#### mln_span_time_cost
+
+```c
+mln_span_time_cost(s);
+```
+
+描述：获取指定span所测量的耗时时长，以微秒为单位。
+
+返回值：`mln_u64_t`微秒数
 
 
 
