@@ -3165,11 +3165,26 @@ Their definitions can be found in melon/include/mln_types.h.
       d) mln_span_move();
          Get span object and reset global variable in span module used by `mln_span_start`.
 
-      e) mln_span_dump();
+      e) void mln_span_dump(mln_span_dump_cb_t cb, void *data);
          Dump all information of spans indicated by the global variable in span module.
+         'cb' is the callback function to process sub-spans whose prototype is:
+             typedef void (*mln_span_dump_cb_t)(mln_span_t *s, int level, void *data);
+         'data' is a user data.
 
       f) void mln_span_free(mln_span_t *span);
          Free the give span object memory.
+
+      g) mln_span_file(s);
+         Get the filename associated with the span.
+
+      h) mln_span_func(s);
+         Get the function name associated with the span.
+
+      i) mln_span_line(s);
+         Get the file line number associated with the span.
+
+      j) mln_span_time_cost(s);
+         Get the time cost associated with the span.
 
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.

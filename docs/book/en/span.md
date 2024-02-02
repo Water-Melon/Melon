@@ -102,13 +102,20 @@ Return value: Pointer to `mln_span_t`
 #### mln_span_dump
 
 ```c
-mln_span_dump();
+void mln_span_dump(mln_span_dump_cb_t cb, void *data);
+
+typedef void (*mln_span_dump_cb_t)(mln_span_t *s, int level, void *data);
 ```
 
-Description: Output the data for the current measurement.
+Description: Use a user-defined output function and auxiliary data to output the current measurement data. The meanings of the parameters of `mln_span_dump_cb_t` are as follows:
 
-Return value: None
+- `s`: Pointer to the current traversed span node.
 
+- `level`: The current level of the span in the call stack (relative to the function call where `mln_span_start` is called).
+
+- `data`: User-defined data.
+
+Return value: None.
 
 
 #### mln_span_free
@@ -129,10 +136,21 @@ This is a multi-threading example demonstrating the usage of the `mln_span` inte
 
 ```c
 //a.c
-
 #include <pthread.h>
 #include "mln_span.h"
 #include "mln_func.h"
+#include "mln_log.h"
+
+static void mln_span_dump_callback(mln_span_t *s, int level, void *data)
+{
+    int i;
+    for (i = 0; i < level * 2; ++i) {
+        mln_log(none, " ");
+    }
+
+    mln_log(none, "| %s at %s:%d takes %U (us)\n", \
+            mln_span_func(s), mln_span_file(s), mln_span_line(s), mln_span_time_cost(s));
+}
 
 MLN_FUNC(int, abc, (int a, int b), (a, b), {
     return a + b;
@@ -155,7 +173,7 @@ void *pentry(void *args)
     }
 
     mln_span_stop();
-    mln_span_dump();
+    mln_span_dump(mln_span_dump_callback, NULL);
     mln_span_release();
     return NULL;
 }
@@ -187,76 +205,76 @@ cc -o a a.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon -DMLN_
 After execution, you should see the following output:
 
 ```
-| pentry at a.c:20 takes 92 (us)
-  | cde at a.c:13 takes 4 (us)
-    | bcd at a.c:9 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-    | bcd at a.c:9 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-  | cde at a.c:13 takes 5 (us)
-    | bcd at a.c:9 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-    | bcd at a.c:9 takes 2 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-  | cde at a.c:13 takes 24 (us)
-    | bcd at a.c:9 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-    | bcd at a.c:9 takes 21 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-  | cde at a.c:13 takes 5 (us)
-    | bcd at a.c:9 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-    | bcd at a.c:9 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-  | cde at a.c:13 takes 3 (us)
-    | bcd at a.c:9 takes 2 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-    | bcd at a.c:9 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-  | cde at a.c:13 takes 30 (us)
-    | bcd at a.c:9 takes 24 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 1 (us)
-    | bcd at a.c:9 takes 6 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-  | cde at a.c:13 takes 3 (us)
-    | bcd at a.c:9 takes 2 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-    | bcd at a.c:9 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-  | cde at a.c:13 takes 3 (us)
-    | bcd at a.c:9 takes 2 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 1 (us)
-    | bcd at a.c:9 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-  | cde at a.c:13 takes 7 (us)
-    | bcd at a.c:9 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-    | bcd at a.c:9 takes 2 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 1 (us)
-  | cde at a.c:13 takes 3 (us)
-    | bcd at a.c:9 takes 2 (us)
-      | abc at a.c:5 takes 1 (us)
-      | abc at a.c:5 takes 0 (us)
-    | bcd at a.c:9 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
-      | abc at a.c:5 takes 0 (us)
+| pentry at a.c:32 takes 16 (us)
+  | cde at a.c:25 takes 2 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+    | bcd at a.c:21 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+  | cde at a.c:25 takes 3 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 1 (us)
+    | bcd at a.c:21 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+  | cde at a.c:25 takes 1 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+    | bcd at a.c:21 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+  | cde at a.c:25 takes 1 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+    | bcd at a.c:21 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+  | cde at a.c:25 takes 1 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+    | bcd at a.c:21 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+  | cde at a.c:25 takes 1 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+    | bcd at a.c:21 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+  | cde at a.c:25 takes 3 (us)
+    | bcd at a.c:21 takes 2 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+  | cde at a.c:25 takes 1 (us)
+    | bcd at a.c:21 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+  | cde at a.c:25 takes 1 (us)
+    | bcd at a.c:21 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+  | cde at a.c:25 takes 1 (us)
+    | bcd at a.c:21 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
+    | bcd at a.c:21 takes 1 (us)
+      | abc at a.c:17 takes 0 (us)
+      | abc at a.c:17 takes 0 (us)
 ```
 

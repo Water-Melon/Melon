@@ -6,8 +6,6 @@
 #define __MLN_SPAN_H
 
 #include <sys/time.h>
-#include "mln_stack.h"
-#include "mln_array.h"
 #include "mln_func.h"
 #include "mln_utils.h"
 #if defined(WIN32)
@@ -17,16 +15,28 @@
 #endif
 
 typedef struct mln_span_s {
-    struct timeval     begin;
-    struct timeval     end;
-    const char        *file;
-    const char        *func;
-    int                line;
-    mln_array_t        subspans;
-    struct mln_span_s *parent;
+    struct timeval                begin;
+    struct timeval                end;
+    const char                   *file;
+    const char                   *func;
+    int                           line;
+    struct mln_span_s            *subspans_head;
+    struct mln_span_s            *subspans_tail;
+    struct mln_span_s            *parent;
+    struct mln_span_s            *prev;
+    struct mln_span_s            *next;
 } mln_span_t;
 
-extern mln_stack_t *mln_span_callstack;
+typedef struct mln_span_stack_node_s {
+    mln_span_t                   *span;
+    struct mln_span_stack_node_s *next;
+} mln_span_stack_node_t;
+
+typedef void (*mln_span_dump_cb_t)(mln_span_t *s, int level, void *data);
+
+
+extern mln_span_stack_node_t *__mln_span_stack_top;
+extern mln_span_stack_node_t *__mln_span_stack_bottom;
 extern mln_span_t *mln_span_root;
 #if defined(WIN32)
 extern DWORD mln_span_registered_thread;
@@ -34,6 +44,7 @@ extern DWORD mln_span_registered_thread;
 extern pthread_t mln_span_registered_thread;
 #endif
 
+extern void mln_span_stack_free(void);
 extern mln_span_t *mln_span_new(mln_span_t *parent, const char *file, const char *func, int line);
 extern void mln_span_free(mln_span_t *s);
 extern void mln_span_entry(const char *file, const char *func, int line);
@@ -41,36 +52,24 @@ extern void mln_span_exit(const char *file, const char *func, int line);
 
 #if defined(WIN32)
 #define mln_span_start() ({\
-    int r;\
-    struct mln_stack_attr sattr;\
+    int r = 0;\
     mln_func_entry_callback_set(mln_span_entry);\
     mln_func_exit_callback_set(mln_span_exit);\
-    sattr.free_handler = NULL;\
-    sattr.copy_handler = NULL;\
     mln_span_registered_thread = GetCurrentThreadId();\
-    if ((mln_span_callstack = mln_stack_init(&sattr)) == NULL) {\
-        r = -1;\
-    } else {\
-        r = 0;\
-        mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
-    }\
+    mln_span_root = NULL;\
+    __mln_span_stack_top = __mln_span_stack_bottom = NULL;\
+    mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
     r;\
 })
 #else
 #define mln_span_start() ({\
-    int r;\
-    struct mln_stack_attr sattr;\
+    int r = 0;\
     mln_func_entry_callback_set(mln_span_entry);\
     mln_func_exit_callback_set(mln_span_exit);\
-    sattr.free_handler = NULL;\
-    sattr.copy_handler = NULL;\
     mln_span_registered_thread = pthread_self();\
-    if ((mln_span_callstack = mln_stack_init(&sattr)) == NULL) {\
-        r = -1;\
-    } else {\
-        r = 0;\
-        mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
-    }\
+    __mln_span_stack_top = __mln_span_stack_bottom = NULL;\
+    mln_span_root = NULL;\
+    mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
     r;\
 })
 #endif
@@ -79,7 +78,7 @@ extern void mln_span_exit(const char *file, const char *func, int line);
     mln_span_exit(__FILE__, __FUNCTION__, __LINE__);\
     mln_func_entry_callback_set(NULL);\
     mln_func_exit_callback_set(NULL);\
-    mln_stack_destroy(mln_span_callstack);\
+    mln_span_stack_free();\
 })
 
 #define mln_span_release() ({\
@@ -92,7 +91,16 @@ extern void mln_span_exit(const char *file, const char *func, int line);
     mln_span_root = NULL;\
     span;\
 })
-extern void mln_span_dump(void);
 
+#define mln_span_file(s)      ((s)->file)
+#define mln_span_func(s)      ((s)->func)
+#define mln_span_line(s)      ((s)->line)
+#define mln_span_time_cost(s) ({\
+    mln_span_t *_s = (s);\
+    mln_u64_t r = (_s->end.tv_sec * 1000000 + _s->end.tv_usec) - (_s->begin.tv_sec * 1000000 + _s->begin.tv_usec);\
+    r;\
+})
+
+extern void mln_span_dump(mln_span_dump_cb_t cb, void *data);
 #endif
 
