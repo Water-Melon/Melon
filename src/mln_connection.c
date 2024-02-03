@@ -14,6 +14,7 @@
 #include "mln_connection.h"
 #include "mln_utils.h"
 #include "mln_file.h"
+#include "mln_func.h"
 #if defined(MLN_WRITEV)
 #include <sys/uio.h>
 #endif
@@ -56,8 +57,7 @@ static inline int mln_fd_is_nonblock(int fd)
  * mln_tcp_conn_t
  */
 
-int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd)
-{
+MLN_FUNC(int, mln_tcp_conn_init, (mln_tcp_conn_t *tc, int sockfd), (tc, sockfd), {
     tc->pool = mln_alloc_init(NULL);
     if (tc->pool == NULL) return -1;
     tc->rcv_head = tc->rcv_tail = NULL;
@@ -65,19 +65,20 @@ int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd)
     tc->sent_head = tc->sent_tail = NULL;
     tc->sockfd = sockfd;
     return 0;
-}
+})
 
-void mln_tcp_conn_destroy(mln_tcp_conn_t *tc)
-{
+MLN_FUNC_VOID(void, mln_tcp_conn_destroy, (mln_tcp_conn_t *tc), (tc), {
     if (tc == NULL) return;
 
     mln_chain_pool_release_all(mln_tcp_conn_remove(tc, M_C_SEND));
     mln_chain_pool_release_all(mln_tcp_conn_remove(tc, M_C_RECV));
     mln_chain_pool_release_all(mln_tcp_conn_remove(tc, M_C_SENT));
     mln_alloc_destroy(tc->pool);
-}
+})
 
-void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chain_t *c_tail, int type)
+MLN_FUNC_VOID(void, mln_tcp_conn_append_chain, \
+              (mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chain_t *c_tail, int type), \
+              (tc, c_head, c_tail, type), \
 {
     if (c_head == NULL) return;
 
@@ -106,10 +107,9 @@ void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chai
         (*tail)->next = c_head;
         *tail = c_tail;
     }
-}
+})
 
-void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
-{
+MLN_FUNC_VOID(void, mln_tcp_conn_append, (mln_tcp_conn_t *tc, mln_chain_t *c, int type), (tc, c, type), {
     mln_chain_t **head = NULL, **tail = NULL;
     if (type == M_C_SEND) {
         head = &(tc->snd_head);
@@ -130,10 +130,9 @@ void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type)
         (*tail)->next = c;
         *tail = c;
     }
-}
+})
 
-mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type)
-{
+MLN_FUNC(mln_chain_t *, mln_tcp_conn_head, (mln_tcp_conn_t *tc, int type), (tc, type), {
     mln_chain_t *rc = NULL;
 
     if (type == M_C_SEND) {
@@ -147,10 +146,9 @@ mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type)
     }
 
     return rc;
-}
+})
 
-mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type)
-{
+MLN_FUNC(mln_chain_t *, mln_tcp_conn_remove, (mln_tcp_conn_t *tc, int type), (tc, type), {
     mln_chain_t *rc = NULL;
 
     if (type == M_C_SEND) {
@@ -167,10 +165,9 @@ mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type)
     }
 
     return rc;
-}
+})
 
-mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type)
-{
+MLN_FUNC(mln_chain_t *, mln_tcp_conn_pop, (mln_tcp_conn_t *tc, int type), (tc, type), {
     mln_chain_t **head = NULL, **tail = NULL;
     if (type == M_C_SEND) {
         head = &(tc->snd_head);
@@ -194,10 +191,9 @@ mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type)
     *head = rc->next;
     rc->next = NULL;
     return rc;
-}
+})
 
-mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type)
-{
+MLN_FUNC(mln_chain_t *, mln_tcp_conn_tail, (mln_tcp_conn_t *tc, int type), (tc, type), {
     mln_chain_t *rc = NULL;
 
     if (type == M_C_SEND) {
@@ -211,10 +207,9 @@ mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type)
     }
 
     return rc;
-}
+})
 
-int mln_tcp_conn_send(mln_tcp_conn_t *tc)
-{
+MLN_FUNC(int, mln_tcp_conn_send, (mln_tcp_conn_t *tc), (tc), {
     ssize_t n;
 
     if (tc->snd_head == NULL) return M_C_NOTYET;
@@ -244,7 +239,7 @@ fi:
     if (n == 0) return M_C_NOTYET;
     if (n > 0) return M_C_FINISH;
     return M_C_ERROR;
-}
+})
 
 
 #if defined(MLN_WRITEV)
@@ -713,8 +708,7 @@ mln_tcp_conn_pop_inline(mln_tcp_conn_t *tc, int type)
     return rc;
 }
 
-int mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag)
-{
+MLN_FUNC(int, mln_tcp_conn_recv, (mln_tcp_conn_t *tc, mln_u32_t flag), (tc, flag), {
     ASSERT(flag == M_C_TYPE_MEMORY || flag == M_C_TYPE_FILE);
 
     int n;
@@ -745,7 +739,7 @@ goon_blk:
         return M_C_NOTYET;
     }
     return M_C_ERROR;
-}
+})
 
 static inline int
 mln_tcp_conn_recv_chain(mln_tcp_conn_t *tc, mln_u32_t flag)
