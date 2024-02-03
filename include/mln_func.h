@@ -11,6 +11,7 @@ typedef void (*mln_func_cb_t)(const char *file, const char *func, int line);
 
 #if defined(MLN_FUNC_FLAG)
 #define MLN_FUNC(ret_type, name, params, args, ...) \
+    ret_type name params;\
     ret_type __mln_func_##name params __VA_ARGS__\
     ret_type name params {\
         if (mln_func_entry != NULL) mln_func_entry(__FILE__, __FUNCTION__, __LINE__);\
@@ -20,6 +21,7 @@ typedef void (*mln_func_cb_t)(const char *file, const char *func, int line);
         return _r;\
     }
 #define MLN_FUNC_VOID(ret_type, name, params, args, ...) \
+    ret_type name params;\
     ret_type __mln_func_##name params __VA_ARGS__\
     ret_type name params {\
         if (mln_func_entry != NULL) mln_func_entry(__FILE__, __FUNCTION__, __LINE__);\
