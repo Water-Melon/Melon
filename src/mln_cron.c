@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include "mln_cron.h"
 #include "mln_tools.h"
+#include "mln_func.h"
 
 static long mln_cron_parse_minute(mln_string_t *smin, long min);
 static long mln_cron_parse_hour(mln_string_t *shour, long hour, int greater);
@@ -13,8 +14,7 @@ static long mln_cron_parse_day(mln_string_t *sday, long year, long month, long d
 static long mln_cron_parse_month(mln_string_t *smon, long mon, int greater);
 static long mln_cron_parse_week(mln_string_t *sweek, long week, int greater);
 
-time_t mln_cron_parse(mln_string_t *exp, time_t base)
-{
+MLN_FUNC(time_t, mln_cron_parse, (mln_string_t *exp, time_t base), (exp, base), {
     struct utctime u;
     mln_string_t *arr;
     time_t tmp;
@@ -60,10 +60,9 @@ time_t mln_cron_parse(mln_string_t *exp, time_t base)
     mln_string_slice_free(arr);
     /*printf("%lu-%lu-%lu %lu:%lu:%lu %lu\n", u.year, u.month, u.day, u.hour, u.minute, u.second, u.week);*/
     return mln_utc2time(&u);
-}
+})
 
-static long mln_cron_parse_minute(mln_string_t *smin, long min)
-{
+MLN_FUNC(static long, mln_cron_parse_minute, (mln_string_t *smin, long min), (smin, min), {
     if (!smin->len) return -1;
     if (smin->len == 1 && smin->data[0] == '*')
         return min + 1;
@@ -122,9 +121,11 @@ static long mln_cron_parse_minute(mln_string_t *smin, long min)
         }
     }
     return save;
-}
+})
 
-static long mln_cron_parse_hour(mln_string_t *shour, long hour, int greater)
+MLN_FUNC(static long, mln_cron_parse_hour, \
+         (mln_string_t *shour, long hour, int greater), \
+         (shour, hour, greater), \
 {
     if (!shour->len) return -1;
     if (shour->len == 1 && shour->data[0] == '*')
@@ -192,9 +193,11 @@ static long mln_cron_parse_hour(mln_string_t *shour, long hour, int greater)
         }
     }
     return save;
-}
+})
 
-static long mln_cron_parse_day(mln_string_t *sday, long year, long month, long day, int greater)
+MLN_FUNC(static long, mln_cron_parse_day, \
+         (mln_string_t *sday, long year, long month, long day, int greater), \
+         (sday, year, month, day, greater), \
 {
     if (!sday->len) return -1;
     if (sday->len == 1 && sday->data[0] == '*')
@@ -262,9 +265,11 @@ static long mln_cron_parse_day(mln_string_t *sday, long year, long month, long d
         }
     }
     return save;
-}
+})
 
-static long mln_cron_parse_month(mln_string_t *smon, long mon, int greater)
+MLN_FUNC(static long, mln_cron_parse_month, \
+         (mln_string_t *smon, long mon, int greater), \
+         (smon, mon, greater), \
 {
     if (!smon->len) return -1;
     if (smon->len == 1 && smon->data[0] == '*')
@@ -332,9 +337,11 @@ static long mln_cron_parse_month(mln_string_t *smon, long mon, int greater)
         }
     }
     return save;
-}
+})
 
-static long mln_cron_parse_week(mln_string_t *sweek, long week, int greater)
+MLN_FUNC(static long, mln_cron_parse_week, \
+         (mln_string_t *sweek, long week, int greater), \
+         (sweek, week, greater), \
 {
     if (!sweek->len) return -1;
     if (sweek->len == 1 && sweek->data[0] == '*')
@@ -402,5 +409,5 @@ static long mln_cron_parse_week(mln_string_t *sweek, long week, int greater)
         }
     }
     return save;
-}
+})
 
