@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mln_fheap.h"
+#include "mln_func.h"
 
 static inline void
 mln_fheap_cut(mln_fheap_t *fh, mln_fheap_node_t *x, mln_fheap_node_t *y);
@@ -13,8 +14,7 @@ static inline void
 mln_fheap_cascading_cut(mln_fheap_t *fh, mln_fheap_node_t *y);
 
 
-mln_fheap_t *mln_fheap_new(void *min_val, struct mln_fheap_attr *attr)
-{
+MLN_FUNC(mln_fheap_t *, mln_fheap_new, (void *min_val, struct mln_fheap_attr *attr), (min_val, attr), {
     mln_fheap_t *fh;
     if (attr != NULL && attr->pool != NULL)
         fh = (mln_fheap_t *)attr->pool_alloc(attr->pool, sizeof(mln_fheap_t));
@@ -42,36 +42,30 @@ mln_fheap_t *mln_fheap_new(void *min_val, struct mln_fheap_attr *attr)
     fh->root_list = NULL;
     fh->num = 0;
     return fh;
-}
+})
 
-void mln_fheap_insert(mln_fheap_t *fh, mln_fheap_node_t *fn)
-{
+MLN_FUNC_VOID(void, mln_fheap_insert, (mln_fheap_t *fh, mln_fheap_node_t *fn), (fh, fn), {
     mln_fheap_inline_insert(fh, fn, NULL);
-}
+})
 
-mln_fheap_node_t *mln_fheap_extract_min(mln_fheap_t *fh)
-{
+MLN_FUNC(mln_fheap_node_t *, mln_fheap_extract_min, (mln_fheap_t *fh), (fh), {
     return mln_fheap_inline_extract_min(fh, NULL);
-}
+})
 
-int mln_fheap_decrease_key(mln_fheap_t *fh, mln_fheap_node_t *node, void *key)
-{
+MLN_FUNC(int, mln_fheap_decrease_key, (mln_fheap_t *fh, mln_fheap_node_t *node, void *key), (fh, node, key), {
     return mln_fheap_inline_decrease_key(fh, node, key, NULL, NULL);
-}
+})
 
-void mln_fheap_delete(mln_fheap_t *fh, mln_fheap_node_t *node)
-{
+MLN_FUNC_VOID(void, mln_fheap_delete, (mln_fheap_t *fh, mln_fheap_node_t *node), (fh, node), {
     mln_fheap_inline_delete(fh, node, NULL, NULL);
-}
+})
 
-void mln_fheap_free(mln_fheap_t *fh)
-{
+MLN_FUNC_VOID(void, mln_fheap_free, (mln_fheap_t *fh), (fh), {
     mln_fheap_inline_free(fh, NULL, NULL);
-}
+})
 
 /*mln_fheap_node_t*/
-mln_fheap_node_t *mln_fheap_node_new(mln_fheap_t *fh, void *key)
-{
+MLN_FUNC(mln_fheap_node_t *, mln_fheap_node_new, (mln_fheap_t *fh, void *key), (fh, key), {
     mln_fheap_node_t *fn;
 
     if (fh->pool != NULL)
@@ -89,10 +83,9 @@ mln_fheap_node_t *mln_fheap_node_new(mln_fheap_t *fh, void *key)
     fn->nofree = 0;
     fn->mark = FHEAP_FALSE;
     return fn;
-}
+})
 
-void mln_fheap_node_free(mln_fheap_t *fh, mln_fheap_node_t *fn)
-{
+MLN_FUNC_VOID(void, mln_fheap_node_free, (mln_fheap_t *fh, mln_fheap_node_t *fn), (fh, fn), {
     mln_fheap_inline_node_free(fh, fn, NULL);
-}
+})
 
