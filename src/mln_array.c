@@ -10,7 +10,7 @@
 
 static inline int mln_array_alloc(mln_array_t *arr, mln_size_t n);
 
-MLN_FUNC(int, mln_array_init, (mln_array_t *arr, struct mln_array_attr *attr), (arr, attr), {
+MLN_FUNC(, int, mln_array_init, (mln_array_t *arr, struct mln_array_attr *attr), (arr, attr), {
     arr->elts = NULL;
     arr->size = attr->size;
     arr->nalloc = attr->nalloc;
@@ -22,7 +22,7 @@ MLN_FUNC(int, mln_array_init, (mln_array_t *arr, struct mln_array_attr *attr), (
     return mln_array_alloc(arr, arr->nalloc);
 })
 
-MLN_FUNC(mln_array_t *, mln_array_new, (struct mln_array_attr *attr), (attr), {
+MLN_FUNC(, mln_array_t *, mln_array_new, (struct mln_array_attr *attr), (attr), {
     mln_array_t *arr;
 
     if (attr->pool == NULL || attr->pool_alloc == NULL || attr->pool_free == NULL) {
@@ -41,7 +41,7 @@ MLN_FUNC(mln_array_t *, mln_array_new, (struct mln_array_attr *attr), (attr), {
     return arr;
 })
 
-MLN_FUNC_VOID(void, mln_array_destroy, (mln_array_t *arr), (arr), {
+MLN_FUNC_VOID(, void, mln_array_destroy, (mln_array_t *arr), (arr), {
     if (arr == NULL) return;
 
     if (arr->free != NULL && arr->nelts) {
@@ -56,7 +56,7 @@ MLN_FUNC_VOID(void, mln_array_destroy, (mln_array_t *arr), (arr), {
         free(arr->elts);
 })
 
-MLN_FUNC_VOID(void, mln_array_free, (mln_array_t *arr), (arr), {
+MLN_FUNC_VOID(, void, mln_array_free, (mln_array_t *arr), (arr), {
     if (arr == NULL) return;
 
     if (arr->free != NULL && arr->nelts) {
@@ -74,7 +74,7 @@ MLN_FUNC_VOID(void, mln_array_free, (mln_array_t *arr), (arr), {
     }
 })
 
-MLN_FUNC_VOID(void, mln_array_reset, (mln_array_t *arr), (arr), {
+MLN_FUNC_VOID(, void, mln_array_reset, (mln_array_t *arr), (arr), {
     if (arr == NULL) return;
 
     if (arr->free != NULL && arr->nelts) {
@@ -85,7 +85,7 @@ MLN_FUNC_VOID(void, mln_array_reset, (mln_array_t *arr), (arr), {
     arr->nelts = 0;
 })
 
-MLN_FUNC(void *, mln_array_push, (mln_array_t *arr), (arr), {
+MLN_FUNC(, void *, mln_array_push, (mln_array_t *arr), (arr), {
     if (arr->nelts >= arr->nalloc) {
         if (mln_array_alloc(arr, 1) < 0)
             return NULL;
@@ -93,7 +93,7 @@ MLN_FUNC(void *, mln_array_push, (mln_array_t *arr), (arr), {
     return arr->elts + (arr->nelts++) * arr->size;
 })
 
-MLN_FUNC(void *, mln_array_pushn, (mln_array_t *arr, mln_size_t n), (arr, n), {
+MLN_FUNC(, void *, mln_array_pushn, (mln_array_t *arr, mln_size_t n), (arr, n), {
     mln_u8ptr_t ptr;
 
     if (arr->nelts + n > arr->nalloc) {
@@ -131,7 +131,7 @@ static inline int mln_array_alloc(mln_array_t *arr, mln_size_t n)
     return 0;
 }
 
-MLN_FUNC_VOID(void, mln_array_pop, (mln_array_t *arr), (arr), {
+MLN_FUNC_VOID(, void, mln_array_pop, (mln_array_t *arr), (arr), {
     if (arr == NULL || !arr->nelts)
         return;
 

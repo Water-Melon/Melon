@@ -75,7 +75,7 @@ static mln_u32_t rcon[] = {
                                  ((((mln_u32_t)sbox[(val >> 16) & 0xff]) & 0xff) << 16) | \
                                  ((((mln_u32_t)sbox[(val >> 24) & 0xff]) & 0xff) << 24))
 
-MLN_FUNC(int, mln_aes_init, (mln_aes_t *a, mln_u8ptr_t key, mln_u32_t bits), (a, key, bits), {
+MLN_FUNC(, int, mln_aes_init, (mln_aes_t *a, mln_u8ptr_t key, mln_u32_t bits), (a, key, bits), {
     int i;
     mln_u32_t nk, times;
     mln_u32_t temp, *roundkey = a->w;
@@ -118,31 +118,31 @@ MLN_FUNC(int, mln_aes_init, (mln_aes_t *a, mln_u8ptr_t key, mln_u32_t bits), (a,
     return 0;
 })
 
-MLN_FUNC(mln_aes_t *, mln_aes_new, (mln_u8ptr_t key, mln_u32_t bits), (key, bits), {
+MLN_FUNC(, mln_aes_t *, mln_aes_new, (mln_u8ptr_t key, mln_u32_t bits), (key, bits), {
     mln_aes_t *a = (mln_aes_t *)malloc(sizeof(mln_aes_t));
     if (a == NULL) return NULL;
     mln_aes_init(a, key, bits);
     return a;
 })
 
-MLN_FUNC(mln_aes_t *, mln_aes_pool_new, (mln_alloc_t *pool, mln_u8ptr_t key, mln_u32_t bits), (pool, key, bits), {
+MLN_FUNC(, mln_aes_t *, mln_aes_pool_new, (mln_alloc_t *pool, mln_u8ptr_t key, mln_u32_t bits), (pool, key, bits), {
     mln_aes_t *a = (mln_aes_t *)mln_alloc_m(pool, sizeof(mln_aes_t));
     if (a == NULL) return NULL;
     mln_aes_init(a, key, bits);
     return a;
 })
 
-MLN_FUNC_VOID(void, mln_aes_free, (mln_aes_t *a), (a), {
+MLN_FUNC_VOID(, void, mln_aes_free, (mln_aes_t *a), (a), {
     if (a == NULL) return;
     free(a);
 })
 
-MLN_FUNC_VOID(void, mln_aes_pool_free, (mln_aes_t *a), (a), {
+MLN_FUNC_VOID(, void, mln_aes_pool_free, (mln_aes_t *a), (a), {
     if (a == NULL) return;
     mln_alloc_free(a);
 })
 
-MLN_FUNC_VOID(static inline void, mln_aes_addroundkey, (mln_u32_t *state, mln_u32_t *roundkey, int round), (state, roundkey, round), {
+MLN_FUNC_VOID(static inline, void, mln_aes_addroundkey, (mln_u32_t *state, mln_u32_t *roundkey, int round), (state, roundkey, round), {
     int i, j;
     mln_u8_t b;
     for (i = 0; i < sizeof(mln_u32_t); ++i) {
@@ -155,7 +155,7 @@ MLN_FUNC_VOID(static inline void, mln_aes_addroundkey, (mln_u32_t *state, mln_u3
     }
 })
 
-MLN_FUNC_VOID(static inline void, mln_aes_mixcolume, (mln_u32_t *state), (state), {
+MLN_FUNC_VOID(static inline, void, mln_aes_mixcolume, (mln_u32_t *state), (state), {
     int i;
     mln_u8_t _0, _1, _2, _3, b;
 
@@ -183,7 +183,7 @@ MLN_FUNC_VOID(static inline void, mln_aes_mixcolume, (mln_u32_t *state), (state)
     }
 })
 
-MLN_FUNC_VOID(static inline void, mln_aes_bytesub, (mln_u32_t *state), (state), {
+MLN_FUNC_VOID(static inline, void, mln_aes_bytesub, (mln_u32_t *state), (state), {
     mln_u32_t i, j;
     mln_u8_t b;
 
@@ -196,13 +196,13 @@ MLN_FUNC_VOID(static inline void, mln_aes_bytesub, (mln_u32_t *state), (state), 
     }
 })
 
-MLN_FUNC_VOID(static inline void, mln_aes_shiftrow, (mln_u32_t *state), (state), {
+MLN_FUNC_VOID(static inline, void, mln_aes_shiftrow, (mln_u32_t *state), (state), {
     state[1] = (((state[1] << 8) | (state[1] >> 24)) & 0xffffffff);
     state[2] = (((state[2] << 16) | (state[2] >> 16)) & 0xffffffff);
     state[3] = (((state[3] << 24) | (state[3] >> 8)) & 0xffffffff);
 })
 
-MLN_FUNC(int, mln_aes_encrypt, (mln_aes_t *a, mln_u8ptr_t text), (a, text), {
+MLN_FUNC(, int, mln_aes_encrypt, (mln_aes_t *a, mln_u8ptr_t text), (a, text), {
     mln_u32_t state[4] = {0, 0, 0, 0}, i, j, round, nr;
 
     switch (a->bits) {
@@ -246,7 +246,7 @@ MLN_FUNC(int, mln_aes_encrypt, (mln_aes_t *a, mln_u8ptr_t text), (a, text), {
     return 0;
 })
 
-MLN_FUNC(int, mln_aes_decrypt, (mln_aes_t *a, mln_u8ptr_t cipher), (a, cipher), {
+MLN_FUNC(, int, mln_aes_decrypt, (mln_aes_t *a, mln_u8ptr_t cipher), (a, cipher), {
     mln_u32_t state[4] = {0, 0, 0, 0}, i, j, round, nr;
 
     switch (a->bits) {
@@ -290,13 +290,13 @@ MLN_FUNC(int, mln_aes_decrypt, (mln_aes_t *a, mln_u8ptr_t cipher), (a, cipher), 
     return 0;
 })
 
-MLN_FUNC_VOID(static inline void, mln_aes_invshiftrow, (mln_u32_t *state), (state), {
+MLN_FUNC_VOID(static inline, void, mln_aes_invshiftrow, (mln_u32_t *state), (state), {
     state[1] = (((state[1] >> 8) | (state[1] << 24)) & 0xffffffff);
     state[2] = (((state[2] >> 16) | (state[2] << 16)) & 0xffffffff);
     state[3] = (((state[3] >> 24) | (state[3] << 8)) & 0xffffffff);
 })
 
-MLN_FUNC_VOID(static inline void, mln_aes_invbytesub, (mln_u32_t *state), (state), {
+MLN_FUNC_VOID(static inline, void, mln_aes_invbytesub, (mln_u32_t *state), (state), {
     mln_u32_t i, j;
     mln_u8_t b;
 
@@ -309,7 +309,7 @@ MLN_FUNC_VOID(static inline void, mln_aes_invbytesub, (mln_u32_t *state), (state
     }
 })
 
-MLN_FUNC_VOID(static inline void, mln_aes_invmixcolume, (mln_u32_t *state), (state), {
+MLN_FUNC_VOID(static inline, void, mln_aes_invmixcolume, (mln_u32_t *state), (state), {
     int i;
     mln_u8_t _0, _1, _2, _3;
 

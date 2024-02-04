@@ -207,15 +207,15 @@ static void mln_span_dump_callback(mln_span_t *s, int level, void *data)
             mln_span_func(s), mln_span_file(s), mln_span_line(s), mln_span_time_cost(s));
 }
 
-MLN_FUNC(int, abc, (int a, int b), (a, b), {
+MLN_FUNC(, int, abc, (int a, int b), (a, b), {
     return a + b;
 })
 
-MLN_FUNC(static int, bcd, (int a, int b), (a, b), {
+MLN_FUNC(static, int, bcd, (int a, int b), (a, b), {
     return abc(a, b) + abc(a, b);
 })
 
-MLN_FUNC(static int, cde, (int a, int b), (a, b), {
+MLN_FUNC(static, int, cde, (int a, int b), (a, b), {
     return bcd(a, b) + bcd(a, b);
 })
 

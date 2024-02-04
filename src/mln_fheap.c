@@ -14,7 +14,7 @@ static inline void
 mln_fheap_cascading_cut(mln_fheap_t *fh, mln_fheap_node_t *y);
 
 
-MLN_FUNC(mln_fheap_t *, mln_fheap_new, (void *min_val, struct mln_fheap_attr *attr), (min_val, attr), {
+MLN_FUNC(, mln_fheap_t *, mln_fheap_new, (void *min_val, struct mln_fheap_attr *attr), (min_val, attr), {
     mln_fheap_t *fh;
     if (attr != NULL && attr->pool != NULL)
         fh = (mln_fheap_t *)attr->pool_alloc(attr->pool, sizeof(mln_fheap_t));
@@ -44,28 +44,28 @@ MLN_FUNC(mln_fheap_t *, mln_fheap_new, (void *min_val, struct mln_fheap_attr *at
     return fh;
 })
 
-MLN_FUNC_VOID(void, mln_fheap_insert, (mln_fheap_t *fh, mln_fheap_node_t *fn), (fh, fn), {
+MLN_FUNC_VOID(, void, mln_fheap_insert, (mln_fheap_t *fh, mln_fheap_node_t *fn), (fh, fn), {
     mln_fheap_inline_insert(fh, fn, NULL);
 })
 
-MLN_FUNC(mln_fheap_node_t *, mln_fheap_extract_min, (mln_fheap_t *fh), (fh), {
+MLN_FUNC(, mln_fheap_node_t *, mln_fheap_extract_min, (mln_fheap_t *fh), (fh), {
     return mln_fheap_inline_extract_min(fh, NULL);
 })
 
-MLN_FUNC(int, mln_fheap_decrease_key, (mln_fheap_t *fh, mln_fheap_node_t *node, void *key), (fh, node, key), {
+MLN_FUNC(, int, mln_fheap_decrease_key, (mln_fheap_t *fh, mln_fheap_node_t *node, void *key), (fh, node, key), {
     return mln_fheap_inline_decrease_key(fh, node, key, NULL, NULL);
 })
 
-MLN_FUNC_VOID(void, mln_fheap_delete, (mln_fheap_t *fh, mln_fheap_node_t *node), (fh, node), {
+MLN_FUNC_VOID(, void, mln_fheap_delete, (mln_fheap_t *fh, mln_fheap_node_t *node), (fh, node), {
     mln_fheap_inline_delete(fh, node, NULL, NULL);
 })
 
-MLN_FUNC_VOID(void, mln_fheap_free, (mln_fheap_t *fh), (fh), {
+MLN_FUNC_VOID(, void, mln_fheap_free, (mln_fheap_t *fh), (fh), {
     mln_fheap_inline_free(fh, NULL, NULL);
 })
 
 /*mln_fheap_node_t*/
-MLN_FUNC(mln_fheap_node_t *, mln_fheap_node_new, (mln_fheap_t *fh, void *key), (fh, key), {
+MLN_FUNC(, mln_fheap_node_t *, mln_fheap_node_new, (mln_fheap_t *fh, void *key), (fh, key), {
     mln_fheap_node_t *fn;
 
     if (fh->pool != NULL)
@@ -85,7 +85,7 @@ MLN_FUNC(mln_fheap_node_t *, mln_fheap_node_new, (mln_fheap_t *fh, void *key), (
     return fn;
 })
 
-MLN_FUNC_VOID(void, mln_fheap_node_free, (mln_fheap_t *fh, mln_fheap_node_t *fn), (fh, fn), {
+MLN_FUNC_VOID(, void, mln_fheap_node_free, (mln_fheap_t *fh, mln_fheap_node_t *fn), (fh, fn), {
     mln_fheap_inline_node_free(fh, fn, NULL);
 })
 

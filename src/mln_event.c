@@ -74,7 +74,7 @@ mln_event_desc_t fheap_min = {
     {(mln_event_tm_t){NULL, NULL, 0}},
 };
 
-MLN_FUNC(mln_event_t *, mln_event_new, (void), (), {
+MLN_FUNC(, mln_event_t *, mln_event_new, (void), (), {
     int rc;
     mln_event_t *ev;
     ev = (mln_event_t *)malloc(sizeof(mln_event_t));
@@ -166,7 +166,7 @@ err1:
     return NULL;
 })
 
-MLN_FUNC_VOID(void, mln_event_free, (mln_event_t *ev), (ev), {
+MLN_FUNC_VOID(, void, mln_event_free, (mln_event_t *ev), (ev), {
     if (ev == NULL) return;
     mln_event_desc_t *ed;
     mln_fheap_inline_free(ev->ev_fd_timeout_heap, mln_event_fd_timeout_cmp, NULL);
@@ -203,7 +203,7 @@ mln_event_desc_free(void *data)
 /*
  * ev_timer
  */
-MLN_FUNC(mln_event_timer_t *, mln_event_timer_set, \
+MLN_FUNC(, mln_event_timer_t *, mln_event_timer_set, \
          (mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler), \
          (event, msec, data, tm_handler), \
 {
@@ -235,7 +235,7 @@ MLN_FUNC(mln_event_timer_t *, mln_event_timer_set, \
     return fn;
 })
 
-MLN_FUNC_VOID(void, mln_event_timer_cancel, \
+MLN_FUNC_VOID(, void, mln_event_timer_cancel, \
               (mln_event_t *event, mln_event_timer_t *timer), \
               (event, timer), \
 {
@@ -286,7 +286,7 @@ lp:
 /*
  * ev_fd
  */
-MLN_FUNC_VOID(void, mln_event_fd_timeout_handler_set, \
+MLN_FUNC_VOID(, void, mln_event_fd_timeout_handler_set, \
          (mln_event_t *event, int fd, void *data, ev_fd_handler timeout_handler), \
          (event, fd, data, timeout_handler), \
 {
@@ -303,7 +303,7 @@ MLN_FUNC_VOID(void, mln_event_fd_timeout_handler_set, \
     pthread_mutex_unlock(&event->fd_lock);
 })
 
-MLN_FUNC(int, mln_event_fd_set, \
+MLN_FUNC(, int, mln_event_fd_set, \
          (mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms, void *data, ev_fd_handler fd_handler), \
          (event, fd, flag, timeout_ms, data, fd_handler), \
 {
@@ -601,7 +601,7 @@ mln_event_fd_append_set(mln_event_t *event, \
     return 0;
 }
 
-MLN_FUNC(static int, mln_event_fd_timeout_set, \
+MLN_FUNC(static, int, mln_event_fd_timeout_set, \
          (mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms), \
          (ev, ed, timeout_ms), \
 {
@@ -697,7 +697,7 @@ mln_event_fd_clr_set(mln_event_t *event, int fd)
 /*
  * set dispatch callback
  */
-MLN_FUNC_VOID(void, mln_event_callback_set, \
+MLN_FUNC_VOID(, void, mln_event_callback_set, \
               (mln_event_t *ev, dispatch_callback dc, void *dc_data), \
               (ev, dc, dc_data), \
 {
@@ -748,7 +748,7 @@ mln_event_fd_block_set(int fd)
         return;\
     }
 #if defined(MLN_EPOLL)
-MLN_FUNC_VOID(void, mln_event_dispatch, (mln_event_t *event), (event), {
+MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
     __uint32_t mod_event;
     int nfds, n, oneshot, other_oneshot;
     mln_event_desc_t *ed;
@@ -897,7 +897,7 @@ MLN_FUNC_VOID(void, mln_event_dispatch, (mln_event_t *event), (event), {
     }
 })
 #elif defined(MLN_KQUEUE)
-MLN_FUNC_VOID(void, mln_event_dispatch, (mln_event_t *event), (event), {
+MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
     int nfds, n;
     mln_event_desc_t *ed;
     struct kevent events[M_EV_EPOLL_SIZE], *ev, mod;
@@ -1033,7 +1033,7 @@ MLN_FUNC_VOID(void, mln_event_dispatch, (mln_event_t *event), (event), {
     }
 })
 #else
-MLN_FUNC_VOID(void, mln_event_dispatch, (mln_event_t *event), (event), {
+MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
     int nfds, fd;
     mln_event_desc_t *ed;
     fd_set *rd_set = &(event->rd_set);
@@ -1290,7 +1290,7 @@ lp:
 /*
  * rbtree functions
  */
-MLN_FUNC(static int, mln_event_rbtree_fd_cmp, (const void *k1, const void *k2), (k1, k2), {
+MLN_FUNC(static, int, mln_event_rbtree_fd_cmp, (const void *k1, const void *k2), (k1, k2), {
     mln_event_desc_t *ed1 = (mln_event_desc_t *)k1;
     mln_event_desc_t *ed2 = (mln_event_desc_t *)k2;
     return ed1->data.fd.fd - ed2->data.fd.fd;

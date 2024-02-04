@@ -6,7 +6,7 @@
 #include "mln_chain.h"
 #include "mln_func.h"
 
-MLN_FUNC(mln_buf_t *, mln_buf_new, (mln_alloc_t *pool), (pool), {
+MLN_FUNC(, mln_buf_t *, mln_buf_new, (mln_alloc_t *pool), (pool), {
     mln_buf_t *b = mln_alloc_m(pool, sizeof(mln_buf_t));
     b->left_pos = b->pos = b->last = NULL;
     b->start = b->end = NULL;
@@ -21,14 +21,14 @@ MLN_FUNC(mln_buf_t *, mln_buf_new, (mln_alloc_t *pool), (pool), {
     return b;
 })
 
-MLN_FUNC(mln_chain_t *, mln_chain_new, (mln_alloc_t *pool), (pool), {
+MLN_FUNC(, mln_chain_t *, mln_chain_new, (mln_alloc_t *pool), (pool), {
     mln_chain_t *c = mln_alloc_m(pool, sizeof(mln_chain_t));
     c->buf = NULL;
     c->next = NULL;
     return c;
 })
 
-MLN_FUNC_VOID(void, mln_buf_pool_release, (mln_buf_t *b), (b), {
+MLN_FUNC_VOID(, void, mln_buf_pool_release, (mln_buf_t *b), (b), {
     if (b == NULL) return;
 
     if (b->shadow != NULL || b->temporary) {
@@ -67,7 +67,7 @@ MLN_FUNC_VOID(void, mln_buf_pool_release, (mln_buf_t *b), (b), {
     mln_alloc_free(b);
 })
 
-MLN_FUNC_VOID(void, mln_chain_pool_release, (mln_chain_t *c), (c), {
+MLN_FUNC_VOID(, void, mln_chain_pool_release, (mln_chain_t *c), (c), {
     if (c == NULL) return;
 
     if (c->buf != NULL) {
@@ -76,7 +76,7 @@ MLN_FUNC_VOID(void, mln_chain_pool_release, (mln_chain_t *c), (c), {
     mln_alloc_free(c);
 })
 
-MLN_FUNC_VOID(void, mln_chain_pool_release_all, (mln_chain_t *c), (c), {
+MLN_FUNC_VOID(, void, mln_chain_pool_release_all, (mln_chain_t *c), (c), {
     mln_chain_t *fr;
 
     while (c != NULL) {

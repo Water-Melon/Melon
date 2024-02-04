@@ -20,7 +20,7 @@ MLN_CHAIN_FUNC_DECLARE(reg_file, \
 static int mln_file_set_cmp(const void *data1, const void *data2);
 static void mln_file_free(void *pfile);
 
-MLN_FUNC(mln_fileset_t *, mln_fileset_init, (mln_size_t max_file), (max_file), {
+MLN_FUNC(, mln_fileset_t *, mln_fileset_init, (mln_size_t max_file), (max_file), {
     struct mln_rbtree_attr attr;
     mln_fileset_t *fs;
 
@@ -52,13 +52,13 @@ MLN_FUNC(mln_fileset_t *, mln_fileset_init, (mln_size_t max_file), (max_file), {
     return fs;
 })
 
-MLN_FUNC(static int, mln_file_set_cmp, (const void *data1, const void *data2), (data1, data2), {
+MLN_FUNC(static, int, mln_file_set_cmp, (const void *data1, const void *data2), (data1, data2), {
     mln_file_t *f1 = (mln_file_t *)data1;
     mln_file_t *f2 = (mln_file_t *)data2;
     return mln_string_strcmp(f1->file_path, f2->file_path);
 })
 
-MLN_FUNC_VOID(void, mln_fileset_destroy, (mln_fileset_t *fs), (fs), {
+MLN_FUNC_VOID(, void, mln_fileset_destroy, (mln_fileset_t *fs), (fs), {
     if (fs == NULL) return;
 
     if (fs->reg_file_tree != NULL)
@@ -69,7 +69,7 @@ MLN_FUNC_VOID(void, mln_fileset_destroy, (mln_fileset_t *fs), (fs), {
 })
 
 
-MLN_FUNC(mln_file_t *, mln_file_open, (mln_fileset_t *fs, const char *filepath), (fs, filepath), {
+MLN_FUNC(, mln_file_t *, mln_file_open, (mln_fileset_t *fs, const char *filepath), (fs, filepath), {
     mln_rbtree_node_t *rn;
     mln_file_t *f, tmpf;
     mln_string_t path;
@@ -125,7 +125,7 @@ MLN_FUNC(mln_file_t *, mln_file_open, (mln_fileset_t *fs, const char *filepath),
     return f;
 })
 
-MLN_FUNC_VOID(void, mln_file_close, (mln_file_t *pfile), (pfile), {
+MLN_FUNC_VOID(, void, mln_file_close, (mln_file_t *pfile), (pfile), {
     if (pfile == NULL) return;
 
     mln_fileset_t *fs;
@@ -152,7 +152,7 @@ MLN_FUNC_VOID(void, mln_file_close, (mln_file_t *pfile), (pfile), {
     }
 })
 
-MLN_FUNC_VOID(static void, mln_file_free, (void *pfile), (pfile), {
+MLN_FUNC_VOID(static, void, mln_file_free, (void *pfile), (pfile), {
     if (pfile == NULL) return;
 
     mln_file_t *f = (mln_file_t *)pfile;
@@ -162,7 +162,7 @@ MLN_FUNC_VOID(static void, mln_file_free, (void *pfile), (pfile), {
     mln_alloc_free(f);
 })
 
-MLN_FUNC(mln_file_t *, mln_file_tmp_open, (mln_alloc_t *pool), (pool), {
+MLN_FUNC(, mln_file_t *, mln_file_tmp_open, (mln_alloc_t *pool), (pool), {
     char dir_path[512] = {0};
     char tmp_path[1024] = {0};
     struct timeval now;

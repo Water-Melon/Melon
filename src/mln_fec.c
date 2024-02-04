@@ -59,7 +59,7 @@ mln_fec_xor(mln_string_t *data1, mln_string_t *data2)
 }
 
 /*mln_fec_result_t*/
-MLN_FUNC(static mln_fec_result_t *, mln_fec_result_new, \
+MLN_FUNC(static, mln_fec_result_t *, mln_fec_result_new, \
          (mln_string_t **packets, mln_size_t nr_packets), \
          (packets, nr_packets), \
 {
@@ -71,7 +71,7 @@ MLN_FUNC(static mln_fec_result_t *, mln_fec_result_new, \
     return fr;
 })
 
-MLN_FUNC_VOID(void, mln_fec_result_free, (mln_fec_result_t *fr), (fr), {
+MLN_FUNC_VOID(, void, mln_fec_result_free, (mln_fec_result_t *fr), (fr), {
     if (fr == NULL) return;
     if (fr->packets != NULL) {
         mln_string_vector_free(fr->packets);
@@ -80,7 +80,7 @@ MLN_FUNC_VOID(void, mln_fec_result_free, (mln_fec_result_t *fr), (fr), {
 })
 
 /*mln_fec_t*/
-MLN_FUNC(mln_fec_t *, mln_fec_new, (void), (), {
+MLN_FUNC(, mln_fec_t *, mln_fec_new, (void), (), {
     mln_fec_t *fec;
 
     if ((fec = (mln_fec_t *)malloc(sizeof(mln_fec_t))) == NULL)
@@ -90,13 +90,13 @@ MLN_FUNC(mln_fec_t *, mln_fec_new, (void), (), {
     return fec;
 })
 
-MLN_FUNC_VOID(void, mln_fec_free, (mln_fec_t *fec), (fec), {
+MLN_FUNC_VOID(, void, mln_fec_free, (mln_fec_t *fec), (fec), {
     if (fec == NULL) return;
     free(fec);
 })
 
 /*generation*/
-MLN_FUNC(static int, mln_fec_generate_fecpacket_fecheader, \
+MLN_FUNC(static, int, mln_fec_generate_fecpacket_fecheader, \
          (mln_fec_t *fec, mln_size_t n, mln_u8ptr_t *packets, \
           mln_u16_t *packlen, mln_u8ptr_t buf, mln_size_t *len), \
          (fec, n, packets, packlen, buf, len), \
@@ -145,7 +145,7 @@ MLN_FUNC(static int, mln_fec_generate_fecpacket_fecheader, \
     return 0;
 })
 
-MLN_FUNC(static int, mln_fec_generate_fecpacket_fecbody, \
+MLN_FUNC(static, int, mln_fec_generate_fecpacket_fecbody, \
          (mln_fec_t *fec, mln_size_t n, mln_u8ptr_t *packets, \
           mln_u16_t *packlen, mln_u8ptr_t buf, mln_size_t *len), \
          (fec, n, packets, packlen, buf, len), \
@@ -208,7 +208,7 @@ MLN_FUNC(static int, mln_fec_generate_fecpacket_fecbody, \
     return 0;
 })
 
-MLN_FUNC(static mln_string_t *, mln_fec_generate_fecpacket, \
+MLN_FUNC(static, mln_string_t *, mln_fec_generate_fecpacket, \
          (mln_fec_t *fec, mln_size_t n, mln_u8ptr_t *packets, mln_u16_t *packlen), \
          (fec, n, packets, packlen), \
 {
@@ -254,7 +254,7 @@ MLN_FUNC(static mln_string_t *, mln_fec_generate_fecpacket, \
     return ret;
 })
 
-MLN_FUNC(mln_fec_result_t *, mln_fec_encode, \
+MLN_FUNC(, mln_fec_result_t *, mln_fec_encode, \
          (mln_fec_t *fec, uint8_t *packets[], uint16_t packlen[], size_t n, uint16_t group_size), \
          (fec, packets, packlen, n, group_size), \
 {
@@ -339,7 +339,7 @@ mln_fec_recover_header_info_get(mln_string_t *fec_packet, \
     }
 }
 
-MLN_FUNC(static int, mln_fec_decode_header, \
+MLN_FUNC(static, int, mln_fec_decode_header, \
          (mln_fec_t *fec, mln_string_t *fec_packet, mln_u8ptr_t buf, mln_size_t *blen, \
           mln_u8ptr_t *packets, mln_u16_t *packlen, mln_size_t n, mln_u16_t *body_len), \
          (fec, fec_packet, buf, blen, packets, packlen, n, body_len), \
@@ -437,7 +437,7 @@ MLN_FUNC(static int, mln_fec_decode_header, \
     return 0;
 })
 
-MLN_FUNC(static int, mln_fec_decode_body, \
+MLN_FUNC(static, int, mln_fec_decode_body, \
          (mln_fec_t *fec, mln_string_t *fec_packet, mln_u8ptr_t buf, mln_size_t *blen, \
           mln_u8ptr_t *packets, mln_u16_t *packlen, mln_size_t n, mln_u16_t body_len), \
          (fec, fec_packet, buf, blen, packets, packlen, n, body_len), \
@@ -493,7 +493,7 @@ MLN_FUNC(static int, mln_fec_decode_body, \
     return 0;
 })
 
-MLN_FUNC(mln_fec_result_t *, mln_fec_decode, \
+MLN_FUNC(, mln_fec_result_t *, mln_fec_decode, \
          (mln_fec_t *fec, uint8_t *packets[], uint16_t *packlen, size_t n), \
          (fec, packets, packlen, n), \
 {

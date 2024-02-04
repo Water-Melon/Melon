@@ -85,7 +85,7 @@ static inline mln_alloc_shm_t * mln_alloc_shm_new (mln_alloc_t *pool, mln_size_t
     return shm;
 }
 
-MLN_FUNC(mln_alloc_t *, mln_alloc_shm_init, (struct mln_alloc_shm_attr_s *attr), (attr), {
+MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, (struct mln_alloc_shm_attr_s *attr), (attr), {
     mln_alloc_t *pool;
 #if defined(WIN32)
     HANDLE handle;
@@ -139,7 +139,7 @@ MLN_FUNC(mln_alloc_t *, mln_alloc_shm_init, (struct mln_alloc_shm_attr_s *attr),
     return pool;
 })
 
-MLN_FUNC(mln_alloc_t *, mln_alloc_init, (mln_alloc_t *parent), (parent), {
+MLN_FUNC(, mln_alloc_t *, mln_alloc_init, (mln_alloc_t *parent), (parent), {
     mln_alloc_t *pool;
 
 #ifdef __DEBUG__
@@ -200,7 +200,7 @@ static inline void mln_alloc_mgr_table_init(mln_alloc_mgr_t *tbl)
     }
 }
 
-MLN_FUNC_VOID(void, mln_alloc_destroy, (mln_alloc_t *pool), (pool), {
+MLN_FUNC_VOID(, void, mln_alloc_destroy, (mln_alloc_t *pool), (pool), {
     if (pool == NULL) return;
 
     mln_alloc_t *parent = pool->parent;
@@ -240,7 +240,7 @@ MLN_FUNC_VOID(void, mln_alloc_destroy, (mln_alloc_t *pool), (pool), {
         (void)parent->unlock(parent->locker);
 })
 
-MLN_FUNC(void *, mln_alloc_m, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
+MLN_FUNC(, void *, mln_alloc_m, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
 #ifdef __DEBUG__
     return malloc(size);
 #else
@@ -362,7 +362,7 @@ static inline mln_alloc_mgr_t *mln_alloc_get_mgr_by_size(mln_alloc_mgr_t *tbl, m
     return &am[off+2];
 }
 
-MLN_FUNC(void *, mln_alloc_c, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
+MLN_FUNC(, void *, mln_alloc_c, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
 #ifdef __DEBUG__
     return calloc(1, size);
 #else
@@ -373,7 +373,7 @@ MLN_FUNC(void *, mln_alloc_c, (mln_alloc_t *pool, mln_size_t size), (pool, size)
 #endif
 })
 
-MLN_FUNC(void *, mln_alloc_re, (mln_alloc_t *pool, void *ptr, mln_size_t size), (pool, ptr, size), {
+MLN_FUNC(, void *, mln_alloc_re, (mln_alloc_t *pool, void *ptr, mln_size_t size), (pool, ptr, size), {
 #ifdef __DEBUG__
     return realloc(ptr, size);
 #else
@@ -396,7 +396,7 @@ MLN_FUNC(void *, mln_alloc_re, (mln_alloc_t *pool, void *ptr, mln_size_t size), 
 #endif
 })
 
-MLN_FUNC_VOID(void, mln_alloc_free, (void *ptr), (ptr), {
+MLN_FUNC_VOID(, void, mln_alloc_free, (void *ptr), (ptr), {
     if (ptr == NULL) {
         return;
     }

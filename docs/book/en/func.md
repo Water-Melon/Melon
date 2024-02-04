@@ -83,38 +83,41 @@ Return value: Exit function pointer
 #### MLN_FUNC
 
 ```c
-MLN_FUNC(ret_type, name, params, args, func_body);
+MLN_FUNC(scope, ret_type, name, params, args, ...);
 ```
 
-Description: Define a function with a `non-void` return type. The implementation principle is to define two functions. The name of one function is specified by `name`, and the name of the other function starts with `__`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function with `func_body`. In this way, we can call the function in the wrapper and add the logic of callback function calling before and after the function call.
+Description: Define a function with a return value type other than `void`. The implementation principle is to define two functions. The name of one function is the name specified by `name`, and the name of the other function starts with `__mln_func_`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function corresponding to the function body pointed to by `...`. This allows you to call functions in the wrapper and add callbacks before and after the function call.
+The logic of counting calls is gone.
 
 Parameters of this macro:
 
-- `ret_type` is the return value type of the function and includes the function scope keyword.
+- `scope` is the scope keyword of the function.
+- `ret_type` is the return value type of the function.
 - `name` is the name of the function.
-- `params` is the parameter list of the function, including the parameter name and parameter type, and the parameter list is quoted by `()`.
-- `args` is the argument list of the function, does not include the data types, and quoted by `()`. This argument list refers to the arguments passed to the function whose name is started with `__` when the wrapper calls it. The arguments names and order in this list should be identical with those in `params`.
-- `func_body` function body, use `{}` to wrapped.
+- `params` is the formal parameter list of the function, including the parameter name and parameter type, and the parameter list is expanded with `()`.
+- `args` is the actual parameter list of the function, does not include the type of the parameter, and expands the parameter list with `()`. This actual parameter refers to the parameter passed to the real function when the wrapper calls the real function. The parameter names and order in this list should be consistent with those in `params`.
+- `...` is the function body, use `{}` to expand it.
 
 Return value: None
-
 
 
 #### MLN_FUNC_VOID
 
 ```c
-MLN_FUNC_VOID(ret_type, name, params, args, func_body);
+MLN_FUNC_VOID(scope, ret_type, name, params, args, func_body);
 ```
 
-Description: Define a function with a `void` return type. The implementation principle is to define two functions. The name of one function is specified by `name`, and the name of the other function starts with `__`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function with `func_body`. In this way, we can call the function in the wrapper and add the logic of callback function calling before and after the function call.
+Description: Define a function with a return value type of `void`. The implementation principle is to define two functions. The name of one function is the name specified by `name`, and the name of the other function starts with `__mln_func_`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function corresponding to the function body referred to by `...`. This allows you to call functions in the wrapper and add callbacks before and after the function call
+The logic of counting calls is gone.
 
 Parameters of this macro:
 
-- `ret_type` is the return value type of the function and includes the function scope keyword.
+- `scope` is the scope keyword of the function.
+- `ret_type` is the return value type of the function.
 - `name` is the name of the function.
-- `params` is the parameter list of the function, including the parameter name and parameter type, and the parameter list is quoted by `()`.
-- `args` is the argument list of the function, does not include the data types, and quoted by `()`. This argument list refers to the arguments passed to the function whose name is started with `__` when the wrapper calls it. The arguments names and order in this list should be identical with those in `params`.
-- `func_body` function body, use `{}` to wrapped.
+- `params` is the formal parameter list of the function, including the parameter name and parameter type, and the parameter list is expanded with `()`.
+- `args` is the actual parameter list of the function, does not include the type of the parameter, and expands the parameter list with `()`. This actual parameter refers to the parameter passed to the real function when the wrapper calls the real function. The parameter names and order in this list should be consistent with those in `params`.
+- `...` is the function body, use `{}` to expand it.
 
 Return value: None
 
@@ -127,12 +130,12 @@ Return value: None
 
 #include "mln_func.h"
 
-MLN_FUNC(int, abc, (int a, int b), (a, b), {
+MLN_FUNC(, int, abc, (int a, int b), (a, b), {
     printf("in %s\n", __FUNCTION__);
     return a + b;
 })
 
-MLN_FUNC(static int, bcd, (int a, int b), (a, b), {
+MLN_FUNC(static, int, bcd, (int a, int b), (a, b), {
     printf("in %s\n", __FUNCTION__);
     return abc(a, b) + abc(a, b);
 })

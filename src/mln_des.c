@@ -111,7 +111,7 @@ static mln_u8_t final_permutation[] = {
 };
 
 
-MLN_FUNC_VOID(void, mln_des_init, (mln_des_t *d, mln_u64_t key), (d, key), {
+MLN_FUNC_VOID(, void, mln_des_init, (mln_des_t *d, mln_u64_t key), (d, key), {
     mln_u64_t _56key = 0, _h28key, _l28key;
     mln_s32_t i, j;
     mln_u8ptr_t scan, end = key_permutation + sizeof(key_permutation);
@@ -137,31 +137,31 @@ MLN_FUNC_VOID(void, mln_des_init, (mln_des_t *d, mln_u64_t key), (d, key), {
     }
 })
 
-MLN_FUNC(mln_des_t *, mln_des_new, (mln_u64_t key), (key), {
+MLN_FUNC(, mln_des_t *, mln_des_new, (mln_u64_t key), (key), {
     mln_des_t *d = (mln_des_t *)malloc(sizeof(mln_des_t));
     if (d == NULL) return NULL;
     mln_des_init(d, key);
     return d;
 })
 
-MLN_FUNC(mln_des_t *, mln_des_pool_new, (mln_alloc_t *pool, mln_u64_t key), (pool, key), {
+MLN_FUNC(, mln_des_t *, mln_des_pool_new, (mln_alloc_t *pool, mln_u64_t key), (pool, key), {
     mln_des_t *d = (mln_des_t *)mln_alloc_m(pool, sizeof(mln_des_t));
     if (d == NULL) return NULL;
     mln_des_init(d, key);
     return d;
 })
 
-MLN_FUNC_VOID(void, mln_des_free, (mln_des_t *d), (d), {
+MLN_FUNC_VOID(, void, mln_des_free, (mln_des_t *d), (d), {
     if (d == NULL) return;
     free(d);
 })
 
-MLN_FUNC_VOID(void, mln_des_pool_free, (mln_des_t *d), (d), {
+MLN_FUNC_VOID(, void, mln_des_pool_free, (mln_des_t *d), (d), {
     if (d == NULL) return;
     mln_alloc_free(d);
 })
 
-MLN_FUNC(mln_u64_t, mln_des, (mln_des_t *d, mln_u64_t msg, mln_u32_t is_encrypt), (d, msg, is_encrypt), {
+MLN_FUNC(, mln_u64_t, mln_des, (mln_des_t *d, mln_u64_t msg, mln_u32_t is_encrypt), (d, msg, is_encrypt), {
     mln_s32_t i;
     mln_u64_t left = 0, right = 0, tmp;
 
@@ -262,7 +262,7 @@ static inline void mln_des_final_permute(mln_u64_t *msg)
     *msg = ret;
 }
 
-MLN_FUNC_VOID(void, mln_des_buf, \
+MLN_FUNC_VOID(, void, mln_des_buf, \
               (mln_des_t *d, \
                mln_u8ptr_t in, mln_uauto_t inlen, mln_u8ptr_t out, mln_uauto_t outlen, \
                mln_u8_t fill, mln_u32_t is_encrypt), \
@@ -294,19 +294,19 @@ MLN_FUNC_VOID(void, mln_des_buf, \
 /*
  * 3DES
  */
-MLN_FUNC_VOID(void, mln_3des_init, (mln_3des_t *tdes, mln_u64_t key1, mln_u64_t key2), (tdes, key1, key2), {
+MLN_FUNC_VOID(, void, mln_3des_init, (mln_3des_t *tdes, mln_u64_t key1, mln_u64_t key2), (tdes, key1, key2), {
     mln_des_init(&(tdes->_1key), key1);
     mln_des_init(&(tdes->_2key), key2);
 })
 
-MLN_FUNC(mln_3des_t *, mln_3des_new, (mln_u64_t key1, mln_u64_t key2), (key1, key2), {
+MLN_FUNC(, mln_3des_t *, mln_3des_new, (mln_u64_t key1, mln_u64_t key2), (key1, key2), {
     mln_3des_t *_3d = (mln_3des_t *)malloc(sizeof(mln_3des_t));
     if (_3d == NULL) return NULL;
     mln_3des_init(_3d, key1, key2);
     return _3d;
 })
 
-MLN_FUNC(mln_3des_t *, mln_3des_pool_new, \
+MLN_FUNC(, mln_3des_t *, mln_3des_pool_new, \
          (mln_alloc_t *pool, mln_u64_t key1, mln_u64_t key2), \
          (pool, key1, key2), \
 {
@@ -316,17 +316,17 @@ MLN_FUNC(mln_3des_t *, mln_3des_pool_new, \
     return _3d;
 })
 
-MLN_FUNC_VOID(void, mln_3des_free, (mln_3des_t *tdes), (tdes), {
+MLN_FUNC_VOID(, void, mln_3des_free, (mln_3des_t *tdes), (tdes), {
     if (tdes == NULL) return;
     free(tdes);
 })
 
-MLN_FUNC_VOID(void, mln_3des_pool_free, (mln_3des_t *tdes), (tdes), {
+MLN_FUNC_VOID(, void, mln_3des_pool_free, (mln_3des_t *tdes), (tdes), {
     if (tdes == NULL) return;
     mln_alloc_free(tdes);
 })
 
-MLN_FUNC(mln_u64_t, mln_3des, \
+MLN_FUNC(, mln_u64_t, mln_3des, \
          (mln_3des_t *tdes, mln_u64_t msg, mln_u32_t is_encrypt), \
          (tdes, msg, is_encrypt), \
 {
@@ -335,7 +335,7 @@ MLN_FUNC(mln_u64_t, mln_3des, \
     return mln_des(&(tdes->_1key), mln_des(&(tdes->_2key), mln_des(&(tdes->_1key), msg, 0), 1), 0);
 })
 
-MLN_FUNC_VOID(void, mln_3des_buf, \
+MLN_FUNC_VOID(, void, mln_3des_buf, \
               (mln_3des_t *tdes, mln_u8ptr_t in, mln_uauto_t inlen, \
                mln_u8ptr_t out, mln_uauto_t outlen, mln_u8_t fill, mln_u32_t is_encrypt), \
               (tdes, in, inlen, out, outlen, fill, is_encrypt), \

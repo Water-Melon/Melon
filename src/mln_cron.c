@@ -14,7 +14,7 @@ static long mln_cron_parse_day(mln_string_t *sday, long year, long month, long d
 static long mln_cron_parse_month(mln_string_t *smon, long mon, int greater);
 static long mln_cron_parse_week(mln_string_t *sweek, long week, int greater);
 
-MLN_FUNC(time_t, mln_cron_parse, (mln_string_t *exp, time_t base), (exp, base), {
+MLN_FUNC(, time_t, mln_cron_parse, (mln_string_t *exp, time_t base), (exp, base), {
     struct utctime u;
     mln_string_t *arr;
     time_t tmp;
@@ -62,7 +62,7 @@ MLN_FUNC(time_t, mln_cron_parse, (mln_string_t *exp, time_t base), (exp, base), 
     return mln_utc2time(&u);
 })
 
-MLN_FUNC(static long, mln_cron_parse_minute, (mln_string_t *smin, long min), (smin, min), {
+MLN_FUNC(static, long, mln_cron_parse_minute, (mln_string_t *smin, long min), (smin, min), {
     if (!smin->len) return -1;
     if (smin->len == 1 && smin->data[0] == '*')
         return min + 1;
@@ -123,7 +123,7 @@ MLN_FUNC(static long, mln_cron_parse_minute, (mln_string_t *smin, long min), (sm
     return save;
 })
 
-MLN_FUNC(static long, mln_cron_parse_hour, \
+MLN_FUNC(static, long, mln_cron_parse_hour, \
          (mln_string_t *shour, long hour, int greater), \
          (shour, hour, greater), \
 {
@@ -195,7 +195,7 @@ MLN_FUNC(static long, mln_cron_parse_hour, \
     return save;
 })
 
-MLN_FUNC(static long, mln_cron_parse_day, \
+MLN_FUNC(static, long, mln_cron_parse_day, \
          (mln_string_t *sday, long year, long month, long day, int greater), \
          (sday, year, month, day, greater), \
 {
@@ -267,7 +267,7 @@ MLN_FUNC(static long, mln_cron_parse_day, \
     return save;
 })
 
-MLN_FUNC(static long, mln_cron_parse_month, \
+MLN_FUNC(static, long, mln_cron_parse_month, \
          (mln_string_t *smon, long mon, int greater), \
          (smon, mon, greater), \
 {
@@ -339,7 +339,7 @@ MLN_FUNC(static long, mln_cron_parse_month, \
     return save;
 })
 
-MLN_FUNC(static long, mln_cron_parse_week, \
+MLN_FUNC(static, long, mln_cron_parse_week, \
          (mln_string_t *sweek, long week, int greater), \
          (sweek, week, greater), \
 {

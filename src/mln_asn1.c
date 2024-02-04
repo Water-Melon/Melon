@@ -20,7 +20,7 @@ static void mln_asn1_deresult_dump_recursive(mln_asn1_deresult_t *res, mln_u32_t
 /*
  * deresult
  */
-MLN_FUNC(static mln_asn1_deresult_t *, mln_asn1_deresult_new, \
+MLN_FUNC(static, mln_asn1_deresult_t *, mln_asn1_deresult_new, \
          (mln_alloc_t *pool, mln_u32_t _class, mln_u32_t is_struct, mln_u32_t ident, \
           mln_u8ptr_t code, mln_size_t code_len, mln_u32_t free),
          (pool, _class, is_struct, ident, code, code_len, free),
@@ -44,7 +44,7 @@ MLN_FUNC(static mln_asn1_deresult_t *, mln_asn1_deresult_new, \
     return res;
 })
 
-MLN_FUNC_VOID(void, mln_asn1_deresult_free, (mln_asn1_deresult_t *res), (res), {
+MLN_FUNC_VOID(, void, mln_asn1_deresult_free, (mln_asn1_deresult_t *res), (res), {
     if (res == NULL) return;
     if (res->contents != NULL) {
         mln_asn1_deresult_t **p, **pend;
@@ -61,7 +61,7 @@ MLN_FUNC_VOID(void, mln_asn1_deresult_free, (mln_asn1_deresult_t *res), (res), {
 /*
  * decode
  */
-MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_decode_chain, \
+MLN_FUNC(, mln_asn1_deresult_t *, mln_asn1_decode_chain, \
          (mln_chain_t *in, int *err, mln_alloc_t *pool), \
          (in, err, pool), \
 {
@@ -107,7 +107,7 @@ MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_decode_chain, \
     return res;
 })
 
-MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_decode, \
+MLN_FUNC(, mln_asn1_deresult_t *, mln_asn1_decode, \
          (void *data, mln_u64_t len, int *err, mln_alloc_t *pool), \
          (data, len, err, pool), \
 {
@@ -115,7 +115,7 @@ MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_decode, \
     return mln_asn1_decode_recursive(&buf, &len, err, pool, 1);
 })
 
-MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_decode_ref, \
+MLN_FUNC(, mln_asn1_deresult_t *, mln_asn1_decode_ref, \
          (void *data, mln_u64_t len, int *err, mln_alloc_t *pool), \
          (data, len, err, pool), \
 {
@@ -123,7 +123,7 @@ MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_decode_ref, \
     return mln_asn1_decode_recursive(&buf, &len, err, pool, 0);
 })
 
-MLN_FUNC(static mln_asn1_deresult_t *, mln_asn1_decode_recursive, \
+MLN_FUNC(static, mln_asn1_deresult_t *, mln_asn1_decode_recursive, \
          (mln_u8ptr_t *code, mln_u64_t *code_len, int *err, mln_alloc_t *pool, mln_u32_t free), \
          (code, code_len, err, pool, free), \
 {
@@ -207,7 +207,7 @@ inc:
     return res;
 })
 
-MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_deresult_content_get, \
+MLN_FUNC(, mln_asn1_deresult_t *, mln_asn1_deresult_content_get, \
          (mln_asn1_deresult_t *res, mln_u32_t index), (res, index), \
 {
     if (res->contents == NULL) return NULL;
@@ -215,12 +215,12 @@ MLN_FUNC(mln_asn1_deresult_t *, mln_asn1_deresult_content_get, \
     return res->contents[index];
 })
 
-MLN_FUNC_VOID(void, mln_asn1_deresult_dump, (mln_asn1_deresult_t *res), (res), {
+MLN_FUNC_VOID(, void, mln_asn1_deresult_dump, (mln_asn1_deresult_t *res), (res), {
     if (res == NULL) return;
     mln_asn1_deresult_dump_recursive(res, 0);
 })
 
-MLN_FUNC_VOID(static void, mln_asn1_deresult_dump_recursive, \
+MLN_FUNC_VOID(static, void, mln_asn1_deresult_dump_recursive, \
               (mln_asn1_deresult_t *res, mln_u32_t nblank), (res, nblank), \
 {
     mln_asn1_deresult_t **p, **end;
@@ -305,7 +305,7 @@ MLN_FUNC_VOID(static void, mln_asn1_deresult_dump_recursive, \
 /*
  * enresult
  */
-MLN_FUNC(int, mln_asn1_enresult_init, (mln_asn1_enresult_t *res, mln_alloc_t *pool), (res, pool), {
+MLN_FUNC(, int, mln_asn1_enresult_init, (mln_asn1_enresult_t *res, mln_alloc_t *pool), (res, pool), {
     res->pool = pool;
     res->size = 0;
     if ((res->contents = (mln_string_t *)mln_alloc_m(pool, \
@@ -319,7 +319,7 @@ MLN_FUNC(int, mln_asn1_enresult_init, (mln_asn1_enresult_t *res, mln_alloc_t *po
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC_VOID(void, mln_asn1_enresult_destroy, (mln_asn1_enresult_t *res), (res), {
+MLN_FUNC_VOID(, void, mln_asn1_enresult_destroy, (mln_asn1_enresult_t *res), (res), {
     if (res == NULL) return;
     if (res->contents != NULL) {
         mln_string_t *s, *send;
@@ -331,7 +331,7 @@ MLN_FUNC_VOID(void, mln_asn1_enresult_destroy, (mln_asn1_enresult_t *res), (res)
     }
 })
 
-MLN_FUNC(mln_asn1_enresult_t *, mln_asn1_enresult_new, (mln_alloc_t *pool), (pool), {
+MLN_FUNC(, mln_asn1_enresult_t *, mln_asn1_enresult_new, (mln_alloc_t *pool), (pool), {
     mln_asn1_enresult_t *res = (mln_asn1_enresult_t *)mln_alloc_m(pool, sizeof(mln_asn1_enresult_t));
     if (res == NULL) return NULL;
     if (mln_asn1_enresult_init(res, pool) != M_ASN1_RET_OK) {
@@ -341,7 +341,7 @@ MLN_FUNC(mln_asn1_enresult_t *, mln_asn1_enresult_new, (mln_alloc_t *pool), (poo
     return res;
 })
 
-MLN_FUNC_VOID(void, mln_asn1_enresult_free, (mln_asn1_enresult_t *res), (res), {
+MLN_FUNC_VOID(, void, mln_asn1_enresult_free, (mln_asn1_enresult_t *res), (res), {
     if (res == NULL) return;
     mln_asn1_enresult_destroy(res);
     mln_alloc_free(res);
@@ -350,7 +350,7 @@ MLN_FUNC_VOID(void, mln_asn1_enresult_free, (mln_asn1_enresult_t *res), (res), {
 /*
  * encode
  */
-MLN_FUNC(static int, mln_asn1_encode_add_content, \
+MLN_FUNC(static, int, mln_asn1_encode_add_content, \
          (mln_asn1_enresult_t *res, mln_u8ptr_t buf, mln_u64_t len), \
          (res, buf, len), \
 {
@@ -481,7 +481,7 @@ MLN_FUNC(static int, mln_asn1_encode_add_content, \
     }\
 }
 
-MLN_FUNC(int, mln_asn1_encode_sequence, (mln_asn1_enresult_t *res), (res), {
+MLN_FUNC(, int, mln_asn1_encode_sequence, (mln_asn1_enresult_t *res), (res), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -513,7 +513,7 @@ MLN_FUNC(int, mln_asn1_encode_sequence, (mln_asn1_enresult_t *res), (res), {
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_boolean, (mln_asn1_enresult_t *res, mln_u8_t val), (res, val), {
+MLN_FUNC(, int, mln_asn1_encode_boolean, (mln_asn1_enresult_t *res, mln_u8_t val), (res, val), {
     mln_u64_t len = 0;
     mln_alloc_t *pool;
     mln_u8ptr_t buf, p;
@@ -539,7 +539,7 @@ MLN_FUNC(int, mln_asn1_encode_boolean, (mln_asn1_enresult_t *res, mln_u8_t val),
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_integer, (mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_t nints), (res, ints, nints), {
+MLN_FUNC(, int, mln_asn1_encode_integer, (mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_t nints), (res, ints, nints), {
     mln_u64_t len = 0;
     mln_alloc_t *pool;
     mln_u8ptr_t buf, p;
@@ -565,7 +565,7 @@ MLN_FUNC(int, mln_asn1_encode_integer, (mln_asn1_enresult_t *res, mln_u8ptr_t in
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_bitstring, (mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u64_t nbits), (res, bits, nbits), {
+MLN_FUNC(, int, mln_asn1_encode_bitstring, (mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u64_t nbits), (res, bits, nbits), {
     mln_u64_t len = 0, bytes = 1 + (nbits % 8? (nbits>>3)+1: (nbits>>3));
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -597,7 +597,7 @@ MLN_FUNC(int, mln_asn1_encode_bitstring, (mln_asn1_enresult_t *res, mln_u8ptr_t 
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_octetstring, (mln_asn1_enresult_t *res, mln_u8ptr_t octets, mln_u64_t n), (res, octets, n), {
+MLN_FUNC(, int, mln_asn1_encode_octetstring, (mln_asn1_enresult_t *res, mln_u8ptr_t octets, mln_u64_t n), (res, octets, n), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -622,7 +622,7 @@ MLN_FUNC(int, mln_asn1_encode_octetstring, (mln_asn1_enresult_t *res, mln_u8ptr_
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_null, (mln_asn1_enresult_t *res), (res), {
+MLN_FUNC(, int, mln_asn1_encode_null, (mln_asn1_enresult_t *res), (res), {
     mln_u8ptr_t buf;
     mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
 
@@ -641,7 +641,7 @@ MLN_FUNC(int, mln_asn1_encode_null, (mln_asn1_enresult_t *res), (res), {
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_object_identifier, \
+MLN_FUNC(, int, mln_asn1_encode_object_identifier, \
          (mln_asn1_enresult_t *res, mln_u8ptr_t oid, mln_u64_t n), (res, oid, n), \
 {
     mln_u64_t len = 0;
@@ -668,7 +668,7 @@ MLN_FUNC(int, mln_asn1_encode_object_identifier, \
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_utf8string, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
+MLN_FUNC(, int, mln_asn1_encode_utf8string, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -693,7 +693,7 @@ MLN_FUNC(int, mln_asn1_encode_utf8string, (mln_asn1_enresult_t *res, mln_u8ptr_t
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_printablestring, (mln_asn1_enresult_t *res, mln_s8ptr_t s, mln_u64_t slen), (res, s, slen), {
+MLN_FUNC(, int, mln_asn1_encode_printablestring, (mln_asn1_enresult_t *res, mln_s8ptr_t s, mln_u64_t slen), (res, s, slen), {
     mln_s8ptr_t scan, end;
     for (scan = s, end = s+slen; scan < end; ++scan) {
         if (!isprint(*scan)) return M_ASN1_RET_ERROR;
@@ -723,7 +723,7 @@ MLN_FUNC(int, mln_asn1_encode_printablestring, (mln_asn1_enresult_t *res, mln_s8
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_t61string, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
+MLN_FUNC(, int, mln_asn1_encode_t61string, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -748,7 +748,7 @@ MLN_FUNC(int, mln_asn1_encode_t61string, (mln_asn1_enresult_t *res, mln_u8ptr_t 
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_ia5string, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
+MLN_FUNC(, int, mln_asn1_encode_ia5string, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
     mln_alloc_t *pool;
@@ -773,7 +773,7 @@ MLN_FUNC(int, mln_asn1_encode_ia5string, (mln_asn1_enresult_t *res, mln_u8ptr_t 
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_utctime, (mln_asn1_enresult_t *res, time_t time), (res, time), {
+MLN_FUNC(, int, mln_asn1_encode_utctime, (mln_asn1_enresult_t *res, time_t time), (res, time), {
     struct utctime uc;
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
@@ -815,7 +815,7 @@ MLN_FUNC(int, mln_asn1_encode_utctime, (mln_asn1_enresult_t *res, time_t time), 
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_generalized_time, (mln_asn1_enresult_t *res, time_t time), (res, time), {
+MLN_FUNC(, int, mln_asn1_encode_generalized_time, (mln_asn1_enresult_t *res, time_t time), (res, time), {
     struct utctime uc;
     mln_u64_t len = 0;
     mln_u8ptr_t buf, p;
@@ -857,7 +857,7 @@ MLN_FUNC(int, mln_asn1_encode_generalized_time, (mln_asn1_enresult_t *res, time_
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_set, (mln_asn1_enresult_t *res), (res), {
+MLN_FUNC(, int, mln_asn1_encode_set, (mln_asn1_enresult_t *res), (res), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf = NULL, p;
     mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
@@ -886,7 +886,7 @@ MLN_FUNC(int, mln_asn1_encode_set, (mln_asn1_enresult_t *res), (res), {
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(static int, mln_encode_set_cmp, (const void *data1, const void *data2), (data1, data2), {
+MLN_FUNC(static, int, mln_encode_set_cmp, (const void *data1, const void *data2), (data1, data2), {
     mln_string_t *s1 = (mln_string_t *)data1;
     mln_string_t *s2 = (mln_string_t *)data2;
     if (s1->data[0] > s2->data[0]) return 1;
@@ -894,7 +894,7 @@ MLN_FUNC(static int, mln_encode_set_cmp, (const void *data1, const void *data2),
     return -1;
 })
 
-MLN_FUNC(int, mln_asn1_encode_setof, (mln_asn1_enresult_t *res), (res), {
+MLN_FUNC(, int, mln_asn1_encode_setof, (mln_asn1_enresult_t *res), (res), {
     mln_u64_t len = 0;
     mln_u8ptr_t buf = NULL, p;
     mln_alloc_t *pool = mln_asn1_enresult_pool_get(res);
@@ -923,7 +923,7 @@ MLN_FUNC(int, mln_asn1_encode_setof, (mln_asn1_enresult_t *res), (res), {
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(static int, mln_encode_setof_cmp, (const void *data1, const void *data2), (data1, data2), {
+MLN_FUNC(static, int, mln_encode_setof_cmp, (const void *data1, const void *data2), (data1, data2), {
     mln_string_t *s1 = (mln_string_t *)data1;
     mln_string_t *s2 = (mln_string_t *)data2;
     mln_size_t len = s1->len > s2->len? s2->len: s1->len;
@@ -935,7 +935,7 @@ MLN_FUNC(static int, mln_encode_setof_cmp, (const void *data1, const void *data2
     return 0;
 })
 
-MLN_FUNC(int, mln_asn1_encode_merge, (mln_asn1_enresult_t *dest, mln_asn1_enresult_t *src), (dest, src), {
+MLN_FUNC(, int, mln_asn1_encode_merge, (mln_asn1_enresult_t *dest, mln_asn1_enresult_t *src), (dest, src), {
     mln_string_t *s, *send;
     mln_alloc_t *pool = mln_asn1_enresult_pool_get(dest);
     mln_u8ptr_t buf;
@@ -953,7 +953,7 @@ MLN_FUNC(int, mln_asn1_encode_merge, (mln_asn1_enresult_t *dest, mln_asn1_enresu
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_trans_chain_once, \
+MLN_FUNC(, int, mln_asn1_encode_trans_chain_once, \
          (mln_asn1_enresult_t *res, mln_chain_t **head, mln_chain_t **tail), \
          (res, head, tail), \
 {
@@ -986,7 +986,7 @@ MLN_FUNC(int, mln_asn1_encode_trans_chain_once, \
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_enresult_get_content, \
+MLN_FUNC(, int, mln_asn1_enresult_get_content, \
          (mln_asn1_enresult_t *res, mln_u32_t index, mln_u8ptr_t *buf, mln_u64_t *len), \
          (res, index, buf, len), \
 {
@@ -998,7 +998,7 @@ MLN_FUNC(int, mln_asn1_enresult_get_content, \
     return M_ASN1_RET_OK;
 })
 
-MLN_FUNC(int, mln_asn1_encode_implicit, \
+MLN_FUNC(, int, mln_asn1_encode_implicit, \
          (mln_asn1_enresult_t *res, mln_u32_t ident, mln_u32_t index), \
          (res, ident, index), \
 {

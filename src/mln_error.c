@@ -12,7 +12,7 @@ mln_string_t *mln_error_errmsgs = NULL;
 mln_size_t    mln_error_nfile = 0;
 mln_size_t    mln_error_nmsg = 0;
 
-MLN_FUNC_VOID(void, mln_error_init, \
+MLN_FUNC_VOID(, void, mln_error_init, \
               (mln_string_t *filenames, mln_string_t *errmsgs, mln_size_t nfile, mln_size_t nmsg), \
               (filenames, errmsgs, nfile, nmsg), \
 {
@@ -22,7 +22,7 @@ MLN_FUNC_VOID(void, mln_error_init, \
     mln_error_nmsg = nmsg;
 })
 
-MLN_FUNC(char *, mln_error_string, (int err, void *buf, mln_size_t len), (err, buf, len), {
+MLN_FUNC(, char *, mln_error_string, (int err, void *buf, mln_size_t len), (err, buf, len), {
     int i = 0, line = 0;
     char *b = (char *)buf, *f = "Unkown File", *l = "Unknown Line", *c = "Unknown Code";
     char intstr[8] = {0};
