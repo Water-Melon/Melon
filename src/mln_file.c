@@ -5,6 +5,7 @@
 
 #include "mln_file.h"
 #include "mln_path.h"
+#include "mln_func.h"
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -19,8 +20,7 @@ MLN_CHAIN_FUNC_DECLARE(reg_file, \
 static int mln_file_set_cmp(const void *data1, const void *data2);
 static void mln_file_free(void *pfile);
 
-mln_fileset_t *mln_fileset_init(mln_size_t max_file)
-{
+MLN_FUNC(mln_fileset_t *, mln_fileset_init, (mln_size_t max_file), (max_file), {
     struct mln_rbtree_attr attr;
     mln_fileset_t *fs;
 
@@ -50,17 +50,15 @@ mln_fileset_t *mln_fileset_init(mln_size_t max_file)
     fs->max_file = max_file;
 
     return fs;
-}
+})
 
-static int mln_file_set_cmp(const void *data1, const void *data2)
-{
+MLN_FUNC(static int, mln_file_set_cmp, (const void *data1, const void *data2), (data1, data2), {
     mln_file_t *f1 = (mln_file_t *)data1;
     mln_file_t *f2 = (mln_file_t *)data2;
     return mln_string_strcmp(f1->file_path, f2->file_path);
-}
+})
 
-void mln_fileset_destroy(mln_fileset_t *fs)
-{
+MLN_FUNC_VOID(void, mln_fileset_destroy, (mln_fileset_t *fs), (fs), {
     if (fs == NULL) return;
 
     if (fs->reg_file_tree != NULL)
@@ -68,11 +66,10 @@ void mln_fileset_destroy(mln_fileset_t *fs)
     if (fs->pool != NULL)
         mln_alloc_destroy(fs->pool);
     free(fs);
-}
+})
 
 
-mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
-{
+MLN_FUNC(mln_file_t *, mln_file_open, (mln_fileset_t *fs, const char *filepath), (fs, filepath), {
     mln_rbtree_node_t *rn;
     mln_file_t *f, tmpf;
     mln_string_t path;
@@ -126,10 +123,9 @@ mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath)
     }
 
     return f;
-}
+})
 
-void mln_file_close(mln_file_t *pfile)
-{
+MLN_FUNC_VOID(void, mln_file_close, (mln_file_t *pfile), (pfile), {
     if (pfile == NULL) return;
 
     mln_fileset_t *fs;
@@ -154,10 +150,9 @@ void mln_file_close(mln_file_t *pfile)
         mln_rbtree_delete(fs->reg_file_tree, pfile->node);
         mln_rbtree_node_free(fs->reg_file_tree, pfile->node);
     }
-}
+})
 
-static void mln_file_free(void *pfile)
-{
+MLN_FUNC_VOID(static void, mln_file_free, (void *pfile), (pfile), {
     if (pfile == NULL) return;
 
     mln_file_t *f = (mln_file_t *)pfile;
@@ -165,10 +160,9 @@ static void mln_file_free(void *pfile)
         mln_string_free(f->file_path);
     if (f->fd >= 0) close(f->fd);
     mln_alloc_free(f);
-}
+})
 
-mln_file_t *mln_file_tmp_open(mln_alloc_t *pool)
-{
+MLN_FUNC(mln_file_t *, mln_file_tmp_open, (mln_alloc_t *pool), (pool), {
     char dir_path[512] = {0};
     char tmp_path[1024] = {0};
     struct timeval now;
@@ -216,7 +210,7 @@ lp:
     f->mtime = f->ctime = f->atime = now.tv_sec;
 
     return f;
-}
+})
 
 
 MLN_CHAIN_FUNC_DEFINE(reg_file, \
