@@ -16,6 +16,7 @@
 #include "mln_global.h"
 #include "mln_ipc.h"
 #include "mln_alloc.h"
+#include "mln_func.h"
 #include <sys/ioctl.h>
 
 mln_tcp_conn_t master_conn;
@@ -66,8 +67,7 @@ static inline mln_ipc_handler_t *mln_ipc_handler_new(mln_u32_t type, ipc_handler
 static void mln_ipc_handler_free(mln_ipc_handler_t *ih);
 
 /*pre-fork*/
-int mln_fork_prepare(void)
-{
+MLN_FUNC(int, mln_fork_prepare, (void), (), {
     if (signal(SIGCHLD, SIG_IGN) == SIG_ERR) {
         mln_log(error, "signal() to ignore SIGCHLD failed, %s\n", strerror(errno));
         return -1;
@@ -119,22 +119,18 @@ int mln_fork_prepare(void)
         return -1;
     }
     return 0;
-}
+})
 
-static int
-mln_fork_rbtree_cmp(const void *k1, const void *k2)
-{
+MLN_FUNC(static int, mln_fork_rbtree_cmp, (const void *k1, const void *k2), (k1, k2), {
     mln_ipc_handler_t *ih1 = (mln_ipc_handler_t *)k1;
     mln_ipc_handler_t *ih2 = (mln_ipc_handler_t *)k2;
     if (ih1->type > ih2->type) return 1;
     else if (ih1->type == ih2->type) return 0;
     return -1;
-}
+})
 
 /*mln_fork_t*/
-static mln_fork_t *
-mln_fork_init(struct mln_fork_attr *attr)
-{
+MLN_FUNC(static mln_fork_t *, mln_fork_init, (struct mln_fork_attr *attr), (attr), {
     mln_fork_t *f = (mln_fork_t *)malloc(sizeof(mln_fork_t));
     if (f == NULL) return NULL;
     f->prev = NULL;
@@ -155,11 +151,9 @@ mln_fork_init(struct mln_fork_attr *attr)
     f->stype = attr->stype;
     worker_list_chain_add(&worker_list_head, &worker_list_tail, f);
     return f;
-}
+})
 
-static void
-mln_fork_destroy(mln_fork_t *f, int free_args)
-{
+MLN_FUNC_VOID(static void, mln_fork_destroy, (mln_fork_t *f, int free_args), (f, free_args), {
     if (f == NULL) return;
     if (f->args != NULL && free_args) {
         free(f->args);
@@ -173,22 +167,19 @@ mln_fork_destroy(mln_fork_t *f, int free_args)
     mln_tcp_conn_destroy(&(f->conn));
     worker_list_chain_del(&worker_list_head, &worker_list_tail, f);
     free(f);
-}
+})
 
-static void
-mln_fork_destroy_all(void)
-{
+MLN_FUNC_VOID(static void, mln_fork_destroy_all, (void), (), {
     mln_fork_t *f;
     while ((f = worker_list_head) != NULL) {
         mln_fork_destroy(f, 1);
     }
-}
+})
 
 /*
  * fork processes
  */
-int mln_fork(void)
-{
+MLN_FUNC(int, mln_fork, (void), (), {
     mln_conf_t *cf = mln_conf();
     if (cf == NULL) {
         mln_log(error, "configuration crashed.\n");
@@ -266,12 +257,11 @@ int mln_fork(void)
     }
     free(v);
     return 1;
-}
+})
 
-int mln_fork_spawn(enum proc_state_type stype, \
-                   mln_s8ptr_t *args, \
-                   mln_u32_t n_args, \
-                   mln_event_t *master_ev)
+MLN_FUNC(int, mln_fork_spawn, \
+         (enum proc_state_type stype, mln_s8ptr_t *args, mln_u32_t n_args, mln_event_t *master_ev), \
+         (stype, args, n_args, master_ev), \
 {
     mln_log(none, "Start up process '%s'\n", args[0]);
     int ret = do_fork_core(M_PET_EXE, \
@@ -294,20 +284,17 @@ int mln_fork_spawn(enum proc_state_type stype, \
         }
     }
     return 0;
-}
+})
 
-int mln_fork_restart(mln_event_t *master_ev)
-{
+MLN_FUNC(int, mln_fork_restart, (mln_event_t *master_ev), (master_ev), {
     return do_fork_core(M_PET_DFL, \
                         M_PST_SUP, \
                         NULL, \
                         0, \
                         master_ev);
-}
+})
 
-static int
-do_fork_worker_process(mln_sauto_t n_worker_proc)
-{
+MLN_FUNC(static int, do_fork_worker_process, (mln_sauto_t n_worker_proc), (n_worker_proc), {
     mln_sauto_t i;
     int ret;
     for (i = 0; i < n_worker_proc; ++i) {
@@ -319,20 +306,17 @@ do_fork_worker_process(mln_sauto_t n_worker_proc)
         }
     }
     return 1;
-}
+})
 
-void mln_fork_resource_clear_handler_set(clr_handler handler, void *data)
-{
+MLN_FUNC_VOID(void, mln_fork_resource_clear_handler_set, (clr_handler handler, void *data), (handler, data), {
     rs_clr_handler = handler;
     rs_clr_data = data;
-}
+})
 
-static int
-do_fork_core(enum proc_exec_type etype, \
-             enum proc_state_type stype, \
-             mln_s8ptr_t *args, \
-             mln_u32_t n_args, \
-             mln_event_t *master_ev)
+MLN_FUNC(static int, do_fork_core, \
+         (enum proc_exec_type etype, enum proc_state_type stype, \
+          mln_s8ptr_t *args, mln_u32_t n_args, mln_event_t *master_ev), \
+         (etype, stype, args, n_args, master_ev), \
 {
     int fds[2];
     mln_u8_t c;
@@ -402,10 +386,12 @@ do_fork_core(enum proc_exec_type etype, \
     }
     mln_log(error, "fork() error. %s\n", strerror(errno));
     return -1;
-}
+})
 
 /*mln_set_master_ipc_handler*/
-int mln_fork_master_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data)
+MLN_FUNC(int, mln_fork_master_ipc_handler_set, \
+         (mln_u32_t type, ipc_handler handler, void *data), \
+         (type, handler, data), \
 {
     mln_ipc_handler_t *ih = mln_ipc_handler_new(type, handler, data);
     if (ih == NULL) return -1;
@@ -422,9 +408,11 @@ int mln_fork_master_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *d
     }
     mln_rbtree_insert(master_ipc_tree, rn);
     return 0;
-}
+})
 /*mln_set_worker_ipc_handler*/
-int mln_fork_worker_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *data)
+MLN_FUNC(int, mln_fork_worker_ipc_handler_set, \
+         (mln_u32_t type, ipc_handler handler, void *data), \
+         (type, handler, data), \
 {
     mln_ipc_handler_t *ih = mln_ipc_handler_new(type, handler, data);
     if (ih == NULL) return -1;
@@ -441,7 +429,7 @@ int mln_fork_worker_ipc_handler_set(mln_u32_t type, ipc_handler handler, void *d
     }
     mln_rbtree_insert(worker_ipc_tree, rn);
     return 0;
-}
+})
 
 static inline mln_ipc_handler_t *mln_ipc_handler_new(mln_u32_t type, ipc_handler handler, void *data)
 {
@@ -455,17 +443,15 @@ static inline mln_ipc_handler_t *mln_ipc_handler_new(mln_u32_t type, ipc_handler
     return ih;
 }
 
-static void mln_ipc_handler_free(mln_ipc_handler_t *ih)
-{
+MLN_FUNC_VOID(static void, mln_ipc_handler_free, (mln_ipc_handler_t *ih), (ih), {
     if (ih == NULL) return;
     free(ih);
-}
+})
 
 /*
  * events
  */
-void mln_fork_master_events_set(mln_event_t *ev)
-{
+MLN_FUNC_VOID(void, mln_fork_master_events_set, (mln_event_t *ev), (ev), {
     mln_fork_t *f;
     for (f = worker_list_head; f != NULL; f = f->next) {
         if (mln_event_fd_set(ev, \
@@ -479,10 +465,9 @@ void mln_fork_master_events_set(mln_event_t *ev)
             abort();
         }
     }
-}
+})
 
-void mln_fork_worker_events_set(mln_event_t *ev)
-{
+MLN_FUNC_VOID(void, mln_fork_worker_events_set, (mln_event_t *ev), (ev), {
     if (mln_event_fd_set(ev, \
                          mln_tcp_conn_fd_get(&master_conn), \
                          M_EV_RECV|M_EV_NONBLOCK, \
@@ -493,9 +478,11 @@ void mln_fork_worker_events_set(mln_event_t *ev)
         mln_log(error, "mln_event_fd_set() failed.\n");
         abort();
     }
-}
+})
 
-int mln_fork_iterate(mln_event_t *ev, fork_iterate_handler handler, void *data)
+MLN_FUNC(int, mln_fork_iterate, \
+         (mln_event_t *ev, fork_iterate_handler handler, void *data), \
+         (ev, handler, data), \
 {
     mln_fork_t *f;
     for (f = worker_list_head; f != NULL; f = f->next) {
@@ -504,12 +491,11 @@ int mln_fork_iterate(mln_event_t *ev, fork_iterate_handler handler, void *data)
         }
     }
     return 0;
-}
+})
 
-mln_tcp_conn_t *mln_fork_master_connection_get(void)
-{
+MLN_FUNC(mln_tcp_conn_t *, mln_fork_master_connection_get, (void), (), {
     return &master_conn;
-}
+})
 
 /*
  * There is a case that I press Ctrl+c to terminate master process,
@@ -522,8 +508,7 @@ mln_tcp_conn_t *mln_fork_master_connection_get(void)
  * Message Format:
  *     [Length(include type length) 4bytes|type 4bytes|content Nbytes]
  */
-void mln_ipc_fd_handler_master(mln_event_t *ev, int fd, void *data)
-{
+MLN_FUNC_VOID(void, mln_ipc_fd_handler_master, (mln_event_t *ev, int fd, void *data), (ev, fd, data), {
     int ret;
     mln_fork_t *f = (mln_fork_t *)data;
     mln_tcp_conn_t *conn = &(f->conn);
@@ -546,7 +531,7 @@ void mln_ipc_fd_handler_master(mln_event_t *ev, int fd, void *data)
     }
 
     mln_ipc_fd_handler_master_process(ev, f);
-}
+})
 
 static inline int
 mln_ipc_get_buf_with_len(mln_tcp_conn_t *tc, void *buf, mln_size_t len)
@@ -617,9 +602,7 @@ mln_ipc_discard_bytes(mln_tcp_conn_t *tc, mln_size_t size)
     return size;
 }
 
-static void
-mln_ipc_fd_handler_master_process(mln_event_t *ev, mln_fork_t *f)
-{
+MLN_FUNC_VOID(static void, mln_ipc_fd_handler_master_process, (mln_event_t *ev, mln_fork_t *f), (ev, f), {
     mln_tcp_conn_t *tc = &(f->conn);
 
     while (1) {
@@ -670,9 +653,11 @@ mln_ipc_fd_handler_master_process(mln_event_t *ev, mln_fork_t *f)
                 abort();
         }
     }
-}
+})
 
-void mln_fork_socketpair_close_handler(mln_event_t *ev, mln_fork_t *f, int fd)
+MLN_FUNC_VOID(void, mln_fork_socketpair_close_handler, \
+              (mln_event_t *ev, mln_fork_t *f, int fd), \
+              (ev, f, fd), \
 {
     mln_event_fd_set(ev, fd, M_EV_CLR, M_EV_UNLIMITED, NULL, NULL);
     enum proc_exec_type etype = f->etype;
@@ -701,10 +686,9 @@ void mln_fork_socketpair_close_handler(mln_event_t *ev, mln_fork_t *f, int fd)
     } else {/*M_PST_DFL*/
         mln_fork_destroy(f, 1);
     }
-}
+})
 
-void mln_ipc_fd_handler_worker(mln_event_t *ev, int fd, void *data)
-{
+MLN_FUNC_VOID(void, mln_ipc_fd_handler_worker, (mln_event_t *ev, int fd, void *data), (ev, fd, data), {
     int ret;
     mln_tcp_conn_t *conn = &master_conn;
 
@@ -724,10 +708,10 @@ void mln_ipc_fd_handler_worker(mln_event_t *ev, int fd, void *data)
     }
 
     mln_ipc_fd_handler_worker_process(ev, conn);
-}
+})
 
-static void
-mln_ipc_fd_handler_worker_process(mln_event_t *ev, mln_tcp_conn_t *tc)
+MLN_FUNC_VOID(static void, mln_ipc_fd_handler_worker_process, \
+              (mln_event_t *ev, mln_tcp_conn_t *tc), (ev, tc), \
 {
     while (1) {
         while (child_error_bytes) {
@@ -777,13 +761,11 @@ mln_ipc_fd_handler_worker_process(mln_event_t *ev, mln_tcp_conn_t *tc)
                 abort();
         }
     }
-}
+})
 
-int mln_ipc_master_send_prepare(mln_event_t *ev, \
-                                mln_u32_t type, \
-                                void *msg, \
-                                mln_size_t len, \
-                                mln_fork_t *f_child)
+MLN_FUNC(int, mln_ipc_master_send_prepare, \
+         (mln_event_t *ev, mln_u32_t type, void *msg, mln_size_t len, mln_fork_t *f_child), \
+         (ev, type, msg, len, f_child), \
 {
     mln_u32_t length = sizeof(type) + len;
     mln_u8ptr_t buf;
@@ -831,10 +813,10 @@ int mln_ipc_master_send_prepare(mln_event_t *ev, \
                      mln_ipc_fd_handler_master_send);
 
     return 0;
-}
+})
 
-static void
-mln_ipc_fd_handler_master_send(mln_event_t *ev, int fd, void *data)
+MLN_FUNC_VOID(static void, mln_ipc_fd_handler_master_send, \
+              (mln_event_t *ev, int fd, void *data), (ev, fd, data), \
 {
     mln_fork_t *f = (mln_fork_t *)data;
     mln_tcp_conn_t *conn = &(f->conn);
@@ -865,12 +847,11 @@ mln_ipc_fd_handler_master_send(mln_event_t *ev, int fd, void *data)
     }
 
     mln_chain_pool_release_all(mln_tcp_conn_remove(conn, M_C_SENT));
-}
+})
 
-int mln_ipc_worker_send_prepare(mln_event_t *ev, \
-                                mln_u32_t type, \
-                                void *msg, \
-                                mln_size_t len)
+MLN_FUNC(int, mln_ipc_worker_send_prepare, \
+         (mln_event_t *ev, mln_u32_t type, void *msg, mln_size_t len), \
+         (ev, type, msg, len), \
 {
     mln_u32_t length = sizeof(type) + len;
     mln_u8ptr_t buf;
@@ -918,10 +899,10 @@ int mln_ipc_worker_send_prepare(mln_event_t *ev, \
                      mln_ipc_fd_handler_worker_send);
 
     return 0;
-}
+})
 
-static void
-mln_ipc_fd_handler_worker_send(mln_event_t *ev, int fd, void *data)
+MLN_FUNC_VOID(static void, mln_ipc_fd_handler_worker_send, \
+              (mln_event_t *ev, int fd, void *data), (ev, fd, data), \
 {
     mln_tcp_conn_t *conn = &master_conn;
     mln_chain_t *c;
@@ -950,11 +931,7 @@ mln_ipc_fd_handler_worker_send(mln_event_t *ev, int fd, void *data)
     }
 
     mln_chain_pool_release_all(mln_tcp_conn_remove(conn, M_C_SENT));
-}
-
-
-
-
+})
 
 
 /*chain*/
