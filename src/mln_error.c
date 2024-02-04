@@ -4,6 +4,7 @@
  */
 
 #include "mln_error.h"
+#include "mln_func.h"
 #include <stdio.h>
 
 mln_string_t *mln_error_filenames = NULL;
@@ -11,16 +12,17 @@ mln_string_t *mln_error_errmsgs = NULL;
 mln_size_t    mln_error_nfile = 0;
 mln_size_t    mln_error_nmsg = 0;
 
-void mln_error_init(mln_string_t *filenames, mln_string_t *errmsgs, mln_size_t nfile, mln_size_t nmsg)
+MLN_FUNC_VOID(void, mln_error_init, \
+              (mln_string_t *filenames, mln_string_t *errmsgs, mln_size_t nfile, mln_size_t nmsg), \
+              (filenames, errmsgs, nfile, nmsg), \
 {
     mln_error_filenames = filenames;
     mln_error_errmsgs = errmsgs;
     mln_error_nfile = nfile;
     mln_error_nmsg = nmsg;
-}
+})
 
-char *mln_error_string(int err, void *buf, mln_size_t len)
-{
+MLN_FUNC(char *, mln_error_string, (int err, void *buf, mln_size_t len), (err, buf, len), {
     int i = 0, line = 0;
     char *b = (char *)buf, *f = "Unkown File", *l = "Unknown Line", *c = "Unknown Code";
     char intstr[8] = {0};
@@ -44,5 +46,5 @@ char *mln_error_string(int err, void *buf, mln_size_t len)
     b[i] = 0;
 
     return b;
-}
+})
 
