@@ -19,6 +19,7 @@
 #include "mln_framework.h"
 #include "mln_rc.h"
 #include "mln_trace.h"
+#include "mln_func.h"
 #if defined(WIN32)
 #include <ws2tcpip.h>
 #include <winsock2.h>
@@ -41,8 +42,7 @@ static mln_event_t *_ev = NULL;
 #endif
 
 
-int mln_framework_init(struct mln_framework_attr *attr)
-{
+MLN_FUNC(, int, mln_framework_init, (struct mln_framework_attr *attr), (attr), {
     /*Init configurations*/
     if (mln_conf_load() < 0) {
         return -1;
@@ -95,11 +95,10 @@ chl:
     }
 #endif
     return 0;
-}
+})
 
 #if !defined(WIN32)
-static void mln_master_routine(struct mln_framework_attr *attr)
-{
+MLN_FUNC_VOID(static, void, mln_master_routine, (struct mln_framework_attr *attr), (attr), {
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     if (_ev == NULL) _ev = ev;
@@ -111,10 +110,9 @@ static void mln_master_routine(struct mln_framework_attr *attr)
     if (attr->master_process != NULL) attr->master_process(ev);
     mln_event_dispatch(ev);
     mln_event_free(ev);
-}
+})
 
-static void mln_worker_routine(struct mln_framework_attr *attr)
-{
+MLN_FUNC_VOID(static, void, mln_worker_routine, (struct mln_framework_attr *attr), (attr), {
     int i_thread_mode;
     mln_string_t proc_mode = mln_string("multiprocess");
     mln_string_t *framework_mode = mln_get_framework_status();
@@ -139,10 +137,9 @@ static void mln_worker_routine(struct mln_framework_attr *attr)
         if (attr->worker_process != NULL) attr->worker_process(ev);
         mln_event_dispatch(ev);
     }
-}
+})
 
-static int mln_master_trace_init(mln_lang_ctx_t *ctx)
-{
+MLN_FUNC(static, int, mln_master_trace_init, (mln_lang_ctx_t *ctx), (ctx), {
     mln_u8_t master = 1;
     mln_string_t *dup, name = mln_string("MASTER");
     if ((dup = mln_string_pool_dup(ctx->pool, &name)) == NULL)
@@ -152,10 +149,9 @@ static int mln_master_trace_init(mln_lang_ctx_t *ctx)
         return -1;
     }
     return 0;
-}
+})
 
-static void mln_sig_conf_reload(int signo)
-{
+MLN_FUNC_VOID(static, void, mln_sig_conf_reload, (int signo), (signo), {
     if (_ev == NULL) return;
 
     if (mln_fork_iterate(_ev, mln_conf_reload_iterate_handler, NULL) < 0) {
@@ -166,17 +162,17 @@ static void mln_sig_conf_reload(int signo)
         mln_log(error, "mln_conf_reload() failed.\n");
         exit(1);
     }
-}
+})
 
-static int mln_conf_reload_iterate_handler(mln_event_t *ev, mln_fork_t *f, void *data)
+MLN_FUNC(static, int, mln_conf_reload_iterate_handler, \
+         (mln_event_t *ev, mln_fork_t *f, void *data), (ev, f, data), \
 {
     char msg[] = "conf_reload";
 
     return mln_ipc_master_send_prepare(ev, M_IPC_TYPE_CONF, msg, sizeof(msg)-1, f);
-}
+})
 
-static mln_string_t *mln_get_framework_status(void)
-{
+MLN_FUNC(static, mln_string_t *, mln_get_framework_status, (void), (), {
     char framework[] = "framework";
     mln_string_t proc_mode = mln_string("multiprocess");
     mln_string_t thread_mode = mln_string("multithread");
@@ -211,11 +207,10 @@ static mln_string_t *mln_get_framework_status(void)
         return NULL;
     }
     return NULL;
-}
+})
 #endif
 
-static void mln_init_notice(int argc, char *argv[])
-{
+MLN_FUNC_VOID(static, void, mln_init_notice, (int argc, char *argv[]), (argc, argv), {
     for (--argc; argc > 0; --argc) {
         if (!strcmp(argv[argc], "--no-report")) {
             return;
@@ -273,5 +268,5 @@ static void mln_init_notice(int argc, char *argv[])
 #endif
     if (n < 0) {/* do nothing */}
     mln_socket_close(fd);
-}
+})
 
