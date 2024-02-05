@@ -116,8 +116,9 @@ MLN_FUNC(, int, mln_bignum_assign, (mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_
     return mln_bignum_assign_dec(bn, sval, tag, len);
 })
 
-static inline int
-mln_bignum_assign_hex(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len)
+MLN_FUNC(static inline, int, mln_bignum_assign_hex, \
+         (mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len), \
+         (bn, sval, tag, len), \
 {
     if (len > M_BIGNUM_BITS/4) return -1;
     mln_s8ptr_t p = sval + len - 1;
@@ -167,10 +168,11 @@ mln_bignum_assign_hex(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32
     }
     bn->length = i+1;
     return 0;
-}
+})
 
-static inline int
-mln_bignum_assign_oct(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len)
+MLN_FUNC(static inline, int, mln_bignum_assign_oct, \
+         (mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len), \
+         (bn, sval, tag, len), \
 {
     if (len > M_BIGNUM_BITS/3) return -1;
     mln_s8ptr_t p = sval + len - 1;
@@ -211,10 +213,11 @@ mln_bignum_assign_oct(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32
     }
     bn->length = i + 1;
     return 0;
-}
+})
 
-static inline int
-mln_bignum_assign_dec(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len)
+MLN_FUNC(static inline, int, mln_bignum_assign_dec, \
+         (mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len), \
+         (bn, sval, tag, len), \
 {
     if (len > M_BIGNUM_BITS/4) return -1;
     mln_s8ptr_t p = sval + len -1;
@@ -233,7 +236,7 @@ mln_bignum_assign_dec(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32
 
     bn->tag = tag;
     return 0;
-}
+})
 
 MLN_FUNC_VOID(static, void, mln_bignum_dec_recursive, \
               (mln_u32_t rec_times, mln_u32_t loop_times, mln_bignum_t *tmp), \
@@ -261,7 +264,8 @@ MLN_FUNC_VOID(, void, mln_bignum_add, (mln_bignum_t *dest, mln_bignum_t *src), (
     __mln_bignum_add(dest, src);
 })
 
-static inline void __mln_bignum_add(mln_bignum_t *dest, mln_bignum_t *src)
+MLN_FUNC_VOID(static inline, void, __mln_bignum_add, \
+              (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), \
 {
     if (dest->tag != src->tag) {
         if (dest->tag == M_BIGNUM_NEGATIVE) {
@@ -304,13 +308,14 @@ static inline void __mln_bignum_add(mln_bignum_t *dest, mln_bignum_t *src)
     }
 
     dest->length = dest_data - dest->data;
-}
+})
 
 MLN_FUNC_VOID(, void, mln_bignum_sub, (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), {
     __mln_bignum_sub(dest, src);
 })
 
-static inline void __mln_bignum_sub(mln_bignum_t *dest, mln_bignum_t *src)
+MLN_FUNC_VOID(static inline, void, __mln_bignum_sub, \
+              (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), \
 {
     if (dest->tag != src->tag) {
         if (dest->tag == M_BIGNUM_NEGATIVE) {
@@ -354,9 +359,10 @@ static inline void __mln_bignum_sub(mln_bignum_t *dest, mln_bignum_t *src)
             __mln_bignum_sub_core(dest, src);
         }
     }
-}
+})
 
-static inline void __mln_bignum_sub_core(mln_bignum_t *dest, mln_bignum_t *src)
+MLN_FUNC_VOID(static inline, void, __mln_bignum_sub_core, \
+              (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), \
 {
     mln_u32_t borrow = 0;
     mln_u64_t *dest_data = dest->data, *src_data = src->data;
@@ -377,9 +383,11 @@ static inline void __mln_bignum_sub_core(mln_bignum_t *dest, mln_bignum_t *src)
         if (*end != 0) break;
     }
     dest->length = (end < dest_data)? 0: end - dest_data + 1;
-}
+})
 
-static inline void __mln_bignum_mul(mln_bignum_t *dest, mln_bignum_t *src)
+MLN_FUNC_VOID(static inline, void, __mln_bignum_mul, \
+              (mln_bignum_t *dest, mln_bignum_t *src), \
+              (dest, src), \
 {
     mln_u32_t tag = dest->tag ^ src->tag;
     if (src->length == 1) {
@@ -416,7 +424,7 @@ static inline void __mln_bignum_mul(mln_bignum_t *dest, mln_bignum_t *src)
     if (data < last && *data != 0) ++(res.length);
     res.tag = tag;
     *dest = res;
-}
+})
 
 MLN_FUNC_VOID(, void, mln_bignum_mul, (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), {
     __mln_bignum_mul(dest, src);
@@ -429,7 +437,9 @@ MLN_FUNC(, int, mln_bignum_div, \
     return __mln_bignum_div(dest, src, quotient);
 })
 
-static inline int __mln_bignum_nmul(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int n, int m)
+MLN_FUNC(static inline, int, __mln_bignum_nmul, \
+         (mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int n, int m), \
+         (a, b, r, n, m), \
 {
     b &= 0xffffffff;
     if (b == 0) {
@@ -454,9 +464,11 @@ static inline int __mln_bignum_nmul(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int
     }
 
     return c > 0;
-}
+})
 
-static inline int __mln_bignum_nsbb(mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, int n)
+MLN_FUNC(static inline, int, __mln_bignum_nsbb, \
+         (mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, int n), \
+         (a, b, r, n), \
 {
     int c = 0;
     for (; n > 0; --n, ++a, ++b, ++r) {
@@ -469,9 +481,11 @@ static inline int __mln_bignum_nsbb(mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, in
         }
     }
     return c;
-}
+})
 
-static inline int __mln_bignum_nadc(mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, int n)
+MLN_FUNC(static inline, int, __mln_bignum_nadc, \
+         (mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, int n), \
+         (a, b, r, n), \
 {
     int c = 0;
     for (; n > 0; --n, ++a, ++b, ++r) {
@@ -484,9 +498,11 @@ static inline int __mln_bignum_nadc(mln_u64_t *a, mln_u64_t *b, mln_u64_t *r, in
         }
     }
     return c;
-}
+})
 
-static inline int __mln_bignum_ndiv(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int n)
+MLN_FUNC(static inline, int, __mln_bignum_ndiv, \
+         (mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int n), \
+         (a, b, r, n), \
 {
     b &= 0xffffffff;
     if (b == 0) return -1;
@@ -512,9 +528,11 @@ static inline int __mln_bignum_ndiv(mln_u64_t *a, mln_u64_t b, mln_u64_t *r, int
         --dest_data;
     }
     return len;
-}
+})
 
-static inline int __mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bignum_t *quotient)
+MLN_FUNC(static inline, int, __mln_bignum_div, \
+         (mln_bignum_t *dest, mln_bignum_t *src, mln_bignum_t *quotient), \
+         (dest, src, quotient), \
 {
     int ret;
     mln_u32_t tag = dest->tag ^ src->tag;
@@ -596,7 +614,7 @@ static inline int __mln_bignum_div(mln_bignum_t *dest, mln_bignum_t *src, mln_bi
     dest->tag = tag;
 
     return 0;
-}
+})
 
 MLN_FUNC(, int, mln_bignum_pwr, \
          (mln_bignum_t *dest, mln_bignum_t *exponent, mln_bignum_t *mod), \
@@ -605,7 +623,9 @@ MLN_FUNC(, int, mln_bignum_pwr, \
     return __mln_bignum_pwr(dest, exponent, mod);
 })
 
-static inline int __mln_bignum_pwr(mln_bignum_t *dest, mln_bignum_t *exponent, mln_bignum_t *mod)
+MLN_FUNC(static inline, int, __mln_bignum_pwr, \
+         (mln_bignum_t *dest, mln_bignum_t *exponent, mln_bignum_t *mod), \
+         (dest, exponent, mod), \
 {
     if (exponent->tag == M_BIGNUM_NEGATIVE) return -1;
 
@@ -652,9 +672,10 @@ static inline int __mln_bignum_pwr(mln_bignum_t *dest, mln_bignum_t *exponent, m
     }
 
     return 0;
-}
+})
 
-static inline int __mln_bignum_abs_compare(mln_bignum_t *bn1, mln_bignum_t *bn2)
+MLN_FUNC(static inline, int, __mln_bignum_abs_compare, \
+         (mln_bignum_t *bn1, mln_bignum_t *bn2), (bn1, bn2), \
 {
     if (bn1->length != bn2->length) {
         if (bn1->length > bn2->length) return 1;
@@ -669,13 +690,14 @@ static inline int __mln_bignum_abs_compare(mln_bignum_t *bn1, mln_bignum_t *bn2)
     }
 
     return 0;
-}
+})
 
 MLN_FUNC(, int, mln_bignum_abs_compare, (mln_bignum_t *bn1, mln_bignum_t *bn2), (bn1, bn2), {
     return __mln_bignum_abs_compare(bn1, bn2);
 })
 
-static inline int __mln_bignum_compare(mln_bignum_t *bn1, mln_bignum_t *bn2)
+MLN_FUNC(static inline, int, __mln_bignum_compare, \
+         (mln_bignum_t *bn1, mln_bignum_t *bn2), (bn1, bn2), \
 {
     if (bn1->length == bn2->length && bn1->length == 0) return 0;
 
@@ -701,16 +723,17 @@ static inline int __mln_bignum_compare(mln_bignum_t *bn1, mln_bignum_t *bn2)
     }
 
     return 0;
-}
+})
 
 MLN_FUNC(, int, mln_bignum_compare, (mln_bignum_t *bn1, mln_bignum_t *bn2), (bn1, bn2), {
     return  __mln_bignum_compare(bn1, bn2);
 })
 
-static inline int __mln_bignum_bit_test(mln_bignum_t *bn, mln_u32_t index)
+MLN_FUNC(static inline, int, __mln_bignum_bit_test, \
+         (mln_bignum_t *bn, mln_u32_t index), (bn, index), \
 {
     return ((bn->data[index/32]) & ((mln_u64_t)1 << (index % 32)))? 1: 0;
-}
+})
 
 MLN_FUNC(, int, mln_bignum_bit_test, (mln_bignum_t *bn, mln_u32_t index), (bn, index), {
     if (index >= M_BIGNUM_BITS) return 0;
@@ -718,7 +741,8 @@ MLN_FUNC(, int, mln_bignum_bit_test, (mln_bignum_t *bn, mln_u32_t index), (bn, i
     return __mln_bignum_bit_test(bn, index);
 })
 
-static inline void __mln_bignum_left_shift(mln_bignum_t *bn, mln_u32_t n)
+MLN_FUNC_VOID(static inline, void, __mln_bignum_left_shift, \
+              (mln_bignum_t *bn, mln_u32_t n), (bn, n), \
 {
     if (n == 0) return;
     mln_u32_t step = n / 32, off = n % 32, len;
@@ -754,13 +778,14 @@ static inline void __mln_bignum_left_shift(mln_bignum_t *bn, mln_u32_t n)
         if (*d) break;
     }
     bn->length = d < end? 0: d-end+1;
-}
+})
 
 MLN_FUNC_VOID(, void, mln_bignum_left_shift, (mln_bignum_t *bn, mln_u32_t n), (bn, n), {
     __mln_bignum_left_shift(bn, n);
 })
 
-static inline void __mln_bignum_right_shift(mln_bignum_t *bn, mln_u32_t n)
+MLN_FUNC_VOID(static inline, void, __mln_bignum_right_shift, \
+              (mln_bignum_t *bn, mln_u32_t n), (bn, n), \
 {
     if (n == 0) return;
     mln_u32_t step = n / 32, off = n % 32;
@@ -796,13 +821,14 @@ static inline void __mln_bignum_right_shift(mln_bignum_t *bn, mln_u32_t n)
         if (*s) break;
     }
     bn->length = s < d? 0: s-d+1;
-}
+})
 
 MLN_FUNC_VOID(, void, mln_bignum_right_shift, (mln_bignum_t *bn, mln_u32_t n), (bn, n), {
     __mln_bignum_right_shift(bn, n);
 })
 
-static inline void __mln_bignum_mul_word(mln_bignum_t *dest, mln_s64_t src)
+MLN_FUNC_VOID(static inline, void, __mln_bignum_mul_word, \
+              (mln_bignum_t *dest, mln_s64_t src), (dest, src), \
 {
     mln_u32_t tag;
     mln_u64_t *dest_data = dest->data;
@@ -830,9 +856,11 @@ static inline void __mln_bignum_mul_word(mln_bignum_t *dest, mln_s64_t src)
         ++(dest->length);
     }
     dest->tag = tag;
-}
+})
 
-static inline int __mln_bignum_div_word(mln_bignum_t *dest, mln_s64_t src, mln_bignum_t *quotient)
+MLN_FUNC(static inline, int, __mln_bignum_div_word, \
+         (mln_bignum_t *dest, mln_s64_t src, mln_bignum_t *quotient), \
+         (dest, src, quotient), \
 {
     if (src == 0) return -1;
     mln_u32_t tag = src < 0? dest->tag ^ M_BIGNUM_NEGATIVE: dest->tag ^ M_BIGNUM_POSITIVE;
@@ -876,7 +904,7 @@ static inline int __mln_bignum_div_word(mln_bignum_t *dest, mln_s64_t src, mln_b
     dest->length = tmp? 1: 0;
     dest->data[0] = tmp >> M_BIGNUM_SHIFT;
     return 0;
-}
+})
 
 MLN_FUNC_VOID(, void, mln_bignum_dump, (mln_bignum_t *bn), (bn), {
     fprintf(stderr, "Tag: %s\n", bn->tag==M_BIGNUM_POSITIVE?"+":"-");
@@ -899,8 +927,8 @@ MLN_FUNC_VOID(, void, mln_bignum_dump, (mln_bignum_t *bn), (bn), {
 /*
  * prime
  */
-static inline void
-mln_bignum_seperate(mln_u32_t *pwr, mln_bignum_t *odd)
+MLN_FUNC_VOID(static inline, void, mln_bignum_seperate, \
+              (mln_u32_t *pwr, mln_bignum_t *odd), (pwr, odd), \
 {
     mln_bignum_t tmp, mod;
     mln_bignum_t two = {M_BIGNUM_POSITIVE, 1, {0}};
@@ -915,10 +943,10 @@ mln_bignum_seperate(mln_u32_t *pwr, mln_bignum_t *odd)
         *odd = tmp;
         ++(*pwr);
     }
-}
+})
 
-static inline mln_u32_t
-mln_bignum_witness(mln_bignum_t *base, mln_bignum_t *prim)
+MLN_FUNC(static inline, mln_u32_t, mln_bignum_witness, \
+         (mln_bignum_t *base, mln_bignum_t *prim), (base, prim), \
 {
     mln_u32_t pwr, i;
     mln_bignum_t tmp, new_x = {M_BIGNUM_POSITIVE, 0, {0}}, x, odd;
@@ -953,10 +981,10 @@ mln_bignum_witness(mln_bignum_t *base, mln_bignum_t *prim)
         return 1;
     }
     return 0;
-}
+})
 
-static inline void
-mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
+MLN_FUNC_VOID(static inline, void, mln_bignum_random_prime, \
+              (mln_bignum_t *bn, mln_u32_t bitwidth), (bn, bitwidth), \
 {
     struct timeval tv;
     memset(bn, 0, sizeof(mln_bignum_t));
@@ -1006,10 +1034,11 @@ mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
             data[0] |= 1;
         }
     }
-}
+})
 
-static inline void
-mln_bignum_random_scope(mln_bignum_t *bn, mln_u32_t bitwidth, mln_bignum_t *max)
+MLN_FUNC_VOID(static inline, void, mln_bignum_random_scope, \
+              (mln_bignum_t *bn, mln_u32_t bitwidth, mln_bignum_t *max), \
+              (bn, bitwidth, max), \
 {
     mln_u32_t width;
     struct timeval tv;
@@ -1026,10 +1055,9 @@ lp:
 #endif
     if (width < 2) goto lp;
     mln_bignum_random_prime(bn, width);
-}
+})
 
-int mln_bignum_prime(mln_bignum_t *res, mln_u32_t bitwidth)
-{
+MLN_FUNC(, int, mln_bignum_prime, (mln_bignum_t *res, mln_u32_t bitwidth), (res, bitwidth), {
     if (bitwidth > M_BIGNUM_BITS>>1 || bitwidth < 3) return -1;
 
     mln_bignum_t prime, tmp, one = {M_BIGNUM_POSITIVE, 1, {0}};
@@ -1049,7 +1077,7 @@ int mln_bignum_prime(mln_bignum_t *res, mln_u32_t bitwidth)
     *res = prime;
 
     return 0;
-}
+})
 
 #if 0
 int mln_bignum_extend_eulid(mln_bignum_t *a, mln_bignum_t *b, mln_bignum_t *x, mln_bignum_t *y, mln_bignum_t *gcd)

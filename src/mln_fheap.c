@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mln_fheap.h"
-#include "mln_func.h"
 
 static inline void
 mln_fheap_cut(mln_fheap_t *fh, mln_fheap_node_t *x, mln_fheap_node_t *y);

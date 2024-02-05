@@ -196,8 +196,7 @@ MLN_FUNC(, mln_u64_t, mln_des, (mln_des_t *d, mln_u64_t msg, mln_u32_t is_encryp
     return msg;
 })
 
-static inline void mln_des_begin_permute(mln_u64_t *msg)
-{
+MLN_FUNC_VOID(static inline, void, mln_des_begin_permute, (mln_u64_t *msg), (msg), {
     mln_u64_t dup = *msg, ret = 0;
     mln_s32_t i;
     mln_u8_t *scan, *end = begin_permutation + sizeof(begin_permutation);
@@ -207,10 +206,9 @@ static inline void mln_des_begin_permute(mln_u64_t *msg)
     }
 
     *msg = ret;
-}
+})
 
-static inline void mln_des_extension_permute(mln_u64_t *right)
-{
+MLN_FUNC_VOID(static inline, void, mln_des_extension_permute, (mln_u64_t *right), (right), {
     mln_u64_t dup = *right, ret = 0;
     mln_s32_t i;
     mln_u8_t *scan, *end = extension_permutation + sizeof(extension_permutation);
@@ -220,10 +218,9 @@ static inline void mln_des_extension_permute(mln_u64_t *right)
     }
 
     *right = ret & 0xffffffffffffllu;
-}
+})
 
-static inline void mln_des_s_permute(mln_u64_t *right)
-{
+MLN_FUNC_VOID(static inline, void, mln_des_s_permute, (mln_u64_t *right), (right), {
     mln_u64_t dup = *right, ret = 0, _64tmp;
     mln_u32_t i = 0, index, _32tmp;
 
@@ -235,10 +232,9 @@ static inline void mln_des_s_permute(mln_u64_t *right)
     }
 
     *right = ret & 0xffffffff;
-}
+})
 
-static inline void mln_des_p_permute(mln_u64_t *right)
-{
+MLN_FUNC_VOID(static inline, void, mln_des_p_permute, (mln_u64_t *right), (right), {
     mln_u64_t dup = *right, ret = 0;
     mln_s32_t i;
     mln_u8_t *scan, *end = p_permutation + sizeof(p_permutation);
@@ -247,10 +243,9 @@ static inline void mln_des_p_permute(mln_u64_t *right)
         ret |= (((dup >> (31 - (*scan))) & 0x1) << i);
     }
     *right = ret & 0xffffffff;
-}
+})
 
-static inline void mln_des_final_permute(mln_u64_t *msg)
-{
+MLN_FUNC_VOID(static inline, void, mln_des_final_permute, (mln_u64_t *msg), (msg), {
     mln_u64_t dup = *msg, ret = 0;
     mln_u32_t i = 0;
     mln_u8_t *scan, *end = final_permutation + sizeof(final_permutation);
@@ -260,7 +255,7 @@ static inline void mln_des_final_permute(mln_u64_t *msg)
     }
 
     *msg = ret;
-}
+})
 
 MLN_FUNC_VOID(, void, mln_des_buf, \
               (mln_des_t *d, \

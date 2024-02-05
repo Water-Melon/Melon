@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include "mln_types.h"
+#include "mln_func.h"
 
 #if defined(i386) || defined(__arm__) || defined(WIN32)
 #define FH_LGN 33
@@ -69,8 +70,9 @@ typedef struct {
 /*
  * for internal
  */
-static inline void
-mln_fheap_add_child(mln_fheap_node_t **root, mln_fheap_node_t *node)
+MLN_FUNC_VOID(static inline, void, mln_fheap_add_child, \
+              (mln_fheap_node_t **root, mln_fheap_node_t *node), \
+              (root, node), \
 {
     if (*root == NULL) {
         *root = node;
@@ -80,10 +82,11 @@ mln_fheap_add_child(mln_fheap_node_t **root, mln_fheap_node_t *node)
     node->left = (*root)->left;
     (*root)->left = node;
     node->left->right = node;
-}
+})
 
-static inline void
-mln_fheap_del_child(mln_fheap_node_t **root, mln_fheap_node_t *node)
+MLN_FUNC_VOID(static inline, void, mln_fheap_del_child, \
+              (mln_fheap_node_t **root, mln_fheap_node_t *node), \
+              (root, node), \
 {
     if (*root == node) {
         if (node->right == node) {
@@ -99,20 +102,21 @@ mln_fheap_del_child(mln_fheap_node_t **root, mln_fheap_node_t *node)
         node->left->right = node->right;
     }
     node->right = node->left = node;
-}
+})
 
-static inline void
-mln_fheap_link(mln_fheap_t *fh, mln_fheap_node_t *y, mln_fheap_node_t *x)
+MLN_FUNC_VOID(static inline, void, mln_fheap_link, \
+              (mln_fheap_t *fh, mln_fheap_node_t *y, mln_fheap_node_t *x), \
+              (fh, y, x), \
 {
     mln_fheap_del_child(&(fh->root_list), y);
     mln_fheap_add_child(&(x->child), y);
     y->parent = x;
     ++(x->degree);
     y->mark = FHEAP_FALSE;
-}
+})
 
-static inline void
-mln_fheap_consolidate(mln_fheap_t *fh, fheap_cmp cmp)
+MLN_FUNC_VOID(static inline, void, mln_fheap_consolidate, \
+              (mln_fheap_t *fh, fheap_cmp cmp), (fh, cmp), \
 {
     mln_fheap_node_t *array[FH_LGN];
     memset(array, 0, sizeof(mln_fheap_node_t *)*FH_LGN);
@@ -153,20 +157,21 @@ mln_fheap_consolidate(mln_fheap_t *fh, fheap_cmp cmp)
         }
     }
     fh->root_list = root_list;
-}
+})
 
-static inline void
-mln_fheap_cut(mln_fheap_t *fh, mln_fheap_node_t *x, mln_fheap_node_t *y)
+MLN_FUNC_VOID(static inline, void, mln_fheap_cut, \
+              (mln_fheap_t *fh, mln_fheap_node_t *x, mln_fheap_node_t *y), \
+              (fh, x, y), \
 {
     mln_fheap_del_child(&(y->child), x);
     --(y->degree);
     mln_fheap_add_child(&(fh->root_list), x);
     x->parent = NULL;
     x->mark = FHEAP_FALSE;
-}
+})
 
-static inline void
-mln_fheap_cascading_cut(mln_fheap_t *fh, mln_fheap_node_t *y)
+MLN_FUNC_VOID(static inline, void, mln_fheap_cascading_cut, \
+              (mln_fheap_t *fh, mln_fheap_node_t *y), (fh, y), \
 {
     mln_fheap_node_t *z;
 lp:
@@ -179,10 +184,10 @@ lp:
         y = z;
         goto lp;
     }
-}
+})
 
-static inline mln_fheap_node_t *
-mln_fheap_remove_child(mln_fheap_node_t **root)
+MLN_FUNC(static inline, mln_fheap_node_t *, mln_fheap_remove_child, \
+         (mln_fheap_node_t **root), (root), \
 {
     if (*root == NULL) return NULL;
     mln_fheap_node_t *ret = *root;
@@ -195,7 +200,7 @@ mln_fheap_remove_child(mln_fheap_node_t **root)
     }
     ret->left = ret->right = ret;
     return ret;
-}
+})
 
 #define mln_fheap_inline_insert(fh, fn, compare) ({\
     fheap_cmp cmp = (fheap_cmp)(compare);\

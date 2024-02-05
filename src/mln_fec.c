@@ -8,27 +8,25 @@
 #include <errno.h>
 
 /*string_vector*/
-static inline mln_string_t **mln_string_vector_new(mln_size_t n)
-{
+MLN_FUNC(static inline, mln_string_t **, mln_string_vector_new, (mln_size_t n), (n), {
     return (mln_string_t **)calloc(n+1, sizeof(mln_string_t *));
-}
+})
 
-static inline void mln_string_vector_free(mln_string_t **vec)
-{
+MLN_FUNC_VOID(static inline, void, mln_string_vector_free, (mln_string_t **vec), (vec), {
     if (vec == NULL) return;
     mln_string_t **p = vec;
     for (; *p != NULL; ++p) {
         mln_string_free(*p);
     }
     free(vec);
-}
+})
 
 
 /*
  * operations
  */
-static inline mln_string_t *
-mln_fec_xor(mln_string_t *data1, mln_string_t *data2)
+MLN_FUNC(static inline, mln_string_t *, mln_fec_xor, \
+         (mln_string_t *data1, mln_string_t *data2), (data1, data2), \
 {
     mln_string_t *ret;
     mln_u8ptr_t p1, p2, end;
@@ -56,7 +54,7 @@ mln_fec_xor(mln_string_t *data1, mln_string_t *data2)
         }
     }
     return ret;
-}
+})
 
 /*mln_fec_result_t*/
 MLN_FUNC(static, mln_fec_result_t *, mln_fec_result_new, \
@@ -306,12 +304,10 @@ MLN_FUNC(, mln_fec_result_t *, mln_fec_encode, \
 })
 
 /*recovery*/
-static inline void
-mln_fec_recover_header_info_get(mln_string_t *fec_packet, \
-                                mln_u16_t *sn_base, \
-                                mln_u32_t *ssrc, \
-                                mln_u64_t *mask, \
-                                mln_u16_t *is_long)
+MLN_FUNC_VOID(static inline, void, mln_fec_recover_header_info_get, \
+              (mln_string_t *fec_packet, mln_u16_t *sn_base, mln_u32_t *ssrc, \
+               mln_u64_t *mask, mln_u16_t *is_long), \
+              (fec_packet, sn_base, ssrc, mask, is_long), \
 {
     mln_u8ptr_t p = fec_packet->data + 8;
     if (ssrc != NULL) {
@@ -337,7 +333,7 @@ mln_fec_recover_header_info_get(mln_string_t *fec_packet, \
             mln_bigendian_decode(*mask, p, 2);
         }
     }
-}
+})
 
 MLN_FUNC(static, int, mln_fec_decode_header, \
          (mln_fec_t *fec, mln_string_t *fec_packet, mln_u8ptr_t buf, mln_size_t *blen, \

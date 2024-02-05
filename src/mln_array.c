@@ -105,8 +105,7 @@ MLN_FUNC(, void *, mln_array_pushn, (mln_array_t *arr, mln_size_t n), (arr, n), 
     return ptr;
 })
 
-static inline int mln_array_alloc(mln_array_t *arr, mln_size_t n)
-{
+MLN_FUNC(static inline, int, mln_array_alloc, (mln_array_t *arr, mln_size_t n), (arr, n), {
     mln_u8ptr_t ptr;
     mln_size_t num = arr->nalloc;
     while (n + arr->nelts > num) {
@@ -129,7 +128,7 @@ static inline int mln_array_alloc(mln_array_t *arr, mln_size_t n)
     arr->nalloc = num;
 
     return 0;
-}
+})
 
 MLN_FUNC_VOID(, void, mln_array_pop, (mln_array_t *arr), (arr), {
     if (arr == NULL || !arr->nelts)

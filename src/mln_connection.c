@@ -41,8 +41,7 @@ static inline ssize_t
 mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc);
 
 
-static inline int mln_fd_is_nonblock(int fd)
-{
+MLN_FUNC(static inline, int, mln_fd_is_nonblock, (int fd), (fd), {
 #if defined(WIN32)
     return 0; /* no useful API for getting this flag from socket */
 #else
@@ -50,7 +49,7 @@ static inline int mln_fd_is_nonblock(int fd)
     ASSERT(flg >= 0);
     return flg & O_NONBLOCK;
 #endif
-}
+})
 
 
 /*
@@ -243,9 +242,7 @@ fi:
 
 
 #if defined(MLN_WRITEV)
-static inline ssize_t
-mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc)
-{
+MLN_FUNC(static inline, ssize_t, mln_tcp_conn_send_chain_memory, (mln_tcp_conn_t *tc), (tc), {
     mln_chain_t *c;
     mln_buf_t *b;
     ssize_t n, is_done = 0;
@@ -360,11 +357,9 @@ blk:
     }
 
     return is_done;
-}
+})
 #else
-static inline ssize_t
-mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc)
-{
+MLN_FUNC(static inline, ssize_t, mln_tcp_conn_send_chain_memory, (mln_tcp_conn_t *tc), (tc), {
     mln_u8_t buf[8192], *p;
     mln_chain_t *c;
     mln_buf_t *b;
@@ -494,14 +489,12 @@ blk:
     }
 
     return is_done;
-}
+})
 #endif
 
 
 #if defined(MLN_SENDFILE)
-static inline ssize_t
-mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc)
-{
+MLN_FUNC(static inline, ssize_t, mln_tcp_conn_send_chain_file, (mln_tcp_conn_t *tc), (tc), {
     int sockfd = tc->sockfd;
     ssize_t n, is_done = 0;
     mln_chain_t *c;
@@ -570,11 +563,9 @@ blk:
     mln_tcp_conn_append(tc, c, M_C_SENT);
 
     return is_done;
-}
+})
 #else
-static inline ssize_t
-mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc)
-{
+MLN_FUNC(static inline, ssize_t, mln_tcp_conn_send_chain_file, (mln_tcp_conn_t *tc), (tc), {
     int sockfd = tc->sockfd;
     ssize_t n;
     mln_buf_t *b;
@@ -677,11 +668,11 @@ blk_snd:
     mln_tcp_conn_append(tc, c, M_C_SENT);
 
     return b->last_in_chain == 0? 0: 1;
-}
+})
 #endif
 
-static inline mln_chain_t *
-mln_tcp_conn_pop_inline(mln_tcp_conn_t *tc, int type)
+MLN_FUNC(static inline, mln_chain_t *, mln_tcp_conn_pop_inline, \
+         (mln_tcp_conn_t *tc, int type), (tc, type), \
 {
     mln_chain_t **head = NULL, **tail = NULL;
     if (type == M_C_SEND) {
@@ -706,7 +697,7 @@ mln_tcp_conn_pop_inline(mln_tcp_conn_t *tc, int type)
     *head = rc->next;
     rc->next = NULL;
     return rc;
-}
+})
 
 MLN_FUNC(, int, mln_tcp_conn_recv, (mln_tcp_conn_t *tc, mln_u32_t flag), (tc, flag), {
     ASSERT(flag == M_C_TYPE_MEMORY || flag == M_C_TYPE_FILE);
@@ -741,8 +732,8 @@ goon_blk:
     return M_C_ERROR;
 })
 
-static inline int
-mln_tcp_conn_recv_chain(mln_tcp_conn_t *tc, mln_u32_t flag)
+MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain, \
+         (mln_tcp_conn_t *tc, mln_u32_t flag), (tc, flag), \
 {
     mln_buf_t *last = NULL;
     int n = -1;
@@ -779,13 +770,11 @@ mln_tcp_conn_recv_chain(mln_tcp_conn_t *tc, mln_u32_t flag)
     }
 
     return n;
-}
+})
 
-static inline int
-mln_tcp_conn_recv_chain_file(int sockfd, \
-                             mln_alloc_t *pool, \
-                             mln_buf_t *b, \
-                             mln_buf_t *last)
+MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain_file, \
+         (int sockfd, mln_alloc_t *pool, mln_buf_t *b, mln_buf_t *last), \
+         (sockfd, pool, b, last), \
 {
     int n;
     mln_u8_t buf[1024];
@@ -816,10 +805,10 @@ mln_tcp_conn_recv_chain_file(int sockfd, \
     }
 
     return n;
-}
+})
 
-static inline int
-mln_tcp_conn_recv_chain_mem(int sockfd, mln_alloc_t *pool, mln_buf_t *b)
+MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain_mem, \
+         (int sockfd, mln_alloc_t *pool, mln_buf_t *b), (sockfd, pool, b), \
 {
     mln_u8ptr_t buf;
     int n;
@@ -846,5 +835,5 @@ mln_tcp_conn_recv_chain_mem(int sockfd, mln_alloc_t *pool, mln_buf_t *b)
     b->last_buf = 1;
 
     return n;
-}
+})
 

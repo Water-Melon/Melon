@@ -431,7 +431,8 @@ MLN_FUNC(, int, mln_fork_worker_ipc_handler_set, \
     return 0;
 })
 
-static inline mln_ipc_handler_t *mln_ipc_handler_new(mln_u32_t type, ipc_handler handler, void *data)
+MLN_FUNC(static inline, mln_ipc_handler_t *, mln_ipc_handler_new, \
+         (mln_u32_t type, ipc_handler handler, void *data), (type, handler, data), \
 {
     mln_ipc_handler_t *ih;
     if ((ih = (mln_ipc_handler_t *)malloc(sizeof(mln_ipc_handler_t))) == NULL) {
@@ -441,7 +442,7 @@ static inline mln_ipc_handler_t *mln_ipc_handler_new(mln_u32_t type, ipc_handler
     ih->data = data;
     ih->type = type;
     return ih;
-}
+})
 
 MLN_FUNC_VOID(static, void, mln_ipc_handler_free, (mln_ipc_handler_t *ih), (ih), {
     if (ih == NULL) return;
@@ -533,8 +534,8 @@ MLN_FUNC_VOID(, void, mln_ipc_fd_handler_master, (mln_event_t *ev, int fd, void 
     mln_ipc_fd_handler_master_process(ev, f);
 })
 
-static inline int
-mln_ipc_get_buf_with_len(mln_tcp_conn_t *tc, void *buf, mln_size_t len)
+MLN_FUNC(static inline, int, mln_ipc_get_buf_with_len, \
+         (mln_tcp_conn_t *tc, void *buf, mln_size_t len), (tc, buf, len), \
 {
     mln_size_t size = 0;
     mln_chain_t *c;
@@ -571,10 +572,10 @@ mln_ipc_get_buf_with_len(mln_tcp_conn_t *tc, void *buf, mln_size_t len)
     }
 
     return 0;
-}
+})
 
-static inline mln_size_t
-mln_ipc_discard_bytes(mln_tcp_conn_t *tc, mln_size_t size)
+MLN_FUNC(static inline, mln_size_t, mln_ipc_discard_bytes, \
+         (mln_tcp_conn_t *tc, mln_size_t size), (tc, size), \
 {
     mln_chain_t *c;
     mln_buf_t *b;
@@ -600,7 +601,7 @@ mln_ipc_discard_bytes(mln_tcp_conn_t *tc, mln_size_t size)
     }
 
     return size;
-}
+})
 
 MLN_FUNC_VOID(static, void, mln_ipc_fd_handler_master_process, (mln_event_t *ev, mln_fork_t *f), (ev, f), {
     mln_tcp_conn_t *tc = &(f->conn);

@@ -133,9 +133,7 @@ MLN_FUNC(static, mln_conf_lex_struct_t *, mln_conf_lex_sglq_handler, (mln_lex_t 
     return mln_conf_lex_new(lex, CONF_TK_CHAR);
 })
 
-static inline int
-mln_get_char(mln_lex_t *lex, char c)
-{
+MLN_FUNC(static inline, int, mln_get_char, (mln_lex_t *lex, char c), (lex, c), {
     if (c == '\\') {
         char n;
         if ((n = mln_lex_getchar(lex)) == MLN_ERR) return -1;
@@ -181,7 +179,7 @@ mln_get_char(mln_lex_t *lex, char c)
         if (mln_lex_putchar(lex, c) == MLN_ERR) return -1;
     }
     return 0;
-}
+})
 
 MLN_FUNC(static, mln_conf_lex_struct_t *, mln_conf_lex_dblq_handler, (mln_lex_t *lex, void *data), (lex, data), {
     mln_lex_result_clean(lex);
@@ -305,9 +303,8 @@ MLN_FUNC(static, mln_conf_lex_struct_t *, mln_conf_token, (mln_lex_t *lex), (lex
 })
 
 
-    /*mln_conf_t*/
-static inline mln_conf_t *mln_conf_init(void)
-{
+/*mln_conf_t*/
+MLN_FUNC(static inline, mln_conf_t *, mln_conf_init, (void), (), {
     mln_conf_lex_lex_dup(NULL, NULL);/*nothing to do, just get rid of compiler's warnging*/
     mln_conf_t *cf;
     cf = (mln_conf_t *)malloc(sizeof(mln_conf_t));
@@ -387,7 +384,7 @@ static inline mln_conf_t *mln_conf_init(void)
         return NULL;
     }
     return cf;
-}
+})
 
 MLN_FUNC_VOID(static, void, mln_conf_destroy, (mln_conf_t *cf), (cf), {
     if (cf == NULL) return;
@@ -399,9 +396,7 @@ MLN_FUNC_VOID(static, void, mln_conf_destroy, (mln_conf_t *cf), (cf), {
     free(cf);
 })
 
-static inline void
-mln_conf_destroy_lex(mln_conf_t *cf)
-{
+MLN_FUNC_VOID(static inline, void, mln_conf_destroy_lex, (mln_conf_t *cf), (cf), {
     if (cf == NULL) return;
     if (cf->lex != NULL) {
         mln_alloc_t *pool = mln_lex_get_pool(cf->lex);
@@ -409,7 +404,7 @@ mln_conf_destroy_lex(mln_conf_t *cf)
         mln_alloc_destroy(pool);
         cf->lex = NULL;
     }
-}
+})
 
 /*mln_conf_domain_t*/
 MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_init, \

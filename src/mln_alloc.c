@@ -30,7 +30,9 @@ static inline void *mln_alloc_shm_set_bitmap(mln_alloc_shm_t *as, mln_off_t Boff
 static inline mln_alloc_shm_t *mln_alloc_shm_new_block(mln_alloc_t *pool, mln_off_t *Boff, mln_off_t *boff, mln_size_t size);
 static inline void mln_alloc_free_shm(void *ptr);
 
-static inline mln_alloc_shm_t * mln_alloc_shm_new (mln_alloc_t *pool, mln_size_t size, int is_large)
+MLN_FUNC(static inline, mln_alloc_shm_t *, mln_alloc_shm_new, \
+         (mln_alloc_t *pool, mln_size_t size, int is_large), \
+         (pool, size, is_large), \
 {
     int n, i, j;
     mln_alloc_shm_t *shm, *tmp;
@@ -83,7 +85,7 @@ static inline mln_alloc_shm_t * mln_alloc_shm_new (mln_alloc_t *pool, mln_size_t
     }
 
     return shm;
-}
+})
 
 MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, (struct mln_alloc_shm_attr_s *attr), (attr), {
     mln_alloc_t *pool;
@@ -175,8 +177,7 @@ MLN_FUNC(, mln_alloc_t *, mln_alloc_init, (mln_alloc_t *parent), (parent), {
     return pool;
 })
 
-static inline void mln_alloc_mgr_table_init(mln_alloc_mgr_t *tbl)
-{
+MLN_FUNC_VOID(static inline, void, mln_alloc_mgr_table_init, (mln_alloc_mgr_t *tbl), (tbl), {
     int i, j;
     mln_size_t blk_size;
     mln_alloc_mgr_t *am, *amprev;
@@ -198,7 +199,7 @@ static inline void mln_alloc_mgr_table_init(mln_alloc_mgr_t *tbl)
             amprev->blk_size = (am->blk_size + tbl[i-2].blk_size) >> 1;
         }
     }
-}
+})
 
 MLN_FUNC_VOID(, void, mln_alloc_destroy, (mln_alloc_t *pool), (pool), {
     if (pool == NULL) return;
@@ -336,7 +337,8 @@ out:
 #endif
 })
 
-static inline mln_alloc_mgr_t *mln_alloc_get_mgr_by_size(mln_alloc_mgr_t *tbl, mln_size_t size)
+MLN_FUNC(static inline, mln_alloc_mgr_t *, mln_alloc_get_mgr_by_size, \
+         (mln_alloc_mgr_t *tbl, mln_size_t size), (tbl, size), \
 {
     if (size > tbl[M_ALLOC_MGR_LEN-1].blk_size)
         return NULL;
@@ -360,7 +362,7 @@ static inline mln_alloc_mgr_t *mln_alloc_get_mgr_by_size(mln_alloc_mgr_t *tbl, m
     if (am[off].blk_size >= size) return &am[off];
     if (am[off+1].blk_size >= size) return &am[off+1];
     return &am[off+2];
-}
+})
 
 MLN_FUNC(, void *, mln_alloc_c, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
 #ifdef __DEBUG__
@@ -461,8 +463,7 @@ MLN_FUNC_VOID(, void, mln_alloc_free, (void *ptr), (ptr), {
 #endif
 })
 
-static inline void *mln_alloc_shm_m(mln_alloc_t *pool, mln_size_t size)
-{
+MLN_FUNC(static inline, void *, mln_alloc_shm_m, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
     mln_alloc_shm_t *as;
     mln_off_t Boff = -1, boff = -1;
 
@@ -485,10 +486,9 @@ new_block:
         if (as == NULL) goto new_block;
     }
     return mln_alloc_shm_set_bitmap(as, Boff, boff, size);
-}
+})
 
-static inline void *mln_alloc_shm_large_m(mln_alloc_t *pool, mln_size_t size)
-{
+MLN_FUNC(static inline, void *, mln_alloc_shm_large_m, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
     mln_alloc_shm_t *as;
     mln_alloc_blk_t *blk;
 
@@ -504,10 +504,11 @@ static inline void *mln_alloc_shm_large_m(mln_alloc_t *pool, mln_size_t size)
     blk->is_large = 1;
     blk->in_used = 1;
     return blk->data;
-}
+})
 
-static inline mln_alloc_shm_t *
-mln_alloc_shm_new_block(mln_alloc_t *pool, mln_off_t *Boff, mln_off_t *boff, mln_size_t size)
+MLN_FUNC(static inline, mln_alloc_shm_t *, mln_alloc_shm_new_block, \
+         (mln_alloc_t *pool, mln_off_t *Boff, mln_off_t *boff, mln_size_t size), \
+         (pool, Boff, boff, size), \
 {
     mln_alloc_shm_t *ret;
     if ((ret = mln_alloc_shm_new(pool, M_ALLOC_SHM_DEFAULT_SIZE, 0)) == NULL) {
@@ -515,10 +516,11 @@ mln_alloc_shm_new_block(mln_alloc_t *pool, mln_off_t *Boff, mln_off_t *boff, mln
     }
     mln_alloc_shm_allowed(ret, Boff, boff, size);
     return ret;
-}
+})
 
-static inline int
-mln_alloc_shm_allowed(mln_alloc_shm_t *as, mln_off_t *Boff, mln_off_t *boff, mln_size_t size)
+MLN_FUNC(static inline, int, mln_alloc_shm_allowed, \
+         (mln_alloc_shm_t *as, mln_off_t *Boff, mln_off_t *boff, mln_size_t size), \
+         (as, Boff, boff, size), \
 {
     int i, j = -1, s = -1;
     int n = (size+sizeof(mln_alloc_blk_t)+M_ALLOC_SHM_BIT_SIZE-1) / M_ALLOC_SHM_BIT_SIZE;
@@ -561,10 +563,11 @@ mln_alloc_shm_allowed(mln_alloc_shm_t *as, mln_off_t *Boff, mln_off_t *boff, mln
         }
     }
     return 0;
-}
+})
 
-static inline void *
-mln_alloc_shm_set_bitmap(mln_alloc_shm_t *as, mln_off_t Boff, mln_off_t boff, mln_size_t size)
+MLN_FUNC(static inline, void *, mln_alloc_shm_set_bitmap, \
+         (mln_alloc_shm_t *as, mln_off_t Boff, mln_off_t boff, mln_size_t size), \
+         (as, Boff, boff, size), \
 {
     int i, n = (size+sizeof(mln_alloc_blk_t)+M_ALLOC_SHM_BIT_SIZE-1) / M_ALLOC_SHM_BIT_SIZE;
     mln_u8ptr_t p, pend, addr;
@@ -593,10 +596,9 @@ mln_alloc_shm_set_bitmap(mln_alloc_shm_t *as, mln_off_t Boff, mln_off_t boff, ml
     }
 
     return blk->data;
-}
+})
 
-static inline void mln_alloc_free_shm(void *ptr)
-{
+MLN_FUNC_VOID(static inline, void, mln_alloc_free_shm, (void *ptr), (ptr), {
     mln_alloc_blk_t *blk;
     mln_alloc_shm_t *as;
     mln_off_t Boff, boff;
@@ -625,7 +627,7 @@ static inline void mln_alloc_free_shm(void *ptr)
     if (as->large || as->nfree == as->base) {
         mln_alloc_shm_chain_del(&as->pool->shm_head, &as->pool->shm_tail, as);
     }
-}
+})
 
 /*
  * chain

@@ -193,12 +193,10 @@ MLN_FUNC_VOID(, void, mln_event_free, (mln_event_t *ev), (ev), {
     free(ev);
 })
 
-static inline void
-mln_event_desc_free(void *data)
-{
+MLN_FUNC_VOID(static inline, void, mln_event_desc_free, (void *data), (data), {
     if (data == NULL) return;
     free(data);
-}
+})
 
 /*
  * ev_timer
@@ -245,8 +243,7 @@ MLN_FUNC_VOID(, void, mln_event_timer_cancel, \
     pthread_mutex_unlock(&event->timer_lock);
 })
 
-static inline void mln_event_timer_process(mln_event_t *event)
-{
+MLN_FUNC_VOID(static inline, void, mln_event_timer_process, (mln_event_t *event), (event), {
     mln_uauto_t now;
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -281,7 +278,7 @@ lp:
 
     if (!event->is_break)
         goto lp;
-}
+})
 
 /*
  * ev_fd
@@ -375,15 +372,10 @@ MLN_FUNC(, int, mln_event_fd_set, \
     return 0;
 })
 
-static inline int
-mln_event_fd_normal_set(mln_event_t *event, \
-                        mln_event_desc_t *ed, \
-                        int fd, \
-                        mln_u32_t flag, \
-                        int timeout_ms, \
-                        void *data, \
-                        ev_fd_handler fd_handler, \
-                        int other_mark)
+MLN_FUNC(static inline, int, mln_event_fd_normal_set, \
+         (mln_event_t *event, mln_event_desc_t *ed, int fd, mln_u32_t flag, \
+          int timeout_ms, void *data, ev_fd_handler fd_handler, int other_mark), \
+         (event, ed, fd, flag, timeout_ms, data, fd_handler, other_mark), \
 {
     if (ed == NULL) {
         ed = (mln_event_desc_t *)malloc(sizeof(mln_event_desc_t));
@@ -439,17 +431,12 @@ mln_event_fd_normal_set(mln_event_t *event, \
                                    data, \
                                    fd_handler, \
                                    other_mark);
-}
+})
 
-static inline int
-mln_event_fd_append_set(mln_event_t *event, \
-                        mln_event_desc_t *ed, \
-                        int fd, \
-                        mln_u32_t flag, \
-                        int timeout_ms, \
-                        void *data, \
-                        ev_fd_handler fd_handler, \
-                        int other_mark)
+MLN_FUNC(static inline, int, mln_event_fd_append_set, \
+         (mln_event_t *event, mln_event_desc_t *ed, int fd, mln_u32_t flag, \
+          int timeout_ms, void *data, ev_fd_handler fd_handler, int other_mark), \
+         (event, ed, fd, flag, timeout_ms, data, fd_handler, other_mark), \
 {
     if (mln_event_fd_timeout_set(event, ed, timeout_ms) < 0)
         return -1;
@@ -599,7 +586,7 @@ mln_event_fd_append_set(mln_event_t *event, \
     }
 #endif
     return 0;
-}
+})
 
 MLN_FUNC(static, int, mln_event_fd_timeout_set, \
          (mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms), \
@@ -637,8 +624,8 @@ MLN_FUNC(static, int, mln_event_fd_timeout_set, \
     return 0;
 })
 
-static inline void
-mln_event_fd_clr_set(mln_event_t *event, int fd)
+MLN_FUNC_VOID(static inline, void, mln_event_fd_clr_set, \
+              (mln_event_t *event, int fd), (event, fd), \
 {
     mln_event_desc_t tmp, *ed;
     memset(&tmp, 0, sizeof(tmp));
@@ -692,7 +679,7 @@ mln_event_fd_clr_set(mln_event_t *event, int fd)
                          &(event->ev_fd_wait_tail), \
                          ed);
     mln_event_desc_free(ed);
-}
+})
 
 /*
  * set dispatch callback
@@ -710,9 +697,7 @@ MLN_FUNC_VOID(, void, mln_event_callback_set, \
 /*
  * tools
  */
-static inline void
-mln_event_fd_nonblock_set(int fd)
-{
+MLN_FUNC_VOID(static inline, void, mln_event_fd_nonblock_set, (int fd), (fd), {
 #if defined(WIN32)
     u_long opt = 1;
     ioctlsocket(fd, FIONBIO, &opt);
@@ -723,11 +708,9 @@ mln_event_fd_nonblock_set(int fd)
     flg = fcntl(fd, F_SETFL, flg | O_NONBLOCK);
     ASSERT(flg >= 0);
 #endif
-}
+})
 
-static inline void
-mln_event_fd_block_set(int fd)
-{
+MLN_FUNC_VOID(static inline, void, mln_event_fd_block_set, (int fd), (fd), {
 #if defined(WIN32)
     u_long opt = 0;
     ioctlsocket(fd, FIONBIO, &opt);
@@ -738,7 +721,7 @@ mln_event_fd_block_set(int fd)
     flg = fcntl(fd, F_SETFL, flg & ~(O_NONBLOCK));
     ASSERT(flg >= 0);
 #endif
-}
+})
 
 /*
  * dispatch
@@ -1151,9 +1134,7 @@ MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
 })
 #endif
 
-static inline void
-mln_event_active_fd_process(mln_event_t *event)
-{
+MLN_FUNC_VOID(static inline, void, mln_event_active_fd_process, (mln_event_t *event), (event), {
     mln_event_desc_t *ed;
     mln_event_fd_t *ef;
     ev_fd_handler h;
@@ -1227,10 +1208,9 @@ lp:
     } else {
         pthread_mutex_unlock(&event->fd_lock);
     }
-}
+})
 
-static inline void mln_event_fd_timeout_process(mln_event_t *event)
-{
+MLN_FUNC_VOID(static inline, void, mln_event_fd_timeout_process, (mln_event_t *event), (event), {
     mln_u64_t now;
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -1285,7 +1265,7 @@ lp:
 
     if (event->is_break) return;
     goto lp;
-}
+})
 
 /*
  * rbtree functions
@@ -1299,39 +1279,31 @@ MLN_FUNC(static, int, mln_event_rbtree_fd_cmp, (const void *k1, const void *k2),
 /*
  * fheap functions
  */
-static inline int
-mln_event_fd_timeout_cmp(const void *k1, const void *k2)
-{
+MLN_FUNC(static inline, int, mln_event_fd_timeout_cmp, (const void *k1, const void *k2), (k1, k2), {
     mln_event_desc_t *ed1 = (mln_event_desc_t *)k1;
     mln_event_desc_t *ed2 = (mln_event_desc_t *)k2;
     if (ed1->data.fd.end_us < ed2->data.fd.end_us) return 0;
     return 1;
-}
+})
 
-static inline void
-mln_event_fd_timeout_copy(void *k1, void *k2)
-{
+MLN_FUNC_VOID(static inline, void, mln_event_fd_timeout_copy, (void *k1, void *k2), (k1, k2), {
     mln_event_desc_t *ed1 = (mln_event_desc_t *)k1;
     mln_event_desc_t *ed2 = (mln_event_desc_t *)k2;
     ed1->data.fd.end_us = ed2->data.fd.end_us;
-}
+})
 
-static inline int
-mln_event_fheap_timer_cmp(const void *k1, const void *k2)
-{
+MLN_FUNC(static inline, int, mln_event_fheap_timer_cmp, (const void *k1, const void *k2), (k1, k2), {
     mln_event_desc_t *ed1 = (mln_event_desc_t *)k1;
     mln_event_desc_t *ed2 = (mln_event_desc_t *)k2;
     if (ed1->data.tm.end_tm < ed2->data.tm.end_tm) return 0;
     return 1;
-}
+})
 
-static inline void
-mln_event_fheap_timer_copy(void *k1, void *k2)
-{
+MLN_FUNC_VOID(static inline, void, mln_event_fheap_timer_copy, (void *k1, void *k2), (k1, k2), {
     mln_event_desc_t *ed1 = (mln_event_desc_t *)k1;
     mln_event_desc_t *ed2 = (mln_event_desc_t *)k2;
     ed1->data.tm.end_tm = ed2->data.tm.end_tm;
-}
+})
 
 /*
  * chains
