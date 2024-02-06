@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include "mln_func.h"
 #if defined(WIN32)
 #include <winsock2.h>
 #else
@@ -21,7 +22,8 @@ static inline void mln_iothread_msg_free(mln_iothread_msg_t *msg);
 MLN_CHAIN_FUNC_DECLARE(mln_iothread_msg, mln_iothread_msg_t, static inline void,);
 MLN_CHAIN_FUNC_DEFINE(mln_iothread_msg, mln_iothread_msg_t, static inline void, prev, next);
 
-int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr)
+MLN_FUNC(, int, mln_iothread_init, \
+         (mln_iothread_t *t, struct mln_iothread_attr *attr), (t, attr), \
 {
     mln_u32_t i;
     int fds[2];
@@ -63,10 +65,9 @@ int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr)
     }
 
     return 0;
-}
+})
 
-void mln_iothread_destroy(mln_iothread_t *t)
-{
+MLN_FUNC_VOID(, void, mln_iothread_destroy, (mln_iothread_t *t), (t), {
     if (t == NULL) return;
     if (t->tids != NULL) {
         mln_u32_t i;
@@ -78,9 +79,11 @@ void mln_iothread_destroy(mln_iothread_t *t)
     }
     mln_socket_close(t->io_fd);
     mln_socket_close(t->user_fd);
-}
+})
 
-int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, mln_u32_t feedback)
+MLN_FUNC(, int, mln_iothread_send, \
+         (mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, mln_u32_t feedback), \
+         (t, type, data, to, feedback), \
 {
     int fd;
     pthread_mutex_t *plock;
@@ -126,10 +129,9 @@ int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothrea
     }
 
     return 0;
-}
+})
 
-int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
-{
+MLN_FUNC(, int, mln_iothread_recv, (mln_iothread_t *t, mln_iothread_ep_type_t from), (t, from), {
     int fd, n = 0;
     mln_s8_t c;
     pthread_mutex_t *plock;
@@ -170,10 +172,11 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from)
     pthread_mutex_unlock(plock);
 
     return n;
-}
+})
 
 
-static inline mln_iothread_msg_t *mln_iothread_msg_new(mln_u32_t type, void *data, int feedback)
+MLN_FUNC(static inline, mln_iothread_msg_t *, mln_iothread_msg_new, \
+         (mln_u32_t type, void *data, int feedback), (type, data, feedback), \
 {
     mln_iothread_msg_t *msg = (mln_iothread_msg_t *)malloc(sizeof(mln_iothread_msg_t));
     if (msg == NULL)
@@ -190,10 +193,9 @@ static inline mln_iothread_msg_t *mln_iothread_msg_new(mln_u32_t type, void *dat
         return NULL;
     }
     return msg;
-}
+})
 
-static inline void mln_iothread_msg_free(mln_iothread_msg_t *msg)
-{
+MLN_FUNC_VOID(static inline, void, mln_iothread_msg_free, (mln_iothread_msg_t *msg), (msg), {
     if (msg == NULL)
         return;
 
@@ -201,10 +203,9 @@ static inline void mln_iothread_msg_free(mln_iothread_msg_t *msg)
         pthread_mutex_destroy(&(msg->mutex));
 
     free(msg);
-}
+})
 
-static inline void mln_iothread_fd_nonblock_set(int fd)
-{
+MLN_FUNC_VOID(static inline, void, mln_iothread_fd_nonblock_set, (int fd), (fd), {
 #if defined(WIN32)
     u_long opt = 1;
     ioctlsocket(fd, FIONBIO, &opt);
@@ -212,4 +213,4 @@ static inline void mln_iothread_fd_nonblock_set(int fd)
     int flg = fcntl(fd, F_GETFL, NULL);
     fcntl(fd, F_SETFL, flg | O_NONBLOCK);
 #endif
-}
+})
