@@ -40,22 +40,22 @@ char mln_lex_errmsg[][MLN_LEX_ERRMSG_LEN] = {
 };
 char error_msg_err[] = "No memory to store error message.";
 
-mln_lex_preprocess_data_t *mln_lex_preprocess_data_new(mln_alloc_t *pool)
-{
+MLN_FUNC(, mln_lex_preprocess_data_t *, mln_lex_preprocess_data_new, (mln_alloc_t *pool), (pool), {
     mln_lex_preprocess_data_t *lpd = (mln_lex_preprocess_data_t *)mln_alloc_m(pool, sizeof(mln_lex_preprocess_data_t));
     if (lpd == NULL) return NULL;
     lpd->if_level = 0;
     lpd->if_matched = 0;
     return lpd;
-}
+})
 
-void mln_lex_preprocess_data_free(mln_lex_preprocess_data_t *lpd)
-{
+MLN_FUNC_VOID(, void, mln_lex_preprocess_data_free, (mln_lex_preprocess_data_t *lpd), (lpd), {
     if (lpd == NULL) return;
     mln_alloc_free(lpd);
-}
+})
 
-static inline int mln_lex_base_dir(mln_lex_t *lex, mln_lex_input_t *input, char *path, int *err)
+MLN_FUNC(static inline, int, mln_lex_base_dir, \
+         (mln_lex_t *lex, mln_lex_input_t *input, char *path, int *err), \
+         (lex, input, path, err), \
 {
     char *p = strrchr(path, '/');
     char tmp[1024] = {0};
@@ -73,10 +73,11 @@ static inline int mln_lex_base_dir(mln_lex_t *lex, mln_lex_input_t *input, char 
         return -1;
     }
     return 0;
-}
+})
 
-mln_lex_input_t *
-mln_lex_input_new(mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line)
+MLN_FUNC(, mln_lex_input_t *, mln_lex_input_new, \
+         (mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line), \
+         (lex, type, data, err, line), \
 {
     int r;
     mln_lex_input_t *li;
@@ -174,10 +175,9 @@ goon:
     }
 
     return li;
-}
+})
 
-void mln_lex_input_free(void *in)
-{
+MLN_FUNC_VOID(, void, mln_lex_input_free, (void *in), (in), {
     if (in == NULL) return;
     mln_lex_input_t *input = (mln_lex_input_t *)in;
     if (input->fd >= 0) close(input->fd);
@@ -185,10 +185,11 @@ void mln_lex_input_free(void *in)
     if (input->dir != NULL) mln_string_free(input->dir);
     if (input->buf != NULL && input->type == M_INPUT_T_FILE) mln_alloc_free(input->buf);
     mln_alloc_free(input);
-}
+})
 
-mln_lex_macro_t *
-mln_lex_macro_new(mln_alloc_t *pool, mln_string_t *key, mln_string_t *val)
+MLN_FUNC(, mln_lex_macro_t *, mln_lex_macro_new, \
+         (mln_alloc_t *pool, mln_string_t *key, mln_string_t *val), \
+         (pool, key, val), \
 {
     mln_lex_macro_t *lm;
     if ((lm = (mln_lex_macro_t *)mln_alloc_m(pool, sizeof(mln_lex_macro_t))) == NULL) {
@@ -205,26 +206,26 @@ mln_lex_macro_new(mln_alloc_t *pool, mln_string_t *key, mln_string_t *val)
     }
     if (val == NULL) lm->val = NULL;
     return lm;
-}
+})
 
-void mln_lex_macro_free(void *data)
-{
+MLN_FUNC_VOID(, void, mln_lex_macro_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lex_macro_t *lm = (mln_lex_macro_t *)data;
     if (lm->key != NULL) mln_string_free(lm->key);
     if (lm->val != NULL) mln_string_free(lm->val);
     mln_alloc_free(lm);
-}
+})
 
-static int mln_lex_macro_cmp(const void *data1, const void *data2)
+MLN_FUNC(static, int, mln_lex_macro_cmp, \
+         (const void *data1, const void *data2), (data1, data2), \
 {
     mln_lex_macro_t *lm1 = (mln_lex_macro_t *)data1;
     mln_lex_macro_t *lm2 = (mln_lex_macro_t *)data2;
     return mln_string_strcmp(lm1->key, lm2->key);
-}
+})
 
-static inline mln_lex_keyword_t *
-mln_lex_keyword_new(mln_string_t *keyword, mln_uauto_t val)
+MLN_FUNC(static inline, mln_lex_keyword_t *, mln_lex_keyword_new, \
+         (mln_string_t *keyword, mln_uauto_t val), (keyword, val), \
 {
     mln_lex_keyword_t *lk = (mln_lex_keyword_t *)malloc(sizeof(mln_lex_keyword_t));
     if (lk == NULL) return NULL;
@@ -234,25 +235,24 @@ mln_lex_keyword_new(mln_string_t *keyword, mln_uauto_t val)
     }
     lk->val = val;
     return lk;
-}
+})
 
-static void mln_lex_keyword_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lex_keyword_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lex_keyword_t *lk = (mln_lex_keyword_t *)data;
     if (lk->keyword != NULL) mln_string_free(lk->keyword);
     free(lk);
-}
+})
 
-static int mln_lex_keywords_cmp(const void *data1, const void *data2)
+MLN_FUNC(static, int, mln_lex_keywords_cmp, \
+         (const void *data1, const void *data2), (data1, data2), \
 {
     mln_lex_keyword_t *lk1 = (mln_lex_keyword_t *)data1;
     mln_lex_keyword_t *lk2 = (mln_lex_keyword_t *)data2;
     return mln_string_strcmp(lk1->keyword, lk2->keyword);
-}
+})
 
-mln_lex_t *mln_lex_init(struct mln_lex_attr *attr)
-{
+MLN_FUNC(, mln_lex_t *, mln_lex_init, (struct mln_lex_attr *attr), (attr), {
     mln_lex_macro_t *lm;
     struct mln_rbtree_attr rbattr;
     mln_rbtree_node_t *rn;
@@ -369,10 +369,9 @@ err:
     }
 
     return lex;
-}
+})
 
-void mln_lex_destroy(mln_lex_t *lex)
-{
+MLN_FUNC_VOID(, void, mln_lex_destroy, (mln_lex_t *lex), (lex), {
     if (lex == NULL) return;
     if (lex->preprocess) {
         mln_lex_preprocess_data_free((mln_lex_preprocess_data_t *)(lex->hooks.at_data));
@@ -387,10 +386,9 @@ void mln_lex_destroy(mln_lex_t *lex)
     if (lex->env != NULL) mln_string_free(lex->env);
     if (lex->preprocess_data != NULL) mln_lex_preprocess_data_free(lex->preprocess_data);
     mln_alloc_free(lex);
-}
+})
 
-char *mln_lex_strerror(mln_lex_t *lex)
-{
+MLN_FUNC(, char *, mln_lex_strerror, (mln_lex_t *lex), (lex), {
     if (lex->err_msg != NULL) mln_alloc_free(lex->err_msg);
     int len = 0;
     if (lex->cur != NULL) {
@@ -426,9 +424,10 @@ char *mln_lex_strerror(mln_lex_t *lex)
         n += snprintf(lex->err_msg + n, len - n, ". %s", strerror(errno));
     lex->err_msg[n] = 0;
     return lex->err_msg;
-}
+})
 
-int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
+MLN_FUNC(, int, mln_lex_push_input_file_stream, \
+         (mln_lex_t *lex, mln_string_t *path), (lex, path), \
 {
     int err = MLN_LEX_SUCCEED;
     mln_lex_input_t *in;
@@ -533,9 +532,10 @@ int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
         lex->line = 1;
     }
     return 0;
-}
+})
 
-int mln_lex_push_input_buf_stream(mln_lex_t *lex, mln_string_t *buf)
+MLN_FUNC(, int, mln_lex_push_input_buf_stream, \
+         (mln_lex_t *lex, mln_string_t *buf), (lex, buf), \
 {
     int err = MLN_LEX_SUCCEED;
     mln_lex_input_t *in = mln_lex_input_new(lex, M_INPUT_T_BUF, buf, &err, lex->line);
@@ -558,18 +558,20 @@ int mln_lex_push_input_buf_stream(mln_lex_t *lex, mln_string_t *buf)
     }
     lex->line = 1;
     return 0;
-}
+})
 
-static int mln_lex_check_file_loop_iterate_handler(void *st_data, void *data)
+MLN_FUNC(static, int, mln_lex_check_file_loop_iterate_handler, \
+         (void *st_data, void *data), (st_data, data), \
 {
     mln_string_t *path = (mln_string_t *)data;
     mln_lex_input_t *in = (mln_lex_input_t *)st_data;
     if (in->type != M_INPUT_T_FILE) return 0;
     if (!mln_string_strcmp(path, in->data)) return -1;
     return 0;
-}
+})
 
-int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path)
+MLN_FUNC(, int, mln_lex_check_file_loop, \
+         (mln_lex_t *lex, mln_string_t *path), (lex, path), \
 {
     char p[1024];
     struct stat path_stat;
@@ -654,10 +656,9 @@ int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path)
         }
     }
     return 0;
-}
+})
 
-int mln_lex_condition_test(mln_lex_t *lex)
-{
+MLN_FUNC(, int, mln_lex_condition_test, (mln_lex_t *lex), (lex), {
     mln_lex_result_clean(lex);
 
     char c;
@@ -714,5 +715,5 @@ int mln_lex_condition_test(mln_lex_t *lex)
         return reverse? 1: 0;
     }
     return reverse? 0: 1;
-}
+})
 
