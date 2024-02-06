@@ -33,11 +33,8 @@ mln_json_parse_false(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
 static inline int
 mln_json_parse_null(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
 static inline void mln_json_jumpoff_blank(char **jstr, int *len);
-static inline mln_size_t mln_json_get_length(mln_json_t *j);
-static int
-mln_json_get_length_obj_iterate_handler(mln_rbtree_node_t *node, void *data);
-static inline mln_size_t
-mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf);
+static inline int
+mln_json_write_content(mln_json_t *j, mln_s8ptr_t *buf, mln_size_t *size, mln_size_t *off);
 static int
 mln_json_write_content_obj_iterate_handler(mln_rbtree_node_t *node, void *data);
 static inline int mln_json_parse_is_index(mln_string_t *s, mln_size_t *idx);
@@ -65,10 +62,14 @@ MLN_FUNC_VOID(static inline, void, mln_json_kv_free, (mln_json_kv_t *kv), (kv), 
 })
 
 
-MLN_FUNC(, int, mln_json_obj_init, (mln_json_t *j), (j), {
+MLN_FUNC(static inline, int, __mln_json_obj_init, (mln_json_t *j), (j), {
     j->type = M_JSON_OBJECT;
     if ((j->data.m_j_obj = mln_rbtree_new(NULL)) == NULL) return -1;
     return 0;
+})
+
+MLN_FUNC(, int, mln_json_obj_init, (mln_json_t *j), (j), {
+    return __mln_json_obj_init(j);
 })
 
 MLN_FUNC(, int, mln_json_obj_update, \
@@ -136,7 +137,7 @@ MLN_FUNC_VOID(, void, mln_json_obj_remove, (mln_json_t *j, mln_string_t *key), (
 })
 
 
-MLN_FUNC(, int, mln_json_array_init, (mln_json_t *j), (j), {
+MLN_FUNC(static inline, int, __mln_json_array_init, (mln_json_t *j), (j), {
     struct mln_array_attr attr;
 
     attr.pool = NULL;
@@ -149,6 +150,10 @@ MLN_FUNC(, int, mln_json_array_init, (mln_json_t *j), (j), {
         return -1;
     mln_json_array_type_set(j);
     return 0;
+})
+
+MLN_FUNC(, int, mln_json_array_init, (mln_json_t *j), (j), {
+    return __mln_json_array_init(j);
 })
 
 MLN_FUNC(, mln_json_t *, mln_json_array_search, (mln_json_t *j, mln_uauto_t index), (j, index), {
@@ -361,7 +366,7 @@ MLN_FUNC(static inline, int, mln_json_parse_obj, \
         return -1;
     }
 
-    if (mln_json_obj_init(val) < 0) return -1;
+    if (__mln_json_obj_init(val) < 0) return -1;
 
 again:
     mln_json_init(&key);
@@ -454,7 +459,7 @@ MLN_FUNC(static inline, int, mln_json_parse_array, \
     mln_json_t j;
     mln_uauto_t cnt = 0;
 
-    if (mln_json_array_init(val) < 0) return -1;
+    if (__mln_json_array_init(val) < 0) return -1;
 
     ++jstr;
     if (--len <= 0) {
@@ -823,198 +828,138 @@ MLN_FUNC_VOID(static inline, void, mln_json_jumpoff_blank, \
 
 
 MLN_FUNC(, mln_string_t *, mln_json_encode, (mln_json_t *j), (j), {
-    mln_u32_t size = mln_json_get_length(j), n;
     mln_s8ptr_t buf;
+    mln_size_t size = M_JSON_BUFLEN, pos = 0;;
     mln_string_t *s;
 
     buf = (mln_s8ptr_t)malloc(size);
     if (buf == NULL) return NULL;
 
-    n = mln_json_write_content(j, buf);
-    buf[n] = 0;
+    if (mln_json_write_content(j, &buf, &size, &pos) < 0) {
+        free(buf);
+        return NULL;
+    }
 
-    s = mln_string_const_ndup(buf, n);
+    s = mln_string_const_ndup(buf, pos);
     free(buf);
     if (s == NULL) return NULL;
 
     return s;
 })
 
-MLN_FUNC(static inline, mln_size_t, mln_json_get_length, (mln_json_t *j), (j), {
-    if (j == NULL) return 0;
-
-    char num_str[512] = {0};
-    mln_size_t length = 1;
-    mln_u8ptr_t p, end;
-
-    switch (j->type) {
-        case M_JSON_OBJECT:
-            length += 2;
-            mln_rbtree_iterate(mln_json_object_data_get(j), mln_json_get_length_obj_iterate_handler, &length);
-            break;
-        case M_JSON_ARRAY:
-        {
-            mln_json_t *el = (mln_json_t *)mln_array_elts(mln_json_array_data_get(j));
-            mln_json_t *elend = el + mln_array_nelts(mln_json_array_data_get(j));
-            length += 2;
-            for (; el < elend; ++el) {
-                length += (mln_json_get_length(el) + 1);
-            }
-            break;
-        }
-        case M_JSON_STRING:
-            length += 2;
-            if (j->data.m_j_string != NULL) {
-                p = j->data.m_j_string->data;
-                end = p + j->data.m_j_string->len;
-                for (; p < end; ++p) {
-                    if (*p == '\"' || *p == '\\')
-                        ++length;
-                }
-                length += j->data.m_j_string->len;
-            }
-            break;
-        case M_JSON_NUM:
-            length += snprintf(num_str, sizeof(num_str), "%f", j->data.m_j_number);
-            break;
-        case M_JSON_TRUE:
-            length += 4;
-            break;
-        case M_JSON_FALSE:
-            length += 5;
-            break;
-        case M_JSON_NULL:
-            length += 4;
-            break;
-        default:
-            break;
-    }
-
-    return length;
-})
-
-MLN_FUNC(static, int, mln_json_get_length_obj_iterate_handler, \
-         (mln_rbtree_node_t *node, void *data), (node, data), \
-{
-    mln_json_kv_t *kv = (mln_json_kv_t *)mln_rbtree_node_data_get(node);
-    mln_size_t *length = (mln_size_t *)data;
-
-    (*length) += (mln_json_get_length(&(kv->key)) + mln_json_get_length(&(kv->val)) + 2);
-    return 0;
-})
-
 struct mln_json_tmp_s {
     void *ptr1;
     void *ptr2;
+    void *ptr3;
 };
 
-MLN_FUNC(static inline, mln_size_t, mln_json_write_content, \
-         (mln_json_t *j, mln_s8ptr_t buf), (j, buf), \
+MLN_FUNC(static inline, int, mln_json_write_byte, \
+         (mln_s8ptr_t *buf, mln_size_t *size, mln_size_t *off, mln_u8ptr_t s, mln_size_t n), \
+         (buf, size, off, s, n), \
+{
+    if (*size < *off + n) {
+        mln_s8ptr_t tmp = (mln_s8ptr_t)realloc(*buf, (*size) << 1);
+        if (tmp == NULL) return -1;
+        *buf = tmp;
+        *size <<= 1;
+    }
+    memcpy(*buf + *off, s, n);
+    *off += n;
+    return 0;
+})
+
+#define mln_json_write_back(_off, _n) ({\
+    mln_size_t o = (_off), n = (_n);\
+    (_off) = o < n? 0: (o - n);\
+})
+
+MLN_FUNC(static inline, int, mln_json_write_content, \
+         (mln_json_t *j, mln_s8ptr_t *buf, mln_size_t *size, mln_size_t *off), \
+         (j, buf, size, off), \
 {
     if (j == NULL) return 0;
 
-    int n;
-    mln_size_t length = 0, save;
-    mln_string_t *s;
-    struct mln_json_tmp_s tmp;
-    mln_u8ptr_t p, end;
+    mln_size_t save;
 
     switch (j->type) {
         case M_JSON_OBJECT:
-            *buf++ = '{';
-            ++length;
-            tmp.ptr1 = &length;
-            tmp.ptr2 = &buf;
-            save = length;
+        {
+            struct mln_json_tmp_s tmp;
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"{", 1) < 0) return -1;
+            tmp.ptr1 = buf;
+            tmp.ptr2 = size;
+            tmp.ptr3 = off;
+            save = *off;
             mln_rbtree_iterate(mln_json_object_data_get(j), mln_json_write_content_obj_iterate_handler, &tmp);
-            if (save < length) {
-                --buf;
-                --length;
-                *buf = 0;
-            }
-            *buf++ = '}';
-            ++length;
+            if (save < *off) mln_json_write_back(*off, 1);
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"}", 1) < 0) return -1;
             break;
+        }
         case M_JSON_ARRAY:
         {
             mln_json_t *el = (mln_json_t *)mln_array_elts(mln_json_array_data_get(j));
             mln_json_t *elend = el + mln_array_nelts(mln_json_array_data_get(j));
 
-            *buf++ = '[';
-            ++length;
-            save = length;
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"[", 1) < 0) return -1;
+            save = *off;
             for (; el < elend; ++el) {
-                n = mln_json_write_content(el, buf);
-                buf += n;
-                length += n;
-
-                *buf++ = ',';
-                length += 1;
+                if (mln_json_write_content(el, buf, size, off) < 0) return-1;
+                if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)",", 1) < 0) return -1;
             }
-            if (save < length) {
-                --buf;
-                --length;
-                *buf = 0;
-            }
-            *buf++ = ']';
-            ++length;
+            if (save < *off) mln_json_write_back(*off, 1);
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"]", 1) < 0) return -1;
             break;
         }
         case M_JSON_STRING:
-            *buf++ = '\"';
-            ++length;
+        {
+            mln_string_t *s;
+            mln_u8ptr_t p, end;
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"\"", 1) < 0) return -1;
             if ((s = j->data.m_j_string) != NULL) {
                 p = j->data.m_j_string->data;
                 end = p + j->data.m_j_string->len;
                 for (; p < end; ) {
                     if (*p == '\"' || *p == '\\') {
-                        *buf++ = '\\';
-                        ++length;
+                        if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"\\", 1) < 0) return -1;
                     }
-                    *buf++ = *p++;
-                    ++length;
+                    if (mln_json_write_byte(buf, size, off, p++, 1) < 0) return -1;
                 }
             }
-            *buf++ = '\"';
-            ++length;
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"\"", 1) < 0) return -1;
             break;
+        }
         case M_JSON_NUM:
         {
+            int n;
+            char tmp[M_JSON_BUFLEN];
             mln_s64_t i = (mln_s64_t)(j->data.m_j_number);
             if (i == j->data.m_j_number)
 #if defined(WIN32) && defined(__pentiumpro__)
-                n = snprintf(buf, 512, "%I64d", i);
+                n = snprintf(tmp, sizeof(tmp) - 1, "%I64d", i);
 #elif defined(WIN32) || defined(i386) || defined(__arm__) || defined(__wasm__)
-                n = snprintf(buf, 512, "%lld", i);
+                n = snprintf(tmp, sizeof(tmp) - 1, "%lld", i);
 #else
-                n = snprintf(buf, 512, "%ld", i);
+                n = snprintf(tmp, sizeof(tmp) - 1, "%ld", i);
 #endif
             else
-                n = snprintf(buf, 512, "%f", j->data.m_j_number);
-            buf += n;
-            length += n;
+                n = snprintf(tmp, sizeof(tmp) - 1, "%f", j->data.m_j_number);
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)tmp, n) < 0) return -1;
             break;
         }
         case M_JSON_TRUE:
-            memcpy(buf, "true", 4);
-            buf += 4;
-            length += 4;
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"true", 4) < 0) return -1;
             break;
         case M_JSON_FALSE:
-            memcpy(buf, "false", 5);
-            buf += 5;
-            length += 5;
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"false", 5) < 0) return -1;
             break;
         case M_JSON_NULL:
-            memcpy(buf, "null", 4);
-            buf += 4;
-            length += 4;
+            if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)"null", 4) < 0) return -1;
             break;
         default:
             break;
     }
 
-    return length;
+    return 0;
 })
 
 MLN_FUNC(static, int, mln_json_write_content_obj_iterate_handler, \
@@ -1022,23 +967,16 @@ MLN_FUNC(static, int, mln_json_write_content_obj_iterate_handler, \
 {
     mln_json_kv_t *kv = (mln_json_kv_t *)mln_rbtree_node_data_get(node);
     struct mln_json_tmp_s *tmp = (struct mln_json_tmp_s *)data;
-    mln_size_t *length = (mln_size_t *)(tmp->ptr1);
-    mln_s8ptr_t *buf = (mln_s8ptr_t *)(tmp->ptr2);
-    mln_size_t n;
+    mln_s8ptr_t *buf = (mln_s8ptr_t *)(tmp->ptr1);
+    mln_size_t *size = (mln_size_t *)(tmp->ptr2);
+    mln_size_t *off = (mln_size_t *)(tmp->ptr3);
 
     if (kv == NULL) return 0;
 
-    n = mln_json_write_content(&(kv->key), *buf);
-    (*buf) += n;
-    (*length) += n;
-    *(*buf)++ = ':';
-    ++(*length);
-    n = mln_json_write_content(&(kv->val), *buf);
-    (*buf) += n;
-    (*length) += n;
-
-    *(*buf)++ = ',';
-    (*length) += 1;
+    if (mln_json_write_content(&(kv->key), buf, size, off) < 0) return -1;
+    if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)":", 1) < 0) return -1;
+    if (mln_json_write_content(&(kv->val), buf, size, off) < 0) return -1;
+    if (mln_json_write_byte(buf, size, off, (mln_u8ptr_t)",", 1) < 0) return -1;
 
     return 0;
 })
@@ -1121,7 +1059,7 @@ MLN_FUNC(static inline, int, mln_json_obj_generate, \
     double d;
     struct mln_json_call_attr *ca;
 
-    if (mln_json_is_none(j) && mln_json_obj_init(j) < 0) return -1;
+    if (mln_json_is_none(j) && __mln_json_obj_init(j) < 0) return -1;
     if (!mln_json_is_object(j)) return -1;
     ++f;
 
@@ -1289,7 +1227,7 @@ MLN_FUNC(static inline, int, mln_json_array_generate, \
     double d;
     struct mln_json_call_attr *ca;
 
-    if (mln_json_is_none(j) && mln_json_array_init(j) < 0) return -1;
+    if (mln_json_is_none(j) && __mln_json_array_init(j) < 0) return -1;
     if (!mln_json_is_array(j)) return -1;
     ++f;
 

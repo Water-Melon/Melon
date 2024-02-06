@@ -12,6 +12,7 @@
 #include "mln_rbtree.h"
 
 #define M_JSON_LEN              31
+#define M_JSON_BUFLEN           512
 
 #define M_JSON_V_FALSE          0
 #define M_JSON_V_TRUE           1
