@@ -4,6 +4,7 @@
  */
 #include "mln_gc.h"
 #include "mln_utils.h"
+#include "mln_func.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -24,8 +25,7 @@ MLN_CHAIN_FUNC_DEFINE(mln_gc_item_proc, \
                       proc_prev, \
                       proc_next);
 
-static inline mln_gc_item_t *mln_gc_item_new(mln_gc_t *gc, void *data)
-{
+MLN_FUNC(static inline, mln_gc_item_t *, mln_gc_item_new, (mln_gc_t *gc, void *data), (gc, data), {
     mln_gc_item_t *item;
     if ((item = (mln_gc_item_t *)mln_alloc_m(gc->pool, sizeof(mln_gc_item_t))) == NULL) {
         return NULL;
@@ -39,19 +39,17 @@ static inline mln_gc_item_t *mln_gc_item_new(mln_gc_t *gc, void *data)
     item->inc = 0;
     item->visited = 0;
     return item;
-}
+})
 
-static inline void mln_gc_item_free(mln_gc_item_t *item)
-{
+MLN_FUNC_VOID(static inline, void, mln_gc_item_free, (mln_gc_item_t *item), (item), {
     if (item == NULL) return;
     mln_alloc_free(item);
-}
+})
 
 /*
  * mln_gc_t
  */
-mln_gc_t *mln_gc_new(struct mln_gc_attr *attr)
-{
+MLN_FUNC(, mln_gc_t *, mln_gc_new, (struct mln_gc_attr *attr), (attr), {
     ASSERT(attr->item_getter != NULL && \
         attr->item_setter != NULL && \
         attr->item_freer != NULL && \
@@ -78,10 +76,9 @@ mln_gc_t *mln_gc_new(struct mln_gc_attr *attr)
     gc->free_handler = attr->free_handler;
     gc->del = 0;
     return gc;
-}
+})
 
-void mln_gc_free(mln_gc_t *gc)
-{
+MLN_FUNC_VOID(, void, mln_gc_free, (mln_gc_t *gc), (gc), {
     if (gc == NULL) return;
     mln_gc_item_t *item;
     while ((item = gc->proc_head) != NULL) {
@@ -93,10 +90,9 @@ void mln_gc_free(mln_gc_t *gc)
         mln_gc_item_free(item);
     }
     mln_alloc_free(gc);
-}
+})
 
-int mln_gc_add(mln_gc_t *gc, void *data)
-{
+MLN_FUNC(, int, mln_gc_add, (mln_gc_t *gc, void *data), (gc, data), {
     mln_gc_item_t *item;
     if ((item = mln_gc_item_new(gc, data)) == NULL) {
         return -1;
@@ -104,16 +100,14 @@ int mln_gc_add(mln_gc_t *gc, void *data)
     gc->item_setter(data, item);
     mln_gc_item_chain_add(&(gc->item_head), &(gc->item_tail), item);
     return 0;
-}
+})
 
-void mln_gc_suspect(mln_gc_t *gc, void *data)
-{
+MLN_FUNC_VOID(, void, mln_gc_suspect, (mln_gc_t *gc, void *data), (gc, data), {
     mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
     item->suspected = 1;
-}
+})
 
-void mln_gc_merge(mln_gc_t *dest, mln_gc_t *src)
-{
+MLN_FUNC_VOID(, void, mln_gc_merge, (mln_gc_t *dest, mln_gc_t *src), (dest, src), {
     /*
      * GC must NOT be identical
      * Pool must be identical
@@ -126,10 +120,9 @@ void mln_gc_merge(mln_gc_t *dest, mln_gc_t *src)
         item->gc = dest;
         mln_gc_item_chain_add(&(dest->item_head), &(dest->item_tail), item);
     }
-}
+})
 
-void mln_gc_collect_add(mln_gc_t *gc, void *data)
-{
+MLN_FUNC_VOID(, void, mln_gc_collect_add, (mln_gc_t *gc, void *data), (gc, data), {
     if (data == NULL) return;
     mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
     ASSERT(item != NULL); /* 'data' has NOT been added. */
@@ -142,10 +135,9 @@ void mln_gc_collect_add(mln_gc_t *gc, void *data)
         mln_gc_item_proc_chain_add(&(gc->proc_head), &(gc->proc_tail), item);
         item->inc = 1;
     }
-}
+})
 
-int mln_gc_clean_add(mln_gc_t *gc, void *data)
-{
+MLN_FUNC(, int, mln_gc_clean_add, (mln_gc_t *gc, void *data), (gc, data), {
     mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
     ASSERT(item != NULL); /* 'data' has NOT been added. */
     if (item->proc_prev != NULL || \
@@ -157,10 +149,9 @@ int mln_gc_clean_add(mln_gc_t *gc, void *data)
     mln_gc_item_proc_chain_add(&(gc->proc_head), &(gc->proc_tail), item);
     item->inc = 1;
     return 0;
-}
+})
 
-void mln_gc_collect(mln_gc_t *gc, void *root_data)
-{
+MLN_FUNC_VOID(, void, mln_gc_collect, (mln_gc_t *gc, void *root_data), (gc, root_data), {
     int done = 0;
     mln_gc_item_t *item, *head = NULL, *tail = NULL;
     for (item = gc->item_head; item != NULL; item = item->next) {
@@ -230,10 +221,9 @@ void mln_gc_collect(mln_gc_t *gc, void *root_data)
         gc->item_freer(item->data);
         mln_gc_item_free(item);
     }
-}
+})
 
-void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *proc_gc)
-{
+MLN_FUNC_VOID(, void, mln_gc_remove, (mln_gc_t *gc, void *data, mln_gc_t *proc_gc), (gc, data, proc_gc), {
     mln_gc_item_t *item = (mln_gc_item_t *)(gc->item_getter(data));
     ASSERT(item != NULL); /* 'data' has NOT been added. */
     if (proc_gc == NULL) proc_gc = gc;
@@ -249,5 +239,5 @@ void mln_gc_remove(mln_gc_t *gc, void *data, mln_gc_t *proc_gc)
     }
     mln_gc_item_chain_del(&(gc->item_head), &(gc->item_tail), item);
     mln_gc_item_free(item);
-}
+})
 
