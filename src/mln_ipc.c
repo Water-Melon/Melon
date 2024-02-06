@@ -4,6 +4,7 @@
  */
 #if !defined(WIN32)
 #include "mln_ipc.h"
+#include "mln_func.h"
 
 /*
  * IPC only act on A child process and the parent process.
@@ -18,11 +19,10 @@
 static mln_ipc_set_t *ipcs = NULL;
 
 
-int mln_ipc_handler_register(mln_u32_t type, \
-                             ipc_handler master_handler, \
-                             ipc_handler worker_handler, \
-                             void *master_data, \
-                             void *worker_data)
+MLN_FUNC(, int, mln_ipc_handler_register, \
+         (mln_u32_t type, ipc_handler master_handler, ipc_handler worker_handler, \
+          void *master_data, void *worker_data), \
+         (type, master_handler, worker_handler, master_data, worker_data), \
 {
     mln_ipc_set_t *is;
     if ((is = (mln_ipc_set_t *)malloc(sizeof(mln_ipc_set_t))) == NULL)
@@ -43,11 +43,10 @@ int mln_ipc_handler_register(mln_u32_t type, \
     }
 
     return 0;
-}
+})
 
 
-int mln_set_ipc_handlers(void)
-{
+MLN_FUNC(, int, mln_set_ipc_handlers, (void), (), {
     mln_ipc_set_t *is;
     for (is = ipcs; is != NULL; is = is->next) {
         if (mln_fork_master_ipc_handler_set(is->type, is->master_handler, is->master_data) < 0)
@@ -56,6 +55,6 @@ int mln_set_ipc_handlers(void)
             return -1;
     }
     return 0;
-}
+})
 
 #endif
