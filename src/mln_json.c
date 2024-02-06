@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "mln_json.h"
+#include "mln_func.h"
 
 static int mln_json_dump_obj_iterate_handler(mln_rbtree_node_t *node, void *data);
 static inline int
@@ -47,35 +48,37 @@ static inline int __mln_json_array_append(mln_json_t *j, mln_json_t *value);
 static inline int mln_json_object_iterator(mln_rbtree_node_t *node, void *data);
 
 
-static inline int mln_json_kv_cmp(const mln_json_kv_t *kv1, const mln_json_kv_t *kv2)
+MLN_FUNC(static inline, int, mln_json_kv_cmp, \
+         (const mln_json_kv_t *kv1, const mln_json_kv_t *kv2), \
+         (kv1, kv2), \
 {
     ASSERT(mln_json_is_string(&(kv1->key)) && mln_json_is_string(&(kv2->key)));
     return mln_string_strcmp(mln_json_string_data_get(&(kv1->key)), mln_json_string_data_get(&(kv2->key)));
-}
+})
 
-static inline void mln_json_kv_free(mln_json_kv_t *kv)
-{
+MLN_FUNC_VOID(static inline, void, mln_json_kv_free, (mln_json_kv_t *kv), (kv), {
     if (kv == NULL) return;
 
     mln_json_destroy(&(kv->key));
     mln_json_destroy(&(kv->val));
     free(kv);
-}
+})
 
 
-int mln_json_obj_init(mln_json_t *j)
-{
+MLN_FUNC(, int, mln_json_obj_init, (mln_json_t *j), (j), {
     j->type = M_JSON_OBJECT;
     if ((j->data.m_j_obj = mln_rbtree_new(NULL)) == NULL) return -1;
     return 0;
-}
+})
 
-int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val)
+MLN_FUNC(, int, mln_json_obj_update, \
+         (mln_json_t *j, mln_json_t *key, mln_json_t *val), (j, key, val), \
 {
     return __mln_json_obj_update(j, key, val);
-}
+})
 
-static inline int __mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val)
+MLN_FUNC(static inline, int, __mln_json_obj_update, \
+         (mln_json_t *j, mln_json_t *key, mln_json_t *val), (j, key, val), \
 {
     mln_rbtree_node_t *rn;
     mln_json_kv_t kv, *pkv;
@@ -101,10 +104,9 @@ static inline int __mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json
     }
 
     return 0;
-}
+})
 
-mln_json_t *mln_json_obj_search(mln_json_t *j, mln_string_t *key)
-{
+MLN_FUNC(, mln_json_t *, mln_json_obj_search, (mln_json_t *j, mln_string_t *key), (j, key), {
     if (!mln_json_is_object(j)) return NULL;
 
     mln_rbtree_node_t *rn;
@@ -116,10 +118,9 @@ mln_json_t *mln_json_obj_search(mln_json_t *j, mln_string_t *key)
         return NULL;
     }
     return &(((mln_json_kv_t *)mln_rbtree_node_data_get(rn))->val);
-}
+})
 
-void mln_json_obj_remove(mln_json_t *j, mln_string_t *key)
-{
+MLN_FUNC_VOID(, void, mln_json_obj_remove, (mln_json_t *j, mln_string_t *key), (j, key), {
     if (!mln_json_is_object(j)) return;
 
     mln_json_kv_t kv;
@@ -132,11 +133,10 @@ void mln_json_obj_remove(mln_json_t *j, mln_string_t *key)
     }
     mln_rbtree_delete(mln_json_object_data_get(j), rn);
     mln_rbtree_inline_node_free(mln_json_object_data_get(j), rn, mln_json_kv_free);
-}
+})
 
 
-int mln_json_array_init(mln_json_t *j)
-{
+MLN_FUNC(, int, mln_json_array_init, (mln_json_t *j), (j), {
     struct mln_array_attr attr;
 
     attr.pool = NULL;
@@ -149,30 +149,26 @@ int mln_json_array_init(mln_json_t *j)
         return -1;
     mln_json_array_type_set(j);
     return 0;
-}
+})
 
-mln_json_t *mln_json_array_search(mln_json_t *j, mln_uauto_t index)
-{
+MLN_FUNC(, mln_json_t *, mln_json_array_search, (mln_json_t *j, mln_uauto_t index), (j, index), {
     if (!mln_json_is_array(j)) return NULL;
 
     if (index >= mln_array_nelts(mln_json_array_data_get(j))) return NULL;
 
     return &(((mln_json_t *)mln_array_elts(mln_json_array_data_get(j)))[index]);
-}
+})
 
-mln_uauto_t mln_json_array_length(mln_json_t *j)
-{
+MLN_FUNC(, mln_uauto_t, mln_json_array_length, (mln_json_t *j), (j), {
     if (!mln_json_is_array(j)) return 0;
     return mln_array_nelts(mln_json_array_data_get(j));
-}
+})
 
-int mln_json_array_append(mln_json_t *j, mln_json_t *value)
-{
+MLN_FUNC(, int, mln_json_array_append, (mln_json_t *j, mln_json_t *value), (j, value), {
     return __mln_json_array_append(j, value);
-}
+})
 
-static inline int __mln_json_array_append(mln_json_t *j, mln_json_t *value)
-{
+MLN_FUNC(static inline, int, __mln_json_array_append, (mln_json_t *j, mln_json_t *value), (j, value), {
     mln_json_t *elem;
 
     if (!mln_json_is_array(j)) return -1;
@@ -181,9 +177,10 @@ static inline int __mln_json_array_append(mln_json_t *j, mln_json_t *value)
         return -1;
     *elem = *value;
     return 0;
-}
+})
 
-int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index)
+MLN_FUNC(, int, mln_json_array_update, \
+         (mln_json_t *j, mln_json_t *value, mln_uauto_t index), (j, value, index), \
 {
     if (!mln_json_is_array(j)) return -1;
 
@@ -193,19 +190,17 @@ int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index)
     mln_json_destroy(&(((mln_json_t *)mln_array_elts(arr))[index]));
     ((mln_json_t *)mln_array_elts(arr))[index] = *value;
     return 0;
-}
+})
 
-void mln_json_array_remove(mln_json_t *j, mln_uauto_t index)
-{
+MLN_FUNC_VOID(, void, mln_json_array_remove, (mln_json_t *j, mln_uauto_t index), (j, index), {
     if (j == NULL || !mln_json_is_array(j)) return;
 
     ASSERT(index == mln_array_nelts(mln_json_array_data_get(j)) - 1);
 
     mln_array_pop(mln_json_array_data_get(j));
-}
+})
 
-void mln_json_destroy(mln_json_t *j)
-{
+MLN_FUNC_VOID(, void, mln_json_destroy, (mln_json_t *j), (j), {
     if (j == NULL) return;
 
     switch (j->type) {
@@ -228,13 +223,14 @@ void mln_json_destroy(mln_json_t *j)
         default:
             break;
     }
-}
+})
 
 
 /*
  * dump
  */
-void mln_json_dump(mln_json_t *j, int n_space, char *prefix)
+MLN_FUNC_VOID(, void, mln_json_dump, \
+              (mln_json_t *j, int n_space, char *prefix), (j, n_space, prefix), \
 {
     if (j == NULL) return;
 
@@ -280,9 +276,10 @@ void mln_json_dump(mln_json_t *j, int n_space, char *prefix)
             printf("type:none\n");
             break;
     }
-}
+})
 
-static int mln_json_dump_obj_iterate_handler(mln_rbtree_node_t *node, void *data)
+MLN_FUNC(static, int, mln_json_dump_obj_iterate_handler, \
+         (mln_rbtree_node_t *node, void *data), (node, data), \
 {
     int *space = (int *)data;
     mln_json_kv_t *kv = (mln_json_kv_t *)mln_rbtree_node_data_get(node);
@@ -291,14 +288,13 @@ static int mln_json_dump_obj_iterate_handler(mln_rbtree_node_t *node, void *data
     mln_json_dump(&(kv->val), *space, "Object value:");
 
     return 0;
-}
+})
 
 
 /*
  * decode
  */
-int mln_json_decode(mln_string_t *jstr, mln_json_t *out)
-{
+MLN_FUNC(, int, mln_json_decode, (mln_string_t *jstr, mln_json_t *out), (jstr, out), {
     if (jstr == NULL || out == NULL) {
         return -1;
     }
@@ -315,10 +311,11 @@ int mln_json_decode(mln_string_t *jstr, mln_json_t *out)
     }
 
     return 0;
-}
+})
 
-static inline int
-mln_json_parse_json(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
+MLN_FUNC(static inline, int, mln_json_parse_json, \
+         (mln_json_t *j, char *jstr, int len, mln_uauto_t index), \
+         (j, jstr, len, index), \
 {
     if (jstr == NULL) {
         return -1;
@@ -349,10 +346,11 @@ mln_json_parse_json(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
             break;
     }
     return mln_json_parse_null(j, jstr, len, index);
-}
+})
 
-static inline int
-mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
+MLN_FUNC(static inline, int, mln_json_parse_obj, \
+         (mln_json_t *val, char *jstr, int len, mln_uauto_t index), \
+         (val, jstr, len, index), \
 {
     int left;
     mln_json_t key, v;
@@ -446,10 +444,11 @@ again:
     }
 
     return -1;
-}
+})
 
-static inline int
-mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index)
+MLN_FUNC(static inline, int, mln_json_parse_array, \
+         (mln_json_t *val, char *jstr, int len, mln_uauto_t index), \
+         (val, jstr, len, index), \
 {
     int left;
     mln_json_t j;
@@ -503,10 +502,11 @@ again:
     }
 
     return -1;
-}
+})
 
-static inline int
-mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
+MLN_FUNC(static inline, int, mln_json_parse_string, \
+         (mln_json_t *j, char *jstr, int len, mln_uauto_t index), \
+         (j, jstr, len, index), \
 {
     mln_u8_t *p, flag = 0;
     int plen, count = 0;
@@ -545,9 +545,10 @@ mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     mln_json_string_init(j, str);
 
     return --plen; /* jump off " */
-}
+})
 
-static mln_u8ptr_t mln_json_parse_string_fetch(mln_u8ptr_t jstr, int *len)
+MLN_FUNC(static, mln_u8ptr_t, mln_json_parse_string_fetch, \
+         (mln_u8ptr_t jstr, int *len), (jstr, len), \
 {
     int l = *len, c, count = 0;
     unsigned int hex = 0;
@@ -570,9 +571,11 @@ static mln_u8ptr_t mln_json_parse_string_fetch(mln_u8ptr_t jstr, int *len)
     }
     *len = count;
     return buf;
-}
+})
 
-static void mln_json_encode_utf8(unsigned int u, mln_u8ptr_t *b, int *count)
+MLN_FUNC_VOID(static, void, mln_json_encode_utf8, \
+              (unsigned int u, mln_u8ptr_t *b, int *count), \
+              (u, b, count), \
 {
     mln_u8ptr_t buf = *b;
     if (u <= 0x7f) {
@@ -595,17 +598,17 @@ static void mln_json_encode_utf8(unsigned int u, mln_u8ptr_t *b, int *count)
         (*count) += 4;
     }
     *b = buf;
-}
+})
 
-static inline int mln_json_char2int(char c)
-{
+MLN_FUNC(static inline, int, mln_json_char2int, (char c), (c), {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     return c;
-}
+})
 
-static inline int mln_json_get_char(mln_u8ptr_t *s, int *len, unsigned int *hex)
+MLN_FUNC(static inline, int, mln_json_get_char, \
+         (mln_u8ptr_t *s, int *len, unsigned int *hex), (s, len, hex), \
 {
     if (*len <= 0) return 0;
 
@@ -671,10 +674,11 @@ static inline int mln_json_get_char(mln_u8ptr_t *s, int *len, unsigned int *hex)
     }
     (*len) -= 1;
     return *((*s)++);
-}
+})
 
-static int
-mln_json_parse_digit(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
+MLN_FUNC(static, int, mln_json_parse_digit, \
+         (mln_json_t *j, char *jstr, int len, mln_uauto_t index), \
+         (j, jstr, len, index), \
 {
     int sub_flag = 0, left;
     double val = 0;
@@ -695,11 +699,9 @@ mln_json_parse_digit(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     mln_json_number_init(j, sub_flag? -val: val);
 
     return left;
-}
+})
 
-static inline int
-mln_json_digit_process(double *val, char *s, int len)
-{
+MLN_FUNC(static inline, int, mln_json_digit_process, (double *val, char *s, int len), (val, s, len), {
     double f = 0;
     int i, j, dir = 1;
 
@@ -760,10 +762,11 @@ mln_json_digit_process(double *val, char *s, int len)
     }
 
     return len;
-}
+})
 
-static inline int
-mln_json_parse_true(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
+MLN_FUNC(static inline, int, mln_json_parse_true, \
+         (mln_json_t *j, char *jstr, int len, mln_uauto_t index), \
+         (j, jstr, len, index), \
 {
     if (len < 4) {
         return -1;
@@ -775,10 +778,11 @@ mln_json_parse_true(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     mln_json_true_init(j);
 
     return len - 4;
-}
+})
 
-static inline int
-mln_json_parse_false(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
+MLN_FUNC(static inline, int, mln_json_parse_false, \
+         (mln_json_t *j, char *jstr, int len, mln_uauto_t index), \
+         (j, jstr, len, index), \
 {
     if (len < 5) {
         return -1;
@@ -790,10 +794,11 @@ mln_json_parse_false(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     mln_json_false_init(j);
 
     return len - 5;
-}
+})
 
-static inline int
-mln_json_parse_null(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
+MLN_FUNC(static inline, int, mln_json_parse_null, \
+         (mln_json_t *j, char *jstr, int len, mln_uauto_t index), \
+         (j, jstr, len, index), \
 {
     if (len < 4) {
         return -1;
@@ -805,19 +810,19 @@ mln_json_parse_null(mln_json_t *j, char *jstr, int len, mln_uauto_t index)
     mln_json_null_init(j);
 
     return len - 4;
-}
+})
 
-static inline void mln_json_jumpoff_blank(char **jstr, int *len)
+MLN_FUNC_VOID(static inline, void, mln_json_jumpoff_blank, \
+              (char **jstr, int *len), (jstr, len), \
 {
     for (; \
          *len > 0 && (*jstr[0] == ' ' || *jstr[0] == '\t' || *jstr[0] == '\r' || *jstr[0] == '\n'); \
          ++(*jstr), --(*len))
         ;
-}
+})
 
 
-mln_string_t *mln_json_encode(mln_json_t *j)
-{
+MLN_FUNC(, mln_string_t *, mln_json_encode, (mln_json_t *j), (j), {
     mln_u32_t size = mln_json_get_length(j), n;
     mln_s8ptr_t buf;
     mln_string_t *s;
@@ -833,10 +838,9 @@ mln_string_t *mln_json_encode(mln_json_t *j)
     if (s == NULL) return NULL;
 
     return s;
-}
+})
 
-static inline mln_size_t mln_json_get_length(mln_json_t *j)
-{
+MLN_FUNC(static inline, mln_size_t, mln_json_get_length, (mln_json_t *j), (j), {
     if (j == NULL) return 0;
 
     char num_str[512] = {0};
@@ -887,25 +891,25 @@ static inline mln_size_t mln_json_get_length(mln_json_t *j)
     }
 
     return length;
-}
+})
 
-static int
-mln_json_get_length_obj_iterate_handler(mln_rbtree_node_t *node, void *data)
+MLN_FUNC(static, int, mln_json_get_length_obj_iterate_handler, \
+         (mln_rbtree_node_t *node, void *data), (node, data), \
 {
     mln_json_kv_t *kv = (mln_json_kv_t *)mln_rbtree_node_data_get(node);
     mln_size_t *length = (mln_size_t *)data;
 
     (*length) += (mln_json_get_length(&(kv->key)) + mln_json_get_length(&(kv->val)) + 2);
     return 0;
-}
+})
 
 struct mln_json_tmp_s {
     void *ptr1;
     void *ptr2;
 };
 
-static inline mln_size_t
-mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
+MLN_FUNC(static inline, mln_size_t, mln_json_write_content, \
+         (mln_json_t *j, mln_s8ptr_t buf), (j, buf), \
 {
     if (j == NULL) return 0;
 
@@ -1011,10 +1015,10 @@ mln_json_write_content(mln_json_t *j, mln_s8ptr_t buf)
     }
 
     return length;
-}
+})
 
-static int
-mln_json_write_content_obj_iterate_handler(mln_rbtree_node_t *node, void *data)
+MLN_FUNC(static, int, mln_json_write_content_obj_iterate_handler, \
+         (mln_rbtree_node_t *node, void *data), (node, data), \
 {
     mln_json_kv_t *kv = (mln_json_kv_t *)mln_rbtree_node_data_get(node);
     struct mln_json_tmp_s *tmp = (struct mln_json_tmp_s *)data;
@@ -1037,10 +1041,12 @@ mln_json_write_content_obj_iterate_handler(mln_rbtree_node_t *node, void *data)
     (*length) += 1;
 
     return 0;
-}
+})
 
 
-int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data)
+MLN_FUNC(, int, mln_json_parse, \
+         (mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data), \
+         (j, exp, iterator, data), \
 {
     mln_size_t idx = 0;
     mln_string_t *p, *arr = mln_string_slice(exp, ".");
@@ -1064,9 +1070,10 @@ err:
     if (iterator != NULL)
         return iterator(j, data);
     return 0;
-}
+})
 
-static inline int mln_json_parse_is_index(mln_string_t *s, mln_size_t *idx)
+MLN_FUNC(static inline, int, mln_json_parse_is_index, \
+         (mln_string_t *s, mln_size_t *idx), (s, idx), \
 {
     mln_u8ptr_t p = s->data, pend = s->data + s->len - 1;
     mln_size_t sum = 0;
@@ -1078,7 +1085,7 @@ static inline int mln_json_parse_is_index(mln_string_t *s, mln_size_t *idx)
     }
     *idx = sum;
     return 1;
-}
+})
 
 
 int mln_json_generate(mln_json_t *j, char *fmt, ...)
@@ -1100,7 +1107,8 @@ int mln_json_generate(mln_json_t *j, char *fmt, ...)
     return rc;
 }
 
-static inline int mln_json_obj_generate(mln_json_t *j, char **fmt, va_list *arg)
+MLN_FUNC(static inline, int, mln_json_obj_generate, \
+         (mln_json_t *j, char **fmt, va_list *arg), (j, fmt, arg), \
 {
     int rc = 0;
     mln_json_t k, v, *json;
@@ -1265,9 +1273,10 @@ error:
 out:
     *fmt = f;
     return rc;
-}
+})
 
-static inline int mln_json_array_generate(mln_json_t *j, char **fmt, va_list *arg)
+MLN_FUNC(static inline, int, mln_json_array_generate, \
+         (mln_json_t *j, char **fmt, va_list *arg), (j, fmt, arg), \
 {
     int rc = 0;
     mln_json_t v, *json;
@@ -1400,9 +1409,10 @@ error:
 out:
     *fmt = f;
     return rc;
-}
+})
 
-int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *data)
+MLN_FUNC(, int, mln_json_object_iterate, \
+         (mln_json_t *j, mln_json_object_iterator_t it, void *data), (j, it, data), \
 {
     if (!mln_json_is_object(j)) return -1;
 
@@ -1410,13 +1420,14 @@ int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *
     tmp.ptr1 = it;
     tmp.ptr2 = data;
     return mln_rbtree_iterate(mln_json_object_data_get(j), mln_json_object_iterator, &tmp);
-}
+})
 
-static inline int mln_json_object_iterator(mln_rbtree_node_t *node, void *data)
+MLN_FUNC(static inline, int, mln_json_object_iterator, \
+         (mln_rbtree_node_t *node, void *data), (node, data), \
 {
     struct mln_json_tmp_s *tmp = (struct mln_json_tmp_s *)data;
     mln_json_kv_t *kv = (mln_json_kv_t *)mln_rbtree_node_data_get(node);
     mln_json_object_iterator_t it = (mln_json_object_iterator_t)(tmp->ptr1);
     return it(&(kv->key), &(kv->val), tmp->ptr2);
-}
+})
 
