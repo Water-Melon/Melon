@@ -6,6 +6,7 @@
 #ifndef __MLN_RBTREE_H
 #define __MLN_RBTREE_H
 #include "mln_types.h"
+#include "mln_func.h"
 
 typedef struct mln_rbtree_node_s mln_rbtree_node_t;
 /*
@@ -70,8 +71,8 @@ MLN_CHAIN_FUNC_DEFINE(mln_rbtree, \
                       next);
 
 /*Left rotate*/
-static inline void
-mln_rbtree_left_rotate(mln_rbtree_t *t, mln_rbtree_node_t *n)
+MLN_FUNC_VOID(static inline, void, mln_rbtree_left_rotate, \
+              (mln_rbtree_t *t, mln_rbtree_node_t *n), (t, n), \
 {
     if (n->right == &(t->nil)) return;
     mln_rbtree_node_t *tmp = n->right;
@@ -83,11 +84,11 @@ mln_rbtree_left_rotate(mln_rbtree_t *t, mln_rbtree_node_t *n)
     else n->parent->right = tmp;
     tmp->left = n;
     n->parent = tmp;
-}
+})
 
 /*Right rotate*/
-static inline void
-mln_rbtree_right_rotate(mln_rbtree_t *t, mln_rbtree_node_t *n)
+MLN_FUNC_VOID(static inline, void, mln_rbtree_right_rotate, \
+              (mln_rbtree_t *t, mln_rbtree_node_t *n), (t, n), \
 {
     if (n->left == &(t->nil)) return;
     mln_rbtree_node_t *tmp = n->left;
@@ -99,11 +100,11 @@ mln_rbtree_right_rotate(mln_rbtree_t *t, mln_rbtree_node_t *n)
     else n->parent->left = tmp;
     tmp->right = n;
     n->parent = tmp;
-}
+})
 
 /*insert fixup*/
-static inline void
-rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
+MLN_FUNC_VOID(static inline, void, rbtree_insert_fixup, \
+              (mln_rbtree_t *t, mln_rbtree_node_t *n), (t, n), \
 {
     mln_rbtree_node_t *tmp;
     while (n->parent->color == M_RB_RED) {
@@ -140,7 +141,7 @@ rbtree_insert_fixup(mln_rbtree_t *t, mln_rbtree_node_t *n)
         }
     }
     t->root->color = M_RB_BLACK;
-}
+})
 
 /*Insert*/
 #define mln_rbtree_inline_insert(t, n, compare) ({\
