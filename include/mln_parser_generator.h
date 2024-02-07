@@ -15,6 +15,7 @@
 #include "mln_queue.h"
 #include "mln_stack.h"
 #include "mln_alloc.h"
+#include "mln_func.h"
 
 #define M_PG_DFL_HASHLEN 31
 #define M_PG_ERROR 0
@@ -258,7 +259,8 @@ SCOPE int PREFIX_NAME##_err_recover(struct mln_sys_parse_attr *spattr, mln_uauto
 #define MLN_DEFINE_PARSER_GENERATOR(SCOPE,PREFIX_NAME,TK_PREFIX,...); \
 MLN_DEFINE_TOKEN(PREFIX_NAME,TK_PREFIX,## __VA_ARGS__);\
 \
-SCOPE int PREFIX_NAME##_reduce_iterate_handler(mln_rbtree_node_t *node, void *udata)\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_reduce_iterate_handler, \
+         (mln_rbtree_node_t *node, void *udata), (node, udata), \
 {\
     mln_pg_token_t *tk = (mln_pg_token_t *)mln_rbtree_node_data_get(node);\
     struct PREFIX_NAME##_reduce_info *info = (struct PREFIX_NAME##_reduce_info *)udata;\
@@ -282,10 +284,11 @@ SCOPE int PREFIX_NAME##_reduce_iterate_handler(mln_rbtree_node_t *node, void *ud
     sh[index].nr_args = info->item->rule->nr_right;\
     sh[index].left_type = info->item->rule->left->type;\
     return 0;\
-}\
+})\
 \
-SCOPE mln_pg_shift_tbl_t *PREFIX_NAME##_build_shift_tbl(struct mln_pg_calc_info_s *pci, \
-                                                        struct PREFIX_NAME##_preprocess_attr *attr)\
+MLN_FUNC(SCOPE, mln_pg_shift_tbl_t *, PREFIX_NAME##_build_shift_tbl, \
+         (struct mln_pg_calc_info_s *pci, struct PREFIX_NAME##_preprocess_attr *attr), \
+         (pci, attr), \
 {\
     mln_pg_shift_tbl_t *stbl = (mln_pg_shift_tbl_t *)malloc(sizeof(mln_pg_shift_tbl_t));\
     if (stbl == NULL) {\
@@ -356,10 +359,9 @@ SCOPE mln_pg_shift_tbl_t *PREFIX_NAME##_build_shift_tbl(struct mln_pg_calc_info_
     }\
 \
     return stbl;\
-}\
+})\
 \
-SCOPE void PREFIX_NAME##_pg_data_free(void *pg_data)\
-{\
+MLN_FUNC_VOID(SCOPE, void, PREFIX_NAME##_pg_data_free, (void *pg_data), (pg_data), {\
     mln_pg_shift_tbl_t *tbl = (mln_pg_shift_tbl_t *)pg_data;\
     if (tbl == NULL) return ;\
     if (tbl->tbl != NULL) {\
@@ -371,10 +373,11 @@ SCOPE void PREFIX_NAME##_pg_data_free(void *pg_data)\
         free(tbl->tbl);\
     }\
     free(tbl);\
-}\
+})\
 \
-SCOPE mln_pg_token_t * \
-PREFIX_NAME##_pg_create_token(struct PREFIX_NAME##_preprocess_attr *attr, PREFIX_NAME##_struct_t *pgs, int index)\
+MLN_FUNC(SCOPE, mln_pg_token_t *, PREFIX_NAME##_pg_create_token, \
+         (struct PREFIX_NAME##_preprocess_attr *attr, PREFIX_NAME##_struct_t *pgs, int index), \
+         (attr, pgs, index), \
 {\
     int *type_val;\
     if ((type_val = (int *)mln_hash_search(attr->map_tbl, pgs->text->data)) == NULL) {\
@@ -431,10 +434,11 @@ PREFIX_NAME##_pg_create_token(struct PREFIX_NAME##_preprocess_attr *attr, PREFIX
         }\
     }\
     return tk;\
-}\
+})\
 \
-SCOPE int \
-PREFIX_NAME##_pg_process_right(struct PREFIX_NAME##_preprocess_attr *attr, mln_lex_t *lex, int index, int cnt)\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_pg_process_right, \
+         (struct PREFIX_NAME##_preprocess_attr *attr, mln_lex_t *lex, int index, int cnt), \
+         (attr, lex, index, cnt), \
 {\
     PREFIX_NAME##_struct_t *pgs;\
     if ((pgs = PREFIX_NAME##_token(lex)) == NULL) {\
@@ -465,10 +469,11 @@ PREFIX_NAME##_pg_process_right(struct PREFIX_NAME##_preprocess_attr *attr, mln_l
     }\
     r->rights[cnt] = tk;\
     return 0;\
-}\
+})\
 \
-SCOPE inline int \
-PREFIX_NAME##_pg_process_token(struct PREFIX_NAME##_preprocess_attr *attr, mln_lex_t *lex, mln_production_t *prod)\
+MLN_FUNC(SCOPE inline, int, PREFIX_NAME##_pg_process_token, \
+         (struct PREFIX_NAME##_preprocess_attr *attr, mln_lex_t *lex, mln_production_t *prod), \
+         (attr, lex, prod), \
 {\
     int index = prod - attr->prod_tbl;\
     PREFIX_NAME##_struct_t *pgs;\
@@ -505,10 +510,9 @@ PREFIX_NAME##_pg_process_token(struct PREFIX_NAME##_preprocess_attr *attr, mln_l
         return -1;\
     }\
     return 0;\
-}\
+})\
 \
-SCOPE int PREFIX_NAME##_preprocess(struct PREFIX_NAME##_preprocess_attr *attr)\
-{\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_preprocess, (struct PREFIX_NAME##_preprocess_attr *attr), (attr), {\
     /*Init hash table*/\
     struct mln_hash_attr hattr;\
     hattr.pool = NULL;\
@@ -614,9 +618,10 @@ err2:\
 err1:\
     mln_hash_free(attr->map_tbl, M_HASH_F_KV);\
     return -1;\
-}\
+})\
 \
-SCOPE void PREFIX_NAME##_preprocess_attr_free(struct PREFIX_NAME##_preprocess_attr *attr)\
+MLN_FUNC_VOID(SCOPE, void, PREFIX_NAME##_preprocess_attr_free, \
+              (struct PREFIX_NAME##_preprocess_attr *attr), (attr), \
 {\
     if (attr->map_tbl != NULL) \
         mln_hash_free(attr->map_tbl, M_HASH_F_KV);\
@@ -630,9 +635,11 @@ SCOPE void PREFIX_NAME##_preprocess_attr_free(struct PREFIX_NAME##_preprocess_at
         }\
         free(attr->rule_tbl);\
     }\
-}\
+})\
 \
-SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t nr_prod, mln_string_t *env)\
+MLN_FUNC(SCOPE, void *, PREFIX_NAME##_parser_generate, \
+         (mln_production_t *prod_tbl, mln_u32_t nr_prod, mln_string_t *env), \
+         (prod_tbl, nr_prod, env), \
 {\
     struct PREFIX_NAME##_preprocess_attr pattr;\
     pattr.map_tbl = NULL;\
@@ -693,14 +700,12 @@ SCOPE void *PREFIX_NAME##_parser_generate(mln_production_t *prod_tbl, mln_u32_t 
     mln_pg_calc_info_destroy(&pci);\
     PREFIX_NAME##_preprocess_attr_free(&pattr);\
     return (void *)shift_tbl;\
-}\
+})\
 \
-SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, \
-                                              enum factor_data_type data_type, \
-                                              int token_type, \
-                                              mln_sauto_t cur_state, \
-                                              mln_u32_t line, \
-                                              mln_string_t *file)\
+MLN_FUNC(SCOPE, mln_factor_t *, PREFIX_NAME##_factor_init, \
+         (void *data, enum factor_data_type data_type, int token_type, \
+          mln_sauto_t cur_state, mln_u32_t line, mln_string_t *file), \
+         (data, data_type, token_type, cur_state, line, file), \
 {\
     mln_factor_t *f = (mln_factor_t *)malloc(sizeof(mln_factor_t));\
     if (f == NULL) return NULL;\
@@ -716,10 +721,9 @@ SCOPE mln_factor_t *PREFIX_NAME##_factor_init(void *data, \
         f->file = mln_string_ref(file);\
     }\
     return f;\
-}\
+})\
 \
-SCOPE void PREFIX_NAME##_factor_destroy(void *ptr)\
-{\
+MLN_FUNC_VOID(SCOPE, void, PREFIX_NAME##_factor_destroy, (void *ptr), (ptr), {\
     if (ptr == NULL) return;\
     mln_factor_t *f = (mln_factor_t *)ptr;\
     if (f->data_type == M_P_TERM) {\
@@ -731,10 +735,9 @@ SCOPE void PREFIX_NAME##_factor_destroy(void *ptr)\
     }\
     if (f->file != NULL) mln_string_free(f->file);\
     free(f);\
-}\
+})\
 \
-SCOPE void *PREFIX_NAME##_factor_copy(void *ptr, void *data)\
-{\
+MLN_FUNC(SCOPE, void *, PREFIX_NAME##_factor_copy, (void *ptr, void *data), (ptr, data), {\
     if (ptr == NULL || data == NULL) return NULL;\
     mln_alloc_t *pool = (mln_alloc_t *)data;\
     mln_factor_t *src = (mln_factor_t *)ptr;\
@@ -761,10 +764,9 @@ SCOPE void *PREFIX_NAME##_factor_copy(void *ptr, void *data)\
         dest->file = mln_string_ref(src->file);\
     }\
     return (void *)dest;\
-}\
+})\
 \
-SCOPE mln_parser_t *PREFIX_NAME##_parser_init(void)\
-{\
+MLN_FUNC(SCOPE, mln_parser_t *, PREFIX_NAME##_parser_init, (void), (), {\
     mln_parser_t *p = (mln_parser_t *)malloc(sizeof(mln_parser_t));\
     if (p == NULL) return NULL;\
     struct mln_stack_attr sattr;\
@@ -806,10 +808,9 @@ err2:\
 err1:\
     free(p);\
     return NULL;\
-}\
+})\
 \
-SCOPE void PREFIX_NAME##_parser_destroy(mln_parser_t *p)\
-{\
+MLN_FUNC_VOID(SCOPE, void, PREFIX_NAME##_parser_destroy, (mln_parser_t *p), (p), {\
     if (p == NULL) return;\
     if (p->cur_stack != NULL) \
         mln_stack_destroy(p->cur_stack);\
@@ -828,12 +829,11 @@ SCOPE void PREFIX_NAME##_parser_destroy(mln_parser_t *p)\
     if (p->err_queue != NULL) \
         mln_queue_destroy(p->err_queue);\
     free(p);\
-}\
+})\
 \
 /*====================parse=======================*/\
 \
-SCOPE void *PREFIX_NAME##_parse(struct mln_parse_attr *pattr)\
-{\
+MLN_FUNC(SCOPE, void *, PREFIX_NAME##_parse, (struct mln_parse_attr *pattr), (pattr), {\
     mln_pg_shift_tbl_t *tbl = (mln_pg_shift_tbl_t *)(pattr->pg_data);\
     mln_parser_t *p = PREFIX_NAME##_parser_init();\
     if (p == NULL) {\
@@ -860,10 +860,9 @@ SCOPE void *PREFIX_NAME##_parse(struct mln_parse_attr *pattr)\
     }\
     PREFIX_NAME##_parser_destroy(p);\
     return ret;\
-}\
+})\
 \
-SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
-{\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_sys_parse, (struct mln_sys_parse_attr *spattr), (spattr), {\
     mln_stack_t **stack;\
     mln_factor_t **la;\
     mln_sauto_t *state, *is_reduce;\
@@ -994,9 +993,10 @@ SCOPE int PREFIX_NAME##_sys_parse(struct mln_sys_parse_attr *spattr)\
         }\
     }\
     return failed == 0? 0: -1;\
-}\
+})\
 \
-SCOPE int PREFIX_NAME##_err_process(struct mln_sys_parse_attr *spattr, int opr)\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_err_process, \
+         (struct mln_sys_parse_attr *spattr, int opr), (spattr, opr), \
 {\
     int ctype, max = spattr->tbl->type_val+1;\
     mln_factor_t *f;\
@@ -1028,9 +1028,11 @@ SCOPE int PREFIX_NAME##_err_process(struct mln_sys_parse_attr *spattr, int opr)\
         }\
     }\
     return -1;\
-}\
+})\
 \
-SCOPE int PREFIX_NAME##_err_recover(struct mln_sys_parse_attr *spattr, mln_uauto_t pos, int ctype, int opr)\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_err_recover, \
+         (struct mln_sys_parse_attr *spattr, mln_uauto_t pos, int ctype, int opr), \
+         (spattr, pos, ctype, opr), \
 {\
     mln_parser_t *p = spattr->p;\
     mln_stack_destroy(p->cur_stack);\
@@ -1068,9 +1070,11 @@ SCOPE int PREFIX_NAME##_err_recover(struct mln_sys_parse_attr *spattr, mln_uauto
         mln_queue_free_index(p->cur_queue, pos);\
     }\
     return 0;\
-}\
+})\
 \
-SCOPE int PREFIX_NAME##_err_dup(struct mln_sys_parse_attr *spattr, mln_uauto_t pos, int ctype, int opr)\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_err_dup, \
+         (struct mln_sys_parse_attr *spattr, mln_uauto_t pos, int ctype, int opr), \
+         (spattr, pos, ctype, opr), \
 {\
     mln_parser_t *p = spattr->p;\
 \
@@ -1130,9 +1134,10 @@ SCOPE int PREFIX_NAME##_err_dup(struct mln_sys_parse_attr *spattr, mln_uauto_t p
         return -1;\
     }\
     return 0;\
-}\
+})\
 \
-SCOPE int PREFIX_NAME##_err_dup_iterate_handler(void *q_node, void *udata)\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_err_dup_iterate_handler, \
+         (void *q_node, void *udata), (q_node, udata), \
 {\
     struct mln_err_queue_s *eq = (struct mln_err_queue_s *)udata;\
     if (eq->opr == M_P_ERR_DEL && eq->index == eq->pos) {\
@@ -1154,14 +1159,12 @@ SCOPE int PREFIX_NAME##_err_dup_iterate_handler(void *q_node, void *udata)\
     }\
     ++(eq->index);\
     return 0;\
-}\
+})\
 \
-SCOPE int PREFIX_NAME##_reduce_launcher(mln_stack_t *st, \
-                                        mln_sauto_t *state, \
-                                        mln_production_t *prod_tbl, \
-                                        mln_shift_t *sh, \
-                                        void *udata, \
-                                        int type)\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_reduce_launcher, \
+         (mln_stack_t *st, mln_sauto_t *state, mln_production_t *prod_tbl, \
+          mln_shift_t *sh, void *udata, int type), \
+         (st, state, prod_tbl, sh, udata, type), \
 {\
     mln_factor_t **rights;\
     rights = (mln_factor_t **)calloc(sh->nr_args, sizeof(mln_factor_t *));\
@@ -1213,14 +1216,12 @@ SCOPE int PREFIX_NAME##_reduce_launcher(mln_stack_t *st, \
         return -1;\
     }\
     return 0;\
-}\
+})\
 \
-SCOPE int PREFIX_NAME##_shift(struct mln_sys_parse_attr *spattr, \
-                              mln_stack_t **stack, \
-                              mln_factor_t **la, \
-                              mln_sauto_t *state, \
-                              mln_sauto_t *is_reduce, \
-                              mln_shift_t *sh)\
+MLN_FUNC(SCOPE, int, PREFIX_NAME##_shift, \
+         (struct mln_sys_parse_attr *spattr, mln_stack_t **stack, mln_factor_t **la, \
+          mln_sauto_t *state, mln_sauto_t *is_reduce, mln_shift_t *sh), \
+         (spattr, stack, la, state, is_reduce, sh), \
 {\
     if (*is_reduce == 0) {\
         (*la)->cur_state = *state;\
@@ -1277,7 +1278,7 @@ SCOPE int PREFIX_NAME##_shift(struct mln_sys_parse_attr *spattr, \
         return 1;\
     *is_reduce = 0;\
     return 0;\
-}
+})
 
 #endif
 
