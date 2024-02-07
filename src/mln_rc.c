@@ -6,8 +6,11 @@
 #include <string.h>
 #include <stdio.h>
 #include "mln_rc.h"
+#include "mln_func.h"
 
-void mln_rc4_init(mln_u8ptr_t s, mln_u8ptr_t key, mln_uauto_t len)
+MLN_FUNC_VOID(, void, mln_rc4_init, \
+              (mln_u8ptr_t s, mln_u8ptr_t key, mln_uauto_t len), \
+              (s, key, len), \
 {
     mln_u32_t i = 0, j = 0;
     mln_u8_t tmp;
@@ -23,9 +26,11 @@ void mln_rc4_init(mln_u8ptr_t s, mln_u8ptr_t key, mln_uauto_t len)
         s[i] = s[j];
         s[j] = tmp;
     }
-}
+})
 
-void mln_rc4_calc(mln_u8ptr_t s, mln_u8ptr_t data, mln_uauto_t len)
+MLN_FUNC_VOID(, void, mln_rc4_calc, \
+              (mln_u8ptr_t s, mln_u8ptr_t data, mln_uauto_t len), \
+              (s, data, len), \
 {
     mln_u32_t i = 0, j = 0, t;
     mln_u8_t tmp, stmp[256];
@@ -42,5 +47,5 @@ void mln_rc4_calc(mln_u8ptr_t s, mln_u8ptr_t data, mln_uauto_t len)
         t = (stmp[i] + stmp[j]) % 256;
         data[k] ^= stmp[t];
     }
-}
+})
 
