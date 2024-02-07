@@ -7,8 +7,11 @@
 #include <errno.h>
 #include <math.h>
 #include "mln_matrix.h"
+#include "mln_func.h"
 
-mln_matrix_t *mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u32_t is_ref)
+MLN_FUNC(, mln_matrix_t *, mln_matrix_new, \
+         (mln_size_t row, mln_size_t col, double *data, mln_u32_t is_ref), \
+         (row, col, data, is_ref), \
 {
     mln_matrix_t *matrix;
     if ((matrix = (mln_matrix_t *)malloc(sizeof(mln_matrix_t))) == NULL) {
@@ -19,18 +22,16 @@ mln_matrix_t *mln_matrix_new(mln_size_t row, mln_size_t col, double *data, mln_u
     matrix->data = data;
     matrix->is_ref = is_ref;
     return matrix;
-}
+})
 
-void mln_matrix_free(mln_matrix_t *matrix)
-{
+MLN_FUNC_VOID(, void, mln_matrix_free, (mln_matrix_t *matrix), (matrix), {
     if (matrix == NULL) return;
     if (matrix->data != NULL && !matrix->is_ref)
         free(matrix->data);
     free(matrix);
-}
+})
 
-mln_matrix_t *mln_matrix_mul(mln_matrix_t *m1, mln_matrix_t *m2)
-{
+MLN_FUNC(, mln_matrix_t *, mln_matrix_mul, (mln_matrix_t *m1, mln_matrix_t *m2), (m1, m2), {
     if (m1->col != m2->row) {
         errno = EINVAL;
         return NULL;
@@ -61,10 +62,9 @@ mln_matrix_t *mln_matrix_mul(mln_matrix_t *m1, mln_matrix_t *m2)
     }
 
     return ret;
-}
+})
 
-mln_matrix_t *mln_matrix_inverse(mln_matrix_t *matrix)
-{
+MLN_FUNC(, mln_matrix_t *, mln_matrix_inverse, (mln_matrix_t *matrix), (matrix), {
     if (matrix == NULL || matrix->row != matrix->col) {
         errno = EINVAL;
         return NULL;
@@ -134,10 +134,9 @@ mln_matrix_t *mln_matrix_inverse(mln_matrix_t *matrix)
     }
 
     return ret;
-}
+})
 
-void mln_matrix_dump(mln_matrix_t *matrix)
-{
+MLN_FUNC_VOID(, void, mln_matrix_dump, (mln_matrix_t *matrix), (matrix), {
     if (matrix == NULL) return;
     mln_size_t i, sum = matrix->row * matrix->col;
 #if defined(WIN32) && !defined(__pentiumpro__)
@@ -154,5 +153,5 @@ void mln_matrix_dump(mln_matrix_t *matrix)
         printf("%f ", matrix->data[i]);
     }
     printf("\n");
-}
+})
 
