@@ -3,9 +3,9 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_queue.h"
+#include "mln_func.h"
 
-mln_queue_t *mln_queue_init(struct mln_queue_attr *attr)
-{
+MLN_FUNC(, mln_queue_t *, mln_queue_init, (struct mln_queue_attr *attr), (attr), {
     mln_queue_t *q = (mln_queue_t *)malloc(sizeof(mln_queue_t));
     if (q == NULL) return NULL;
     q->qlen = attr->qlen;
@@ -18,10 +18,9 @@ mln_queue_t *mln_queue_init(struct mln_queue_attr *attr)
     }
     q->head = q->tail = q->queue;
     return q;
-}
+})
 
-void mln_queue_destroy(mln_queue_t *q)
-{
+MLN_FUNC_VOID(, void, mln_queue_destroy, (mln_queue_t *q), (q), {
     if (q == NULL) return;
     if (q->free_handler != NULL) {
         while (q->nr_element) {
@@ -34,42 +33,40 @@ void mln_queue_destroy(mln_queue_t *q)
     if (q->queue != NULL)
         free(q->queue);
     free(q);
-}
+})
 
-int mln_queue_append(mln_queue_t *q, void *data)
-{
+MLN_FUNC(, int, mln_queue_append, (mln_queue_t *q, void *data), (q, data), {
     if (q->nr_element >= q->qlen) return -1;
     *(q->tail)++ = data;
     if (q->tail == q->queue + q->qlen)
         q->tail = q->queue;
     ++(q->nr_element);
     return 0;
-}
+})
 
-void *mln_queue_get(mln_queue_t *q)
-{
+MLN_FUNC(, void *, mln_queue_get, (mln_queue_t *q), (q), {
     if (!q->nr_element) return NULL;
     return *(q->head);
-}
+})
 
-void mln_queue_remove(mln_queue_t *q)
-{
+MLN_FUNC_VOID(, void, mln_queue_remove, (mln_queue_t *q), (q), {
     if (!q->nr_element) return;
     if (++(q->head) >= q->queue + q->qlen)
         q->head = q->queue;
     --(q->nr_element);
-}
+})
 
-void *mln_queue_search(mln_queue_t *q, mln_uauto_t index)
-{
+MLN_FUNC(, void *, mln_queue_search, (mln_queue_t *q, mln_uauto_t index), (q, index), {
     if (index >= q->nr_element) return NULL;
     void **ptr = q->head + index;
     if (ptr >= q->queue+q->qlen)
         ptr = q->queue + (ptr - (q->queue + q->qlen));
     return *ptr;
-}
+})
 
-int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void *udata)
+MLN_FUNC(, int, mln_queue_iterate, \
+         (mln_queue_t *q, queue_iterate_handler handler, void *udata), \
+         (q, handler, udata), \
 {
     void **scan = q->head;
     mln_uauto_t i = 0;
@@ -82,10 +79,9 @@ int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void *udata
             scan = q->queue;
     }
     return 0;
-}
+})
 
-void mln_queue_free_index(mln_queue_t *q, mln_uauto_t index)
-{
+MLN_FUNC_VOID(, void, mln_queue_free_index, (mln_queue_t *q, mln_uauto_t index), (q, index), {
     if (index >= q->nr_element) return;
     void **pos = q->head + index;
     if (pos >= q->queue+q->qlen)
@@ -104,5 +100,5 @@ void mln_queue_free_index(mln_queue_t *q, mln_uauto_t index)
     --(q->nr_element);
     if (q->free_handler != NULL)
         q->free_handler(save);
-}
+})
 
