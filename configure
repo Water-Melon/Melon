@@ -326,6 +326,7 @@ generate_path_module() {
     echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > src/mln_path.c
     echo "#include <stdio.h>" >> src/mln_path.c
     echo "#include \"mln_path.h\"" >> src/mln_path.c
+    echo "#include \"mln_func.h\"" >> src/mln_path.c
     echo -e "\nstatic char install_path[] = \"$realpath\";" >> src/mln_path.c
     echo -e "\nstatic char conf_path[] = \"$confpath\";" >> src/mln_path.c
     echo -e "\nstatic char tmpfile_path[] = \"$tmpfilepath\";" >> src/mln_path.c
@@ -342,7 +343,7 @@ generate_path_module() {
     echo -e "\nstatic mln_path_hook_t _tmpfile_path = NULL;" >> src/mln_path.c
     echo -e "\nstatic mln_path_hook_t _pid_path = NULL;" >> src/mln_path.c
     echo -e "\nstatic mln_path_hook_t _log_path = NULL;" >> src/mln_path.c
-    echo -e "\nvoid mln_path_hook_set(mln_path_type_t type, mln_path_hook_t hook)\n{" >> src/mln_path.c
+    echo -e "\nMLN_FUNC_VOID(, void, mln_path_hook_set, (mln_path_type_t type, mln_path_hook_t hook), (type, hook), {\n" >> src/mln_path.c
     echo -e "    switch (type) {\n" >> src/mln_path.c
     echo -e "        case m_p_install:\n            _install_path = hook;\n            break;" >> src/mln_path.c
     echo -e "        case m_p_conf:\n            _conf_path = hook;\n            break;" >> src/mln_path.c
@@ -354,31 +355,31 @@ generate_path_module() {
     echo -e "        case m_p_melang_dylib:\n            _melang_dylib_path = hook;\n            break;" >> src/mln_path.c
     echo -e "        default:\n            break;" >> src/mln_path.c
     echo -e "    }" >> src/mln_path.c
-    echo -e "}" >> src/mln_path.c
-    echo -e "\nchar *mln_path(void)\n{" >> src/mln_path.c
+    echo -e "})" >> src/mln_path.c
+    echo -e "\nMLN_FUNC(, char *, mln_path, (void), (), {\n" >> src/mln_path.c
     echo "    return _install_path == NULL? install_path: _install_path();" >> src/mln_path.c
-    echo "}" >> src/mln_path.c
-    echo -e "\nchar *mln_path_conf(void)\n{" >> src/mln_path.c
+    echo "})" >> src/mln_path.c
+    echo -e "\nMLN_FUNC(, char *, mln_path_conf, (void), (), {\n" >> src/mln_path.c
     echo "    return _conf_path == NULL? conf_path: _conf_path();" >> src/mln_path.c
-    echo "}" >> src/mln_path.c
-    echo -e "\nchar *mln_path_tmpfile(void)\n{" >> src/mln_path.c
+    echo "})" >> src/mln_path.c
+    echo -e "\nMLN_FUNC(, char *, mln_path_tmpfile, (void), (), {\n" >> src/mln_path.c
     echo "    return _tmpfile_path == NULL? tmpfile_path: _tmpfile_path();" >> src/mln_path.c
-    echo "}" >> src/mln_path.c
-    echo -e "\nchar *mln_path_pid(void)\n{" >> src/mln_path.c
+    echo "})" >> src/mln_path.c
+    echo -e "\nMLN_FUNC(, char *, mln_path_pid, (void), (), {\n" >> src/mln_path.c
     echo "    return _pid_path == NULL? pid_path: _pid_path();" >> src/mln_path.c
-    echo "}" >> src/mln_path.c
-    echo -e "\nchar *mln_path_log(void)\n{" >> src/mln_path.c
+    echo "})" >> src/mln_path.c
+    echo -e "\nMLN_FUNC(, char *, mln_path_log, (void), (), {\n" >> src/mln_path.c
     echo "    return _log_path == NULL? log_path: _log_path();" >> src/mln_path.c
-    echo "}" >> src/mln_path.c
-    echo -e "\nchar *mln_path_null(void)\n{" >> src/mln_path.c
+    echo "})" >> src/mln_path.c
+    echo -e "\nMLN_FUNC(, char *, mln_path_null, (void), (), {\n" >> src/mln_path.c
     echo "    return _null_path == NULL? null_path: _null_path();" >> src/mln_path.c
-    echo "}" >> src/mln_path.c
-    echo -e "\nchar *mln_path_melang_lib(void)\n{" >> src/mln_path.c
+    echo "})" >> src/mln_path.c
+    echo -e "\nMLN_FUNC(, char *, mln_path_melang_lib, (void), (), {\n" >> src/mln_path.c
     echo "    return _melang_lib_path == NULL? melang_lib_path: _melang_lib_path();" >> src/mln_path.c
-    echo "}" >> src/mln_path.c
-    echo -e "\nchar *mln_path_melang_dylib(void)\n{" >> src/mln_path.c
+    echo "})" >> src/mln_path.c
+    echo -e "\nMLN_FUNC(, char *, mln_path_melang_dylib, (void), (), {\n" >> src/mln_path.c
     echo "    return _melang_dylib_path == NULL? melang_dylib_path: _melang_dylib_path();" >> src/mln_path.c
-    echo "}" >> src/mln_path.c
+    echo "})" >> src/mln_path.c
 }
 
 # build makefile content
