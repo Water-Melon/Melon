@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mln_md5.h"
+#include "mln_func.h"
 
 static inline void mln_md5_calc_block(mln_md5_t *m);
 
@@ -34,45 +35,42 @@ static mln_u32_t ti[4][16] = {
      0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391}
 };
 
-void mln_md5_init(mln_md5_t *m)
-{
+MLN_FUNC_VOID(, void, mln_md5_init, (mln_md5_t *m), (m), {
     m->A = 0x67452301;
     m->B = 0xefcdab89;
     m->C = 0x98badcfe;
     m->D = 0x10325476;
     m->length = 0;
     m->pos = 0;
-}
+})
 
-mln_md5_t *mln_md5_new(void)
-{
+MLN_FUNC(, mln_md5_t *, mln_md5_new, (void), (), {
     mln_md5_t *m = (mln_md5_t *)malloc(sizeof(mln_md5_t));
     if (m == NULL) return m;
     mln_md5_init(m);
     return m;
-}
+})
 
-mln_md5_t *mln_md5_pool_new(mln_alloc_t *pool)
-{
+MLN_FUNC(, mln_md5_t *, mln_md5_pool_new, (mln_alloc_t *pool), (pool), {
     mln_md5_t *m = (mln_md5_t *)mln_alloc_m(pool, sizeof(mln_md5_t));
     if (m == NULL) return m;
     mln_md5_init(m);
     return m;
-}
+})
 
-void mln_md5_free(mln_md5_t *m)
-{
+MLN_FUNC_VOID(, void, mln_md5_free, (mln_md5_t *m), (m), {
     if (m == NULL) return;
     free(m);
-}
+})
 
-void mln_md5_pool_free(mln_md5_t *m)
-{
+MLN_FUNC_VOID(, void, mln_md5_pool_free, (mln_md5_t *m), (m), {
     if (m == NULL) return;
     mln_alloc_free(m);
-}
+})
 
-void mln_md5_calc(mln_md5_t *m, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last)
+MLN_FUNC_VOID(, void, mln_md5_calc, \
+              (mln_md5_t *m, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last), \
+              (m, input, len, is_last), \
 {
     mln_uauto_t size;
 
@@ -120,10 +118,9 @@ void mln_md5_calc(mln_md5_t *m, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is
         mln_md5_calc_block(m);
         m->pos = 0;
     }
-}
+})
 
-static inline void mln_md5_calc_block(mln_md5_t *m)
-{
+MLN_FUNC_VOID(static inline, void, mln_md5_calc_block, (mln_md5_t *m), (m), {
     mln_u32_t i = 0, j = 0, group[16];
     mln_u32_t a = m->A, b = m->B, c = m->C, d = m->D;
     while (i < __M_MD5_BUFLEN) {
@@ -210,9 +207,10 @@ static inline void mln_md5_calc_block(mln_md5_t *m)
     m->B &= 0xffffffff;
     m->C &= 0xffffffff;
     m->D &= 0xffffffff;
-}
+})
 
-void mln_md5_tobytes(mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len)
+MLN_FUNC_VOID(, void, mln_md5_tobytes, \
+              (mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len), (m, buf, len), \
 {
     if (len == 0 || buf == NULL) return;
     mln_u32_t i = 0;
@@ -251,24 +249,30 @@ void mln_md5_tobytes(mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len)
     buf[i++] = (m->D >> 16) & 0xff;
     if (i >= len) return;
     buf[i++] = (m->D >> 24) & 0xff;
-}
+})
 
-void mln_md5_tostring(mln_md5_t *m, mln_s8ptr_t buf, mln_u32_t len)
+MLN_FUNC(static inline, mln_s8_t, mln_md5_hex_tostring, (mln_u8_t c), (c), {
+    return c < 10? ('0' + c): ('a' + (c - 10));
+})
+
+MLN_FUNC_VOID(, void, mln_md5_tostring, \
+              (mln_md5_t *m, mln_s8ptr_t buf, mln_u32_t len), \
+              (m, buf, len), \
 {
     if (buf == NULL || len == 0) return;
-    mln_u32_t i, n = 0;
+    mln_u32_t i;
     mln_u8_t bytes[16] = {0};
 
     mln_md5_tobytes(m, bytes, sizeof(bytes));
-    for (i = 0; i < sizeof(bytes); ++i) {
-        if (n >= len) break;
-        n += snprintf(buf + n, len - n, "%02x", bytes[i]);
+    len = len > (sizeof(bytes) << 1)? sizeof(bytes): ((len - 1) >> 1);
+    for (i = 0; i < len; ++i) {
+        *buf++ = mln_md5_hex_tostring((bytes[i] >> 4) & 0xf);
+        *buf++ = mln_md5_hex_tostring(bytes[i] & 0xf);
     }
-    if (n < len) buf[n] = 0;
-}
+    *buf = 0;
+})
 
-void mln_md5_dump(mln_md5_t *m)
-{
+MLN_FUNC_VOID(, void, mln_md5_dump, (mln_md5_t *m), (m), {
     printf("%lx %lx %lx %lx\n", (unsigned long)m->A, (unsigned long)m->B, (unsigned long)m->C, (unsigned long)m->D);
-}
+})
 
