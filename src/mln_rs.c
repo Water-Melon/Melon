@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include "mln_func.h"
 
 /*GF operations*/
 static mln_u8_t mln_rs_gfilog[] = {
@@ -91,9 +92,7 @@ static mln_u8_t mln_rs_gflog[] = {
                              255-(mln_rs_gflog[(src)]-mln_rs_gflog[(dst)]): \
                              mln_rs_gflog[(dst)]-mln_rs_gflog[(src)]) ]))
 
-static inline mln_size_t
-mln_rs_power_calc(mln_size_t base, mln_size_t exp)
-{
+MLN_FUNC(static inline, mln_size_t, mln_rs_power_calc, (mln_size_t base, mln_size_t exp), (base, exp), {
     mln_s32_t i;
     mln_size_t save = base;
     for (i = (sizeof(base)<<3)-1; i >= 0; --i) {
@@ -108,11 +107,12 @@ mln_rs_power_calc(mln_size_t base, mln_size_t exp)
         }
     }
     return base;
-}
+})
 
 /*matrix*/
-static mln_rs_matrix_t *
-mln_rs_matrix_new(mln_size_t row, mln_size_t col, mln_u8ptr_t data, mln_u32_t is_ref)
+MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_new, \
+         (mln_size_t row, mln_size_t col, mln_u8ptr_t data, mln_u32_t is_ref), \
+         (row, col, data, is_ref), \
 {
     mln_rs_matrix_t *rm;
     if ((rm = (mln_rs_matrix_t *)malloc(sizeof(mln_rs_matrix_t))) == NULL) {
@@ -123,18 +123,17 @@ mln_rs_matrix_new(mln_size_t row, mln_size_t col, mln_u8ptr_t data, mln_u32_t is
     rm->data = data;
     rm->is_ref = is_ref;
     return rm;
-}
+})
 
-static void mln_rs_matrix_free(mln_rs_matrix_t *matrix)
-{
+MLN_FUNC_VOID(static, void, mln_rs_matrix_free, (mln_rs_matrix_t *matrix), (matrix), {
     if (matrix == NULL) return;
     if (matrix->data != NULL && !matrix->is_ref)
         free(matrix->data);
     free(matrix);
-}
+})
 
-static inline mln_rs_matrix_t *
-mln_rs_matrix_mul(mln_rs_matrix_t *m1, mln_rs_matrix_t *m2)
+MLN_FUNC(static inline, mln_rs_matrix_t *, mln_rs_matrix_mul, \
+         (mln_rs_matrix_t *m1, mln_rs_matrix_t *m2), (m1, m2), \
 {
     if (m1->col != m2->row) {
         errno = EINVAL;
@@ -170,9 +169,10 @@ mln_rs_matrix_mul(mln_rs_matrix_t *m1, mln_rs_matrix_t *m2)
     }
 
     return ret;
-}
+})
 
-static mln_rs_matrix_t *mln_rs_matrix_inverse(mln_rs_matrix_t *matrix)
+MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_inverse, \
+         (mln_rs_matrix_t *matrix), (matrix), \
 {
     if (matrix == NULL || matrix->row != matrix->col) {
         errno = EINVAL;
@@ -248,10 +248,10 @@ static mln_rs_matrix_t *mln_rs_matrix_inverse(mln_rs_matrix_t *matrix)
     }
 
     return ret;
-}
+})
 
-static mln_rs_matrix_t *
-mln_rs_matrix_co_matrix(mln_size_t row, mln_size_t addition_row)
+MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_co_matrix, \
+         (mln_size_t row, mln_size_t addition_row), (row, addition_row), \
 {
     mln_u8ptr_t data, p;
     mln_size_t i, j, k;
@@ -279,10 +279,11 @@ mln_rs_matrix_co_matrix(mln_size_t row, mln_size_t addition_row)
         return NULL;
     }
     return matrix;
-}
+})
 
-static mln_rs_matrix_t *
-mln_rs_matrix_co_inverse_matrix(uint8_t **data_vector, size_t len, size_t n, size_t k)
+MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_co_inverse_matrix, \
+         (uint8_t **data_vector, size_t len, size_t n, size_t k), \
+         (data_vector, len, n, k), \
 {
     mln_size_t i, j, row = 0;
     mln_rs_matrix_t *matrix, *inverse;
@@ -324,10 +325,11 @@ mln_rs_matrix_co_inverse_matrix(uint8_t **data_vector, size_t len, size_t n, siz
     }
     mln_rs_matrix_free(matrix);
     return inverse;
-}
+})
 
-static mln_rs_matrix_t *
-mln_rs_matrix_data_matrix(uint8_t **data_vector, size_t len, size_t n, size_t k)
+MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_data_matrix, \
+         (uint8_t **data_vector, size_t len, size_t n, size_t k), \
+         (data_vector, len, n, k), \
 {
     mln_size_t row = 0;
     mln_u8ptr_t data, p, *pend;
@@ -352,10 +354,9 @@ mln_rs_matrix_data_matrix(uint8_t **data_vector, size_t len, size_t n, size_t k)
         return NULL;
     }
     return matrix;
-}
+})
 
-void mln_rs_matrix_dump(mln_rs_matrix_t *matrix)
-{
+MLN_FUNC_VOID(, void, mln_rs_matrix_dump, (mln_rs_matrix_t *matrix), (matrix), {
     if (matrix == NULL) return;
     mln_size_t i, sum = matrix->row * matrix->col;
 #if defined(WIN32) && !defined(__pentiumpro__)
@@ -372,11 +373,11 @@ void mln_rs_matrix_dump(mln_rs_matrix_t *matrix)
         printf("%u ", matrix->data[i]);
     }
     printf("\n");
-}
+})
 
 /*mln_rs_result_t*/
-static mln_rs_result_t *
-mln_rs_result_new(mln_u8ptr_t data, mln_size_t num, mln_size_t len)
+MLN_FUNC(static, mln_rs_result_t *, mln_rs_result_new, \
+         (mln_u8ptr_t data, mln_size_t num, mln_size_t len), (data, num, len), \
 {
     mln_rs_result_t *rr;
     if ((rr = (mln_rs_result_t *)malloc(sizeof(mln_rs_result_t))) == NULL) {
@@ -387,21 +388,21 @@ mln_rs_result_new(mln_u8ptr_t data, mln_size_t num, mln_size_t len)
     rr->len = len;
     rr->num = num;
     return rr;
-}
+})
 
-void mln_rs_result_free(mln_rs_result_t *result)
-{
+MLN_FUNC_VOID(, void, mln_rs_result_free, (mln_rs_result_t *result), (result), {
     if (result == NULL) return;
     if (result->data != NULL)
         free(result->data);
     free(result);
-}
+})
 
 /*
  * Reed-Solomon operations
  */
-mln_rs_result_t *
-mln_rs_encode(uint8_t *data_vector, size_t len, size_t n, size_t k)
+MLN_FUNC(, mln_rs_result_t *, mln_rs_encode, \
+         (uint8_t *data_vector, size_t len, size_t n, size_t k), \
+         (data_vector, len, n, k), \
 {
     mln_rs_result_t *result;
     mln_rs_matrix_t *matrix, *co_matrix, *res_matrix;
@@ -436,10 +437,11 @@ mln_rs_encode(uint8_t *data_vector, size_t len, size_t n, size_t k)
     res_matrix->is_ref = 1;
     mln_rs_matrix_free(res_matrix);
     return result;
-}
+})
 
-mln_rs_result_t *
-mln_rs_decode(uint8_t **data_vector, size_t len, size_t n, size_t k)
+MLN_FUNC(, mln_rs_result_t *, mln_rs_decode, \
+         (uint8_t **data_vector, size_t len, size_t n, size_t k), \
+         (data_vector, len, n, k), \
 {
     mln_u8ptr_t data, p, *pp, *pend;
     mln_rs_result_t *result;
@@ -493,5 +495,5 @@ mln_rs_decode(uint8_t **data_vector, size_t len, size_t n, size_t k)
     result_matrix->data = NULL;
     mln_rs_matrix_free(result_matrix);
     return result;
-}
+})
 
