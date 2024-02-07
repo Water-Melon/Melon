@@ -7,14 +7,14 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "mln_types.h"
+#include "mln_func.h"
 
 static inline mln_u32_t rand_scope(mln_u32_t low, mln_u32_t high);
 static inline void seperate(mln_u32_t num, mln_u32_t *pwr, mln_u32_t *odd);
 static inline mln_u64_t modular_expoinentiation(mln_u32_t base, mln_u32_t pwr, mln_u32_t n);
 static inline mln_u32_t witness(mln_u32_t base, mln_u32_t prim);
 
-mln_u32_t mln_prime_generate(mln_u32_t n)
-{
+MLN_FUNC(, mln_u32_t, mln_prime_generate, (mln_u32_t n), (n), {
     if (n <= 2) return 2;
     if (n >= 1073741824) return 1073741827;
     mln_u32_t a, prim = n%2 ? n : n+1;
@@ -31,9 +31,10 @@ mln_u32_t mln_prime_generate(mln_u32_t n)
         prim += 2;
     }
     return prim;
-}
+})
 
-static inline mln_u32_t rand_scope(mln_u32_t low, mln_u32_t high)
+MLN_FUNC(static inline, mln_u32_t, rand_scope, \
+         (mln_u32_t low, mln_u32_t high), (low, high), \
 {
     struct timeval tv;
     mln_u32_t r = 0;
@@ -44,9 +45,11 @@ static inline mln_u32_t rand_scope(mln_u32_t low, mln_u32_t high)
         r = ((mln_u32_t)rand() + low) % high;
     }
     return r;
-}
+})
 
-static inline void seperate(mln_u32_t num, mln_u32_t *pwr, mln_u32_t *odd)
+MLN_FUNC_VOID(static inline, void, seperate, \
+              (mln_u32_t num, mln_u32_t *pwr, mln_u32_t *odd), \
+              (num, pwr, odd), \
 {
     *pwr = 0;
     while (!(num % 2)) {
@@ -54,9 +57,11 @@ static inline void seperate(mln_u32_t num, mln_u32_t *pwr, mln_u32_t *odd)
         ++(*pwr);
     }
     *odd = num;
-}
+})
 
-static inline mln_u64_t modular_expoinentiation(mln_u32_t base, mln_u32_t pwr, mln_u32_t n)
+MLN_FUNC(static inline, mln_u64_t, modular_expoinentiation, \
+         (mln_u32_t base, mln_u32_t pwr, mln_u32_t n), \
+         (base, pwr, n), \
 {
     int i;
     mln_u64_t d = 1;
@@ -69,9 +74,10 @@ static inline mln_u64_t modular_expoinentiation(mln_u32_t base, mln_u32_t pwr, m
         }
     }
     return d;
-}
+})
 
-static inline mln_u32_t witness(mln_u32_t base, mln_u32_t prim)
+MLN_FUNC(static inline, mln_u32_t, witness, \
+         (mln_u32_t base, mln_u32_t prim), (base, prim), \
 {
     mln_u32_t pwr, odd;
     seperate(prim - 1, &pwr, &odd);
@@ -88,5 +94,5 @@ static inline mln_u32_t witness(mln_u32_t base, mln_u32_t prim)
         return 1;
     }
     return 0;
-}
+})
 
