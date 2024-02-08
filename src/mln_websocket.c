@@ -11,6 +11,7 @@
 #include "mln_sha.h"
 #include "mln_base64.h"
 #include <sys/time.h>
+#include "mln_func.h"
 
 static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key);
 static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2);
@@ -23,8 +24,7 @@ static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *po
 static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_string_t *in);
 static mln_u32_t mln_websocket_masking_key_generate(void);
 
-int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
-{
+MLN_FUNC(, int, mln_websocket_init, (mln_websocket_t *ws, mln_http_t *http), (ws, http), {
     struct mln_hash_attr hattr;
     hattr.pool = mln_http_pool_get(http);
     hattr.pool_alloc = (hash_pool_alloc_handler)mln_alloc_m;
@@ -56,10 +56,9 @@ int mln_websocket_init(mln_websocket_t *ws, mln_http_t *http)
     ws->masking_key = 0;
 
     return 0;
-}
+})
 
-static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key)
-{
+MLN_FUNC(static, mln_u64_t, mln_websocket_hash_calc, (mln_hash_t *h, void *key), (h, key), {
     mln_string_t *k = (mln_string_t *)key;
     mln_u64_t index = 0;
     mln_u8ptr_t p, end = k->data + k->len;
@@ -69,21 +68,20 @@ static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key)
     }
 
     return index % h->len;
-}
+})
 
-static int mln_websocket_hash_cmp(mln_hash_t *h, void *key1, void *key2)
+MLN_FUNC(static, int, mln_websocket_hash_cmp, \
+         (mln_hash_t *h, void *key1, void *key2), (h, key1, key2), \
 {
     return !mln_string_strcasecmp((mln_string_t *)key1, (mln_string_t *)key2);
-}
+})
 
-static void mln_websocket_hash_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_websocket_hash_free, (void *data), (data), {
     if (data == NULL) return;
     mln_string_free((mln_string_t *)data);
-}
+})
 
-mln_websocket_t *mln_websocket_new(mln_http_t *http)
-{
+MLN_FUNC(, mln_websocket_t *, mln_websocket_new, (mln_http_t *http), (http), {
     mln_websocket_t *ws = (mln_websocket_t *)mln_alloc_m(mln_http_pool_get(http), sizeof(mln_websocket_t));
     if (ws == NULL) return NULL;
     if (mln_websocket_init(ws, http) < 0) {
@@ -91,27 +89,24 @@ mln_websocket_t *mln_websocket_new(mln_http_t *http)
         return NULL;
     }
     return ws;
-}
+})
 
-void mln_websocket_destroy(mln_websocket_t *ws)
-{
+MLN_FUNC_VOID(, void, mln_websocket_destroy, (mln_websocket_t *ws), (ws), {
     if (ws == NULL) return;
     if (ws->fields != NULL) mln_hash_free(ws->fields, M_HASH_F_KV);
     if (ws->uri != NULL) mln_string_free(ws->uri);
     if (ws->args != NULL) mln_string_free(ws->args);
     if (ws->key != NULL) mln_string_free(ws->key);
     if (ws->content_free) mln_alloc_free(ws->content);
-}
+})
 
-void mln_websocket_free(mln_websocket_t *ws)
-{
+MLN_FUNC_VOID(, void, mln_websocket_free, (mln_websocket_t *ws), (ws), {
     if (ws == NULL) return;
     mln_websocket_destroy(ws);
     mln_alloc_free(ws);
-}
+})
 
-void mln_websocket_reset(mln_websocket_t *ws)
-{
+MLN_FUNC_VOID(, void, mln_websocket_reset, (mln_websocket_t *ws), (ws), {
     if (ws->fields != NULL) {
         mln_hash_reset(ws->fields, M_HASH_F_KV);
     }
@@ -144,21 +139,19 @@ void mln_websocket_reset(mln_websocket_t *ws)
     ws->mask = 0;
     ws->status = 0;
     ws->masking_key = 0;
-}
+})
 
 
-int mln_websocket_is_websocket(mln_http_t *http)
-{
+MLN_FUNC(, int, mln_websocket_is_websocket, (mln_http_t *http), (http), {
     mln_string_t key = mln_string("Upgrade");
     mln_string_t val = mln_string("websocket");
     mln_string_t *tmp = mln_http_field_get(http, &key);
     if (tmp == NULL || mln_string_strcasecmp(&val, tmp)) return M_WS_RET_NOTWS;
     if (mln_http_type_get(http) != M_HTTP_REQUEST) return M_WS_RET_ERROR;
     return M_WS_RET_OK;
-}
+})
 
-int mln_websocket_validate(mln_websocket_t *ws)
-{
+MLN_FUNC(, int, mln_websocket_validate, (mln_websocket_t *ws), (ws), {
     mln_http_t *http = ws->http;
     if (mln_http_status_get(http) != M_HTTP_SWITCHING_PROTOCOLS) return M_WS_RET_NOTWS;
 
@@ -176,9 +169,10 @@ int mln_websocket_validate(mln_websocket_t *ws)
     if (mln_http_type_get(http) != M_HTTP_RESPONSE) return M_WS_RET_ERROR;
 
     return M_WS_RET_OK;
-}
+})
 
-static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey)
+MLN_FUNC(static, int, mln_websocket_validate_accept, \
+         (mln_http_t *http, mln_string_t *wskey), (http, wskey), \
 {
     mln_sha1_t s;
     mln_sha1_init(&s);
@@ -203,9 +197,11 @@ static int mln_websocket_validate_accept(mln_http_t *http, mln_string_t *wskey)
     int ret = mln_string_strcasecmp(&key, val);
     mln_base64_pool_free(buf);
     return ret? M_WS_RET_ERROR: M_WS_RET_OK;
-}
+})
 
-int mln_websocket_set_field(mln_websocket_t *ws, mln_string_t *key, mln_string_t *val)
+MLN_FUNC(, int, mln_websocket_set_field, \
+         (mln_websocket_t *ws, mln_string_t *key, mln_string_t *val), \
+         (ws, key, val), \
 {
     mln_string_t *dup_key, *dup_val;
     dup_key = mln_string_pool_dup(ws->pool, key);
@@ -219,12 +215,13 @@ int mln_websocket_set_field(mln_websocket_t *ws, mln_string_t *key, mln_string_t
     mln_string_free(dup_key);
     mln_string_free(dup_val);
     return ret<0? M_WS_RET_FAILED: M_WS_RET_OK;
-}
+})
 
-mln_string_t *mln_websocket_get_field(mln_websocket_t *ws, mln_string_t *key)
+MLN_FUNC(, mln_string_t *, mln_websocket_get_field, \
+         (mln_websocket_t *ws, mln_string_t *key), (ws, key), \
 {
     return (mln_string_t *)mln_hash_search(ws->fields, key);
-}
+})
 
 int mln_websocket_match(mln_websocket_t *ws)
 {
@@ -233,7 +230,8 @@ int mln_websocket_match(mln_websocket_t *ws)
     return M_WS_RET_OK;
 }
 
-static int mln_websocket_match_iterate_handler(mln_hash_t *h, void *key, void *val, void *data)
+MLN_FUNC(static, int, mln_websocket_match_iterate_handler, \
+         (mln_hash_t *h, void *key, void *val, void *data), (h, key, val, data), \
 {
     mln_reg_match_result_t *res = NULL;
     mln_string_t *tmp = mln_http_field_get((mln_http_t *)data, (mln_string_t *)key);
@@ -247,9 +245,11 @@ static int mln_websocket_match_iterate_handler(mln_hash_t *h, void *key, void *v
     }
     mln_reg_match_result_free(res);
     return 0;
-}
+})
 
-int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t **chead, mln_chain_t **ctail)
+MLN_FUNC(, int, mln_websocket_handshake_response_generate, \
+         (mln_websocket_t *ws, mln_chain_t **chead, mln_chain_t **ctail), \
+         (ws, chead, ctail), \
 {
     mln_string_t *tmp;
     mln_http_t *http = ws->http;
@@ -320,9 +320,10 @@ int mln_websocket_handshake_response_generate(mln_websocket_t *ws, mln_chain_t *
     if (mln_http_generate(http, chead, ctail) == M_HTTP_RET_ERROR) return M_WS_RET_FAILED;
 
     return M_WS_RET_OK;
-}
+})
 
-static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_string_t *in)
+MLN_FUNC(static, mln_string_t *, mln_websocket_extension_tokens, \
+         (mln_alloc_t *pool, mln_string_t *in), (pool, in), \
 {
     mln_string_t *tmp = mln_string_pool_dup(pool, in);
     if (tmp == NULL) return NULL;
@@ -367,15 +368,15 @@ static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_strin
     tmp = mln_string_pool_dup(pool, &t);
     mln_alloc_free(buf);
     return tmp;
-}
+})
 
-static int mln_websocket_iterate_set_fields(mln_hash_t *h, void *key, void *val, void *data)
+MLN_FUNC(static, int, mln_websocket_iterate_set_fields, \
+         (mln_hash_t *h, void *key, void *val, void *data), (h, key, val, data), \
 {
     return mln_http_field_set((mln_http_t *)data, (mln_string_t *)key, (mln_string_t *)val)==M_HTTP_RET_OK?0:-1;
-}
+})
 
-static mln_string_t *mln_websocket_accept_field(mln_http_t *http)
-{
+MLN_FUNC(static, mln_string_t *, mln_websocket_accept_field, (mln_http_t *http), (http), {
     mln_sha1_t s;
     mln_sha1_init(&s);
     mln_alloc_t *pool = mln_http_pool_get(http);
@@ -398,9 +399,11 @@ static mln_string_t *mln_websocket_accept_field(mln_http_t *http)
     val = mln_string_pool_dup(pool, &key);
     mln_base64_pool_free(buf);
     return val;
-}
+})
 
-int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **chead, mln_chain_t **ctail)
+MLN_FUNC(, int, mln_websocket_handshake_request_generate, \
+         (mln_websocket_t *ws, mln_chain_t **chead, mln_chain_t **ctail), \
+         (ws, chead, ctail), \
 {
     mln_http_t *http = ws->http;
     mln_alloc_t *pool = ws->pool;
@@ -452,10 +455,9 @@ int mln_websocket_handshake_request_generate(mln_websocket_t *ws, mln_chain_t **
     if (mln_http_generate(http, chead, ctail) == M_HTTP_RET_ERROR) return M_WS_RET_FAILED;
 
     return M_WS_RET_OK;
-}
+})
 
-static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *pool)
-{
+MLN_FUNC(static, mln_string_t *, mln_websocket_client_handshake_key_generate, (mln_alloc_t *pool), (pool), {
     struct timeval tv;
     mln_u8_t buf[16];
     mln_u32_t i, tmp;
@@ -479,14 +481,13 @@ static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *po
     sdup = mln_string_pool_dup(pool, &s);
     mln_base64_pool_free(out);
     return sdup;
-}
+})
 
 
-int mln_websocket_text_generate(mln_websocket_t *ws, \
-                                mln_chain_t **out_cnode, \
-                                mln_u8ptr_t buf, \
-                                mln_size_t len, \
-                                mln_u32_t flags)
+MLN_FUNC(, int, mln_websocket_text_generate, \
+         (mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u8ptr_t buf, \
+          mln_size_t len, mln_u32_t flags), \
+         (ws, out_cnode, buf, len, flags), \
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
@@ -512,13 +513,12 @@ int mln_websocket_text_generate(mln_websocket_t *ws, \
     }
 
     return mln_websocket_generate(ws, out_cnode);
-}
+})
 
-int mln_websocket_binary_generate(mln_websocket_t *ws, \
-                                  mln_chain_t **out_cnode, \
-                                  void *buf, \
-                                  mln_size_t len, \
-                                  mln_u32_t flags)
+MLN_FUNC(, int, mln_websocket_binary_generate, \
+         (mln_websocket_t *ws, mln_chain_t **out_cnode, void *buf, \
+          mln_size_t len, mln_u32_t flags), \
+         (ws, out_cnode, buf, len, flags), \
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
@@ -544,13 +544,12 @@ int mln_websocket_binary_generate(mln_websocket_t *ws, \
     }
 
     return mln_websocket_generate(ws, out_cnode);
-}
+})
 
-int mln_websocket_close_generate(mln_websocket_t *ws, \
-                                 mln_chain_t **out_cnode, \
-                                 char *reason, \
-                                 mln_u16_t status, \
-                                 mln_u32_t flags)
+MLN_FUNC(, int, mln_websocket_close_generate, \
+         (mln_websocket_t *ws, mln_chain_t **out_cnode, \
+          char *reason, mln_u16_t status, mln_u32_t flags), \
+         (ws, out_cnode, reason, status, flags), \
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
@@ -575,9 +574,11 @@ int mln_websocket_close_generate(mln_websocket_t *ws, \
     }
 
     return mln_websocket_generate(ws, out_cnode);
-}
+})
 
-int mln_websocket_ping_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u32_t flags)
+MLN_FUNC(, int, mln_websocket_ping_generate, \
+         (mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u32_t flags), \
+         (ws, out_cnode, flags), \
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
@@ -601,9 +602,11 @@ int mln_websocket_ping_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, ml
     }
 
     return mln_websocket_generate(ws, out_cnode);
-}
+})
 
-int mln_websocket_pong_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u32_t flags)
+MLN_FUNC(, int, mln_websocket_pong_generate, \
+         (mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u32_t flags), \
+         (ws, out_cnode, flags), \
 {
     if ((flags & M_WS_FLAG_CLIENT) && (flags & M_WS_FLAG_SERVER)) return M_WS_RET_ERROR;
 
@@ -627,18 +630,18 @@ int mln_websocket_pong_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, ml
     }
 
     return mln_websocket_generate(ws, out_cnode);
-}
+})
 
-static mln_u32_t mln_websocket_masking_key_generate(void)
-{
+MLN_FUNC(static, mln_u32_t, mln_websocket_masking_key_generate, (void), (), {
     struct timeval tv;
     mln_uauto_t tmp = (mln_uauto_t)&tv;
     gettimeofday(&tv, NULL);
     srand(tv.tv_sec*1000000+tv.tv_usec);
     return ((mln_u32_t)tmp | (mln_u32_t)rand());
-}
+})
 
-int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode)
+MLN_FUNC(, int, mln_websocket_generate, \
+         (mln_websocket_t *ws, mln_chain_t **out_cnode), (ws, out_cnode), \
 {
     mln_size_t size = 2;
     mln_u8ptr_t buf, p;
@@ -756,10 +759,9 @@ int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode)
     }
 
     return M_WS_RET_OK;
-}
+})
 
-int mln_websocket_parse(mln_websocket_t *ws, mln_chain_t **in)
-{
+MLN_FUNC(, int, mln_websocket_parse, (mln_websocket_t *ws, mln_chain_t **in), (ws, in), {
     mln_chain_t *c = *in;
     mln_u8ptr_t p = NULL, end = NULL, content = NULL;
     mln_u64_t len, i, tmp;
@@ -967,5 +969,5 @@ againc:
     }
 
     return M_WS_RET_OK;
-}
+})
 
