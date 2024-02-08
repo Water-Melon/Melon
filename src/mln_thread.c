@@ -16,6 +16,7 @@
 #include "mln_rbtree.h"
 #include "mln_conf.h"
 #include "mln_log.h"
+#include "mln_func.h"
 
 /*
  * global variables
@@ -83,9 +84,7 @@ __mln_thread_create(mln_thread_t *t);
 /*
  * mln_thread_t
  */
-static mln_thread_t *
-mln_thread_init(struct mln_thread_attr *attr)
-{
+MLN_FUNC(static, mln_thread_t *, mln_thread_init, (struct mln_thread_attr *attr), (attr), {
     mln_thread_t *t = (mln_thread_t *)malloc(sizeof(mln_thread_t));
     if (t == NULL) return NULL;
     t->ev = attr->ev;
@@ -110,11 +109,9 @@ mln_thread_init(struct mln_thread_attr *attr)
     t->dest_head = NULL;
     t->dest_tail = NULL;
     return t;
-}
+})
 
-static void
-mln_thread_destroy(mln_thread_t *t)
-{
+MLN_FUNC_VOID(static, void, mln_thread_destroy, (mln_thread_t *t), (t), {
     mln_chain_t *c;
 
     if (t == NULL) return;
@@ -144,10 +141,10 @@ mln_thread_destroy(mln_thread_t *t)
     mln_tcp_conn_destroy(&(t->conn));
     mln_thread_clear_msg_queue(t->ev, t);
     free(t);
-}
+})
 
-static void
-mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t)
+MLN_FUNC_VOID(static, void, mln_thread_clear_msg_queue, \
+              (mln_event_t *ev, mln_thread_t *t), (ev, t), \
 {
     mln_thread_msgq_t *tmq;
     while ((tmq = t->local_head) != NULL) {
@@ -164,13 +161,12 @@ mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t)
         mln_thread_clear_msg(&(tmq->msg));
         mln_thread_msgq_destroy(tmq);
     }
-}
+})
 
 /*
  * msg
  */
-void mln_thread_clear_msg(mln_thread_msg_t *msg)
-{
+MLN_FUNC_VOID(, void, mln_thread_clear_msg, (mln_thread_msg_t *msg), (msg), {
     if (msg == NULL) return;
     if (msg->dest != NULL) {
         mln_string_free(msg->dest);
@@ -185,13 +181,12 @@ void mln_thread_clear_msg(mln_thread_msg_t *msg)
         free(msg->pdata);
     else
         msg->pdata = NULL;
-}
+})
 
 /*
  * load
  */
-int mln_load_thread(mln_event_t *ev)
-{
+MLN_FUNC(, int, mln_load_thread, (mln_event_t *ev), (ev), {
     if (mln_thread_rbtree_init() < 0) {
         mln_log(error, "No memory.\n");
         return -1;
@@ -220,11 +215,9 @@ int mln_load_thread(mln_event_t *ev)
     }
     free(v);
     return 0;
-}
+})
 
-static void
-mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
-{
+MLN_FUNC_VOID(static, void, mln_loada_thread, (mln_event_t *ev, mln_conf_cmd_t *cc), (ev, cc), {
     mln_thread_t *t;
     mln_u32_t i, nr_args = 0;
     mln_conf_item_t *ci;
@@ -285,14 +278,12 @@ mln_loada_thread(mln_event_t *ev, mln_conf_cmd_t *cc)
     if (__mln_thread_create(t) < 0) {
         mln_thread_destroy(t);
     }
-}
+})
 
-int mln_thread_create(mln_event_t *ev, \
-                      char *alias, \
-                      mln_thread_stype_t stype, \
-                      mln_thread_entrance_t entrance, \
-                      int argc, \
-                      char *argv[])
+MLN_FUNC(, int, mln_thread_create, \
+         (mln_event_t *ev, char *alias, mln_thread_stype_t stype, \
+          mln_thread_entrance_t entrance, int argc, char *argv[]), \
+         (ev, alias, stype, entrance, argc, argv), \
 {
     mln_thread_t *t;
     int fds[2];
@@ -322,22 +313,20 @@ int mln_thread_create(mln_event_t *ev, \
     }
 
     return 0;
-}
+})
 
-static void *mln_get_module_entrance(char *alias)
-{
+MLN_FUNC(static, void *, mln_get_module_entrance, (char *alias), (alias), {
     mln_thread_module_t *tm = module_array, *end = module_array + module_array_num;
     for (; tm < end; ++tm) {
         if (!strcmp(alias, tm->alias)) return tm->thread_main;
     }
     return NULL;
-}
+})
 
 /*
  * create_thread
  */
-static inline int __mln_thread_create(mln_thread_t *t)
-{
+MLN_FUNC(static inline, int, __mln_thread_create, (mln_thread_t *t), (t), {
     mln_rbtree_node_t *rn;
     if (t->argv[t->argc-1] == NULL) {
         char *int_str = (char *)malloc(THREAD_SOCKFD_LEN);
@@ -384,10 +373,10 @@ static inline int __mln_thread_create(mln_thread_t *t)
     t->is_created = 1;
     t->node = rn;
     return 0;
-}
+})
 
-static inline int
-mln_itc_get_buf_with_len(mln_tcp_conn_t *tc, void *buf, mln_size_t len)
+MLN_FUNC(static inline, int, mln_itc_get_buf_with_len, \
+         (mln_tcp_conn_t *tc, void *buf, mln_size_t len), (tc, buf, len), \
 {
     mln_size_t size = 0;
     mln_chain_t *c;
@@ -424,24 +413,22 @@ mln_itc_get_buf_with_len(mln_tcp_conn_t *tc, void *buf, mln_size_t len)
     }
 
     return 0;
-}
+})
 
-static inline void
-mln_thread_itc_chain_release_msg(mln_chain_t *c)
-{
+MLN_FUNC_VOID(static inline, void, mln_thread_itc_chain_release_msg, (mln_chain_t *c), (c), {
     mln_buf_t *b;
 
     for (; c != NULL; c = c->next) {
         if ((b = c->buf)== NULL) continue;
         mln_thread_clear_msg((mln_thread_msg_t *)(b->pos));
     }
-}
+})
 
 /*
  * main thread itc_handler
  */
-static void
-mln_main_thread_itc_recv_handler(mln_event_t *ev, int fd, void *data)
+MLN_FUNC_VOID(static, void, mln_main_thread_itc_recv_handler, \
+              (mln_event_t *ev, int fd, void *data), (ev, fd, data), \
 {
     mln_thread_t *t = (mln_thread_t *)data;
     mln_tcp_conn_t *conn = &(t->conn);
@@ -465,10 +452,10 @@ mln_main_thread_itc_recv_handler(mln_event_t *ev, int fd, void *data)
     }
 
     mln_main_thread_itc_recv_handler_process(ev, t);
-}
+})
 
-static void
-mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
+MLN_FUNC_VOID(static, void, mln_main_thread_itc_recv_handler_process, \
+              (mln_event_t *ev, mln_thread_t *t), (ev, t), \
 {
     mln_tcp_conn_t *conn = &(t->conn);
     mln_thread_msg_t msg, *m;
@@ -518,10 +505,10 @@ mln_main_thread_itc_recv_handler_process(mln_event_t *ev, mln_thread_t *t)
         msg_local_chain_add(&(t->local_head), &(t->local_tail), tmq);
         msg_dest_chain_add(&(target->dest_head), &(target->dest_tail), tmq);
     }
-}
+})
 
-static void
-mln_main_thread_itc_send_handler(mln_event_t *ev, int fd, void *data)
+MLN_FUNC_VOID(static, void, mln_main_thread_itc_send_handler, \
+              (mln_event_t *ev, int fd, void *data), (ev, fd, data), \
 {
     mln_thread_t *t = (mln_thread_t *)data;
     mln_thread_msgq_t *tmq;
@@ -600,10 +587,10 @@ again:
 
         goto again;
     }
-}
+})
 
-static int
-mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
+MLN_FUNC(static, int, mln_thread_deal_child_exit, \
+         (mln_event_t *ev, mln_thread_t *t), (ev, t), \
 {
     mln_chain_t *c;
 
@@ -661,14 +648,12 @@ mln_thread_deal_child_exit(mln_event_t *ev, mln_thread_t *t)
         return -1;
     }
     return 0;
-}
+})
 
 /*
  * thread launcher
  */
-static void *
-mln_thread_launcher(void *args)
-{
+MLN_FUNC(static, void *, mln_thread_launcher, (void *args), (args), {
     mln_thread_t *t = (mln_thread_t *)args;
     m_thread = t;
     int ret = t->thread_main(t->argc, t->argv);
@@ -678,14 +663,12 @@ mln_thread_launcher(void *args)
     mln_socket_close(t->peerfd);
     t->peerfd = -1;
     return NULL;
-}
+})
 
  /*
   * hash
   */
-static int
-mln_thread_rbtree_init(void)
-{
+MLN_FUNC(static, int, mln_thread_rbtree_init, (void), (), {
     struct mln_rbtree_attr rbattr;
     rbattr.pool = NULL;
     rbattr.pool_alloc = NULL;
@@ -696,35 +679,34 @@ mln_thread_rbtree_init(void)
         return -1;
     }
     return 0;
-}
+})
 
-static int
-mln_thread_rbtree_cmp(const void *data1, const void *data2)
+MLN_FUNC(static, int, mln_thread_rbtree_cmp, \
+         (const void *data1, const void *data2), (data1, data2), \
 {
     mln_thread_t *t1 = (mln_thread_t *)data1;
     mln_thread_t *t2 = (mln_thread_t *)data2;
     return mln_string_strcmp(t1->alias, t2->alias);
-}
+})
 
 /*
  * other apis
  */
-void mln_thread_module_set(mln_thread_module_t *modules, mln_size_t num)
+MLN_FUNC_VOID(, void, mln_thread_module_set, \
+              (mln_thread_module_t *modules, mln_size_t num), (modules, num), \
 {
     module_array = modules;
     module_array_num = num;
-}
+})
 
-void mln_thread_exit(int exit_code)
-{
+MLN_FUNC_VOID(, void, mln_thread_exit, (int exit_code), (exit_code), {
     mln_socket_close(m_thread->peerfd);
     m_thread->peerfd = -1;
     intptr_t ec = exit_code;
     pthread_exit((void *)ec);
-}
+})
 
-void mln_thread_kill(mln_string_t *alias)
-{
+MLN_FUNC_VOID(, void, mln_thread_kill, (mln_string_t *alias), (alias), {
     mln_thread_t *t, tmp;
     mln_rbtree_node_t *rn;
     tmp.alias = alias;
@@ -734,13 +716,12 @@ void mln_thread_kill(mln_string_t *alias)
     mln_socket_close(t->peerfd);
     t->peerfd = -1;
     pthread_cancel(t->tid);
-}
+})
 
-void mln_thread_cleanup_set(void (*tcleanup)(void *), void *data)
-{
+MLN_FUNC_VOID(, void, mln_thread_cleanup_set, (void (*tcleanup)(void *), void *data), (tcleanup, data), {
     thread_cleanup = tcleanup;
     thread_data = data;
-}
+})
 
 /*
  * chain
@@ -756,19 +737,17 @@ MLN_CHAIN_FUNC_DEFINE(msg_local, \
                       local_prev, \
                       local_next);
 
-static mln_thread_msgq_t *
-mln_thread_msgq_init(mln_thread_t *sender, mln_thread_msg_t *msg)
+MLN_FUNC(static, mln_thread_msgq_t *, mln_thread_msgq_init, \
+         (mln_thread_t *sender, mln_thread_msg_t *msg), (sender, msg), \
 {
     mln_thread_msgq_t *tmq = (mln_thread_msgq_t *)malloc(sizeof(mln_thread_msgq_t));
     if (tmq == NULL) return NULL;
     tmq->sender = sender;
     memcpy(&(tmq->msg), msg, sizeof(mln_thread_msg_t));
     return tmq;
-}
+})
 
-static void
-mln_thread_msgq_destroy(mln_thread_msgq_t *tmq)
-{
+MLN_FUNC_VOID(static, void, mln_thread_msgq_destroy, (mln_thread_msgq_t *tmq), (tmq), {
     free(tmq);
-}
+})
 
