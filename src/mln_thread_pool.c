@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include "mln_utils.h"
+#include "mln_func.h"
 
 /*
  * There is a problem in linux.
@@ -47,8 +48,8 @@ MLN_CHAIN_FUNC_DECLARE(mln_child, \
 /*
  * thread_pool_member
  */
-static inline mln_thread_pool_member_t *
-mln_thread_pool_member_new(mln_thread_pool_t *tpool, mln_u32_t child)
+MLN_FUNC(static inline, mln_thread_pool_member_t *, mln_thread_pool_member_new, \
+         (mln_thread_pool_t *tpool, mln_u32_t child), (tpool, child), \
 {
     mln_thread_pool_member_t *tpm;
     if ((tpm = (mln_thread_pool_member_t *)malloc(sizeof(mln_thread_pool_member_t))) == NULL) {
@@ -62,18 +63,19 @@ mln_thread_pool_member_new(mln_thread_pool_t *tpool, mln_u32_t child)
     tpm->child = child;
     tpm->prev = tpm->next = NULL;
     return tpm;
-}
+})
 
-static inline void mln_thread_pool_member_free(mln_thread_pool_member_t *member)
+MLN_FUNC_VOID(static inline, void, mln_thread_pool_member_free, \
+              (mln_thread_pool_member_t *member), (member), \
 {
     if (member == NULL) return;
     if (member->data != NULL && member->pool->free_handler != NULL)
         member->pool->free_handler(member->data);
     free(member);
-}
+})
 
-static mln_thread_pool_member_t *
-mln_thread_pool_member_join(mln_thread_pool_t *tp, mln_u32_t child)
+MLN_FUNC(static, mln_thread_pool_member_t *, mln_thread_pool_member_join, \
+         (mln_thread_pool_t *tp, mln_u32_t child), (tp, child), \
 {
     /*
      * @ mutex must be locked by caller.
@@ -88,10 +90,9 @@ mln_thread_pool_member_join(mln_thread_pool_t *tp, mln_u32_t child)
     ++(tp->idle);
     mln_child_chain_add(&(tp->child_head), &(tp->child_tail), tpm);
     return tpm;
-}
+})
 
-static void mln_thread_pool_member_exit(void *arg)
-{
+MLN_FUNC_VOID(static, void, mln_thread_pool_member_exit, (void *arg), (arg), {
     ASSERT(arg != NULL); /*Fatal error, thread messed up*/
 
     mln_thread_pool_member_t *tpm = (mln_thread_pool_member_t *)arg;
@@ -109,28 +110,25 @@ static void mln_thread_pool_member_exit(void *arg)
     if (forked && child) {
         mln_thread_pool_free(tpool);
     }
-}
+})
 
 /*
  * thread_pool
  */
 #if !defined(WIN32)
-static void mln_thread_pool_prepare(void)
-{
+MLN_FUNC_VOID(static, void, mln_thread_pool_prepare, (void), (), {
     if (m_thread_pool_self == NULL) return;
     if (!m_thread_pool_self->locked)
         pthread_mutex_lock(&(m_thread_pool_self->pool->mutex));
-}
+})
 
-static void mln_thread_pool_parent(void)
-{
+MLN_FUNC_VOID(static, void, mln_thread_pool_parent, (void), (), {
     if (m_thread_pool_self == NULL) return;
     if (!m_thread_pool_self->locked)
         pthread_mutex_unlock(&(m_thread_pool_self->pool->mutex));
-}
+})
 
-static void mln_thread_pool_child(void)
-{
+MLN_FUNC_VOID(static, void, mln_thread_pool_child, (void), (), {
     if (m_thread_pool_self == NULL) return;
     mln_thread_pool_t *tpool = m_thread_pool_self->pool;
     if (!m_thread_pool_self->locked)
@@ -143,11 +141,11 @@ static void mln_thread_pool_child(void)
         if (fr == m_thread_pool_self) continue;
         mln_thread_pool_member_exit(fr);
     }
-}
+})
 #endif
 
-static mln_thread_pool_t *
-mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
+MLN_FUNC(static, mln_thread_pool_t *, mln_thread_pool_new, \
+         (struct mln_thread_pool_attr *tpattr, int *err), (tpattr, err), \
 {
     int rc;
     mln_thread_pool_t *tp;
@@ -215,10 +213,9 @@ mln_thread_pool_new(struct mln_thread_pool_attr *tpattr, int *err)
         return NULL;
     }
     return tp;
-}
+})
 
-static void mln_thread_pool_free(mln_thread_pool_t *tp)
-{
+MLN_FUNC_VOID(static, void, mln_thread_pool_free, (mln_thread_pool_t *tp), (tp), {
     if (tp == NULL) return;
     m_thread_pool_self = NULL;
     mln_thread_pool_resource_t *tpr;
@@ -232,14 +229,13 @@ static void mln_thread_pool_free(mln_thread_pool_t *tp)
     pthread_cond_destroy(&(tp->cond));
     pthread_attr_destroy(&(tp->attr));
     free(tp);
-}
+})
 
 
 /*
  * resource
  */
-int mln_thread_pool_resource_add(void *data)
-{
+MLN_FUNC(, int, mln_thread_pool_resource_add, (void *data), (data), {
     /*
      * Only main thread can call this function
      */
@@ -285,10 +281,9 @@ int mln_thread_pool_resource_add(void *data)
     pthread_mutex_unlock(&(tpool->mutex));
     m_thread_pool_self->locked = 0;
     return 0;
-}
+})
 
-static void *mln_thread_pool_resource_remove(void)
-{
+MLN_FUNC(static, void *, mln_thread_pool_resource_remove, (void), (), {
     /*
      * Only child threads can call this function
      * @ the lock will be locked by caller.
@@ -309,13 +304,12 @@ again:
     m_thread_pool_self->idle = 0;
     --(tpool->idle);
     return m_thread_pool_self->data;
-}
+})
 
 /*
  * launcher
  */
-int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr)
-{
+MLN_FUNC(, int, mln_thread_pool_run, (struct mln_thread_pool_attr *tpattr), (tpattr), {
     int rc;
     mln_thread_pool_t *tpool;
 
@@ -347,10 +341,9 @@ int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr)
     m_thread_pool_self = NULL;
     mln_thread_pool_free(tpool);
     return rc;
-}
+})
 
-static void *child_thread_launcher(void *arg)
-{
+MLN_FUNC(static, void *, child_thread_launcher, (void *arg), (arg), {
     mln_sptr_t rc = 0;
     mln_u32_t forked = 0;
     pthread_cleanup_push(mln_thread_pool_member_exit, arg);
@@ -402,10 +395,9 @@ again:
     m_thread_pool_self = NULL;
     if (forked) exit(rc);
     return (void *)rc;
-}
+})
 
-void mln_thread_quit(void)
-{
+MLN_FUNC_VOID(, void, mln_thread_quit, (void), (), {
     ASSERT(m_thread_pool_self != NULL);
 
     mln_thread_pool_t *tpool = m_thread_pool_self->pool;
@@ -414,10 +406,9 @@ void mln_thread_quit(void)
     tpool->quit = 1;
     pthread_mutex_unlock(&(tpool->mutex));
     m_thread_pool_self->locked = 0;
-}
+})
 
-void mln_thread_resource_info(struct mln_thread_pool_info *info)
-{
+MLN_FUNC_VOID(, void, mln_thread_resource_info, (struct mln_thread_pool_info *info), (info), {
     if (info == NULL) return;
 
     ASSERT(m_thread_pool_self != NULL);
@@ -431,7 +422,7 @@ void mln_thread_resource_info(struct mln_thread_pool_info *info)
     info->res_num = tpool->n_res;
     pthread_mutex_unlock(&(tpool->mutex));
     m_thread_pool_self->locked = 0;
-}
+})
 
 MLN_CHAIN_FUNC_DEFINE(mln_child, \
                       mln_thread_pool_member_t, \
