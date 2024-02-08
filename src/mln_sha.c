@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mln_sha.h"
+#include "mln_func.h"
 
 /*
  * sha1
@@ -47,8 +48,12 @@ static mln_u32_t k[4] = {
 
 static inline void mln_sha1_calc_block(mln_sha1_t *s);
 
-void mln_sha1_init(mln_sha1_t *s)
-{
+
+MLN_FUNC(static inline, mln_s8_t, mln_sha_hex_tostring, (mln_u8_t c), (c), {
+    return c < 10? ('0' + c): ('a' + (c - 10));
+})
+
+MLN_FUNC_VOID(, void, mln_sha1_init, (mln_sha1_t *s), (s), {
     s->H0 = 0x67452301;
     s->H1 = 0xefcdab89;
     s->H2 = 0x98badcfe;
@@ -56,37 +61,35 @@ void mln_sha1_init(mln_sha1_t *s)
     s->H4 = 0xc3d2e1f0;
     s->length = 0;
     s->pos = 0;
-}
+})
 
-mln_sha1_t *mln_sha1_new(void)
-{
+MLN_FUNC(, mln_sha1_t *, mln_sha1_new, (void), (), {
     mln_sha1_t *s = (mln_sha1_t *)malloc(sizeof(mln_sha1_t));
     if (s == NULL) return NULL;
     mln_sha1_init(s);
     return s;
-}
+})
 
-mln_sha1_t *mln_sha1_pool_new(mln_alloc_t *pool)
-{
+MLN_FUNC(, mln_sha1_t *, mln_sha1_pool_new, (mln_alloc_t *pool), (pool), {
     mln_sha1_t *s = (mln_sha1_t *)mln_alloc_m(pool, sizeof(mln_sha1_t));
     if (s == NULL) return NULL;
     mln_sha1_init(s);
     return s;
-}
+})
 
-void mln_sha1_free(mln_sha1_t *s)
-{
+MLN_FUNC_VOID(, void, mln_sha1_free, (mln_sha1_t *s), (s), {
     if (s == NULL) return;
     free(s);
-}
+})
 
-void mln_sha1_pool_free(mln_sha1_t *s)
-{
+MLN_FUNC_VOID(, void, mln_sha1_pool_free, (mln_sha1_t *s), (s), {
     if (s == NULL) return;
     mln_alloc_free(s);
-}
+})
 
-void mln_sha1_calc(mln_sha1_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last)
+MLN_FUNC_VOID(, void, mln_sha1_calc, \
+              (mln_sha1_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last), \
+              (s, input, len, is_last), \
 {
     mln_uauto_t size;
 
@@ -134,10 +137,9 @@ void mln_sha1_calc(mln_sha1_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t 
         mln_sha1_calc_block(s);
         s->pos = 0;
     }
-}
+})
 
-static inline void mln_sha1_calc_block(mln_sha1_t *s)
-{
+MLN_FUNC_VOID(static inline, void, mln_sha1_calc_block, (mln_sha1_t *s), (s), {
     mln_u32_t i = 0, j = 0, group[16];
     mln_u32_t a = s->H0, b = s->H1, c = s->H2, d = s->H3, e = s->H4;
     while (i < __M_SHA_BUFLEN) {
@@ -237,9 +239,11 @@ static inline void mln_sha1_calc_block(mln_sha1_t *s)
     s->H2 += c;
     s->H3 += d;
     s->H4 += e;
-}
+})
 
-void mln_sha1_tobytes(mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len)
+MLN_FUNC_VOID(, void, mln_sha1_tobytes, \
+              (mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len), \
+              (s, buf, len), \
 {
     if (len == 0 || buf == NULL) return;
     mln_u32_t i = 0;
@@ -287,31 +291,33 @@ void mln_sha1_tobytes(mln_sha1_t *s, mln_u8ptr_t buf, mln_u32_t len)
     buf[i++] = (s->H4 >> 8) & 0xff;
     if (i >= len) return;
     buf[i++] = (s->H4) & 0xff;
-}
+})
 
-void mln_sha1_tostring(mln_sha1_t *s, mln_s8ptr_t buf, mln_u32_t len)
+MLN_FUNC_VOID(, void, mln_sha1_tostring, \
+              (mln_sha1_t *s, mln_s8ptr_t buf, mln_u32_t len), \
+              (s, buf, len), \
 {
     if (buf == NULL || len == 0) return;
-    mln_u32_t i, n = 0;
+    mln_u32_t i;
     mln_u8_t bytes[20] = {0};
 
     mln_sha1_tobytes(s, bytes, sizeof(bytes));
-    for (i = 0; i < sizeof(bytes); ++i) {
-        if (n >= len) break;
-        n += snprintf(buf + n, len - n, "%02x", bytes[i]);
+    len = len > (sizeof(bytes) << 1)? sizeof(bytes): ((len - 1) >> 1);
+    for (i = 0; i < len; ++i) {
+        *buf++ = mln_sha_hex_tostring((bytes[i] >> 4) & 0xf);
+        *buf++ = mln_sha_hex_tostring(bytes[i] & 0xf);
     }
-    if (n < len) buf[n] = 0;
-}
+    *buf = 0;
+})
 
-void mln_sha1_dump(mln_sha1_t *s)
-{
+MLN_FUNC_VOID(, void, mln_sha1_dump, (mln_sha1_t *s), (s), {
     printf("%lx %lx %lx %lx %lx\n", \
            (unsigned long)s->H0, \
            (unsigned long)s->H1, \
            (unsigned long)s->H2, \
            (unsigned long)s->H3, \
            (unsigned long)s->H4);
-}
+})
 
 
 /*
@@ -339,8 +345,7 @@ static mln_u32_t sha256_round_constant[] = {
 0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2
 };
 
-void mln_sha256_init(mln_sha256_t *s)
-{
+MLN_FUNC_VOID(, void, mln_sha256_init, (mln_sha256_t *s), (s), {
     s->H0 = 0x6a09e667;
     s->H1 = 0xbb67ae85;
     s->H2 = 0x3c6ef372;
@@ -351,37 +356,35 @@ void mln_sha256_init(mln_sha256_t *s)
     s->H7 = 0x5be0cd19;
     s->length = 0;
     s->pos = 0;
-}
+})
 
-mln_sha256_t *mln_sha256_new(void)
-{
+MLN_FUNC(, mln_sha256_t *, mln_sha256_new, (void), (), {
     mln_sha256_t *s = (mln_sha256_t *)malloc(sizeof(mln_sha256_t));
     if (s == NULL) return NULL;
     mln_sha256_init(s);
     return s;
-}
+})
 
-mln_sha256_t *mln_sha256_pool_new(mln_alloc_t *pool)
-{
+MLN_FUNC(, mln_sha256_t *, mln_sha256_pool_new, (mln_alloc_t *pool), (pool), {
     mln_sha256_t *s = (mln_sha256_t *)mln_alloc_m(pool, sizeof(mln_sha256_t));
     if (s == NULL) return NULL;
     mln_sha256_init(s);
     return s;
-}
+})
 
-void mln_sha256_free(mln_sha256_t *s)
-{
+MLN_FUNC_VOID(, void, mln_sha256_free, (mln_sha256_t *s), (s), {
     if (s == NULL) return;
     free(s);
-}
+})
 
-void mln_sha256_pool_free(mln_sha256_t *s)
-{
+MLN_FUNC_VOID(, void, mln_sha256_pool_free, (mln_sha256_t *s), (s), {
     if (s == NULL) return;
     mln_alloc_free(s);
-}
+})
 
-void mln_sha256_calc(mln_sha256_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last)
+MLN_FUNC_VOID(, void, mln_sha256_calc, \
+              (mln_sha256_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u32_t is_last), \
+              (s, input, len, is_last), \
 {
     mln_uauto_t size;
 
@@ -429,7 +432,7 @@ void mln_sha256_calc(mln_sha256_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u3
         mln_sha256_calc_block(s);
         s->pos = 0;
     }
-}
+})
 
 #define mln_sha256_S(x,n) (((x) >> (n)) | ((x) << (32 - (n))))
 #define mln_sha256_R(x,n) ((x) >> n)
@@ -440,15 +443,13 @@ void mln_sha256_calc(mln_sha256_t *s, mln_u8ptr_t input, mln_uauto_t len, mln_u3
 #define mln_sha256_Gamma0256(x) (mln_sha256_S((x), 7) ^ mln_sha256_S((x), 18) ^ mln_sha256_R((x), 3))
 #define mln_sha256_Gamma1256(x) (mln_sha256_S((x), 17) ^ mln_sha256_S((x), 19) ^ mln_sha256_R((x), 10))
 
-static inline mln_u32_t mln_sha256_safe_add(mln_u32_t x, mln_u32_t y)
-{
+MLN_FUNC(static inline, mln_u32_t, mln_sha256_safe_add, (mln_u32_t x, mln_u32_t y), (x, y), {
     mln_u32_t lsw = (x & 0xffff) + (y & 0xffff);
     mln_u32_t msw = (x >> 16) + (y >> 16) + (lsw >> 16);
     return (msw << 16) | (lsw & 0xffff);
-}
+})
 
-static inline void mln_sha256_calc_block(mln_sha256_t *s)
-{
+MLN_FUNC_VOID(static inline, void, mln_sha256_calc_block, (mln_sha256_t *s), (s), {
     mln_u32_t h0, h1, h2, h3, h4, h5, h6, h7;
     mln_u32_t j, t1, t2;
     mln_u32_t group[64] = {0};
@@ -501,10 +502,9 @@ static inline void mln_sha256_calc_block(mln_sha256_t *s)
     s->H5 = mln_sha256_safe_add(h5, s->H5);
     s->H6 = mln_sha256_safe_add(h6, s->H6);
     s->H7 = mln_sha256_safe_add(h7, s->H7);
-}
+})
 
-void mln_sha256_tobytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len)
-{
+MLN_FUNC_VOID(, void, mln_sha256_tobytes, (mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len), (s, buf, len), {
     if (len == 0 || buf == NULL) return;
     mln_u32_t i = 0;
 
@@ -576,24 +576,26 @@ void mln_sha256_tobytes(mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len)
     if (i >= len) return;
     buf[i++] = (s->H7) & 0xff;
 
-}
+})
 
-void mln_sha256_tostring(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len)
+MLN_FUNC_VOID(, void, mln_sha256_tostring, \
+              (mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len), \
+              (s, buf, len), \
 {
     if (buf == NULL || len == 0) return;
-    mln_u32_t i, n = 0;
+    mln_u32_t i;
     mln_u8_t bytes[32] = {0};
 
     mln_sha256_tobytes(s, bytes, sizeof(bytes));
-    for (i = 0; i < sizeof(bytes); ++i) {
-        if (n >= len) break;
-        n += snprintf(buf + n, len - n, "%02x", bytes[i]);
+    len = len > (sizeof(bytes) << 1)? sizeof(bytes): ((len - 1) >> 1);
+    for (i = 0; i < len; ++i) {
+        *buf++ = mln_sha_hex_tostring((bytes[i] >> 4) & 0xf);
+        *buf++ = mln_sha_hex_tostring(bytes[i] & 0xf);
     }
-    if (n < len) buf[n] = 0;
-}
+    *buf = 0;
+})
 
-void mln_sha256_dump(mln_sha256_t *s)
-{
+MLN_FUNC_VOID(, void, mln_sha256_dump, (mln_sha256_t *s), (s), {
     printf("%lx %lx %lx %lx %lx %lx %lx %lx\n", \
            (unsigned long)s->H0, \
            (unsigned long)s->H1, \
@@ -603,5 +605,5 @@ void mln_sha256_dump(mln_sha256_t *s)
            (unsigned long)s->H5, \
            (unsigned long)s->H6, \
            (unsigned long)s->H7);
-}
+})
 
