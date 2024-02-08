@@ -3,7 +3,6 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
-#include <ctype.h>
 #include "mln_cron.h"
 #include "mln_tools.h"
 #include "mln_func.h"
@@ -104,7 +103,7 @@ MLN_FUNC(static, long, mln_cron_parse_minute, (mln_string_t *smin, long min), (s
                 else head = p;
                 break;
             default:
-                if (!isdigit(*p++)) return -1;
+                if (!mln_isdigit(*p++)) return -1;
                 break;
         }
     }
@@ -172,7 +171,7 @@ MLN_FUNC(static, long, mln_cron_parse_hour, \
                 else head = p;
                 break;
             default:
-                if (!isdigit(*p++)) return -1;
+                if (!mln_isdigit(*p++)) return -1;
                 break;
         }
     }
@@ -244,7 +243,7 @@ MLN_FUNC(static, long, mln_cron_parse_day, \
                 else head = p;
                 break;
             default:
-                if (!isdigit(*p++)) return -1;
+                if (!mln_isdigit(*p++)) return -1;
                 break;
         }
     }
@@ -316,7 +315,7 @@ MLN_FUNC(static, long, mln_cron_parse_month, \
                 else head = p;
                 break;
             default:
-                if (!isdigit(*p++)) return -1;
+                if (!mln_isdigit(*p++)) return -1;
                 break;
         }
     }
@@ -388,7 +387,7 @@ MLN_FUNC(static, long, mln_cron_parse_week, \
                 else head = p;
                 break;
             default:
-                if (!isdigit(*p++)) return -1;
+                if (!mln_isdigit(*p++)) return -1;
                 break;
         }
     }

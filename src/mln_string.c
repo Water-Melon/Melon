@@ -5,7 +5,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include "mln_string.h"
 #include "mln_func.h"

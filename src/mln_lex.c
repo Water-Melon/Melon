@@ -12,7 +12,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <unistd.h>
-#include <ctype.h>
 #include "mln_string.h"
 #include "mln_lex.h"
 #include "mln_path.h"
@@ -697,7 +696,7 @@ MLN_FUNC(, int, mln_lex_condition_test, (mln_lex_t *lex), (lex), {
         if (c == ' ' || c == '\t' || c == '\n' || c == MLN_EOF) {
             break;
         }
-        if (!mln_lex_is_letter(c) && !isdigit(c)) {
+        if (!mln_lex_is_letter(c) && !mln_isdigit(c)) {
             mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
             return -1;
         }

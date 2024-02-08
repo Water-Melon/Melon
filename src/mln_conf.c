@@ -120,7 +120,7 @@ MLN_FUNC(static, mln_conf_lex_struct_t *, mln_conf_lex_sglq_handler, (mln_lex_t 
     mln_lex_result_clean(lex);
     char c = mln_lex_getchar(lex);
     if (c == MLN_ERR) return NULL;
-    if (!isascii(c) || c == '\'') {
+    if (!mln_isascii(c) || c == '\'') {
         mln_lex_error_set(lex, MLN_LEX_EINVCHAR);
         return NULL;
     }

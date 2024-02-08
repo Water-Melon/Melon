@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <ctype.h>
 #include "mln_regexp.h"
 #include "mln_func.h"
 
@@ -157,7 +156,7 @@ again:
                         len -= mln_get_length(regexp+steplen+(reglen-len), reglen-steplen-(reglen-len));
                         continue;
                     }
-                    if (!isdigit(c)) {
+                    if (!mln_isdigit(c)) {
                         return -1;
                     }
                     existent = 1;
@@ -200,7 +199,7 @@ again:
             }
         }
         if (c_0 == M_REGEXP_NUM && textlen > 0) {
-            if (!isdigit(*text)) {
+            if (!mln_isdigit(*text)) {
                 return -1;
             }
             ++text;
@@ -210,7 +209,7 @@ again:
             goto again;
         }
         if (c_0 == M_REGEXP_NOT_NUM && textlen > 0) {
-            if (isdigit(*text)) {
+            if (mln_isdigit(*text)) {
                 return -1;
             }
             ++text;
@@ -220,7 +219,7 @@ again:
             goto again;
         }
         if (c_0 == M_REGEXP_ALPHA && textlen > 0) {
-            if (!isalpha(*text)) {
+            if (!mln_isalpha(*text)) {
                 return -1;
             }
             ++text;

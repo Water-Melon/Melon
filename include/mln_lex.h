@@ -8,12 +8,12 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 #include "mln_stack.h"
 #include "mln_string.h"
 #include "mln_alloc.h"
 #include "mln_rbtree.h"
 #include "mln_func.h"
+#include "mln_utils.h"
 #include <stdlib.h>
 #include <errno.h>
 
@@ -295,7 +295,7 @@ again:
 })
 
 MLN_FUNC(static inline, int, mln_lex_is_letter, (char c), (c), {
-    if (c == '_' || isalpha(c))
+    if (c == '_' || mln_isalpha(c))
         return 1;
     return 0;
 })
@@ -307,7 +307,7 @@ MLN_FUNC(static inline, int, mln_lex_is_oct, (char c), (c), {
 })
 
 MLN_FUNC(static inline, int, mln_lex_is_hex, (char c), (c), {
-    if (isdigit(c) || \
+    if (mln_isdigit(c) || \
         (c >= 'a' && c <= 'f') || \
         (c >= 'A' && c <= 'F'))
         return 1;
@@ -691,7 +691,7 @@ lp:\
             default:\
                 {\
                     if (mln_lex_is_letter(c)) {\
-                        while (mln_lex_is_letter(c) || isdigit(c)) {\
+                        while (mln_lex_is_letter(c) || mln_isdigit(c)) {\
                             if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
                             c = mln_lex_getchar(lex);\
                             if (c == MLN_ERR) return NULL;\
@@ -705,12 +705,12 @@ lp:\
                         sret = PREFIX_NAME##_process_keywords(lex);\
                         if (sret == NULL || !lex->ignore) return sret;\
                         goto beg;\
-                    } else if (isdigit(c)) {\
+                    } else if (mln_isdigit(c)) {\
                         while ( 1 ) {\
                             if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
                             c = mln_lex_getchar(lex);\
                             if (c == MLN_ERR) return NULL;\
-                            if (!isdigit(c) && !isalpha(c) && c != '.') {\
+                            if (!mln_isdigit(c) && !mln_isalpha(c) && c != '.') {\
                                 mln_lex_stepback(lex, c);\
                                 break;\
                             }\
@@ -738,7 +738,7 @@ lp:\
                                         mln_s32_t dot_cnt = 0;\
                                         for (; chk < lex->result_pos; ++chk) {\
                                             if (*chk == (mln_u8_t)'.') ++dot_cnt;\
-                                            if (!isdigit((char)(*chk)) && *chk != (mln_u8_t)'.') {\
+                                            if (!mln_isdigit((char)(*chk)) && *chk != (mln_u8_t)'.') {\
                                                 mln_lex_error_set(lex, MLN_LEX_EINVOCT);\
                                                 return NULL;\
                                             }\
@@ -761,10 +761,10 @@ lp:\
                             }\
                         } else {\
                             for (; chk < lex->result_pos; ++chk) {\
-                                if (isdigit((char)(*chk))) continue;\
+                                if (mln_isdigit((char)(*chk))) continue;\
                                 if (*chk == (mln_u8_t)'.') {\
                                     for (++chk; chk < lex->result_pos; ++chk) {\
-                                        if (!isdigit((char)(*chk))) {\
+                                        if (!mln_isdigit((char)(*chk))) {\
                                             mln_lex_error_set(lex, MLN_LEX_EINVREAL);\
                                             return NULL;\
                                         }\
@@ -878,7 +878,7 @@ lp:\
                 mln_lex_error_set(lex, MLN_LEX_EINVEOL);\
                 return NULL;\
             }\
-            if (!mln_lex_is_letter(c) && !isdigit(c)) {\
+            if (!mln_lex_is_letter(c) && !mln_isdigit(c)) {\
                 mln_lex_error_set(lex, MLN_LEX_EINVCHAR);\
                 return NULL;\
             }\
@@ -1017,7 +1017,7 @@ goon:\
                 mln_lex_error_set(lex, MLN_LEX_EINVEOL);\
                 return NULL;\
             }\
-            if (!mln_lex_is_letter(c) && !isdigit(c)) {\
+            if (!mln_lex_is_letter(c) && !mln_isdigit(c)) {\
                 mln_lex_error_set(lex, MLN_LEX_EINVCHAR);\
                 return NULL;\
             }\
@@ -1058,12 +1058,12 @@ goon:\
         mln_lex_macro_t lm;\
         char c = mln_lex_getchar(lex);\
         if (c == MLN_ERR) return NULL;\
-        if (!mln_lex_is_letter(c) && !isdigit(c)) {\
+        if (!mln_lex_is_letter(c) && !mln_isdigit(c)) {\
             mln_lex_stepback(lex, c);\
             return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_AT);\
         }\
         mln_lex_result_clean(lex);\
-        while (mln_lex_is_letter(c) || isdigit(c)) {\
+        while (mln_lex_is_letter(c) || mln_isdigit(c)) {\
             if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
             if ((c = mln_lex_getchar(lex)) == MLN_ERR) return NULL;\
         }\

@@ -3,7 +3,6 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include "mln_json.h"
@@ -341,7 +340,7 @@ MLN_FUNC(static inline, int, mln_json_parse_json, \
         case '\"':
             return mln_json_parse_string(j, jstr, len, index);
         default:
-            if (isdigit(jstr[0]) || jstr[0] == '-') {
+            if (mln_isdigit(jstr[0]) || jstr[0] == '-') {
                 return mln_json_parse_digit(j, jstr, len, index);
             }
             left = mln_json_parse_true(j, jstr, len, index);
@@ -710,15 +709,15 @@ MLN_FUNC(static inline, int, mln_json_digit_process, (double *val, char *s, int 
     double f = 0;
     int i, j, dir = 1;
 
-    if (!isdigit(*s)) return -1;
+    if (!mln_isdigit(*s)) return -1;
 
     if (s[0] == '0') {
         ++s;
         if (--len <= 0) return 0;
-        if (isdigit(*s)) return -1;
+        if (mln_isdigit(*s)) return -1;
     } else {
         for (; len > 0; --len, ++s) {
-            if (!isdigit(*s)) break;
+            if (!mln_isdigit(*s)) break;
             (*val) *= 10;
             (*val) += (*s - '0');
         }
@@ -729,7 +728,7 @@ MLN_FUNC(static inline, int, mln_json_digit_process, (double *val, char *s, int 
         ++s;
         if (--len <= 0) return -1;
         for (i = 1; len > 0; --len, ++s, ++i) {
-            if (!isdigit(*s)) break;
+            if (!mln_isdigit(*s)) break;
             f = *s - '0';
             for (j = 0; j < i; ++j) {
                 f /= 10;
@@ -753,7 +752,7 @@ MLN_FUNC(static inline, int, mln_json_digit_process, (double *val, char *s, int 
         }
 
         for (i = 0; len > 0; --len, ++s) {
-            if (!isdigit(*s)) break;
+            if (!mln_isdigit(*s)) break;
             i *= 10;
             i += (*s - '0');
         }

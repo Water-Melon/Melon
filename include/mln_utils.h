@@ -153,6 +153,11 @@ extern int socketpair(int domain, int type, int protocol, int sv[2]);
 #define mln_socket_close close
 #endif
 
+#define mln_isalpha(x) (((x) >= 'a' && (x) <= 'z') || ((x) >= 'A' && (x) <= 'Z'))
+#define mln_isdigit(x) ((x) >= '0' && (x) <= '9')
+#define mln_isascii(x) ((x) >= 0 && (x) <= 127)
+#define mln_isprint(x) ((x) >= 32 && (x) <= 126)
+
 #define MLN_AUTHOR "Niklaus F.Schen"
 
 #endif

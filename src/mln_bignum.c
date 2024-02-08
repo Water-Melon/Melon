@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <assert.h>
 #include <sys/time.h>
 #include <math.h>
@@ -130,7 +129,7 @@ MLN_FUNC(static inline, int, mln_bignum_assign_hex, \
 
     for (i = 0; p >= sval; --p, ++i) {
         if (i % 2) {
-            if (isdigit(*p)) {
+            if (mln_isdigit(*p)) {
                 b |= (((*p - '0') << 4) & 0xf0);
             } else if (*p >= 'a' && *p <= 'f') {
                 b |= (((*p - 'a' + 10) << 4) & 0xf0);
@@ -141,7 +140,7 @@ MLN_FUNC(static inline, int, mln_bignum_assign_hex, \
             }
         } else {
             b = 0;
-            if (isdigit(*p)) {
+            if (mln_isdigit(*p)) {
                 b |= ((*p - '0') & 0xf);
             } else if (*p >= 'a' && *p <= 'f') {
                 b |= ((*p - 'a' + 10) & 0xf);
@@ -227,7 +226,7 @@ MLN_FUNC(static inline, int, mln_bignum_assign_dec, \
     mln_bignum_positive(bn);
 
     for (cnt = 0; p >= sval; --p, ++cnt) {
-        if (!isdigit(*p)) return -1;
+        if (!mln_isdigit(*p)) return -1;
         memset(&tmp, 0, sizeof(tmp));
         mln_bignum_positive(&tmp);
         mln_bignum_dec_recursive(cnt, *p-'0', &tmp);

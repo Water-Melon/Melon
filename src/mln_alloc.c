@@ -303,7 +303,7 @@ MLN_FUNC(, void *, mln_alloc_m, (mln_alloc_t *pool, mln_size_t size), (pool, siz
                 (void)pool->parent->unlock(pool->parent->locker);
             }
         } else {
-            ptr = (mln_u8ptr_t)malloc(1, n << 2);
+            ptr = (mln_u8ptr_t)malloc(n << 2);
         }
         if (ptr == NULL) {
             for (; am < pool->mgr_tbl + M_ALLOC_MGR_LEN; ++am) {
@@ -313,7 +313,7 @@ MLN_FUNC(, void *, mln_alloc_m, (mln_alloc_t *pool, mln_size_t size), (pool, siz
         }
         ch = (mln_alloc_chunk_t *)ptr;
         mln_chunk_chain_add(&(am->chunk_head), &(am->chunk_tail), ch);
-        ch->ref = ch->count = 0;
+        ch->refer = ch->count = 0;
         ch->mgr = am;
         ptr += sizeof(mln_alloc_chunk_t);
         for (n = 0; n < M_ALLOC_BLK_NUM; ++n) {

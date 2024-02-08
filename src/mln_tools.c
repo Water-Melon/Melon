@@ -464,7 +464,7 @@ MLN_FUNC(, int, mln_s2time, (time_t *tm, mln_string_t *s, int type), (tm, s, typ
             p = s->data;
             end = s->data + s->len - 1;
             if (s->len != 13 || (*end != 'Z' && *end != 'z')) return -1;
-            for (; p < end; ++p) if (!isdigit(*p)) return -1;
+            for (; p < end; ++p) if (!mln_isdigit(*p)) return -1;
             p = s->data;
             year = ((*p++) - '0') * 10;
             year += ((*p++) - '0');
@@ -475,7 +475,7 @@ MLN_FUNC(, int, mln_s2time, (time_t *tm, mln_string_t *s, int type), (tm, s, typ
             p = s->data;
             end = s->data + s->len - 1;
             if (s->len != 15 || (*end != 'Z' && *end != 'z')) return -1;
-            for (; p < end; ++p) if (!isdigit(*p)) return -1;
+            for (; p < end; ++p) if (!mln_isdigit(*p)) return -1;
             p = s->data;
             year = ((*p++) - '0') * 1000;
             year += (((*p++) - '0') * 100);

@@ -5,7 +5,6 @@
 
 #include <stdio.h>
 #include <unistd.h>
-#include <ctype.h>
 #include "mln_types.h"
 #include "mln_http.h"
 #include "mln_func.h"
@@ -864,7 +863,7 @@ MLN_FUNC(static inline, int, mln_http_atou, (mln_string_t *s, mln_u32_t *status)
     mln_u8ptr_t p, end = s->data + s->len;
 
     for (p = s->data; p < end; ++p) {
-        if (!isdigit(*p)) return M_HTTP_RET_ERROR;
+        if (!mln_isdigit(*p)) return M_HTTP_RET_ERROR;
         st *= 10;
         st += (*p - '0');
     }

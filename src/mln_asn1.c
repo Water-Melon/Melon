@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include "mln_asn1.h"
 #include "mln_tools.h"
 #include "mln_func.h"
@@ -696,7 +695,7 @@ MLN_FUNC(, int, mln_asn1_encode_utf8string, (mln_asn1_enresult_t *res, mln_u8ptr
 MLN_FUNC(, int, mln_asn1_encode_printablestring, (mln_asn1_enresult_t *res, mln_s8ptr_t s, mln_u64_t slen), (res, s, slen), {
     mln_s8ptr_t scan, end;
     for (scan = s, end = s+slen; scan < end; ++scan) {
-        if (!isprint(*scan)) return M_ASN1_RET_ERROR;
+        if (!mln_isprint(*scan)) return M_ASN1_RET_ERROR;
     }
 
     mln_u64_t len = 0;
