@@ -19,6 +19,7 @@
 #include "mln_conf.h"
 #include "mln_log.h"
 #include "mln_path.h"
+#include "mln_tools.h"
 
 static int
 mln_boot_help(const char *boot_str, const char *alias);
@@ -47,16 +48,14 @@ char mln_core_file_cmd[] = "core_file_size";
 char mln_nofile_cmd[] = "max_nofile";
 char mln_limit_unlimited[] = "unlimited";
 
-int mln_sys_limit_modify(void)
-{
+MLN_FUNC(, int, mln_sys_limit_modify, (void), (), {
     if (mln_sys_core_modify() < 0) {
         return -1;
     }
     return mln_sys_nofile_modify();
-}
+})
 
-static int mln_sys_core_modify(void)
-{
+MLN_FUNC(static, int, mln_sys_core_modify, (void), (), {
 #ifdef RLIMIT_CORE
     rlim_t core_file_size = 0;
 
@@ -96,10 +95,9 @@ static int mln_sys_core_modify(void)
     }
 #endif
     return 0;
-}
+})
 
-static int mln_sys_nofile_modify(void)
-{
+MLN_FUNC(static, int, mln_sys_nofile_modify, (void), (), {
 #ifdef RLIMIT_NOFILE
     rlim_t nofile = 0;
 
@@ -139,11 +137,10 @@ static int mln_sys_nofile_modify(void)
     }
 #endif
     return 0;
-}
+})
 
 #if !defined(WIN32)
-int mln_daemon(void)
-{
+MLN_FUNC(, int, mln_daemon, (void), (), {
     int ret = mln_log_init(NULL);
     if (ret < 0) return ret;
     if (!mln_log_in_daemon()) return mln_set_id();
@@ -173,10 +170,9 @@ int mln_daemon(void)
         fprintf(stderr, "Unexpected file descriptors %d %d %d\n", fd0, fd1, fd2);
     }
     return mln_set_id();
-}
+})
 
-static int mln_set_id(void)
-{
+MLN_FUNC(static, int, mln_set_id, (void), (), {
     char name[256] = {0};
     int len;
     uid_t uid;
@@ -253,11 +249,10 @@ static int mln_set_id(void)
     }
 
     return 0;
-}
+})
 #endif
 
-int mln_boot_params(int argc, char *argv[])
-{
+MLN_FUNC(, int, mln_boot_params, (int argc, char *argv[]), (argc, argv), {
     int i, ret;
     char *p;
     mln_boot_t *b;
@@ -278,21 +273,22 @@ int mln_boot_params(int argc, char *argv[])
         }
     }
     return 0;
-}
+})
 
-static int
-mln_boot_help(const char *boot_str, const char *alias)
+MLN_FUNC(static, int, mln_boot_help, \
+         (const char *boot_str, const char *alias), (boot_str, alias), \
 {
     printf("Boot parameters:\n");
     printf("\t--reload  -r\t\t\treload configuration\n");
     printf("\t--stop    -s\t\t\tstop melon service.\n");
     exit(0);
     return 0;
-}
+})
 
 #if !defined(WIN32)
-static int
-mln_boot_reload(const char *boot_str, const char *alias)
+MLN_FUNC(static, int, mln_boot_reload, \
+         (const char *boot_str, const char *alias), \
+         (boot_str, alias), \
 {
     char buf[1024] = {0};
     int fd, n, pid;
@@ -313,10 +309,10 @@ mln_boot_reload(const char *boot_str, const char *alias)
     kill(pid, SIGUSR2);
 
     exit(0);
-}
+})
 
-static int
-mln_boot_stop(const char *boot_str, const char *alias)
+MLN_FUNC(static, int, mln_boot_stop, \
+         (const char *boot_str, const char *alias), (boot_str, alias), \
 {
     char buf[1024] = {0};
     int fd, n, pid;
@@ -338,22 +334,19 @@ mln_boot_stop(const char *boot_str, const char *alias)
     kill(pid, SIGKILL);
 
     exit(0);
-}
+})
 #endif
 
 /*
  * time
  */
-static inline int
-mln_is_leap(long year)
-{
+MLN_FUNC(static inline, int, mln_is_leap, (long year), (year), {
     if (((year%4 == 0) && (year%100 != 0)) || (year%400 == 0))
         return 1;
     return 0;
-}
+})
 
-void mln_time2utc(time_t tm, struct utctime *uc)
-{
+MLN_FUNC_VOID(, void, mln_time2utc, (time_t tm, struct utctime *uc), (tm, uc), {
     long days = tm / 86400;
     long subsec = tm % 86400;
     long month, year;
@@ -380,10 +373,9 @@ void mln_time2utc(time_t tm, struct utctime *uc)
     month = uc->month < 3? uc->month + 12: uc->month;
     year = uc->month < 3? uc->year - 1: uc->year;
     uc->week = (uc->day + 1 + 2 * month + 3 * (month + 1) / 5 + year + (year >> 2) - year / 100 + year / 400) % 7;
-}
+})
 
-time_t mln_utc2time(struct utctime *uc)
-{
+MLN_FUNC(, time_t, mln_utc2time, (struct utctime *uc), (uc), {
     time_t ret = 0;
     long year = uc->year - 1, month = uc->month - 2;
     int is_leap_year = mln_is_leap(uc->year);
@@ -399,10 +391,9 @@ time_t mln_utc2time(struct utctime *uc)
     ret += (uc->hour * 3600 + uc->minute * 60 + uc->second);
 
     return ret;
-}
+})
 
-void mln_utc_adjust(struct utctime *uc)
-{
+MLN_FUNC_VOID(, void, mln_utc_adjust, (struct utctime *uc), (uc), {
     long adj = 0, month, year;
 
     if (uc->second >= 60) {
@@ -456,15 +447,13 @@ again:
     month = uc->month < 3? uc->month + 12: uc->month;
     year = uc->month < 3? uc->year - 1: uc->year;
     uc->week = (uc->day + 1 + 2 * month + 3 * (month + 1) / 5 + year + (year >> 2) - year / 100 + year / 400) % 7;
-}
+})
 
-long mln_month_days(long year, long month)
-{
+MLN_FUNC(, long, mln_month_days, (long year, long month), (year, month), {
     return mon_days[mln_is_leap(year)][month-1];
-}
+})
 
-int mln_s2time(time_t *tm, mln_string_t *s, int type)
-{
+MLN_FUNC(, int, mln_s2time, (time_t *tm, mln_string_t *s, int type), (tm, s, type), {
     mln_u8ptr_t p, end;
     time_t year = 0, month = 0, day = 0;
     time_t hour = 0, minute = 0, second = 0;
@@ -529,5 +518,5 @@ int mln_s2time(time_t *tm, mln_string_t *s, int type)
     }
 
     return 0;
-}
+})
 
