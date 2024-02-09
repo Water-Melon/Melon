@@ -97,14 +97,10 @@ MLN_FUNC(, mln_event_t *, mln_event_new, (void), (), {
         goto err2;
     }
     /*timer heap*/
-    struct mln_fheap_attr fattr;
-    fattr.pool = NULL;
-    fattr.pool_alloc = NULL;
-    fattr.pool_free = NULL;
-    fattr.cmp = mln_event_fheap_timer_cmp;
-    fattr.copy = mln_event_fheap_timer_copy;
-    fattr.key_free = mln_event_desc_free;
-    ev->ev_timer_heap = mln_fheap_new(&fheap_min, &fattr);
+    ev->ev_timer_heap = mln_fheap_new_fast(&fheap_min, \
+                                           mln_event_fheap_timer_cmp, \
+                                           mln_event_fheap_timer_copy, \
+                                           mln_event_desc_free);
     if (ev->ev_timer_heap == NULL) {
         goto err3;
     }

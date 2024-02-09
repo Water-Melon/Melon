@@ -338,46 +338,49 @@ Their definitions can be found in melon/include/mln_types.h.
     d) mln_fheap_t *mln_fheap_new(struct mln_fheap_attr *attr);
        It initializes and returns a fibonacci heap.
 
-    e) void mln_fheap_free(mln_fheap_t *fh);
+    e) mln_fheap_t *mln_fheap_new_fast(void *min_val, fheap_cmp cmp, fheap_copy copy, fheap_key_free key_free);
+       It initializes and returns a fibonacci heap.
+
+    f) void mln_fheap_free(mln_fheap_t *fh);
        It destroys a fibonacci heap. If 'key_free' is not NULL, the key's value in every heap node will be freed by
        the function 'key_free' at the same time.
 
-    f) void mln_fheap_insert(mln_fheap_t *fh, mln_fheap_node_t *fn);
+    g) void mln_fheap_insert(mln_fheap_t *fh, mln_fheap_node_t *fn);
        This interface inserts a heap node.
 
-    g) void mln_fheap_delete(mln_fheap_t *fh, mln_fheap_node_t *node);
+    h) void mln_fheap_delete(mln_fheap_t *fh, mln_fheap_node_t *node);
        This interface removes a heap node.
 
-    h) mln_fheap_node_t* mln_fheap_minimum(mln_fheap_t *fh);
+    i) mln_fheap_node_t* mln_fheap_minimum(mln_fheap_t *fh);
        It retrieves a minimum heap node.
        If the heap is empty, NULL will be returned.
 
-    i) mln_fheap_node_t* mln_fheap_extract_min(mln_fheap_t *fh);
+    j) mln_fheap_node_t* mln_fheap_extract_min(mln_fheap_t *fh);
        Extract the node whose key value is minimum in the heap.
        If the heap is empty, NULL will be returned.
 
-    j) int mln_fheap_decrease_key(mln_fheap_t *fh, mln_fheap_node_t *node, void *key);
+    k) int mln_fheap_decrease_key(mln_fheap_t *fh, mln_fheap_node_t *node, void *key);
        It decreases the key's value of the specified node to the key.
        The type of key must be identical with the type of keys in heap nodes.
        The return value is: -1 - key error, 0 - on success.
 
-    k) mln_fheap_inline_insert(fh, fn, compare)
+    l) mln_fheap_inline_insert(fh, fn, compare)
        Inline version of 'mln_fheap_insert'. 'compare' is the callback function 'cmp' in 'attr'.
 
-    l) mln_fheap_inline_extract_min(fh, compare)
+    m) mln_fheap_inline_extract_min(fh, compare)
        Inline version of 'mln_fheap_insert'. 'compare' is the callback function 'cmp' in 'attr'.
 
-    m) mln_fheap_inline_decrease_key(fh, node, k, cpy, compare)
+    n) mln_fheap_inline_decrease_key(fh, node, k, cpy, compare)
        Inline version of 'mln_fheap_decrease_key'. 'compare' is the callback function 'cmp' in 'attr'.
 
-    n) mln_fheap_inline_delete(fh, node, cpy, compare)
+    o) mln_fheap_inline_delete(fh, node, cpy, compare)
        Inline version of 'mln_fheap_delelte'. 'compare' is the callback function 'cmp' in 'attr'.
        'cpy' is the callback function 'copy' in 'attr'.
 
-    o) mln_fheap_inline_node_free(fh, fn, freer)
+    p) mln_fheap_inline_node_free(fh, fn, freer)
        Inline version of 'mln_fheap_node_free'. 'freer' is the callback function 'key_free' in 'attr'.
 
-    p) mln_fheap_inline_free(fh, compare, freer)
+    q) mln_fheap_inline_free(fh, compare, freer)
        Inline version of 'mln_fheap_free'. 'freer' is the callback function 'key_free' in 'attr'.
 
   4) Red-Black Tree

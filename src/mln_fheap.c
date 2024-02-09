@@ -43,6 +43,28 @@ MLN_FUNC(, mln_fheap_t *, mln_fheap_new, (void *min_val, struct mln_fheap_attr *
     return fh;
 })
 
+MLN_FUNC(, mln_fheap_t *, mln_fheap_new_fast, \
+         (void *min_val, fheap_cmp cmp, fheap_copy copy, fheap_key_free key_free), \
+         (min_val, cmp, copy, key_free), \
+{
+    mln_fheap_t *fh;
+
+    fh = (mln_fheap_t *)malloc(sizeof(mln_fheap_t));
+    if (fh == NULL) return NULL;
+
+    fh->pool = NULL;
+    fh->pool_alloc = NULL;
+    fh->pool_free = NULL;
+    fh->cmp = cmp;
+    fh->copy = copy;
+    fh->key_free = key_free;
+    fh->min_val = min_val;
+    fh->min = NULL;
+    fh->root_list = NULL;
+    fh->num = 0;
+    return fh;
+})
+
 MLN_FUNC_VOID(, void, mln_fheap_insert, (mln_fheap_t *fh, mln_fheap_node_t *fn), (fh, fn), {
     mln_fheap_inline_insert(fh, fn, NULL);
 })

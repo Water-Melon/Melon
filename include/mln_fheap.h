@@ -311,6 +311,8 @@ MLN_FUNC(static inline, mln_fheap_node_t *, mln_fheap_remove_child, \
 
 extern mln_fheap_t *
 mln_fheap_new(void *min_val, struct mln_fheap_attr *attr) __NONNULL1(1);
+extern mln_fheap_t *
+mln_fheap_new_fast(void *min_val, fheap_cmp cmp, fheap_copy copy, fheap_key_free key_free);
 extern void
 mln_fheap_free(mln_fheap_t *fh);
 extern void

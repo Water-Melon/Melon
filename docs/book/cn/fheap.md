@@ -77,6 +77,29 @@ typedef void (*fheap_pool_free_handler)(void *);
 
 
 
+#### mln_fheap_new_fast
+
+```c
+mln_fheap_t *mln_fheap_new_fast(void *min_val, fheap_cmp cmp, fheap_copy copy, fheap_key_free key_free);
+
+typedef int (*fheap_cmp)(const void *, const void *);
+typedef void (*fheap_copy)(void *, void *);
+typedef void (*fheap_key_free)(void *);
+```
+
+描述：创建斐波那契堆。与`mln_fheap_new_fast`的差异在于不支持内存池且将属性作为函数参数传递。
+
+其中：
+
+- `min_val`是指堆结点中用户自定义数据类型的最小值，这个指针的类型与堆结点内用户自定义数据的类型一致。注意，这个指针指向的内存不应被更改，其生命周期应至少贯穿该斐波那契堆的生命周期。
+- `cmp`是用于key比较大小的函数，该函数有两个参数，皆为用户自定义的key结构指针。如果参数1小于参数2，则返回`0`，否则返回`非0`。
+- `copy`是用来拷贝key结构的，这个回调函数会在`decrease key`时被调用，用于将原有key值改为新的key值。这个函数有两个参数，依次分别为：原有key值指针和新key值指针。
+- `key_free`为key值结构释放函数，如果不需要释放，则可以置`NULL`。
+
+返回值：成功则返回`mln_fheap_t`类型指针，否则返回`NULL`
+
+
+
 #### mln_fheap_free
 
 ```c

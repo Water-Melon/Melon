@@ -65,13 +65,34 @@ Description: Create a Fibonacci heap.
    - `pool` is a user-defined memory pool structure. If this item is not `NULL`, the Fibonacci heap structure will be allocated from this memory pool, otherwise it will be allocated from the malloc library.
    - `pool_alloc` is the allocation memory function pointer of the memory pool, and this callback will be used when `pool` is not empty.
    - `pool_free` is the pointer to the free memory function of the memory pool, and this callback will be used when `pool` is not empty.
-   - `cmp` is a function used to compare key sizes. This function has two parameters, both of which are user-defined key structure pointers. Return `0` if argument 1 is less than argument 2, otherwise return `not 0`.
+   - `cmp` is a function used to compare key. This function has two parameters, both of which are user-defined key structure pointers. Return `0` if argument 1 is less than argument 2, otherwise return `not 0`.
    - `copy` is used to copy the key structure, this callback function will be called when `decrease key` is used to change the original key value to a new key value. This function has two parameters, respectively: the original key value pointer and the new key value pointer.
    - `key_free` is the release function of the key value structure, if it does not need to be released, you can set `NULL`.
 
    Here is an additional note, if you use the inline mode and do not use the `pool` field, you can directly set the attr parameter of `mln_fheap_new` to `NULL`.
 
 Return value: return `mln_fheap_t` type pointer if successful, otherwise return `NULL`
+
+
+
+#### mln_fheap_new_fast
+
+```c
+mln_fheap_t *mln_fheap_new_fast(void *min_val, fheap_cmp cmp, fheap_copy copy, fheap_key_free key_free);
+
+typedef int (*fheap_cmp)(const void *, const void *);
+typedef void (*fheap_copy)(void *, void *);
+typedef void (*fheap_key_free)(void *);
+```
+
+Description: Create a Fibonacci heap. The difference from `mln_fheap_new_fast` is that memory pool is not supported and attributes are passed as function parameters.
+
+- `min_val` refers to the minimum value of the user-defined data type in the heap node. The type of this pointer is consistent with the type of user-defined data in the heap node. Note that the memory pointed to by this pointer should not be changed, and its life cycle should last at least throughout the life cycle of the Fibonacci heap.
+- `cmp` is a function used for key comparison. This function has two parameters, both of which are user-defined key structure pointers. If parameter 1 is less than parameter 2, return `0`, otherwise return `non-0`.
+- `copy` is used to copy the key structure. This callback function will be called when `decrease key` is used to change the original key value to the new key value. This function has two parameters, which are: the original key value pointer and the new key value pointer.
+- `key_free` is the key value structure release function. If it does not need to be released, it can be set to `NULL`.
+
+Return value: Returns `mln_fheap_t` type pointer if successful, otherwise returns `NULL`
 
 
 
