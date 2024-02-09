@@ -789,10 +789,7 @@ MLN_FUNC(SCOPE, mln_parser_t *, PREFIX_NAME##_parser_init, (void), (), {\
     p->err_state = 0;\
     p->err_reduce = 0;\
     p->err_queue = NULL;\
-    struct mln_queue_attr qattr;\
-    qattr.qlen = M_P_QLEN;\
-    qattr.free_handler = PREFIX_NAME##_factor_destroy;\
-    p->cur_queue = mln_queue_init(&qattr);\
+    p->cur_queue = mln_queue_init(M_P_QLEN, PREFIX_NAME##_factor_destroy);\
     if (p->cur_queue == NULL) {\
         goto err3;\
     }\
@@ -1102,10 +1099,7 @@ MLN_FUNC(SCOPE, int, PREFIX_NAME##_err_dup, \
     }\
     p->err_state = p->old_state;\
     p->err_reduce = p->old_reduce;\
-    struct mln_queue_attr qattr;\
-    qattr.qlen = M_P_QLEN;\
-    qattr.free_handler = PREFIX_NAME##_factor_destroy;\
-    p->err_queue = mln_queue_init(&qattr);\
+    p->err_queue = mln_queue_init(M_P_QLEN, PREFIX_NAME##_factor_destroy);\
     if (p->err_queue == NULL) {\
         mln_log(error, "No memory.\n");\
         mln_stack_destroy(p->err_stack);\

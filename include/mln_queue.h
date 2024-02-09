@@ -22,17 +22,12 @@ typedef struct {
     queue_free             free_handler;
 } mln_queue_t;
 
-struct mln_queue_attr {
-    mln_uauto_t            qlen;
-    queue_free             free_handler;
-};
-
 
 #define mln_queue_empty(q) (!((q)->nr_element))
 #define mln_queue_full(q) ((q)->nr_element >= (q)->qlen)
 #define mln_queue_length(q) ((q)->qlen)
 #define mln_queue_element(q) ((q)->nr_element)
-extern mln_queue_t *mln_queue_init(struct mln_queue_attr *attr) __NONNULL1(1);
+extern mln_queue_t *mln_queue_init(mln_uauto_t qlen, queue_free free_handler);
 extern void mln_queue_destroy(mln_queue_t *q);
 extern int mln_queue_append(mln_queue_t *q, void *data) __NONNULL1(1);
 extern void *mln_queue_get(mln_queue_t *q) __NONNULL1(1);

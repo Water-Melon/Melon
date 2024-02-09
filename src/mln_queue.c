@@ -5,12 +5,14 @@
 #include "mln_queue.h"
 #include "mln_func.h"
 
-MLN_FUNC(, mln_queue_t *, mln_queue_init, (struct mln_queue_attr *attr), (attr), {
+MLN_FUNC(, mln_queue_t *, mln_queue_init, \
+         (mln_uauto_t qlen, queue_free free_handler), (qlen, free_handler), \
+{
     mln_queue_t *q = (mln_queue_t *)malloc(sizeof(mln_queue_t));
     if (q == NULL) return NULL;
-    q->qlen = attr->qlen;
+    q->qlen = qlen;
     q->nr_element = 0;
-    q->free_handler = attr->free_handler;
+    q->free_handler = free_handler;
     q->queue = (void **)calloc(q->qlen, sizeof(void *));
     if (q->queue == NULL) {
         free(q);

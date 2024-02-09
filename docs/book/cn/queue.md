@@ -23,18 +23,14 @@
 #### mln_queue_init
 
 ```c
-mln_queue_t *mln_queue_init(struct mln_queue_attr *attr);
+mln_queue_t *mln_queue_init(mln_uauto_t qlen, queue_free free_handler);
 
-struct mln_queue_attr {
-    mln_uauto_t            qlen; //队列长度
-    queue_free             free_handler; //队列节点数据的释放函数
-};
 typedef void (*queue_free)(void *);
 ```
 
 描述：创建队列。
 
-本队列为固定长度队列，因此`attr.qlen`就是队列的长度。`free_handler`为释放函数，用于释放队列内每个成员中的数据。若不需要释放则置`NULL`即可。
+本队列为固定长度队列，因此`qlen`就是队列的长度。`free_handler`为释放函数，用于释放队列内每个成员中的数据。若不需要释放则置`NULL`即可。
 
 释放函数的参数即为队列每个成员的数据结构指针。
 
@@ -193,11 +189,8 @@ int main(int argc, char *argv[])
 {
     int i = 10;
     mln_queue_t *q;
-    struct mln_queue_attr qattr;
 
-    qattr.qlen = 10;
-    qattr.free_handler = NULL;
-    q = mln_queue_init(&qattr);
+    q = mln_queue_init(10, NULL);
     if (q == NULL) {
         fprintf(stderr, "queue init failed.\n");
         return -1;

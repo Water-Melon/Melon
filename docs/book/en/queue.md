@@ -23,18 +23,14 @@
 #### mln_queue_init
 
 ```c
-mln_queue_t *mln_queue_init(struct mln_queue_attr *attr);
+mln_queue_t *mln_queue_init(mln_uauto_t qlen, queue_free free_handler);
 
-struct mln_queue_attr {
-    mln_uauto_t            qlen; //queue length
-    queue_free             free_handler; //free function for queue node
-};
 typedef void (*queue_free)(void *);
 ```
 
 Description: Create a queue.
 
-This queue is a fixed-length queue, so `attr.qlen` is the length of the queue. `free_handler` is the release function, which is used to release the data in each member of the queue. If you don't need to release, just set `NULL`.
+This queue is a fixed-length queue, so `qlen` is the length of the queue. `free_handler` is the release function, which is used to release the data in each member of the queue. If you don't need to release, just set `NULL`.
 
 The parameter of the release function is the data structure pointer of each member of the queue.
 
@@ -193,11 +189,8 @@ int main(int argc, char *argv[])
 {
     int i = 10;
     mln_queue_t *q;
-    struct mln_queue_attr qattr;
 
-    qattr.qlen = 10;
-    qattr.free_handler = NULL;
-    q = mln_queue_init(&qattr);
+    q = mln_queue_init(10, NULL);
     if (q == NULL) {
         fprintf(stderr, "queue init failed.\n");
         return -1;

@@ -1046,18 +1046,6 @@ Their definitions can be found in melon/include/mln_types.h.
 
   14) Queue
 
-     struct mln_queue_attr {
-         mln_uauto_t            qlen;
-         queue_free             free_handler;
-     };
-
-     This structure is used to initialize a queue data structure.
-     qlen -- is the length of the queue.
-     free_handler -- is a function pointer to free the element's
-     memory in queue. Its prototype is
-         typedef void (*queue_free)(void *);
-     The argument is the data pointer of an element.
-
      There are 12 interfaces for this data structure.
      a) mln_queue_empty(q)
          It is used to test whether the queue is empty.
@@ -1071,8 +1059,12 @@ Their definitions can be found in melon/include/mln_types.h.
      d) mln_queue_element(q)
         It is used to get the number of elements currently in queue.
 
-     e) mln_queue_t *mln_queue_init(struct mln_queue_attr *attr);
+     e) mln_queue_t *mln_queue_init(mln_uauto_t qlen, queue_free free_handler);
         It is used to initialize a queue object.
+        qlen -- is the length of the queue.
+        free_handler -- is a function pointer to free the element's memory in queue. Its prototype is
+            typedef void (*queue_free)(void *);
+        The argument is the data pointer of an element.
 
      f) void mln_queue_destroy(mln_queue_t *q);
         It is used to destroy a queue object.
