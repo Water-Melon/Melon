@@ -325,6 +325,7 @@ MLN_FUNC(, void *, mln_alloc_m, (mln_alloc_t *pool, mln_size_t size), (pool, siz
             ch->blks[n] = blk;
             ptr += size;
         }
+        ch->blks[n] = NULL;
     }
 
 out:
