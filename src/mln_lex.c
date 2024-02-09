@@ -255,13 +255,10 @@ MLN_FUNC(, mln_lex_t *, mln_lex_init, (struct mln_lex_attr *attr), (attr), {
     mln_lex_macro_t *lm;
     struct mln_rbtree_attr rbattr;
     mln_rbtree_node_t *rn;
-    struct mln_stack_attr sattr;
     mln_string_t k1 = mln_string("1");
     mln_string_t k2 = mln_string("true");
     mln_string_t *scan;
     mln_lex_keyword_t *newkw;
-    sattr.free_handler = mln_lex_input_free;
-    sattr.copy_handler = NULL;
     mln_lex_t *lex;
     if ((lex = (mln_lex_t *)mln_alloc_m(attr->pool, sizeof(mln_lex_t))) == NULL) {
         return NULL;
@@ -299,7 +296,7 @@ err:
     mln_rbtree_insert(lex->macros, rn);
 
     lex->cur = NULL;
-    if ((lex->stack = mln_stack_init(&sattr)) == NULL) {
+    if ((lex->stack = mln_stack_init(mln_lex_input_free, NULL)) == NULL) {
         goto err;
     }
     if (attr->hooks != NULL)

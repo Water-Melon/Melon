@@ -1101,27 +1101,20 @@ Their definitions can be found in melon/include/mln_types.h.
         The first argument is the pointer of an element. The second one is a user data.
 
   15) Stack
-
-     struct mln_stack_attr {
-         stack_free               free_handler;
-         stack_copy               copy_handler;
-     };
-     This structure is used to initialize a stack object.
-     free_handler -- is a function pointer to free stack data.
-     Its prototype is
-         typedef void (*stack_free)(void *);
-     The argument is a stack data.
-     copy_handler -- is a function pointer to duplicate a stack data.
-     Its prototype is
-         typedef void *(*stack_copy)(void *);
-     The argument is the stack data.
-
      There are 7 interfaces for stack.
      a) mln_stack_empty(s)
         It is used to test whether the stack is empty.
 
-     b) mln_stack_t *mln_stack_init(struct mln_stack_attr *attr);
+     b) mln_stack_t *mln_stack_init(stack_free free_handler, stack_copy copy_handler);
         This interface is used to initialize a stack object.
+        free_handler -- is a function pointer to free stack data.
+        Its prototype is
+            typedef void (*stack_free)(void *);
+        The argument is a stack data.
+        copy_handler -- is a function pointer to duplicate a stack data.
+        Its prototype is
+            typedef void *(*stack_copy)(void *);
+        The argument is the stack data.
 
      c) void mln_stack_destroy(mln_stack_t *st);
         This interface is used to destroy a stack object.

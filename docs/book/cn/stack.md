@@ -23,12 +23,7 @@
 #### 	mln_stack_init
 
 ```c
-mln_stack_t *mln_stack_init(struct mln_stack_attr *attr);
-
-struct mln_stack_attr {
-    stack_free               free_handler;//栈节点数据释放函数
-    stack_copy               copy_handler;//栈节点数据复制函数
-};
+mln_stack_t *mln_stack_init(stack_free free_handler, stack_copy copy_handler);
 
 typedef void (*stack_free)(void *);
 typedef void *(*stack_copy)(void *, void *);

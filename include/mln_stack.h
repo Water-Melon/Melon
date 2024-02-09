@@ -28,16 +28,10 @@ typedef struct {
     stack_copy               copy_handler;
 } mln_stack_t;
 
-struct mln_stack_attr {
-    stack_free               free_handler;
-    stack_copy               copy_handler;
-};
-
-
 #define mln_stack_empty(s) (!(s)->nr_node)
 #define mln_stack_top(st) ((st)->top == NULL? NULL: (st)->top->data)
 extern mln_stack_t *
-mln_stack_init(struct mln_stack_attr *attr) __NONNULL1(1);
+mln_stack_init(stack_free free_handler, stack_copy copy_handler);
 extern void
 mln_stack_destroy(mln_stack_t *st);
 extern int

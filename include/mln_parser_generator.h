@@ -769,17 +769,14 @@ MLN_FUNC(SCOPE, void *, PREFIX_NAME##_factor_copy, (void *ptr, void *data), (ptr
 MLN_FUNC(SCOPE, mln_parser_t *, PREFIX_NAME##_parser_init, (void), (), {\
     mln_parser_t *p = (mln_parser_t *)malloc(sizeof(mln_parser_t));\
     if (p == NULL) return NULL;\
-    struct mln_stack_attr sattr;\
-    sattr.free_handler = PREFIX_NAME##_factor_destroy;\
-    sattr.copy_handler = PREFIX_NAME##_factor_copy;\
-    p->cur_stack = mln_stack_init(&sattr);\
+    p->cur_stack = mln_stack_init(PREFIX_NAME##_factor_destroy, PREFIX_NAME##_factor_copy);\
     if (p->cur_stack == NULL) {\
         goto err1;\
     }\
     p->cur_la = NULL;\
     p->cur_state = 0;\
     p->cur_reduce = 0;\
-    p->old_stack = mln_stack_init(&sattr);\
+    p->old_stack = mln_stack_init(PREFIX_NAME##_factor_destroy, PREFIX_NAME##_factor_copy);\
     if (p->old_stack == NULL) {\
         goto err2;\
     }\

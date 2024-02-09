@@ -43,14 +43,17 @@ MLN_FUNC_VOID(static, void, mln_stack_node_destroy, \
 /*
  * stack
  */
-MLN_FUNC(, mln_stack_t *, mln_stack_init, (struct mln_stack_attr *attr), (attr), {
+MLN_FUNC(, mln_stack_t *, mln_stack_init, \
+         (stack_free free_handler, stack_copy copy_handler), \
+         (free_handler, copy_handler), \
+{
     mln_stack_t *st = (mln_stack_t *)malloc(sizeof(mln_stack_t));
     if (st == NULL) return NULL;
     st->bottom = NULL;
     st->top = NULL;
     st->nr_node = 0;
-    st->free_handler = attr->free_handler;
-    st->copy_handler = attr->copy_handler;
+    st->free_handler = free_handler;
+    st->copy_handler = copy_handler;
     return st;
 })
 
@@ -106,10 +109,7 @@ MLN_FUNC(, void *, mln_stack_pop, (mln_stack_t *st), (st), {
  * dup
  */
 MLN_FUNC(, mln_stack_t *, mln_stack_dup, (mln_stack_t *st, void *udata), (st, udata), {
-    struct mln_stack_attr sattr;
-    sattr.free_handler = st->free_handler;
-    sattr.copy_handler = st->copy_handler;
-    mln_stack_t *new_st = mln_stack_init(&sattr);
+    mln_stack_t *new_st = mln_stack_init(st->free_handler, st->copy_handler);
     if (new_st == NULL) return NULL;
     mln_stack_node_t *scan;
     void *data;
