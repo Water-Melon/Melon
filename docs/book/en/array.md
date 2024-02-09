@@ -21,45 +21,69 @@
 #### mln_array_init
 
 ```c
-int mln_array_init(mln_array_t *arr, struct mln_array_attr *attr);
+int mln_array_init(mln_array_t *arr, array_free free, mln_size_t size, mln_size_t nalloc);
+
+typedef void (*array_free)(void *);
 ```
 
-Description: For a given array `arr`, initialize it according to the initialization attribute `attr`. The `attr` structure is as follows:
+Description: Initialize a given array `arr`. The parameter meanings are as follows:
+
+- `arr` array object.
+- `free` is a function pointer used to release resources of array elements.
+- `size` is the size in bytes of a single array element.
+- `nalloc` is the initial array length, and subsequent array expansion is expanded by twice the number of elements allocated in the current array.
+
+Return value: Returns `0` on success, otherwise returns `-1`
+
+
+
+#### mln_array_pool_init
 
 ```c
-struct mln_array_attr {
-    void                     *pool;
-    array_pool_alloc_handler  pool_alloc;
-    array_pool_free_handler   pool_free;
-    array_free                free;
-    mln_size_t                size;
-    mln_size_t                nalloc;
-};
+int mln_array_pool_init(mln_array_t *arr, array_free free, mln_size_t size, mln_size_t nalloc,
+                        void *pool, array_pool_alloc_handler pool_alloc, array_pool_free_handler pool_free);
+
 typedef void *(*array_pool_alloc_handler)(void *, mln_size_t);
 typedef void (*array_pool_free_handler)(void *);
 typedef void (*array_free)(void *);
 ```
 
-- `pool` is a custom memory pool structure pointer
-- `pool_alloc` is a custom memory pool allocation function pointer
-- `pool_free` is a custom memory pool release function pointer
-- `free` is a function pointer for resource release of array elements
-- `size` is the size in bytes of a single array element
-- `nalloc` is the initial array length, and the subsequent array expansion is to expand twice the number of elements allocated in the current array
+Description: Initialize a given array `arr` using memory pool memory. The parameter meanings are as follows:
 
-Return value: returns `0` on success, otherwise returns `-1`
+- `arr` array object.
+- `free` is a function pointer used to release resources of array elements.
+- `size` is the size in bytes of a single array element.
+- `nalloc` is the initial array length, and subsequent array expansion is expanded by twice the number of elements allocated in the current array.
+- `pool` is a custom memory pool structure pointer.
+- `pool_alloc` is a custom memory pool allocation function pointer.
+- `pool_free` is a custom memory pool release function pointer.
+
+Return value: Returns `0` on success, otherwise returns `-1`
 
 
 
 #### mln_array_new
 
 ```c
-mln_array_t *mln_array_new(struct mln_array_attr *attr);
+mln_array_t *mln_array_new(array_free free, mln_size_t size, mln_size_t nalloc);
 ```
 
-Description: Create and initialize an array according to the given initialization attribute `attr`.
+Description: Create and initialize an array based on the given parameters.
 
-Return value: return array pointer if successful, otherwise return `NULL`
+Return value: Returns array pointer if successful, otherwise returns `NULL`
+
+
+
+#### mln_array_pool_new
+
+```c
+mln_array_t *mln_array_pool_new(array_free free, mln_size_t size, mln_size_t nalloc, void *pool,
+                                array_pool_alloc_handler pool_alloc, array_pool_free_handler pool_free);
+```
+
+Description: Creates and initializes an array using memory pool memory according to the given parameters.
+
+Return value: Returns array pointer if successful, otherwise returns `NULL`
 
 
 
@@ -175,15 +199,8 @@ int main(void)
     test_t *t;
     mln_size_t i, n;
     mln_array_t arr;
-    struct mln_array_attr attr;
 
-    attr.pool = NULL;
-    attr.pool_alloc = NULL;
-    attr.pool_free = NULL;
-    attr.free = NULL;
-    attr.size = sizeof(test_t);
-    attr.nalloc = 1;
-    mln_array_init(&arr, &attr);
+    mln_array_init(&arr, NULL, sizeof(test_t), 1);
 
     t = mln_array_push(&arr);
     if (t == NULL)

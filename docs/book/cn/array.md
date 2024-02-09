@@ -27,30 +27,14 @@
 #### mln_array_init
 
 ```c
-int mln_array_init(mln_array_t *arr, struct mln_array_attr *attr);
-```
+int mln_array_init(mln_array_t *arr, array_free free, mln_size_t size, mln_size_t nalloc);
 
-描述：对一个给定的数组`arr`，按照初始化属性`attr`进行初始化。`attr`结构如下：
-
-```c
-struct mln_array_attr {
-    void                     *pool;
-    array_pool_alloc_handler  pool_alloc;
-    array_pool_free_handler   pool_free;
-    array_free                free;
-    mln_size_t                size;
-    mln_size_t                nalloc;
-};
-typedef void *(*array_pool_alloc_handler)(void *, mln_size_t);
-typedef void (*array_pool_free_handler)(void *);
 typedef void (*array_free)(void *);
 ```
 
-其中：
+描述：对一个给定的数组`arr`进行初始化，参数含义如下：
 
-- `pool`是自定义内存池结构指针
-- `pool_alloc`是自定义内存池分配函数指针
-- `pool_free`是自定义内存池释放函数指针
+- `arr` 数组对象
 - `free`是用于对数组元素做资源释放的函数指针
 - `size`是单个数组元素的字节大小
 - `nalloc`是初始数组长度，后续数组扩张则是针对当前数组分配元素的两倍进行扩张
@@ -59,13 +43,51 @@ typedef void (*array_free)(void *);
 
 
 
+#### mln_array_pool_init
+
+```c
+int mln_array_pool_init(mln_array_t *arr, array_free free, mln_size_t size, mln_size_t nalloc,
+                        void *pool, array_pool_alloc_handler pool_alloc, array_pool_free_handler pool_free);
+
+typedef void *(*array_pool_alloc_handler)(void *, mln_size_t);
+typedef void (*array_pool_free_handler)(void *);
+typedef void (*array_free)(void *);
+```
+
+描述：对一个给定的数组`arr`使用内存池内存来初始化，参数含义如下：
+
+- `arr` 数组对象
+- `free`是用于对数组元素做资源释放的函数指针
+- `size`是单个数组元素的字节大小
+- `nalloc`是初始数组长度，后续数组扩张则是针对当前数组分配元素的两倍进行扩张
+- `pool`是自定义内存池结构指针
+- `pool_alloc`是自定义内存池分配函数指针
+- `pool_free`是自定义内存池释放函数指针
+
+返回值：成功则返回`0`，否则返回`-1`
+
+
+
 #### mln_array_new
 
 ```c
-mln_array_t *mln_array_new(struct mln_array_attr *attr);
+mln_array_t *mln_array_new(array_free free, mln_size_t size, mln_size_t nalloc);
 ```
 
-描述：根据给定的初始化属性`attr`，创建和初始化数组。
+描述：根据给定参数创建和初始化数组。
+
+返回值：成功则返回数组指针，否则返回`NULL`
+
+
+
+#### mln_array_pool_new
+
+```c
+mln_array_t *mln_array_pool_new(array_free free, mln_size_t size, mln_size_t nalloc, void *pool,
+                                array_pool_alloc_handler pool_alloc, array_pool_free_handler pool_free);
+```
+
+描述：根据给定参数使用内存池内存来创建和初始化数组。
 
 返回值：成功则返回数组指针，否则返回`NULL`
 
@@ -183,15 +205,8 @@ int main(void)
     test_t *t;
     mln_size_t i, n;
     mln_array_t arr;
-    struct mln_array_attr attr;
 
-    attr.pool = NULL;
-    attr.pool_alloc = NULL;
-    attr.pool_free = NULL;
-    attr.free = NULL;
-    attr.size = sizeof(test_t);
-    attr.nalloc = 1;
-    mln_array_init(&arr, &attr);
+    mln_array_init(&arr, NULL, sizeof(test_t), 1);
 
     t = mln_array_push(&arr);
     if (t == NULL)

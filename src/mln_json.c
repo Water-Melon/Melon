@@ -137,15 +137,7 @@ MLN_FUNC_VOID(, void, mln_json_obj_remove, (mln_json_t *j, mln_string_t *key), (
 
 
 MLN_FUNC(static inline, int, __mln_json_array_init, (mln_json_t *j), (j), {
-    struct mln_array_attr attr;
-
-    attr.pool = NULL;
-    attr.pool_alloc = NULL;
-    attr.pool_free = NULL;
-    attr.free = (array_free)mln_json_destroy;
-    attr.size = sizeof(mln_json_t);
-    attr.nalloc = M_JSON_LEN;
-    if ((j->data.m_j_array = mln_array_new(&attr)) == NULL)
+    if ((j->data.m_j_array = mln_array_new((array_free)mln_json_destroy, sizeof(mln_json_t), M_JSON_LEN)) == NULL)
         return -1;
     mln_json_array_type_set(j);
     return 0;

@@ -2065,24 +2065,31 @@ __mln_lang_func_detail_new(mln_lang_ctx_t *ctx, \
                            mln_lang_exp_t *exp, \
                            mln_lang_exp_t *closure)
 {
-    struct mln_array_attr attr;
     mln_lang_func_detail_t *lfd;
     if ((lfd = (mln_lang_func_detail_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_func_detail_t))) == NULL) {
         return NULL;
     }
     lfd->exp = exp;
 
-    attr.pool = ctx->pool;
-    attr.pool_alloc = (array_pool_alloc_handler)mln_alloc_m;
-    attr.pool_free = (array_pool_free_handler)mln_alloc_free;
-    attr.free = (array_free)mln_lang_var_pfree;
-    attr.size = sizeof(mln_lang_var_t *);
-    attr.nalloc = M_LANG_ARRAY_PREALLOC;
-    if (mln_array_init(&(lfd->args), &attr) < 0) {
+    if (mln_array_pool_init(&(lfd->args), \
+                            (array_free)mln_lang_var_pfree, \
+                            sizeof(mln_lang_var_t *), \
+                            M_LANG_ARRAY_PREALLOC, \
+                            ctx->pool, \
+                            (array_pool_alloc_handler)mln_alloc_m, \
+                            (array_pool_free_handler)mln_alloc_free) < 0)
+    {
         mln_alloc_free(lfd);
         return NULL;
     }
-    if (mln_array_init(&(lfd->closure), &attr) < 0) {
+    if (mln_array_pool_init(&(lfd->closure), \
+                            (array_free)mln_lang_var_pfree, \
+                            sizeof(mln_lang_var_t *), \
+                            M_LANG_ARRAY_PREALLOC, \
+                            ctx->pool, \
+                            (array_pool_alloc_handler)mln_alloc_m, \
+                            (array_pool_free_handler)mln_alloc_free) < 0)
+    {
         mln_array_destroy(&(lfd->args));
         mln_alloc_free(lfd);
         return NULL;
@@ -2766,7 +2773,6 @@ int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key)
 
 static inline mln_lang_funccall_val_t *__mln_lang_funccall_val_new(mln_alloc_t *pool, mln_string_t *name)
 {
-    struct mln_array_attr attr;
     mln_lang_funccall_val_t *func;
 
     if ((func = (mln_lang_funccall_val_t *)mln_alloc_m(pool, sizeof(mln_lang_funccall_val_t))) == NULL) {
@@ -2780,13 +2786,14 @@ static inline mln_lang_funccall_val_t *__mln_lang_funccall_val_new(mln_alloc_t *
     func->prototype = NULL;
     func->object = NULL;
 
-    attr.pool = pool;
-    attr.pool_alloc = (array_pool_alloc_handler)mln_alloc_m;
-    attr.pool_free = (array_pool_free_handler)mln_alloc_free;
-    attr.free = (array_free)mln_lang_var_pfree;
-    attr.size = sizeof(mln_lang_var_t *);
-    attr.nalloc = M_LANG_ARRAY_PREALLOC;
-    if (mln_array_init(&func->args, &attr) < 0) {
+    if (mln_array_pool_init(&func->args, \
+                            (array_free)mln_lang_var_pfree, \
+                            sizeof(mln_lang_var_t *), \
+                            M_LANG_ARRAY_PREALLOC, \
+                            pool, \
+                            (array_pool_alloc_handler)mln_alloc_m, \
+                            (array_pool_free_handler)mln_alloc_free) < 0)
+    {
         mln_alloc_free(func);
         return NULL;
     }
@@ -7757,7 +7764,6 @@ static inline mln_lang_hash_bucket_t *mln_lang_hash_get_bucket(mln_lang_hash_t *
 static mln_lang_ctx_pipe_t *mln_lang_ctx_pipe_new(mln_lang_ctx_t *ctx)
 {
     mln_lang_ctx_pipe_t *p;
-    struct mln_array_attr attr;
 
     if ((p = (mln_lang_ctx_pipe_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_ctx_pipe_t))) == NULL) {
         return NULL;
@@ -7767,13 +7773,14 @@ static mln_lang_ctx_pipe_t *mln_lang_ctx_pipe_new(mln_lang_ctx_t *ctx)
         return NULL;
     }
     p->ctx = ctx;
-    attr.pool = ctx->pool;
-    attr.pool_alloc = (array_pool_alloc_handler)mln_alloc_m;
-    attr.pool_free = (array_pool_free_handler)mln_alloc_free;
-    attr.free = (array_free)mln_array_destroy;
-    attr.size = sizeof(mln_array_t);
-    attr.nalloc = MLN_LANG_PIPE_LIST_NALLOC;
-    if (mln_array_init(&p->list, &attr) < 0) {
+    if (mln_array_pool_init(&p->list, \
+                            (array_free)mln_array_destroy, \
+                            sizeof(mln_array_t), \
+                            MLN_LANG_PIPE_LIST_NALLOC, \
+                            ctx->pool, \
+                            (array_pool_alloc_handler)mln_alloc_m, \
+                            (array_pool_free_handler)mln_alloc_free) < 0)
+    {
         pthread_mutex_destroy(&p->lock);
         mln_alloc_free(p);
         return NULL;
@@ -8053,7 +8060,6 @@ static inline int mln_lang_ctx_pipe_do_send(mln_lang_ctx_t *ctx, char *fmt, va_l
     mln_lang_ctx_pipe_t *p;
     mln_lang_ctx_pipe_elem_t *pe;
     mln_array_t *a = NULL;
-    struct mln_array_attr attr;
 
     if ((p = (mln_lang_ctx_pipe_t *)mln_lang_ctx_resource_fetch(ctx, "pipe")) == NULL)
         return 0;
@@ -8070,13 +8076,14 @@ static inline int mln_lang_ctx_pipe_do_send(mln_lang_ctx_t *ctx, char *fmt, va_l
         pthread_mutex_unlock(&p->lock);
         return -1;
     }
-    attr.pool = ctx->pool;
-    attr.pool_alloc = (array_pool_alloc_handler)mln_alloc_m;
-    attr.pool_free = (array_pool_free_handler)mln_alloc_free;
-    attr.free = (array_free)mln_lang_ctx_pipe_elem_destroy;
-    attr.size = sizeof(mln_lang_ctx_pipe_elem_t);
-    attr.nalloc = MLN_LANG_PIPE_ELEM_NALLOC;
-    if (mln_array_init(a, &attr) < 0) {
+    if (mln_array_pool_init(a, \
+                            (array_free)mln_lang_ctx_pipe_elem_destroy, \
+                            sizeof(mln_lang_ctx_pipe_elem_t), \
+                            MLN_LANG_PIPE_ELEM_NALLOC, \
+                            ctx->pool, \
+                            (array_pool_alloc_handler)mln_alloc_m, \
+                            (array_pool_free_handler)mln_alloc_free) < 0)
+    {
         mln_array_pop(&p->list);
         pthread_mutex_unlock(&p->lock);
         return -1;

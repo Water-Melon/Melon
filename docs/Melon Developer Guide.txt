@@ -3071,34 +3071,45 @@ Their definitions can be found in melon/include/mln_types.h.
          This is used to initialize linked list.
 
   45) Array
-      a) int mln_array_init(mln_array_t *arr, struct mln_array_attr *attr);
-         Initialize an array indicated by 'arr' with attribute 'attr'.
+      a) int mln_array_init(mln_array_t *arr, array_free free, mln_size_t size, mln_size_t nalloc);
+         Initialize an array indicated by 'arr' with the attributes.
 
-      b) mln_array_t *mln_array_new(struct mln_array_attr *attr);
+      b) int mln_array_pool_init(mln_array_t *arr, array_free free, mln_size_t size, mln_size_t nalloc, \
+                                 void *pool, array_pool_alloc_handler pool_alloc, array_pool_free_handler pool_free);
+         Initialize an array that indicated by 'arr' by memory pool 'pool'.
+
+      c) mln_array_t *mln_array_new(array_free free, mln_size_t size, mln_size_t nalloc);
+         Allocate an array indicated by 'arr' with the attributes.
+
+      d) mln_array_t *mln_array_pool_new(array_free free, mln_size_t size, mln_size_t nalloc, void *pool, \
+                                         array_pool_alloc_handler pool_alloc, array_pool_free_handler pool_free);
+         Allocate an array that indicated by 'arr' by memory pool 'pool'.
+
+      e) mln_array_t *mln_array_new(struct mln_array_attr *attr);
          Create an array with attribute 'attr'.
 
-      c) void mln_array_destroy(mln_array_t *arr);
+      f) void mln_array_destroy(mln_array_t *arr);
          Release all elements in 'arr'.
 
-      d) void mln_array_free(mln_array_t *arr);
+      g) void mln_array_free(mln_array_t *arr);
          Release all elements in 'arr' and free 'arr'.
 
-      e) void mln_array_reset(mln_array_t *arr);
+      h) void mln_array_reset(mln_array_t *arr);
          Reset array elements but not free.
 
-      f) void *mln_array_push(mln_array_t *arr);
+      i) void *mln_array_push(mln_array_t *arr);
          Push an element in 'arr' and return this new element pointer.
 
-      g) void *mln_array_pushn(mln_array_t *arr, mln_size_t n);
+      j) void *mln_array_pushn(mln_array_t *arr, mln_size_t n);
          Push 'n' elements in 'arr' and return the pointer of these elements.
 
-      h) void mln_array_pop(mln_array_t *arr);
+      k) void mln_array_pop(mln_array_t *arr);
          Pop the last element in 'arr' and free.
 
-      i) mln_array_elts(arr);
+      l) mln_array_elts(arr);
          Get elements.
 
-      j) mln_array_nelts(arr);
+      m) mln_array_nelts(arr);
          Get the number of elements.
 
    46) Function

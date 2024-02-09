@@ -10,32 +10,64 @@
 
 static inline int mln_array_alloc(mln_array_t *arr, mln_size_t n);
 
-MLN_FUNC(, int, mln_array_init, (mln_array_t *arr, struct mln_array_attr *attr), (arr, attr), {
+MLN_FUNC(, int, mln_array_init, \
+         (mln_array_t *arr, array_free free, mln_size_t size, mln_size_t nalloc), \
+         (arr, free, size, nalloc), \
+{
     arr->elts = NULL;
-    arr->size = attr->size;
-    arr->nalloc = attr->nalloc;
+    arr->size = size;
+    arr->nalloc = nalloc;
     arr->nelts = 0;
-    arr->pool = attr->pool;
-    arr->pool_alloc = attr->pool_alloc;
-    arr->pool_free = attr->pool_free;
-    arr->free = attr->free;
+    arr->pool = NULL;
+    arr->pool_alloc = NULL;
+    arr->pool_free = NULL;
+    arr->free = free;
     return mln_array_alloc(arr, arr->nalloc);
 })
 
-MLN_FUNC(, mln_array_t *, mln_array_new, (struct mln_array_attr *attr), (attr), {
+MLN_FUNC(, int, mln_array_pool_init, \
+         (mln_array_t *arr, array_free free, mln_size_t size, mln_size_t nalloc, \
+          void *pool, array_pool_alloc_handler pool_alloc, array_pool_free_handler pool_free), \
+         (arr, free, size, nalloc, pool, pool_alloc, pool_free), \
+{
+    arr->elts = NULL;
+    arr->size = size;
+    arr->nalloc = nalloc;
+    arr->nelts = 0;
+    arr->pool = pool;
+    arr->pool_alloc = pool_alloc;
+    arr->pool_free = pool_free;
+    arr->free = free;
+    return mln_array_alloc(arr, arr->nalloc);
+})
+
+MLN_FUNC(, mln_array_t *, mln_array_new, \
+         (array_free free, mln_size_t size, mln_size_t nalloc), \
+         (free, size, nalloc), \
+{
     mln_array_t *arr;
 
-    if (attr->pool == NULL || attr->pool_alloc == NULL || attr->pool_free == NULL) {
-        arr = (mln_array_t *)malloc(sizeof(mln_array_t));
-        attr->pool = NULL;
-    } else {
-        arr = (mln_array_t *)attr->pool_alloc(attr->pool, sizeof(mln_array_t));
+    if ((arr = (mln_array_t *)malloc(sizeof(mln_array_t))) == NULL)
+        return NULL;
+
+    if (mln_array_init(arr, free, size, nalloc) < 0) {
+        free(arr);
+        return NULL;
     }
-    if (mln_array_init(arr, attr) < 0) {
-        if (attr->pool == NULL || attr->pool_alloc == NULL || attr->pool_free == NULL)
-            free(arr);
-        else
-            attr->pool_free(arr);
+    return arr;
+})
+
+MLN_FUNC(, mln_array_t *, mln_array_pool_new, \
+         (array_free free, mln_size_t size, mln_size_t nalloc, void *pool, \
+          array_pool_alloc_handler pool_alloc, array_pool_free_handler pool_free), \
+         (free, size, nalloc, pool, pool_alloc, pool_free), \
+{
+    mln_array_t *arr;
+
+    if ((arr = (mln_array_t *)pool_alloc(pool, sizeof(mln_array_t))) == NULL)
+        return NULL;
+    if (mln_array_pool_init(arr, free, size, nalloc, pool, pool_alloc, pool_free) < 0) {
+        pool_free(arr);
         return NULL;
     }
     return arr;
