@@ -25,8 +25,8 @@ struct mln_hash_s {
     hash_pool_free_handler   pool_free;//free function of memory pool
     hash_calc_handler        hash;//callback to calculate the bucket index
     hash_cmp_handler         cmp;//comparision function for comparing nodes in the same bucket
-    hash_free_handler        free_key;//key free function
-    hash_free_handler        free_val;//value free function
+    hash_free_handler        key_freer;//key free function
+    hash_free_handler        val_freer;//value free function
     mln_hash_mgr_t          *tbl;//buckets
     mln_u64_t                len;//bucket length
     mln_u32_t                nr_nodes;//number of nodes
@@ -44,22 +44,82 @@ Here, we mainly focus on `len`, because when calculating the belonging bucket, t
 
 
 
+#### mln_hash_init
+
+```c
+int mln_hash_init(mln_hash_t *h, struct mln_hash_attr *attr);
+
+struct mln_hash_attr {
+    void                    *pool;
+    hash_pool_alloc_handler  pool_alloc;
+    hash_pool_free_handler   pool_free;
+    hash_calc_handler        hash;
+    hash_cmp_handler         cmp;
+    hash_free_handler        key_freer;
+    hash_free_handler        val_freer;
+    mln_u64_t                len_base;
+    mln_u32_t                expandable:1;
+    mln_u32_t                calc_prime:1;
+};
+
+typedef mln_u64_t (*hash_calc_handler)(mln_hash_t *, void *);
+typedef int  (*hash_cmp_handler) (mln_hash_t *, void *, void *);
+typedef void (*hash_free_handler)(void *);
+typedef void *(*hash_pool_alloc_handler)(void *, mln_size_t);
+typedef void (*hash_pool_free_handler)(void *);
+```
+
+Description:
+
+This function is used to initialize the hash table structure `h`.
+
+The `pool` of parameter `attr` is optional. If you want to allocate from the memory pool, assign a value, otherwise set `NULL` and allocate it by `malloc`. That is, the pool structure is given by the caller.
+
+`pool_alloc` and `pool_free` are function pointers for memory allocation and release of the pool `pool`.
+
+`key_freer` and `val_freer` are also optional parameters. If you need to release resources at the same time when the table entry is removed or the hash table is destroyed, set it, otherwise set it to `NULL`. Release the structure whose function parameter is `key` or `value`.
+
+The return value of `hash` is a 64-bit integer offset, and the offset should not be greater than or equal to the bucket length, so the modulo operation should be performed within this function.
+
+`cmp` return value: `0` means different, `non-0` means the same.
+
+The hash table supports automatic expansion of the bucket length based on the number of elements, but it is recommended to treat this option with caution, because the bucket length expansion will be accompanied by node migration, which will cause corresponding calculation and time overhead, so use it with caution.
+
+It is recommended that the hash table bucket length be a prime number, because taking the modulo of a prime number will relatively evenly place elements into different buckets, preventing some bucket linked lists from being too long.
+
+Return value: Returns `0` if successful, otherwise returns `-1`
+
+
+
+#### mln_hash_init_fast
+
+```c
+int mln_hash_init_fast(mln_hash_t *h, hash_calc_handler hash, hash_cmp_handler cmp, hash_free_handler key_freer,
+                       hash_free_handler val_freer, mln_u64_t base_len, mln_u32_t expandable, mln_u32_t calc_prime);
+```
+
+Description: This function is used to initialize the hash table structure `h`. The meaning of the parameters is the same as that of `mln_hash_init`, but it is passed directly as the function parameters.
+
+Return value: Returns `0` if successful, otherwise returns `-1`
+
+
+
 #### mln_hash_new
 
 ```c
 mln_hash_t *mln_hash_new(struct mln_hash_attr *attr);
 
 struct mln_hash_attr {
-    void                    *pool; //memory pool, it's an option, NULL means memory pool not activated
-    hash_pool_alloc_handler  pool_alloc;//allocation function of memory pool
-    hash_pool_free_handler   pool_free;//free function of memory pool
-    hash_calc_handler        hash; //callback to calculate the bucket index
-    hash_cmp_handler         cmp; //comparision function for comparing nodes in the same bucket
-    hash_free_handler        free_key; //key free function
-    hash_free_handler        free_val; //value free function
-    mln_u64_t                len_base; //recommended bucket length
-    mln_u32_t                expandable:1; //expansion flag
-    mln_u32_t                calc_prime:1; //prime flag for calculating bucket length as a prime number
+    void                    *pool;
+    hash_pool_alloc_handler  pool_alloc;
+    hash_pool_free_handler   pool_free;
+    hash_calc_handler        hash;
+    hash_cmp_handler         cmp;
+    hash_free_handler        key_freer;
+    hash_free_handler        val_freer;
+    mln_u64_t                len_base;
+    mln_u32_t                expandable:1;
+    mln_u32_t                calc_prime:1;
 };
 
 typedef mln_u64_t (*hash_calc_handler)(mln_hash_t *, void *);
@@ -73,21 +133,62 @@ Description:
 
 This function is used to initialize the hash table structure.
 
-The `pool` of the parameter `attr` is optional. If you want to allocate from the memory pool, assign a value, otherwise set `NULL` to allocate by `malloc`. That is, the pool structure is given by the caller.
+The `pool` of parameter `attr` is optional. If you want to allocate from the memory pool, assign a value, otherwise set `NULL` and allocate it by `malloc`. That is, the pool structure is given by the caller.
 
-`pool_alloc` and `pool_free` are the function pointers for the memory allocation and release of pool `pool`.
+`pool_alloc` and `pool_free` are function pointers for memory allocation and release of the pool `pool`.
 
-`free_key` and `free_val` are also optional parameters. If the resource needs to be released when the entry is deleted or the hash table is destroyed, set it, otherwise set it to `NULL`. Frees structures whose function arguments are `key` or `value`.
+`key_freer` and `val_freer` are also optional parameters. If you need to release resources at the same time when the table entry is removed or the hash table is destroyed, set it, otherwise set it to `NULL`. Release the structure whose function parameter is `key` or `value`.
 
-The return value of `hash` is a 64-bit integer offset, and the offset should not be greater than or equal to the bucket length, so the modulo operation should be performed in this function.
+The return value of `hash` is a 64-bit integer offset, and the offset should not be greater than or equal to the bucket length, so the modulo operation should be performed within this function.
 
-`cmp` return value: `0` is not the same, `non-zero` is the same.
+`cmp` return value: `0` means different, `non-0` means the same.
 
-The hash table supports automatic expansion of the bucket length according to the number of elements, but it is recommended to treat this option with caution, because the expansion of the bucket length will accompany the node migration, which will cause corresponding calculation and time overhead, so use it with caution.
+The hash table supports automatic expansion of the bucket length based on the number of elements, but it is recommended to treat this option with caution, because the bucket length expansion will be accompanied by node migration, which will cause corresponding calculation and time overhead, so use it with caution.
 
-The bucket length of the hash table is recommended to be a prime number, because taking the modulo of the prime number will relatively evenly drop the elements into different buckets, preventing some bucket lists from being too long.
+It is recommended that the hash table bucket length be a prime number, because taking the modulo of a prime number will relatively evenly place elements into different buckets, preventing some bucket linked lists from being too long.
 
-Return value: if successful, return the hash table structure pointer, otherwise `NULL`
+Return value: If successful, returns the hash table structure pointer, otherwise `NULL`
+
+
+
+#### mln_hash_new_fast
+
+```c
+mln_hash_t *mln_hash_new_fast(hash_calc_handler hash, hash_cmp_handler cmp, hash_free_handler key_freer, hash_free_handler val_freer,
+                              mln_u64_t base_len, mln_u32_t expandable, mln_u32_t calc_prime);
+```
+
+Description: This function is used to initialize the hash table structure. The meaning of the parameters is the same as that of `mln_hash_new`, except that it is passed as function parameters.
+
+Return value: If successful, returns the hash table structure pointer, otherwise `NULL`
+
+
+
+#### mln_hash_destroy
+
+```c
+void mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg);
+
+typedef enum mln_hash_flag {
+    M_HASH_F_NONE,
+    M_HASH_F_VAL,
+    M_HASH_F_KEY,
+    M_HASH_F_KV
+} mln_hash_flag_t;
+```
+
+Description:
+
+Destroy the hash table.
+
+The parameter `flg` is used to indicate whether to release the resources occupied by the `key`value` in the hash table when it is released. It is divided into:
+
+- No need to release
+- Only release value resources
+- Only release key resources
+- Release key and value resources at the same time
+
+Return value: None
 
 
 
@@ -106,16 +207,16 @@ typedef enum mln_hash_flag {
 
 Description:
 
-Destroy the hash table.
+Destroy and free the hash table.
 
 The parameter `flg` is used to indicate whether to release the resources occupied by the `key`value` in the hash table when it is released. It is divided into:
 
-- no release required
-- only release value resources
-- only release key resources
+- No need to release
+- Only release value resources
+- Only release key resources
 - Release key and value resources at the same time
 
-Return value: none
+Return value: None
 
 
 
@@ -301,8 +402,8 @@ int main(int argc, char *argv[])
     hattr.pool_free = NULL;
     hattr.hash = calc_handler;
     hattr.cmp = cmp_handler;
-    hattr.free_key = NULL;
-    hattr.free_val = free_handler;
+    hattr.key_freer = NULL;
+    hattr.val_freer = free_handler;
     hattr.len_base = 97;
     hattr.expandable = 0;
     hattr.calc_prime = 0;

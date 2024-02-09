@@ -33,8 +33,8 @@ MLN_FUNC(, int, mln_hash_init, (mln_hash_t *h, struct mln_hash_attr *attr), (h, 
     h->pool_free = attr->pool_free;
     h->hash = attr->hash;
     h->cmp = attr->cmp;
-    h->free_key = attr->free_key;
-    h->free_val = attr->free_val;
+    h->key_freer = attr->key_freer;
+    h->val_freer = attr->val_freer;
     h->len = attr->calc_prime? mln_prime_generate(attr->len_base): attr->len_base;
     if (h->pool != NULL) {
         h->tbl = (mln_hash_mgr_t *)h->pool_alloc(h->pool, h->len*sizeof(mln_hash_mgr_t));
@@ -48,6 +48,41 @@ MLN_FUNC(, int, mln_hash_init, (mln_hash_t *h, struct mln_hash_attr *attr), (h, 
     h->threshold = attr->calc_prime? mln_prime_generate(h->len << 1): h->len << 1;
     h->expandable = attr->expandable;
     h->calc_prime = attr->calc_prime;
+    if (h->len == 0 || \
+        h->hash == NULL || \
+        h->cmp == NULL)
+    {
+        if (h->pool != NULL) {
+            h->pool_free(h->tbl);
+        } else {
+            free(h->tbl);
+        }
+        return -1;
+    }
+    h->iter = h->iter_head = h->iter_tail = NULL;
+    return 0;
+})
+
+MLN_FUNC(, int, mln_hash_init_fast, \
+         (mln_hash_t *h, hash_calc_handler hash, hash_cmp_handler cmp, hash_free_handler key_freer, \
+          hash_free_handler val_freer, mln_u64_t base_len, mln_u32_t expandable, mln_u32_t calc_prime), \
+         (h, hash, cmp, key_freer, val_freer, base_len, expandable, calc_prime), \
+{
+    h->pool = NULL;
+    h->pool_alloc = NULL;
+    h->pool_free = NULL;
+    h->hash = hash;
+    h->cmp = cmp;
+    h->key_freer = key_freer;
+    h->val_freer = val_freer;
+    h->len = calc_prime? mln_prime_generate(base_len): base_len;
+    h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
+    if (h->tbl == NULL) return -1;
+
+    h->nr_nodes = 0;
+    h->threshold = calc_prime? mln_prime_generate(h->len << 1): h->len << 1;
+    h->expandable = expandable;
+    h->calc_prime = calc_prime;
     if (h->len == 0 || \
         h->hash == NULL || \
         h->cmp == NULL)
@@ -77,8 +112,8 @@ MLN_FUNC(, mln_hash_t *, mln_hash_new, (struct mln_hash_attr *attr), (attr), {
     h->pool_free = attr->pool_free;
     h->hash = attr->hash;
     h->cmp = attr->cmp;
-    h->free_key = attr->free_key;
-    h->free_val = attr->free_val;
+    h->key_freer = attr->key_freer;
+    h->val_freer = attr->val_freer;
     h->len = attr->calc_prime? mln_prime_generate(attr->len_base): attr->len_base;
     if (h->pool != NULL) {
         h->tbl = (mln_hash_mgr_t *)h->pool_alloc(h->pool, h->len*sizeof(mln_hash_mgr_t));
@@ -106,6 +141,42 @@ MLN_FUNC(, mln_hash_t *, mln_hash_new, (struct mln_hash_attr *attr), (attr), {
             free(h->tbl);
             free(h);
         }
+        return NULL;
+    }
+    h->iter = h->iter_head = h->iter_tail = NULL;
+    return h;
+})
+
+MLN_FUNC(, mln_hash_t *, mln_hash_new_fast, \
+         (hash_calc_handler hash, hash_cmp_handler cmp, hash_free_handler key_freer, \
+          hash_free_handler val_freer, mln_u64_t base_len, mln_u32_t expandable, mln_u32_t calc_prime), \
+         (hash, cmp, key_freer, val_freer, base_len, expandable, calc_prime), \
+{
+    mln_hash_t *h;
+
+    h = (mln_hash_t *)malloc(sizeof(mln_hash_t));
+    if (h == NULL) return NULL;
+
+    h->pool = NULL;
+    h->pool_alloc = NULL;
+    h->pool_free = NULL;
+    h->hash = hash;
+    h->cmp = cmp;
+    h->key_freer = key_freer;
+    h->val_freer = val_freer;
+    h->len = calc_prime? mln_prime_generate(base_len): base_len;
+    h->tbl = (mln_hash_mgr_t *)calloc(h->len, sizeof(mln_hash_mgr_t));
+    if (h->tbl == NULL) {
+        free(h);
+        return NULL;
+    }
+    h->nr_nodes = 0;
+    h->threshold = calc_prime? mln_prime_generate(h->len << 1): h->len << 1;
+    h->expandable = expandable;
+    h->calc_prime = calc_prime;
+    if (h->len == 0 || h->hash == NULL || h->cmp == NULL) {
+        free(h->tbl);
+        free(h);
         return NULL;
     }
     h->iter = h->iter_head = h->iter_tail = NULL;
@@ -369,18 +440,18 @@ MLN_FUNC_VOID(static inline, void, mln_hash_entry_free, \
     if (he == NULL) return;
     switch (flg) {
         case M_HASH_F_VAL:
-            if (h->free_val != NULL)
-                h->free_val(he->val);
+            if (h->val_freer != NULL)
+                h->val_freer(he->val);
             break;
         case M_HASH_F_KEY:
-            if (h->free_key != NULL)
-                h->free_key(he->key);
+            if (h->key_freer != NULL)
+                h->key_freer(he->key);
             break;
         case M_HASH_F_KV:
-            if (h->free_val != NULL)
-                h->free_val(he->val);
-            if (h->free_key != NULL)
-                h->free_key(he->key);
+            if (h->val_freer != NULL)
+                h->val_freer(he->val);
+            if (h->key_freer != NULL)
+                h->key_freer(he->key);
             break;
         default: break;
     }

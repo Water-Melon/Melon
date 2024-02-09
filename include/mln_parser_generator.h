@@ -514,18 +514,13 @@ MLN_FUNC(SCOPE inline, int, PREFIX_NAME##_pg_process_token, \
 \
 MLN_FUNC(SCOPE, int, PREFIX_NAME##_preprocess, (struct PREFIX_NAME##_preprocess_attr *attr), (attr), {\
     /*Init hash table*/\
-    struct mln_hash_attr hattr;\
-    hattr.pool = NULL;\
-    hattr.pool_alloc = NULL;\
-    hattr.pool_free = NULL;\
-    hattr.hash = mln_pg_map_hash_calc;\
-    hattr.cmp = mln_pg_map_hash_cmp;\
-    hattr.free_key = mln_pg_map_hash_free;\
-    hattr.free_val = mln_pg_map_hash_free;\
-    hattr.len_base = M_PG_DFL_HASHLEN;\
-    hattr.expandable = 1;\
-    hattr.calc_prime = 0;\
-    attr->map_tbl = mln_hash_new(&hattr);\
+    attr->map_tbl = mln_hash_new_fast(mln_pg_map_hash_calc, \
+                                      mln_pg_map_hash_cmp, \
+                                      mln_pg_map_hash_free, \
+                                      mln_pg_map_hash_free, \
+                                      M_PG_DFL_HASHLEN, \
+                                      1, \
+                                      0);\
     if (attr->map_tbl == NULL) {\
         mln_log(error, "No memory.\n");\
         return -1;\

@@ -895,8 +895,8 @@ MLN_FUNC(, mln_http_t *, mln_http_init, \
     hattr.pool_free = (hash_pool_free_handler)mln_alloc_free;
     hattr.hash = mln_http_hash_calc;
     hattr.cmp = mln_http_hash_cmp;
-    hattr.free_key = mln_http_hash_free;
-    hattr.free_val = mln_http_hash_free;
+    hattr.key_freer = mln_http_hash_free;
+    hattr.val_freer = mln_http_hash_free;
     hattr.len_base = M_HTTP_HASH_LEN;
     hattr.expandable = 0;
     hattr.calc_prime = 0;

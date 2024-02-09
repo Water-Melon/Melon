@@ -31,8 +31,8 @@ MLN_FUNC(, int, mln_websocket_init, (mln_websocket_t *ws, mln_http_t *http), (ws
     hattr.pool_free = (hash_pool_free_handler)mln_alloc_free;
     hattr.hash = mln_websocket_hash_calc;
     hattr.cmp = mln_websocket_hash_cmp;
-    hattr.free_key = mln_websocket_hash_free;
-    hattr.free_val = mln_websocket_hash_free;
+    hattr.key_freer = mln_websocket_hash_free;
+    hattr.val_freer = mln_websocket_hash_free;
     hattr.len_base = 37;
     hattr.expandable = 0;
     hattr.calc_prime = 0;

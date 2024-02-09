@@ -31,8 +31,8 @@ typedef enum mln_hash_flag {
 struct mln_hash_attr {
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
-    hash_free_handler        free_key;
-    hash_free_handler        free_val;
+    hash_free_handler        key_freer;
+    hash_free_handler        val_freer;
     mln_u64_t                len_base;
     mln_u32_t                expandable:1;
     mln_u32_t                calc_prime:1;
@@ -64,8 +64,8 @@ struct mln_hash_s {
     mln_u64_t                len;
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
-    hash_free_handler        free_key;
-    hash_free_handler        free_val;
+    hash_free_handler        key_freer;
+    hash_free_handler        val_freer;
     mln_u32_t                nr_nodes;
     mln_u32_t                threshold;
     mln_u32_t                expandable:1;
@@ -80,9 +80,26 @@ struct mln_hash_s {
 
 extern int
 mln_hash_init(mln_hash_t *h, struct mln_hash_attr *attr) __NONNULL2(1,2);
+extern int
+mln_hash_init_fast(mln_hash_t *h, \
+                   hash_calc_handler hash, \
+                   hash_cmp_handler cmp, \
+                   hash_free_handler key_freer, \
+                   hash_free_handler val_freer, \
+                   mln_u64_t base_len, \
+                   mln_u32_t expandable, \
+                   mln_u32_t calc_prime);
 extern void mln_hash_destroy(mln_hash_t *h, mln_hash_flag_t flg);
 extern mln_hash_t *
 mln_hash_new(struct mln_hash_attr *attr) __NONNULL1(1);
+extern mln_hash_t *
+mln_hash_new_fast(hash_calc_handler hash, \
+                  hash_cmp_handler cmp, \
+                  hash_free_handler key_freer, \
+                  hash_free_handler val_freer, \
+                  mln_u64_t base_len, \
+                  mln_u32_t expandable, \
+                  mln_u32_t calc_prime);
 extern void
 mln_hash_free(mln_hash_t *h, mln_hash_flag_t flg);
 extern void *
