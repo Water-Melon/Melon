@@ -30,13 +30,6 @@ struct mln_iothread_msg_s {
     pthread_mutex_t             mutex;
 };
 
-struct mln_iothread_attr {
-    mln_u32_t                   nthread;
-    mln_iothread_entry_t        entry;
-    void                       *args;
-    mln_iothread_msg_process_t  handler;
-};
-
 struct mln_iothread_s {
     pthread_mutex_t             io_lock;
     pthread_mutex_t             user_lock;
@@ -59,7 +52,7 @@ struct mln_iothread_s {
 #define mln_iothread_msg_type(m)       ((m)->type)
 #define mln_iothread_msg_data(m)       ((m)->data)
 
-extern int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr);
+extern int mln_iothread_init(mln_iothread_t *t, mln_u32_t nthread, mln_iothread_entry_t entry, void *args, mln_iothread_msg_process_t handler);
 extern void mln_iothread_destroy(mln_iothread_t *t);
 extern int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, mln_u32_t feedback);
 extern int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);

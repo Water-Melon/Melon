@@ -23,12 +23,13 @@ MLN_CHAIN_FUNC_DECLARE(mln_iothread_msg, mln_iothread_msg_t, static inline void,
 MLN_CHAIN_FUNC_DEFINE(mln_iothread_msg, mln_iothread_msg_t, static inline void, prev, next);
 
 MLN_FUNC(, int, mln_iothread_init, \
-         (mln_iothread_t *t, struct mln_iothread_attr *attr), (t, attr), \
+         (mln_iothread_t *t, mln_u32_t nthread, mln_iothread_entry_t entry, void *args, mln_iothread_msg_process_t handler), \
+         (t, nthread, entry, args, handler), \
 {
     mln_u32_t i;
     int fds[2];
 
-    if (!attr->nthread || attr->entry == NULL) {
+    if (!nthread || entry == NULL) {
         return -1;
     }
 
@@ -39,14 +40,14 @@ MLN_FUNC(, int, mln_iothread_init, \
     t->user_fd = fds[1];
     mln_iothread_fd_nonblock_set(t->io_fd);
     mln_iothread_fd_nonblock_set(t->user_fd);
-    t->entry = attr->entry;
-    t->args = attr->args;
-    t->handler = attr->handler;
+    t->entry = entry;
+    t->args = args;
+    t->handler = handler;
     pthread_mutex_init(&(t->io_lock), NULL);
     pthread_mutex_init(&(t->user_lock), NULL);
     t->io_head = t->io_tail = NULL;
     t->user_head = t->user_tail = NULL;
-    t->nthread = attr->nthread;
+    t->nthread = nthread;
 
     if ((t->tids = (pthread_t *)calloc(t->nthread, sizeof(pthread_t))) == NULL) {
         mln_socket_close(fds[0]);

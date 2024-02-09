@@ -2984,8 +2984,8 @@ Their definitions can be found in melon/include/mln_types.h.
          It will return the next timestamp depending on 'exp'. If failed, 0 will be returned.
 
   41) I/O Thread
-      a) int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr);
-         Initialize an iothread instance 't' with attribute 'attr'.
+      a) int mln_iothread_init(mln_iothread_t *t, mln_u32_t nthread, mln_iothread_entry_t entry, void *args, mln_iothread_msg_process_t handler);
+         Initialize an iothread instance 't' with attributes.
          Return value: 0 on success, otherwise -1.
 
       b) void mln_iothread_destroy(mln_iothread_t *t);

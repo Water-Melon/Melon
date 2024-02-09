@@ -25,20 +25,18 @@ I/O thread is another kind of thread pool. But this component is mainly used for
 #### mln_iothread_init
 
 ```c
-int mln_iothread_init(mln_iothread_t *t, struct mln_iothread_attr *attr);
-
-struct mln_iothread_attr {
-    mln_u32_t                   nthread; //Total number of I/O threads
-    mln_iothread_entry_t        entry; //I/O thread entry function
-    void                       *args; //I/O thread entry parameters
-    mln_iothread_msg_process_t  handler; //message handler
-};
+int mln_iothread_init(mln_iothread_t *t, mln_u32_t nthread, mln_iothread_entry_t entry, void *args, mln_iothread_msg_process_t handler);
 
 typedef void *(*mln_iothread_entry_t)(void *); //I/O thread entry function
 typedef void (*mln_iothread_msg_process_t)(mln_iothread_t *t, mln_iothread_ep_type_t from, mln_iothread_msg_t *msg);//message handler
 ```
 
 Description: Initialize `t` according to `attr`.
+
+- `nthread` Total number of I/O threads.
+- `entry` I/O thread entry function.
+- `args` I/O thread entry parameters.
+- `handler` message handler.
 
 Return value: return `0` on success, otherwise return `-1`
 
@@ -181,13 +179,8 @@ int main(void)
 {
     int i, rc;
     mln_iothread_t t;
-    struct mln_iothread_attr tattr;
 
-    tattr.nthread = 1;
-    tattr.entry = (mln_iothread_entry_t)entry;
-    tattr.args = &t;
-    tattr.handler = (mln_iothread_msg_process_t)msg_handler;
-    if (mln_iothread_init(&t, &tattr) < 0) {
+    if (mln_iothread_init(&t, 1, (mln_iothread_entry_t)entry, &t, (mln_iothread_msg_process_t)msg_handler) < 0) {
         fprintf(stderr, "iothread init failed\n");
         return -1;
     }
