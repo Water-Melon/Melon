@@ -42,36 +42,27 @@ Return value: If successful, return the memory pool structure pointer, otherwise
 
 
 #### mln_alloc_shm_init
-
+    
 ```c
-mln_alloc_t *mln_alloc_shm_init(struct mln_alloc_shm_attr_s *attr);
-```
-
+mln_alloc_t *mln_alloc_shm_init(mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock);                  
+``` 
+    
 Description: Create a shared memory memory pool.
-
-Parameter structure definition:
-
+                                                                                                                                               
+Parameters:
+                                                                                                                                               
+- `size` The pool size `size` (in bytes) needs to be given when creating this pool. Once created, it cannot be expanded later.
+- `locker` is the lock resource pointer.
+- `lock` is a callback function used to lock the lock resource. The function parameter is the lock resource pointer. If the lock fails, a `non-0` value is returned.
+- `unlock` is a callback function used to unlock the lock resource. The function parameter is the lock resource pointer. If unlocking fails, a `non-0` value is returned.
+                                                                                                                                               
 ```c
-struct mln_alloc_shm_attr_s {
-    mln_size_t                size;
-    void                     *locker;
-    mln_alloc_shm_lock_cb_t   lock;
-    mln_alloc_shm_lock_cb_t   unlock;
-};
 typedef int (*mln_alloc_shm_lock_cb_t)(void *);
 ```
-
-The pool size `size` (in bytes) needs to be given when the pool is created. Once created, it cannot be expanded later.
-
-`locker` is a pointer to a lock resource structure.
-
-`lock` is a callback function used to lock the lock resource. The function parameter is the lock resource pointer. Returns a `non-0` value if the lock fails.
-
-`unlock` is the callback function used to unlock the lock resource, the function parameter is the lock resource pointer. Returns a `non-0` value if the unlock fails.
-
-`lock` and `unlock` are only used for function calls in subpools. Therefore, if you directly operate on the shared memory pool, you need to add and unlock it externally, and the allocation and release functions acting on the shared memory pool will not call this callback.
-
-Return value: If successful, return the memory pool structure pointer, otherwise return `NULL`
+                                                                                                                                               
+`lock` and `unlock` are only used when functions in the subpool are called. Therefore, if you directly operate on the shared memory pool, you need to unlock it externally. The allocation and release functions that act on the shared memory pool will not call this callback.
+    
+Return value: Returns the memory pool structure pointer if successful, otherwise returns `NULL`
 
 
 

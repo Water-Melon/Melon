@@ -31,13 +31,6 @@ typedef struct mln_alloc_s       mln_alloc_t;
 typedef struct mln_alloc_mgr_s   mln_alloc_mgr_t;
 typedef struct mln_alloc_chunk_s mln_alloc_chunk_t;
 
-struct mln_alloc_shm_attr_s {
-    mln_size_t                size;
-    void                     *locker;
-    mln_alloc_shm_lock_cb_t   lock;
-    mln_alloc_shm_lock_cb_t   unlock;
-};
-
 /*
  * Note:
  * In Darwin, if set mln_alloc_blk_t's prev and next at the beginning of the structure,
@@ -109,7 +102,7 @@ struct mln_alloc_s {
 
 #define mln_alloc_is_shm(pool) (pool->mem != NULL)
 
-extern mln_alloc_t *mln_alloc_shm_init(struct mln_alloc_shm_attr_s *attr);
+extern mln_alloc_t *mln_alloc_shm_init(mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock);
 extern mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
 extern void mln_alloc_destroy(mln_alloc_t *pool);
 extern void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size);

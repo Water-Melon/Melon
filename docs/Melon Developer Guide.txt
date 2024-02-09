@@ -1320,18 +1320,17 @@ Their definitions can be found in melon/include/mln_types.h.
      f) void mln_alloc_free(void *ptr);
         Free a memory block to a memory pool.
 
-     g) mln_alloc_t *mln_alloc_shm_init(struct mln_alloc_shm_attr_s *attr);
+     g) mln_alloc_t *mln_alloc_shm_init(mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock);
         Initialize a shared memory pool.
-          struct mln_alloc_shm_attr_s {
-              mln_size_t                size;   //shared memory size
-              void                     *locker; //lock
-              mln_alloc_shm_lock_cb_t   lock;   //lock handler
-              mln_alloc_shm_lock_cb_t   unlock; //unlock handler
-          };
-          typedef int (*mln_alloc_shm_lock_cb_t)(void *);
+        `size` - shared memory size
+        `locker` - lock
+        `lock` - lock handler
+        `unlock` - unlock handler
+
+        typedef int (*mln_alloc_shm_lock_cb_t)(void *);
         Callback 'lock' can not be a trylock function.
-        'lock' and 'unlock' will be called only in sub-pool functions. So user should lock or unlock
-        by yourself when operate shared memory pool directly.
+        'lock' and 'unlock' will be called only in sub-pool functions.
+        So user should lock or unlock by yourself when operate shared memory pool directly.
 
   18) Chain & Buf
      These two structures do not have interfaces to operate.

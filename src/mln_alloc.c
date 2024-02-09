@@ -87,30 +87,28 @@ MLN_FUNC(static inline, mln_alloc_shm_t *, mln_alloc_shm_new, \
     return shm;
 })
 
-MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, (struct mln_alloc_shm_attr_s *attr), (attr), {
+MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, \
+         (mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock), \
+         (size, locker, lock, unlock), \
+{
     mln_alloc_t *pool;
 #if defined(WIN32)
     HANDLE handle;
 #endif
 
-    if (attr->size < M_ALLOC_SHM_DEFAULT_SIZE+1024 || \
-        attr->locker == NULL || \
-        attr->lock == NULL || \
-        attr->unlock == NULL)
-    {
+    if (size < M_ALLOC_SHM_DEFAULT_SIZE+1024 || locker == NULL || lock == NULL || unlock == NULL)
         return NULL;
-    }
 
 #if defined(WIN32)
     if ((handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                     NULL,
                                     PAGE_READWRITE,
 #if defined(__x86_64)
-                                    (u_long) (attr->size >> 32),
+                                    (u_long) (size >> 32),
 #else
                                     0,
 #endif
-                                    (u_long) (attr->size & 0xffffffff),
+                                    (u_long) (size & 0xffffffff),
                                     NULL)) == NULL)
     {
         return NULL;
@@ -124,7 +122,7 @@ MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, (struct mln_alloc_shm_attr_s *attr
 #else
 
 #if defined(MLN_MMAP)
-    pool = (mln_alloc_t *)mmap(NULL, attr->size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0);
+    pool = (mln_alloc_t *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0);
     if (pool == NULL) return NULL;
 #else
     return NULL;
@@ -134,10 +132,10 @@ MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, (struct mln_alloc_shm_attr_s *attr
     pool->large_used_head = pool->large_used_tail = NULL;
     pool->shm_head = pool->shm_tail = NULL;
     pool->mem = pool;
-    pool->shm_size = attr->size;
-    pool->locker = attr->locker;
-    pool->lock = attr->lock;
-    pool->unlock = attr->unlock;
+    pool->shm_size = size;
+    pool->locker = locker;
+    pool->lock = lock;
+    pool->unlock = unlock;
     return pool;
 })
 
