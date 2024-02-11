@@ -6,6 +6,7 @@
 #include "mln_lang_ast.h"
 #include "mln_parser_generator.h"
 #include "mln_path.h"
+#include "mln_func.h"
 
 MLN_DECLARE_PARSER_GENERATOR(static, \
                              mln_lang, \
@@ -535,8 +536,8 @@ static mln_string_t mln_lang_env = mln_string("MELANG_PATH");
 static inline int
 mln_get_char(mln_lex_t *lex, char c);
 
-static mln_lang_struct_t *
-mln_lang_sub_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_sub_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '-') {
@@ -549,10 +550,10 @@ mln_lang_sub_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_SUB);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_plus_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_plus_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '+') {
@@ -565,10 +566,10 @@ mln_lang_plus_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_PLUS);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_ast_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_ast_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '=') {
@@ -577,10 +578,10 @@ mln_lang_ast_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_AST);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_lagl_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_lagl_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '<') {
@@ -598,10 +599,10 @@ mln_lang_lagl_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_LAGL);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_ragl_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_ragl_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '>') {
@@ -619,10 +620,10 @@ mln_lang_ragl_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_RAGL);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_vertl_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_vertl_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '=') {
@@ -635,10 +636,10 @@ mln_lang_vertl_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_VERTL);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_amp_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_amp_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '=') {
@@ -651,10 +652,10 @@ mln_lang_amp_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_AMP);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_dash_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_dash_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '=') {
@@ -663,10 +664,10 @@ mln_lang_dash_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_DASH);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_xor_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_xor_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '=') {
@@ -675,10 +676,10 @@ mln_lang_xor_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_XOR);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_perc_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_perc_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '=') {
@@ -687,10 +688,10 @@ mln_lang_perc_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_PERC);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_equal_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_equal_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '=') {
@@ -699,10 +700,10 @@ mln_lang_equal_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_EQUAL);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_excl_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_excl_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == '=') {
@@ -711,10 +712,10 @@ mln_lang_excl_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_stepback(lex, c);
     return mln_lang_new(lex, LANG_TK_EXCL);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_sglq_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_sglq_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     mln_lex_result_clean(lex);
     char c;
@@ -729,10 +730,10 @@ mln_lang_sglq_handler(mln_lex_t *lex, void *data)
         if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;
     }
     return mln_lang_new(lex, LANG_TK_STRING);
-}
+})
 
-static inline int
-mln_get_char(mln_lex_t *lex, char c)
+MLN_FUNC(static inline, int, mln_get_char, \
+         (mln_lex_t *lex, char c), (lex, c), \
 {
     if (c == '\\') {
         char n;
@@ -779,10 +780,10 @@ mln_get_char(mln_lex_t *lex, char c)
         if (mln_lex_putchar(lex, c) == MLN_ERR) return -1;
     }
     return 0;
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_dblq_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_dblq_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     mln_lex_result_clean(lex);
     char c;
@@ -798,10 +799,10 @@ mln_lang_dblq_handler(mln_lex_t *lex, void *data)
         if (mln_get_char(lex, c) < 0) return NULL;
     }
     return mln_lang_new(lex, LANG_TK_STRING);
-}
+})
 
-static mln_lang_struct_t *
-mln_lang_slash_handler(mln_lex_t *lex, void *data)
+MLN_FUNC(static, mln_lang_struct_t *, mln_lang_slash_handler, \
+         (mln_lex_t *lex, void *data), (lex, data), \
 {
     char c = mln_lex_getchar(lex);
     if (c == MLN_ERR) return NULL;
@@ -855,18 +856,15 @@ mln_lang_slash_handler(mln_lex_t *lex, void *data)
     }
     mln_lex_result_clean(lex);
     return mln_lang_token(lex);
-}
+})
 
 /*
  * AST structs
  */
-static inline mln_lang_stm_t *
-mln_lang_stm_new(mln_alloc_t *pool, \
-                 void *data, \
-                 mln_lang_stm_type_t type, \
-                 mln_lang_stm_t *next, \
-                 mln_u64_t line, \
-                 mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_stm_t *, mln_lang_stm_new, \
+         (mln_alloc_t *pool, void *data, mln_lang_stm_type_t type, \
+          mln_lang_stm_t *next, mln_u64_t line, mln_string_t *file), \
+         (pool, data, type, next, line, file), \
 {
     mln_lang_stm_t *ls;
     if ((ls = (mln_lang_stm_t *)mln_alloc_m(pool, sizeof(mln_lang_stm_t))) == NULL) {
@@ -906,10 +904,9 @@ mln_lang_stm_new(mln_alloc_t *pool, \
     ls->jump = NULL;
     ls->jump_type = 0;
     return ls;
-}
+})
 
-static void mln_lang_stm_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_stm_free, (void *data), (data), {
     mln_lang_stm_t *stm, *next = (mln_lang_stm_t *)data;
     mln_lang_stm_type_t type;
     while (next != NULL) {
@@ -943,17 +940,13 @@ static void mln_lang_stm_free(void *data)
             mln_string_free(stm->file);
         mln_alloc_free(stm);
     }
-}
+})
 
 
-static inline mln_lang_funcdef_t *
-mln_lang_funcdef_new(mln_alloc_t *pool, \
-                     mln_string_t *name, \
-                     mln_lang_exp_t *exp, \
-                     mln_lang_exp_t *closure, \
-                     mln_lang_stm_t *stm, \
-                     mln_u64_t line, \
-                     mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_funcdef_t *, mln_lang_funcdef_new, \
+         (mln_alloc_t *pool, mln_string_t *name, mln_lang_exp_t *exp, mln_lang_exp_t *closure, \
+          mln_lang_stm_t *stm, mln_u64_t line, mln_string_t *file), \
+         (pool, name, exp, closure, stm, line, file), \
 {
     mln_lang_funcdef_t *lf;
     if ((lf = (mln_lang_funcdef_t *)mln_alloc_m(pool, sizeof(mln_lang_funcdef_t))) == NULL) {
@@ -970,10 +963,9 @@ mln_lang_funcdef_new(mln_alloc_t *pool, \
     lf->stm = stm;
     lf->closure = closure;
     return lf;
-}
+})
 
-static void mln_lang_funcdef_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_funcdef_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_funcdef_t *lf = (mln_lang_funcdef_t *)data;
     if (lf->name != NULL) mln_string_free(lf->name);
@@ -982,15 +974,13 @@ static void mln_lang_funcdef_free(void *data)
     if (lf->closure != NULL) mln_lang_exp_free(lf->closure);
     if (lf->file != NULL) mln_string_free(lf->file);
     mln_alloc_free(lf);
-}
+})
 
 
-static inline mln_lang_set_t *
-mln_lang_set_new(mln_alloc_t *pool, \
-                 mln_string_t *name, \
-                 mln_lang_setstm_t *stm, \
-                 mln_u64_t line, \
-                 mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_set_t *, mln_lang_set_new, \
+         (mln_alloc_t *pool, mln_string_t *name, mln_lang_setstm_t *stm, \
+          mln_u64_t line, mln_string_t *file), \
+         (pool, name, stm, line, file), \
 {
     mln_lang_set_t *lc;
     if ((lc = (mln_lang_set_t *)mln_alloc_m(pool, sizeof(mln_lang_set_t))) == NULL) {
@@ -1005,26 +995,22 @@ mln_lang_set_new(mln_alloc_t *pool, \
     lc->name = name;
     lc->stm = stm;
     return lc;
-}
+})
 
-static void mln_lang_set_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_set_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_set_t *lc = (mln_lang_set_t *)data;
     if (lc->name != NULL) mln_string_free(lc->name);
     if (lc->stm != NULL) mln_lang_setstm_free(lc->stm);
     if (lc->file != NULL) mln_string_free(lc->file);
     mln_alloc_free(lc);
-}
+})
 
 
-static inline mln_lang_setstm_t *
-mln_lang_setstm_new(mln_alloc_t *pool, \
-                      void *data, \
-                      mln_lang_setstm_type_t type, \
-                      mln_lang_setstm_t *next, \
-                      mln_u64_t line, \
-                      mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_setstm_t *, mln_lang_setstm_new, \
+         (mln_alloc_t *pool, void *data, mln_lang_setstm_type_t type, \
+          mln_lang_setstm_t *next, mln_u64_t line, mln_string_t *file), \
+         (pool, data, type, next, line, file), \
 {
     mln_lang_setstm_t *lc;
     if ((lc = (mln_lang_setstm_t *)mln_alloc_m(pool, sizeof(mln_lang_setstm_t))) == NULL) {
@@ -1047,10 +1033,9 @@ mln_lang_setstm_new(mln_alloc_t *pool, \
     }
     lc->next = next;
     return lc;
-}
+})
 
-static void mln_lang_setstm_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_setstm_free, (void *data), (data), {
     mln_lang_setstm_t *lc, *next = (mln_lang_setstm_t *)data;
     while (next != NULL) {
         lc = next;
@@ -1066,11 +1051,12 @@ static void mln_lang_setstm_free(void *data)
         if (lc->file != NULL) mln_string_free(lc->file);
         mln_alloc_free(lc);
     }
-}
+})
 
 
-static inline mln_lang_block_t *
-mln_lang_block_new(mln_alloc_t *pool, void *data, mln_lang_block_type_t type, mln_u64_t line, mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_block_t *, mln_lang_block_new, \
+         (mln_alloc_t *pool, void *data, mln_lang_block_type_t type, mln_u64_t line, mln_string_t *file), \
+         (pool, data, type, line, file), \
 {
     mln_lang_block_t *lb;
     if ((lb = (mln_lang_block_t *)mln_alloc_m(pool, sizeof(mln_lang_block_t))) == NULL) {
@@ -1104,10 +1090,9 @@ mln_lang_block_new(mln_alloc_t *pool, void *data, mln_lang_block_type_t type, ml
     lb->jump = NULL;
     lb->jump_type = 0;
     return lb;
-}
+})
 
-static void mln_lang_block_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_block_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_block_t *lb = (mln_lang_block_t *)data;
     mln_lang_block_type_t type = lb->type;
@@ -1130,11 +1115,12 @@ static void mln_lang_block_free(void *data)
     }
     if (lb->file != NULL) mln_string_free(lb->file);
     mln_alloc_free(lb);
-}
+})
 
 
-static inline mln_lang_switch_t *
-mln_lang_switch_new(mln_alloc_t *pool, mln_lang_exp_t *exp, mln_lang_switchstm_t *switchstm, mln_u64_t line, mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_switch_t *, mln_lang_switch_new, \
+         (mln_alloc_t *pool, mln_lang_exp_t *exp, mln_lang_switchstm_t *switchstm, mln_u64_t line, mln_string_t *file), \
+         (pool, exp, switchstm, line, file), \
 {
     mln_lang_switch_t *ls;
     if ((ls = (mln_lang_switch_t *)mln_alloc_m(pool, sizeof(mln_lang_switch_t))) == NULL) {
@@ -1149,26 +1135,22 @@ mln_lang_switch_new(mln_alloc_t *pool, mln_lang_exp_t *exp, mln_lang_switchstm_t
     ls->condition = exp;
     ls->switchstm = switchstm;
     return ls;
-}
+})
 
-static void mln_lang_switch_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_switch_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_switch_t *ls = (mln_lang_switch_t *)data;
     if (ls->condition != NULL) mln_lang_exp_free(ls->condition);
     if (ls->switchstm != NULL) mln_lang_switchstm_free(ls->switchstm);
     if (ls->file != NULL) mln_string_free(ls->file);
     mln_alloc_free(ls);
-}
+})
 
 
-static inline mln_lang_switchstm_t *
-mln_lang_switchstm_new(mln_alloc_t *pool, \
-                       mln_lang_factor_t *factor, \
-                       mln_lang_stm_t *stm, \
-                       mln_lang_switchstm_t *next, \
-                       mln_u64_t line, \
-                       mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_switchstm_t *, mln_lang_switchstm_new, \
+         (mln_alloc_t *pool, mln_lang_factor_t *factor, mln_lang_stm_t *stm, \
+          mln_lang_switchstm_t *next, mln_u64_t line, mln_string_t *file), \
+         (pool, factor, stm, next, line, file), \
 {
     mln_lang_switchstm_t *ls;
     if ((ls = (mln_lang_switchstm_t *)mln_alloc_m(pool, sizeof(mln_lang_switchstm_t))) == NULL) {
@@ -1184,10 +1166,9 @@ mln_lang_switchstm_new(mln_alloc_t *pool, \
     ls->stm = stm;
     ls->next = next;
     return ls;
-}
+})
 
-static void mln_lang_switchstm_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_switchstm_free, (void *data), (data), {
     mln_lang_switchstm_t *ls, *next = (mln_lang_switchstm_t *)data;
     while (next != NULL) {
         ls = next;
@@ -1197,11 +1178,12 @@ static void mln_lang_switchstm_free(void *data)
         if (ls->file != NULL) mln_string_free(ls->file);
         mln_alloc_free(ls);
     }
-}
+})
 
 
-static inline mln_lang_while_t *
-mln_lang_while_new(mln_alloc_t *pool, mln_lang_exp_t *exp, mln_lang_block_t *blockstm, mln_u64_t line, mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_while_t *, mln_lang_while_new, \
+         (mln_alloc_t *pool, mln_lang_exp_t *exp, mln_lang_block_t *blockstm, mln_u64_t line, mln_string_t *file), \
+         (pool, exp, blockstm, line, file), \
 {
     mln_lang_while_t *lw;
     if ((lw = (mln_lang_while_t *)mln_alloc_m(pool, sizeof(mln_lang_while_t))) == NULL) {
@@ -1216,27 +1198,22 @@ mln_lang_while_new(mln_alloc_t *pool, mln_lang_exp_t *exp, mln_lang_block_t *blo
     lw->condition = exp;
     lw->blockstm = blockstm;
     return lw;
-}
+})
 
-static void mln_lang_while_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_while_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_while_t *lw = (mln_lang_while_t *)data;
     if (lw->condition != NULL) mln_lang_exp_free(lw->condition);
     if (lw->blockstm != NULL) mln_lang_block_free(lw->blockstm);
     if (lw->file != NULL) mln_string_free(lw->file);
     mln_alloc_free(lw);
-}
+})
 
 
-static inline mln_lang_for_t *
-mln_lang_for_new(mln_alloc_t *pool, \
-                 mln_lang_exp_t *init_exp, \
-                 mln_lang_exp_t *condition, \
-                 mln_lang_exp_t *mod_exp, \
-                 mln_lang_block_t *blockstm, \
-                 mln_u64_t line, \
-                 mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_for_t *, mln_lang_for_new, \
+         (mln_alloc_t *pool, mln_lang_exp_t *init_exp, mln_lang_exp_t *condition, mln_lang_exp_t *mod_exp, \
+          mln_lang_block_t *blockstm, mln_u64_t line, mln_string_t *file), \
+         (pool, init_exp, condition, mod_exp, blockstm, line, file), \
 {
     mln_lang_for_t *lf;
     if ((lf = (mln_lang_for_t *)mln_alloc_m(pool, sizeof(mln_lang_for_t))) == NULL) {
@@ -1253,10 +1230,9 @@ mln_lang_for_new(mln_alloc_t *pool, \
     lf->mod_exp = mod_exp;
     lf->blockstm = blockstm;
     return lf;
-}
+})
 
-static void mln_lang_for_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_for_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_for_t *lf = (mln_lang_for_t *)data;
     if (lf->init_exp != NULL) mln_lang_exp_free(lf->init_exp);
@@ -1265,16 +1241,13 @@ static void mln_lang_for_free(void *data)
     if (lf->blockstm != NULL) mln_lang_block_free(lf->blockstm);
     if (lf->file != NULL) mln_string_free(lf->file);
     mln_alloc_free(lf);
-}
+})
 
 
-static inline mln_lang_if_t *
-mln_lang_if_new(mln_alloc_t *pool, \
-                mln_lang_exp_t *condition, \
-                mln_lang_block_t *truestm, \
-                mln_lang_block_t *falsestm, \
-                mln_u64_t line, \
-                mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_if_t *, mln_lang_if_new, \
+         (mln_alloc_t *pool, mln_lang_exp_t *condition, mln_lang_block_t *truestm, \
+          mln_lang_block_t *falsestm, mln_u64_t line, mln_string_t *file), \
+         (pool, condition, truestm, falsestm, line, file), \
 {
     mln_lang_if_t *li;
     if ((li = (mln_lang_if_t *)mln_alloc_m(pool, sizeof(mln_lang_if_t))) == NULL) {
@@ -1290,10 +1263,9 @@ mln_lang_if_new(mln_alloc_t *pool, \
     li->blockstm = truestm;
     li->elsestm = falsestm;
     return li;
-}
+})
 
-static void mln_lang_if_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_if_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_if_t *li = (mln_lang_if_t *)data;
     if (li->condition != NULL) mln_lang_exp_free(li->condition);
@@ -1301,11 +1273,12 @@ static void mln_lang_if_free(void *data)
     if (li->elsestm != NULL) mln_lang_block_free(li->elsestm);
     if (li->file != NULL) mln_string_free(li->file);
     mln_alloc_free(li);
-}
+})
 
 
-static inline mln_lang_exp_t *
-mln_lang_exp_new(mln_alloc_t *pool, mln_lang_assign_t *assign, mln_lang_exp_t *next, mln_u64_t line, mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_exp_t *, mln_lang_exp_new, \
+         (mln_alloc_t *pool, mln_lang_assign_t *assign, mln_lang_exp_t *next, mln_u64_t line, mln_string_t *file), \
+         (pool, assign, next, line, file), \
 {
     mln_lang_exp_t *le;
     if ((le = (mln_lang_exp_t *)mln_alloc_m(pool, sizeof(mln_lang_exp_t))) == NULL) {
@@ -1322,10 +1295,9 @@ mln_lang_exp_new(mln_alloc_t *pool, mln_lang_assign_t *assign, mln_lang_exp_t *n
     le->jump = NULL;
     le->type = 0;
     return le;
-}
+})
 
-static void mln_lang_exp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_exp_free, (void *data), (data), {
     mln_lang_exp_t *le, *next = (mln_lang_exp_t *)data;
     while (next != NULL) {
         le = next;
@@ -1334,16 +1306,13 @@ static void mln_lang_exp_free(void *data)
         if (le->file != NULL) mln_string_free(le->file);
         mln_alloc_free(le);
     }
-}
+})
 
 
-static inline mln_lang_assign_t *
-mln_lang_assign_new(mln_alloc_t *pool, \
-                    mln_lang_logiclow_t *left, \
-                    mln_lang_assign_op_t op, \
-                    mln_lang_assign_t *right, \
-                    mln_u64_t line, \
-                    mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_assign_t *, mln_lang_assign_new, \
+         (mln_alloc_t *pool, mln_lang_logiclow_t *left, mln_lang_assign_op_t op, \
+          mln_lang_assign_t *right, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, right, line, file), \
 {
     mln_lang_assign_t *la;
     if ((la = (mln_lang_assign_t *)mln_alloc_m(pool, sizeof(mln_lang_assign_t))) == NULL) {
@@ -1361,10 +1330,9 @@ mln_lang_assign_new(mln_alloc_t *pool, \
     la->jump = NULL;
     la->type = 0;
     return la;
-}
+})
 
-static void mln_lang_assign_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_assign_free, (void *data), (data), {
     mln_lang_assign_t *la, *right = (mln_lang_assign_t *)data;
     while (right != NULL) {
         la = right;
@@ -1373,11 +1341,12 @@ static void mln_lang_assign_free(void *data)
         if (la->file != NULL) mln_string_free(la->file);
         mln_alloc_free(la);
     }
-}
+})
 
 
-static inline mln_lang_assign_tmp_t *
-mln_lang_assign_tmp_new(mln_alloc_t *pool, mln_lang_assign_op_t op, mln_lang_assign_t *assign)
+MLN_FUNC(static inline, mln_lang_assign_tmp_t *, mln_lang_assign_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_assign_op_t op, mln_lang_assign_t *assign), \
+         (pool, op, assign), \
 {
     mln_lang_assign_tmp_t *lat;
     if ((lat = (mln_lang_assign_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_assign_tmp_t))) == NULL) {
@@ -1386,24 +1355,20 @@ mln_lang_assign_tmp_new(mln_alloc_t *pool, mln_lang_assign_op_t op, mln_lang_ass
     lat->op = op;
     lat->assign = assign;
     return lat;
-}
+})
 
-static void mln_lang_assign_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_assign_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_assign_tmp_t *lat = (mln_lang_assign_tmp_t *)data;
     if (lat->assign != NULL) mln_lang_assign_free(lat->assign);
     mln_alloc_free(lat);
-}
+})
 
 
-static inline mln_lang_logiclow_t *
-mln_lang_logiclow_new(mln_alloc_t *pool, \
-                      mln_lang_logichigh_t *left, \
-                      mln_lang_logiclow_op_t op, \
-                      mln_lang_logiclow_t *right, \
-                      mln_u64_t line, \
-                      mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_logiclow_t *, mln_lang_logiclow_new, \
+         (mln_alloc_t *pool, mln_lang_logichigh_t *left, mln_lang_logiclow_op_t op, \
+          mln_lang_logiclow_t *right, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, right, line, file), \
 {
     mln_lang_logiclow_t *ll;
     if ((ll = (mln_lang_logiclow_t *)mln_alloc_m(pool, sizeof(mln_lang_logiclow_t))) == NULL) {
@@ -1421,10 +1386,9 @@ mln_lang_logiclow_new(mln_alloc_t *pool, \
     ll->jump = NULL;
     ll->type = 0;
     return ll;
-}
+})
 
-static void mln_lang_logiclow_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_logiclow_free, (void *data), (data), {
     mln_lang_logiclow_t *ll, *right = (mln_lang_logiclow_t *)data;
     while (right != NULL) {
         ll = right;
@@ -1433,13 +1397,12 @@ static void mln_lang_logiclow_free(void *data)
         if (ll->file != NULL) mln_string_free(ll->file);
         mln_alloc_free(ll);
     }
-}
+})
 
 
-static inline mln_lang_logiclow_tmp_t *
-mln_lang_logiclow_tmp_new(mln_alloc_t *pool, \
-                          mln_lang_logiclow_op_t op, \
-                          mln_lang_logiclow_t *logiclow)
+MLN_FUNC(static inline, mln_lang_logiclow_tmp_t *, mln_lang_logiclow_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_logiclow_op_t op, mln_lang_logiclow_t *logiclow), \
+         (pool, op, logiclow), \
 {
     mln_lang_logiclow_tmp_t *llt;
     if ((llt = (mln_lang_logiclow_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_logiclow_tmp_t))) == NULL) {
@@ -1448,24 +1411,20 @@ mln_lang_logiclow_tmp_new(mln_alloc_t *pool, \
     llt->op = op;
     llt->logiclow = logiclow;
     return llt;
-}
+})
 
-static void mln_lang_logiclow_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_logiclow_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_logiclow_tmp_t *llt = (mln_lang_logiclow_tmp_t *)data;
     if (llt->logiclow != NULL) mln_lang_logiclow_free(llt->logiclow);
     mln_alloc_free(llt);
-}
+})
 
 
-static inline mln_lang_logichigh_t *
-mln_lang_logichigh_new(mln_alloc_t *pool, \
-                       mln_lang_relativelow_t *left, \
-                       mln_lang_logichigh_op_t op, \
-                       mln_lang_logichigh_t *right, \
-                       mln_u64_t line, \
-                       mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_logichigh_t *, mln_lang_logichigh_new, \
+         (mln_alloc_t *pool, mln_lang_relativelow_t *left, mln_lang_logichigh_op_t op, \
+          mln_lang_logichigh_t *right, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, right, line, file), \
 {
     mln_lang_logichigh_t *ll;
     if ((ll = (mln_lang_logichigh_t *)mln_alloc_m(pool, sizeof(mln_lang_logichigh_t))) == NULL) {
@@ -1483,10 +1442,9 @@ mln_lang_logichigh_new(mln_alloc_t *pool, \
     ll->jump = NULL;
     ll->type = 0;
     return ll;
-}
+})
 
-static void mln_lang_logichigh_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_logichigh_free, (void *data), (data), {
     mln_lang_logichigh_t *ll, *right = (mln_lang_logichigh_t *)data;
     while (right != NULL) {
         ll = right;
@@ -1495,13 +1453,12 @@ static void mln_lang_logichigh_free(void *data)
         if (ll->file != NULL) mln_string_free(ll->file);
         mln_alloc_free(ll);
     }
-}
+})
 
 
-static inline mln_lang_logichigh_tmp_t *
-mln_lang_logichigh_tmp_new(mln_alloc_t *pool, \
-                           mln_lang_logichigh_op_t op, \
-                           mln_lang_logichigh_t *logichigh)
+MLN_FUNC(static inline, mln_lang_logichigh_tmp_t *, mln_lang_logichigh_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_logichigh_op_t op, mln_lang_logichigh_t *logichigh), \
+         (pool, op, logichigh), \
 {
     mln_lang_logichigh_tmp_t *llt;
     if ((llt = (mln_lang_logichigh_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_logichigh_tmp_t))) == NULL) {
@@ -1510,24 +1467,20 @@ mln_lang_logichigh_tmp_new(mln_alloc_t *pool, \
     llt->op = op;
     llt->logichigh = logichigh;
     return llt;
-}
+})
 
-static void mln_lang_logichigh_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_logichigh_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_logichigh_tmp_t *llt = (mln_lang_logichigh_tmp_t *)data;
     if (llt->logichigh != NULL) mln_lang_logichigh_free(llt->logichigh);
     mln_alloc_free(llt);
-}
+})
 
 
-static inline mln_lang_relativelow_t *
-mln_lang_relativelow_new(mln_alloc_t *pool, \
-                         mln_lang_relativehigh_t *left, \
-                         mln_lang_relativelow_op_t op, \
-                         mln_lang_relativelow_t *right, \
-                         mln_u64_t line, \
-                         mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_relativelow_t *, mln_lang_relativelow_new, \
+         (mln_alloc_t *pool, mln_lang_relativehigh_t *left, mln_lang_relativelow_op_t op, \
+          mln_lang_relativelow_t *right, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, right, line, file), \
 {
     mln_lang_relativelow_t *lr;
     if ((lr = (mln_lang_relativelow_t *)mln_alloc_m(pool, sizeof(mln_lang_relativelow_t))) == NULL) {
@@ -1545,10 +1498,9 @@ mln_lang_relativelow_new(mln_alloc_t *pool, \
     lr->jump = NULL;
     lr->type = 0;
     return lr;
-}
+})
 
-static void mln_lang_relativelow_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_relativelow_free, (void *data), (data), {
     mln_lang_relativelow_t *lr, *right = (mln_lang_relativelow_t *)data;
     while (right != NULL) {
         lr = right;
@@ -1557,13 +1509,12 @@ static void mln_lang_relativelow_free(void *data)
         if (lr->file != NULL) mln_string_free(lr->file);
         mln_alloc_free(lr);
     }
-}
+})
 
 
-static inline mln_lang_relativelow_tmp_t *
-mln_lang_relativelow_tmp_new(mln_alloc_t *pool, \
-                             mln_lang_relativelow_op_t op, \
-                             mln_lang_relativelow_t *relativelow)
+MLN_FUNC(static inline, mln_lang_relativelow_tmp_t *, mln_lang_relativelow_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_relativelow_op_t op, mln_lang_relativelow_t *relativelow), \
+         (pool, op, relativelow), \
 {
     mln_lang_relativelow_tmp_t *lrt;
     if ((lrt = (mln_lang_relativelow_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_relativelow_tmp_t))) == NULL) {
@@ -1572,24 +1523,20 @@ mln_lang_relativelow_tmp_new(mln_alloc_t *pool, \
     lrt->op = op;
     lrt->relativelow = relativelow;
     return lrt;
-}
+})
 
-static void mln_lang_relativelow_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_relativelow_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_relativelow_tmp_t *lrt = (mln_lang_relativelow_tmp_t *)data;
     if (lrt->relativelow != NULL) mln_lang_relativelow_free(lrt->relativelow);
     mln_alloc_free(lrt);
-}
+})
 
 
-static inline mln_lang_relativehigh_t *
-mln_lang_relativehigh_new(mln_alloc_t *pool, \
-                          mln_lang_move_t *left, \
-                          mln_lang_relativehigh_op_t op, \
-                          mln_lang_relativehigh_t *right, \
-                          mln_u64_t line, \
-                          mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_relativehigh_t *, mln_lang_relativehigh_new, \
+         (mln_alloc_t *pool, mln_lang_move_t *left, mln_lang_relativehigh_op_t op, \
+          mln_lang_relativehigh_t *right, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, right, line, file), \
 {
     mln_lang_relativehigh_t *lr;
     if ((lr = (mln_lang_relativehigh_t *)mln_alloc_m(pool, sizeof(mln_lang_relativehigh_t))) == NULL) {
@@ -1607,10 +1554,9 @@ mln_lang_relativehigh_new(mln_alloc_t *pool, \
     lr->jump = NULL;
     lr->type = 0;
     return lr;
-}
+})
 
-static void mln_lang_relativehigh_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_relativehigh_free, (void *data), (data), {
     mln_lang_relativehigh_t *lr, *right = (mln_lang_relativehigh_t *)data;
     while (right !=  NULL) {
         lr = right;
@@ -1619,13 +1565,12 @@ static void mln_lang_relativehigh_free(void *data)
         if (lr->file != NULL) mln_string_free(lr->file);
         mln_alloc_free(lr);
     }
-}
+})
 
 
-static inline mln_lang_relativehigh_tmp_t *
-mln_lang_relativehigh_tmp_new(mln_alloc_t *pool, \
-                              mln_lang_relativehigh_op_t op, \
-                              mln_lang_relativehigh_t *relativehigh)
+MLN_FUNC(static inline, mln_lang_relativehigh_tmp_t *, mln_lang_relativehigh_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_relativehigh_op_t op, mln_lang_relativehigh_t *relativehigh), \
+         (pool, op, relativehigh), \
 {
     mln_lang_relativehigh_tmp_t *lrt;
     if ((lrt = (mln_lang_relativehigh_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_relativehigh_tmp_t))) == NULL) {
@@ -1634,24 +1579,20 @@ mln_lang_relativehigh_tmp_new(mln_alloc_t *pool, \
     lrt->op = op;
     lrt->relativehigh = relativehigh;
     return lrt;
-}
+})
 
-static void mln_lang_relativehigh_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_relativehigh_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_relativehigh_tmp_t *lrt = (mln_lang_relativehigh_tmp_t *)data;
     if (lrt->relativehigh != NULL) mln_lang_relativehigh_free(lrt->relativehigh);
     mln_alloc_free(lrt);
-}
+})
 
 
-static inline mln_lang_move_t *
-mln_lang_move_new(mln_alloc_t *pool, \
-                  mln_lang_addsub_t *left, \
-                  mln_lang_move_op_t op, \
-                  mln_lang_move_t *right, \
-                  mln_u64_t line, \
-                  mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_move_t *, mln_lang_move_new, \
+         (mln_alloc_t *pool, mln_lang_addsub_t *left, mln_lang_move_op_t op, \
+          mln_lang_move_t *right, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, right, line, file), \
 {
     mln_lang_move_t *lm;
     if ((lm = (mln_lang_move_t *)mln_alloc_m(pool, sizeof(mln_lang_move_t))) == NULL) {
@@ -1669,10 +1610,9 @@ mln_lang_move_new(mln_alloc_t *pool, \
     lm->jump = NULL;
     lm->type = 0;
     return lm;
-}
+})
 
-static void mln_lang_move_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_move_free, (void *data), (data), {
     mln_lang_move_t *lm, *right = (mln_lang_move_t *)data;
     while (right != NULL) {
         lm = right;
@@ -1681,13 +1621,12 @@ static void mln_lang_move_free(void *data)
         if (lm->file != NULL) mln_string_free(lm->file);
         mln_alloc_free(lm);
     }
-}
+})
 
 
-static inline mln_lang_move_tmp_t *
-mln_lang_move_tmp_new(mln_alloc_t *pool, \
-                      mln_lang_move_op_t op, \
-                      mln_lang_move_t *move)
+MLN_FUNC(static inline, mln_lang_move_tmp_t *, mln_lang_move_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_move_op_t op, mln_lang_move_t *move), \
+         (pool, op, move), \
 {
     mln_lang_move_tmp_t *lmt;
     if ((lmt = (mln_lang_move_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_move_tmp_t))) == NULL) {
@@ -1696,24 +1635,20 @@ mln_lang_move_tmp_new(mln_alloc_t *pool, \
     lmt->op = op;
     lmt->move = move;
     return lmt;
-}
+})
 
-static void mln_lang_move_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_move_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_move_tmp_t *lmt = (mln_lang_move_tmp_t *)data;
     if (lmt->move != NULL) mln_lang_move_free(lmt->move);
     mln_alloc_free(lmt);
-}
+})
 
 
-static inline mln_lang_addsub_t *
-mln_lang_addsub_new(mln_alloc_t *pool, \
-                    mln_lang_muldiv_t *left, \
-                    mln_lang_addsub_op_t op, \
-                    mln_lang_addsub_t *right, \
-                    mln_u64_t line, \
-                    mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_addsub_t *, mln_lang_addsub_new, \
+         (mln_alloc_t *pool, mln_lang_muldiv_t *left, mln_lang_addsub_op_t op, \
+          mln_lang_addsub_t *right, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, right, line, file), \
 {
     mln_lang_addsub_t *la;
     if ((la = (mln_lang_addsub_t *)mln_alloc_m(pool, sizeof(mln_lang_addsub_t))) == NULL) {
@@ -1731,10 +1666,9 @@ mln_lang_addsub_new(mln_alloc_t *pool, \
     la->jump = NULL;
     la->type = 0;
     return la;
-}
+})
 
-static void mln_lang_addsub_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_addsub_free, (void *data), (data), {
     mln_lang_addsub_t *la, *right = (mln_lang_addsub_t *)data;
     while (right != NULL) {
         la = right;
@@ -1743,13 +1677,12 @@ static void mln_lang_addsub_free(void *data)
         if (la->file != NULL) mln_string_free(la->file);
         mln_alloc_free(la);
     }
-}
+})
 
 
-static inline mln_lang_addsub_tmp_t *
-mln_lang_addsub_tmp_new(mln_alloc_t *pool, \
-                        mln_lang_addsub_op_t op, \
-                        mln_lang_addsub_t *addsub)
+MLN_FUNC(static inline, mln_lang_addsub_tmp_t *, mln_lang_addsub_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_addsub_op_t op, mln_lang_addsub_t *addsub), \
+         (pool, op, addsub), \
 {
     mln_lang_addsub_tmp_t *lat;
     if ((lat = (mln_lang_addsub_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_addsub_tmp_t))) == NULL) {
@@ -1758,24 +1691,20 @@ mln_lang_addsub_tmp_new(mln_alloc_t *pool, \
     lat->op = op;
     lat->addsub = addsub;
     return lat;
-}
+})
 
-static void mln_lang_addsub_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_addsub_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_addsub_tmp_t *lat = (mln_lang_addsub_tmp_t *)data;
     if (lat->addsub != NULL) mln_lang_addsub_free(lat->addsub);
     mln_alloc_free(lat);
-}
+})
 
 
-static inline mln_lang_muldiv_t *
-mln_lang_muldiv_new(mln_alloc_t *pool, \
-                    mln_lang_not_t *left, \
-                    mln_lang_muldiv_op_t op, \
-                    mln_lang_muldiv_t *right, \
-                    mln_u64_t line, \
-                    mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_muldiv_t *, mln_lang_muldiv_new, \
+         (mln_alloc_t *pool, mln_lang_not_t *left, mln_lang_muldiv_op_t op, \
+          mln_lang_muldiv_t *right, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, right, line, file), \
 {
     mln_lang_muldiv_t *lm;
     if ((lm = (mln_lang_muldiv_t *)mln_alloc_m(pool, sizeof(mln_lang_muldiv_t))) == NULL) {
@@ -1793,10 +1722,9 @@ mln_lang_muldiv_new(mln_alloc_t *pool, \
     lm->jump = NULL;
     lm->type = 0;
     return lm;
-}
+})
 
-static void mln_lang_muldiv_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_muldiv_free, (void *data), (data), {
     mln_lang_muldiv_t *lm, *right = (mln_lang_muldiv_t *)data;
     while (right != NULL) {
         lm = right;
@@ -1805,13 +1733,12 @@ static void mln_lang_muldiv_free(void *data)
         if (lm->file != NULL) mln_string_free(lm->file);
         mln_alloc_free(lm);
     }
-}
+})
 
 
-static inline mln_lang_muldiv_tmp_t *
-mln_lang_muldiv_tmp_new(mln_alloc_t *pool, \
-                        mln_lang_muldiv_op_t op, \
-                        mln_lang_muldiv_t *muldiv)
+MLN_FUNC(static inline, mln_lang_muldiv_tmp_t *, mln_lang_muldiv_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_muldiv_op_t op, mln_lang_muldiv_t *muldiv), \
+         (pool, op, muldiv), \
 {
     mln_lang_muldiv_tmp_t *lmt;
     if ((lmt = (mln_lang_muldiv_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_muldiv_tmp_t))) == NULL) {
@@ -1820,23 +1747,19 @@ mln_lang_muldiv_tmp_new(mln_alloc_t *pool, \
     lmt->op = op;
     lmt->muldiv = muldiv;
     return lmt;
-}
+})
 
-static void mln_lang_muldiv_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_muldiv_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_muldiv_tmp_t *lmt = (mln_lang_muldiv_tmp_t *)data;
     if (lmt->muldiv != NULL) mln_lang_muldiv_free(lmt->muldiv);
     mln_alloc_free(lmt);
-}
+})
 
 
-static inline mln_lang_not_t *
-mln_lang_not_new(mln_alloc_t *pool, \
-                  mln_lang_not_op_t op, \
-                  void *data, \
-                  mln_u64_t line, \
-                  mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_not_t *, mln_lang_not_new, \
+         (mln_alloc_t *pool, mln_lang_not_op_t op, void *data, mln_u64_t line, mln_string_t *file), \
+         (pool, op, data, line, file), \
 {
     mln_lang_not_t *ln;
     if ((ln = (mln_lang_not_t *)mln_alloc_m(pool, sizeof(mln_lang_not_t))) == NULL) {
@@ -1860,10 +1783,9 @@ mln_lang_not_new(mln_alloc_t *pool, \
     ln->jump = NULL;
     ln->type = 0;
     return ln;
-}
+})
 
-static void mln_lang_not_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_not_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_not_t *ln = (mln_lang_not_t *)data, *fr;
 
@@ -1880,11 +1802,12 @@ again:
         if (fr->file != NULL) mln_string_free(fr->file);
         mln_alloc_free(fr);
     }
-}
+})
 
 
-static inline mln_lang_suffix_t *
-mln_lang_suffix_new(mln_alloc_t *pool, mln_lang_locate_t *left, mln_lang_suffix_op_t op, mln_u64_t line, mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_suffix_t *, mln_lang_suffix_new, \
+         (mln_alloc_t *pool, mln_lang_locate_t *left, mln_lang_suffix_op_t op, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, line, file), \
 {
     mln_lang_suffix_t *ls;
     if ((ls = (mln_lang_suffix_t *)mln_alloc_m(pool, sizeof(mln_lang_suffix_t))) == NULL) {
@@ -1901,20 +1824,19 @@ mln_lang_suffix_new(mln_alloc_t *pool, mln_lang_locate_t *left, mln_lang_suffix_
     ls->jump = NULL;
     ls->type = 0;
     return ls;
-}
+})
 
-static void mln_lang_suffix_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_suffix_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_suffix_t *ls = (mln_lang_suffix_t *)data;
     if (ls->left != NULL) mln_lang_locate_free(ls->left);
     if (ls->file != NULL) mln_string_free(ls->file);
     mln_alloc_free(ls);
-}
+})
 
 
-static inline mln_lang_suffix_tmp_t *
-mln_lang_suffix_tmp_new(mln_alloc_t *pool, mln_lang_suffix_op_t op)
+MLN_FUNC(static inline, mln_lang_suffix_tmp_t *, mln_lang_suffix_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_suffix_op_t op), (pool, op), \
 {
     mln_lang_suffix_tmp_t *lst;
     if ((lst = (mln_lang_suffix_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_suffix_tmp_t))) == NULL) {
@@ -1922,23 +1844,18 @@ mln_lang_suffix_tmp_new(mln_alloc_t *pool, mln_lang_suffix_op_t op)
     }
     lst->op = op;
     return lst;
-}
+})
 
-static void mln_lang_suffix_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_suffix_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_alloc_free(data);
-}
+})
 
 
-static inline mln_lang_locate_t *
-mln_lang_locate_new(mln_alloc_t *pool, \
-                    mln_lang_spec_t *left, \
-                    mln_lang_locate_op_t op, \
-                    void *right, \
-                    mln_lang_locate_tmp_t *next, \
-                    mln_u64_t line, \
-                    mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_locate_t *, mln_lang_locate_new, \
+         (mln_alloc_t *pool, mln_lang_spec_t *left, mln_lang_locate_op_t op, void *right, \
+          mln_lang_locate_tmp_t *next, mln_u64_t line, mln_string_t *file), \
+         (pool, left, op, right, next, line, file), \
 {
     mln_lang_locate_t *ll, *n;
     if ((ll = (mln_lang_locate_t *)mln_alloc_m(pool, sizeof(mln_lang_locate_t))) == NULL) {
@@ -2004,10 +1921,9 @@ mln_lang_locate_new(mln_alloc_t *pool, \
         }
     }
     return ll;
-}
+})
 
-static void mln_lang_locate_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_locate_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_locate_t *ll = (mln_lang_locate_t *)data, *next;
     mln_lang_locate_op_t op;
@@ -2033,14 +1949,12 @@ lp:
         ll = next;
         goto lp;
     }
-}
+})
 
 
-static inline mln_lang_locate_tmp_t *
-mln_lang_locate_tmp_new(mln_alloc_t *pool, \
-                        mln_lang_locate_op_t op, \
-                        void *data, \
-                        mln_lang_locate_tmp_t *next)
+MLN_FUNC(static inline, mln_lang_locate_tmp_t *, mln_lang_locate_tmp_new, \
+         (mln_alloc_t *pool, mln_lang_locate_op_t op, void *data, mln_lang_locate_tmp_t *next), \
+         (pool, op, data, next), \
 {
     mln_lang_locate_tmp_t *llt;
     if ((llt = (mln_lang_locate_tmp_t *)mln_alloc_m(pool, sizeof(mln_lang_locate_tmp_t))) == NULL) {
@@ -2061,10 +1975,9 @@ mln_lang_locate_tmp_new(mln_alloc_t *pool, \
     }
     llt->next = next;
     return llt;
-}
+})
 
-static void mln_lang_locate_tmp_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_locate_tmp_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_locate_tmp_t *llt = (mln_lang_locate_tmp_t *)data;
     mln_lang_locate_op_t op = llt->op;
@@ -2081,14 +1994,11 @@ static void mln_lang_locate_tmp_free(void *data)
     }
     if (llt->next != NULL) mln_lang_locate_tmp_free(llt->next);
     mln_alloc_free(llt);
-}
+})
 
-static inline mln_lang_spec_t *
-mln_lang_spec_new(mln_alloc_t *pool, \
-                  mln_lang_spec_op_t op, \
-                  void *data, \
-                  mln_u64_t line, \
-                  mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_spec_t *, mln_lang_spec_new, \
+         (mln_alloc_t *pool, mln_lang_spec_op_t op, void *data, mln_u64_t line, mln_string_t *file), \
+         (pool, op, data, line, file), \
 {
     mln_lang_spec_t *ls;
     if ((ls = (mln_lang_spec_t *)mln_alloc_m(pool, sizeof(mln_lang_spec_t))) == NULL) {
@@ -2120,10 +2030,9 @@ mln_lang_spec_new(mln_alloc_t *pool, \
             break;
     }
     return ls;
-}
+})
 
-static void mln_lang_spec_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_spec_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_spec_t *ls, *right = (mln_lang_spec_t *)data;
     mln_lang_spec_op_t op;
@@ -2154,11 +2063,12 @@ static void mln_lang_spec_free(void *data)
         if (ls->file != NULL) mln_string_free(ls->file);
         mln_alloc_free(ls);
     }
-}
+})
 
 
-static inline mln_lang_factor_t *
-mln_lang_factor_new(mln_alloc_t *pool, mln_lang_factor_type_t type, void *data, mln_u64_t line, mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_factor_t *, mln_lang_factor_new, \
+         (mln_alloc_t *pool, mln_lang_factor_type_t type, void *data, mln_u64_t line, mln_string_t *file), \
+         (pool, type, data, line, file), \
 {
     mln_lang_factor_t *lf;
     if ((lf = (mln_lang_factor_t *)mln_alloc_m(pool, sizeof(mln_lang_factor_t))) == NULL) {
@@ -2193,10 +2103,9 @@ mln_lang_factor_new(mln_alloc_t *pool, mln_lang_factor_type_t type, void *data, 
             break;
     }
     return lf;
-}
+})
 
-static void mln_lang_factor_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_factor_free, (void *data), (data), {
     if (data == NULL) return;
     mln_lang_factor_t *lf = (mln_lang_factor_t *)data;
     mln_lang_factor_type_t type = lf->type;
@@ -2216,16 +2125,13 @@ static void mln_lang_factor_free(void *data)
     }
     if (lf->file != NULL) mln_string_free(lf->file);
     mln_alloc_free(lf);
-}
+})
 
 
-static inline mln_lang_elemlist_t *
-mln_lang_elemlist_new(mln_alloc_t *pool, \
-                      mln_lang_assign_t *key, \
-                      mln_lang_assign_t *val, \
-                      mln_lang_elemlist_t *next, \
-                      mln_u64_t line, \
-                      mln_string_t *file)
+MLN_FUNC(static inline, mln_lang_elemlist_t *, mln_lang_elemlist_new, \
+         (mln_alloc_t *pool, mln_lang_assign_t *key, mln_lang_assign_t *val, \
+          mln_lang_elemlist_t *next, mln_u64_t line, mln_string_t *file), \
+         (pool, key, val, next, line, file), \
 {
     mln_lang_elemlist_t *le;
     if ((le = (mln_lang_elemlist_t *)mln_alloc_m(pool, sizeof(mln_lang_elemlist_t))) == NULL) {
@@ -2241,10 +2147,9 @@ mln_lang_elemlist_new(mln_alloc_t *pool, \
     le->val = val;
     le->next = next;
     return le;
-}
+})
 
-static void mln_lang_elemlist_free(void *data)
-{
+MLN_FUNC_VOID(static, void, mln_lang_elemlist_free, (void *data), (data), {
     mln_lang_elemlist_t *le, *next = (mln_lang_elemlist_t *)data;
     while (next != NULL) {
         le = next;
@@ -2254,20 +2159,24 @@ static void mln_lang_elemlist_free(void *data)
         if (le->file != NULL) mln_string_free(le->file);
         mln_alloc_free(le);
     }
-}
+})
 
 /*
  * semantic
  */
-static int mln_lang_semantic_start(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_start, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     left->data = right[0]->data;
     left->nonterm_free_handler = right[0]->nonterm_free_handler;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_stm_block(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_stm_block, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_stm_t *stm;
@@ -2279,9 +2188,11 @@ static int mln_lang_semantic_stm_block(mln_factor_t *left, mln_factor_t **right,
     right[0]->data = NULL;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_stmfunc(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_stmfunc, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_stm_t *stm;
@@ -2293,9 +2204,11 @@ static int mln_lang_semantic_stmfunc(mln_factor_t *left, mln_factor_t **right, v
     left->data = stm;
     left->nonterm_free_handler = mln_lang_stm_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_stmset, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_stm_t *stm;
@@ -2321,9 +2234,11 @@ static int mln_lang_semantic_stmset(mln_factor_t *left, mln_factor_t **right, vo
     left->data = stm;
     left->nonterm_free_handler = mln_lang_stm_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_setstm_var(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_setstm_var, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
@@ -2343,9 +2258,11 @@ static int mln_lang_semantic_setstm_var(mln_factor_t *left, mln_factor_t **right
     left->nonterm_free_handler = mln_lang_setstm_free;
     right[2]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_setstm_func(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_setstm_func, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_setstm_t *lc = mln_lang_setstm_new(pool, \
@@ -2360,9 +2277,11 @@ static int mln_lang_semantic_setstm_func(mln_factor_t *left, mln_factor_t **righ
     right[0]->data = NULL;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_blockstmexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_blockstmexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_block_t *lb = mln_lang_block_new(pool, right[0]->data, M_BLOCK_EXP, left->line, left->file);
@@ -2371,9 +2290,11 @@ static int mln_lang_semantic_blockstmexp(mln_factor_t *left, mln_factor_t **righ
     left->nonterm_free_handler = mln_lang_block_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_blockstmstm(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_blockstmstm, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_block_t *lb = mln_lang_block_new(pool, right[1]->data, M_BLOCK_STM, left->line, left->file);
@@ -2382,9 +2303,11 @@ static int mln_lang_semantic_blockstmstm(mln_factor_t *left, mln_factor_t **righ
     left->nonterm_free_handler = mln_lang_block_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_labelstm(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_labelstm, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
@@ -2399,9 +2322,11 @@ static int mln_lang_semantic_labelstm(mln_factor_t *left, mln_factor_t **right, 
     left->nonterm_free_handler = mln_lang_stm_free;
     right[2]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_whilestm(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_whilestm, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_while_t *w = mln_lang_while_new(pool, \
@@ -2421,10 +2346,12 @@ static int mln_lang_semantic_whilestm(mln_factor_t *left, mln_factor_t **right, 
     right[4]->data = NULL;
     right[5]->data = NULL;
     return 0;
-}
+})
 
 
-static int mln_lang_semantic_forstm(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_forstm, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_for_t *f = mln_lang_for_new(pool, \
@@ -2448,9 +2375,11 @@ static int mln_lang_semantic_forstm(mln_factor_t *left, mln_factor_t **right, vo
     right[8]->data = NULL;
     right[9]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_ifstm(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_ifstm, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_if_t *i = mln_lang_if_new(pool, \
@@ -2471,9 +2400,11 @@ static int mln_lang_semantic_ifstm(mln_factor_t *left, mln_factor_t **right, voi
     right[4]->data = NULL;
     right[5]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_switchstm(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_switchstm, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_switch_t *sw = mln_lang_switch_new(pool, \
@@ -2493,9 +2424,11 @@ static int mln_lang_semantic_switchstm(mln_factor_t *left, mln_factor_t **right,
     right[5]->data = NULL;
     right[7]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_funcdef(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_funcdef, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
@@ -2518,17 +2451,21 @@ static int mln_lang_semantic_funcdef(mln_factor_t *left, mln_factor_t **right, v
     right[5]->data = NULL;
     right[7]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_funcdef_closure(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_funcdef_closure, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     left->data = right[2]->data;
     left->nonterm_free_handler = right[2]->nonterm_free_handler;
     right[2]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_switchstm__(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_switchstm__, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_switchstm_t *ls = mln_lang_switchstm_new(pool, \
@@ -2544,25 +2481,31 @@ static int mln_lang_semantic_switchstm__(mln_factor_t *left, mln_factor_t **righ
     right[2]->data = NULL;
     right[3]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_switchprefix(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_switchprefix, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     left->data = right[1]->data;
     left->nonterm_free_handler = right[1]->nonterm_free_handler;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_elsestm(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_elsestm, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     left->data = right[1]->data;
     left->nonterm_free_handler = right[1]->nonterm_free_handler;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_continue(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_continue, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_block_t *block = mln_lang_block_new(pool, NULL, M_BLOCK_CONTINUE, left->line, left->file);
@@ -2570,9 +2513,11 @@ static int mln_lang_semantic_continue(mln_factor_t *left, mln_factor_t **right, 
     left->data = block;
     left->nonterm_free_handler = mln_lang_block_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_break(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_break, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_block_t *block = mln_lang_block_new(pool, NULL, M_BLOCK_BREAK, left->line, left->file);
@@ -2580,9 +2525,11 @@ static int mln_lang_semantic_break(mln_factor_t *left, mln_factor_t **right, voi
     left->data = block;
     left->nonterm_free_handler = mln_lang_block_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_return(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_return, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_block_t *block = mln_lang_block_new(pool, right[1]->data, M_BLOCK_RETURN, left->line, left->file);
@@ -2591,9 +2538,11 @@ static int mln_lang_semantic_return(mln_factor_t *left, mln_factor_t **right, vo
     left->nonterm_free_handler = mln_lang_block_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_goto(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_goto, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[1]->data);
@@ -2607,9 +2556,11 @@ static int mln_lang_semantic_goto(mln_factor_t *left, mln_factor_t **right, void
     left->data = block;
     left->nonterm_free_handler = mln_lang_block_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_exp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_exp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_exp_t *exp = mln_lang_exp_new(pool, \
@@ -2623,17 +2574,21 @@ static int mln_lang_semantic_exp(mln_factor_t *left, mln_factor_t **right, void 
     right[0]->data = NULL;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_explist(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_explist, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     left->data = right[1]->data;
     left->nonterm_free_handler = right[1]->nonterm_free_handler;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_t *assign, *r = NULL;
@@ -2651,9 +2606,11 @@ static int mln_lang_semantic_assignexp(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_assign_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexpeq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexpeq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_EQUAL, (mln_lang_assign_t *)(right[1]->data));
@@ -2662,9 +2619,11 @@ static int mln_lang_semantic_assignexpeq(mln_factor_t *left, mln_factor_t **righ
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexppluseq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexppluseq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_PLUSEQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2673,9 +2632,11 @@ static int mln_lang_semantic_assignexppluseq(mln_factor_t *left, mln_factor_t **
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexpsubeq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexpsubeq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_SUBEQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2684,9 +2645,11 @@ static int mln_lang_semantic_assignexpsubeq(mln_factor_t *left, mln_factor_t **r
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexplmoveq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexplmoveq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_LMOVEQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2695,9 +2658,11 @@ static int mln_lang_semantic_assignexplmoveq(mln_factor_t *left, mln_factor_t **
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexprmoveq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexprmoveq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_RMOVEQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2706,9 +2671,11 @@ static int mln_lang_semantic_assignexprmoveq(mln_factor_t *left, mln_factor_t **
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexpmuleq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexpmuleq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_MULEQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2717,9 +2684,11 @@ static int mln_lang_semantic_assignexpmuleq(mln_factor_t *left, mln_factor_t **r
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexpdiveq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexpdiveq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_DIVEQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2728,9 +2697,11 @@ static int mln_lang_semantic_assignexpdiveq(mln_factor_t *left, mln_factor_t **r
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexporeq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexporeq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_OREQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2739,9 +2710,11 @@ static int mln_lang_semantic_assignexporeq(mln_factor_t *left, mln_factor_t **ri
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexpandeq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexpandeq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_ANDEQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2750,9 +2723,11 @@ static int mln_lang_semantic_assignexpandeq(mln_factor_t *left, mln_factor_t **r
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexpxoreq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexpxoreq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_XOREQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2761,9 +2736,11 @@ static int mln_lang_semantic_assignexpxoreq(mln_factor_t *left, mln_factor_t **r
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_assignexpmodeq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_assignexpmodeq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_assign_tmp_t *tmp = mln_lang_assign_tmp_new(pool, M_ASSIGN_MODEQ, (mln_lang_assign_t *)(right[1]->data));
@@ -2772,9 +2749,11 @@ static int mln_lang_semantic_assignexpmodeq(mln_factor_t *left, mln_factor_t **r
     left->nonterm_free_handler = mln_lang_assign_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_logiclowexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_logiclowexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_logiclow_t *ll, *r = NULL;
@@ -2792,9 +2771,11 @@ static int mln_lang_semantic_logiclowexp(mln_factor_t *left, mln_factor_t **righ
     left->nonterm_free_handler = mln_lang_logiclow_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_logiclowexpor(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_logiclowexpor, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_logiclow_tmp_t *tmp;
@@ -2804,9 +2785,11 @@ static int mln_lang_semantic_logiclowexpor(mln_factor_t *left, mln_factor_t **ri
     left->nonterm_free_handler = mln_lang_logiclow_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_logiclowexpand(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_logiclowexpand, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_logiclow_tmp_t *tmp;
@@ -2816,9 +2799,11 @@ static int mln_lang_semantic_logiclowexpand(mln_factor_t *left, mln_factor_t **r
     left->nonterm_free_handler = mln_lang_logiclow_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_logichighexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_logichighexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_logichigh_t *ll, *r = NULL;
@@ -2836,9 +2821,11 @@ static int mln_lang_semantic_logichighexp(mln_factor_t *left, mln_factor_t **rig
     left->nonterm_free_handler = mln_lang_logichigh_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_logichighor(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_logichighor, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_logichigh_tmp_t *tmp;
@@ -2848,9 +2835,11 @@ static int mln_lang_semantic_logichighor(mln_factor_t *left, mln_factor_t **righ
     left->nonterm_free_handler = mln_lang_logichigh_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_logichighand(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_logichighand, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_logichigh_tmp_t *tmp;
@@ -2860,9 +2849,11 @@ static int mln_lang_semantic_logichighand(mln_factor_t *left, mln_factor_t **rig
     left->nonterm_free_handler = mln_lang_logichigh_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_logichighxor(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_logichighxor, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_logichigh_tmp_t *tmp;
@@ -2872,9 +2863,11 @@ static int mln_lang_semantic_logichighxor(mln_factor_t *left, mln_factor_t **rig
     left->nonterm_free_handler = mln_lang_logichigh_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_relativelowexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_relativelowexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_relativelow_t *lr, *r = NULL; 
@@ -2892,9 +2885,11 @@ static int mln_lang_semantic_relativelowexp(mln_factor_t *left, mln_factor_t **r
     left->nonterm_free_handler = mln_lang_relativelow_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_relativeloweq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_relativeloweq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_relativelow_tmp_t *tmp;
@@ -2904,9 +2899,11 @@ static int mln_lang_semantic_relativeloweq(mln_factor_t *left, mln_factor_t **ri
     left->nonterm_free_handler = mln_lang_relativelow_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_relativelownoneq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_relativelownoneq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_relativelow_tmp_t *tmp;
@@ -2916,9 +2913,11 @@ static int mln_lang_semantic_relativelownoneq(mln_factor_t *left, mln_factor_t *
     left->nonterm_free_handler = mln_lang_relativelow_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_relativehighexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_relativehighexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_relativehigh_t *lr, *r = NULL;
@@ -2936,9 +2935,11 @@ static int mln_lang_semantic_relativehighexp(mln_factor_t *left, mln_factor_t **
     left->nonterm_free_handler = mln_lang_relativehigh_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_relativehighless(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_relativehighless, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_relativehigh_tmp_t *tmp;
@@ -2948,9 +2949,11 @@ static int mln_lang_semantic_relativehighless(mln_factor_t *left, mln_factor_t *
     left->nonterm_free_handler = mln_lang_relativehigh_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_relativehighlesseq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_relativehighlesseq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_relativehigh_tmp_t *tmp;
@@ -2960,9 +2963,11 @@ static int mln_lang_semantic_relativehighlesseq(mln_factor_t *left, mln_factor_t
     left->nonterm_free_handler = mln_lang_relativehigh_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_relativehighgreater(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_relativehighgreater, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_relativehigh_tmp_t *tmp;
@@ -2972,9 +2977,11 @@ static int mln_lang_semantic_relativehighgreater(mln_factor_t *left, mln_factor_
     left->nonterm_free_handler = mln_lang_relativehigh_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_relativehighgreatereq(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_relativehighgreatereq, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_relativehigh_tmp_t *tmp;
@@ -2984,9 +2991,11 @@ static int mln_lang_semantic_relativehighgreatereq(mln_factor_t *left, mln_facto
     left->nonterm_free_handler = mln_lang_relativehigh_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_moveexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_moveexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_move_t *move, *r = NULL;
@@ -3004,9 +3013,11 @@ static int mln_lang_semantic_moveexp(mln_factor_t *left, mln_factor_t **right, v
     left->nonterm_free_handler = mln_lang_move_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_moveleft(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_moveleft, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_move_tmp_t *tmp;
@@ -3016,9 +3027,11 @@ static int mln_lang_semantic_moveleft(mln_factor_t *left, mln_factor_t **right, 
     left->nonterm_free_handler = mln_lang_move_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_moveright(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_moveright, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_move_tmp_t *tmp;
@@ -3028,9 +3041,11 @@ static int mln_lang_semantic_moveright(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_move_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_addsubexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_addsubexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_addsub_t *la, *r = NULL;
@@ -3048,9 +3063,11 @@ static int mln_lang_semantic_addsubexp(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_addsub_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_addsubplus(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_addsubplus, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_addsub_tmp_t *tmp;
@@ -3060,9 +3077,11 @@ static int mln_lang_semantic_addsubplus(mln_factor_t *left, mln_factor_t **right
     left->nonterm_free_handler = mln_lang_addsub_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_addsubsub(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_addsubsub, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_addsub_tmp_t *tmp;
@@ -3072,9 +3091,11 @@ static int mln_lang_semantic_addsubsub(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_addsub_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_muldivexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_muldivexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_muldiv_t *lm, *r = NULL;
@@ -3092,9 +3113,11 @@ static int mln_lang_semantic_muldivexp(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_muldiv_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_muldivmul(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_muldivmul, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_muldiv_tmp_t *tmp;
@@ -3104,9 +3127,11 @@ static int mln_lang_semantic_muldivmul(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_muldiv_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_muldivdiv(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_muldivdiv, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_muldiv_tmp_t *tmp;
@@ -3116,9 +3141,11 @@ static int mln_lang_semantic_muldivdiv(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_muldiv_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_muldivmod(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_muldivmod, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_muldiv_tmp_t *tmp;
@@ -3128,9 +3155,11 @@ static int mln_lang_semantic_muldivmod(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_muldiv_tmp_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_notnot(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_notnot, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_not_t *ln;
@@ -3141,9 +3170,11 @@ static int mln_lang_semantic_notnot(mln_factor_t *left, mln_factor_t **right, vo
     left->nonterm_free_handler = mln_lang_not_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_notsuffix(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_notsuffix, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_not_t *ln;
@@ -3154,9 +3185,11 @@ static int mln_lang_semantic_notsuffix(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_not_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_suffixexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_suffixexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_suffix_t *ls;
@@ -3172,9 +3205,11 @@ static int mln_lang_semantic_suffixexp(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_suffix_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_suffixinc(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_suffixinc, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_suffix_tmp_t *tmp;
@@ -3184,9 +3219,11 @@ static int mln_lang_semantic_suffixinc(mln_factor_t *left, mln_factor_t **right,
     left->data = tmp;
     left->nonterm_free_handler = mln_lang_suffix_tmp_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_suffixdec(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_suffixdec, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_suffix_tmp_t *tmp;
@@ -3196,9 +3233,11 @@ static int mln_lang_semantic_suffixdec(mln_factor_t *left, mln_factor_t **right,
     left->data = tmp;
     left->nonterm_free_handler = mln_lang_suffix_tmp_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_locateexp(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_locateexp, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_locate_t *ll = NULL;
@@ -3244,9 +3283,11 @@ static int mln_lang_semantic_locateexp(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_locate_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_locateindex(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_locateindex, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_locate_tmp_t *tmp;
@@ -3262,9 +3303,11 @@ static int mln_lang_semantic_locateindex(mln_factor_t *left, mln_factor_t **righ
     right[1]->data = NULL;
     right[3]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_locateproperty(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_locateproperty, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_locate_tmp_t *tmp;
@@ -3283,9 +3326,11 @@ static int mln_lang_semantic_locateproperty(mln_factor_t *left, mln_factor_t **r
     left->nonterm_free_handler = mln_lang_locate_tmp_free;
     right[2]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_locatefunc(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_locatefunc, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_locate_tmp_t *tmp;
@@ -3301,9 +3346,11 @@ static int mln_lang_semantic_locatefunc(mln_factor_t *left, mln_factor_t **right
     right[1]->data = NULL;
     right[3]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_specnegative(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_specnegative, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
@@ -3314,9 +3361,11 @@ static int mln_lang_semantic_specnegative(mln_factor_t *left, mln_factor_t **rig
     left->nonterm_free_handler = mln_lang_spec_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_specreverse(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_specreverse, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
@@ -3327,9 +3376,11 @@ static int mln_lang_semantic_specreverse(mln_factor_t *left, mln_factor_t **righ
     left->nonterm_free_handler = mln_lang_spec_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_specrefer(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_specrefer, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
@@ -3340,9 +3391,11 @@ static int mln_lang_semantic_specrefer(mln_factor_t *left, mln_factor_t **right,
     left->nonterm_free_handler = mln_lang_spec_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_specinc(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_specinc, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
@@ -3353,9 +3406,11 @@ static int mln_lang_semantic_specinc(mln_factor_t *left, mln_factor_t **right, v
     left->nonterm_free_handler = mln_lang_spec_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_specdec(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_specdec, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
@@ -3366,9 +3421,11 @@ static int mln_lang_semantic_specdec(mln_factor_t *left, mln_factor_t **right, v
     left->nonterm_free_handler = mln_lang_spec_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_specnew(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_specnew, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *spec;
@@ -3382,9 +3439,11 @@ static int mln_lang_semantic_specnew(mln_factor_t *left, mln_factor_t **right, v
     left->data = spec;
     left->nonterm_free_handler = mln_lang_spec_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_specparenth(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_specparenth, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
@@ -3400,9 +3459,11 @@ static int mln_lang_semantic_specparenth(mln_factor_t *left, mln_factor_t **righ
     left->nonterm_free_handler = mln_lang_spec_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_specfactor(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_specfactor, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_spec_t *ls;
@@ -3413,9 +3474,11 @@ static int mln_lang_semantic_specfactor(mln_factor_t *left, mln_factor_t **right
     left->nonterm_free_handler = mln_lang_spec_free;
     right[0]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_factortrue(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_factortrue, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_factor_t *lf;
@@ -3426,9 +3489,11 @@ static int mln_lang_semantic_factortrue(mln_factor_t *left, mln_factor_t **right
     left->data = lf;
     left->nonterm_free_handler = mln_lang_factor_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_factorfalse(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_factorfalse, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_factor_t *lf;
@@ -3439,9 +3504,11 @@ static int mln_lang_semantic_factorfalse(mln_factor_t *left, mln_factor_t **righ
     left->data = lf;
     left->nonterm_free_handler = mln_lang_factor_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_factornil(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_factornil, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_factor_t *lf;
@@ -3451,9 +3518,11 @@ static int mln_lang_semantic_factornil(mln_factor_t *left, mln_factor_t **right,
     left->data = lf;
     left->nonterm_free_handler = mln_lang_factor_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_factorid(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_factorid, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
@@ -3467,9 +3536,11 @@ static int mln_lang_semantic_factorid(mln_factor_t *left, mln_factor_t **right, 
     left->data = lf;
     left->nonterm_free_handler = mln_lang_factor_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_factorint, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
@@ -3515,9 +3586,11 @@ static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right,
     left->data = lf;
     left->nonterm_free_handler = mln_lang_factor_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_factorreal(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_factorreal, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
@@ -3536,9 +3609,11 @@ static int mln_lang_semantic_factorreal(mln_factor_t *left, mln_factor_t **right
     left->data = lf;
     left->nonterm_free_handler = mln_lang_factor_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_factorstring(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_factorstring, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
@@ -3552,9 +3627,11 @@ static int mln_lang_semantic_factorstring(mln_factor_t *left, mln_factor_t **rig
     left->data = lf;
     left->nonterm_free_handler = mln_lang_factor_free;
     return 0;
-}
+})
 
-static int mln_lang_semantic_factorarray(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_factorarray, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_factor_t *lf;
@@ -3565,9 +3642,11 @@ static int mln_lang_semantic_factorarray(mln_factor_t *left, mln_factor_t **righ
     left->nonterm_free_handler = mln_lang_factor_free;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_elemlist(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_elemlist, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_elemlist_t *le;
@@ -3593,29 +3672,32 @@ static int mln_lang_semantic_elemlist(mln_factor_t *left, mln_factor_t **right, 
     right[1]->data = NULL;
     right[2]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_elemval(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_elemval, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     left->data = right[1]->data;
     left->nonterm_free_handler = right[1]->nonterm_free_handler;
     right[1]->data = NULL;
     return 0;
-}
+})
 
-static int mln_lang_semantic_elemnext(mln_factor_t *left, mln_factor_t **right, void *data)
+MLN_FUNC(static, int, mln_lang_semantic_elemnext, \
+         (mln_factor_t *left, mln_factor_t **right, void *data), \
+         (left, right, data), \
 {
     left->data = right[1]->data;
     left->nonterm_free_handler = right[1]->nonterm_free_handler;
     right[1]->data = NULL;
     return 0;
-}
+})
 
 /*
  * APIs
  */
-int mln_lang_ast_file_open(mln_string_t *file_path)
-{
+MLN_FUNC(, int, mln_lang_ast_file_open, (mln_string_t *file_path), (file_path), {
     int fd, n;
     size_t len = file_path->len >= 1024? 1023: file_path->len;
     char path[1024], *melang_path = NULL, tmp_path[1024];
@@ -3664,19 +3746,19 @@ goon:
     }
 
     return fd;
-}
+})
 
-void *mln_lang_ast_parser_generate(void)
-{
+MLN_FUNC(, void *, mln_lang_ast_parser_generate, (void), (), {
     return mln_lang_parser_generate(prod_tbl, sizeof(prod_tbl)/sizeof(mln_production_t), &mln_lang_env);
-}
+})
 
-void mln_lang_ast_parser_destroy(void *data)
-{
+MLN_FUNC_VOID(, void, mln_lang_ast_parser_destroy, (void *data), (data), {
     if (data != NULL) mln_lang_pg_data_free(data);
-}
+})
 
-void *mln_lang_ast_generate(mln_alloc_t *pool, void *state_tbl, mln_string_t *data, mln_u32_t data_type)
+MLN_FUNC(, void *, mln_lang_ast_generate, \
+         (mln_alloc_t *pool, void *state_tbl, mln_string_t *data, mln_u32_t data_type), \
+         (pool, state_tbl, data, data_type), \
 {
     mln_lex_hooks_t hooks;
     struct mln_lex_attr lattr;
@@ -3730,11 +3812,10 @@ void *mln_lang_ast_generate(mln_alloc_t *pool, void *state_tbl, mln_string_t *da
     mln_lex_destroy(lex);
     mln_alloc_destroy(internal_pool);
     return ret;
-}
+})
 
-void mln_lang_ast_free(void *ast)
-{
+MLN_FUNC_VOID(, void, mln_lang_ast_free, (void *ast), (ast), {
     if (ast == NULL) return;
     mln_lang_stm_free(ast);
-}
+})
 
