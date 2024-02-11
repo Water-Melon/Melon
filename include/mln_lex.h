@@ -385,7 +385,7 @@ SCOPE void *PREFIX_NAME##_lex_dup(mln_alloc_t *pool, void *ptr);\
 SCOPE PREFIX_NAME##_struct_t *PREFIX_NAME##_nums_handler(mln_lex_t *lex, void *data);
 
 
-#define MLN_DEFINE_TOKEN(PREFIX_NAME,TK_PREFIX,...); \
+#define MLN_DEFINE_TOKEN(SCOPE, PREFIX_NAME,TK_PREFIX,...); \
 PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
     {TK_PREFIX##_TK_EOF,          #TK_PREFIX"_TK_EOF"},             \
     {TK_PREFIX##_TK_OCT,          #TK_PREFIX"_TK_OCT"},             \
@@ -429,104 +429,104 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
     {TK_PREFIX##_TK_KEYWORD_BEGIN,#TK_PREFIX"_TK_KEYWORD_BEGIN"},   \
     ## __VA_ARGS__                                                  \
 };\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_excl_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_excl_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_EXCL);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_dblq_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_dblq_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_DBLQ);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_nums_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_nums_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_NUMS);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_doll_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_doll_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_DOLL);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_perc_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_perc_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_PERC);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_amp_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_amp_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_AMP);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_sglq_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_sglq_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_SGLQ);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lpar_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lpar_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_LPAR);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_rpar_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_rpar_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_RPAR);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_ast_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_ast_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_AST);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_plus_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_plus_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_PLUS);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_comma_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_comma_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_COMMA);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_sub_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_sub_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_SUB);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_period_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_period_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_PERIOD);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_slash_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_slash_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_SLASH);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_colon_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_colon_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_COLON);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_semic_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_semic_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_SEMIC);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lagl_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lagl_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_LAGL);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_equal_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_equal_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_EQUAL);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_ragl_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_ragl_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_RAGL);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_ques_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_ques_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_QUES);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_at_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_at_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_AT);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lsquar_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lsquar_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_LSQUAR);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_bslash_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_bslash_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_BSLASH);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_rsquar_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_rsquar_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_RSQUAR);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_xor_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_xor_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_XOR);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_under_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_under_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_UNDER);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_fulstp_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_fulstp_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_FULSTP);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lbrace_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lbrace_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_LBRACE);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_vertl_default_handler, (mln_lex_t *lex, void *data), (lex, data),  {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_vertl_default_handler, (mln_lex_t *lex, void *data), (lex, data),  {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_VERTL);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_rbrace_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_rbrace_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_RBRACE);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_dash_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_dash_default_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         return PREFIX_NAME##_new(lex, TK_PREFIX##_TK_DASH);\
     })\
     \
-    mln_spechar_t PREFIX_NAME##_handlers[] = {         \
+    SCOPE mln_spechar_t PREFIX_NAME##_handlers[] = {         \
         {'!',  (lex_hook)PREFIX_NAME##_excl_default_handler,   NULL},\
         {'"',  (lex_hook)PREFIX_NAME##_dblq_default_handler,   NULL},\
         {'#',  (lex_hook)PREFIX_NAME##_nums_default_handler,   NULL},\
@@ -561,7 +561,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         {'~',  (lex_hook)PREFIX_NAME##_dash_default_handler,   NULL} \
     };\
     \
-    MLN_FUNC_VOID(static, void, PREFIX_NAME##_set_hooks, (mln_lex_t *lex), (lex), {\
+    MLN_FUNC_VOID(SCOPE, void, PREFIX_NAME##_set_hooks, (mln_lex_t *lex), (lex), {\
         mln_lex_hooks_t *hooks = &(lex->hooks);\
         if (hooks->excl_handler != NULL)   {PREFIX_NAME##_handlers[0].handler  = hooks->excl_handler;  PREFIX_NAME##_handlers[0].data = hooks->excl_data;   }\
         if (hooks->dblq_handler != NULL)   {PREFIX_NAME##_handlers[1].handler  = hooks->dblq_handler;  PREFIX_NAME##_handlers[1].data = hooks->dblq_data;   }\
@@ -597,7 +597,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         if (hooks->dash_handler != NULL)   {PREFIX_NAME##_handlers[31].handler = hooks->dash_handler;  PREFIX_NAME##_handlers[31].data = hooks->dash_data;  }\
     })\
     \
-    MLN_FUNC(, PREFIX_NAME##_struct_t *, PREFIX_NAME##_new, (mln_lex_t *lex, enum PREFIX_NAME##_enum type), (lex, type), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_new, (mln_lex_t *lex, enum PREFIX_NAME##_enum type), (lex, type), {\
         mln_string_t tmp;\
         PREFIX_NAME##_struct_t *ptr;\
         if ((ptr = (PREFIX_NAME##_struct_t *)mln_alloc_m(lex->pool, sizeof(PREFIX_NAME##_struct_t))) == NULL) {\
@@ -625,7 +625,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         return ptr;\
     })\
     \
-    MLN_FUNC_VOID(, void, PREFIX_NAME##_free, (PREFIX_NAME##_struct_t *ptr), (ptr), {\
+    MLN_FUNC_VOID(SCOPE, void, PREFIX_NAME##_free, (PREFIX_NAME##_struct_t *ptr), (ptr), {\
         if (ptr == NULL) return ;\
         if (ptr->text != NULL) mln_string_free(ptr->text);\
         if (ptr->file != NULL) mln_string_free(ptr->file);\
@@ -661,7 +661,7 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         return NULL;\
     })\
     \
-    MLN_FUNC(, PREFIX_NAME##_struct_t *, PREFIX_NAME##_token, (mln_lex_t *lex), (lex), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_token, (mln_lex_t *lex), (lex), {\
         char c;\
         PREFIX_NAME##_struct_t *sret;\
 beg:\
@@ -792,7 +792,7 @@ lp:\
         return NULL;\
     })\
     \
-    MLN_FUNC(, void *, PREFIX_NAME##_lex_dup, (mln_alloc_t *pool, void *ptr), (pool, ptr), {\
+    MLN_FUNC(SCOPE, void *, PREFIX_NAME##_lex_dup, (mln_alloc_t *pool, void *ptr), (pool, ptr), {\
         if (ptr == NULL) return NULL;\
         PREFIX_NAME##_struct_t *src = (PREFIX_NAME##_struct_t *)ptr;\
         PREFIX_NAME##_struct_t *dest = (PREFIX_NAME##_struct_t *)mln_alloc_m(pool, sizeof(PREFIX_NAME##_struct_t));\
@@ -812,7 +812,7 @@ lp:\
         return (void *)dest;\
     })\
     \
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_include, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_include, (mln_lex_t *lex, void *data), (lex, data), {\
         char c;\
         mln_string_t path;\
         while (1) {\
@@ -860,7 +860,7 @@ lp:\
         mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_define, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_define, (mln_lex_t *lex, void *data), (lex, data), {\
         char c;\
         mln_string_t str, *k = NULL, *v = NULL;\
         mln_lex_macro_t *lm, tmp;\
@@ -952,7 +952,7 @@ goon:\
         mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_if, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_if, (mln_lex_t *lex, void *data), (lex, data), {\
         int ret;\
         mln_lex_preprocess_data_t *lpd = (mln_lex_preprocess_data_t *)data;\
         mln_lex_result_clean(lex);\
@@ -970,7 +970,7 @@ goon:\
         mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_else, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_else, (mln_lex_t *lex, void *data), (lex, data), {\
         mln_lex_preprocess_data_t *lpd = (mln_lex_preprocess_data_t *)data;\
         if (lpd->if_level == 0) {\
             mln_lex_error_set(lex, MLN_LEX_EINVMACRO);\
@@ -986,7 +986,7 @@ goon:\
         }\
         return PREFIX_NAME##_token(lex);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_endif, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_endif, (mln_lex_t *lex, void *data), (lex, data), {\
         mln_lex_preprocess_data_t *lpd = (mln_lex_preprocess_data_t *)data;\
         if (lpd->if_level == 0) {\
             mln_lex_error_set(lex, MLN_LEX_EINVMACRO);\
@@ -999,7 +999,7 @@ goon:\
         mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     })\
-    MLN_FUNC(static, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_undef, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_lex_preprocess_undef, (mln_lex_t *lex, void *data), (lex, data), {\
         char c;\
         mln_string_t str;\
         mln_lex_macro_t tmp;\
@@ -1043,7 +1043,7 @@ goon:\
         mln_lex_result_clean(lex);\
         return PREFIX_NAME##_token(lex);\
     })\
-    mln_preprocess_handler_t PREFIX_NAME##_preprocess_handlers[] = {\
+    SCOPE mln_preprocess_handler_t PREFIX_NAME##_preprocess_handlers[] = {\
         {mln_string("define"), (lex_hook)PREFIX_NAME##_lex_preprocess_define},\
         {mln_string("include"), (lex_hook)PREFIX_NAME##_lex_preprocess_include},\
         {mln_string("if"), (lex_hook)PREFIX_NAME##_lex_preprocess_if},\
@@ -1051,7 +1051,7 @@ goon:\
         {mln_string("endif"), (lex_hook)PREFIX_NAME##_lex_preprocess_endif},\
         {mln_string("undef"), (lex_hook)PREFIX_NAME##_lex_preprocess_undef}\
     };\
-    MLN_FUNC(, PREFIX_NAME##_struct_t *, PREFIX_NAME##_nums_handler, (mln_lex_t *lex, void *data), (lex, data), {\
+    MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_nums_handler, (mln_lex_t *lex, void *data), (lex, data), {\
         mln_preprocess_handler_t *ph, *phend;\
         mln_string_t tmp;\
         mln_rbtree_node_t *rn;\

@@ -399,11 +399,12 @@ MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(SCOPE,PREFIX_NAME,TK_PREFIX,...);
 #### MLN_DEFINE_TOKEN
 
 ```c
-MLN_DEFINE_TOKEN(PREFIX_NAME,TK_PREFIX,...);
+MLN_DEFINE_TOKEN(SCOPE, PREFIX_NAME,TK_PREFIX,...);
 ```
 
 描述：该宏用于定义处理函数、特殊符号默认处理函数、词素类型与词素类型字符串数组等内容。其中：
 
+- `SCOPE`为本宏定义的一些变量和函数的作用域。
 - `PREFIX_NAME`为词素结构、类型结构、函数的前缀。
 - `TK_PREFIX`为词素类型的前缀（枚举中的值的前缀）。
 
@@ -436,7 +437,7 @@ mln_string_t keywords[] = {
 };
 
 MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(static, mln_test, TEST, TEST_TK_ON, TEST_TK_OFF, TEST_TK_STRING);
-MLN_DEFINE_TOKEN(mln_test, TEST, {TEST_TK_ON, "TEST_TK_ON"}, {TEST_TK_OFF, "TEST_TK_OFF"}, {TEST_TK_STRING, "TEST_TK_STRING"});
+MLN_DEFINE_TOKEN(static, mln_test, TEST, {TEST_TK_ON, "TEST_TK_ON"}, {TEST_TK_OFF, "TEST_TK_OFF"}, {TEST_TK_STRING, "TEST_TK_STRING"});
 
 static inline int
 mln_get_char(mln_lex_t *lex, char c)

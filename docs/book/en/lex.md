@@ -393,11 +393,12 @@ Return value: none
 #### MLN_DEFINE_TOKEN
 
 ```c
-MLN_DEFINE_TOKEN(PREFIX_NAME,TK_PREFIX,...);
+MLN_DEFINE_TOKEN(SCOPE, PREFIX_NAME,TK_PREFIX,...);
 ```
 
 Description: This macro is used to define processing functions, default processing functions for special symbols, token types and token type string arrays, etc. in:
 
+- `SCOPE` is the scope keyword of function declaration, for example: static.
 - `PREFIX_NAME` is the prefix of the token structure, type structure, and function.
 - `TK_PREFIX` is the prefix of the token type (the prefix of the values in the enumeration).
 
@@ -430,7 +431,7 @@ mln_string_t keywords[] = {
 };
 
 MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(static, mln_test, TEST, TEST_TK_ON, TEST_TK_OFF, TEST_TK_STRING);
-MLN_DEFINE_TOKEN(mln_test, TEST, {TEST_TK_ON, "TEST_TK_ON"}, {TEST_TK_OFF, "TEST_TK_OFF"}, {TEST_TK_STRING, "TEST_TK_STRING"});
+MLN_DEFINE_TOKEN(static, mln_test, TEST, {TEST_TK_ON, "TEST_TK_ON"}, {TEST_TK_OFF, "TEST_TK_OFF"}, {TEST_TK_STRING, "TEST_TK_STRING"});
 
 static inline int
 mln_get_char(mln_lex_t *lex, char c)

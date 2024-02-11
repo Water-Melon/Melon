@@ -257,7 +257,7 @@ SCOPE int PREFIX_NAME##_err_recover(struct mln_sys_parse_attr *spattr, mln_uauto
 
 
 #define MLN_DEFINE_PARSER_GENERATOR(SCOPE,PREFIX_NAME,TK_PREFIX,...); \
-MLN_DEFINE_TOKEN(PREFIX_NAME,TK_PREFIX,## __VA_ARGS__);\
+MLN_DEFINE_TOKEN(SCOPE, PREFIX_NAME,TK_PREFIX,## __VA_ARGS__);\
 \
 MLN_FUNC(SCOPE, int, PREFIX_NAME##_reduce_iterate_handler, \
          (mln_rbtree_node_t *node, void *udata), (node, udata), \

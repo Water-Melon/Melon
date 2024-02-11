@@ -606,7 +606,8 @@ Their definitions can be found in melon/include/mln_types.h.
          And the sequence of keywords' enumerations should be identical with the sequence written in a keywords array. 
      (3) Then we need to define functions and related arrays,
          e.g.,
-         MLN_DEFINE_TOKEN(mln_test_lex,
+         MLN_DEFINE_TOKEN(static,
+                          mln_test_lex,
                           TEST,
                           {TEST_TK_FOR, "TEST_TK_FOR"},
                           {TEST_TK_WHILE, "TEST_TK_WHILE"},

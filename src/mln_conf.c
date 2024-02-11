@@ -41,7 +41,7 @@ MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(static, mln_conf_lex, CONF, \
                                  CONF_TK_COMMENT, \
                                  CONF_TK_CHAR, \
                                  CONF_TK_STRING);
-MLN_DEFINE_TOKEN(mln_conf_lex, CONF, \
+MLN_DEFINE_TOKEN(static, mln_conf_lex, CONF, \
                  {CONF_TK_ON, "CONF_TK_ON"}, \
                  {CONF_TK_OFF, "CONF_TK_OFF"}, \
                  {CONF_TK_COMMENT, "CONF_TK_COMMENT"}, \
