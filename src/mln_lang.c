@@ -5559,7 +5559,7 @@ MLN_FUNC(static inline, int, mln_lang_stack_handler_funccall_run, \
             return -1;
         }
     }
-    if (var != NULL) {
+    if (j < m) {
         if ((args_array = mln_lang_funccall_run_build_args(ctx)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             return -1;
