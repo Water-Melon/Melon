@@ -11,7 +11,6 @@
 #include <signal.h>
 #include "mln_utils.h"
 #include "mln_event.h"
-#include "mln_global.h"
 #include "mln_func.h"
 #if !defined(WIN32)
 #include <sys/socket.h>

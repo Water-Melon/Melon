@@ -1051,18 +1051,7 @@ Their definitions can be found in melon/include/mln_types.h.
      p) mln_tcp_conn_sent_empty(pconn);
         Test whether the 'sent' chain is empty or not.
 
-  13) Global resources Initialization
-     a) void mln_global_init(void);
-        This interface is used to initialize global variables.
-        It is called in the case that configuration file is not loaded.
-        If developers need to initialize some global variables independent of the configuration, they can write the
-        code directly in this function.
-
-     b) int mln_init_all_resource(void);
-        This interface is used to initialize global variables those are dependent on the configuration.
-        People can write the code directly in this function.
-
-  14) Queue
+  13) Queue
 
      There are 12 interfaces for this data structure.
      a) mln_queue_empty(q)
@@ -1110,7 +1099,7 @@ Their definitions can be found in melon/include/mln_types.h.
             typedef int (*queue_iterate_handler)(void *, void *);
         The first argument is the pointer of an element. The second one is a user data.
 
-  15) Stack
+  14) Stack
      There are 7 interfaces for stack.
      a) mln_stack_empty(s)
         It is used to test whether the stack is empty.
@@ -1149,7 +1138,7 @@ Their definitions can be found in melon/include/mln_types.h.
         the first argument is the data in stack node, the second argument is the same as
         the 'data' passed to 'mln_stack_iterate', that is a customized data.
 
-  16) Parser and Parser Generator
+  15) Parser and Parser Generator
      Parser can be used to parse a text which is in a file or buffer automatically.
      And it also can do some semantic actions.
      How to use it? Just follow these steps below.
@@ -1299,7 +1288,7 @@ Their definitions can be found in melon/include/mln_types.h.
      Now, the text has been parsed.
      We can build a A.S.T via semantic actions.
 
-  17) Memory Pool
+  16) Memory Pool
      The memory pool can help developer use memory more easily.
      a) mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
         Initialize a memory pool object.
@@ -1335,7 +1324,7 @@ Their definitions can be found in melon/include/mln_types.h.
         'lock' and 'unlock' will be called only in sub-pool functions.
         So user should lock or unlock by yourself when operate shared memory pool directly.
 
-  18) Chain & Buf
+  17) Chain & Buf
      These two structures do not have interfaces to operate.
      We should set them manually. Just like buf and chain in Nginx.
 
@@ -1386,7 +1375,7 @@ Their definitions can be found in melon/include/mln_types.h.
      g) void mln_chain_pool_release_all(mln_chain_t *c);
         Release whole chain node.
 
-  19) File
+  18) File
      a) mln_fileset_t *mln_fileset_init(mln_size_t max_file);
         Create and initilize a file set.
 
@@ -1407,7 +1396,7 @@ Their definitions can be found in melon/include/mln_types.h.
         This interface is used to get a file descriptor from 'pfile'.
         'pfile' is a 'mln_file_t' pointer.
 
-  20) HTTP
+  19) HTTP
      HTTP is not quiet difficult to use. There are some functions. So we just,
      1) initialize a HTTP object.
      2) set its HTTP fields, status, version, method, type and handler,
@@ -1544,7 +1533,7 @@ Their definitions can be found in melon/include/mln_types.h.
          But there is a thing we should know. If there is an error occured, we should set the error code via
          mln_http_error_set().
 
-  21) Regular Expression
+  20) Regular Expression
      Melon, now, has already support regular expression. And this capability is not relying on library pcre, but its
      own component.
      Providing this feature is trying to make the capability of parsing HTTP URI better.
@@ -1610,7 +1599,7 @@ Their definitions can be found in melon/include/mln_types.h.
      o) \\
         Just like '\\' in C.
 
-  22) JSON
+  21) JSON
      Melon, now, support JSON without relying on any json libraries.
      Here are the functions:
      a) mln_json_init(j);
@@ -1766,7 +1755,7 @@ Their definitions can be found in melon/include/mln_types.h.
      au) mln_json_array_iterate(j, it, data);
          Iterate and process each element in array 'j' with the handler 'it' and user data 'data'.
 
-  23) Big Number
+  22) Big Number
       For now, big number only can represent the number which is smaller than 2048-bit number.
 
       a) mln_bignum_positive(pbn);
@@ -1888,7 +1877,7 @@ Their definitions can be found in melon/include/mln_types.h.
       ab) mln_string_t *mln_bignum_tostring(mln_bignum_t *n);
          Convert 'n' into a string.
 
-  24) MD5
+  23) MD5
       a) void mln_md5_init(mln_md5_t *m);
          Initialize a MD5 instance.
          'm' can be allocated on stack or heap.
@@ -1922,7 +1911,7 @@ Their definitions can be found in melon/include/mln_types.h.
          'len' is the length of 'buf'.
          The data filled in 'buf' is a hex string.
 
-  25) SHA1
+  24) SHA1
       a) void mln_sha1_init(mln_sha1_t *s);
          Initialize a SHA1 instance.
          's' can be allocated on stack or heap.
@@ -1983,7 +1972,7 @@ Their definitions can be found in melon/include/mln_types.h.
       p) void mln_sha256_tostring(mln_sha256_t *s, mln_s8ptr_t buf, mln_u32_t len);
          The same as 'mln_sha1_tostring()', but the first argument.
 
-  26) DES
+  25) DES
       a) void mln_des_init(mln_des_t *d, mln_u64_t key);
          Initialize a DES instance.
          'd' is the instance which can be allocated on stack or heap.
@@ -2047,7 +2036,7 @@ Their definitions can be found in melon/include/mln_types.h.
                            mln_u32_t is_encrypt);
          Same as 'mln_des_buf' but work on 3DES.
 
-  27) RC4
+  26) RC4
       a) void mln_rc4_init(mln_u8ptr_t s, mln_u8ptr_t key, mln_uauto_t len);
          Initialize input data 's'.
          'key' can be any data.
@@ -2060,7 +2049,7 @@ Their definitions can be found in melon/include/mln_types.h.
          'len' is the length of 'data'.
          's' is a 256 bytes memory which is initialized by 'mln_rc4_init()'.
 
-  28) AES
+  27) AES
       a) int mln_aes_init(mln_aes_t *a, mln_u8ptr_t key, mln_u32_t bits);
          Initialize an AES instance.
          The 'key''s length is depending on 'bits'.
@@ -2092,7 +2081,7 @@ Their definitions can be found in melon/include/mln_types.h.
          AES decrypt.
          'cipher' must be a 128-bit data.
 
-  29) Base64
+  28) Base64
       a) int mln_base64_encode(mln_u8ptr_t in,
                                mln_uauto_t inlen,
                                mln_u8ptr_t *out,
@@ -2127,7 +2116,7 @@ Their definitions can be found in melon/include/mln_types.h.
       f) void mln_base64_pool_free(mln_u8ptr_t data);
          Same as 'mln_base64_free' but free memory to a pool.
 
-  30) RSA
+  29) RSA
       a) mln_rsa_key_t *mln_rsa_key_new(void);
          Create a new RSA key instance.
 
@@ -2174,7 +2163,7 @@ Their definitions can be found in melon/include/mln_types.h.
       o) mln_RSA_public_value_set(pkey,modulus,exponent);
          Set modulus and exponent into 'pkey'.
 
-  31) Websocket
+  30) Websocket
       Just like HTTP, the interfaces of websocket don't focus on the details of protocol transmition.
       The return values of all interfaces:
           I.   M_WS_RET_ERROR
@@ -2427,7 +2416,7 @@ Their definitions can be found in melon/include/mln_types.h.
       bh) mln_websocket_get_masking_key(ws);
          Get masking key from 'ws'.
 
-  32) Tools
+  31) Tools
       a) void mln_time2utc(time_t tm, struct utctime *uc);
          Parse 'tm' into structure UTCTime.
          The definition of structure utctime is
@@ -2449,7 +2438,7 @@ Their definitions can be found in melon/include/mln_types.h.
              I.  M_TOOLS_TIME_UTC
              II. M_TOOLS_TIME_GENERALIZEDTIME
 
-  33) ASN.1
+  32) ASN.1
       There are two parts, one is about decode, the other one is about encode.
       I. decode
       a) mln_asn1_deresult_class_get(pres);
@@ -2594,7 +2583,7 @@ Their definitions can be found in melon/include/mln_types.h.
          Transform the content which is indicated by 'index' into Implicit type whose class will be set
          'M_ASN1_CLASS_CONTEXT_SPECIFIC' and identifier will be replaced by 'ident'.
 
-  34) Thread Pool
+  33) Thread Pool
       There is a problem in linux. I don't know whether it's a bug or not.
       If I fork a child process in the callback function 'process_handler' which is running on child thread,
       there is always 288-byte(64-bit)/144-byte(32-bit) block leak in child process.

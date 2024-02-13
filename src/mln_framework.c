@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include "mln_types.h"
-#include "mln_global.h"
 #include "mln_tools.h"
 #include "mln_log.h"
 #include "mln_string.h"

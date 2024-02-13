@@ -15,7 +15,6 @@
 #include <sys/types.h>
 #include <signal.h>
 #include "mln_tools.h"
-#include "mln_global.h"
 #include "mln_conf.h"
 #include "mln_log.h"
 #include "mln_path.h"
