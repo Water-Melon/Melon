@@ -28,10 +28,32 @@ typedef void (*mln_func_cb_t)(const char *file, const char *func, int line);
         __mln_func_##name args;\
         if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__);\
     }
+#define MLN_FUNC_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
+    scope ret_type name params;\
+    scope ret_type __mln_func_##name params __VA_ARGS__\
+    scope ret_type name params {\
+        entry(__FILE__, __FUNCTION__, __LINE__);\
+        ret_type _r;\
+        _r = __mln_func_##name args;\
+        exit(__FILE__, __FUNCTION__, __LINE__);\
+        return _r;\
+    }
+#define MLN_FUNC_VOID_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
+    scope ret_type name params;\
+    scope ret_type __mln_func_##name params __VA_ARGS__\
+    scope ret_type name params {\
+        entry(__FILE__, __FUNCTION__, __LINE__);\
+        __mln_func_##name args;\
+        exit(__FILE__, __FUNCTION__, __LINE__);\
+    }
 #else
 #define MLN_FUNC(scope, ret_type, name, params, args, ...) \
     scope ret_type name params __VA_ARGS__
 #define MLN_FUNC_VOID(scope, ret_type, name, params, args, ...) \
+    scope ret_type name params __VA_ARGS__
+#define MLN_FUNC_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
+    scope ret_type name params __VA_ARGS__
+#define MLN_FUNC_VOID_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
     scope ret_type name params __VA_ARGS__
 #endif
 

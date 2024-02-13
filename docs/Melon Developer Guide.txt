@@ -3153,6 +3153,28 @@ Their definitions can be found in melon/include/mln_types.h.
          `args` is a argument list (without data type) divided by comma and quoted by parenthese.
          `func_body` is the function body.
 
+      g) MLN_FUNC_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...);
+         Define a function with non-void return type.
+         `entry` is the function that will be called when the function indicated by name is called.
+         `exit` is the function that will be called before the exit of the function indicated by name.
+         `scope` is the function scope.
+         `ret_type` is the function return type.
+         `name` is the function name.
+         `params` is a parameter list (with data type) divided by comma and quoted by parenthese.
+         `args` is a argument list (without data type) divided by comma and quoted by parenthese.
+         `func_body` is the function body.
+
+      h) MLN_FUNC_VOID_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...);
+         Define a function with void return type.
+         `entry` is the function that will be called when the function indicated by name is called.
+         `exit` is the function that will be called before the exit of the function indicated by name.
+         `scope` is the function scope.
+         `ret_type` is the function return type.
+         `name` is the function name.
+         `params` is a parameter list (with data type) divided by comma and quoted by parenthese.
+         `args` is a argument list (without data type) divided by comma and quoted by parenthese.
+         `func_body` is the function body.
+
    47) Span
        This module is used to test function performance, especially time consumption.
        This module should be used with `Function` module.

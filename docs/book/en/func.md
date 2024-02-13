@@ -123,6 +123,53 @@ Return value: None
 
 
 
+#### MLN_FUNC_CUSTOM
+
+```c
+MLN_FUNC_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...);
+```
+
+Description: Define a function with a return value type other than `void`. The implementation principle is to define two functions. The name of one function is the name specified by `name`, and the name of the other function starts with `__mln_func_`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function corresponding to the function body pointed to by `...`. This allows you to call functions in the wrapper and add callbacks before and after the function call.
+The logic of counting calls is gone.
+
+Parameters of this macro:
+
+- `entry` is the callback function called before the defined function is invoked.
+- `exit` is the callback function called after the defined function returns.
+- `scope` is the scope keyword of the function.
+- `ret_type` is the return value type of the function.
+- `name` is the name of the function.
+- `params` is the formal parameter list of the function, including the parameter name and parameter type, and the parameter list is expanded with `()`.
+- `args` is the actual parameter list of the function, does not include the type of the parameter, and expands the parameter list with `()`. This actual parameter refers to the parameter passed to the real function when the wrapper calls the real function. The parameter names and order in this list should be consistent with those in `params`.
+- `...` is the function body, use `{}` to expand it.
+
+Return value: None
+
+
+#### MLN_FUNC_VOID_CUSTOM
+
+```c
+MLN_FUNC_VOID_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...);
+```
+
+Description: Define a function with a return value type of `void`. The implementation principle is to define two functions. The name of one function is the name specified by `name`, and the name of the other function starts with `__mln_func_`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function corresponding to the function body referred to by `...`. This allows you to call functions in the wrapper and add callbacks before and after the function call
+The logic of counting calls is gone.
+
+Parameters of this macro:
+
+- `entry` is the callback function called before the defined function is invoked.
+- `exit` is the callback function called after the defined function returns.
+- `scope` is the scope keyword of the function.
+- `ret_type` is the return value type of the function.
+- `name` is the name of the function.
+- `params` is the formal parameter list of the function, including the parameter name and parameter type, and the parameter list is expanded with `()`.
+- `args` is the actual parameter list of the function, does not include the type of the parameter, and expands the parameter list with `()`. This actual parameter refers to the parameter passed to the real function when the wrapper calls the real function. The parameter names and order in this list should be consistent with those in `params`.
+- `...` is the function body, use `{}` to expand it.
+
+Return value: None
+
+
+
 ### Example
 
 ```c
