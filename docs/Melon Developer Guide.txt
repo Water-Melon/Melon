@@ -3212,6 +3212,20 @@ Their definitions can be found in melon/include/mln_types.h.
       j) mln_span_time_cost(s);
          Get the time cost associated with the span.
 
+   48) Class
+      a) class(type, constructor, destructor, ...);
+         Define a class. The parameters are described as follow:
+         `type` is the type name.
+         `constructor` is the constructor function which is a user-defined function.
+         `destructor` is the destructor which is a user-defined function.
+         `...` is the properties of the class. It should be a brace block.
+
+      b) new(type, ...);
+         Create and initialize a class instance. `...` is the rest arguments to be passed to constructor.
+
+      c) delete(o, ...);
+         Uninitialize and release a class instance. `...` is the rest arguments to be passed to destructor.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.

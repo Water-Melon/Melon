@@ -7,62 +7,77 @@
 
 #include <stdlib.h>
 
-#define class(type, constructor, destructor, properties, ...); \
-    typedef struct type type; \
-    __VA_ARGS__ \
-    struct type properties;\
-    int type##_init(type *this) constructor \
-    int type##_destroy(type *this) destructor \
-    type *new##type() {\
-        type *ptr = (type *)malloc(sizeof(*ptr));\
-        if (ptr == NULL) return NULL;\
-        if (type##_init(ptr)) {\
-            free(ptr);\
-            return NULL;\
-        }\
-        return ptr;\
+#define new(type, ...) ({\
+    type *_o = (type *)malloc(sizeof(type));\
+    if (_o != NULL) {\
+        _o->_constructor = type##_constructor;\
+        _o->_destructor = type##_destructor;\
+        type##_constructor(_o, ##__VA_ARGS__);\
     }\
-    void del##type(type *ptr) {\
-        if (ptr == NULL) return;\
-        if (!type##_destroy(ptr)) free(ptr);\
-    }
+    _o;\
+})
+#define delete(o, ...) ({\
+    if (o != NULL) {\
+        o->_destructor(o, ##__VA_ARGS__);\
+        free(o);\
+    }\
+})
+#define class(type, constructor, destructor, ...); \
+    typedef struct type type; \
+    struct type {\
+        typeof(constructor) *_constructor;\
+        typeof(destructor) *_destructor;\
+        struct __VA_ARGS__;\
+    };\
+    typeof(constructor) *type##_constructor = constructor;\
+    typeof(destructor) *type##_destructor = destructor;
 
 #endif
 
+
+#if 0
+
 /*
- * Example
- * It defines a class named Foo.
- * And must be given constructor, destructor and structure properties and methods.
- * The rest things are optional. Commonly, they are declarations.
- * The object will be allocated via malloc.
- *
- * #include <stdio.h>
- * class(Foo, {
- *     printf("constructor\n");
- *     this->a = 1;
- *     this->method = foo_method;
- *     return 0;
- * },{
- *     printf("destructor\n");
- *     return 0;
- * },{
- *     int a;
- *     method method;
- * },
- * typedef void (*method)(Foo *);
- * void foo_method(Foo *this);
- * );
- * 
- * void foo_method(Foo *this)
- * {
- *   printf("foo method: %d\n", this->a);
- * }
- * 
- * int main(void)
- * {
- *     Foo *f = newFoo();
- *     f->method(f);
- *     delFoo(f);
- *     return 0;
- * }
+ * Here is an example
  */
+
+#include "mln_class.h"
+#include <stdio.h>
+
+typedef void (*func_t)(void *);
+static void _constructor(void *o, int a, func_t func);
+static void _destructor(void *o);
+
+class(F, _constructor, _destructor, {
+    int a;
+    func_t f;
+});
+
+static void fcall(void *o)
+{
+    printf("in function call\n");
+}
+
+static void _constructor(void *o, int a, func_t func)
+{
+    printf("constructor\n");
+    F *f = (F *)o;
+    f->a = a;
+    f->f = func;
+}
+
+static void _destructor(void *o)
+{
+    printf("destructor\n");
+}
+
+int main(void)
+{
+     F *f = new(F, 1, fcall);
+     printf("%d\n", f->a);
+     f->f(f);
+     delete(f);
+     return 0;
+}
+#endif
+
