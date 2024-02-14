@@ -56,6 +56,7 @@ Melon currently provides the following components:
   - Base64
 - Template
   - Function Template
+  - Class Template
 - Scripting Language Development
 - Frameworks
   - Multi-Process Model

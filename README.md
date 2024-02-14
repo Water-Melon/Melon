@@ -51,6 +51,9 @@ Melon is a generic cross-platform C library. It contains many algorithms, data s
   - MD5
   - SHA
   - Base64
+- Templates
+  - Function Template
+  - Class Template
 - Scripting Language Development
 - Frameworks
   - Multi-Process Model
