@@ -39,12 +39,12 @@ static mln_size_t module_array_num = 0;
 /*
  * declarations
  */
-MLN_CHAIN_FUNC_DECLARE(msg_dest, \
-                       mln_thread_msgq_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DECLARE(msg_local, \
-                       mln_thread_msgq_t, \
-                       static inline void,);
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       msg_dest, \
+                       mln_thread_msgq_t, );
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       msg_local, \
+                       mln_thread_msgq_t, );
 static mln_thread_msgq_t *
 mln_thread_msgq_init(mln_thread_t *sender, mln_thread_msg_t *msg);
 static void
@@ -726,14 +726,14 @@ MLN_FUNC_VOID(, void, mln_thread_cleanup_set, (void (*tcleanup)(void *), void *d
 /*
  * chain
  */
-MLN_CHAIN_FUNC_DEFINE(msg_dest, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      msg_dest, \
                       mln_thread_msgq_t, \
-                      static inline void, \
                       dest_prev, \
                       dest_next);
-MLN_CHAIN_FUNC_DEFINE(msg_local, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      msg_local, \
                       mln_thread_msgq_t, \
-                      static inline void, \
                       local_prev, \
                       local_next);
 

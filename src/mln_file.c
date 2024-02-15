@@ -14,9 +14,9 @@
 #include <errno.h>
 #include <sys/time.h>
 
-MLN_CHAIN_FUNC_DECLARE(reg_file, \
-                       mln_file_t, \
-                       static inline void,);
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       reg_file, \
+                       mln_file_t, );
 static int mln_file_set_cmp(const void *data1, const void *data2);
 static void mln_file_free(void *pfile);
 
@@ -213,9 +213,9 @@ lp:
 })
 
 
-MLN_CHAIN_FUNC_DEFINE(reg_file, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      reg_file, \
                       mln_file_t, \
-                      static inline void, \
                       prev, \
                       next);
 

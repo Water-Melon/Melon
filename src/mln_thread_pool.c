@@ -41,9 +41,9 @@ __thread mln_thread_pool_member_t *m_thread_pool_self = NULL;
 static void *child_thread_launcher(void *arg);
 static void mln_thread_pool_free(mln_thread_pool_t *tp);
 
-MLN_CHAIN_FUNC_DECLARE(mln_child, \
-                       mln_thread_pool_member_t, \
-                       static inline void,);
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_child, \
+                       mln_thread_pool_member_t, );
 
 /*
  * thread_pool_member
@@ -424,9 +424,9 @@ MLN_FUNC_VOID(, void, mln_thread_resource_info, (struct mln_thread_pool_info *in
     m_thread_pool_self->locked = 0;
 })
 
-MLN_CHAIN_FUNC_DEFINE(mln_child, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_child, \
                       mln_thread_pool_member_t, \
-                      static inline void, \
                       prev, \
                       next);
 

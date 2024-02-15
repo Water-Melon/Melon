@@ -61,12 +61,12 @@ typedef struct rbtree_s {
 } mln_rbtree_t;
 
 
-MLN_CHAIN_FUNC_DECLARE(mln_rbtree, \
-                       mln_rbtree_node_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_rbtree, \
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_rbtree, \
+                       mln_rbtree_node_t,);
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_rbtree, \
                       mln_rbtree_node_t, \
-                      static inline void, \
                       prev, \
                       next);
 

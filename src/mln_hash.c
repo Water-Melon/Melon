@@ -10,12 +10,12 @@
 #include <stdio.h>
 #include <string.h>
 
-MLN_CHAIN_FUNC_DECLARE(mln_hash_entry_iter, \
-                       mln_hash_entry_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DECLARE(mln_hash_entry, \
-                       mln_hash_entry_t, \
-                       static inline void,);
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_hash_entry_iter, \
+                       mln_hash_entry_t, );
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_hash_entry, \
+                       mln_hash_entry_t, );
 static inline mln_hash_entry_t *
 mln_hash_entry_new(mln_hash_t *h, mln_hash_mgr_t *mgr, void *key, void *val) __NONNULL4(1,2,3,4);
 static inline void
@@ -513,14 +513,14 @@ MLN_FUNC_VOID(, void, mln_hash_reset, (mln_hash_t *h, mln_hash_flag_t flg), (h, 
     h->iter = h->iter_head = h->iter_tail = NULL;
 })
 
-MLN_CHAIN_FUNC_DEFINE(mln_hash_entry, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_hash_entry, \
                       mln_hash_entry_t, \
-                      static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DEFINE(mln_hash_entry_iter, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_hash_entry_iter, \
                       mln_hash_entry_t, \
-                      static inline void, \
                       iter_prev, \
                       iter_next);
 

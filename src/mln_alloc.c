@@ -10,15 +10,15 @@
 #include "mln_func.h"
 
 
-MLN_CHAIN_FUNC_DECLARE(mln_blk, \
-                       mln_alloc_blk_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DECLARE(mln_chunk, \
-                       mln_alloc_chunk_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DECLARE(mln_alloc_shm, \
-                       mln_alloc_shm_t, \
-                       static inline void,);
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_blk, \
+                       mln_alloc_blk_t, );
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_chunk, \
+                       mln_alloc_chunk_t, );
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_alloc_shm, \
+                       mln_alloc_shm_t, );
 static inline void
 mln_alloc_mgr_table_init(mln_alloc_mgr_t *tbl);
 static inline mln_alloc_mgr_t *
@@ -633,19 +633,19 @@ MLN_FUNC_VOID(static inline, void, mln_alloc_free_shm, (void *ptr), (ptr), {
 /*
  * chain
  */
-MLN_CHAIN_FUNC_DEFINE(mln_blk, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_blk, \
                       mln_alloc_blk_t, \
-                      static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DEFINE(mln_chunk, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_chunk, \
                       mln_alloc_chunk_t, \
-                      static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DEFINE(mln_alloc_shm, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_alloc_shm, \
                       mln_alloc_shm_t, \
-                      static inline void, \
                       prev, \
                       next);
 

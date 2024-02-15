@@ -10,9 +10,9 @@
 /*
  * declarations
  */
-MLN_CHAIN_FUNC_DECLARE(mln_stack, \
-                       mln_stack_node_t, \
-                       static inline void,);
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_stack, \
+                       mln_stack_node_t, );
 static mln_stack_node_t *
 mln_stack_node_init(void *data);
 static void
@@ -72,9 +72,9 @@ MLN_FUNC_VOID(, void, mln_stack_destroy, (mln_stack_t *st), (st), {
 /*
  * chain
  */
-MLN_CHAIN_FUNC_DEFINE(mln_stack, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_stack, \
                       mln_stack_node_t, \
-                      static inline void, \
                       prev, \
                       next);
 

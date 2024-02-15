@@ -48,36 +48,36 @@ struct mln_lang_gc_setter_s {
     mln_gc_t     *gc;
 };
 
-MLN_CHAIN_FUNC_DECLARE(mln_lang_sym_scope, \
-                       mln_lang_symbol_node_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_lang_sym_scope, \
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_lang_sym_scope, \
+                       mln_lang_symbol_node_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_lang_sym_scope, \
                       mln_lang_symbol_node_t, \
-                      static inline void, \
                       scope_prev, \
                       scope_next);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_sym, \
-                       mln_lang_symbol_node_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_lang_sym, \
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_lang_sym, \
+                       mln_lang_symbol_node_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_lang_sym, \
                       mln_lang_symbol_node_t, \
-                      static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_ast_cache, \
-                       mln_lang_ast_cache_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_lang_ast_cache, \
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_lang_ast_cache, \
+                       mln_lang_ast_cache_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_lang_ast_cache, \
                       mln_lang_ast_cache_t, \
-                      static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DECLARE(mln_lang_ctx, \
-                       mln_lang_ctx_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_lang_ctx, \
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_lang_ctx, \
+                       mln_lang_ctx_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_lang_ctx, \
                       mln_lang_ctx_t, \
-                      static inline void, \
                       prev, \
                       next);
 static int mln_lang_ctx_alias_cmp(mln_lang_ctx_t *ctx1, mln_lang_ctx_t *ctx2);

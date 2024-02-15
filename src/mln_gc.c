@@ -8,20 +8,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-MLN_CHAIN_FUNC_DECLARE(mln_gc_item, \
-                       mln_gc_item_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_gc_item, \
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_gc_item, \
+                       mln_gc_item_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_gc_item, \
                       mln_gc_item_t, \
-                      static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DECLARE(mln_gc_item_proc, \
-                       mln_gc_item_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_gc_item_proc, \
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       mln_gc_item_proc, \
+                       mln_gc_item_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      mln_gc_item_proc, \
                       mln_gc_item_t, \
-                      static inline void, \
                       proc_prev, \
                       proc_next);
 

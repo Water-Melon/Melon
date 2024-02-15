@@ -54,20 +54,20 @@ mln_pg_state_duplicate(mln_pg_state_t **q_head, \
                        mln_pg_state_t **q_tail, \
                        mln_pg_state_t *dest, \
                        mln_pg_state_t *src);
-MLN_CHAIN_FUNC_DECLARE(mln_item, \
-                       mln_pg_item_t, \
-                       static void,);
-MLN_CHAIN_FUNC_DEFINE(mln_item, \
+MLN_CHAIN_FUNC_DECLARE(static, \
+                       mln_item, \
+                       mln_pg_item_t, );
+MLN_CHAIN_FUNC_DEFINE(static, \
+                      mln_item, \
                       mln_pg_item_t, \
-                      static void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DECLARE(mln_state, \
-                       mln_pg_state_t, \
-                       static void,);
-MLN_CHAIN_FUNC_DEFINE(mln_state, \
+MLN_CHAIN_FUNC_DECLARE(static, \
+                       mln_state, \
+                       mln_pg_state_t, );
+MLN_CHAIN_FUNC_DEFINE(static, \
+                      mln_state, \
                       mln_pg_state_t, \
-                      static void, \
                       prev, \
                       next);
 

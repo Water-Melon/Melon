@@ -48,9 +48,9 @@ MLN_DEFINE_TOKEN(static, mln_conf_lex, CONF, \
                  {CONF_TK_CHAR, "CONF_TK_CHAR"}, \
                  {CONF_TK_STRING, "CONF_TK_STRING"});
 
-MLN_CHAIN_FUNC_DECLARE(conf_hook, \
-                       mln_conf_hook_t, \
-                       static inline void,);
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       conf_hook, \
+                       mln_conf_hook_t, );
 
 /*
  * declarations
@@ -1018,9 +1018,9 @@ MLN_FUNC(static, int, mln_conf_dump_domain_iterate_handler, \
 /*
  * chain
  */
-MLN_CHAIN_FUNC_DEFINE(conf_hook, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      conf_hook, \
                       mln_conf_hook_t, \
-                      static inline void, \
                       prev, \
                       next);
 

@@ -6,6 +6,7 @@
 #define __MLN_DEFS_H
 
 #include <pthread.h>
+#include "mln_func.h"
 
 #ifdef __DEBUG__
 #include <assert.h>
@@ -88,13 +89,12 @@ extern int spin_trylock(void *lock);
 /*
  * Chain
  */
-#define MLN_CHAIN_FUNC_DECLARE(prefix,type,ret_attr,func_attr); \
-    ret_attr prefix##_chain_add(type **head, type **tail, type *node) func_attr;\
-    ret_attr prefix##_chain_del(type **head, type **tail, type *node) func_attr;
+#define MLN_CHAIN_FUNC_DECLARE(scope,prefix,type,func_attr); \
+    scope void prefix##_chain_add(type **head, type **tail, type *node) func_attr;\
+    scope void prefix##_chain_del(type **head, type **tail, type *node) func_attr;
 
-#define MLN_CHAIN_FUNC_DEFINE(prefix,type,ret_attr,prev_ptr,next_ptr); \
-    ret_attr prefix##_chain_add(type **head, type **tail, type *node) \
-    {\
+#define MLN_CHAIN_FUNC_DEFINE(scope,prefix,type,prev_ptr,next_ptr); \
+    MLN_FUNC_VOID(scope, void, prefix##_chain_add, (type **head, type **tail, type *node), (head, tail, node), { \
         if (head == NULL || tail == NULL || node == NULL) return;\
         node->prev_ptr = node->next_ptr = NULL;\
         if (*head == NULL) {\
@@ -104,10 +104,9 @@ extern int spin_trylock(void *lock);
         (*tail)->next_ptr = node;\
         node->prev_ptr = (*tail);\
         *tail = node;\
-    }\
+    })\
     \
-    ret_attr prefix##_chain_del(type **head, type **tail, type *node) \
-    {\
+    MLN_FUNC_VOID(scope, void, prefix##_chain_del, (type **head, type **tail, type *node), (head, tail, node), { \
         if (head == NULL || tail == NULL || node == NULL) return;\
         if (*head == node) {\
             if (*tail == node) {\
@@ -126,7 +125,7 @@ extern int spin_trylock(void *lock);
             }\
         }\
         node->prev_ptr = node->next_ptr = NULL;\
-    }
+    })
 
 #define mln_bigendian_encode(num,buf,Blen); \
 {\

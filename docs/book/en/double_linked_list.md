@@ -27,14 +27,14 @@ There are two doubly linked list implementations in Melon. We introduce them res
 #### MLN_CHAIN_FUNC_DECLARE
 
 ```c
- MLN_CHAIN_FUNC_DECLARE(prefix,type,ret_attr,func_attr);
+ MLN_CHAIN_FUNC_DECLARE(scope,prefix,type,func_attr);
 ```
 
 Description: This macro is used to declare the insert operation and remove operation functions of the doubly linked list, among which:
 
+- `scope`: The scope keyword for functions.
 - `prefix`: The prefix of two function names, this is to allow function declarations for multiple doubly linked lists within a source file.
 - `type`: the type of the linked list node
-- `ret_attr`: the operation field type and return value type of the two functions
 - `func_attr`: Constraints on function parameters (only in Linux), if not, leave it blank
 
 
@@ -42,17 +42,17 @@ Description: This macro is used to declare the insert operation and remove opera
 #### MLN_CHAIN_FUNC_DEFINE
 
 ```c
-MLN_CHAIN_FUNC_DEFINE(prefix,type,ret_attr,prev_ptr,next_ptr);
+MLN_CHAIN_FUNC_DEFINE(scope,prefix,type,prev_ptr,next_ptr);
 
-ret_attr prefix##_chain_add(type **head, type **tail, type *node);
-ret_attr prefix##_chain_del(type **head, type **tail, type *node);
+scope void prefix##_chain_add(type **head, type **tail, type *node);
+scope void prefix##_chain_del(type **head, type **tail, type *node);
 ```
 
 Description: This macro is used to define the insert and remove operation functions of the doubly linked list, where:
 
+- `scope`: The scope keyword for functions.
 - `prefix`: The prefix of two function names, this is to allow function declarations for multiple doubly linked lists within a source file.
 - `type`: the type of the linked list node
-- `ret_attr`: the operation field type and return value type of the two functions
 - `prev_ptr`: the name of the pointer to the previous node in the linked list node
 - `next_ptr`: the name of the pointer to the next node in the linked list node
 
@@ -77,8 +77,8 @@ typedef struct chain_s {
   struct chain_s *next;
 } chain_t;
 
-MLN_CHAIN_FUNC_DECLARE(test, chain_t, static inline void, );
-MLN_CHAIN_FUNC_DEFINE(test, chain_t, static inline void, prev, next);
+MLN_CHAIN_FUNC_DECLARE(static inline, test, chain_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, test, chain_t, prev, next);
 
 int main(void)
 {

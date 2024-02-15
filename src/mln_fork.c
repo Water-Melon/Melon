@@ -31,9 +31,9 @@ mln_rbtree_t *worker_ipc_tree = NULL;
 clr_handler rs_clr_handler = NULL;
 void *rs_clr_data = NULL;
 
-MLN_CHAIN_FUNC_DECLARE(worker_list, \
-                       mln_fork_t, \
-                       static inline void,);
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       worker_list, \
+                       mln_fork_t, );
 static int
 mln_fork_rbtree_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
 static int
@@ -935,9 +935,9 @@ MLN_FUNC_VOID(static, void, mln_ipc_fd_handler_worker_send, \
 
 
 /*chain*/
-MLN_CHAIN_FUNC_DEFINE(worker_list, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      worker_list, \
                       mln_fork_t, \
-                      static inline void, \
                       prev, \
                       next);
 #endif

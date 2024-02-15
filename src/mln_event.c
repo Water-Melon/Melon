@@ -17,12 +17,12 @@
 #endif
 
 /*declarations*/
-MLN_CHAIN_FUNC_DECLARE(ev_fd_wait, \
-                       mln_event_desc_t, \
-                       static inline void,);
-MLN_CHAIN_FUNC_DECLARE(ev_fd_active, \
-                       mln_event_desc_t, \
-                       static inline void,);
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       ev_fd_wait, \
+                       mln_event_desc_t, );
+MLN_CHAIN_FUNC_DECLARE(static inline, \
+                       ev_fd_active, \
+                       mln_event_desc_t, );
 static inline void
 mln_event_desc_free(void *data);
 static int
@@ -1303,13 +1303,13 @@ MLN_FUNC_VOID(static inline, void, mln_event_fheap_timer_copy, (void *k1, void *
 /*
  * chains
  */
-MLN_CHAIN_FUNC_DEFINE(ev_fd_wait, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      ev_fd_wait, \
                       mln_event_desc_t, \
-                      static inline void, \
                       prev, \
                       next);
-MLN_CHAIN_FUNC_DEFINE(ev_fd_active, \
+MLN_CHAIN_FUNC_DEFINE(static inline, \
+                      ev_fd_active, \
                       mln_event_desc_t, \
-                      static inline void, \
                       act_prev, \
                       act_next);

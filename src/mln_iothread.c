@@ -19,8 +19,8 @@
 static inline void mln_iothread_fd_nonblock_set(int fd);
 static inline mln_iothread_msg_t *mln_iothread_msg_new(mln_u32_t type, void *data, int feedback);
 static inline void mln_iothread_msg_free(mln_iothread_msg_t *msg);
-MLN_CHAIN_FUNC_DECLARE(mln_iothread_msg, mln_iothread_msg_t, static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_iothread_msg, mln_iothread_msg_t, static inline void, prev, next);
+MLN_CHAIN_FUNC_DECLARE(static inline, mln_iothread_msg, mln_iothread_msg_t,);
+MLN_CHAIN_FUNC_DEFINE(static inline, mln_iothread_msg, mln_iothread_msg_t, prev, next);
 
 MLN_FUNC(, int, mln_iothread_init, \
          (mln_iothread_t *t, mln_u32_t nthread, mln_iothread_entry_t entry, void *args, mln_iothread_msg_process_t handler), \

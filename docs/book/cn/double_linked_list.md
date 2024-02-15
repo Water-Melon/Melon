@@ -28,14 +28,14 @@ Melon中有两个双向链表实现，读者可自行选用所需的一种。下
 #### MLN_CHAIN_FUNC_DECLARE
 
 ```c
- MLN_CHAIN_FUNC_DECLARE(prefix,type,ret_attr,func_attr);
+ MLN_CHAIN_FUNC_DECLARE(scope,prefix,type,func_attr);
 ```
 
 描述：本宏用于对双向链表的添加操作和删除操作函数进行声明，其中：
 
+- `scope`: 为函数的作用域关键字。
 - `prefix`：为两个函数名的前缀，这是为了允许在一个源文件内为多个双向链表进行函数声明。
 - `type`：链表节点的类型
-- `ret_attr`：两个函数的操作域类型和返回值类型
 - `func_attr`：对函数参数的约束（仅限于Linux中），若无则留空即可
 
 
@@ -43,17 +43,17 @@ Melon中有两个双向链表实现，读者可自行选用所需的一种。下
 #### MLN_CHAIN_FUNC_DEFINE
 
 ```c
-MLN_CHAIN_FUNC_DEFINE(prefix,type,ret_attr,prev_ptr,next_ptr);
+MLN_CHAIN_FUNC_DEFINE(scope,prefix,type,prev_ptr,next_ptr);
 
-ret_attr prefix##_chain_add(type **head, type **tail, type *node);
-ret_attr prefix##_chain_del(type **head, type **tail, type *node);
+scope void prefix##_chain_add(type **head, type **tail, type *node);
+scope void prefix##_chain_del(type **head, type **tail, type *node);
 ```
 
 描述：本宏用于定义双向链表的添加和删除操作函数，其中：
 
+- `scope`: 为函数的作用域关键字。
 - `prefix`：为两个函数名的前缀，这是为了允许在一个源文件内为多个双向链表进行函数声明。
 - `type`：链表节点的类型
-- `ret_attr`：两个函数的操作域类型和返回值类型
 - `prev_ptr`：链表节点中指向前一节点的指针名
 - `next_ptr`：链表节点中指向后一节点的指针名
 
@@ -78,8 +78,8 @@ typedef struct chain_s {
   struct chain_s *next;
 } chain_t;
 
-MLN_CHAIN_FUNC_DECLARE(test, chain_t, static inline void, );
-MLN_CHAIN_FUNC_DEFINE(test, chain_t, static inline void, prev, next);
+MLN_CHAIN_FUNC_DECLARE(static inline, test, chain_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, test, chain_t, prev, next);
 
 int main(void)
 {

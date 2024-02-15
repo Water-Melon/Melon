@@ -15,8 +15,8 @@ DWORD mln_span_registered_thread;
 pthread_t mln_span_registered_thread;
 #endif
 
-MLN_CHAIN_FUNC_DECLARE(mln_span, mln_span_t, static inline void,);
-MLN_CHAIN_FUNC_DEFINE(mln_span, mln_span_t, static inline void, prev, next);
+MLN_CHAIN_FUNC_DECLARE(static inline, mln_span, mln_span_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, mln_span, mln_span_t, prev, next);
 
 /*
  * callstack
