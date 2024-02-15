@@ -95,19 +95,17 @@ extern int spin_trylock(void *lock);
 
 #define MLN_CHAIN_FUNC_DEFINE(scope,prefix,type,prev_ptr,next_ptr); \
     MLN_FUNC_VOID(scope, void, prefix##_chain_add, (type **head, type **tail, type *node), (head, tail, node), { \
-        if (head == NULL || tail == NULL || node == NULL) return;\
-        node->prev_ptr = node->next_ptr = NULL;\
+        node->next_ptr = NULL;\
         if (*head == NULL) {\
-            *head = *tail = node;\
-            return ;\
+            *head = node;\
+        } else {\
+            (*tail)->next_ptr = node;\
         }\
-        (*tail)->next_ptr = node;\
         node->prev_ptr = (*tail);\
         *tail = node;\
     })\
     \
     MLN_FUNC_VOID(scope, void, prefix##_chain_del, (type **head, type **tail, type *node), (head, tail, node), { \
-        if (head == NULL || tail == NULL || node == NULL) return;\
         if (*head == node) {\
             if (*tail == node) {\
                 *head = *tail = NULL;\
