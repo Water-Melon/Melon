@@ -7,7 +7,6 @@
 
 #include <sys/time.h>
 #include "mln_func.h"
-#include "mln_utils.h"
 #if defined(WIN32)
 #include <windows.h>
 #else

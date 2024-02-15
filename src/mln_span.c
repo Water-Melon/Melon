@@ -4,6 +4,7 @@
  */
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "mln_span.h"
 
 mln_span_stack_node_t *__mln_span_stack_top = NULL;
@@ -15,8 +16,40 @@ DWORD mln_span_registered_thread;
 pthread_t mln_span_registered_thread;
 #endif
 
-MLN_CHAIN_FUNC_DECLARE(static inline, mln_span, mln_span_t, );
-MLN_CHAIN_FUNC_DEFINE(static inline, mln_span, mln_span_t, prev, next);
+static inline void mln_span_chain_add(mln_span_t **head, mln_span_t **tail, mln_span_t *node)
+{
+    if (head == NULL || tail == NULL || node == NULL) return;
+    node->prev = node->next = NULL;
+    if (*head == NULL) {
+        *head = *tail = node;
+        return;
+    }
+    (*tail)->next = node;
+    node->prev = (*tail);
+    *tail = node;
+}
+
+static inline void mln_span_chain_del(mln_span_t **head, mln_span_t **tail, mln_span_t *node)
+{
+    if (head == NULL || tail == NULL || node == NULL) return;
+    if (*head == node) {
+        if (*tail == node) {
+            *head = *tail = NULL;
+        } else {
+            *head = node->next;
+            (*head)->prev = NULL;
+        }
+    } else {
+        if (*tail == node) {
+            *tail = node->prev;
+            (*tail)->next = NULL;
+        } else {
+            node->prev->next = node->next;
+            node->next->prev = node->prev;
+        }
+    }
+    node->prev = node->next = NULL;
+}
 
 /*
  * callstack
@@ -122,11 +155,11 @@ void mln_span_entry(const char *file, const char *func, int line)
     if (!pthread_equal(mln_span_registered_thread, pthread_self())) return;
 #endif
     if ((span = mln_span_new(mln_span_stack_top(), file, func, line)) == NULL) {
-        ASSERT(0);
+        assert(0);
         return;
     }
     if (mln_span_stack_push(span) < 0) {
-        ASSERT(0);
+        assert(0);
         return;
     }
     if (mln_span_root == NULL) mln_span_root = span;
@@ -142,7 +175,7 @@ void mln_span_exit(const char *file, const char *func, int line)
 #endif
     mln_span_t *span = (mln_span_t *)mln_span_stack_pop();
     if (span == NULL) {
-        ASSERT(0);
+        assert(0);
         return;
     }
     gettimeofday(&span->end, NULL);
