@@ -61,7 +61,7 @@ void mln_error_init(mln_string_t *filenames, mln_string_t *errmsgs, mln_size_t n
 RET(code)
 ```
 
-描述：根据给定的错误码`code`生成返回值。如果`code`为0，则表示无错。若`code`小于0则是不合法的错误值。若`code`大于0，则表示一个合法错误码。
+描述：根据给定的错误码`code`生成返回值。如果`code`为0，则表示无错。若`code`小于0则是不合法的错误值。若`code`大于0，则表示一个合法错误码。如果再此之前使用了`mln_error_callback_set`设置了回调函数，那么在返回值拼装完成后，回调函数会被调用。
 
 返回值：0或一个负值，0表示无错误，负值表示出错
 
@@ -88,6 +88,17 @@ char *mln_error_string(int err, void *buf, mln_size_t len);
 描述：将返回值`err`翻译成字符串，并放入由`buf`和`len`指定的缓冲区中。
 
 返回值：错误信息，`buf`的首地址。
+
+
+
+#### mln_error_callback_set
+
+```c
+void mln_error_callback_set(mln_error_cb_t cb, void *udata);
+```
+
+描述：设置一个回调函数和用户定义数据到这个模块的全局变量中，这个回调函数会在RET宏中，在返回值拼装完成后被调用。
+返回值：无
 
 
 

@@ -3023,6 +3023,10 @@ Their definitions can be found in melon/include/mln_types.h.
       d) char *mln_error_string(int err, void *buf, mln_size_t len);
          Get error message string from return value 'err' and set in buffer 'buf' with buffer length 'len'.
 
+      e) void mln_error_callback_set(mln_error_cb_t cb, void *udata);
+         Set a callback function and user-defined data to Error module. The callback function will be called after return
+         code is composed in macro RET.
+
   43) Trace
       a) mln_string_t *mln_trace_path(void);
          Get trace script file path given in configuration. NULL will be returned if 'trace_mode' is not existent

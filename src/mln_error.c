@@ -7,10 +7,12 @@
 #include "mln_func.h"
 #include <stdio.h>
 
-mln_string_t *mln_error_filenames = NULL;
-mln_string_t *mln_error_errmsgs = NULL;
-mln_size_t    mln_error_nfile = 0;
-mln_size_t    mln_error_nmsg = 0;
+mln_string_t   *mln_error_filenames = NULL;
+mln_string_t   *mln_error_errmsgs = NULL;
+mln_size_t      mln_error_nfile = 0;
+mln_size_t      mln_error_nmsg = 0;
+void           *mln_error_udata = NULL;
+mln_error_cb_t  mln_error_callback = NULL;
 
 MLN_FUNC_VOID(, void, mln_error_init, \
               (mln_string_t *filenames, mln_string_t *errmsgs, mln_size_t nfile, mln_size_t nmsg), \
@@ -46,5 +48,10 @@ MLN_FUNC(, char *, mln_error_string, (int err, void *buf, mln_size_t len), (err,
     b[i] = 0;
 
     return b;
+})
+
+MLN_FUNC_VOID(, void, mln_error_callback_set, (mln_error_cb_t cb, void *udata), (cb, udata), {
+    mln_error_callback = cb;
+    mln_error_udata = udata;
 })
 

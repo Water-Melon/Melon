@@ -8,10 +8,14 @@
 #include "mln_utils.h"
 #include "mln_string.h"
 
-extern mln_string_t *mln_error_filenames;
-extern mln_string_t *mln_error_errmsgs;
-extern mln_size_t    mln_error_nfile;
-extern mln_size_t    mln_error_nmsg;
+typedef void (*mln_error_cb_t)(int, void *);
+
+extern mln_string_t   *mln_error_filenames;
+extern mln_string_t   *mln_error_errmsgs;
+extern mln_size_t      mln_error_nfile;
+extern mln_size_t      mln_error_nmsg;
+extern void           *mln_error_udata;
+extern mln_error_cb_t  mln_error_callback;
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
@@ -37,6 +41,7 @@ extern mln_size_t    mln_error_nmsg;
     } else {\
         r = 0;\
     }\
+    if (mln_error_callback != NULL) mln_error_callback(r, mln_error_udata);\
     r;\
 })
 
@@ -44,6 +49,7 @@ extern mln_size_t    mln_error_nmsg;
 
 extern void mln_error_init(mln_string_t *filenames, mln_string_t *errmsgs, mln_size_t nfile, mln_size_t nmsg);
 extern char *mln_error_string(int err, void *buf, mln_size_t len);
+extern void mln_error_callback_set(mln_error_cb_t cb, void *udata);
 
 #endif
 

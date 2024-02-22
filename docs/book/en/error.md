@@ -56,7 +56,7 @@ Return value: none
 RET(code)
 ```
 
-Description: Generate a return value based on the given error code `code`. No error if `code` is 0. An invalid error value if `code` is less than 0. If `code` is greater than 0, it indicates a valid error code.
+Description: Generate a return value based on the given error code `code`. No error if `code` is 0. An invalid error value if `code` is less than 0. If `code` is greater than 0, it indicates a valid error code. If mln_error_callback_set was used to set a callback function before this, the callback function will be invoked after the return value is composed.
 
 Return value: 0 or a negative value, 0 means no error, negative value means error
 
@@ -83,6 +83,18 @@ char *mln_error_string(int err, void *buf, mln_size_t len);
 Description: Translate the return value `err` into a string into the buffer specified by `buf` and `len`.
 
 Return value: error message, the first address of `buf`.
+
+
+
+#### mln_error_callback_set
+
+```c
+void mln_error_callback_set(mln_error_cb_t cb, void *udata);
+```
+
+Description: Set a callback function and user-defined data to the global variable of this module. This callback function will be invoked in the RET macro after the return value is composed.
+
+Return value: None
 
 
 
