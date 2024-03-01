@@ -228,6 +228,36 @@ again:
             reglen -= len_0;
             goto again;
         }
+        if (c_0 == M_REGEXP_NOT_ALPHA && textlen > 0) {
+            if (mln_isalpha(*text)) {
+                return -1;
+            }
+            ++text;
+            --textlen;
+            regexp += len_0;
+            reglen -= len_0;
+            goto again;
+        }
+        if (c_0 == M_REGEXP_WHITESPACE && textlen > 0) {
+            if (!mln_iswhitespace(*text)) {
+                return -1;
+            }
+            ++text;
+            --textlen;
+            regexp += len_0;
+            reglen -= len_0;
+            goto again;
+        }
+        if (c_0 == M_REGEXP_NOT_WHITESPACE && textlen > 0) {
+            if (mln_iswhitespace(*text)) {
+                return -1;
+            }
+            ++text;
+            --textlen;
+            regexp += len_0;
+            reglen -= len_0;
+            goto again;
+        }
         if (c_0 == M_REGEXP_DOT && textlen > 0) {
             regexp += len_0;
             ++text;
@@ -773,12 +803,18 @@ MLN_FUNC(static inline, int, mln_get_char, (unsigned int flag, char *s, int len)
                 return '|';
             case '\\':
                 return '\\';
-            case 'a':
+            case 'w':
                 return M_REGEXP_ALPHA;
+            case 'W':
+                return M_REGEXP_NOT_ALPHA;
             case 'd':
                 return M_REGEXP_NUM;
             case 'D':
                 return M_REGEXP_NOT_NUM;
+            case 's':
+                return M_REGEXP_WHITESPACE;
+            case 'S':
+                return M_REGEXP_NOT_WHITESPACE;
             default:
                 return s[1];
         }
@@ -829,9 +865,12 @@ MLN_FUNC(static inline, int, mln_get_length, (char *s, int len), (s, len), {
             case 't':
             case '-':
             case '|':
-            case 'a':
+            case 'w':
+            case 'W':
             case 'd':
             case 'D':
+            case 's':
+            case 'S':
             case '\\':
             default:
                 return 2;

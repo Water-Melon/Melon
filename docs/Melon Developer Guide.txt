@@ -1594,9 +1594,15 @@ Their definitions can be found in melon/include/mln_types.h.
         Match a nonnumeric character.
      m) \n
         Just like '\n' in C.
-     n) \a
+     n) \w
         Match a letter.
-     o) \\
+     o) \W
+        Match a non-letter character.
+     p) \s
+        Match a whitespace.
+     q) \S
+        Match a non-whitespace.
+     r) \\
         Just like '\\' in C.
 
   21) JSON
