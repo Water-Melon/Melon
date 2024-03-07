@@ -19,7 +19,7 @@
 #include "mln_rc.h"
 #include "mln_trace.h"
 #include "mln_func.h"
-#if defined(WIN32)
+#if defined(__WIN32__)
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #else
@@ -29,7 +29,7 @@
 #endif
 
 static void mln_init_notice(int argc, char *argv[]);
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 static int mln_master_trace_init(mln_lang_ctx_t *ctx);
 static void mln_worker_routine(struct mln_framework_attr *attr);
 static void mln_master_routine(struct mln_framework_attr *attr);
@@ -55,7 +55,7 @@ MLN_FUNC(, int, mln_framework_init, (struct mln_framework_attr *attr), (attr), {
         return -1;
 
     mln_init_notice(attr->argc, attr->argv);
-#if !defined(WIN32)
+#if !defined(__WIN32__)
     if (mln_get_framework_status()) {
         if (mln_boot_params(attr->argc, attr->argv) < 0)
             return -1;
@@ -90,13 +90,13 @@ chl:
     } else {
 #endif
         if (mln_log_init(NULL) < 0) return -1;
-#if !defined(WIN32)
+#if !defined(__WIN32__)
     }
 #endif
     return 0;
 })
 
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 MLN_FUNC_VOID(static, void, mln_master_routine, (struct mln_framework_attr *attr), (attr), {
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
@@ -251,7 +251,7 @@ MLN_FUNC_VOID(static, void, mln_init_notice, (int argc, char *argv[]), (argc, ar
         freeaddrinfo(res);
         return;
     }
-#if defined(WIN32)
+#if defined(__WIN32__)
     u_long opt = 1;
     ioctlsocket(fd, FIONBIO, &opt);
 #else
@@ -260,7 +260,7 @@ MLN_FUNC_VOID(static, void, mln_init_notice, (int argc, char *argv[]), (argc, ar
     connect(fd, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(res);
     usleep(400000);
-#if defined(WIN32)
+#if defined(__WIN32__)
     n = send(fd, (char *)buf, sizeof(buf) - 1, 0);
 #else
     n = send(fd, buf, sizeof(buf) - 1, 0);

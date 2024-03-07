@@ -95,14 +95,14 @@ MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, \
          (size, locker, lock, unlock), \
 {
     mln_alloc_t *pool;
-#if defined(WIN32)
+#if defined(__WIN32__)
     HANDLE handle;
 #endif
 
     if (size < M_ALLOC_SHM_DEFAULT_SIZE+1024 || locker == NULL || lock == NULL || unlock == NULL)
         return NULL;
 
-#if defined(WIN32)
+#if defined(__WIN32__)
     if ((handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                     NULL,
                                     PAGE_READWRITE,
@@ -235,7 +235,7 @@ MLN_FUNC_VOID(, void, mln_alloc_destroy, (mln_alloc_t *pool), (pool), {
         if (parent != NULL) mln_alloc_free(pool);
         else free(pool);
     } else {
-#if defined(WIN32)
+#if defined(__WIN32__)
         HANDLE handle = pool->map_handle;
         UnmapViewOfFile(pool->mem);
         CloseHandle(handle);

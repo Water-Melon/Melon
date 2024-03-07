@@ -32,7 +32,7 @@ static inline void mln_file_lock(int fd);
 static inline void mln_file_unlock(int fd);
 static int mln_log_set_level(mln_log_t *log, mln_conf_t *cf, int is_init);
 static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 static void mln_log_atfork_lock(void);
 static void mln_log_atfork_unlock(void);
 #endif
@@ -52,7 +52,7 @@ mln_log_t g_log = {(mln_spin_t)0, STDERR_FILENO, 0, 0, 0, none, {0},{0},{0}};
  */
 static inline void mln_file_lock(int fd)
 {
-#if !defined(WIN32)
+#if !defined(__WIN32__)
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
     fl.l_type = F_WRLCK;
@@ -65,7 +65,7 @@ static inline void mln_file_lock(int fd)
 
 static inline void mln_file_unlock(int fd)
 {
-#if !defined(WIN32)
+#if !defined(__WIN32__)
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
     fl.l_type = F_UNLCK;
@@ -186,7 +186,7 @@ mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
                     __FUNCTION__, log_path_cmd);
             return -1;
         }
-#if defined(WIN32)
+#if defined(__WIN32__)
         if (ci->val.s->len <= 1 || (ci->val.s->data)[1] != ':') {
 #else
         if ((ci->val.s->data)[0] != '/' && (ci->val.s->data)[0] != '.') {
@@ -202,7 +202,7 @@ mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
         ;
     memcpy(log->dir_path, path_str, p - path_str);
     log->dir_path[p - path_str] = 0;
-#if defined(WIN32)
+#if defined(__WIN32__)
     if (mkdir(log->dir_path) < 0) {
 #else
     if (mkdir(log->dir_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) < 0) {
@@ -249,7 +249,7 @@ mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
     return 0;
 }
 
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 static void mln_log_atfork_lock(void)
 {
     mln_spin_lock(&(g_log.thread_lock));
@@ -481,7 +481,7 @@ _mln_sys_log_process(mln_log_t *log, \
             {
                 memset(line_str, 0, sizeof(line_str));
                 mln_sauto_t num = va_arg(arg, long);
-#if defined(WIN32)
+#if defined(__WIN32__)
   #if defined(i386) || defined(__arm__)
                 int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
   #elif defined(__pentiumpro__)
@@ -552,10 +552,10 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'i':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(WIN32) && defined(__pentiumpro__)
+#if defined(__WIN32__) && defined(__pentiumpro__)
                 long long num = va_arg(arg, long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%I64d", num);
-#elif defined(WIN32) || defined(i386) || defined(__arm__)
+#elif defined(__WIN32__) || defined(i386) || defined(__arm__)
                 long long num = va_arg(arg, long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%lld", num);
 #else
@@ -568,10 +568,10 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'I':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(WIN32) && defined(__pentiumpro__)
+#if defined(__WIN32__) && defined(__pentiumpro__)
                 unsigned long long num = va_arg(arg, unsigned long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%I64u", num);
-#elif defined(WIN32) || defined(i386) || defined(__arm__)
+#elif defined(__WIN32__) || defined(i386) || defined(__arm__)
                 unsigned long long num = va_arg(arg, unsigned long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%llu", num);
 #else

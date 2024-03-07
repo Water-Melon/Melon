@@ -3,7 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_lang.h"
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -24,7 +24,7 @@
 #include "mln_lang_array.h"
 #include "mln_path.h"
 #include "mln_func.h"
-#if defined(WIN32)
+#if defined(__WIN32__)
 #include <libloaderapi.h>
 #else
 #include <dlfcn.h>
@@ -6695,7 +6695,7 @@ MLN_FUNC_VOID(static, void, mln_lang_func_import_free, (mln_lang_import_t *i), (
 
     if (i == NULL) return;
 
-#if defined(WIN32)
+#if defined(__WIN32__)
     destroy = (import_destroy_t)GetProcAddress(i->handle, "destroy");
 #else
     destroy = (import_destroy_t)dlsym(i->handle, "destroy");
@@ -6706,7 +6706,7 @@ MLN_FUNC_VOID(static, void, mln_lang_func_import_free, (mln_lang_import_t *i), (
 
     if (i->name != NULL) mln_string_free(i->name);
     if (i->handle != NULL) {
-#if defined(WIN32)
+#if defined(__WIN32__)
         FreeLibrary((HMODULE)(i->handle));
 #else
         dlclose(i->handle);
@@ -6826,7 +6826,7 @@ MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_import_process, (mln_lang_ctx_t
     if (!mln_rbtree_null(rn, tree)) {
         pi = (mln_lang_import_t *)mln_rbtree_node_data_get(rn);
     } else {
-#if defined(WIN32)
+#if defined(__WIN32__)
         if (name->len > 1 && name->data[1] == ':') {
             n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
 #else
@@ -6836,13 +6836,13 @@ MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_import_process, (mln_lang_ctx_t
             path[n] = 0;
         } else {
             if (name->len > 0 && name->data[0] != '.') {
-#if defined(WIN32)
+#if defined(__WIN32__)
                 n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
 #else
                 n = snprintf(path, sizeof(path)-1, "./%s.so", (char *)(name->data));
 #endif
             } else {
-#if defined(WIN32)
+#if defined(__WIN32__)
                 n = snprintf(path, sizeof(path)-1, "%s.dll", (char *)(name->data));
 #else
                 n = snprintf(path, sizeof(path)-1, "%s.so", (char *)(name->data));
@@ -6884,7 +6884,7 @@ goon:
             }
         }
 
-#if defined(WIN32)
+#if defined(__WIN32__)
         handle = LoadLibrary(TEXT(path));
 #else
         handle = dlopen(path, RTLD_LAZY);
@@ -6897,7 +6897,7 @@ goon:
         }
 
         if ((pi = mln_lang_func_import_new(ctx, name, handle)) == NULL) {
-#if defined(WIN32)
+#if defined(__WIN32__)
             FreeLibrary((HMODULE)(pi->handle));
 #else
             dlclose(pi->handle);
@@ -6934,7 +6934,7 @@ goon:
         mln_rbtree_insert(ctx_tree, ctx_rn);
     }
 
-#if defined(WIN32)
+#if defined(__WIN32__)
     init = (import_init_t)GetProcAddress(pi->handle, "init");
 #else
     init = (import_init_t)dlsym(pi->handle, "init");

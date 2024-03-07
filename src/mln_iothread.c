@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include "mln_func.h"
-#if defined(WIN32)
+#if defined(__WIN32__)
 #include <winsock2.h>
 #else
 #include <sys/socket.h>
@@ -207,7 +207,7 @@ MLN_FUNC_VOID(static inline, void, mln_iothread_msg_free, (mln_iothread_msg_t *m
 })
 
 MLN_FUNC_VOID(static inline, void, mln_iothread_fd_nonblock_set, (int fd), (fd), {
-#if defined(WIN32)
+#if defined(__WIN32__)
     u_long opt = 1;
     ioctlsocket(fd, FIONBIO, &opt);
 #else

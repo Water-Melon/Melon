@@ -42,7 +42,7 @@ mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc);
 
 
 MLN_FUNC(static inline, int, mln_fd_is_nonblock, (int fd), (fd), {
-#if defined(WIN32)
+#if defined(__WIN32__)
     return 0; /* no useful API for getting this flag from socket */
 #else
     int flg = fcntl(fd, F_GETFL, NULL);
@@ -395,7 +395,7 @@ MLN_FUNC(static inline, ssize_t, mln_tcp_conn_send_chain_memory, (mln_tcp_conn_t
             if (left_size == sizeof(buf)) return 0;
 
 non:
-#if defined(WIN32)
+#if defined(__WIN32__)
             n = send(tc->sockfd, (char *)buf, sizeof(buf) - left_size, 0);
 #else
             n = send(tc->sockfd, buf, sizeof(buf) - left_size, 0);
@@ -458,7 +458,7 @@ non:
     if (left_size == sizeof(buf)) return 0;
 
 blk:
-#if defined(WIN32)
+#if defined(__WIN32__)
     n = send(tc->sockfd, (char *)buf, sizeof(buf) - left_size, 0);
 #else
     n = send(tc->sockfd, buf, sizeof(buf) - left_size, 0);
@@ -601,7 +601,7 @@ non_rd:
 
             len = n;
 non_snd:
-#if defined(WIN32)
+#if defined(__WIN32__)
             n = send(sockfd, (char *)buf, len, 0);
 #else
             n = send(sockfd, buf, len, 0);
@@ -652,7 +652,7 @@ blk_rd:
 
     len = n;
 blk_snd:
-#if defined(WIN32)
+#if defined(__WIN32__)
     n = send(sockfd, (char *)buf, len, 0);
 #else
     n = send(sockfd, buf, len, 0);
@@ -779,7 +779,7 @@ MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain_file, \
     int n;
     mln_u8_t buf[1024];
 
-#if defined(WIN32)
+#if defined(__WIN32__)
     n = recv(sockfd, (char *)buf, sizeof(buf), 0);
 #else
     n = recv(sockfd, buf, sizeof(buf), 0);
@@ -819,7 +819,7 @@ MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain_mem, \
         return -1;
     }
 
-#if defined(WIN32)
+#if defined(__WIN32__)
     n = recv(sockfd, (char *)buf, 1024, 0);
 #else
     n = recv(sockfd, buf, 1024, 0);

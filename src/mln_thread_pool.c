@@ -115,7 +115,7 @@ MLN_FUNC_VOID(static, void, mln_thread_pool_member_exit, (void *arg), (arg), {
 /*
  * thread_pool
  */
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 MLN_FUNC_VOID(static, void, mln_thread_pool_prepare, (void), (), {
     if (m_thread_pool_self == NULL) return;
     if (!m_thread_pool_self->locked)
@@ -191,7 +191,7 @@ MLN_FUNC(static, mln_thread_pool_t *, mln_thread_pool_new, \
 #ifdef MLN_USE_UNIX98
     if (tpattr->concurrency) pthread_setconcurrency(tpattr->concurrency);
 #endif
-#if !defined(WIN32)
+#if !defined(__WIN32__)
     if ((rc = pthread_atfork(mln_thread_pool_prepare, \
                              mln_thread_pool_parent, \
                              mln_thread_pool_child)) != 0)

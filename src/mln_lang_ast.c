@@ -3554,26 +3554,26 @@ MLN_FUNC(static, int, mln_lang_semantic_factorint, \
     mln_s64_t i;
     if (ls->text->len > 1 && num[0] == '0') {
         if (num[1] == 'x' || num[1] == 'X') {
-#if defined(WIN32) && defined(__pentiumpro__)
+#if defined(__WIN32__) && defined(__pentiumpro__)
             sscanf(num, "%I64x", &i);
-#elif defined(WIN32) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf(num, "%llx", &i);
 #else
             sscanf(num, "%lx", &i);
 #endif
         } else {
-#if defined(WIN32) && defined(__pentiumpro__)
+#if defined(__WIN32__) && defined(__pentiumpro__)
             sscanf(num, "%I64o", &i);
-#elif defined(WIN32) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf(num, "%llo", &i);
 #else
             sscanf(num, "%lo", &i);
 #endif
         }
     } else {
-#if defined(WIN32) && defined(__pentiumpro__)
+#if defined(__WIN32__) && defined(__pentiumpro__)
         sscanf(num, "%I64d", &i);
-#elif defined(WIN32) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
         sscanf(num, "%lld", &i);
 #else
         sscanf(num, "%ld", &i);
@@ -3704,7 +3704,7 @@ MLN_FUNC(, int, mln_lang_ast_file_open, (mln_string_t *file_path), (file_path), 
     memcpy(path, file_path->data, len);
     path[len] = 0;
 
-#if defined(WIN32)
+#if defined(__WIN32__)
     if (len > 1 && path[1] == ':') {
 #else
     if (path[0] == '/') {

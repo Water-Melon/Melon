@@ -3,7 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_types.h"
-#if defined(WIN32)
+#if defined(__WIN32__)
 #include <stdio.h>
 #include <winsock2.h>
 #include <windows.h>
@@ -101,7 +101,7 @@ int spin_trylock(void *lock)
 }
 #endif
 
-#if defined(MLN_C99)
+#if defined(MLN_C99) && defined(__linux__)
 #include <time.h>
 #include <stdio.h>
 void usleep(unsigned long usec)

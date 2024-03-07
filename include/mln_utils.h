@@ -30,7 +30,7 @@
 /*
  * nonnull attribute
  */
-#if defined(__APPLE__) || defined(WIN32) || defined(__wasm__)
+#if defined(__APPLE__) || defined(__WIN32__) || defined(__wasm__)
 #define __NONNULL1(x)
 #define __NONNULL2(x,y)
 #define __NONNULL3(x,y,z)
@@ -142,7 +142,7 @@ extern int spin_trylock(void *lock);
     }\
 }
 
-#if defined(WIN32)
+#if defined(__WIN32__)
 extern int pipe(int fds[2]);
 extern int socketpair(int domain, int type, int protocol, int sv[2]);
 #define mln_socket_close closesocket
@@ -156,7 +156,7 @@ extern int socketpair(int domain, int type, int protocol, int sv[2]);
 #define mln_isprint(x)      ((x) >= 32 && (x) <= 126)
 #define mln_iswhitespace(x) ((x) == ' ' || (x) == '\t' || (x) == '\n' || (x) == '\f' || (x) == '\r' || (x) == '\v')
 
-#if defined(MLN_C99)
+#if defined(MLN_C99) && defined(__linux__)
 extern void usleep(unsigned long usec);
 #endif
 

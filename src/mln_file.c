@@ -170,7 +170,7 @@ MLN_FUNC(, mln_file_t *, mln_file_tmp_open, (mln_alloc_t *pool), (pool), {
     mln_file_t *f;
 
     snprintf(dir_path, sizeof(dir_path)-1, "%s", mln_path_tmpfile());
-#if defined(WIN32)
+#if defined(__WIN32__)
     if (mkdir(dir_path) < 0) {
 #else
     if (mkdir(dir_path, S_IRWXU) < 0) {
