@@ -27,7 +27,7 @@
 ```c
 void mln_func_entry_callback_set(mln_func_cb_t cb);
 
-typedef void (*mln_func_cb_t)(const char *file, const char *func, int line);
+typedef void (*mln_func_cb_t)(const char *file, const char *func, int line, ...);
 ```
 
 Description: Set the callback function of the function entry. Parameter descriptions of `mln_func_cb_t`:
@@ -35,6 +35,7 @@ Description: Set the callback function of the function entry. Parameter descript
 - `file` The file where the function is located
 - `func` function name
 - `line` is the number of lines in the file
+- `...` The variable arguments are the function arguments of the calling function for this callback function. This parameter only works on c99.
 
 Return value: None
 
@@ -187,12 +188,12 @@ MLN_FUNC(static, int, bcd, (int a, int b), (a, b), {
     return abc(a, b) + abc(a, b);
 })
 
-static void my_entry(const char *file, const char *func, int line)
+static void my_entry(const char *file, const char *func, int line, ...)
 {
     printf("entry %s %s %d\n", file, func, line);
 }
 
-static void my_exit(const char *file, const char *func, int line)
+static void my_exit(const char *file, const char *func, int line, ...)
 {
     printf("exit %s %s %d\n", file, func, line);
 }
