@@ -33,7 +33,7 @@
 ```c
 void mln_func_entry_callback_set(mln_func_cb_t cb);
 
-typedef void (*mln_func_cb_t)(const char *file, const char *func, int line);
+typedef void (*mln_func_cb_t)(const char *file, const char *func, int line, ...);
 ```
 
 描述：设置函数入口的回调函数。`mln_func_cb_t`的参数含义：
@@ -41,6 +41,7 @@ typedef void (*mln_func_cb_t)(const char *file, const char *func, int line);
 - `file` 函数所在文件
 - `func` 函数名
 - `line` 所在文件行数
+- `...` 这里的可变参数为本回调函数的调用方函数的函数参数。这个参数只有在c99下才起作用。
 
 返回值：无
 
@@ -191,12 +192,12 @@ MLN_FUNC(static, int, bcd, (int a, int b), (a, b), {
     return abc(a, b) + abc(a, b);
 })
 
-static void my_entry(const char *file, const char *func, int line)
+static void my_entry(const char *file, const char *func, int line, ...)
 {
     printf("entry %s %s %d\n", file, func, line);
 }
 
-static void my_exit(const char *file, const char *func, int line)
+static void my_exit(const char *file, const char *func, int line, ...)
 {
     printf("exit %s %s %d\n", file, func, line);
 }
