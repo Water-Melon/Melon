@@ -101,3 +101,14 @@ int spin_trylock(void *lock)
 }
 #endif
 
+#if defined(MLN_C99)
+#include <time.h>
+#include <stdio.h>
+void usleep(unsigned long usec)
+{
+    struct timespec req;
+    req.tv_sec = usec / 1000000;
+    req.tv_nsec = (usec % 1000000) * 1000;
+    nanosleep(&req, NULL);
+}
+#endif

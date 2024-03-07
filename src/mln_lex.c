@@ -9,6 +9,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#if defined(MLN_C99)
+#define _GNU_SOURCE
+#endif
 #include <dirent.h>
 #include <errno.h>
 #include <unistd.h>
@@ -482,7 +485,18 @@ MLN_FUNC(, int, mln_lex_push_input_file_stream, \
             FindClose(FindFirstFile(p, &fileData));
             if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY || entry->d_name[0] == '.') {
 #else
-            if (entry->d_type != DT_REG || entry->d_name[0] == '.') {
+            if (entry->d_name[0] == '.') continue;
+#if defined(MLN_C99)
+            struct stat st;
+            if (stat(entry->d_name, &st) < 0) {
+                lex->error = MLN_LEX_EFPATH;
+                closedir(directory);
+                return -1;
+            }
+            if (!S_ISREG(st.st_mode)) {
+#else
+            if (entry->d_type != DT_REG) {
+#endif
 #endif
                 continue;
             }
@@ -495,6 +509,7 @@ MLN_FUNC(, int, mln_lex_push_input_file_stream, \
                 if (mln_stack_push(lex->stack, lex->cur) < 0) {
                     mln_lex_input_free(in);
                     lex->error = MLN_LEX_ENMEM;
+                    closedir(directory);
                     return -1;
                 }
                 lex->cur = NULL;
@@ -502,6 +517,7 @@ MLN_FUNC(, int, mln_lex_push_input_file_stream, \
             if (mln_stack_push(lex->stack, in) < 0) {
                 mln_lex_input_free(in);
                 lex->error = MLN_LEX_ENMEM;
+                closedir(directory);
                 return -1;
             }
             lex->line = 1;
@@ -626,17 +642,30 @@ MLN_FUNC(, int, mln_lex_check_file_loop, \
             FindClose(FindFirstFile(p, &fileData));
             if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY || entry->d_name[0] == '.') {
 #else
-            if (entry->d_type != DT_REG || entry->d_name[0] == '.') {
+            if (entry->d_name[0] == '.') continue;
+#if defined(MLN_C99)
+            struct stat st;
+            if (stat(entry->d_name, &st) < 0) {
+                mln_lex_error_set(lex, MLN_LEX_EFPATH);
+                closedir(directory);
+                return -1;
+            }
+            if (!S_ISREG(st.st_mode)) {
+#else
+            if (entry->d_type != DT_REG) {
+#endif
 #endif
                 continue;
             }
 
             if (lex->cur != NULL && !mln_string_strcmp(path, lex->cur->data)) {
                 mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
+                closedir(directory);
                 return -1;
             }
             if (mln_stack_iterate(lex->stack, mln_lex_check_file_loop_iterate_handler, path) < 0) {
                 mln_lex_error_set(lex, MLN_LEX_EINCLUDELOOP);
+                closedir(directory);
                 return -1;
             }
         }

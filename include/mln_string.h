@@ -124,5 +124,8 @@ extern mln_string_t *mln_string_trim(mln_string_t *s, mln_string_t *mask);
 extern mln_string_t *mln_string_pool_trim(mln_alloc_t *pool, mln_string_t *s, mln_string_t *mask);
 extern void mln_string_upper(mln_string_t *s) __NONNULL1(1);
 extern void mln_string_lower(mln_string_t *s) __NONNULL1(1);
+#if defined(MLN_C99)
+extern int strncasecmp(const char *s1, const char *s2, size_t n);
+#endif
 #endif
 
