@@ -6,6 +6,7 @@
 #ifndef __MLN_TYPES
 #define __MLN_TYPES
 
+#include <sys/types.h>
 #include <unistd.h>
 #include "mln_utils.h"
 #if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)

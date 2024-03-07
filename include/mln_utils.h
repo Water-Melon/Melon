@@ -156,6 +156,10 @@ extern int socketpair(int domain, int type, int protocol, int sv[2]);
 #define mln_isprint(x)      ((x) >= 32 && (x) <= 126)
 #define mln_iswhitespace(x) ((x) == ' ' || (x) == '\t' || (x) == '\n' || (x) == '\f' || (x) == '\r' || (x) == '\v')
 
+#if defined(MLN_C99)
+extern void usleep(unsigned long usec);
+#endif
+
 #define MLN_AUTHOR "Niklaus F.Schen"
 
 #endif

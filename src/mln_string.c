@@ -4,8 +4,6 @@
  */
 
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "mln_string.h"
 #include "mln_func.h"
 
@@ -15,6 +13,31 @@ static inline char *
 kmp_string_match(char *text, const char *pattern, int text_len, int pattern_len) __NONNULL2(1,2);
 static mln_string_t *mln_string_slice_recursive(char *s, mln_u64_t len, mln_u8ptr_t ascii, int cnt, mln_string_t *save) __NONNULL3(1,3,5);
 static inline mln_string_t *mln_string_assign(char *s, mln_u32_t len);
+
+#if defined(MLN_C99)
+static inline int __tolower(int c) {
+    if (c >= 'A' && c <= 'Z') {
+        return c + ('a' - 'A');
+    }
+    return c;
+}
+
+int strncasecmp(const char *s1, const char *s2, size_t n) {
+    unsigned char u1, u2;
+    while (n-- > 0) {
+        u1 = (unsigned char)__tolower(*s1++);
+        u2 = (unsigned char)__tolower(*s2++);
+        if (u1 != u2) {
+            return u1 - u2;
+        }
+        if (u1 == '\0') {
+            break;
+        }
+    }
+    return 0;
+}
+
+#endif
 
 MLN_FUNC(static inline, mln_string_t *, mln_string_assign, (char *s, mln_u32_t len), (s, len), {
     mln_string_t *str;

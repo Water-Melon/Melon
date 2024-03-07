@@ -7,6 +7,9 @@
 #include "mln_utils.h"
 #include <stdlib.h>
 #include <string.h>
+#if defined(MLN_C99)
+#include <fcntl.h>
+#endif
 #include "mln_func.h"
 
 
@@ -122,7 +125,14 @@ MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, \
 #else
 
 #if defined(MLN_MMAP)
+#if defined(MLN_C99)
+    int fd = open("/dev/zero", O_RDWR);
+    if (fd < 0) return NULL;
+    pool = (mln_alloc_t *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
+#else
     pool = (mln_alloc_t *)mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANON, -1, 0);
+#endif
     if (pool == NULL) return NULL;
 #else
     return NULL;
