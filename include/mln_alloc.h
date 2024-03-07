@@ -6,7 +6,7 @@
 #ifndef __MLN_ALLOC_H
 #define __MLN_ALLOC_H
 
-#if defined(WIN32)
+#if defined(__WIN32__)
 #include <windows.h>
 #include <winbase.h>
 #else
@@ -88,7 +88,7 @@ struct mln_alloc_s {
     void                     *locker;
     mln_alloc_shm_lock_cb_t   lock;
     mln_alloc_shm_lock_cb_t   unlock;
-#if defined(WIN32)
+#if defined(__WIN32__)
     HANDLE                    map_handle;
 #endif
     struct mln_alloc_s       *parent;

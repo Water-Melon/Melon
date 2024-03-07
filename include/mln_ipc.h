@@ -5,7 +5,7 @@
 #ifndef __MLN_IPC_H
 #define __MLN_IPC_H
 
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 
 #include "mln_types.h"
 #include "mln_fork.h"

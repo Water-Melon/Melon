@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 #include <sys/socket.h>
 #include <dlfcn.h>
 #endif

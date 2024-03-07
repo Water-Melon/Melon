@@ -7,7 +7,7 @@
 
 #include <sys/time.h>
 #include "mln_func.h"
-#if defined(WIN32)
+#if defined(__WIN32__)
 #include <windows.h>
 #else
 #include <pthread.h>
@@ -37,7 +37,7 @@ typedef void (*mln_span_dump_cb_t)(mln_span_t *s, int level, void *data);
 extern mln_span_stack_node_t *__mln_span_stack_top;
 extern mln_span_stack_node_t *__mln_span_stack_bottom;
 extern mln_span_t *mln_span_root;
-#if defined(WIN32)
+#if defined(__WIN32__)
 extern DWORD mln_span_registered_thread;
 #else
 extern pthread_t mln_span_registered_thread;
@@ -49,7 +49,7 @@ extern void mln_span_free(mln_span_t *s);
 extern void mln_span_entry(const char *file, const char *func, int line);
 extern void mln_span_exit(const char *file, const char *func, int line);
 
-#if defined(WIN32)
+#if defined(__WIN32__)
 #define mln_span_start() ({\
     int r = 0;\
     mln_func_entry_callback_set(mln_span_entry);\

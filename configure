@@ -57,12 +57,16 @@ func_flag=""
 # C99
 c99_flag=""
 
+# compile_flags_for_mingw
+mingw_cflags=""
+
 
 #Functions
 set_melang_default_paths() {
     if ! case $sysname in MINGW*) false;; esac; then
         melang_script_path=$HOME/lib/melang
         melang_dylib_path=$HOME/lib/melang_dynamic
+        mingw_cflags="-Wno-error=use-after-free -Wno-use-after-free"
     else
         melang_script_path=/usr/local/lib/melang
         melang_dylib_path=/usr/local/lib/melang_dynamic
@@ -454,7 +458,7 @@ generate_Makefile() {
     if [ $wasm -eq 1 ]; then
         echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc" >> Makefile
     else
-        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $olevel -fPIC $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag" >> Makefile
+        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $mingw_cflags $olevel -fPIC $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag" >> Makefile
     fi
     if ! case $sysname in MINGW*) false;; esac; then
         if [ $wasm -eq 0 ]; then

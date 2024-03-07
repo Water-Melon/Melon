@@ -107,7 +107,7 @@ static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *u
 /*for hook*/
 static mln_conf_hook_t *mln_conf_hook_init(void);
 static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 static void mln_conf_reload_master_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
 static void mln_conf_reload_worker_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
 #endif
@@ -847,7 +847,7 @@ MLN_FUNC(, int, mln_conf_load, (void), (), {
             return -1;
         }
     }
-#if !defined(WIN32)
+#if !defined(__WIN32__)
     if (mln_ipc_handler_register(M_IPC_TYPE_CONF, mln_conf_reload_master_handler, mln_conf_reload_worker_handler, NULL, NULL) < 0) {
         mln_conf_destroy(g_conf);
         g_conf = NULL;
@@ -994,7 +994,7 @@ MLN_FUNC(static, int, mln_conf_dump_domain_iterate_handler, \
                 printf("BOOL [%u]\n", ci->val.b);
                 break;
             case CONF_INT:
-#if defined(WIN32)
+#if defined(__WIN32__)
   #if defined(i386) || defined(__arm__)
                 printf("INT [%ld]\n", ci->val.i);
   #elif defined(__pentiumpro__)
@@ -1027,7 +1027,7 @@ MLN_CHAIN_FUNC_DEFINE(static inline, \
 /*
  * ipc handlers
  */
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 MLN_FUNC_VOID(static, void, mln_conf_reload_master_handler, \
               (mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr), \
               (ev, f_ptr, buf, len, udata_ptr), \

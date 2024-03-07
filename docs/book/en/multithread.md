@@ -39,7 +39,7 @@ Different from the thread pool described above, the multi-threaded framework is 
                return -1;
            }
            memset(&msg, 0, sizeof(msg));
-   #if defined(WIN32)
+   #if defined(__WIN32__)
            int n = recv(fd, (char *)&msg, sizeof(msg), 0);
    #else
            int n = recv(fd, &msg, sizeof(msg), 0);
@@ -73,7 +73,7 @@ Different from the thread pool described above, the multi-threaded framework is 
            msg.c = 'N';
            msg.type = ITC_REQUEST;
            msg.need_clear = 1;
-   #if defined(WIN32)
+   #if defined(__WIN32__)
            int n = send(fd, (char *)&msg, sizeof(msg), 0);
    #else
            int n = send(fd, &msg, sizeof(msg), 0);

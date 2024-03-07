@@ -117,7 +117,7 @@ MLN_FUNC(, mln_lex_input_t *, mln_lex_input_new, \
             len = data->len >= 1024? 1023: data->len;
             memcpy(path, data->data, len);
         }
-#if defined(WIN32)
+#if defined(__WIN32__)
         if (len > 1 && path[1] == ':') {
 #else
         if (path[0] == '/') {
@@ -404,9 +404,9 @@ MLN_FUNC(, char *, mln_lex_strerror, (mln_lex_t *lex), (lex), {
     int n = 0;
     if (lex->cur != NULL && lex->cur->fd >= 0)
         n += snprintf(lex->err_msg + n, len - n, "%s:", (char *)(lex->cur->data->data));
-#if defined(WIN32) && defined(__pentiumpro__)
+#if defined(__WIN32__) && defined(__pentiumpro__)
     n += snprintf(lex->err_msg + n, len - n, "%I64u: %s", lex->line, mln_lex_errmsg[lex->error]);
-#elif defined(WIN32) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
     n += snprintf(lex->err_msg + n, len - n, "%llu: %s", lex->line, mln_lex_errmsg[lex->error]);
 #else
     n += snprintf(lex->err_msg + n, len - n, "%lu: %s", lex->line, mln_lex_errmsg[lex->error]);
@@ -465,7 +465,7 @@ MLN_FUNC(, int, mln_lex_push_input_file_stream, \
         mln_string_t tmp;
         struct dirent *entry;
         DIR *directory;
-#if defined(WIN32)
+#if defined(__WIN32__)
         WIN32_FIND_DATA fileData;
 #endif
         if ((directory = opendir(p)) == NULL) {
@@ -481,7 +481,7 @@ MLN_FUNC(, int, mln_lex_push_input_file_stream, \
             p[n + m] = 0;
             mln_string_nset(&tmp, p, n + m);
             path = &tmp;
-#if defined(WIN32)
+#if defined(__WIN32__)
             FindClose(FindFirstFile(p, &fileData));
             if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY || entry->d_name[0] == '.') {
 #else
@@ -620,7 +620,7 @@ MLN_FUNC(, int, mln_lex_check_file_loop, \
         DIR *directory;
         mln_string_t tmp;
         struct dirent *entry;
-#if defined(WIN32)
+#if defined(__WIN32__)
         WIN32_FIND_DATA fileData;
 #endif
 
@@ -638,7 +638,7 @@ MLN_FUNC(, int, mln_lex_check_file_loop, \
             p[n + m] = 0;
             mln_string_nset(&tmp, p, n + m);
             path = &tmp;
-#if defined(WIN32)
+#if defined(__WIN32__)
             FindClose(FindFirstFile(p, &fileData));
             if (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY || entry->d_name[0] == '.') {
 #else

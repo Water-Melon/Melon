@@ -12,7 +12,7 @@
 #include "mln_utils.h"
 #include "mln_event.h"
 #include "mln_func.h"
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 #include <sys/socket.h>
 #endif
 
@@ -693,7 +693,7 @@ MLN_FUNC_VOID(, void, mln_event_callback_set, \
  * tools
  */
 MLN_FUNC_VOID(static inline, void, mln_event_fd_nonblock_set, (int fd), (fd), {
-#if defined(WIN32)
+#if defined(__WIN32__)
     u_long opt = 1;
     ioctlsocket(fd, FIONBIO, &opt);
 #else
@@ -706,7 +706,7 @@ MLN_FUNC_VOID(static inline, void, mln_event_fd_nonblock_set, (int fd), (fd), {
 })
 
 MLN_FUNC_VOID(static inline, void, mln_event_fd_block_set, (int fd), (fd), {
-#if defined(WIN32)
+#if defined(__WIN32__)
     u_long opt = 0;
     ioctlsocket(fd, FIONBIO, &opt);
 #else
@@ -1065,12 +1065,12 @@ MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
             tm.tv_usec = M_EV_TIMEOUT_US;
             nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
             if (nfds < 0) {
-#if !defined(WIN32)
+#if !defined(__WIN32__)
                 if (errno == EINTR || errno == ENOMEM) {
 #endif
                     pthread_mutex_unlock(&event->fd_lock);
                     continue;
-#if !defined(WIN32)
+#if !defined(__WIN32__)
                 } else {
                     ASSERT(0);
                 }

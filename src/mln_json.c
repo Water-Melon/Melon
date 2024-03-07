@@ -925,9 +925,9 @@ MLN_FUNC(static inline, int, mln_json_write_content, \
             char tmp[M_JSON_BUFLEN];
             mln_s64_t i = (mln_s64_t)(j->data.m_j_number);
             if (i == j->data.m_j_number)
-#if defined(WIN32) && defined(__pentiumpro__)
+#if defined(__WIN32__) && defined(__pentiumpro__)
                 n = snprintf(tmp, sizeof(tmp) - 1, "%I64d", i);
-#elif defined(WIN32) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
                 n = snprintf(tmp, sizeof(tmp) - 1, "%lld", i);
 #else
                 n = snprintf(tmp, sizeof(tmp) - 1, "%ld", i);

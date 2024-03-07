@@ -2,7 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#if defined(WIN32)
+#if defined(__WIN32__)
 #define _CRT_RAND_S
 #endif
 #include <string.h>
@@ -162,7 +162,7 @@ MLN_FUNC_VOID(static inline, void, mln_rsa_pub_padding, \
     val = tv.tv_sec*1000000+tv.tv_usec;
     for (j = keylen - inlen - 3; j > 0; --j) {
 lp:
-#if defined(WIN32)
+#if defined(__WIN32__)
         rand_s(&val);
         *out = val;
 #else

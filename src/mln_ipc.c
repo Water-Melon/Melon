@@ -2,7 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#if !defined(WIN32)
+#if !defined(__WIN32__)
 #include "mln_ipc.h"
 #include "mln_func.h"
 
