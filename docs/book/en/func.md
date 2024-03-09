@@ -8,7 +8,7 @@
 #include "mln_func.h"
 ```
 
-仅在编译时定义了宏`MLN_FUNC_FLAG`时，`MLN_FUNC`宏才会生成特殊的函数代码，否则仅生成常规C函数。
+The MLN_FUNC macro will generate special function code only when the macro MLN_FUNC_FLAG is defined at compile time; otherwise, it will generate a regular C function.
 
 
 
@@ -25,17 +25,18 @@
 #### mln_func_entry_callback_set
 
 ```c
-void mln_func_entry_callback_set(mln_func_cb_t cb);
+void mln_func_entry_callback_set(mln_func_entry_cb_t cb);
 
-typedef void (*mln_func_cb_t)(const char *file, const char *func, int line, ...);
+typedef int (*mln_func_entry_cb_t)(const char *file, const char *func, int line, ...);
 ```
 
-Description: Set the callback function of the function entry. Parameter descriptions of `mln_func_cb_t`:
+Description: Set the callback function for the function entry. Description of the parameters and return value of `mln_func_entry_cb_t`:
 
-- `file` The file where the function is located
-- `func` function name
-- `line` is the number of lines in the file
-- `...` The variable arguments are the function arguments of the calling function for this callback function. This parameter only works on c99.
+- `file`: The file where the function is located.
+- `func`: The name of the function.
+- `line`: The line number in the file.
+- `...`: The variable arguments here are the function arguments of the caller function for this callback function. This parameter only works under C99.
+- Return value: `<0` indicates that the function call is stopped and returns immediately, meaning the actual function logic will not be executed. Otherwise, the actual function logic will be executed.
 
 Return value: None
 
@@ -44,26 +45,29 @@ Return value: None
 #### mln_func_entry_callback_get
 
 ```c
- mln_func_cb_t mln_func_entry_callback_get(void);
+ mln_func_entry_cb_t mln_func_entry_callback_get(void);
 ```
 
 Description: Get the entry callback function.
 
-Return value: Entry function pointer
+Return value: Pointer to the entry function
 
 
 
 #### mln_func_exit_callback_set
 
 ```c
-void mln_func_exit_callback_set(mln_func_cb_t cb);
+void mln_func_exit_callback_set(mln_func_exit_cb_t cb);
+
+typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line, ...);
 ```
 
-Description: Set the callback function for function exit. Parameter descriptions of `mln_func_cb_t`:
+Description: Set the callback function for the function exit. Description of the parameters of `mln_func_exit_cb_t`:
 
-- `file` The file where the function is located
-- `func` function name
-- `line` is the number of lines in the file
+- `file`: The file where the function is located.
+- `func`: The name of the function.
+- `line`: The line number in the file.
+- `...`: The variable arguments here are the function arguments of the caller function for this callback function. This parameter only works under C99.
 
 Return value: None
 
@@ -72,12 +76,12 @@ Return value: None
 #### mln_func_exit_callback_get
 
 ```c
-mln_func_cb_t mln_func_exit_callback_get(void);
+mln_func_exit_cb_t mln_func_exit_callback_get(void);
 ```
 
 Description: Get the exit callback function.
 
-Return value: Exit function pointer
+Return value: Pointer to the exit function
 
 
 
@@ -87,19 +91,20 @@ Return value: Exit function pointer
 MLN_FUNC(scope, ret_type, name, params, args, ...);
 ```
 
-Description: Define a function with a return value type other than `void`. The implementation principle is to define two functions. The name of one function is the name specified by `name`, and the name of the other function starts with `__mln_func_`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function corresponding to the function body pointed to by `...`. This allows you to call functions in the wrapper and add callbacks before and after the function call.
-The logic of counting calls is gone.
+Description: Define a function that returns a non-void type. The implementation is to define two functions, one with the name specified by `name`, and the other with a name that starts with `__mln_func_` followed by the name specified by `name`. The first function is just a wrapper, while the second function is the actual function corresponding to the function body represented by `...`. This allows you to call the function in the wrapper and add logic for callback function calls before and after the function call. If the entry callback function returns a value `<0`, the `__mln_func_xxx` function will not be called, and in this case, the return value of the function `name` will be `MLN_FUNC_ERROR`.
 
-Parameters of this macro:
+The parameters of this macro are:
 
-- `scope` is the scope keyword of the function.
-- `ret_type` is the return value type of the function.
-- `name` is the name of the function.
-- `params` is the formal parameter list of the function, including the parameter name and parameter type, and the parameter list is expanded with `()`.
-- `args` is the actual parameter list of the function, does not include the type of the parameter, and expands the parameter list with `()`. This actual parameter refers to the parameter passed to the real function when the wrapper calls the real function. The parameter names and order in this list should be consistent with those in `params`.
-- `...` is the function body, use `{}` to expand it.
+- `scope`: The scope keyword of the function.
+- `ret_type`: The return type of the function.
+- `name`: The name of the function.
+- `params`: The parameter list of the function, including parameter names and types, enclosed in `()`.
+- `args`: The argument list of the function, excluding parameter types, enclosed in `()`. These arguments are the arguments passed to the real function by the wrapper when calling the real function. The names and order of these arguments should be identical with those in `params`.
+- `...`: The function body, enclosed in `{}`.
 
 Return value: None
+
+
 
 
 #### MLN_FUNC_VOID
@@ -108,19 +113,19 @@ Return value: None
 MLN_FUNC_VOID(scope, ret_type, name, params, args, func_body);
 ```
 
-Description: Define a function with a return value type of `void`. The implementation principle is to define two functions. The name of one function is the name specified by `name`, and the name of the other function starts with `__mln_func_`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function corresponding to the function body referred to by `...`. This allows you to call functions in the wrapper and add callbacks before and after the function call
-The logic of counting calls is gone.
+Description: Define a function that returns void. The implementation is to define two functions, one with the name specified by `name`, and the other with a name that starts with `__mln_func_` followed by the name specified by `name`. The first function is just a wrapper, while the second function is the actual function corresponding to the function body represented by `...`. This allows you to call the function in the wrapper and add logic for callback function calls before and after the function call. If the entry callback function returns a value `<0`, the `__mln_func_xxx` function will not be called, and in this case, the return value of the function `name` will be `MLN_FUNC_ERROR`.
 
-Parameters of this macro:
+The parameters of this macro are:
 
-- `scope` is the scope keyword of the function.
-- `ret_type` is the return value type of the function.
-- `name` is the name of the function.
-- `params` is the formal parameter list of the function, including the parameter name and parameter type, and the parameter list is expanded with `()`.
-- `args` is the actual parameter list of the function, does not include the type of the parameter, and expands the parameter list with `()`. This actual parameter refers to the parameter passed to the real function when the wrapper calls the real function. The parameter names and order in this list should be consistent with those in `params`.
-- `...` is the function body, use `{}` to expand it.
+- `scope`: The scope keyword of the function.
+- `ret_type`: The return type of the function.
+- `name`: The name of the function.
+- `params`: The parameter list of the function, including parameter names and types, enclosed in `()`.
+- `args`: The argument list of the function, excluding parameter types, enclosed in `()`. These arguments are the arguments passed to the real function by the wrapper when calling the real function. The names and order of these arguments should be identical with those in `params`.
+- `...`: The function body, enclosed in `{}`.
 
 Return value: None
+
 
 
 
@@ -130,21 +135,21 @@ Return value: None
 MLN_FUNC_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...);
 ```
 
-Description: Define a function with a return value type other than `void`. The implementation principle is to define two functions. The name of one function is the name specified by `name`, and the name of the other function starts with `__mln_func_`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function corresponding to the function body pointed to by `...`. This allows you to call functions in the wrapper and add callbacks before and after the function call.
-The logic of counting calls is gone.
+Description: Define a function that returns a non-void type. The implementation is to define two functions, one with the name specified by `name`, and the other with a name that starts with `__mln_func_` followed by the name specified by `name`. The first function is just a wrapper, while the second function is the actual function corresponding to the function body represented by `...`. This allows you to call the function in the wrapper and add logic for callback function calls before and after the function call. If the entry callback function returns a value `<0`, the `__mln_func_xxx` function will not be called, and in this case, the return value of the function `name` will be `MLN_FUNC_ERROR`.
 
-Parameters of this macro:
+The parameters of this macro are:
 
-- `entry` is the callback function called before the defined function is invoked.
-- `exit` is the callback function called after the defined function returns.
-- `scope` is the scope keyword of the function.
-- `ret_type` is the return value type of the function.
-- `name` is the name of the function.
-- `params` is the formal parameter list of the function, including the parameter name and parameter type, and the parameter list is expanded with `()`.
-- `args` is the actual parameter list of the function, does not include the type of the parameter, and expands the parameter list with `()`. This actual parameter refers to the parameter passed to the real function when the wrapper calls the real function. The parameter names and order in this list should be consistent with those in `params`.
-- `...` is the function body, use `{}` to expand it.
+- `entry`: The callback function for the function entry.
+- `exit`: The callback function for the function exit.
+- `scope`: The scope keyword of the function.
+- `ret_type`: The return type of the function.
+- `name`: The name of the function.
+- `params`: The parameter list of the function, including parameter names and types, enclosed in `()`.
+- `args`: The argument list of the function, excluding parameter types, enclosed in `()`. These arguments are the arguments passed to the real function by the wrapper when calling the real function. The names and order of these arguments should be identical with those in `params`.
+- `...`: The function body, enclosed in `{}`.
 
 Return value: None
+
 
 
 #### MLN_FUNC_VOID_CUSTOM
@@ -153,75 +158,142 @@ Return value: None
 MLN_FUNC_VOID_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...);
 ```
 
-Description: Define a function with a return value type of `void`. The implementation principle is to define two functions. The name of one function is the name specified by `name`, and the name of the other function starts with `__mln_func_`, followed by the name specified by `name`. The first function is just a wrapper, while the second function is the function corresponding to the function body referred to by `...`. This allows you to call functions in the wrapper and add callbacks before and after the function call
-The logic of counting calls is gone.
+Description: Define a function that returns void. The implementation is to define two functions, one with the name specified by `name`, and the other with a name that starts with `__mln_func_` followed by the name specified by `name`. The first function is just a wrapper, while the second function is the actual function corresponding to the function body represented by `...`. This allows you to call the function in the wrapper and add logic for callback function calls before and after the function call. If the entry callback function returns a value `<0`, the `__mln_func_xxx` function will not be called, and in this case, the return value of the function `name` will be `MLN_FUNC_ERROR`.
 
-Parameters of this macro:
+The parameters of this macro are:
 
-- `entry` is the callback function called before the defined function is invoked.
-- `exit` is the callback function called after the defined function returns.
-- `scope` is the scope keyword of the function.
-- `ret_type` is the return value type of the function.
-- `name` is the name of the function.
-- `params` is the formal parameter list of the function, including the parameter name and parameter type, and the parameter list is expanded with `()`.
-- `args` is the actual parameter list of the function, does not include the type of the parameter, and expands the parameter list with `()`. This actual parameter refers to the parameter passed to the real function when the wrapper calls the real function. The parameter names and order in this list should be consistent with those in `params`.
-- `...` is the function body, use `{}` to expand it.
+- `entry`: The callback function for the function entry.
+- `exit`: The callback function for the function exit.
+- `scope`: The scope keyword of the function.
+- `ret_type`: The return type of the function.
+- `name`: The name of the function.
+- `params`: The parameter list of the function, including parameter names and types, enclosed in `()`.
+- `args`: The argument list of the function, excluding parameter types, enclosed in `()`. These arguments are the arguments passed to the real function by the wrapper when calling the real function. The names and order of these arguments should be identical with those in `params`.
+- `...`: The function body, enclosed in `{}`.
 
 Return value: None
+
 
 
 
 ### Example
 
 ```c
-#define MLN_FUNC_FLAG
+//a.c
 
 #include "mln_func.h"
+#include <stdio.h>
+#include <string.h>
+#if defined(MLN_C99)
+#include <stdarg.h>
+#endif
 
-MLN_FUNC(, int, abc, (int a, int b), (a, b), {
-    printf("in %s\n", __FUNCTION__);
-    return a + b;
+MLN_FUNC_VOID(static, void, foo, (int *a, int b), (a, b), {
+    printf("in %s: %d\n", __FUNCTION__, *a);
+    *a += b;
 })
 
-MLN_FUNC(static, int, bcd, (int a, int b), (a, b), {
-    printf("in %s\n", __FUNCTION__);
-    return abc(a, b) + abc(a, b);
+MLN_FUNC(static, int, bar, (void), (), {
+    printf("%s\n", __FUNCTION__);
+    return 0;
 })
 
-static void my_entry(const char *file, const char *func, int line, ...)
+static int my_entry(const char *file, const char *func, int line, ...)
 {
+    if (strcmp(func, "foo")) {
+        printf("%s won't be executed\n", func);
+        return -1;
+    }
+
+#if defined(MLN_C99)
+    va_list args;
+    va_start(args, line);
+    int *a = (int *)va_arg(args, int *);
+    va_end(args);
+
+    printf("entry %s %s %d %d\n", file, func, line, *a);
+    ++(*a);
+#else
     printf("entry %s %s %d\n", file, func, line);
+#endif
+
+    return 0;
 }
 
 static void my_exit(const char *file, const char *func, int line, ...)
 {
-    printf("exit %s %s %d\n", file, func, line);
-}
+    if (strcmp(func, "foo"))
+        return;
 
+#if defined(MLN_C99)
+    va_list args;
+    va_start(args, line);
+    int *a = (int *)va_arg(args, int *);
+    va_end(args);
+
+    printf("exit %s %s %d %d\n", file, func, line, *a);
+#else
+    printf("exit %s %s %d\n", file, func, line);
+#endif
+}
 
 int main(void)
 {
+    int a = 1;
+
     mln_func_entry_callback_set(my_entry);
     mln_func_exit_callback_set(my_exit);
-    printf("%d\n", bcd(1, 2));
-    return 0;
+
+    foo(&a, 2);
+    return bar();
 }
 ```
 
-In this example, the `MLN_FUNC` macro is used to define two functions, `abc` and `bcd`. `abc` will be called in `bcd`.
+In this example, the `MLN_FUNC` is used to define two functions, `foo` and `bar`.
 
-When you run this program, you will see the following output:
+Let's first look at the execution under C99, compile at first:
+
+```bash
+cc -o a a.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon -std=c99 -DMLN_C99 -DMLN_FUNC_FLAG
+```
+
+You will see the following output after running this program:
 
 ```
-entry a.c bcd 10
-in __bcd
-entry a.c abc 5
-in __abc
-exit a.c abc 5
-entry a.c abc 5
-in __abc
-exit a.c abc 5
-exit a.c bcd 10
-6
+entry a.c foo 6 1
+in __mln_func_foo: 2
+exit a.c foo 6 4
+bar won't be executed
+```
+
+
+As explained in the `MLN_FUNC` macro, when using this macro to define functions, the actual function will be prefixed with `__`, while the original name given will be a wrapper.
+
+Next, let's look at the execution under C89, compile at first:
+
+```bash
+cc -o a a.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon -DMLN_FUNC_FLAG
+```
+
+You will see the following output after running this program:
+
+```
+entry a.c foo 6
+in __mln_func_foo: 1
+exit a.c foo 6
+bar won't be executed
+```
+
+Finally, let's see the effect of not defining the macro `MLN_FUNC_FLAG`. Compile it at first:
+
+```bash
+cc -o a a.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon
+```
+
+You will see the following output after running this program:
+
+```
+in foo: 1
+bar
 ```
 

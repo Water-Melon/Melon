@@ -3133,16 +3133,16 @@ Their definitions can be found in melon/include/mln_types.h.
        You can use the macro provided by Melon to define a function which can be
        traced (Call custom functions when entering and exiting functions).
 
-      a) void mln_func_entry_callback_set(mln_func_cb_t cb);
+      a) void mln_func_entry_callback_set(mln_func_entry_cb_t cb);
          Set the entry callback function.
 
-      b) mln_func_cb_t mln_func_entry_callback_get(void);
+      b) mln_func_entry_cb_t mln_func_entry_callback_get(void);
          Get the entry callback function.
 
-      c) void mln_func_exit_callback_set(mln_func_cb_t cb);
+      c) void mln_func_exit_callback_set(mln_func_exit_cb_t cb);
          Set the exit callback function.
 
-      d) mln_func_cb_t mln_func_exit_callback_get(void);
+      d) mln_func_exit_cb_t mln_func_exit_callback_get(void);
          Get the exit callback function.
 
       e) MLN_FUNC(scope, ret_type, name, params, args, func_body);
