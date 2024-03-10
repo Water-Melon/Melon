@@ -2,12 +2,6 @@
 
 
 
-### 视频介绍
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV1vT4y1t7ha&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
-
-
-
 ### 头文件
 
 ```c
@@ -65,7 +59,7 @@ typedef int (*mln_func_entry_cb_t)(const char *file, const char *func, int line,
 ```c
 void mln_func_exit_callback_set(mln_func_exit_cb_t cb);
 
-typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line, ...);
+typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line, void *ret, ...);
 ```
 
 描述：设置函数出口的回调函数。`mln_func_exit_cb_t`的参数含义：
@@ -73,6 +67,7 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
 - `file` 函数所在文件
 - `func` 函数名
 - `line` 所在文件行数
+- `ret` 功能函数的返回值的指针，如何使用可以参考后面的示例
 - `...` 这里的可变参数为本回调函数的调用方函数的函数参数。这个参数只有在c99下才起作用。
 
 返回值：无
@@ -196,6 +191,11 @@ MLN_FUNC_VOID(static, void, foo, (int *a, int b), (a, b), {
     *a += b;
 })
 
+MLN_FUNC(static, int, car, (int *a, int b), (a, b), {
+    printf("%s\n", __FUNCTION__);
+    return 100;
+})
+
 MLN_FUNC(static, int, bar, (void), (), {
     printf("%s\n", __FUNCTION__);
     return 0;
@@ -203,7 +203,7 @@ MLN_FUNC(static, int, bar, (void), (), {
 
 static int my_entry(const char *file, const char *func, int line, ...)
 {
-    if (strcmp(func, "foo")) {
+    if (!strcmp(func, "bar")) {
         printf("%s won't be executed\n", func);
         return -1;
     }
@@ -223,14 +223,14 @@ static int my_entry(const char *file, const char *func, int line, ...)
     return 0;
 }
 
-static void my_exit(const char *file, const char *func, int line, ...)
+static void my_exit(const char *file, const char *func, int line, void *ret, ...)
 {
-    if (strcmp(func, "foo"))
+    if (!strcmp(func, "bar"))
         return;
 
 #if defined(MLN_C99)
     va_list args;
-    va_start(args, line);
+    va_start(args, ret);
     int *a = (int *)va_arg(args, int *);
     va_end(args);
 
@@ -238,6 +238,8 @@ static void my_exit(const char *file, const char *func, int line, ...)
 #else
     printf("exit %s %s %d\n", file, func, line);
 #endif
+    if (ret != NULL)
+        printf("return value is %d\n", *((int *)ret));
 }
 
 int main(void)
@@ -248,11 +250,12 @@ int main(void)
     mln_func_exit_callback_set(my_exit);
 
     foo(&a, 2);
+    car(&a, 3);
     return bar();
 }
 ```
 
-本例中使用`MLN_FUNC`宏定义了两个函数分别为`foo`和`bar`。
+本例中使用`MLN_FUNC`宏定义了三个函数分别为`foo`, `bar`, `car`。
 
 我们首先看C99下的执行，先对其编译：
 
@@ -263,9 +266,13 @@ cc -o a a.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon -std=c
 运行这个程序，会看到如下输出：
 
 ```
-entry a.c foo 6 1
+entry a.c foo 8 1
 in __mln_func_foo: 2
-exit a.c foo 6 4
+exit a.c foo 8 4
+entry a.c car 13 4
+__mln_func_car
+exit a.c car 13 5
+return value is 100
 bar won't be executed
 ```
 
@@ -280,9 +287,13 @@ cc -o a a.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon -DMLN_
 执行后的输出如下：
 
 ```
-entry a.c foo 6
+entry a.c foo 8
 in __mln_func_foo: 1
-exit a.c foo 6
+exit a.c foo 8
+entry a.c car 13
+__mln_func_car
+exit a.c car 13
+return value is 100
 bar won't be executed
 ```
 
@@ -296,6 +307,7 @@ cc -o a a.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon
 
 ```
 in foo: 1
+car
 bar
 ```
 

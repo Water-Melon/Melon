@@ -59,7 +59,7 @@ Return value: Pointer to the entry function
 ```c
 void mln_func_exit_callback_set(mln_func_exit_cb_t cb);
 
-typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line, ...);
+typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line, void *ret, ...);
 ```
 
 Description: Set the callback function for the function exit. Description of the parameters of `mln_func_exit_cb_t`:
@@ -67,6 +67,7 @@ Description: Set the callback function for the function exit. Description of the
 - `file`: The file where the function is located.
 - `func`: The name of the function.
 - `line`: The line number in the file.
+- `ret`: A pointer to the return value of the function related to the callback. Refer to the example below for usage.
 - `...`: The variable arguments here are the function arguments of the caller function for this callback function. This parameter only works under C99.
 
 Return value: None
@@ -193,6 +194,11 @@ MLN_FUNC_VOID(static, void, foo, (int *a, int b), (a, b), {
     *a += b;
 })
 
+MLN_FUNC(static, int, car, (int *a, int b), (a, b), {
+    printf("%s\n", __FUNCTION__);
+    return 100;
+})
+
 MLN_FUNC(static, int, bar, (void), (), {
     printf("%s\n", __FUNCTION__);
     return 0;
@@ -200,7 +206,7 @@ MLN_FUNC(static, int, bar, (void), (), {
 
 static int my_entry(const char *file, const char *func, int line, ...)
 {
-    if (strcmp(func, "foo")) {
+    if (!strcmp(func, "bar")) {
         printf("%s won't be executed\n", func);
         return -1;
     }
@@ -220,14 +226,14 @@ static int my_entry(const char *file, const char *func, int line, ...)
     return 0;
 }
 
-static void my_exit(const char *file, const char *func, int line, ...)
+static void my_exit(const char *file, const char *func, int line, void *ret, ...)
 {
-    if (strcmp(func, "foo"))
+    if (!strcmp(func, "bar"))
         return;
 
 #if defined(MLN_C99)
     va_list args;
-    va_start(args, line);
+    va_start(args, ret);
     int *a = (int *)va_arg(args, int *);
     va_end(args);
 
@@ -235,6 +241,8 @@ static void my_exit(const char *file, const char *func, int line, ...)
 #else
     printf("exit %s %s %d\n", file, func, line);
 #endif
+    if (ret != NULL)
+        printf("return value is %d\n", *((int *)ret));
 }
 
 int main(void)
@@ -245,11 +253,12 @@ int main(void)
     mln_func_exit_callback_set(my_exit);
 
     foo(&a, 2);
+    car(&a, 3);
     return bar();
 }
 ```
 
-In this example, the `MLN_FUNC` is used to define two functions, `foo` and `bar`.
+In this example, the `MLN_FUNC` is used to define three functions, `foo`, `bar`, and `car`.
 
 Let's first look at the execution under C99, compile at first:
 
@@ -260,9 +269,13 @@ cc -o a a.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon -std=c
 You will see the following output after running this program:
 
 ```
-entry a.c foo 6 1
+entry a.c foo 8 1
 in __mln_func_foo: 2
-exit a.c foo 6 4
+exit a.c foo 8 4
+entry a.c car 13 4
+__mln_func_car
+exit a.c car 13 5
+return value is 100
 bar won't be executed
 ```
 
@@ -278,9 +291,13 @@ cc -o a a.c -I /usr/local/melon/include/ -L /usr/local/melon/lib/ -lmelon -DMLN_
 You will see the following output after running this program:
 
 ```
-entry a.c foo 6
+entry a.c foo 8
 in __mln_func_foo: 1
-exit a.c foo 6
+exit a.c foo 8
+entry a.c car 13
+__mln_func_car
+exit a.c car 13
+return value is 100
 bar won't be executed
 ```
 
@@ -294,6 +311,7 @@ You will see the following output after running this program:
 
 ```
 in foo: 1
+car
 bar
 ```
 

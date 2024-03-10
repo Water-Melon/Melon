@@ -46,8 +46,8 @@ extern pthread_t mln_span_registered_thread;
 extern void mln_span_stack_free(void);
 extern mln_span_t *mln_span_new(mln_span_t *parent, const char *file, const char *func, int line);
 extern void mln_span_free(mln_span_t *s);
-extern void mln_span_entry(const char *file, const char *func, int line);
-extern void mln_span_exit(const char *file, const char *func, int line);
+extern int mln_span_entry(const char *file, const char *func, int line, ...);
+extern void mln_span_exit(const char *file, const char *func, int line, void *ret, ...);
 
 #if defined(__WIN32__)
 #define mln_span_start() ({\
@@ -74,7 +74,7 @@ extern void mln_span_exit(const char *file, const char *func, int line);
 #endif
 
 #define mln_span_stop() ({\
-    mln_span_exit(__FILE__, __FUNCTION__, __LINE__);\
+    mln_span_exit(__FILE__, __FUNCTION__, __LINE__, NULL);\
     mln_func_entry_callback_set(NULL);\
     mln_func_exit_callback_set(NULL);\
     mln_span_stack_free();\

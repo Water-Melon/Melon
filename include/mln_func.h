@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 typedef int (*mln_func_entry_cb_t)(const char *file, const char *func, int line, ...);
-typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line, ...);
+typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line, void *ret, ...);
 
 #define MLN_FUNC_ERROR (~((long)0))
 
@@ -24,7 +24,7 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
         }\
         ret_type _r;\
         _r = __mln_func_##name args;\
-        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args);\
+        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, &_r MLN_FUNC_STRIP args);\
         return _r;\
     }
 #define MLN_FUNC_VOID(scope, ret_type, name, params, args, ...) \
@@ -35,7 +35,7 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
             if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) return;\
         }\
         __mln_func_##name args;\
-        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args);\
+        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, NULL MLN_FUNC_STRIP args);\
     }
 #define MLN_FUNC_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
     scope ret_type name params;\
@@ -44,7 +44,7 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
         if (entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) return (ret_type)MLN_FUNC_ERROR;\
         ret_type _r;\
         _r = __mln_func_##name args;\
-        exit(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args);\
+        exit(__FILE__, __FUNCTION__, __LINE__, &_r MLN_FUNC_STRIP args);\
         return _r;\
     }
 #define MLN_FUNC_VOID_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
@@ -53,7 +53,7 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
     scope ret_type name params {\
         if (entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) return;\
         __mln_func_##name args;\
-        exit(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args);\
+        exit(__FILE__, __FUNCTION__, __LINE__, NULL MLN_FUNC_STRIP args);\
     }
 
 #else
@@ -66,7 +66,7 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
         }\
         ret_type _r;\
         _r = __mln_func_##name args;\
-        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__);\
+        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, &_r);\
         return _r;\
     }
 #define MLN_FUNC_VOID(scope, ret_type, name, params, args, ...) \
@@ -77,7 +77,7 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
             if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__) < 0) return;\
         }\
         __mln_func_##name args;\
-        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__);\
+        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, NULL);\
     }
 #define MLN_FUNC_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
     scope ret_type name params;\
@@ -86,7 +86,7 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
         if (entry(__FILE__, __FUNCTION__, __LINE__) < 0) return (ret_type)MLN_FUNC_ERROR;\
         ret_type _r;\
         _r = __mln_func_##name args;\
-        exit(__FILE__, __FUNCTION__, __LINE__);\
+        exit(__FILE__, __FUNCTION__, __LINE__, &_r);\
         return _r;\
     }
 #define MLN_FUNC_VOID_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
@@ -95,7 +95,7 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
     scope ret_type name params {\
         if (entry(__FILE__, __FUNCTION__, __LINE__) < 0) return;\
         __mln_func_##name args;\
-        exit(__FILE__, __FUNCTION__, __LINE__);\
+        exit(__FILE__, __FUNCTION__, __LINE__, NULL);\
     }
 #endif
 #else

@@ -145,28 +145,30 @@ void mln_span_free(mln_span_t *s)
     free(s);
 }
 
-void mln_span_entry(const char *file, const char *func, int line)
+int mln_span_entry(const char *file, const char *func, int line, ...)
 {
     mln_span_t *span;
 
 #if defined(__WIN32__)
-    if (mln_span_registered_thread != GetCurrentThreadId()) return;
+    if (mln_span_registered_thread != GetCurrentThreadId()) return 0;
 #else
-    if (!pthread_equal(mln_span_registered_thread, pthread_self())) return;
+    if (!pthread_equal(mln_span_registered_thread, pthread_self())) return 0;
 #endif
     if ((span = mln_span_new(mln_span_stack_top(), file, func, line)) == NULL) {
         assert(0);
-        return;
+        return 0;
     }
     if (mln_span_stack_push(span) < 0) {
         assert(0);
-        return;
+        return 0;
     }
     if (mln_span_root == NULL) mln_span_root = span;
     gettimeofday(&span->begin, NULL);
+
+    return 0;
 }
 
-void mln_span_exit(const char *file, const char *func, int line)
+void mln_span_exit(const char *file, const char *func, int line, void *ret, ...)
 {
 #if defined(__WIN32__)
     if (mln_span_registered_thread != GetCurrentThreadId()) return;
