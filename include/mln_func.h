@@ -19,11 +19,15 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
     scope ret_type name params;\
     scope ret_type __mln_func_##name params __VA_ARGS__\
     scope ret_type name params {\
-        if (mln_func_entry != NULL) {\
-            if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) return (ret_type)MLN_FUNC_ERROR;\
-        }\
         ret_type _r;\
+        if (mln_func_entry != NULL) {\
+            if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) {\
+                _r = (ret_type)MLN_FUNC_ERROR;\
+                goto out;\
+            }\
+        }\
         _r = __mln_func_##name args;\
+out:\
         if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, &_r MLN_FUNC_STRIP args);\
         return _r;\
     }
@@ -31,19 +35,28 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
     scope ret_type name params;\
     scope ret_type __mln_func_##name params __VA_ARGS__\
     scope ret_type name params {\
+        int _r = 0;\
         if (mln_func_entry != NULL) {\
-            if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) return;\
+            if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) {\
+                _r = (int)MLN_FUNC_ERROR;\
+                goto out;\
+            }\
         }\
         __mln_func_##name args;\
-        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, NULL MLN_FUNC_STRIP args);\
+out:\
+        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, _r? &_r: NULL MLN_FUNC_STRIP args);\
     }
 #define MLN_FUNC_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
     scope ret_type name params;\
     scope ret_type __mln_func_##name params __VA_ARGS__\
     scope ret_type name params {\
-        if (entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) return (ret_type)MLN_FUNC_ERROR;\
         ret_type _r;\
+        if (entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) {\
+            _r = (ret_type)MLN_FUNC_ERROR;\
+            goto out;\
+        }\
         _r = __mln_func_##name args;\
+out:\
         exit(__FILE__, __FUNCTION__, __LINE__, &_r MLN_FUNC_STRIP args);\
         return _r;\
     }
@@ -51,9 +64,14 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
     scope ret_type name params;\
     scope ret_type __mln_func_##name params __VA_ARGS__\
     scope ret_type name params {\
-        if (entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) return;\
+        int _r = 0;\
+        if (entry(__FILE__, __FUNCTION__, __LINE__ MLN_FUNC_STRIP args) < 0) {\
+            _r = (int)MLN_FUNC_ERROR;\
+            goto out;\
+        }\
         __mln_func_##name args;\
-        exit(__FILE__, __FUNCTION__, __LINE__, NULL MLN_FUNC_STRIP args);\
+out:\
+        exit(__FILE__, __FUNCTION__, __LINE__, _r? &_r: NULL MLN_FUNC_STRIP args);\
     }
 
 #else
@@ -61,11 +79,15 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
     scope ret_type name params;\
     scope ret_type __mln_func_##name params __VA_ARGS__\
     scope ret_type name params {\
-        if (mln_func_entry != NULL) {\
-            if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__) < 0) return (ret_type)MLN_FUNC_ERROR;\
-        }\
         ret_type _r;\
+        if (mln_func_entry != NULL) {\
+            if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__) < 0) {\
+                _r = (ret_type)MLN_FUNC_ERROR;\
+                goto out;\
+            }\
+        }\
         _r = __mln_func_##name args;\
+out:\
         if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, &_r);\
         return _r;\
     }
@@ -73,19 +95,28 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
     scope ret_type name params;\
     scope ret_type __mln_func_##name params __VA_ARGS__\
     scope ret_type name params {\
+        int _r = 0;\
         if (mln_func_entry != NULL) {\
-            if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__) < 0) return;\
+            if (mln_func_entry(__FILE__, __FUNCTION__, __LINE__) < 0) {\
+                _r = (int)MLN_FUNC_ERROR;\
+                goto out;\
+            }\
         }\
         __mln_func_##name args;\
-        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, NULL);\
+out:\
+        if (mln_func_exit != NULL) mln_func_exit(__FILE__, __FUNCTION__, __LINE__, _r? &_r: NULL);\
     }
 #define MLN_FUNC_CUSTOM(entry, exit, scope, ret_type, name, params, args, ...) \
     scope ret_type name params;\
     scope ret_type __mln_func_##name params __VA_ARGS__\
     scope ret_type name params {\
-        if (entry(__FILE__, __FUNCTION__, __LINE__) < 0) return (ret_type)MLN_FUNC_ERROR;\
         ret_type _r;\
+        if (entry(__FILE__, __FUNCTION__, __LINE__) < 0) {\
+            _r = (ret_type)MLN_FUNC_ERROR;\
+            goto out;\
+        }\
         _r = __mln_func_##name args;\
+out:\
         exit(__FILE__, __FUNCTION__, __LINE__, &_r);\
         return _r;\
     }
@@ -93,9 +124,14 @@ typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line,
     scope ret_type name params;\
     scope ret_type __mln_func_##name params __VA_ARGS__\
     scope ret_type name params {\
-        if (entry(__FILE__, __FUNCTION__, __LINE__) < 0) return;\
+        int _r = 0;\
+        if (entry(__FILE__, __FUNCTION__, __LINE__) < 0) {\
+            _r = (int)MLN_FUNC_ERROR;\
+            goto out;\
+        }\
         __mln_func_##name args;\
-        exit(__FILE__, __FUNCTION__, __LINE__, NULL);\
+out:\
+        exit(__FILE__, __FUNCTION__, __LINE__, _r? &_r: NULL);\
     }
 #endif
 #else
