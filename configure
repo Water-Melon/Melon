@@ -83,6 +83,10 @@ set_c_compilers() {
         cc="cc"
         tcc="cc"
     fi
+    if [ -n "$CC" ]; then
+        cc="$CC"
+        tcc=${TCC:-$CC}
+    fi
     echo -e "#include <stdio.h>\nint main(void) {printf(\"1\");return 0;}" > .xcode.c
     $tcc -o .xcode .xcode.c 2>/dev/null 1>&2
     if [ $? -ne 0 ]; then
@@ -456,9 +460,9 @@ generate_Makefile() {
         echo -e "CC\t\t= $cc" >> Makefile
     fi
     if [ $wasm -eq 1 ]; then
-        echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc" >> Makefile
+        echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc $CFLAGS" >> Makefile
     else
-        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $mingw_cflags $olevel -fPIC $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag" >> Makefile
+        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $mingw_cflags $olevel -fPIC $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag $CFLAGS" >> Makefile
     fi
     if ! case $sysname in MINGW*) false;; esac; then
         if [ $wasm -eq 0 ]; then
@@ -505,11 +509,11 @@ generate_Makefile() {
     if [ $wasm -eq 0 ]; then
         echo "\$(MELONSO) : \$(OBJS)" >> Makefile
         if [ $sysname = 'Linux' ]; then
-            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -ldl -shared -fPIC" >> Makefile
+            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -ldl -shared -fPIC $LDFLAGS" >> Makefile
         elif ! case $sysname in MINGW*) false;; esac; then
-            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC" >> Makefile
+            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC $LDFLAGS" >> Makefile
         else
-            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -lc -shared -fPIC" >> Makefile
+            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug -Wall -lpthread -Llib/ -lc -shared -fPIC $LDFLAGS" >> Makefile
         fi
     fi
     echo "install:" >> Makefile
