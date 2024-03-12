@@ -125,7 +125,6 @@ The type of your commit indicates what type of change this commit is about. The 
 
 - **feat**: A new feature
 - **fix**: A bug fix
-- **hotfix**: An urgent bug fix during a release process
 - **docs**: Changes to the README.md, this file, or other such documents
 - **style**: Changes that do not affect the meaning of the code (white-space trimming, formatting, etc...)
 - **perf**: A code change that significantly improves performance
