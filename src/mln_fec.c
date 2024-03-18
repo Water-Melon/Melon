@@ -439,7 +439,7 @@ MLN_FUNC(static, int, mln_fec_decode_body, \
          (fec, fec_packet, buf, blen, packets, packlen, n, body_len), \
 {
     mln_u64_t mask = 0;
-    mln_u16_t seq_no, sn_base, protect_len = 0;
+    mln_u16_t seq_no, sn_base = 0, protect_len = 0;
     mln_u16_t *pl, is_long = 0;
     mln_u8ptr_t ptr, *p, *pend;
     mln_string_t *t, *res, tmp;

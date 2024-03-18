@@ -79,7 +79,7 @@ MLN_FUNC(static inline, mln_u64_t, modular_expoinentiation, \
 MLN_FUNC(static inline, mln_u32_t, witness, \
          (mln_u32_t base, mln_u32_t prim), (base, prim), \
 {
-    mln_u32_t pwr, odd;
+    mln_u32_t pwr = 0, odd = 0;
     seperate(prim - 1, &pwr, &odd);
     mln_u64_t new_x = 0, x = modular_expoinentiation(base, odd, prim);
     mln_u32_t i;

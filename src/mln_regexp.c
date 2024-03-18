@@ -136,7 +136,7 @@ again:
                                           matches);
             }
             if (c_n == M_REGEXP_LBRACE) {
-                int part = 1, min, max, existent = 0;
+                int part = 1, min = 0, max = 0, existent = 0;
                 int c, len = reglen, l = mln_get_length(regexp+steplen, reglen-steplen);
                 count = 0;
                 while (len > steplen) {

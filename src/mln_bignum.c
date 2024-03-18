@@ -947,7 +947,7 @@ MLN_FUNC_VOID(static inline, void, mln_bignum_seperate, \
 MLN_FUNC(static inline, mln_u32_t, mln_bignum_witness, \
          (mln_bignum_t *base, mln_bignum_t *prim), (base, prim), \
 {
-    mln_u32_t pwr, i;
+    mln_u32_t pwr = 0, i;
     mln_bignum_t tmp, new_x = {M_BIGNUM_POSITIVE, 0, {0}}, x, odd;
     mln_bignum_t num = {M_BIGNUM_POSITIVE, 1, {0}};
     num.data[0] = 1;

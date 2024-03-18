@@ -310,7 +310,7 @@ again:
  * launcher
  */
 MLN_FUNC(, int, mln_thread_pool_run, (struct mln_thread_pool_attr *tpattr), (tpattr), {
-    int rc;
+    int rc = 0;
     mln_thread_pool_t *tpool;
 
     if (tpattr->child_process_handler == NULL || \

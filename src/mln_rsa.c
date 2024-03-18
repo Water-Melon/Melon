@@ -582,7 +582,7 @@ MLN_FUNC(, int, mln_RSASSAPKCS1V15_verify, \
     mln_size_t n = mln_bignum_get_length(&(pub->n)) << 2;
     mln_u8_t hashval[32] = {0};
     mln_size_t hlen;
-    mln_u32_t hash_type;
+    mln_u32_t hash_type = 0;
 
     if (s->len % n) {
         return -1;
