@@ -158,11 +158,12 @@ MLN_FUNC(static inline, int, mln_expr_val_init, (mln_expr_val_t *v, mln_expr_str
         default:
             return -1;
     }
+    v->free = NULL;
 
     return 0;
 })
 
-MLN_FUNC(, mln_expr_val_t *, mln_expr_val_new, (mln_expr_typ_t type, void *data), (type, data), {
+MLN_FUNC(, mln_expr_val_t *, mln_expr_val_new, (mln_expr_typ_t type, void *data, mln_expr_udata_free free), (type, data, free), {
     mln_expr_val_t *ev;
 
     if ((ev = (mln_expr_val_t *)malloc(sizeof(mln_expr_val_t))) == NULL) return NULL;
@@ -170,18 +171,27 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_val_new, (mln_expr_typ_t type, void *data)
     ev->type = type;
     switch (type) {
         case mln_expr_type_null:
+            ev->free = NULL;
             break;
         case mln_expr_type_bool:
             ev->data.b = *((mln_u8ptr_t)data);
+            ev->free = NULL;
             break;
         case mln_expr_type_int:
             ev->data.i = *((mln_s64_t *)data);
+            ev->free = NULL;
             break;
         case mln_expr_type_real:
             ev->data.r = *((double *)data);
+            ev->free = NULL;
             break;
-        default: /* mln_expr_type_string */
+        case mln_expr_type_string:
             ev->data.s = mln_string_ref((mln_string_t *)data);
+            ev->free = free;
+            break;
+        default: /* mln_expr_type_udata */
+            ev->data.u = data;
+            ev->free = free;
             break;
     }
     return ev;
@@ -190,14 +200,23 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_val_new, (mln_expr_typ_t type, void *data)
 MLN_FUNC_VOID(, void, mln_expr_val_free, (mln_expr_val_t *ev), (ev), {
     if (ev == NULL) return;
 
-    if (ev->type == mln_expr_type_string)
-        mln_string_free(ev->data.s);
+    if (ev->type == mln_expr_type_string) {
+        if (ev->free != NULL) ev->free(ev->data.s);
+        else mln_string_free(ev->data.s);
+    } else if (ev->type == mln_expr_type_udata) {
+        if (ev->free != NULL) ev->free(ev->data.u);
+    }
+
     free(ev);
 })
 
 MLN_FUNC_VOID(static, void, mln_expr_val_destroy, (mln_expr_val_t *ev), (ev), {
-    if (ev->type == mln_expr_type_string)
-        mln_string_free(ev->data.s);
+    if (ev->type == mln_expr_type_string) {
+        if (ev->free != NULL) ev->free(ev->data.s);
+        else mln_string_free(ev->data.s);
+    } else if (ev->type == mln_expr_type_udata) {
+        if (ev->free != NULL) ev->free(ev->data.u);
+    }
 })
 
 MLN_FUNC_VOID(, void, mln_expr_val_dup, (mln_expr_val_t *dest, mln_expr_val_t *src), (dest, src), {
@@ -216,8 +235,14 @@ MLN_FUNC_VOID(, void, mln_expr_val_dup, (mln_expr_val_t *dest, mln_expr_val_t *s
         case mln_expr_type_real:
             dest->data.r = src->data.r;
             break;
-        default: /* mln_expr_type_string */
+        case mln_expr_type_string:
             dest->data.s = mln_string_ref(src->data.s);
+            dest->free = src->free;
+            break;
+        default: /* mln_expr_type_udata */
+            dest->data.u = src->data.u;
+            dest->free = src->free;
+            src->free = NULL;
             break;
     }
 })

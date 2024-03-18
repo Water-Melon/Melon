@@ -3237,8 +3237,8 @@ Their definitions can be found in melon/include/mln_types.h.
          Uninitialize and release a class instance. `...` is the rest arguments to be passed to destructor.
 
    49) Expression
-      a) mln_expr_val_t *mln_expr_val_new(mln_expr_typ_t type, void *data);
-         Create an expression value object.
+      a) mln_expr_val_t *mln_expr_val_new(mln_expr_typ_t type, void *data, mln_expr_udata_free free);
+         Create an expression value object. `free` is used to free user-data `data` if `type` is `mln_expr_type_udata` or `mln_expr_type_string`.
 
       b) void mln_expr_val_free(mln_expr_val_t *ev);
          Free an expression value object.

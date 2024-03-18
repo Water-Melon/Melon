@@ -42,7 +42,9 @@ concat("abc", concat(bcd, "efg")) --这个例子展示了函数嵌套调用
 #### mln_expr_val_new
 
 ```c
-mln_expr_val_t *mln_expr_val_new(mln_expr_typ_t type, void *data);
+mln_expr_val_t *mln_expr_val_new(mln_expr_typ_t type, void *data, mln_expr_udata_free free);
+
+typedef void (*mln_expr_udata_free)(void *);
 
 typedef enum {
     mln_expr_type_null = 0,
@@ -50,16 +52,19 @@ typedef enum {
     mln_expr_type_int,
     mln_expr_type_real,
     mln_expr_type_string,
+    mln_expr_type_udata,
 } mln_expr_typ_t;
 
 typedef struct {
-    mln_expr_typ_t    type;
+    mln_expr_typ_t       type;
     union {
-        mln_u8_t      b;
-        mln_s64_t     i;
-        double        r;
-        mln_string_t *s;
+        mln_u8_t         b;
+        mln_s64_t        i;
+        double           r;
+        mln_string_t    *s;
+        void            *u;
     } data;
+    mln_expr_udata_free  free;
 } mln_expr_val_t;
 ```
 
@@ -69,6 +74,7 @@ typedef struct {
 - `mln_s64_t *`
 - `double *`
 - `mln_string_t *` 字符串会在函数内使用函数`mln_string_ref`引用该字符串。
+- `void *` 用户自定义数据。可以使用第三个参数`free`来释放这个用户数据。
 
 返回值：
 
@@ -83,7 +89,7 @@ typedef struct {
 void mln_expr_val_free(mln_expr_val_t *ev);
 ```
 
-描述：释放一个表达式值对象。
+描述：释放一个表达式值对象。如果值是`string`类型，同时`free`回调也被设置，那么将使用`free`对字符串进行释放，否则使用`mln_string_free`释放字符串。
 
 返回值：无
 
@@ -95,7 +101,7 @@ void mln_expr_val_free(mln_expr_val_t *ev);
 void mln_expr_val_dup(mln_expr_val_t *dest, mln_expr_val_t *src);
 ```
 
-描述：拷贝一个表达式值对象。将`src`的内容拷贝到`dest`中。如果是字符串类型，则会使用函数`mln_string_ref`引用字符串。
+描述：拷贝一个表达式值对象。将`src`的内容拷贝到`dest`中。如果是字符串类型，则会使用函数`mln_string_ref`引用字符串。如果是`udata`类型，则直接复制数据指针，并将`src`的`free`置`NULL`，保证`src`释放时，用户自定义数据不会被释放。
 
 返回值：无
 
@@ -127,12 +133,18 @@ typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_ar
 
 static mln_expr_val_t *var_expr_handler(mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
+    mln_string_t *s;
+    mln_expr_val_t *ret;
+
     printf("%p %p %p\n", name, args, data);
     if (is_func)
         mln_log(none, "%S %d %U %X\n", name, is_func, args->nelts, data);
     else
         mln_log(none, "%S %d %X\n", name, is_func, data);
-    return mln_expr_val_new(mln_expr_type_string, name);
+    if ((s = mln_string_dup(name)) == NULL) return NULL;
+    ret = mln_expr_val_new(mln_expr_type_string, s, NULL);
+    mln_string_free(s);
+    return ret;
 }
 
 static mln_expr_val_t *func_expr_handler(mln_string_t *name, int is_func, mln_array_t *args, void *data)
@@ -142,7 +154,7 @@ static mln_expr_val_t *func_expr_handler(mln_string_t *name, int is_func, mln_ar
     mln_string_t *s1 = NULL, *s2, *s3;
 
     if (!is_func)
-        return mln_expr_val_new(mln_expr_type_string, name);
+        return mln_expr_val_new(mln_expr_type_string, name, NULL);
 
     for (i = 0, v = p = mln_array_elts(args); i < mln_array_nelts(args); v = p + (++i)) {
         if (s1 == NULL) {
@@ -155,7 +167,7 @@ static mln_expr_val_t *func_expr_handler(mln_string_t *name, int is_func, mln_ar
         s1 = s3;
     }
 
-    v = mln_expr_val_new(mln_expr_type_string, s1);
+    v = mln_expr_val_new(mln_expr_type_string, s1, NULL);
     mln_string_free(s1);
 
     return v;
@@ -191,9 +203,9 @@ int main(void)
 执行结果：
 
 ```
-0xaaaae8d9a210 (nil) (nil)
+0x4b1ac98 (nil) (nil)
 aaa 0 0
-03/18/2024 03:34:58 UTC DEBUG: a.c:main:53: PID:2293415 4 aaa
-03/18/2024 03:34:58 UTC DEBUG: a.c:main:61: PID:2293415 4 abcaaabcdeee
+03/18/2024 06:18:10 UTC DEBUG: a.c:main:59: PID:2303523 4 aaa
+03/18/2024 06:18:10 UTC DEBUG: a.c:main:67: PID:2303523 4 abcaaabcdeee
 ```
 

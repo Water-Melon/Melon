@@ -42,7 +42,9 @@ concat("abc", concat(bcd, "efg")) -- This example demonstrates nested function c
 #### mln_expr_val_new
 
 ```c
-mln_expr_val_t *mln_expr_val_new(mln_expr_typ_t type, void *data);
+mln_expr_val_t *mln_expr_val_new(mln_expr_typ_t type, void *data, mln_expr_udata_free free);
+
+typedef void (*mln_expr_udata_free)(void *);
 
 typedef enum {
     mln_expr_type_null = 0,
@@ -50,16 +52,19 @@ typedef enum {
     mln_expr_type_int,
     mln_expr_type_real,
     mln_expr_type_string,
+    mln_expr_type_udata,
 } mln_expr_typ_t;
 
 typedef struct {
-    mln_expr_typ_t    type;
+    mln_expr_typ_t       type;
     union {
-        mln_u8_t      b;
-        mln_s64_t     i;
-        double        r;
-        mln_string_t *s;
+        mln_u8_t         b;
+        mln_s64_t        i;
+        double           r;
+        mln_string_t    *s;
+        void            *u;
     } data;
+    mln_expr_udata_free  free;
 } mln_expr_val_t;
 ```
 
@@ -69,6 +74,7 @@ Description: Create an expression value object. `mln_expr_typ_t` is the type of 
 - `mln_s64_t *`
 - `double *`
 - `mln_string_t *` Strings will be referenced using the `mln_string_ref` within the function.
+- `void *` User-defined data. It can be freed by the free function indicated by the third parameter of this function.
 
 Return values:
 
@@ -83,7 +89,7 @@ Return values:
 void mln_expr_val_free(mln_expr_val_t *ev);
 ```
 
-Description: Free an expression value object.
+Description: Free an expression value object. If the value is of type `string` and the `free` callback is also set, then the string will be freed using `free`; otherwise, `mln_string_free` will be used for freeing.
 
 Return value: None
 
@@ -95,7 +101,7 @@ Return value: None
 void mln_expr_val_dup(mln_expr_val_t *dest, mln_expr_val_t *src);
 ```
 
-Description: duplicate an expression value object. Duplicate the content of `src` to `dest`. If the type is a string, the function `mln_string_ref` will be used to reference the string.
+Description: duplicate an expression value object. Duplicate the content of `src` to `dest`. If the type is a string, the function `mln_string_ref` will be used to reference the string. If it is of type `udata`, simply copy the data pointer and set `src`'s `free` to `NULL`, ensuring that the user-defined data is not freed when `src` is released.
 
 Return value: None
 
@@ -127,12 +133,18 @@ Return values:
 
 static mln_expr_val_t *var_expr_handler(mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
+    mln_string_t *s;
+    mln_expr_val_t *ret;
+
     printf("%p %p %p\n", name, args, data);
     if (is_func)
         mln_log(none, "%S %d %U %X\n", name, is_func, args->nelts, data);
     else
         mln_log(none, "%S %d %X\n", name, is_func, data);
-    return mln_expr_val_new(mln_expr_type_string, name);
+    if ((s = mln_string_dup(name)) == NULL) return NULL;
+    ret = mln_expr_val_new(mln_expr_type_string, s, NULL);
+    mln_string_free(s);
+    return ret;
 }
 
 static mln_expr_val_t *func_expr_handler(mln_string_t *name, int is_func, mln_array_t *args, void *data)
@@ -142,7 +154,7 @@ static mln_expr_val_t *func_expr_handler(mln_string_t *name, int is_func, mln_ar
     mln_string_t *s1 = NULL, *s2, *s3;
 
     if (!is_func)
-        return mln_expr_val_new(mln_expr_type_string, name);
+        return mln_expr_val_new(mln_expr_type_string, name, NULL);
 
     for (i = 0, v = p = mln_array_elts(args); i < mln_array_nelts(args); v = p + (++i)) {
         if (s1 == NULL) {
@@ -155,7 +167,7 @@ static mln_expr_val_t *func_expr_handler(mln_string_t *name, int is_func, mln_ar
         s1 = s3;
     }
 
-    v = mln_expr_val_new(mln_expr_type_string, s1);
+    v = mln_expr_val_new(mln_expr_type_string, s1, NULL);
     mln_string_free(s1);
 
     return v;
@@ -191,9 +203,9 @@ int main(void)
 Execution result:
 
 ```
-0xaaaae8d9a210 (nil) (nil)
+0x4b1ac98 (nil) (nil)
 aaa 0 0
-03/18/2024 03:34:58 UTC DEBUG: a.c:main:53: PID:2293415 4 aaa
-03/18/2024 03:34:58 UTC DEBUG: a.c:main:61: PID:2293415 4 abcaaabcdeee
+03/18/2024 06:18:10 UTC DEBUG: a.c:main:59: PID:2303523 4 aaa
+03/18/2024 06:18:10 UTC DEBUG: a.c:main:67: PID:2303523 4 abcaaabcdeee
 ```
 
