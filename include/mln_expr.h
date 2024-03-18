@@ -25,7 +25,7 @@ typedef enum {
 
 typedef struct {
     mln_expr_typ_t    type;
-    struct {
+    union {
         mln_u8_t      b;
         mln_s64_t     i;
         double        r;
