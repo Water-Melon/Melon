@@ -381,7 +381,7 @@ typedef struct {\
 SCOPE PREFIX_NAME##_struct_t *PREFIX_NAME##_new(mln_lex_t *lex, enum PREFIX_NAME##_enum type);\
 SCOPE void PREFIX_NAME##_free(PREFIX_NAME##_struct_t *ptr);                                   \
 SCOPE PREFIX_NAME##_struct_t *PREFIX_NAME##_token(mln_lex_t *lex);\
-SCOPE void *PREFIX_NAME##_lex_dup(mln_alloc_t *pool, void *ptr);\
+void *PREFIX_NAME##_lex_dup(mln_alloc_t *pool, void *ptr);\
 SCOPE PREFIX_NAME##_struct_t *PREFIX_NAME##_nums_handler(mln_lex_t *lex, void *data);
 
 
@@ -792,7 +792,7 @@ lp:\
         return NULL;\
     })\
     \
-    MLN_FUNC(SCOPE, void *, PREFIX_NAME##_lex_dup, (mln_alloc_t *pool, void *ptr), (pool, ptr), {\
+    MLN_FUNC(, void *, PREFIX_NAME##_lex_dup, (mln_alloc_t *pool, void *ptr), (pool, ptr), {\
         if (ptr == NULL) return NULL;\
         PREFIX_NAME##_struct_t *src = (PREFIX_NAME##_struct_t *)ptr;\
         PREFIX_NAME##_struct_t *dest = (PREFIX_NAME##_struct_t *)mln_alloc_m(pool, sizeof(PREFIX_NAME##_struct_t));\

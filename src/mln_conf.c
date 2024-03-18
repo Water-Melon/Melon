@@ -305,7 +305,6 @@ MLN_FUNC(static, mln_conf_lex_struct_t *, mln_conf_token, (mln_lex_t *lex), (lex
 
 /*mln_conf_t*/
 MLN_FUNC(static inline, mln_conf_t *, mln_conf_init, (void), (), {
-    mln_conf_lex_lex_dup(NULL, NULL);/*nothing to do, just get rid of compiler's warnging*/
     mln_conf_t *cf;
     cf = (mln_conf_t *)malloc(sizeof(mln_conf_t));
     if (cf == NULL) {

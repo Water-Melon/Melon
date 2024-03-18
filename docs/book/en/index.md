@@ -12,46 +12,59 @@ QQ: 756582294
 
 Melon currently provides the following components:
 
-- Data structure
-  - Doubly linked list
-  - Fibonacci heap
-  - Hash table
+- Components
+  - Library Initialization
+  - Configuration
+  - Log
+  - Error Code Management
+  - Memory Pool
+  - Thread Pool
+  - I/O Thread
+  - TCP Encapsulation
+  - Event Mechanism
+  - File Set
+  - HTTP Handling
+  - Scripting Language
+  - Lexical Analyzer
+  - Parser Generator
+  - Websocket
+  - String
+  - Regular Expression
+  - Big Number Calculation
+  - FEC
+  - JSON
+  - Matrix Operations
+  - Reed Solomon Coding
+  - Cron Format Parser
+  - Spin Lock
+  - Prime Generator
+  - Span
+  - Expression
+- Data Structures
+  - Doubly Linked List
+  - Fibonacci Heap
+  - Hash Table
   - Queue
-  - Red-black tree
+  - Red-black Tree
   - Stack
   - Array
 - Algorithms
-   - Encryption algorithm: AES, DES, 3DES, RC4, RSA
-   - Hash algorithm: MD5, SHA1, SHA256
-   - Base64
-   - Large number calculation
-   - FEC
-   - JSON
-   - Matrix Operations
-   - Reed Solomon coding
-   - Regular matching algorithm
-   - KMP
-   - Cron format parser
-- Components
-   - Error code management
-   - Memory pool
-   - Thread Pool
-   - I/O Thread
-   - Data link
-   - TCP encapsulation
-   - Event mechanism
-   - File set
-   - HTTP handling
-   - Scripting language
-   - Lexical analyzer
-   - Parser generator
-   - Websocket
-- Scripting language
-   - Preemptive coroutine language - Melang
-- Framework
-   - Multi-process model
-   - Multi-thread model
-   - Trace mode
+  - AES
+  - DES/3DES
+  - RC4
+  - RSA
+  - MD5
+  - SHA
+  - Base64
+- Template
+  - Function Template
+  - Class Template
+- Scripting Language Development
+- Frameworks
+  - Multi-Process Model
+  - Multi-Thread Model
+  - Trace Mode
+  - IPC
 
 
 

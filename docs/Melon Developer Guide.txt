@@ -3236,6 +3236,19 @@ Their definitions can be found in melon/include/mln_types.h.
       c) delete(o, ...);
          Uninitialize and release a class instance. `...` is the rest arguments to be passed to destructor.
 
+   49) Expression
+      a) mln_expr_val_t *mln_expr_val_new(mln_expr_typ_t type, void *data);
+         Create an expression value object.
+
+      b) void mln_expr_val_free(mln_expr_val_t *ev);
+         Free an expression value object.
+
+      c) void mln_expr_val_dup(mln_expr_val_t *dest, mln_expr_val_t *src);
+         Duplicate an expression object from `src` to `dest`.
+
+      d) mln_expr_val_t *mln_expr_run(mln_string_t *exp, mln_expr_cb_t cb, void *data);
+         Run a simple expression `exp`. `cb` will be called with user-data `data` when parsing variables and functions.
+
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.
    1) include header file.

@@ -38,6 +38,7 @@ Melon currently provides the following components:
   - Spin Lock
   - Prime Generator
   - Span
+  - Expression
 - Data Structures
   - Doubly Linked List
   - Fibonacci Heap
