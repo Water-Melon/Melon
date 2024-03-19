@@ -19,6 +19,7 @@ concat(abc, bcd) -- This is a function with two parameters, both are variables
 concat(abc, "bcd") -- This is a function with two parameters, one is a variable and the other is a constant
 concat(1, "bcd") -- Both parameters are constants
 concat("abc", concat(bcd, "efg")) -- This example demonstrates nested function calls
+concat("abc", concat(bcd, "efg")) aaa concat("bcd", concat(efg, "hij")) -- This example demonstrates running multiple expressions
 ```
 
 
@@ -175,8 +176,8 @@ static mln_expr_val_t *func_expr_handler(mln_string_t *name, int is_func, mln_ar
 
 int main(void)
 {
-    mln_string_t var_exp = mln_string("aaa");
-    mln_string_t func_exp = mln_string("concat('abc', aaa, concat(bcd, 'eee'))");
+    mln_string_t var_exp = mln_string("aaa bbb");
+    mln_string_t func_exp = mln_string("concat('abc', concat(aaa, 'bbb')) ccc concat('eee', concat(bbb, 'fff'))");
 
     mln_expr_val_t *v;
 
@@ -203,9 +204,11 @@ int main(void)
 Execution result:
 
 ```
-0x4b1ac98 (nil) (nil)
+0x4bbb720 (nil) (nil)
 aaa 0 0
-03/18/2024 06:18:10 UTC DEBUG: a.c:main:59: PID:2303523 4 aaa
-03/18/2024 06:18:10 UTC DEBUG: a.c:main:67: PID:2303523 4 abcaaabcdeee
+0x4bbb830 (nil) (nil)
+bbb 0 0
+03/19/2024 00:17:17 UTC DEBUG: a.c:main:59: PID:2317789 4 bbb
+03/19/2024 00:17:17 UTC DEBUG: a.c:main:67: PID:2317789 4 eeebbbfff
 ```
 

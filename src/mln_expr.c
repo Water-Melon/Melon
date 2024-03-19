@@ -248,8 +248,8 @@ MLN_FUNC_VOID(, void, mln_expr_val_dup, (mln_expr_val_t *dest, mln_expr_val_t *s
 })
 
 MLN_FUNC(static inline, int, mln_expr_parse, \
-         (mln_lex_t *lex, mln_expr_cb_t cb, void *data, mln_expr_val_t *ret), \
-         (lex, cb, data, ret), \
+         (mln_lex_t *lex, mln_expr_cb_t cb, void *data, mln_expr_val_t *ret, int *eof, mln_expr_struct_t **next), \
+         (lex, cb, data, ret, eof, next), \
 {
     int rc;
     enum mln_expr_enum type;
@@ -258,11 +258,20 @@ MLN_FUNC(static inline, int, mln_expr_parse, \
     mln_expr_val_t *v;
 
 again:
-    if ((name = mln_expr_token(lex)) == NULL || name->type == EXPR_TK_EOF) {
-        mln_expr_free(name);
-        return MLN_EXPR_RET_ERR;
+    if ((name = *next) != NULL) {
+        *next = NULL;
+    } else {
+        if ((name = mln_expr_token(lex)) == NULL) {
+            mln_expr_free(name);
+            return MLN_EXPR_RET_ERR;
+        }
     }
-    if ((type = name->type) == EXPR_TK_SPACE) {
+    if ((type = name->type) == EXPR_TK_EOF) {
+        *eof = 1;
+        mln_expr_free(name);
+        return MLN_EXPR_RET_OK;
+    }
+    if (type == EXPR_TK_SPACE) {
         mln_expr_free(name);
         goto again;
     }
@@ -285,22 +294,21 @@ again2:
         mln_expr_free(name);
         return MLN_EXPR_RET_ERR;
     }
-    if (tk->type == EXPR_TK_SPACE) {
+    if ((type = tk->type) == EXPR_TK_SPACE) {
         mln_expr_free(tk);
         goto again2;
     }
-    if ((type = tk->type) == EXPR_TK_EOF || type == EXPR_TK_COMMA) {
+    if (type != EXPR_TK_LPAR) {
         v = cb(name->text, 0, NULL, data);
         mln_expr_val_dup(ret, v);
         mln_expr_val_free(v);
         mln_expr_free(name);
-        mln_expr_free(tk);
+        if ((type = tk->type) == EXPR_TK_EOF || type == EXPR_TK_COMMA) {
+            mln_expr_free(tk);
+        } else {
+            *next = tk;
+        }
         return v == NULL? MLN_EXPR_RET_ERR: MLN_EXPR_RET_OK;
-    }
-    if (type != EXPR_TK_LPAR) {
-        mln_expr_free(name);
-        mln_expr_free(tk);
-        return MLN_EXPR_RET_ERR;
     }
     mln_expr_free(tk);
 
@@ -316,8 +324,8 @@ again2:
             mln_array_destroy(&arr);
             return MLN_EXPR_RET_ERR;
         }
-        v->type = 0;
-        rc = mln_expr_parse(lex, cb, data, v);
+        v->type = mln_expr_type_null;
+        rc = mln_expr_parse(lex, cb, data, v, eof, next);
         if (rc == MLN_EXPR_RET_ERR) {
             mln_expr_free(name);
             mln_array_destroy(&arr);
@@ -328,6 +336,11 @@ again2:
             break;
         } else if (rc == MLN_EXPR_RET_OK) {
             v = NULL;
+            if (*eof) {
+                mln_expr_free(name);
+                mln_array_destroy(&arr);
+                return MLN_EXPR_RET_ERR;
+            }
         }
     }
 
@@ -344,7 +357,9 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_run, (mln_string_t *exp, mln_expr_cb_t cb,
     struct mln_lex_attr lattr;
     mln_lex_hooks_t hooks;
     mln_alloc_t *pool;
-    mln_expr_val_t *ret, v;
+    mln_expr_val_t *ret = NULL, v;
+    int eof = 0;
+    mln_expr_struct_t *next = NULL;
 
     memset(&hooks, 0, sizeof(hooks));
     hooks.dblq_handler = (lex_hook)mln_expr_dblq_handler;
@@ -367,15 +382,28 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_run, (mln_string_t *exp, mln_expr_cb_t cb,
         return NULL;
     }
 
-    if (mln_expr_parse(lex, cb, data, &v) != MLN_EXPR_RET_OK) {
-        ret = NULL;
-    } else {
+    while (1) {
+        v.type = mln_expr_type_null;
+        if (mln_expr_parse(lex, cb, data, &v, &eof, &next) != MLN_EXPR_RET_OK) {
+            if (ret != NULL) mln_expr_val_free(ret);
+            ret = NULL;
+            mln_expr_val_destroy(&v);
+            break;
+        }
+
+        if (eof) {
+            mln_expr_val_destroy(&v);
+            break;
+        }
+
+        if (ret != NULL) mln_expr_val_free(ret);
         if ((ret = (mln_expr_val_t *)malloc(sizeof(mln_expr_val_t))) != NULL) {
             mln_expr_val_dup(ret, &v);
         }
+        mln_expr_val_destroy(&v);
     }
-    mln_expr_val_destroy(&v);
 
+    if (next != NULL) mln_expr_free(next);
     mln_lex_destroy(lex);
     mln_alloc_destroy(pool);
 
