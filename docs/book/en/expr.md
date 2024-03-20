@@ -96,15 +96,30 @@ Return value: None
 
 
 
-#### mln_expr_val_dup
+#### mln_expr_val_copy
 
 ```c
-void mln_expr_val_dup(mln_expr_val_t *dest, mln_expr_val_t *src);
+void mln_expr_val_copy(mln_expr_val_t *dest, mln_expr_val_t *src);
 ```
 
 Description: duplicate an expression value object. Duplicate the content of `src` to `dest`. If the type is a string, the function `mln_string_ref` will be used to reference the string. If it is of type `udata`, simply copy the data pointer and set `src`'s `free` to `NULL`, ensuring that the user-defined data is not freed when `src` is released.
 
 Return value: None
+
+
+
+#### mln_expr_val_dup
+
+```c
+void mln_expr_val_dup(mln_expr_val_t *val);
+```
+
+Description: Copy an expression value object. Similar to `mln_expr_val_copy`, but allocates a completely new block of memory.
+
+Return values:
+
+- On success: Pointer to `mln_expr_val_t`
+- On failure: `NULL`
 
 
 

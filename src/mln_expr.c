@@ -219,7 +219,37 @@ MLN_FUNC_VOID(static, void, mln_expr_val_destroy, (mln_expr_val_t *ev), (ev), {
     }
 })
 
-MLN_FUNC_VOID(, void, mln_expr_val_dup, (mln_expr_val_t *dest, mln_expr_val_t *src), (dest, src), {
+MLN_FUNC(, mln_expr_val_t *, mln_expr_val_dup, (mln_expr_val_t *val), (val), {
+    mln_expr_val_t *v;
+
+    if ((v = (mln_expr_val_t *)malloc(sizeof(mln_expr_val_t))) == NULL) return NULL;
+    v->type = val->type;
+    switch (val->type) {
+        case mln_expr_type_null:
+            break;
+        case mln_expr_type_bool:
+            v->data.b = val->data.b;
+            break;
+        case mln_expr_type_int:
+            v->data.i = val->data.i;
+            break;
+        case mln_expr_type_real:
+            v->data.r = val->data.r;
+            break;
+        case mln_expr_type_string:
+            v->data.s = mln_string_ref(val->data.s);
+            v->free = val->free;
+            break;
+        default: /* mln_expr_type_udata */
+            v->data.u = val->data.u;
+            v->free = val->free;
+            val->free = NULL;
+            break;
+    }
+    return v;
+})
+
+MLN_FUNC_VOID(, void, mln_expr_val_copy, (mln_expr_val_t *dest, mln_expr_val_t *src), (dest, src), {
     if (src == NULL) return;
 
     dest->type = src->type;
@@ -300,7 +330,7 @@ again2:
     }
     if (type != EXPR_TK_LPAR) {
         v = cb(name->text, 0, NULL, data);
-        mln_expr_val_dup(ret, v);
+        mln_expr_val_copy(ret, v);
         mln_expr_val_free(v);
         mln_expr_free(name);
         if ((type = tk->type) == EXPR_TK_EOF || type == EXPR_TK_COMMA) {
@@ -345,7 +375,7 @@ again2:
     }
 
     v = cb(name->text, 1, &arr, data);
-    mln_expr_val_dup(ret, v);
+    mln_expr_val_copy(ret, v);
     mln_expr_val_free(v);
     mln_expr_free(name);
     mln_array_destroy(&arr);
@@ -399,7 +429,7 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_run, (mln_string_t *exp, mln_expr_cb_t cb,
 
         if (ret != NULL) mln_expr_val_free(ret);
         if ((ret = (mln_expr_val_t *)malloc(sizeof(mln_expr_val_t))) != NULL) {
-            mln_expr_val_dup(ret, &v);
+            mln_expr_val_copy(ret, &v);
         }
         mln_expr_val_destroy(&v);
     }
@@ -458,7 +488,7 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_run_file, (mln_string_t *path, mln_expr_cb
 
         if (ret != NULL) mln_expr_val_free(ret);
         if ((ret = (mln_expr_val_t *)malloc(sizeof(mln_expr_val_t))) != NULL) {
-            mln_expr_val_dup(ret, &v);
+            mln_expr_val_copy(ret, &v);
         }
         mln_expr_val_destroy(&v);
     }

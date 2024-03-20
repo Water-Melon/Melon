@@ -3243,14 +3243,17 @@ Their definitions can be found in melon/include/mln_types.h.
       b) void mln_expr_val_free(mln_expr_val_t *ev);
          Free an expression value object.
 
-      c) void mln_expr_val_dup(mln_expr_val_t *dest, mln_expr_val_t *src);
-         Duplicate an expression object from `src` to `dest`.
+      c) void mln_expr_val_copy(mln_expr_val_t *dest, mln_expr_val_t *src);
+         Duplicate an expression object from `src` to `dest`. Note: user-defined data will be freed by `dest`.
 
       d) mln_expr_val_t *mln_expr_run(mln_string_t *exp, mln_expr_cb_t cb, void *data);
          Run a simple expression `exp`. `cb` will be called with user-data `data` when parsing variables and functions.
 
       e) mln_expr_val_t *mln_expr_run_file(mln_string_t *path, mln_expr_cb_t cb, void *data);
          Run the expression in the file indicated by `path`. `cb` will be called with user-data `data` when parsing variables and functions.
+
+      f) mln_expr_val_t *mln_expr_val_dup(mln_expr_val_t *val);
+         Duplicate an expression object from `val`. Note: user-defined data will be freed by `dest`.
 
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.

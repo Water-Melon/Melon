@@ -96,15 +96,30 @@ void mln_expr_val_free(mln_expr_val_t *ev);
 
 
 
-#### mln_expr_val_dup
+#### mln_expr_val_copy
 
 ```c
-void mln_expr_val_dup(mln_expr_val_t *dest, mln_expr_val_t *src);
+void mln_expr_val_copy(mln_expr_val_t *dest, mln_expr_val_t *src);
 ```
 
 描述：拷贝一个表达式值对象。将`src`的内容拷贝到`dest`中。如果是字符串类型，则会使用函数`mln_string_ref`引用字符串。如果是`udata`类型，则直接复制数据指针，并将`src`的`free`置`NULL`，保证`src`释放时，用户自定义数据不会被释放。
 
 返回值：无
+
+
+
+#### mln_expr_val_dup
+
+```c
+mln_expr_val_t *mln_expr_val_dup(mln_expr_val_t *val);
+```
+
+描述：拷贝一个表达式值对象。与`mln_expr_val_copy`相似，但会分配一块全新的内存。
+
+返回值：
+
+- 成功：`mln_expr_val_t`指针
+- 失败：`NULL`
 
 
 
