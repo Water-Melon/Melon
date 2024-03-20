@@ -125,6 +125,40 @@ typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_ar
 
 
 
+#### mln_expr_run
+
+```c
+mln_expr_val_t *mln_expr_run(mln_string_t *exp, mln_expr_cb_t cb, void *data);
+
+typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_array_t *args, void *data);
+```
+
+描述：运行表达式`exp`。表达式中的变量以及函数（和函数的参数）还有用户自定义数据`data`，都会被传递到回调函数`cb`中进行解析。开发者可以根据需求，定制化这些函数和变量的值。
+
+返回值：
+
+- 成功：`mln_expr_val_t`指针，存放运行结果。
+- 失败：`NULL`
+
+
+
+#### mln_expr_run_filr
+
+```c
+mln_expr_val_t *mln_expr_run_file(mln_string_t *path, mln_expr_cb_t cb, void *data);
+
+typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_array_t *args, void *data);
+```
+
+描述：运行由`path`指定的文件中的表达式。表达式中的变量以及函数（和函数的参数）还有用户自定义数据`data`，都会被传递到回调函数`cb`中进行解析。开发者可以根据需求，定制化这些函数和变量的值。
+
+返回值：
+
+- 成功：`mln_expr_val_t`指针，存放运行结果。
+- 失败：`NULL`
+
+
+
 ### 示例
 
 ```c

@@ -125,6 +125,23 @@ Return values:
 
 
 
+#### mln_expr_run_file
+
+```c
+mln_expr_val_t *mln_expr_run_file(mln_string_t *path, mln_expr_cb_t cb, void *data);
+
+typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_array_t *args, void *data);
+```
+
+Description: Run the expression specified in the file identified by `path`. Variables and functions (along with their arguments) in the expression, as well as user-defined data `data`, will be passed to the callback function `cb` for evaluation. Developers can customize the values of these functions and variables as needed.
+
+Return values:
+
+- On success: Pointer to `mln_expr_val_t`, containing the result of the evaluation
+- On failure: `NULL`
+
+
+
 ### Example
 
 ```c

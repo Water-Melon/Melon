@@ -393,6 +393,66 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_run, (mln_string_t *exp, mln_expr_cb_t cb,
 
         if (eof) {
             mln_expr_val_destroy(&v);
+            if (ret == NULL) ret = mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+            break;
+        }
+
+        if (ret != NULL) mln_expr_val_free(ret);
+        if ((ret = (mln_expr_val_t *)malloc(sizeof(mln_expr_val_t))) != NULL) {
+            mln_expr_val_dup(ret, &v);
+        }
+        mln_expr_val_destroy(&v);
+    }
+
+    if (next != NULL) mln_expr_free(next);
+    mln_lex_destroy(lex);
+    mln_alloc_destroy(pool);
+
+    return ret;
+})
+
+MLN_FUNC(, mln_expr_val_t *, mln_expr_run_file, (mln_string_t *path, mln_expr_cb_t cb, void *data), (path, cb, data), {
+    mln_lex_t *lex = NULL;
+    struct mln_lex_attr lattr;
+    mln_lex_hooks_t hooks;
+    mln_alloc_t *pool;
+    mln_expr_val_t *ret = NULL, v;
+    int eof = 0;
+    mln_expr_struct_t *next = NULL;
+
+    memset(&hooks, 0, sizeof(hooks));
+    hooks.dblq_handler = (lex_hook)mln_expr_dblq_handler;
+    hooks.sglq_handler = (lex_hook)mln_expr_sglq_handler;
+
+    if ((pool = lattr.pool = mln_alloc_init(NULL)) == NULL) {
+        return NULL;
+    }
+    lattr.keywords = keywords;
+    lattr.hooks = &hooks;
+    lattr.preprocess = 1;
+    lattr.padding = 0;
+    lattr.type = M_INPUT_T_FILE;
+    lattr.data = path;
+    lattr.env = NULL;
+
+    mln_lex_init_with_hooks(mln_expr, lex, &lattr);
+    if (lex == NULL) {
+        mln_alloc_destroy(pool);
+        return NULL;
+    }
+
+    while (1) {
+        v.type = mln_expr_type_null;
+        if (mln_expr_parse(lex, cb, data, &v, &eof, &next) != MLN_EXPR_RET_OK) {
+            if (ret != NULL) mln_expr_val_free(ret);
+            ret = NULL;
+            mln_expr_val_destroy(&v);
+            break;
+        }
+
+        if (eof) {
+            mln_expr_val_destroy(&v);
+            if (ret == NULL) ret = mln_expr_val_new(mln_expr_type_null, NULL, NULL);
             break;
         }
 

@@ -44,6 +44,7 @@ typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, \
                                          void *data);
 
 extern mln_expr_val_t *mln_expr_run(mln_string_t *exp, mln_expr_cb_t cb, void *data);
+extern mln_expr_val_t *mln_expr_run_file(mln_string_t *path, mln_expr_cb_t cb, void *data);
 extern mln_expr_val_t *mln_expr_val_new(mln_expr_typ_t type, void *data, mln_expr_udata_free free);
 extern void mln_expr_val_free(mln_expr_val_t *ev);
 extern void mln_expr_val_dup(mln_expr_val_t *dest, mln_expr_val_t *src);
