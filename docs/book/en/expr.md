@@ -20,6 +20,23 @@ concat(abc, "bcd") -- This is a function with two parameters, one is a variable 
 concat(1, "bcd") -- Both parameters are constants
 concat("abc", concat(bcd, "efg")) -- This example demonstrates nested function calls
 concat("abc", concat(bcd, "efg")) aaa concat("bcd", concat(efg, "hij")) -- This example demonstrates running multiple expressions
+
+-- if else
+if a then
+  var1
+else
+  func2()
+fi
+
+if a then
+  func1()
+  if b then
+  fi
+else
+  if c then
+  else
+  fi
+fi
 ```
 
 

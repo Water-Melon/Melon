@@ -10,17 +10,38 @@ static mln_string_t keywords[] = {
     mln_string("true"),
     mln_string("false"),
     mln_string("null"),
+    mln_string("if"),
+    mln_string("then"),
+    mln_string("else"),
+    mln_string("fi"),
     mln_string(NULL)
 };
 
-MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(static, mln_expr, EXPR, EXPR_TK_TRUE, EXPR_TK_FALSE, EXPR_TK_NULL, EXPR_TK_STRING);
+MLN_DEFINE_TOKEN_TYPE_AND_STRUCT(static, \
+                                 mln_expr, \
+                                 EXPR, \
+                                 EXPR_TK_TRUE, \
+                                 EXPR_TK_FALSE, \
+                                 EXPR_TK_NULL, \
+                                 EXPR_TK_IF, \
+                                 EXPR_TK_THEN, \
+                                 EXPR_TK_ELSE, \
+                                 EXPR_TK_FI, \
+                                 EXPR_TK_STRING);
 MLN_DEFINE_TOKEN(static, \
                  mln_expr, \
                  EXPR, \
                  {EXPR_TK_TRUE, "EXPR_TK_TRUE"}, \
                  {EXPR_TK_FALSE, "EXPR_TK_FALSE"}, \
                  {EXPR_TK_NULL, "EXPR_TK_NULL"}, \
+                 {EXPR_TK_IF, "EXPR_TK_IF"}, \
+                 {EXPR_TK_THEN, "EXPR_TK_THEN"}, \
+                 {EXPR_TK_ELSE, "EXPR_TK_ELSE"}, \
+                 {EXPR_TK_FI, "EXPR_TK_FI"}, \
                  {EXPR_TK_STRING, "EXPR_TK_STRING"});
+
+static inline int
+mln_expr_parse_if(mln_lex_t *lex, mln_expr_cb_t cb, void *data, mln_expr_val_t *ret, int *eof, mln_expr_struct_t **next);
 
 MLN_FUNC(static inline, int, mln_get_char, (mln_lex_t *lex, char c), (lex, c), {
     if (c == '\\') {
@@ -313,6 +334,10 @@ again:
         mln_expr_free(name);
         return MLN_EXPR_RET_RPAR;
     }
+    if (type == EXPR_TK_IF) {
+        mln_expr_free(name);
+        return mln_expr_parse_if(lex, cb, data, ret, eof, next);
+    }
     if (type != EXPR_TK_ID) {
         rc = mln_expr_val_init(ret, name);
         mln_expr_free(name);
@@ -380,6 +405,171 @@ again2:
     mln_expr_free(name);
     mln_array_destroy(&arr);
     return v == NULL? MLN_EXPR_RET_ERR: MLN_EXPR_RET_OK;
+})
+
+MLN_FUNC(static inline, int, mln_expr_parse_if, \
+         (mln_lex_t *lex, mln_expr_cb_t cb, void *data, mln_expr_val_t *ret, int *eof, mln_expr_struct_t **next), \
+         (lex, cb, data, ret, eof, next), \
+{
+    enum mln_expr_enum type;
+    int rc, is_true = 1, count = 0;
+    mln_expr_struct_t *tk;
+    mln_expr_val_t v;
+
+    v.type = mln_expr_type_null;
+    if ((rc = mln_expr_parse(lex, cb, data, &v, eof, next)) != MLN_EXPR_RET_OK) {
+        mln_expr_val_destroy(&v);
+        return rc;
+    }
+    if (*eof) {
+        mln_expr_val_destroy(&v);
+        return MLN_EXPR_RET_ERR;
+    }
+
+    switch (v.type) {
+        case mln_expr_type_null:
+            is_true = 0;
+            break;
+        case mln_expr_type_bool:
+            is_true = v.data.b;
+            break;
+        case mln_expr_type_int:
+            is_true = v.data.i? 1: 0;
+            break;
+        case mln_expr_type_real:
+            is_true = v.data.r == 0.0? 0: 1;
+            break;
+        case mln_expr_type_string:
+            is_true = (v.data.s != NULL && v.data.s->len)? 1: 0;
+            break;
+        default: /* mln_expr_type_udata */
+            is_true = v.data.u != NULL? 1: 0;
+            break;
+    }
+    mln_expr_val_destroy(&v);
+
+    /* then */
+again:
+    if (*next != NULL) {
+        tk = *next;
+        *next = NULL;
+    } else {
+        if ((tk = mln_expr_token(lex)) == NULL) {
+            return MLN_EXPR_RET_ERR;
+        }
+    }
+    type = tk->type;
+    mln_expr_free(tk);
+    if (type == EXPR_TK_SPACE) {
+        goto again;
+    }
+    if (type != EXPR_TK_THEN) {
+        return MLN_EXPR_RET_ERR;
+    }
+
+    if (is_true) {
+        while (1) {
+            if (*next != NULL) {
+                tk = *next;
+                *next = NULL;
+            } else {
+                if ((tk = mln_expr_token(lex)) == NULL) {
+                    return MLN_EXPR_RET_ERR;
+                }
+            }
+            if ((type = tk->type) == EXPR_TK_ELSE) {
+                mln_expr_free(tk);
+                while (1) {
+                    if ((tk = mln_expr_token(lex)) == NULL) {
+                        return MLN_EXPR_RET_ERR;
+                    }
+                    type = tk->type;
+                    mln_expr_free(tk);
+                    if (type == EXPR_TK_IF) {
+                        ++count;
+                    } else if (type == EXPR_TK_EOF) {
+                        return MLN_EXPR_RET_ERR;
+                    } else if (type == EXPR_TK_FI) {
+                        if (count-- == 0) break;
+                    }
+                }
+                break;
+            } else if (type == EXPR_TK_FI) {
+                mln_expr_free(tk);
+                break;
+            } else {
+                *next = tk;
+                v.type = mln_expr_type_null;
+                if ((rc = mln_expr_parse(lex, cb, data, &v, eof, next)) != MLN_EXPR_RET_OK) {
+                    mln_expr_val_destroy(&v);
+                    return rc;
+                }
+                if (*eof) {
+                    mln_expr_val_destroy(&v);
+                    return MLN_EXPR_RET_ERR;
+                }
+
+                if (ret != NULL) mln_expr_val_destroy(ret);
+                mln_expr_val_copy(ret, &v);
+                mln_expr_val_destroy(&v);
+            }
+        }
+    } else {
+        while (1) {
+            if (*next != NULL) {
+                tk = *next;
+                *next = NULL;
+            } else {
+lp:
+                if ((tk = mln_expr_token(lex)) == NULL) {
+                    return MLN_EXPR_RET_ERR;
+                }
+            }
+
+            type = tk->type;
+            mln_expr_free(tk);
+            if (type == EXPR_TK_IF) {
+                ++count;
+            } else if (type == EXPR_TK_EOF) {
+                return MLN_EXPR_RET_ERR;
+            } else if (type == EXPR_TK_FI) {
+                --count;
+            } else if (type == EXPR_TK_ELSE) {
+                if (!count) break;
+            }
+            goto lp;
+        }
+
+        while (1) {
+            if (*next != NULL) {
+                tk = *next;
+                *next = NULL;
+            } else {
+                if ((tk = mln_expr_token(lex)) == NULL) {
+                    return MLN_EXPR_RET_ERR;
+                }
+            }
+            if (tk->type == EXPR_TK_FI) {
+                break;
+            }
+            *next = tk;
+            v.type = mln_expr_type_null;
+            if ((rc = mln_expr_parse(lex, cb, data, &v, eof, next)) != MLN_EXPR_RET_OK) {
+                mln_expr_val_destroy(&v);
+                return rc;
+            }
+            if (*eof) {
+                mln_expr_val_destroy(&v);
+                return MLN_EXPR_RET_ERR;
+            }
+
+            if (ret != NULL) mln_expr_val_destroy(ret);
+            mln_expr_val_copy(ret, &v);
+            mln_expr_val_destroy(&v);
+        }
+    }
+
+    return MLN_EXPR_RET_OK;
 })
 
 MLN_FUNC(, mln_expr_val_t *, mln_expr_run, (mln_string_t *exp, mln_expr_cb_t cb, void *data), (exp, cb, data), {

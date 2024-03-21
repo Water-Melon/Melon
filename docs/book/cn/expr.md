@@ -20,6 +20,23 @@ concat(abc, "bcd") --这是一个函数，参数有两个，一个是变量，�
 concat(1, "bcd") --两个参数都是常量
 concat("abc", concat(bcd, "efg")) --这个例子展示了函数嵌套调用
 concat("abc", concat(bcd, "efg")) aaa concat("bcd", concat(efg, "hij")) --这个例子展示运行多个表达式
+
+-- if else
+if a then
+  var1
+else
+  func2()
+fi
+
+if a then
+  func1()
+  if b then
+  fi
+else
+  if c then
+  else
+  fi
+fi
 ```
 
 
