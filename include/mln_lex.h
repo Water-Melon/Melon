@@ -136,6 +136,11 @@ struct mln_lex_attr {
     mln_string_t       *data;
 };
 
+typedef union {
+    mln_u8ptr_t         soff;
+    off_t               foff;
+} mln_lex_off_t;
+
 typedef struct {
     mln_u32_t           type;
     int                 fd;
@@ -207,6 +212,8 @@ extern int mln_lex_condition_test(mln_lex_t *lex) __NONNULL1(1);
 extern mln_lex_input_t *
 mln_lex_input_new(mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line) __NONNULL3(1,3,4);
 extern void mln_lex_input_free(void *in);
+extern mln_lex_off_t mln_lex_snapshot_record(mln_lex_t *lex);
+extern void mln_lex_snapshot_apply(mln_lex_t *lex, mln_lex_off_t off);
 #define mln_lex_get_pool(lex) ((lex)->pool)
 #define mln_lex_result_clean(lex) ((lex)->result_pos = (lex)->result_buf)
 #define mln_lex_get_cur_filename(lex) \

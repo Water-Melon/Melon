@@ -742,3 +742,39 @@ MLN_FUNC(, int, mln_lex_condition_test, (mln_lex_t *lex), (lex), {
     return reverse? 0: 1;
 })
 
+MLN_FUNC(, mln_lex_off_t, mln_lex_snapshot_record, (mln_lex_t *lex), (lex), {
+    mln_lex_off_t ret;
+    mln_lex_input_t *input = lex->cur;
+
+    if (input == NULL && (input = mln_stack_top(lex->stack)) == NULL) {
+        ret.soff = NULL;
+        return ret;
+    }
+
+    if (input->type == M_INPUT_T_BUF) {
+        ret.soff = input->pos;
+    } else {
+        ret.foff = lseek(input->fd, 0, SEEK_CUR) - (input->buf_len - (input->pos - input->buf));
+    }
+
+    return ret;
+})
+
+MLN_FUNC_VOID(, void, mln_lex_snapshot_apply, (mln_lex_t *lex, mln_lex_off_t off), (lex, off), {
+    mln_lex_input_t *input = lex->cur;
+
+    if (input == NULL && (input = mln_stack_top(lex->stack)) == NULL) {
+        return;
+    }
+    if (input->type == M_INPUT_T_BUF) {
+        if (off.soff < input->buf || off.soff >= input->buf + input->buf_len) return;
+
+        input->pos = off.soff;
+    } else {
+        off_t foff = lseek(input->fd, 0, SEEK_CUR);
+        if (off.foff >= foff || off.foff < foff - input->buf_len) return;
+        lseek(input->fd, off.foff, SEEK_SET);
+        input->pos = input->buf + input->buf_len;
+    }
+})
+

@@ -424,6 +424,30 @@ mln_lex_init_with_hooks(PREFIX_NAME,lex_ptr,attr_ptr)
 
 
 
+#### mln_lex_snapshot_record
+
+```c
+mln_lex_off_t mln_lex_snapshot_record(mln_lex_t *lex);
+```
+
+描述：记录当前输入流的位置信息。
+
+返回值：文件内偏移或内存地址
+
+
+
+#### mln_lex_snapshot_apply
+
+```c
+void mln_lex_snapshot_apply(mln_lex_t *lex, mln_lex_off_t off);
+```
+
+描述：恢复当前输入流的读取偏移到快照的位置。注意，这个函数应用时应确保当前输入流是`mln_lex_snapshot_record`调用时的输入流，函数中会进行一定的检查，但并不能确保万无一失。
+
+返回值：无
+
+
+
 ### 示例
 
 ```c

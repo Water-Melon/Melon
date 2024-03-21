@@ -418,6 +418,30 @@ Return value: There is no return value, but it should be checked whether `lex_pt
 
 
 
+#### mln_lex_snapshot_record
+
+```c
+mln_lex_off_t mln_lex_snapshot_record(mln_lex_t *lex);
+```
+
+Description: Records the position information of the current input stream.
+
+Return value: File offset or memory address
+
+
+
+#### mln_lex_snapshot_apply
+
+```c
+void mln_lex_snapshot_apply(mln_lex_t *lex, mln_lex_off_t off);
+```
+
+Description: Restores the read offset of the current input stream to the position of the snapshot. Note that this function should ensure that the current input stream is the one when `mln_lex_snapshot_record` was called. The function performs some checks, but does not guarantee complete safety.
+
+Return value: None.
+
+
+
 ### Example
 
 ```c
