@@ -37,6 +37,17 @@ else
   else
   fi
 fi
+
+-- loop
+loop condition do
+  aaa
+  func(func2())
+  if a then
+    bbb
+  else
+    ccc
+  fi
+end
 ```
 
 
