@@ -1,7 +1,5 @@
 .tmpSubIncs/
 Makefile
-include/mln_path.h
 lib/
 objs/
-src/mln_path.c
 conf/melon.conf

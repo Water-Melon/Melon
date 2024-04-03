@@ -311,89 +311,10 @@ update_paths() {
     $tcc -o path_generator .path_generator.c
     realpath=`./path_generator $install_path`
     nullpath=`./path_generator /dev/null`
-    confpath=`./path_generator $realpath/conf/melon.conf`
-    tmpfilepath=`./path_generator $realpath/tmp`
-    pidpath=`./path_generator $realpath/logs/melon.pid`
-    logpath=`./path_generator $realpath/logs/melon.log`
     melang_script_path=`./path_generator $melang_script_path`
     melang_script_path=`./path_generator $melang_script_path`
     melang_dylib_path=`./path_generator $melang_dylib_path`
     rm -f path_generator .path_generator.c
-}
-
-generate_path_module() {
-    echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > include/mln_path.h
-    echo -e "#ifndef __MLN_PATH_H\n#define __MLN_PATH_H" >> include/mln_path.h
-    echo -e "\ntypedef enum {\n    m_p_install,\n    m_p_conf,\n    m_p_tmpfile,\n    m_p_pid,\n    m_p_log,\n    m_p_null,\n    m_p_melang_lib,\n    m_p_melang_dylib\n} mln_path_type_t;" >> include/mln_path.h
-    echo -e "\ntypedef char *(*mln_path_hook_t)(void);" >> include/mln_path.h
-    echo -e "\nextern char *mln_path(void);" >> include/mln_path.h
-    echo -e "\nextern char *mln_path_null(void);" >> include/mln_path.h
-    echo -e "\nextern char *mln_path_melang_lib(void);" >> include/mln_path.h
-    echo -e "\nextern char *mln_path_melang_dylib(void);" >> include/mln_path.h
-    echo -e "\nextern char *mln_path_conf(void);" >> include/mln_path.h
-    echo -e "\nextern char *mln_path_tmpfile(void);" >> include/mln_path.h
-    echo -e "\nextern char *mln_path_pid(void);" >> include/mln_path.h
-    echo -e "\nextern char *mln_path_log(void);" >> include/mln_path.h
-    echo -e "\nextern void mln_path_hook_set(mln_path_type_t type, mln_path_hook_t hook);" >> include/mln_path.h
-    echo -e "\n#endif\n" >> include/mln_path.h
-
-    echo -e "\n/*\n * Copyright (C) Niklaus F.Schen.\n */" > src/mln_path.c
-    echo "#include <stdio.h>" >> src/mln_path.c
-    echo "#include \"mln_path.h\"" >> src/mln_path.c
-    echo "#include \"mln_func.h\"" >> src/mln_path.c
-    echo -e "\nstatic char install_path[] = \"$realpath\";" >> src/mln_path.c
-    echo -e "\nstatic char conf_path[] = \"$confpath\";" >> src/mln_path.c
-    echo -e "\nstatic char tmpfile_path[] = \"$tmpfilepath\";" >> src/mln_path.c
-    echo -e "\nstatic char pid_path[] = \"$pidpath\";" >> src/mln_path.c
-    echo -e "\nstatic char log_path[] = \"$logpath\";" >> src/mln_path.c
-    echo -e "\nstatic char null_path[] = \"$nullpath\";" >> src/mln_path.c
-    echo -e "\nstatic char melang_lib_path[] = \"$melang_script_path\";" >> src/mln_path.c
-    echo -e "\nstatic char melang_dylib_path[] = \"$melang_dylib_path\";" >> src/mln_path.c
-    echo -e "\nstatic mln_path_hook_t _install_path = NULL;" >> src/mln_path.c
-    echo -e "\nstatic mln_path_hook_t _null_path = NULL;" >> src/mln_path.c
-    echo -e "\nstatic mln_path_hook_t _melang_lib_path = NULL;" >> src/mln_path.c
-    echo -e "\nstatic mln_path_hook_t _melang_dylib_path = NULL;" >> src/mln_path.c
-    echo -e "\nstatic mln_path_hook_t _conf_path = NULL;" >> src/mln_path.c
-    echo -e "\nstatic mln_path_hook_t _tmpfile_path = NULL;" >> src/mln_path.c
-    echo -e "\nstatic mln_path_hook_t _pid_path = NULL;" >> src/mln_path.c
-    echo -e "\nstatic mln_path_hook_t _log_path = NULL;" >> src/mln_path.c
-    echo -e "\nMLN_FUNC_VOID(, void, mln_path_hook_set, (mln_path_type_t type, mln_path_hook_t hook), (type, hook), {\n" >> src/mln_path.c
-    echo -e "    switch (type) {\n" >> src/mln_path.c
-    echo -e "        case m_p_install:\n            _install_path = hook;\n            break;" >> src/mln_path.c
-    echo -e "        case m_p_conf:\n            _conf_path = hook;\n            break;" >> src/mln_path.c
-    echo -e "        case m_p_tmpfile:\n            _tmpfile_path = hook;\n            break;" >> src/mln_path.c
-    echo -e "        case m_p_pid:\n            _pid_path = hook;\n            break;" >> src/mln_path.c
-    echo -e "        case m_p_log:\n            _log_path = hook;\n            break;" >> src/mln_path.c
-    echo -e "        case m_p_null:\n            _null_path = hook;\n            break;" >> src/mln_path.c
-    echo -e "        case m_p_melang_lib:\n            _melang_lib_path = hook;\n            break;" >> src/mln_path.c
-    echo -e "        case m_p_melang_dylib:\n            _melang_dylib_path = hook;\n            break;" >> src/mln_path.c
-    echo -e "        default:\n            break;" >> src/mln_path.c
-    echo -e "    }" >> src/mln_path.c
-    echo -e "})" >> src/mln_path.c
-    echo -e "\nMLN_FUNC(, char *, mln_path, (void), (), {\n" >> src/mln_path.c
-    echo "    return _install_path == NULL? install_path: _install_path();" >> src/mln_path.c
-    echo "})" >> src/mln_path.c
-    echo -e "\nMLN_FUNC(, char *, mln_path_conf, (void), (), {\n" >> src/mln_path.c
-    echo "    return _conf_path == NULL? conf_path: _conf_path();" >> src/mln_path.c
-    echo "})" >> src/mln_path.c
-    echo -e "\nMLN_FUNC(, char *, mln_path_tmpfile, (void), (), {\n" >> src/mln_path.c
-    echo "    return _tmpfile_path == NULL? tmpfile_path: _tmpfile_path();" >> src/mln_path.c
-    echo "})" >> src/mln_path.c
-    echo -e "\nMLN_FUNC(, char *, mln_path_pid, (void), (), {\n" >> src/mln_path.c
-    echo "    return _pid_path == NULL? pid_path: _pid_path();" >> src/mln_path.c
-    echo "})" >> src/mln_path.c
-    echo -e "\nMLN_FUNC(, char *, mln_path_log, (void), (), {\n" >> src/mln_path.c
-    echo "    return _log_path == NULL? log_path: _log_path();" >> src/mln_path.c
-    echo "})" >> src/mln_path.c
-    echo -e "\nMLN_FUNC(, char *, mln_path_null, (void), (), {\n" >> src/mln_path.c
-    echo "    return _null_path == NULL? null_path: _null_path();" >> src/mln_path.c
-    echo "})" >> src/mln_path.c
-    echo -e "\nMLN_FUNC(, char *, mln_path_melang_lib, (void), (), {\n" >> src/mln_path.c
-    echo "    return _melang_lib_path == NULL? melang_lib_path: _melang_lib_path();" >> src/mln_path.c
-    echo "})" >> src/mln_path.c
-    echo -e "\nMLN_FUNC(, char *, mln_path_melang_dylib, (void), (), {\n" >> src/mln_path.c
-    echo "    return _melang_dylib_path == NULL? melang_dylib_path: _melang_dylib_path();" >> src/mln_path.c
-    echo "})" >> src/mln_path.c
 }
 
 # build makefile content
@@ -460,9 +381,9 @@ generate_Makefile() {
         echo -e "CC\t\t= $cc" >> Makefile
     fi
     if [ $wasm -eq 1 ]; then
-        echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc $CFLAGS" >> Makefile
+        echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc -DMLN_ROOT=\\\"$realpath\\\" -DMLN_NULL=\\\"$nullpath\\\" -DMLN_LANG_LIB=\\\"$melang_script_path\\\" -DMLN_LANG_DYLIB=\\\"$melang_dylib_path\\\" $CFLAGS" >> Makefile
     else
-        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $mingw_cflags $olevel -fPIC $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag $CFLAGS" >> Makefile
+        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $mingw_cflags $olevel -fPIC -DMLN_ROOT=\\\"$realpath\\\" -DMLN_NULL=\\\"$nullpath\\\" -DMLN_LANG_LIB=\\\"$melang_script_path\\\" -DMLN_LANG_DYLIB=\\\"$melang_dylib_path\\\" $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag $CFLAGS" >> Makefile
     fi
     if ! case $sysname in MINGW*) false;; esac; then
         if [ $wasm -eq 0 ]; then
@@ -557,7 +478,6 @@ after_get_params() {
     update_debug_flag
     detect_operating_system_support
     update_paths
-    generate_path_module
     get_source_files $select_files
     generate_Makefile
     generate_conf_file
