@@ -389,12 +389,12 @@ generate_Makefile() {
         if [ $wasm -eq 0 ]; then
             echo -e "MELONSO\t\t= libmelon.dll" >> Makefile
         fi
-        echo -e "MELONA\t\t= libmelon.lib" >> Makefile
+        echo -e "MELONA\t\t= libmelon_static.lib" >> Makefile
     else
         if [ $wasm -eq 0 ]; then
             echo -e "MELONSO\t\t= libmelon.so" >> Makefile
         fi
-        echo -e "MELONA\t\t= libmelon.a" >> Makefile
+        echo -e "MELONA\t\t= libmelon_static.a" >> Makefile
     fi
 
     echo -e "OBJS\t\t= \\" >> Makefile

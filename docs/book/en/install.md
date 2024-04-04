@@ -89,4 +89,4 @@ You should install `emsdk` at first, make sure `emcc` and `emar` have been insta
 make && make install
 ```
 
-There is only one static library `libmelon.a` to be created.
+There is only one static library `libmelon_static.a` to be created.

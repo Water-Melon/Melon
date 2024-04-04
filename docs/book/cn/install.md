@@ -97,4 +97,4 @@ Melon支持被编译为webassembly格式库。但在此之前，需要先行安�
 make && make install
 ```
 
-安装后可以看到，在安装目录的`lib`子目录下仅会生成`libmelon.a` 静态库。
+安装后可以看到，在安装目录的`lib`子目录下仅会生成`libmelon_static.a` 静态库。
