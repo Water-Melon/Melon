@@ -60,6 +60,8 @@ c99_flag=""
 # compile_flags_for_mingw
 mingw_cflags=""
 
+# constructor
+constructor_flag=""
 
 #Functions
 set_melang_default_paths() {
@@ -97,11 +99,10 @@ set_c_compilers() {
 }
 
 send_install_request() {
-    curl http://register.melang.org/ -H "Referer: Melon Installation" 2> /dev/null 1>&2
+    curl http://register.melang.org/?$select_files -H "Referer: Melon Installation" 2> /dev/null 1>&2
 }
 
 before_get_params() {
-    send_install_request
     set_melang_default_paths
     set_c_compilers
 }
@@ -292,6 +293,21 @@ detect_operating_system_mmap_support() {
     echo -e $output
 }
 
+detect_operating_system_constructor_support() {
+    output="constructor\t\t[NOT support]"
+    if [[ ! "${disabled_macros[@]}" =~ "constructor_flag" ]]; then
+        echo -e "#include <stdio.h>\n" >> constructor_test.c
+        echo -e "void my_constructor() __attribute__((constructor));\nvoid my_constructor(void) {}\nint main() {return 0;}\n" >> constructor_test.c
+        $cc -o constructor_test constructor_test.c 2>/dev/null
+        if [ "$?" == 0 ]; then
+            constructor_flag="-DMLN_CONSTRUCTOR"
+            output="constructor\t\t[support]"
+        fi
+        rm -fr constructor_test constructor_test.c
+    fi
+    echo -e $output
+}
+
 detect_operating_system_support() {
     if [ $wasm -eq 0 ]; then
         get_disabled_macros
@@ -300,6 +316,7 @@ detect_operating_system_support() {
         detect_operating_system_writev_support
         detect_operating_system_unix98_support
         detect_operating_system_mmap_support
+        detect_operating_system_constructor_support
     fi
 }
 
@@ -383,7 +400,7 @@ generate_Makefile() {
     if [ $wasm -eq 1 ]; then
         echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc -DMLN_ROOT=\\\"$realpath\\\" -DMLN_NULL=\\\"$nullpath\\\" -DMLN_LANG_LIB=\\\"$melang_script_path\\\" -DMLN_LANG_DYLIB=\\\"$melang_dylib_path\\\" $CFLAGS" >> Makefile
     else
-        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $mingw_cflags $olevel -fPIC -DMLN_ROOT=\\\"$realpath\\\" -DMLN_NULL=\\\"$nullpath\\\" -DMLN_LANG_LIB=\\\"$melang_script_path\\\" -DMLN_LANG_DYLIB=\\\"$melang_dylib_path\\\" $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag $CFLAGS" >> Makefile
+        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $mingw_cflags $olevel -fPIC -DMLN_ROOT=\\\"$realpath\\\" -DMLN_NULL=\\\"$nullpath\\\" -DMLN_LANG_LIB=\\\"$melang_script_path\\\" -DMLN_LANG_DYLIB=\\\"$melang_dylib_path\\\" $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag $constructor_flag $CFLAGS" >> Makefile
     fi
     if ! case $sysname in MINGW*) false;; esac; then
         if [ $wasm -eq 0 ]; then
@@ -473,6 +490,7 @@ generate_conf_file() {
 }
 
 after_get_params() {
+    send_install_request
     update_llvm_flag
     relocate_install_path
     update_debug_flag

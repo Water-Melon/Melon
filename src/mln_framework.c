@@ -9,26 +9,15 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-#include <fcntl.h>
 #include "mln_types.h"
 #include "mln_tools.h"
 #include "mln_log.h"
 #include "mln_string.h"
 #include "mln_conf.h"
 #include "mln_framework.h"
-#include "mln_rc.h"
 #include "mln_trace.h"
 #include "mln_func.h"
-#if defined(__WIN32__)
-#include <ws2tcpip.h>
-#include <winsock2.h>
-#else
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#endif
 
-static void mln_init_notice(int argc, char *argv[]);
 #if !defined(__WIN32__)
 static int mln_master_trace_init(mln_lang_ctx_t *ctx);
 static void mln_worker_routine(struct mln_framework_attr *attr);
@@ -54,7 +43,6 @@ MLN_FUNC(, int, mln_framework_init, (struct mln_framework_attr *attr), (attr), {
     if (attr->global_init != NULL && attr->global_init() < 0)
         return -1;
 
-    mln_init_notice(attr->argc, attr->argv);
 #if !defined(__WIN32__)
     if (mln_get_framework_status()) {
         if (mln_boot_params(attr->argc, attr->argv) < 0)
@@ -208,64 +196,4 @@ MLN_FUNC(static, mln_string_t *, mln_get_framework_status, (void), (), {
     return NULL;
 })
 #endif
-
-MLN_FUNC_VOID(static, void, mln_init_notice, (int argc, char *argv[]), (argc, argv), {
-    for (--argc; argc > 0; --argc) {
-        if (!strcmp(argv[argc], "--no-report")) {
-            return;
-        }
-    }
-    mln_u8_t buf[] = {
-        0x84, 0xff, 0x8a, 0x62, 0xee, 0x6a, 0xcc, 0x3e, 0x7b, 0x74,
-        0xfa, 0x25, 0xfd, 0x48, 0xa6, 0xca, 0xc0, 0xbd, 0xf5, 0xae,
-        0x89, 0xfc, 0x66, 0xc0, 0x47, 0xdf, 0xf7, 0xdf, 0xc9, 0xc6,
-        0xf6, 0xb5, 0x17, 0x09, 0x76, 0x58, 0xee, 0xd3, 0x9e, 0xd1,
-        0x4c, 0x5d, 0xa2, 0x0a, 0x03, 0xa7, 0xf3, 0x7f, 0x74, 0xf7,
-        0x74, 0x29, 0x2f, 0xcd, 0xad, 0x7b, 0x30, 0xf9, 0xbe, 0x23,
-        0xd0, 0x27, 0x6f, 0xc2, 0x00
-    };
-    mln_s8_t host[] = {
-        0x72, 0x65, 0x67, 0x69, 0x73, 0x74,
-        0x65, 0x72, 0x2e, 0x6d, 0x65, 0x6c,
-        0x61, 0x6e, 0x67, 0x2e, 0x6f, 0x72,
-        0x67, 0x00
-    };
-    mln_s8_t service[] = "80";
-    mln_u8_t rc_buf[256] = {0};
-    int fd;
-    ssize_t n;
-    struct addrinfo addr, *res = NULL;
-
-    mln_rc4_init(rc_buf, (mln_u8ptr_t)MLN_AUTHOR, sizeof(MLN_AUTHOR)-1);
-    mln_rc4_calc(rc_buf, buf, sizeof(buf)-1);
-
-    memset(&addr, 0, sizeof(addr));
-    addr.ai_flags = AI_PASSIVE;
-    addr.ai_family = AF_UNSPEC;
-    addr.ai_socktype = SOCK_STREAM;
-    addr.ai_protocol = IPPROTO_IP;
-    if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
-        return;
-    }
-    if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
-        freeaddrinfo(res);
-        return;
-    }
-#if defined(__WIN32__)
-    u_long opt = 1;
-    ioctlsocket(fd, FIONBIO, &opt);
-#else
-    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, NULL) | O_NONBLOCK);
-#endif
-    connect(fd, res->ai_addr, res->ai_addrlen);
-    freeaddrinfo(res);
-    usleep(400000);
-#if defined(__WIN32__)
-    n = send(fd, (char *)buf, sizeof(buf) - 1, 0);
-#else
-    n = send(fd, buf, sizeof(buf) - 1, 0);
-#endif
-    if (n < 0) {/* do nothing */}
-    mln_socket_close(fd);
-})
 
