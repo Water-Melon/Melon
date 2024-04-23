@@ -12,7 +12,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - name: Install Valgrind
+      run: sudo apt-get update && sudo apt-get install valgrind -y
+
     - uses: actions/checkout@v3
     - name: Build and Test
       run: |
-        ./configure && make && make test && export LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH && make run
+        ./configure && make && make test && export LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH && export MLN_TEST_RUNNER=valgrind && make run

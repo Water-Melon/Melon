@@ -504,16 +504,17 @@ generate_Makefile() {
     echo "" >> Makefile
 
     echo "run:" >> Makefile
+    echo -e "\t@echo 'Run Tests' && \\" >> Makefile
     for fname in ${select_files[@]}
     do
         fname=$(echo $fname | sed 's/^src\/mln_//')
         binname="bin/"`echo $fname | cut -d '.' -f 1`
         fname="t/$fname"
         if [ -f $fname ]; then
-            echo -e "\t./$binname && \\" >> Makefile
+            echo -e "\techo \"====== Test $binname running... ======\" && $MLN_TEST_RUNNER ./$binname && \\" >> Makefile
         fi
     done
-    echo "echo 'Done'" >> Makefile
+    echo -e "\techo 'Done'" >> Makefile
 
     for fname in ${select_files[@]}
     do
