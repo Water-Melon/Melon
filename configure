@@ -432,7 +432,7 @@ generate_Makefile() {
         echo "compile: MKDIR \$(OBJS) \$(MELONSO) \$(MELONA)" >> Makefile
     fi
     echo "clean:" >> Makefile
-    echo -e "\trm -fr objs lib Makefile" >> Makefile
+    echo -e "\trm -fr objs lib bin Makefile" >> Makefile
     echo "MKDIR :" >> Makefile
     echo -e "\ttest -d objs || mkdir objs" >> Makefile
     echo -e "\ttest -d lib || mkdir lib" >> Makefile
@@ -461,6 +461,59 @@ generate_Makefile() {
     echo -e "\tcp -fr include $install_path" >> Makefile
     echo -e "\ttest -d $install_path/conf || cp -fr conf $install_path" >> Makefile
     echo -e "\ttest -d $melang_script_path/trace || cp -fr trace $melang_script_path" >> Makefile
+
+    echo "TEST_MKDIR: " >> Makefile
+    echo -e "\ttest -d bin || mkdir -p bin" >> Makefile
+    for fname in ${select_files[@]}
+    do
+        fname=$(echo $fname | sed 's/^src\/mln_//')
+        binname=`echo $fname | cut -d '.' -f 1`
+        fname="t/$fname"
+        if [ -f $fname ]; then
+            echo -n "bin/$binname : " >> Makefile
+            for header in `cpp -MM -MG $fname 2> /dev/null`
+            do
+                suffix=`echo $header | cut -d '.' -f 2`
+                if [ $suffix = 'c' ]; then
+                    echo -n $header >> Makefile
+                    echo -n " " >> Makefile
+                    continue
+                fi
+                if [ $suffix != 'h' ]; then
+                    continue
+                fi
+                test -e include/$header && echo -n "include/$header " >> Makefile
+            done
+            echo "" >> Makefile
+
+            echo -e "\t\$(CC) -o \$@ $fname $debug -Iinclude -Llib -lmelon" >> Makefile
+        fi
+    done
+    echo -e "BINS = \\" >> Makefile
+    for fname in ${select_files[@]}
+    do
+        fname=$(echo $fname | sed 's/^src\/mln_//')
+        binname="bin/"`echo $fname | cut -d '.' -f 1`
+        fname="t/$fname"
+        if [ -f $fname ]; then
+            echo "        $binname \\" >> Makefile
+        fi
+    done
+    echo "" >> Makefile
+    echo "test: TEST_MKDIR \$(BINS)" >> Makefile
+    echo "" >> Makefile
+
+    echo "run:" >> Makefile
+    for fname in ${select_files[@]}
+    do
+        fname=$(echo $fname | sed 's/^src\/mln_//')
+        binname="bin/"`echo $fname | cut -d '.' -f 1`
+        fname="t/$fname"
+        if [ -f $fname ]; then
+            echo -e "\t./$binname && \\" >> Makefile
+        fi
+    done
+    echo "echo 'Done'" >> Makefile
 
     for fname in ${select_files[@]}
     do
