@@ -16,42 +16,45 @@
  * All above operations mean that you can customize the send routine.
  */
 
-static mln_ipc_set_t *ipcs = NULL;
+static mln_ipc_cb_t *ipcs_head = NULL;
+static mln_ipc_cb_t *ipcs_tail = NULL;
 
+MLN_CHAIN_FUNC_DECLARE(static inline, mln_ipc, mln_ipc_cb_t, );
+MLN_CHAIN_FUNC_DEFINE(static inline, mln_ipc, mln_ipc_cb_t, prev, next);
 
-MLN_FUNC(, int, mln_ipc_handler_register, \
+MLN_FUNC(, mln_ipc_cb_t *, mln_ipc_handler_register, \
          (mln_u32_t type, ipc_handler master_handler, ipc_handler worker_handler, \
           void *master_data, void *worker_data), \
          (type, master_handler, worker_handler, master_data, worker_data), \
 {
-    mln_ipc_set_t *is;
-    if ((is = (mln_ipc_set_t *)malloc(sizeof(mln_ipc_set_t))) == NULL)
-        return -1;
+    mln_ipc_cb_t *cb;
+    if ((cb = (mln_ipc_cb_t *)malloc(sizeof(mln_ipc_cb_t))) == NULL)
+        return NULL;
 
-    is->master_handler = master_handler;
-    is->worker_handler = worker_handler;
-    is->master_data = master_data;
-    is->worker_data = worker_data;
-    is->type = type;
+    cb->master_handler = master_handler;
+    cb->worker_handler = worker_handler;
+    cb->master_data = master_data;
+    cb->worker_data = worker_data;
+    cb->type = type;
 
-    if (ipcs == NULL) {
-        is->next = NULL;
-        ipcs = is;
-    } else {
-        is->next = ipcs;
-        ipcs = is;
-    }
+    mln_ipc_chain_add(&ipcs_head, &ipcs_tail, cb);
 
-    return 0;
+    return cb;
 })
 
+MLN_FUNC_VOID(, void, mln_ipc_handler_unregister, (mln_ipc_cb_t *cb), (cb), {
+    if (cb == NULL) return;
 
-MLN_FUNC(, int, mln_set_ipc_handlers, (void), (), {
-    mln_ipc_set_t *is;
-    for (is = ipcs; is != NULL; is = is->next) {
-        if (mln_fork_master_ipc_handler_set(is->type, is->master_handler, is->master_data) < 0)
+    mln_ipc_chain_del(&ipcs_head, &ipcs_tail, cb);
+    free(cb);
+})
+
+MLN_FUNC(, int, mln_ipc_set_process_handlers, (void), (), {
+    mln_ipc_cb_t *cb;
+    for (cb = ipcs_head; cb != NULL; cb = cb->next) {
+        if (mln_fork_master_ipc_handler_set(cb->type, cb->master_handler, cb->master_data) < 0)
             return -1;
-        if (mln_fork_worker_ipc_handler_set(is->type, is->worker_handler, is->worker_data) < 0)
+        if (mln_fork_worker_ipc_handler_set(cb->type, cb->worker_handler, cb->worker_data) < 0)
             return -1;
     }
     return 0;

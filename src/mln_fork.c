@@ -106,7 +106,7 @@ MLN_FUNC(, int, mln_fork_prepare, (void), (), {
         mln_tcp_conn_destroy(&master_conn);
         return -1;
     }
-    if (mln_set_ipc_handlers() < 0) {
+    if (mln_ipc_set_process_handlers() < 0) {
         mln_log(error, "No memory.\n");
         mln_rbtree_free(worker_ipc_tree);
         worker_ipc_tree = NULL;

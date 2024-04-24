@@ -3346,9 +3346,9 @@ Their definitions can be found in melon/include/mln_types.h.
 
    Now, the next essential is IPC. How to implement IPC?
    We can register our IPC handlers through `mln_ipc_handler_register`. Its prototype is:
-       int mln_ipc_handler_register(mln_u32_t type,
-                                    ipc_handler master_handler, ipc_handler worker_handler,
-                                    void *master_data, void *worker_data);
+       mln_ipc_cb_t *mln_ipc_handler_register(mln_u32_t type,
+                                              ipc_handler master_handler, ipc_handler worker_handler,
+                                              void *master_data, void *worker_data);
    All registered handlers will be loaded when multi-process framework start.
    `master_handler` is the main process handler, `master_data` is the main process user data.
    `worker_handler` is the worker process handler, `master_data` is the worker process user data.

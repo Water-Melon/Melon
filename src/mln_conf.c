@@ -6,7 +6,6 @@
 #include "mln_event.h"
 #include "mln_conf.h"
 #include "mln_log.h"
-#include "mln_ipc.h"
 #include "mln_func.h"
 #include "mln_path.h"
 #include <stdlib.h>
@@ -382,6 +381,7 @@ MLN_FUNC(static inline, mln_conf_t *, mln_conf_init, (void), (), {
         mln_conf_destroy(cf);
         return NULL;
     }
+    cf->cb = NULL;
     return cf;
 })
 
@@ -392,6 +392,7 @@ MLN_FUNC_VOID(static, void, mln_conf_destroy, (mln_conf_t *cf), (cf), {
         mln_rbtree_free(cf->domain);
         cf->domain = NULL;
     }
+    if (cf->cb != NULL) mln_ipc_handler_unregister(cf->cb);
     free(cf);
 })
 
@@ -847,7 +848,7 @@ MLN_FUNC(, int, mln_conf_load, (void), (), {
         }
     }
 #if !defined(__WIN32__)
-    if (mln_ipc_handler_register(M_IPC_TYPE_CONF, mln_conf_reload_master_handler, mln_conf_reload_worker_handler, NULL, NULL) < 0) {
+    if ((g_conf->cb = mln_ipc_handler_register(M_IPC_TYPE_CONF, mln_conf_reload_master_handler, mln_conf_reload_worker_handler, NULL, NULL)) == NULL) {
         mln_conf_destroy(g_conf);
         g_conf = NULL;
         return -1;

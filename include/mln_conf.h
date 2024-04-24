@@ -10,6 +10,7 @@
 #include "mln_types.h"
 #include "mln_rbtree.h"
 #include "mln_string.h"
+#include "mln_ipc.h"
 
 #define M_IPC_TYPE_CONF 1
 
@@ -70,6 +71,7 @@ struct mln_conf_s {
     mln_conf_domain_cb_t           search;
     mln_conf_domain_cb_t           insert;
     mln_conf_domain_cb_t           remove;
+    mln_ipc_cb_t                  *cb;
 };
 
 typedef struct mln_conf_hook_s {

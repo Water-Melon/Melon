@@ -25,7 +25,7 @@ Melon支持多进程框架，那么自然主子进程之间会涉及通信问题
 开发者可以在框架初始化前，调用
 
 ```c
-int mln_ipc_handler_register(mln_u32_t type, ipc_handler master_handler, ipc_handler worker_handler, void *master_data, void *worker_data);
+mln_ipc_cb_t *mln_ipc_handler_register(mln_u32_t type, ipc_handler master_handler, ipc_handler worker_handler, void *master_data, void *worker_data);
 ```
 
 来注册自己的IPC消息处理函数，其中：
@@ -49,6 +49,16 @@ int mln_ipc_handler_register(mln_u32_t type, ipc_handler master_handler, ipc_han
 - `master_data`为主进程处理函数配套的用户自定义数据，若不需要则可传入`NULL`。
 
 - `worker_data`为子进程处理函数配套的用户自定义数据，若不需要则可传入`NULL`。
+
+- 返回值：`mln_ipc_cb_t *`指针，记录了IPC消息处理函数及消息类型等信息。
+
+
+还可以调用
+
+```c
+void mln_ipc_handler_unregister(mln_ipc_cb_t *cb);
+```
+来反注册消息处理函数。
 
 
 

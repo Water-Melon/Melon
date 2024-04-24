@@ -25,7 +25,7 @@ Melon supports a multi-process framework, so naturally there will be communicati
 Developers can call before the framework is initialized
 
 ```c
-int mln_ipc_handler_register(mln_u32_t type, ipc_handler master_handler, ipc_handler worker_handler, void *master_data, void *worker_data);
+mln_ipc_cb_t *mln_ipc_handler_register(mln_u32_t type, ipc_handler master_handler, ipc_handler worker_handler, void *master_data, void *worker_data);
 ```
 
 To register your own IPC message processing function, which:
@@ -50,6 +50,16 @@ To register your own IPC message processing function, which:
 
 - `worker_data` is the user-defined data matching the subprocess processing function. If not needed, `NULL` can be passed in.
 
+- Return value: A `mln_ipc_cb_t *` pointer, which records information such as the IPC message processing function and message type.
+
+
+We can also call
+
+```c
+void mln_ipc_handler_unregister(mln_ipc_cb_t *cb);
+```
+
+to unregister the IPC callback handlers.
 
 
 Regarding the `mln_fork_t` type:
