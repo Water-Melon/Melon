@@ -133,7 +133,7 @@ MLN_FUNC(, int, mln_http_parse, (mln_http_t *http, mln_chain_t **in), (http, in)
     }
     if (ret == M_HTTP_RET_OK || ret == M_HTTP_RET_ERROR) return ret;
 
-    ret = handler(http, in, NULL);
+    if (handler != NULL) ret = handler(http, in, NULL);
     if (ret == M_HTTP_RET_DONE) {
         mln_http_done_set(http, 0);
     }

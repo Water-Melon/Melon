@@ -28,7 +28,7 @@ mln_http_t *mln_http_init(mln_tcp_conn_t *connection, void *data, mln_http_handl
 typedef int (*mln_http_handler)(mln_http_t *, mln_chain_t **, mln_chain_t **);
 ```
 
-描述：创建并初始化`mln_http_t`结构。`connection`是TCP结构，内含TCP套接字。`data`为体处理函数的用户自定义数据部分，用于辅助请求或响应体的处理。`body_handler`是体处理函数，该函数会在每次调用`mln_http_parse`或`mln_http_generate`函数时被调用。体处理函数有三个参数，分别为：http结构，用于解析或生成HTTP报文的双向链表的头和尾节点。
+描述：创建并初始化`mln_http_t`结构。`connection`是TCP结构，内含TCP套接字。`data`为体处理函数的用户自定义数据部分，用于辅助请求或响应体的处理。`body_handler`是体处理函数，如果该指针非`NULL`，则该函数会在每次调用`mln_http_parse`或`mln_http_generate`函数时被调用。体处理函数有三个参数，分别为：http结构，用于解析或生成HTTP报文的双向链表的头和尾节点。
 
 返回值：成功则返回`mln_http_t`结构指针，否则返回`NULL`
 

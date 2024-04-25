@@ -28,7 +28,7 @@ mln_http_t *mln_http_init(mln_tcp_conn_t *connection, void *data, mln_http_handl
 typedef int (*mln_http_handler)(mln_http_t *, mln_chain_t **, mln_chain_t **);
 ```
 
-Description: Create and initialize the `mln_http_t` structure. `connection` is a TCP structure, which contains a TCP socket. `data` is the user-defined data part of the body processing function, which is used to assist the processing of the request or response body. `body_handler` is the body handler function, which is called every time the `mln_http_parse` or `mln_http_generate` function is called. The body processing function has three parameters: http structure, the head and tail nodes of the doubly linked list used to parse or generate HTTP packets.
+Description: Create and initialize the `mln_http_t` structure. `connection` is a TCP structure, which contains a TCP socket. `data` is the user-defined data part of the body processing function, which is used to assist the processing of the request or response body. `body_handler` is the body handler function, which is called every time the `mln_http_parse` or `mln_http_generate` function is called if it is not `NULL`. The body processing function has three parameters: http structure, the head and tail nodes of the doubly linked list used to parse or generate HTTP packets.
 
 Return value: return `mln_http_t` structure pointer if successful, otherwise return `NULL`
 

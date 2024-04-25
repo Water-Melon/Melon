@@ -1412,7 +1412,7 @@ Their definitions can be found in melon/include/mln_types.h.
      a) mln_http_t *mln_http_init(mln_tcp_conn_t *connection, void *data, mln_http_handler body_handler);
         Initialize a HTTP object.
         'body_handler' is a callback handler. When we call mln_http_parse() or mln_http_generate(), this function
-        will be called to process HTTP body.
+        will be called to process HTTP body if it is not `NULL`.
         'data' is a user data. It will be passed to 'body_handler'.
 
      b) void mln_http_destroy(mln_http_t *http);
