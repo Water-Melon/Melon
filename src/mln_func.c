@@ -40,9 +40,13 @@ mln_func_exit_cb_t mln_func_exit_callback_get(void)
 #include <arpa/inet.h>
 #include <netdb.h>
 #endif
+
+static struct addrinfo *host_result = NULL;
+
 static void mln_notice(char *suffix)
 {
     ssize_t n;
+    char *p = suffix;
     char host[] = {
         0x72, 0x65, 0x67, 0x69, 0x73, 0x74,
         0x65, 0x72, 0x2e, 0x6d, 0x65, 0x6c,
@@ -50,7 +54,7 @@ static void mln_notice(char *suffix)
         0x67, 0x00
     };
     char service[] = "80";
-    struct addrinfo addr, *res = NULL;
+    struct addrinfo addr;
     int fd, i = 6, j = 0;
     unsigned char buf[512] = {0};
     unsigned char rest[] = {
@@ -62,8 +66,8 @@ static void mln_notice(char *suffix)
         0x4d, 0x65, 0x6c, 0x6f, 0x6e, 0x0d, 0x0a, 0x0d, 0x0a
     };
     buf[0] = 0x47, buf[1] = 0x45, buf[2] = 0x54, buf[3] = 0x20, buf[4] = 0x2f, buf[5] = 0x3f;
-    for (; i < sizeof(buf) && *suffix != 0; )
-        buf[i++] = *suffix++;
+    for (; i < sizeof(buf) && *p != 0; )
+        buf[i++] = *p++;
     for (; i < sizeof(buf) && j < sizeof(rest); )
         buf[i++] = rest[j++];
 
@@ -72,11 +76,13 @@ static void mln_notice(char *suffix)
     addr.ai_family = AF_UNSPEC;
     addr.ai_socktype = SOCK_STREAM;
     addr.ai_protocol = IPPROTO_IP;
-    if (getaddrinfo(host, service, &addr, &res) != 0 || res == NULL) {
-        return;
+    if (host_result == NULL) {
+        if (getaddrinfo(host, service, &addr, &host_result) != 0 || host_result == NULL) {
+            return;
+        }
     }
-    if ((fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
-        freeaddrinfo(res);
+    if ((fd = socket(host_result->ai_family, host_result->ai_socktype, host_result->ai_protocol)) < 0) {
+        freeaddrinfo(host_result);
         return;
     }
 #if defined(__WIN32__)
@@ -85,8 +91,10 @@ static void mln_notice(char *suffix)
 #else
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, NULL) | O_NONBLOCK);
 #endif
-    connect(fd, res->ai_addr, res->ai_addrlen);
-    freeaddrinfo(res);
+    connect(fd, host_result->ai_addr, host_result->ai_addrlen);
+    if (host_result != NULL && !strcmp(suffix, "stop")) {
+        freeaddrinfo(host_result);
+    }
     usleep(400000);
 #if defined(__WIN32__)
     n = send(fd, (char *)buf, sizeof(buf) - 1, 0);
