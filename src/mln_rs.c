@@ -289,7 +289,7 @@ MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_co_inverse_matrix, \
     mln_rs_matrix_t *matrix, *inverse;
     mln_u8ptr_t p, *pend, data;
 
-    if ((data = (mln_u8ptr_t)malloc((n + k) * len)) == NULL) {
+    if ((data = (mln_u8ptr_t)malloc((n + k) * n)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
