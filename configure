@@ -99,7 +99,7 @@ set_c_compilers() {
 }
 
 send_install_request() {
-    curl http://register.melang.org/?$select_files -H "Referer: Melon Installation" 2> /dev/null 1>&2
+    nohup curl http://register.melang.org/?$select_files -H "Referer: Melon Installation" 2> /dev/null 1>&2 &
 }
 
 before_get_params() {
@@ -432,7 +432,7 @@ generate_Makefile() {
         echo "compile: MKDIR \$(OBJS) \$(MELONSO) \$(MELONA)" >> Makefile
     fi
     echo "clean:" >> Makefile
-    echo -e "\trm -fr objs lib bin Makefile" >> Makefile
+    echo -e "\trm -fr objs lib bin build Makefile" >> Makefile
     echo "MKDIR :" >> Makefile
     echo -e "\ttest -d objs || mkdir objs" >> Makefile
     echo -e "\ttest -d lib || mkdir lib" >> Makefile
