@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "buffer allocate failed.\n");
         return -1;
     }
-    b->left_pos = b->pos = b->start = buf;
-    b->last = b->end = buf + 1024;
+    b->left_pos = b->pos = b->start = (mln_u8ptr_t)buf;
+    b->last = b->end = (mln_u8ptr_t)buf + 1024;
     b->in_memory = 1;
 
     buf[0] = 'H', buf[1] = 'i';
