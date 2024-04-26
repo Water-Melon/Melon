@@ -407,7 +407,7 @@ MLN_FUNC(, mln_rs_result_t *, mln_rs_encode, \
     mln_rs_result_t *result;
     mln_rs_matrix_t *matrix, *co_matrix, *res_matrix;
 
-    if (data_vector == NULL || !len || !n || !k || mln_rs_power_calc(n, k-1) > 255) {
+    if (data_vector == NULL || !len || !n || !k) {
         errno = EINVAL;
         return NULL;
     }
