@@ -27,11 +27,12 @@ The MLN_FUNC macro will generate special function code only when the macro MLN_F
 ```c
 void mln_func_entry_callback_set(mln_func_entry_cb_t cb);
 
-typedef int (*mln_func_entry_cb_t)(const char *file, const char *func, int line, ...);
+typedef int (*mln_func_entry_cb_t)(void *fptr, const char *file, const char *func, int line, ...);
 ```
 
 Description: Set the callback function for the function entry. Description of the parameters and return value of `mln_func_entry_cb_t`:
 
+- `fptr` is a function pointer, which points to the function corresponding to `func`.
 - `file`: The file where the function is located.
 - `func`: The name of the function.
 - `line`: The line number in the file.
@@ -59,11 +60,12 @@ Return value: Pointer to the entry function
 ```c
 void mln_func_exit_callback_set(mln_func_exit_cb_t cb);
 
-typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line, void *ret, ...);
+typedef void (*mln_func_exit_cb_t)(void *fptr, const char *file, const char *func, int line, void *ret, ...);
 ```
 
 Description: Set the callback function for the function exit. Description of the parameters of `mln_func_exit_cb_t`:
 
+- `fptr` is a function pointer, which points to the function corresponding to `func`.
 - `file`: The file where the function is located.
 - `func`: The name of the function.
 - `line`: The line number in the file.
@@ -204,7 +206,7 @@ MLN_FUNC(static, int, bar, (void), (), {
     return 0;
 })
 
-static int my_entry(const char *file, const char *func, int line, ...)
+static int my_entry(void *fptr, const char *file, const char *func, int line, ...)
 {
     if (!strcmp(func, "bar")) {
         printf("%s won't be executed\n", func);
@@ -226,7 +228,7 @@ static int my_entry(const char *file, const char *func, int line, ...)
     return 0;
 }
 
-static void my_exit(const char *file, const char *func, int line, void *ret, ...)
+static void my_exit(void *fptr, const char *file, const char *func, int line, void *ret, ...)
 {
     if (!strcmp(func, "bar"))
         return;

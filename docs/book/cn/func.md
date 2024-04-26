@@ -27,11 +27,12 @@
 ```c
 void mln_func_entry_callback_set(mln_func_entry_cb_t cb);
 
-typedef int (*mln_func_entry_cb_t)(const char *file, const char *func, int line, ...);
+typedef int (*mln_func_entry_cb_t)(void *fptr, const char *file, const char *func, int line, ...);
 ```
 
 描述：设置函数入口的回调函数。`mln_func_entry_cb_t`的参数和返回值含义：
 
+- `fptr` 函数指针，也就是`func`对应的函数
 - `file` 函数所在文件
 - `func` 函数名
 - `line` 所在文件行数
@@ -59,11 +60,12 @@ typedef int (*mln_func_entry_cb_t)(const char *file, const char *func, int line,
 ```c
 void mln_func_exit_callback_set(mln_func_exit_cb_t cb);
 
-typedef void (*mln_func_exit_cb_t)(const char *file, const char *func, int line, void *ret, ...);
+typedef void (*mln_func_exit_cb_t)(void *fptr, const char *file, const char *func, int line, void *ret, ...);
 ```
 
 描述：设置函数出口的回调函数。`mln_func_exit_cb_t`的参数含义：
 
+- `fptr` 函数指针，也就是`func`对应的函数
 - `file` 函数所在文件
 - `func` 函数名
 - `line` 所在文件行数
@@ -201,7 +203,7 @@ MLN_FUNC(static, int, bar, (void), (), {
     return 0;
 })
 
-static int my_entry(const char *file, const char *func, int line, ...)
+static int my_entry(void *fptr, const char *file, const char *func, int line, ...)
 {
     if (!strcmp(func, "bar")) {
         printf("%s won't be executed\n", func);
@@ -223,7 +225,7 @@ static int my_entry(const char *file, const char *func, int line, ...)
     return 0;
 }
 
-static void my_exit(const char *file, const char *func, int line, void *ret, ...)
+static void my_exit(void *fptr, const char *file, const char *func, int line, void *ret, ...)
 {
     if (!strcmp(func, "bar"))
         return;

@@ -145,7 +145,7 @@ void mln_span_free(mln_span_t *s)
     free(s);
 }
 
-int mln_span_entry(const char *file, const char *func, int line, ...)
+int mln_span_entry(void *fptr, const char *file, const char *func, int line, ...)
 {
     mln_span_t *span;
 
@@ -168,7 +168,7 @@ int mln_span_entry(const char *file, const char *func, int line, ...)
     return 0;
 }
 
-void mln_span_exit(const char *file, const char *func, int line, void *ret, ...)
+void mln_span_exit(void *fptr, const char *file, const char *func, int line, void *ret, ...)
 {
 #if defined(__WIN32__)
     if (mln_span_registered_thread != GetCurrentThreadId()) return;
