@@ -55,7 +55,7 @@ void mln_lang_free(mln_lang_t *lang);
 #### mln_lang_job_new
 
 ```c
-mln_lang_ctx_t *mln_lang_job_new(mln_lang_t *lang, mln_u32_t type, mln_string_t *data, void *udata, mln_lang_return_handler handler);
+mln_lang_ctx_t *mln_lang_job_new(mln_lang_t *lang, mln_string_t *alias, mln_u32_t type, mln_string_t *data, void *udata, mln_lang_return_handler handler);
 
 typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 ```
@@ -63,6 +63,7 @@ typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 描述：创建脚本任务。参数含义如下：
 
 - `lang` 脚本管理结构，由`mln_lang_new`创建而来。本任务创建好后将由该结构进行管理。
+- `alias` 脚本任务的别名，若不需要可置`NULL`。
 - `type`脚本任务代码的类型：`M_INPUT_T_FILE`（文件）、`M_INPUT_T_BUF`（字符串）。
 - `data` 根据`type`不同，本参数含义不同。文件时本参数为文件路径；字符串时本参数为代码字符串。
 - `udata` 用户自定义结构，一般用于第三方库函数实现以及`handler`内获取任务返回值之用。

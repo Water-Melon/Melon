@@ -55,7 +55,7 @@ Return value: none
 #### mln_lang_job_new
 
 ```c
-mln_lang_ctx_t *mln_lang_job_new(mln_lang_t *lang, mln_u32_t type, mln_string_t *data, void *udata, mln_lang_return_handler handler);
+mln_lang_ctx_t *mln_lang_job_new(mln_lang_t *lang, mln_string_t *alias, mln_u32_t type, mln_string_t *data, void *udata, mln_lang_return_handler handler);
 
 typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 ```
@@ -63,6 +63,7 @@ typedef void (*mln_lang_return_handler)(mln_lang_ctx_t *);
 Description: Create a script task. The meaning of the parameters is as follows:
 
 - `lang` script management structure, created by `mln_lang_new`. Once created, this task will be managed by this structure.
+- `alias`: An alias for the script task. Set to `NULL` if not needed.
 - `type` Type of script task code: `M_INPUT_T_FILE` (file), `M_INPUT_T_BUF` (string).
 - `data` This parameter has different meanings depending on the `type`. When it is a file, this parameter is the file path; when it is a string, this parameter is a code string.
 - `udata` user-defined structure, generally used for third-party library function implementation and `handler` to obtain the task return value.
