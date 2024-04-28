@@ -595,6 +595,8 @@ MLN_FUNC(, mln_lang_t *, mln_lang_new, \
 MLN_FUNC_VOID(, void, mln_lang_free, (mln_lang_t *lang), (lang), {
     if (lang == NULL) return;
 
+    mln_alloc_t *pool = lang->pool;
+
     pthread_mutex_lock(&lang->lock);
 
     if (lang->wait) {
@@ -623,7 +625,8 @@ MLN_FUNC_VOID(, void, mln_lang_free, (mln_lang_t *lang), (lang), {
     pthread_mutex_unlock(&lang->lock);
     pthread_mutex_destroy(&lang->lock);
 
-    mln_alloc_destroy(lang->pool);
+    mln_alloc_free(lang);
+    mln_alloc_destroy(pool);
 })
 
 MLN_FUNC_VOID(static, void, mln_lang_run_handler, \
