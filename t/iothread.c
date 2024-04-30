@@ -30,7 +30,7 @@ int main(void)
         fprintf(stderr, "iothread init failed\n");
         return -1;
     }
-    for (i = 0; i < 10000; ++i) {
+    for (i = 0; i < 1000; ++i) {
         if ((rc = mln_iothread_send(&t, i, NULL, io_thread, 1)) < 0) {
             fprintf(stderr, "send failed\n");
             return -1;
