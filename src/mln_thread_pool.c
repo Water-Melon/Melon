@@ -2,6 +2,9 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+
+#if !defined(MSVC)
+
 #include <time.h>
 #include <stdlib.h>
 #include "mln_thread_pool.h"
@@ -188,7 +191,7 @@ MLN_FUNC(static, mln_thread_pool_t *, mln_thread_pool_new, \
     tp->process_handler = tpattr->child_process_handler;
     tp->free_handler = tpattr->free_handler;
     tp->max = tpattr->max;
-#ifdef MLN_USE_UNIX98
+#if defined(MLN_USE_UNIX98) && !defined(MSYS2)
     if (tpattr->concurrency) pthread_setconcurrency(tpattr->concurrency);
 #endif
 #if !defined(__WIN32__)
@@ -429,4 +432,6 @@ MLN_CHAIN_FUNC_DEFINE(static inline, \
                       mln_thread_pool_member_t, \
                       prev, \
                       next);
+
+#endif
 

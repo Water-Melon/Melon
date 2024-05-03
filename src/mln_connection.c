@@ -2,16 +2,22 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+#include "mln_connection.h"
 #include <stdio.h>
 #include <stdlib.h>
+#if !defined(MSVC)
 #include <unistd.h>
+#endif
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#if defined(MSVC)
+#include "mln_utils.h"
+#else
 #include <sys/time.h>
+#endif
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "mln_connection.h"
 #include "mln_utils.h"
 #include "mln_file.h"
 #include "mln_func.h"
@@ -35,13 +41,14 @@ mln_tcp_conn_recv_chain_file(int sockfd, \
                              mln_buf_t *last);
 static inline int
 mln_tcp_conn_recv_chain_mem(int sockfd, mln_alloc_t *pool, mln_buf_t *b);
-static inline ssize_t
+static inline int
 mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc);
-static inline ssize_t
+static inline int
 mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc);
 
 
-MLN_FUNC(static inline, int, mln_fd_is_nonblock, (int fd), (fd), {
+static inline int mln_fd_is_nonblock(int fd)
+{
 #if defined(__WIN32__)
     return 0; /* no useful API for getting this flag from socket */
 #else
@@ -49,7 +56,7 @@ MLN_FUNC(static inline, int, mln_fd_is_nonblock, (int fd), (fd), {
     ASSERT(flg >= 0);
     return flg & O_NONBLOCK;
 #endif
-})
+}
 
 
 /*
@@ -209,7 +216,7 @@ MLN_FUNC(, mln_chain_t *, mln_tcp_conn_tail, (mln_tcp_conn_t *tc, int type), (tc
 })
 
 MLN_FUNC(, int, mln_tcp_conn_send, (mln_tcp_conn_t *tc), (tc), {
-    ssize_t n;
+    int n;
 
     if (tc->snd_head == NULL) return M_C_NOTYET;
 
@@ -242,10 +249,10 @@ fi:
 
 
 #if defined(MLN_WRITEV)
-MLN_FUNC(static inline, ssize_t, mln_tcp_conn_send_chain_memory, (mln_tcp_conn_t *tc), (tc), {
+MLN_FUNC(static inline, int, mln_tcp_conn_send_chain_memory, (mln_tcp_conn_t *tc), (tc), {
     mln_chain_t *c;
     mln_buf_t *b;
-    ssize_t n, is_done = 0;
+    int n, is_done = 0;
     register mln_size_t buf_left_size;
     int proc_vec, nvec = 256;
     struct iovec vector[256];
@@ -359,13 +366,14 @@ blk:
     return is_done;
 })
 #else
-MLN_FUNC(static inline, ssize_t, mln_tcp_conn_send_chain_memory, (mln_tcp_conn_t *tc), (tc), {
+static inline int mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc)
+{
     mln_u8_t buf[8192], *p;
     mln_chain_t *c;
     mln_buf_t *b;
     mln_size_t left_size;
     register mln_size_t buf_left_size;
-    ssize_t n, is_done = 0;
+    int n, is_done = 0;
 
     if (mln_fd_is_nonblock(tc->sockfd)) {
         while (1) {
@@ -489,14 +497,14 @@ blk:
     }
 
     return is_done;
-})
+}
 #endif
 
 
 #if defined(MLN_SENDFILE)
-MLN_FUNC(static inline, ssize_t, mln_tcp_conn_send_chain_file, (mln_tcp_conn_t *tc), (tc), {
+MLN_FUNC(static inline, int, mln_tcp_conn_send_chain_file, (mln_tcp_conn_t *tc), (tc), {
     int sockfd = tc->sockfd;
-    ssize_t n, is_done = 0;
+    int n, is_done = 0;
     mln_chain_t *c;
     mln_buf_t *b;
     mln_size_t buf_left_size;
@@ -565,9 +573,10 @@ blk:
     return is_done;
 })
 #else
-MLN_FUNC(static inline, ssize_t, mln_tcp_conn_send_chain_file, (mln_tcp_conn_t *tc), (tc), {
+static inline int mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc)
+{
     int sockfd = tc->sockfd;
-    ssize_t n;
+    int n;
     mln_buf_t *b;
     mln_chain_t *c;
     mln_u8_t buf[4096];
@@ -668,7 +677,7 @@ blk_snd:
     mln_tcp_conn_append(tc, c, M_C_SENT);
 
     return b->last_in_chain == 0? 0: 1;
-})
+}
 #endif
 
 MLN_FUNC(static inline, mln_chain_t *, mln_tcp_conn_pop_inline, \
@@ -772,9 +781,7 @@ MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain, \
     return n;
 })
 
-MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain_file, \
-         (int sockfd, mln_alloc_t *pool, mln_buf_t *b, mln_buf_t *last), \
-         (sockfd, pool, b, last), \
+static inline int mln_tcp_conn_recv_chain_file(int sockfd, mln_alloc_t *pool, mln_buf_t *b, mln_buf_t *last)
 {
     int n;
     mln_u8_t buf[1024];
@@ -805,10 +812,9 @@ MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain_file, \
     }
 
     return n;
-})
+}
 
-MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain_mem, \
-         (int sockfd, mln_alloc_t *pool, mln_buf_t *b), (sockfd, pool, b), \
+static inline int mln_tcp_conn_recv_chain_mem(int sockfd, mln_alloc_t *pool, mln_buf_t *b)
 {
     mln_u8ptr_t buf;
     int n;
@@ -835,5 +841,5 @@ MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain_mem, \
     b->last_buf = 1;
 
     return n;
-})
+}
 

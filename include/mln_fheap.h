@@ -202,6 +202,7 @@ MLN_FUNC(static inline, mln_fheap_node_t *, mln_fheap_remove_child, \
     return ret;
 })
 
+#if !defined(MSVC)
 #define mln_fheap_inline_insert(fh, fn, compare) ({\
     fheap_cmp cmp = (fheap_cmp)(compare);\
     if (cmp == NULL) cmp = (fh)->cmp;\
@@ -301,7 +302,9 @@ MLN_FUNC(static inline, mln_fheap_node_t *, mln_fheap_remove_child, \
     (fn)->mark = FHEAP_FALSE;\
     (fn);\
 })
-
+#else
+extern mln_fheap_node_t *mln_fheap_node_init(mln_fheap_node_t *fn, void *k);
+#endif
 
 /*
  * external

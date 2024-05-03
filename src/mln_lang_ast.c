@@ -732,8 +732,7 @@ MLN_FUNC(static, mln_lang_struct_t *, mln_lang_sglq_handler, \
     return mln_lang_new(lex, LANG_TK_STRING);
 })
 
-MLN_FUNC(static inline, int, mln_get_char, \
-         (mln_lex_t *lex, char c), (lex, c), \
+static inline int mln_get_char(mln_lex_t *lex, char c)
 {
     if (c == '\\') {
         char n;
@@ -763,9 +762,11 @@ MLN_FUNC(static inline, int, mln_get_char, \
             case 'r':
                 if (mln_lex_putchar(lex, '\r') == MLN_ERR) return -1;
                 break;
+#if !defined(MSVC)
             case 'e':
                 if (mln_lex_putchar(lex, '\e') == MLN_ERR) return -1;
                 break;
+#endif
             case 'v':
                 if (mln_lex_putchar(lex, '\v') == MLN_ERR) return -1;
                 break;
@@ -780,7 +781,7 @@ MLN_FUNC(static inline, int, mln_get_char, \
         if (mln_lex_putchar(lex, c) == MLN_ERR) return -1;
     }
     return 0;
-})
+}
 
 MLN_FUNC(static, mln_lang_struct_t *, mln_lang_dblq_handler, \
          (mln_lex_t *lex, void *data), (lex, data), \
@@ -3538,9 +3539,7 @@ MLN_FUNC(static, int, mln_lang_semantic_factorid, \
     return 0;
 })
 
-MLN_FUNC(static, int, mln_lang_semantic_factorint, \
-         (mln_factor_t *left, mln_factor_t **right, void *data), \
-         (left, right, data), \
+static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right, void *data)
 {
     mln_alloc_t *pool = (mln_alloc_t *)data;
     mln_lang_struct_t *ls = (mln_lang_struct_t *)(right[0]->data);
@@ -3586,7 +3585,7 @@ MLN_FUNC(static, int, mln_lang_semantic_factorint, \
     left->data = lf;
     left->nonterm_free_handler = mln_lang_factor_free;
     return 0;
-})
+}
 
 MLN_FUNC(static, int, mln_lang_semantic_factorreal, \
          (mln_factor_t *left, mln_factor_t **right, void *data), \
@@ -3697,7 +3696,8 @@ MLN_FUNC(static, int, mln_lang_semantic_elemnext, \
 /*
  * APIs
  */
-MLN_FUNC(, int, mln_lang_ast_file_open, (mln_string_t *file_path), (file_path), {
+int mln_lang_ast_file_open(mln_string_t *file_path)
+{
     int fd, n;
     size_t len = file_path->len >= 1024? 1023: file_path->len;
     char path[1024], *melang_path = NULL, tmp_path[1024];
@@ -3711,7 +3711,11 @@ MLN_FUNC(, int, mln_lang_ast_file_open, (mln_string_t *file_path), (file_path), 
 #endif
         fd = open(path, O_RDONLY);
     } else {
+#if defined(MSVC)
+        if (!_access(path, 0)) {
+#else
         if (!access(path, F_OK)) {
+#endif
             fd = open(path, O_RDONLY);
         } else if ((melang_path = getenv((char *)(mln_lang_env.data))) != NULL) {
             char *end = strchr(melang_path, ';');
@@ -3720,7 +3724,11 @@ MLN_FUNC(, int, mln_lang_ast_file_open, (mln_string_t *file_path), (file_path), 
                 *end = 0;
                 n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
                 tmp_path[n] = 0;
+#if defined(MSVC)
+                if (!_access(tmp_path, 0)) {
+#else
                 if (!access(tmp_path, F_OK)) {
+#endif
                     fd = open(tmp_path, O_RDONLY);
                     found = 1;
                     break;
@@ -3746,7 +3754,7 @@ goon:
     }
 
     return fd;
-})
+}
 
 MLN_FUNC(, void *, mln_lang_ast_parser_generate, (void), (), {
     return mln_lang_parser_generate(prod_tbl, sizeof(prod_tbl)/sizeof(mln_production_t), &mln_lang_env);

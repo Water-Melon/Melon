@@ -2,7 +2,6 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#include "mln_types.h"
 #if defined(__WIN32__)
 #include <stdio.h>
 #include <winsock2.h>
@@ -43,6 +42,8 @@ int socketpair(int domain, int type, int protocol, int sv[2])
     return pipe(sv);
 }
 #endif
+
+#include "mln_types.h"
 
 
 #if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)
@@ -112,3 +113,80 @@ void usleep(unsigned long usec)
     nanosleep(&req, NULL);
 }
 #endif
+
+#if defined(MSVC)
+#define EPOCH 116444736000000000ULL
+int gettimeofday(struct timeval *tv, void *tz)
+{
+    FILETIME ft;
+    mln_u64_t tmpres = 0;
+
+    if (tv != NULL) {
+        GetSystemTimeAsFileTime(&ft);
+        tmpres |= ft.dwHighDateTime;
+        tmpres <<= 32;
+        tmpres |= ft.dwLowDateTime;
+        tmpres /= 10;
+        tmpres -= EPOCH;
+        tv->tv_sec = tmpres / 1000000;
+        tv->tv_usec = tmpres % 1000000;
+    }
+
+    return 0;
+}
+
+DIR* opendir(const char* path)
+{
+    DIR* dir = (DIR*)malloc(sizeof(DIR));
+    if (dir == NULL) {
+        return NULL;
+    }
+
+    char searchPath[MAX_PATH];
+    snprintf(searchPath, MAX_PATH, "%s\\*", path);
+    dir->hFind = FindFirstFileA(searchPath, &dir->findFileData);
+    if (dir->hFind == INVALID_HANDLE_VALUE) {
+        free(dir);
+        return NULL;
+    }
+
+    dir->path = _strdup(path);
+    InitializeCriticalSection(&dir->lock);
+    return dir;
+}
+
+struct dirent* readdir(DIR* dirp)
+{
+    if (dirp == NULL || dirp->hFind == INVALID_HANDLE_VALUE) {
+        return NULL;
+    }
+
+    EnterCriticalSection(&dirp->lock);
+    static struct dirent entry;
+    if (FindNextFileA(dirp->hFind, &dirp->findFileData) != 0) {
+        strncpy(entry.d_name, dirp->findFileData.cFileName, sizeof(entry.d_name));
+        entry.d_name[sizeof(entry.d_name) - 1] = '\0';
+        LeaveCriticalSection(&dirp->lock);
+        return &entry;
+    }
+
+    LeaveCriticalSection(&dirp->lock);
+    return NULL;
+}
+
+int closedir(DIR* dirp)
+{
+    if (dirp == NULL || dirp->hFind == INVALID_HANDLE_VALUE) {
+        return -1;
+    }
+
+    EnterCriticalSection(&dirp->lock);
+    FindClose(dirp->hFind);
+    free(dirp->path);
+    LeaveCriticalSection(&dirp->lock);
+    DeleteCriticalSection(&dirp->lock);
+    free(dirp);
+    return 0;
+}
+#endif
+

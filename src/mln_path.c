@@ -6,6 +6,13 @@
 #include "mln_path.h"
 #include "mln_func.h"
 
+#if defined(MSVC)
+#define MLN_ROOT "~/libmelon/"
+#define MLN_LANG_LIB "~/libmelon/lib/"
+#define MLN_LANG_DYLIB "~/libmelon/dylib/"
+#define MLN_NULL "~/libmelon/null"
+#endif
+
 static char install_path[] = MLN_ROOT;
 
 static char conf_path[] = MLN_ROOT"/conf/melon.conf";

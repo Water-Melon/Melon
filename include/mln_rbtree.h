@@ -143,6 +143,7 @@ MLN_FUNC_VOID(static inline, void, rbtree_insert_fixup, \
     t->root->color = M_RB_BLACK;
 })
 
+#if !defined(MSVC)
 /*Insert*/
 #define mln_rbtree_inline_insert(t, n, compare) ({\
     mln_rbtree_t *tree = (t);\
@@ -246,6 +247,7 @@ MLN_FUNC_VOID(static inline, void, rbtree_insert_fixup, \
     (n)->nofree = 1;\
     (n);\
 })
+#endif
 
 
 #define mln_rbtree_node_num(ptree)            ((ptree)->nr_node)
@@ -254,6 +256,9 @@ MLN_FUNC_VOID(static inline, void, rbtree_insert_fixup, \
 #define mln_rbtree_node_data_set(node,ud)     ((node)->data = (ud))
 #define mln_rbtree_root(ptree)                ((ptree)->root)
 
+#if defined(MSVC)
+extern mln_rbtree_node_t *mln_rbtree_node_init(mln_rbtree_node_t *n, void *data);
+#endif
 extern mln_rbtree_t *mln_rbtree_new(struct mln_rbtree_attr *attr);
 extern void mln_rbtree_free(mln_rbtree_t *t);
 extern void mln_rbtree_insert(mln_rbtree_t *t, mln_rbtree_node_t *node) __NONNULL2(1,2);

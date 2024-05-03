@@ -2,6 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+#if !defined(MSVC)
 #include "mln_iothread.h"
 #include <string.h>
 #include <stdio.h>
@@ -215,3 +216,6 @@ MLN_FUNC_VOID(static inline, void, mln_iothread_fd_nonblock_set, (int fd), (fd),
     fcntl(fd, F_SETFL, flg | O_NONBLOCK);
 #endif
 })
+
+#endif
+

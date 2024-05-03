@@ -10,7 +10,9 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#if !defined(MSVC)
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <sys/types.h>
 #include <signal.h>
@@ -54,7 +56,8 @@ MLN_FUNC(, int, mln_sys_limit_modify, (void), (), {
     return mln_sys_nofile_modify();
 })
 
-MLN_FUNC(static, int, mln_sys_core_modify, (void), (), {
+static int mln_sys_core_modify(void)
+{
 #ifdef RLIMIT_CORE
     rlim_t core_file_size = 0;
 
@@ -94,9 +97,10 @@ MLN_FUNC(static, int, mln_sys_core_modify, (void), (), {
     }
 #endif
     return 0;
-})
+}
 
-MLN_FUNC(static, int, mln_sys_nofile_modify, (void), (), {
+static int mln_sys_nofile_modify(void)
+{
 #ifdef RLIMIT_NOFILE
     rlim_t nofile = 0;
 
@@ -136,7 +140,7 @@ MLN_FUNC(static, int, mln_sys_nofile_modify, (void), (), {
     }
 #endif
     return 0;
-})
+}
 
 #if !defined(__WIN32__)
 MLN_FUNC(, int, mln_daemon, (void), (), {

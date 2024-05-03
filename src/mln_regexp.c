@@ -6,7 +6,6 @@
 #include <stdio.h> 
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include "mln_regexp.h"
 #include "mln_func.h"
 

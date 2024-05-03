@@ -9,7 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#if defined(MSVC)
+#include "mln_utils.h"
+#else
 #include <sys/time.h>
+#endif
 #include <math.h>
 #include "mln_bignum.h"
 #include "mln_func.h"
@@ -905,7 +909,8 @@ MLN_FUNC(static inline, int, __mln_bignum_div_word, \
     return 0;
 })
 
-MLN_FUNC_VOID(, void, mln_bignum_dump, (mln_bignum_t *bn), (bn), {
+void mln_bignum_dump(mln_bignum_t *bn)
+{
     fprintf(stderr, "Tag: %s\n", bn->tag==M_BIGNUM_POSITIVE?"+":"-");
     fprintf(stderr, "Length: %u\n", bn->length);
     mln_u32_t i;
@@ -921,7 +926,7 @@ MLN_FUNC_VOID(, void, mln_bignum_dump, (mln_bignum_t *bn), (bn), {
     }
     fprintf(stderr, "\n");
     fflush(stderr);
-})
+}
 
 /*
  * prime
@@ -982,8 +987,7 @@ MLN_FUNC(static inline, mln_u32_t, mln_bignum_witness, \
     return 0;
 })
 
-MLN_FUNC_VOID(static inline, void, mln_bignum_random_prime, \
-              (mln_bignum_t *bn, mln_u32_t bitwidth), (bn, bitwidth), \
+static inline void mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
 {
     struct timeval tv;
     memset(bn, 0, sizeof(mln_bignum_t));
@@ -1033,11 +1037,9 @@ MLN_FUNC_VOID(static inline, void, mln_bignum_random_prime, \
             data[0] |= 1;
         }
     }
-})
+}
 
-MLN_FUNC_VOID(static inline, void, mln_bignum_random_scope, \
-              (mln_bignum_t *bn, mln_u32_t bitwidth, mln_bignum_t *max), \
-              (bn, bitwidth, max), \
+static inline void mln_bignum_random_scope(mln_bignum_t *bn, mln_u32_t bitwidth, mln_bignum_t *max)
 {
     mln_u32_t width;
     struct timeval tv;
@@ -1054,7 +1056,7 @@ lp:
 #endif
     if (width < 2) goto lp;
     mln_bignum_random_prime(bn, width);
-})
+}
 
 MLN_FUNC(, int, mln_bignum_prime, (mln_bignum_t *res, mln_u32_t bitwidth), (res, bitwidth), {
     if (bitwidth > M_BIGNUM_BITS>>1 || bitwidth < 3) return -1;

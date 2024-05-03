@@ -4,13 +4,16 @@
  */
 
 #include <stdio.h>
-#include <sys/time.h>
 #include <stdlib.h>
 #include "mln_websocket.h"
 #include "mln_regexp.h"
 #include "mln_sha.h"
 #include "mln_base64.h"
+#if defined(MSVC)
+#include "mln_utils.h"
+#else
 #include <sys/time.h>
+#endif
 #include "mln_func.h"
 
 static mln_u64_t mln_websocket_hash_calc(mln_hash_t *h, void *key);

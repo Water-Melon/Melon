@@ -7,6 +7,8 @@
 
 #include <stdlib.h>
 
+#if !defined(MSVC)
+
 #define new(type, ...) ({\
     type *_o = (type *)malloc(sizeof(type));\
     if (_o != NULL) {\
@@ -31,6 +33,8 @@
     };\
     typeof(constructor) *type##_constructor = constructor;\
     typeof(destructor) *type##_destructor = destructor;
+
+#endif
 
 #endif
 

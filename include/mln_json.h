@@ -86,6 +86,33 @@ struct mln_json_call_attr {
 #define mln_json_null_type_set(json)             (json)->type = M_JSON_NULL
 
 #define mln_json_init(j)                       mln_json_none_type_set(j)
+#if defined(MSVC)
+#define mln_json_string_init(j, s) do {\
+    mln_json_t *json = (j);\
+    mln_json_string_type_set(json);\
+    json->data.m_j_string = (s);\
+} while (0)
+#define mln_json_number_init(j, n) do {\
+    mln_json_t *json = (j);\
+    mln_json_number_type_set(json);\
+    json->data.m_j_number = (double)(n);\
+} while (0)
+#define mln_json_true_init(j) do {\
+    mln_json_t *json = (j);\
+    mln_json_true_type_set(json);\
+    json->data.m_j_true = 1;\
+} while (0)
+#define mln_json_false_init(j) do {\
+    mln_json_t *json = (j);\
+    mln_json_false_type_set(json);\
+    json->data.m_j_false = 1;\
+} while (0)
+#define mln_json_null_init(j) do {\
+    mln_json_t *json = (j);\
+    mln_json_null_type_set(json);\
+    json->data.m_j_null = NULL;\
+} while (0)
+#else
 #define mln_json_string_init(j, s)             ({\
     mln_json_t *json = (j);\
     mln_json_string_type_set(json);\
@@ -111,14 +138,10 @@ struct mln_json_call_attr {
     mln_json_null_type_set(json);\
     json->data.m_j_null = NULL;\
 })
+#endif
 extern int mln_json_obj_init(mln_json_t *j) __NONNULL1(1);
 extern int mln_json_array_init(mln_json_t *j) __NONNULL1(1);
 extern void mln_json_destroy(mln_json_t *j);
-#define mln_json_reset(j)                      ({\
-    mln_json_t *json = (j);\
-    mln_json_destroy(json);\
-    mln_json_none_type_set((json));\
-})
 extern void mln_json_dump(mln_json_t *j, int n_space, char *prefix);
 extern int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val) __NONNULL3(1,2,3);
 extern mln_json_t *mln_json_obj_search(mln_json_t *j, mln_string_t *key) __NONNULL2(1,2);
@@ -133,7 +156,15 @@ extern mln_string_t *mln_json_encode(mln_json_t *j);
 extern int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data) __NONNULL2(1,2);
 extern int mln_json_generate(mln_json_t *j, char *fmt, ...) __NONNULL2(1,2);
 extern int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *data) __NONNULL2(1,2);
-
+#if defined(MSVC)
+extern void mln_json_reset(mln_json_t *j);
+extern int mln_json_array_iterate(mln_json_t *j, mln_json_array_iterator_t it, void *data);
+#else
+#define mln_json_reset(j)                      ({\
+    mln_json_t *json = (j);\
+    mln_json_destroy(json);\
+    mln_json_none_type_set((json));\
+})
 #define mln_json_array_iterate(j, it, data) ({\
     mln_json_t *json = (mln_json_t *)(j), *end;\
     mln_json_array_iterator_t iterator = (mln_json_array_iterator_t)(it);\
@@ -149,6 +180,7 @@ extern int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it,
     }\
     rc;\
 })
+#endif
 
 #endif
 

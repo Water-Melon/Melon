@@ -12,9 +12,13 @@
 #if defined(MLN_C99)
 #define _GNU_SOURCE
 #endif
-#include <dirent.h>
 #include <errno.h>
+#if !defined(MSVC)
+#include <dirent.h>
 #include <unistd.h>
+#else
+#include "mln_utils.h"
+#endif
 #include "mln_string.h"
 #include "mln_lex.h"
 #include "mln_path.h"
@@ -77,9 +81,7 @@ MLN_FUNC(static inline, int, mln_lex_base_dir, \
     return 0;
 })
 
-MLN_FUNC(, mln_lex_input_t *, mln_lex_input_new, \
-         (mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line), \
-         (lex, type, data, err, line), \
+mln_lex_input_t *mln_lex_input_new(mln_lex_t *lex, mln_u32_t type, mln_string_t *data, int *err, mln_u64_t line)
 {
     int r;
     mln_lex_input_t *li;
@@ -125,7 +127,11 @@ MLN_FUNC(, mln_lex_input_t *, mln_lex_input_new, \
             li->fd = open(path, O_RDONLY);
             r = mln_lex_base_dir(lex, li, path, err);
         } else {
+#if defined(MSVC)
+            if (!_access(path, 0)) {
+#else
             if (!access(path, F_OK)) {
+#endif
                 li->fd = open(path, O_RDONLY);
                 r = mln_lex_base_dir(lex, li, path, err);
             } else if (lex->env != NULL && (melang_path = getenv((char *)(lex->env->data))) != NULL) {
@@ -135,7 +141,11 @@ MLN_FUNC(, mln_lex_input_t *, mln_lex_input_new, \
                     *end = 0;
                     n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
                     tmp_path[n] = 0;
+#if defined(MSVC)
+                    if (!_access(tmp_path, 0)) {
+#else
                     if (!access(tmp_path, F_OK)) {
+#endif
                         li->fd = open(tmp_path, O_RDONLY);
                         r = mln_lex_base_dir(lex, li, tmp_path, err);
                         found = 1;
@@ -177,7 +187,7 @@ goon:
     }
 
     return li;
-})
+}
 
 MLN_FUNC_VOID(, void, mln_lex_input_free, (void *in), (in), {
     if (in == NULL) return;
@@ -387,7 +397,8 @@ MLN_FUNC_VOID(, void, mln_lex_destroy, (mln_lex_t *lex), (lex), {
     mln_alloc_free(lex);
 })
 
-MLN_FUNC(, char *, mln_lex_strerror, (mln_lex_t *lex), (lex), {
+char *mln_lex_strerror(mln_lex_t *lex)
+{
     if (lex->err_msg != NULL) mln_alloc_free(lex->err_msg);
     int len = 0;
     if (lex->cur != NULL) {
@@ -423,10 +434,9 @@ MLN_FUNC(, char *, mln_lex_strerror, (mln_lex_t *lex), (lex), {
         n += snprintf(lex->err_msg + n, len - n, ". %s", strerror(errno));
     lex->err_msg[n] = 0;
     return lex->err_msg;
-})
+}
 
-MLN_FUNC(, int, mln_lex_push_input_file_stream, \
-         (mln_lex_t *lex, mln_string_t *path), (lex, path), \
+int mln_lex_push_input_file_stream(mln_lex_t *lex, mln_string_t *path)
 {
     int err = MLN_LEX_SUCCEED;
     mln_lex_input_t *in;
@@ -451,7 +461,11 @@ MLN_FUNC(, int, mln_lex_push_input_file_stream, \
         memcpy(p, path->data, n);
     }
     p[n] = 0;
+#if defined(MSVC)
+    if (_access(p, 0)) {
+#else
     if (access(p, F_OK)) {
+#endif
         mln_lex_error_set(lex, MLN_LEX_EFPATH);
         return -1;
     }
@@ -544,7 +558,7 @@ MLN_FUNC(, int, mln_lex_push_input_file_stream, \
         lex->line = 1;
     }
     return 0;
-})
+}
 
 MLN_FUNC(, int, mln_lex_push_input_buf_stream, \
          (mln_lex_t *lex, mln_string_t *buf), (lex, buf), \
@@ -582,8 +596,7 @@ MLN_FUNC(static, int, mln_lex_check_file_loop_iterate_handler, \
     return 0;
 })
 
-MLN_FUNC(, int, mln_lex_check_file_loop, \
-         (mln_lex_t *lex, mln_string_t *path), (lex, path), \
+int mln_lex_check_file_loop(mln_lex_t *lex, mln_string_t *path)
 {
     char p[1024];
     struct stat path_stat;
@@ -607,7 +620,11 @@ MLN_FUNC(, int, mln_lex_check_file_loop, \
     }
     p[n] = 0;
 
+#if defined(MSVC)
+    if (_access(p, 0)) {
+#else
     if (access(p, F_OK)) {
+#endif
         mln_lex_error_set(lex, MLN_LEX_EFPATH);
         return -1;
     }
@@ -681,7 +698,7 @@ MLN_FUNC(, int, mln_lex_check_file_loop, \
         }
     }
     return 0;
-})
+}
 
 MLN_FUNC(, int, mln_lex_condition_test, (mln_lex_t *lex), (lex), {
     mln_lex_result_clean(lex);

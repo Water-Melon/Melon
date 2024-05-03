@@ -166,7 +166,8 @@ static mln_string_t mln_lang_int_opr_names[] = {
     mln_string("__int_pdec_operator__"),
 };
 
-MLN_FUNC(static inline, mln_s64_t, mln_lang_int_var_toint, (mln_lang_var_t *var), (var), {
+static inline mln_s64_t mln_lang_int_var_toint(mln_lang_var_t *var)
+{
     ASSERT(var != NULL && var->val != NULL);
     mln_s64_t i = 0;
     mln_lang_val_t *val = var->val;
@@ -208,7 +209,7 @@ MLN_FUNC(static inline, mln_s64_t, mln_lang_int_var_toint, (mln_lang_var_t *var)
             break;
     }
     return i;
-})
+}
 
 MLN_FUNC(static inline, double, mln_lang_int_var_toreal, (mln_lang_var_t *var), (var), {
     ASSERT(var != NULL && var->val != NULL);

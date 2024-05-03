@@ -39,6 +39,47 @@ int strncasecmp(const char *s1, const char *s2, size_t n) {
 
 #endif
 
+#if defined(MSVC)
+mln_string_t *mln_string_set(mln_string_t *str, char *s)
+{
+    str->data = (mln_u8ptr_t)s;
+    str->len = strlen(s);
+    str->data_ref = 1;
+    str->pool = 0;
+    str->ref = 1;
+    return str;
+}
+
+mln_string_t *mln_string_nset(mln_string_t *str, char *s, mln_u64_t n)
+{
+    str->data = (mln_u8ptr_t)s;
+    str->len = n;
+    str->data_ref = 1;
+    str->pool = 0;
+    str->ref = 1;
+    return str;
+}
+
+mln_string_t *mln_string_ref(mln_string_t *s)
+{
+    ++s->ref;
+    return s;
+}
+
+void mln_string_free(mln_string_t *s)
+{
+    if (s == NULL) return;
+    if (s->ref-- > 1) return;
+    if (!s->data_ref && s->data != NULL) {
+        if (s->pool) mln_alloc_free(s->data);
+        else free(s->data);
+    }
+    if (s->pool) mln_alloc_free(s);
+    else free(s);
+}
+
+#endif
+
 MLN_FUNC(static inline, mln_string_t *, mln_string_assign, (char *s, mln_u32_t len), (s, len), {
     mln_string_t *str;
     str = (mln_string_t *)malloc(sizeof(mln_string_t));

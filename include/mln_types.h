@@ -7,8 +7,9 @@
 #define __MLN_TYPES
 
 #include <sys/types.h>
-#include <unistd.h>
 #include "mln_utils.h"
+#if !defined(MSVC)
+#include <unistd.h>
 #if defined(__GNUC__) && (__GNUC__ >= 4 && __GNUC_MINOR__ > 1)
 typedef long                  mln_spin_t;
 #elif defined(i386) || defined(__x86_64)
@@ -16,6 +17,7 @@ typedef unsigned long         mln_spin_t;
 #else
 #include <pthread.h>
 typedef pthread_spinlock_t    mln_spin_t;
+#endif
 #endif
 
 typedef unsigned char         mln_u8_t;
@@ -47,7 +49,7 @@ typedef unsigned long *       mln_u64ptr_t;
 typedef size_t                mln_size_t;
 typedef off_t                 mln_off_t;
 #if defined(__WIN32__)
-  #if defined(i386) || defined(__arm__)
+  #if defined(i386) || defined(__arm__) || defined(MSVC)
 typedef long                  mln_sptr_t;
 typedef unsigned long         mln_uptr_t;
 typedef long                  mln_sauto_t;

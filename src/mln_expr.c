@@ -131,7 +131,8 @@ MLN_FUNC(static, mln_expr_struct_t *, mln_expr_sglq_handler, (mln_lex_t *lex, vo
     return mln_expr_new(lex, EXPR_TK_STRING);
 })
 
-MLN_FUNC(static inline, int, mln_expr_val_init, (mln_expr_val_t *v, mln_expr_struct_t *token), (v, token), {
+static inline int mln_expr_val_init(mln_expr_val_t *v, mln_expr_struct_t *token)
+{
     char num[1024];
     mln_size_t len = token->text->len >= sizeof(num)-1? sizeof(num)-1: token->text->len;
     memcpy(num, token->text->data, len);
@@ -193,7 +194,7 @@ MLN_FUNC(static inline, int, mln_expr_val_init, (mln_expr_val_t *v, mln_expr_str
     v->free = NULL;
 
     return 0;
-})
+}
 
 MLN_FUNC(, mln_expr_val_t *, mln_expr_val_new, (mln_expr_typ_t type, void *data, mln_expr_udata_free free), (type, data, free), {
     mln_expr_val_t *ev;

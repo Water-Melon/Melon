@@ -8,7 +8,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(MSVC)
+#include "mln_utils.h"
+#else
 #include <sys/time.h>
+#endif
 #include "mln_rsa.h"
 #include "mln_chain.h"
 #include "mln_md5.h"
@@ -148,9 +152,7 @@ in:
     return 0;
 })
 
-MLN_FUNC_VOID(static inline, void, mln_rsa_pub_padding, \
-              (mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen), \
-              (in, inlen, out, keylen), \
+static inline void mln_rsa_pub_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen)
 {
     mln_size_t j;
     struct timeval tv;
@@ -177,7 +179,7 @@ lp:
     }
     *out++ = 0;
     memcpy(out, in, inlen);
-})
+}
 
 MLN_FUNC_VOID(static inline, void, mln_rsa_pri_padding, \
               (mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen), \

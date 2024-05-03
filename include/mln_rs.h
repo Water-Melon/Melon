@@ -10,7 +10,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#if !defined(MSVC)
 #include <unistd.h>
+#endif
 
 typedef struct {
     mln_size_t      row;

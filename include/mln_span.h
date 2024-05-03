@@ -5,7 +5,11 @@
 #ifndef __MLN_SPAN_H
 #define __MLN_SPAN_H
 
+#if defined(MSVC)
+#include "mln_utils.h"
+#else
 #include <sys/time.h>
+#endif
 #include "mln_func.h"
 #if defined(__WIN32__)
 #include <windows.h>
@@ -50,6 +54,17 @@ extern int mln_span_entry(void *fptr, const char *file, const char *func, int li
 extern void mln_span_exit(void *fptr, const char *file, const char *func, int line, void *ret, ...);
 
 #if defined(__WIN32__)
+#if defined(MSVC)
+#define mln_span_start(r) ({\
+    r = 0;\
+    mln_func_entry_callback_set(mln_span_entry);\
+    mln_func_exit_callback_set(mln_span_exit);\
+    mln_span_registered_thread = GetCurrentThreadId();\
+    mln_span_root = NULL;\
+    __mln_span_stack_top = __mln_span_stack_bottom = NULL;\
+    mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
+})
+#else
 #define mln_span_start() ({\
     int r = 0;\
     mln_func_entry_callback_set(mln_span_entry);\
@@ -60,6 +75,7 @@ extern void mln_span_exit(void *fptr, const char *file, const char *func, int li
     mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
     r;\
 })
+#endif
 #else
 #define mln_span_start() ({\
     int r = 0;\
@@ -73,6 +89,7 @@ extern void mln_span_exit(void *fptr, const char *file, const char *func, int li
 })
 #endif
 
+#if !defined(MSVC)
 #define mln_span_stop() ({\
     mln_span_exit(__FILE__, __FUNCTION__, __LINE__, NULL);\
     mln_func_entry_callback_set(NULL);\
@@ -91,14 +108,26 @@ extern void mln_span_exit(void *fptr, const char *file, const char *func, int li
     span;\
 })
 
-#define mln_span_file(s)      ((s)->file)
-#define mln_span_func(s)      ((s)->func)
-#define mln_span_line(s)      ((s)->line)
 #define mln_span_time_cost(s) ({\
     mln_span_t *_s = (s);\
     mln_u64_t r = (_s->end.tv_sec * 1000000 + _s->end.tv_usec) - (_s->begin.tv_sec * 1000000 + _s->begin.tv_usec);\
     r;\
 })
+#else
+#define mln_span_stop() do {\
+    mln_span_exit(__FILE__, __FUNCTION__, __LINE__, NULL);\
+    mln_func_entry_callback_set(NULL);\
+    mln_func_exit_callback_set(NULL);\
+    mln_span_stack_free();\
+} while (0)
+
+extern void mln_span_release(void);
+extern mln_span_t *mln_span_move(void);
+extern mln_u64_t mln_span_time_cost(mln_span_t *s);
+#endif
+#define mln_span_file(s)      ((s)->file)
+#define mln_span_func(s)      ((s)->func)
+#define mln_span_line(s)      ((s)->line)
 
 extern void mln_span_dump(mln_span_dump_cb_t cb, void *data);
 #endif

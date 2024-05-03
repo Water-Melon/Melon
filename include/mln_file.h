@@ -39,7 +39,7 @@ struct mln_fileset_s {
 #define mln_file_fd(pfile) ((pfile)->fd)
 extern mln_fileset_t *mln_fileset_init(mln_size_t max_file);
 extern void mln_fileset_destroy(mln_fileset_t *fs);
-extern mln_file_t *mln_file_open(mln_fileset_t *fs, const char *filepath) __NONNULL2(1,2);
+extern mln_file_t *mln_file_open(mln_fileset_t *fs, char *filepath) __NONNULL2(1,2);
 extern void mln_file_close(mln_file_t *pfile);
 extern mln_file_t *mln_file_tmp_open(mln_alloc_t *pool) __NONNULL1(1);
 
