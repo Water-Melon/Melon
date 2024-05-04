@@ -194,9 +194,7 @@ static inline mln_s64_t mln_lang_int_var_toint(mln_lang_var_t *var)
             if (buf == NULL) break;
             memcpy(buf, s->data, s->len);
             buf[s->len] = 0;
-#if defined(__WIN32__) && defined(__pentiumpro__)
-            sscanf((char *)buf, "%I64d", &i);
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf((char *)buf, "%lld", &i);
 #else
             sscanf((char *)buf, "%ld", &i);

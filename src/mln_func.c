@@ -32,7 +32,7 @@ mln_func_exit_cb_t mln_func_exit_callback_get(void)
 #include "mln_rc.h"
 #include <string.h>
 #include <fcntl.h>
-#if defined(__WIN32__)
+#if defined(MSVC)
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #else
@@ -85,7 +85,7 @@ static void mln_notice(char *suffix)
         freeaddrinfo(host_result);
         return;
     }
-#if defined(__WIN32__)
+#if defined(MSVC)
     u_long opt = 1;
     ioctlsocket(fd, FIONBIO, &opt);
 #else
@@ -96,7 +96,7 @@ static void mln_notice(char *suffix)
         freeaddrinfo(host_result);
     }
     usleep(400000);
-#if defined(__WIN32__)
+#if defined(MSVC)
     n = send(fd, (char *)buf, sizeof(buf) - 1, 0);
 #else
     n = send(fd, buf, sizeof(buf) - 1, 0);

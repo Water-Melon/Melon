@@ -103,7 +103,7 @@ static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *u
 /*for hook*/
 static mln_conf_hook_t *mln_conf_hook_init(void);
 static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 static void mln_conf_reload_master_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
 static void mln_conf_reload_worker_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
 #endif
@@ -858,7 +858,7 @@ int mln_conf_load(void)
             return -1;
         }
     }
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     if ((g_conf->cb = mln_ipc_handler_register(M_IPC_TYPE_CONF, mln_conf_reload_master_handler, mln_conf_reload_worker_handler, NULL, NULL)) == NULL) {
         mln_conf_destroy(g_conf);
         g_conf = NULL;
@@ -984,8 +984,7 @@ MLN_FUNC(static, int, mln_conf_dump_conf_iterate_handler, (mln_rbtree_node_t *no
     return 0;
 })
 
-static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *udata)
-{
+MLN_FUNC(static, int, mln_conf_dump_domain_iterate_handler, (mln_rbtree_node_t *node, void *udata), (node, udata), {
     mln_conf_cmd_t *cc = (mln_conf_cmd_t *)mln_rbtree_node_data_get(node);
     printf("\t\tCOMMAND [%s]:\n", (char *)(cc->cmd_name->data));
     mln_s32_t i;
@@ -1004,17 +1003,7 @@ static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *u
                 printf("BOOL [%u]\n", ci->val.b);
                 break;
             case CONF_INT:
-#if defined(__WIN32__)
-  #if defined(i386) || defined(__arm__) || defined(MSVC)
                 printf("INT [%ld]\n", ci->val.i);
-  #elif defined(__pentiumpro__)
-                printf("INT [%I64d]\n", ci->val.i);
-  #else
-                printf("INT [%lld]\n", ci->val.i);
-  #endif
-#else
-                printf("INT [%ld]\n", ci->val.i);
-#endif
                 break;
             case CONF_FLOAT:
                 printf("FLOAT [%f]\n", ci->val.f);
@@ -1023,7 +1012,7 @@ static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *u
         }
     }
     return 0;
-}
+})
 
 /*
  * chain
@@ -1037,7 +1026,7 @@ MLN_CHAIN_FUNC_DEFINE(static inline, \
 /*
  * ipc handlers
  */
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 MLN_FUNC_VOID(static, void, mln_conf_reload_master_handler, \
               (mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr), \
               (ev, f_ptr, buf, len, udata_ptr), \

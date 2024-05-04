@@ -5,7 +5,7 @@
 #ifndef __MLN_CONNECTION_H
 #define __MLN_CONNECTION_H
 
-#if defined(__WIN32__)
+#if defined(MSVC)
 #include <winsock2.h>
 #else
 #include <sys/socket.h>

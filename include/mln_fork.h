@@ -4,7 +4,7 @@
  */
 #ifndef __MLN_FORK_H
 #define __MLN_FORK_H
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 #include <sys/types.h>
 #include "mln_types.h"
 #include "mln_event.h"

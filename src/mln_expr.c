@@ -141,9 +141,7 @@ static inline int mln_expr_val_init(mln_expr_val_t *v, mln_expr_struct_t *token)
     switch (token->type) {
         case EXPR_TK_OCT:
             v->type = mln_expr_type_int;
-#if defined(__WIN32__) && defined(__pentiumpro__)
-            sscanf(num, "%I64o", &(v->data.i));
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf(num, "%llo", &(v->data.i));
 #else
             sscanf(num, "%lo", &(v->data.i));
@@ -151,9 +149,7 @@ static inline int mln_expr_val_init(mln_expr_val_t *v, mln_expr_struct_t *token)
             break;
         case EXPR_TK_DEC:
             v->type = mln_expr_type_int;
-#if defined(__WIN32__) && defined(__pentiumpro__)
-        sscanf(num, "%I64d", &(v->data.i));
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
         sscanf(num, "%lld", &(v->data.i));
 #else
         sscanf(num, "%ld", &(v->data.i));
@@ -161,9 +157,7 @@ static inline int mln_expr_val_init(mln_expr_val_t *v, mln_expr_struct_t *token)
             break;
         case EXPR_TK_HEX:
             v->type = mln_expr_type_int;
-#if defined(__WIN32__) && defined(__pentiumpro__)
-            sscanf(num, "%I64x", &(v->data.i));
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf(num, "%llx", &(v->data.i));
 #else
             sscanf(num, "%lx", &(v->data.i));

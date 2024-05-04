@@ -7,15 +7,12 @@
 
 #if defined(MSVC)
 #include "mln_utils.h"
-#else
-#include <sys/time.h>
-#endif
-#include "mln_func.h"
-#if defined(__WIN32__)
 #include <windows.h>
 #else
+#include <sys/time.h>
 #include <pthread.h>
 #endif
+#include "mln_func.h"
 
 typedef struct mln_span_s {
     struct timeval                begin;
@@ -41,7 +38,7 @@ typedef void (*mln_span_dump_cb_t)(mln_span_t *s, int level, void *data);
 extern mln_span_stack_node_t *__mln_span_stack_top;
 extern mln_span_stack_node_t *__mln_span_stack_bottom;
 extern mln_span_t *mln_span_root;
-#if defined(__WIN32__)
+#if defined(MSVC)
 extern DWORD mln_span_registered_thread;
 #else
 extern pthread_t mln_span_registered_thread;
@@ -53,39 +50,23 @@ extern void mln_span_free(mln_span_t *s);
 extern int mln_span_entry(void *fptr, const char *file, const char *func, int line, ...);
 extern void mln_span_exit(void *fptr, const char *file, const char *func, int line, void *ret, ...);
 
-#if defined(__WIN32__)
 #if defined(MSVC)
-#define mln_span_start(r) ({\
-    r = 0;\
+#define mln_span_start() do {\
     mln_func_entry_callback_set(mln_span_entry);\
     mln_func_exit_callback_set(mln_span_exit);\
     mln_span_registered_thread = GetCurrentThreadId();\
     mln_span_root = NULL;\
     __mln_span_stack_top = __mln_span_stack_bottom = NULL;\
     mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
-})
+} while (0)
 #else
 #define mln_span_start() ({\
-    int r = 0;\
-    mln_func_entry_callback_set(mln_span_entry);\
-    mln_func_exit_callback_set(mln_span_exit);\
-    mln_span_registered_thread = GetCurrentThreadId();\
-    mln_span_root = NULL;\
-    __mln_span_stack_top = __mln_span_stack_bottom = NULL;\
-    mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
-    r;\
-})
-#endif
-#else
-#define mln_span_start() ({\
-    int r = 0;\
     mln_func_entry_callback_set(mln_span_entry);\
     mln_func_exit_callback_set(mln_span_exit);\
     mln_span_registered_thread = pthread_self();\
     __mln_span_stack_top = __mln_span_stack_bottom = NULL;\
     mln_span_root = NULL;\
     mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
-    r;\
 })
 #endif
 

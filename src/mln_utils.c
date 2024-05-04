@@ -2,7 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#if defined(__WIN32__)
+#if defined(MSVC)
 #include <stdio.h>
 #include <winsock2.h>
 #include <windows.h>

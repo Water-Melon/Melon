@@ -2,7 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#if defined(__WIN32__)
+#if defined(MSVC)
 #define _CRT_RAND_S
 #endif
 #include <stdio.h>
@@ -916,9 +916,7 @@ void mln_bignum_dump(mln_bignum_t *bn)
     mln_u32_t i;
     fprintf(stderr, "Data:\n");
     for (i = 0; i < M_BIGNUM_SIZE; ++i) {
-#if defined(__WIN32__) && defined(__pentiumpro__)
-        fprintf(stderr, "\t%I64x\n", bn->data[i]);
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
         fprintf(stderr, "\t%llx\n", bn->data[i]);
 #else
         fprintf(stderr, "\t%lx\n", bn->data[i]);
@@ -998,7 +996,7 @@ static inline void mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
     mln_s32_t i;
 
     for (i = 0; i < times; ++i) {
-#if defined(__WIN32__)
+#if defined(MSVC)
         rand_s(&val);
 #else
         val = (mln_u32_t)rand_r(&val);
@@ -1007,7 +1005,7 @@ static inline void mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
     }
 
     if ((off = bitwidth % 32)) {
-#if defined(__WIN32__)
+#if defined(MSVC)
         rand_s(&val);
         data[i] = ((mln_u64_t)val * 0xfdfd) & 0xffffffff;
 #else
@@ -1025,7 +1023,7 @@ static inline void mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
             if (data[i-1] == 0) {
                 gettimeofday(&tv, NULL);
                 val = tv.tv_sec*1000000+tv.tv_usec;
-#if defined(__WIN32__)
+#if defined(MSVC)
                 rand_s(&val);
                 data[i-1] = (mln_u32_t)val;
 #else
@@ -1048,7 +1046,7 @@ static inline void mln_bignum_random_scope(mln_bignum_t *bn, mln_u32_t bitwidth,
 lp:
     gettimeofday(&tv, NULL);
     val = tv.tv_sec*1000000+tv.tv_usec;
-#if defined(__WIN32__)
+#if defined(MSVC)
     rand_s(&val);
     width = val % bitwidth;
 #else

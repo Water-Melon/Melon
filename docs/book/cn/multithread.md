@@ -40,11 +40,7 @@
                return -1;
            }
            memset(&msg, 0, sizeof(msg));
-   #if defined(__WIN32__)
-           int n = recv(fd, (char *)&msg, sizeof(msg), 0);
-   #else
            int n = recv(fd, &msg, sizeof(msg), 0);
-   #endif
            if (n != sizeof(msg)) {
                mln_log(debug, "recv error. n=%d. %s\n", n, strerror(errno));
                return -1;
@@ -74,11 +70,7 @@
            msg.c = 'N';
            msg.type = ITC_REQUEST;
            msg.need_clear = 1;
-   #if defined(__WIN32__)
-           int n = send(fd, (char *)&msg, sizeof(msg), 0);
-   #else
            int n = send(fd, &msg, sizeof(msg), 0);
-   #endif
            if (n != sizeof(msg)) {
                mln_log(debug, "send error. n=%d. %s\n", n, strerror(errno));
                mln_string_free(msg.dest);

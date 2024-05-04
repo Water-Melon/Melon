@@ -863,35 +863,15 @@ MLN_FUNC(static, int, mln_pg_output_token_set_iterate_handler, \
     return 0;
 })
 
-void mln_pg_output_state(mln_pg_state_t *s)
-{
+MLN_FUNC_VOID(, void, mln_pg_output_state, (mln_pg_state_t *s), (s), {
     mln_pg_item_t *it;
     mln_u32_t i;
     printf("STATES:\n");
     for (; s != NULL; s = s->next) {
-#if defined(__WIN32__)
-  #if defined(i386) || defined(__arm__) || defined(MSVC)
-        printf("State %ld: input: [%s] nr_item:%I64u\n", \
-               s->id, \
-               s->input==NULL?"(null)":(char *)(s->input->token->data), \
-               (unsigned long long)(s->nr_item));
-  #elif defined(__pentiumpro__)
-        printf("State %I64d: input: [%s] nr_item:%I64u\n", \
-               s->id, \
-               s->input==NULL?"(null)":(char *)(s->input->token->data), \
-               (unsigned long long)(s->nr_item));
-  #else
-        printf("State %lld: input: [%s] nr_item:%llu\n", \
-               s->id, \
-               s->input==NULL?"(null)":(char *)(s->input->token->data), \
-               (unsigned long long)(s->nr_item));
-  #endif
-#else
         printf("State %ld: input: [%s] nr_item:%llu\n", \
                s->id, \
                s->input==NULL?"(null)":(char *)(s->input->token->data), \
                (unsigned long long)(s->nr_item));
-#endif
         printf("Items:\n");
         for (it = s->head; it != NULL; it = it->next) {
             printf("rule: %s->", (char *)(it->rule->left->token->data));
@@ -899,18 +879,14 @@ void mln_pg_output_state(mln_pg_state_t *s)
                 if (it->pos == i) printf(".");
                 printf(" %s", (char *)((it->rule->rights[i])->token->data));
             }
-#if defined(__WIN32__) && !defined(__pentiumpro__) && !defined(MSVC)
-            printf("\t\tread:[%s] goto_id:%lld", it->read==NULL?"(null)":(char *)(it->read->token->data), it->goto_id);
-#else
             printf("\t\tread:[%s] goto_id:%ld", it->read==NULL?"(null)":(char *)(it->read->token->data), it->goto_id);
-#endif
             printf("\tLookahead:");
             mln_rbtree_iterate(it->lookahead_set, mln_pg_output_state_iterate_handler, NULL);
             printf("\n");
         }
         printf("\n");
     }
-}
+})
 
 MLN_FUNC(static, int, mln_pg_output_state_iterate_handler, \
          (mln_rbtree_node_t *node, void *udata), (node, udata), \

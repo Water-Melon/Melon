@@ -91,14 +91,14 @@ static inline mln_alloc_shm_t *mln_alloc_shm_new(mln_alloc_t *pool, mln_size_t s
 mln_alloc_t *mln_alloc_shm_init(mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock)
 {
     mln_alloc_t *pool;
-#if defined(__WIN32__)
+#if defined(MSVC)
     HANDLE handle;
 #endif
 
     if (size < M_ALLOC_SHM_DEFAULT_SIZE+1024 || locker == NULL || lock == NULL || unlock == NULL)
         return NULL;
 
-#if defined(__WIN32__)
+#if defined(MSVC)
     if ((handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                     NULL,
                                     PAGE_READWRITE,
@@ -237,7 +237,7 @@ void mln_alloc_destroy(mln_alloc_t *pool)
         if (parent != NULL) mln_alloc_free(pool);
         else free(pool);
     } else {
-#if defined(__WIN32__)
+#if defined(MSVC)
         HANDLE handle = pool->map_handle;
         UnmapViewOfFile(pool->mem);
         CloseHandle(handle);

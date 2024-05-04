@@ -10,7 +10,7 @@
 #include "mln_types.h"
 #include "mln_func.h"
 
-#if defined(i386) || defined(__arm__) || defined(__WIN32__)
+#if defined(i386) || defined(__arm__) || defined(MSVC)
 #define FH_LGN 33
 #else
 #define FH_LGN 65

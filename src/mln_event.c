@@ -12,7 +12,7 @@
 #include <signal.h>
 #include "mln_utils.h"
 #include "mln_func.h"
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 #include <sys/socket.h>
 #endif
 
@@ -767,7 +767,7 @@ void mln_event_callback_set(mln_event_t *ev, dispatch_callback dc, void *dc_data
  */
 static inline void mln_event_fd_nonblock_set(int fd)
 {
-#if defined(__WIN32__)
+#if defined(MSVC)
     u_long opt = 1;
     ioctlsocket(fd, FIONBIO, &opt);
 #else
@@ -781,7 +781,7 @@ static inline void mln_event_fd_nonblock_set(int fd)
 
 static inline void mln_event_fd_block_set(int fd)
 {
-#if defined(__WIN32__)
+#if defined(MSVC)
     u_long opt = 0;
     ioctlsocket(fd, FIONBIO, &opt);
 #else
@@ -1147,17 +1147,15 @@ void mln_event_dispatch(mln_event_t *event)
             tm.tv_usec = M_EV_TIMEOUT_US;
             nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
             if (nfds < 0) {
-#if !defined(__WIN32__)
-                if (errno == EINTR || errno == ENOMEM) {
-#endif
 #if !defined(MSVC)
+                if (errno == EINTR || errno == ENOMEM) {
                     pthread_mutex_unlock(&event->fd_lock);
-#endif
                     continue;
-#if !defined(__WIN32__)
                 } else {
                     ASSERT(0);
                 }
+#else
+                continue;
 #endif
             } else if (nfds == 0) {
 #if !defined(MSVC)

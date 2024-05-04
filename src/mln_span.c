@@ -10,7 +10,7 @@
 mln_span_stack_node_t *__mln_span_stack_top = NULL;
 mln_span_stack_node_t *__mln_span_stack_bottom = NULL;
 mln_span_t *mln_span_root = NULL;
-#if defined(__WIN32__)
+#if defined(MSVC)
 DWORD mln_span_registered_thread;
 #else
 pthread_t mln_span_registered_thread;
@@ -149,7 +149,7 @@ int mln_span_entry(void *fptr, const char *file, const char *func, int line, ...
 {
     mln_span_t *span;
 
-#if defined(__WIN32__)
+#if defined(MSVC)
     if (mln_span_registered_thread != GetCurrentThreadId()) return 0;
 #else
     if (!pthread_equal(mln_span_registered_thread, pthread_self())) return 0;
@@ -170,7 +170,7 @@ int mln_span_entry(void *fptr, const char *file, const char *func, int line, ...
 
 void mln_span_exit(void *fptr, const char *file, const char *func, int line, void *ret, ...)
 {
-#if defined(__WIN32__)
+#if defined(MSVC)
     if (mln_span_registered_thread != GetCurrentThreadId()) return;
 #else
     if (!pthread_equal(mln_span_registered_thread, pthread_self())) return;

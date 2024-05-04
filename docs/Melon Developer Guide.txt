@@ -3430,7 +3430,7 @@ Their definitions can be found in melon/include/mln_types.h.
                   return -1;
               }
               memset(&msg, 0, sizeof(msg));
-      #if defined(____WIN32____)
+      #if defined(MSVC)
               int n = recv(fd, (char *)&msg, sizeof(msg), 0);
       #else
               int n = recv(fd, &msg, sizeof(msg), 0);
@@ -3464,7 +3464,7 @@ Their definitions can be found in melon/include/mln_types.h.
               msg.c = 'N';
               msg.type = ITC_REQUEST;
               msg.need_clear = 1;
-      #if defined(____WIN32____)
+      #if defined(MSVC)
               int n = send(fd, (char *)&msg, sizeof(msg), 0);
       #else
               int n = send(fd, &msg, sizeof(msg), 0);

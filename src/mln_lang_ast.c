@@ -3553,26 +3553,20 @@ static int mln_lang_semantic_factorint(mln_factor_t *left, mln_factor_t **right,
     mln_s64_t i;
     if (ls->text->len > 1 && num[0] == '0') {
         if (num[1] == 'x' || num[1] == 'X') {
-#if defined(__WIN32__) && defined(__pentiumpro__)
-            sscanf(num, "%I64x", &i);
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf(num, "%llx", &i);
 #else
             sscanf(num, "%lx", &i);
 #endif
         } else {
-#if defined(__WIN32__) && defined(__pentiumpro__)
-            sscanf(num, "%I64o", &i);
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
             sscanf(num, "%llo", &i);
 #else
             sscanf(num, "%lo", &i);
 #endif
         }
     } else {
-#if defined(__WIN32__) && defined(__pentiumpro__)
-        sscanf(num, "%I64d", &i);
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
         sscanf(num, "%lld", &i);
 #else
         sscanf(num, "%ld", &i);
@@ -3704,7 +3698,7 @@ int mln_lang_ast_file_open(mln_string_t *file_path)
     memcpy(path, file_path->data, len);
     path[len] = 0;
 
-#if defined(__WIN32__)
+#if defined(MSVC)
     if (len > 1 && path[1] == ':') {
 #else
     if (path[0] == '/') {

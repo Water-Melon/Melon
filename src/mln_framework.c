@@ -18,9 +18,7 @@
 #include <errno.h>
 #if !defined(MSVC)
 #include <unistd.h>
-#endif
 
-#if !defined(__WIN32__)
 static int mln_master_trace_init(mln_lang_ctx_t *ctx);
 static void mln_worker_routine(struct mln_framework_attr *attr);
 static void mln_master_routine(struct mln_framework_attr *attr);
@@ -46,7 +44,7 @@ int mln_framework_init(struct mln_framework_attr *attr)
     if (attr->global_init != NULL && attr->global_init() < 0)
         return -1;
 
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     if (mln_get_framework_status()) {
         if (mln_boot_params(attr->argc, attr->argv) < 0)
             return -1;
@@ -81,13 +79,13 @@ chl:
     } else {
 #endif
         if (mln_log_init(NULL) < 0) return -1;
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     }
 #endif
     return 0;
 }
 
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 MLN_FUNC_VOID(static, void, mln_master_routine, (struct mln_framework_attr *attr), (attr), {
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
