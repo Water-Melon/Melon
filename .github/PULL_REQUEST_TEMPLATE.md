@@ -1,7 +1,7 @@
 <!--
 NOTE: Please read the CONTRIBUTING.md guidelines before submitting your patch,
 and ensure you followed them all:
-[https://github.com/Kong/kong/blob/master/CONTRIBUTING.md#contributing](https://github.com/Water-Melon/Melon/blob/master/CONTRIBUTING.md#contributing)
+[https://github.com/Water-Melon/Melon/blob/master/CONTRIBUTING.md#contributing](https://github.com/Water-Melon/Melon/blob/master/CONTRIBUTING.md#contributing)
 -->
 
 ### Summary
