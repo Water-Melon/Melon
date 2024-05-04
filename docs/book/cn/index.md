@@ -70,9 +70,25 @@ Melon当前提供了如下功能：
 
 ### 平台支持
 
-Melon最初是为UNIX系统编写，因此适用于Linux、MacOS等类UNIX系统，并在针对Intel CPU有少量优化。
+- Linux
 
-目前Melon也已经完成了向Windows的初步移植，因此可以在Windows上进行使用。但由于Windows在创建进程上与UNIX系统差异较大，因此导致上述`框架`部分功能在Windows中暂时不支持。
+- MacOSX
+
+- Windows
+  - `msys2` (完全支持)
+  - `msvc` (部分支持，详情参考下一小节的安装文档)
+
+
+### 快速安装
+```
+git clone https://github.com/Water-Melon/Melon.git
+cd Melon
+./configure [--prefix=LIB_INSTALL_PATH | ...]
+make
+make install
+```
+
+关于如何在其他平台安装以及configure的更多选项，请参考[安装](http://doc.melonc.io/cn/install.html)章节内容。
 
 
 

@@ -2,23 +2,23 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+#include "mln_framework.h"
 #include "mln_thread.h"
 #include "mln_fork.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <errno.h>
 #include "mln_types.h"
 #include "mln_tools.h"
 #include "mln_log.h"
 #include "mln_string.h"
 #include "mln_conf.h"
-#include "mln_framework.h"
 #include "mln_trace.h"
 #include "mln_func.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#if !defined(MSVC)
+#include <unistd.h>
 
-#if !defined(__WIN32__)
 static int mln_master_trace_init(mln_lang_ctx_t *ctx);
 static void mln_worker_routine(struct mln_framework_attr *attr);
 static void mln_master_routine(struct mln_framework_attr *attr);
@@ -30,7 +30,8 @@ static mln_event_t *_ev = NULL;
 #endif
 
 
-MLN_FUNC(, int, mln_framework_init, (struct mln_framework_attr *attr), (attr), {
+int mln_framework_init(struct mln_framework_attr *attr)
+{
     /*Init configurations*/
     if (mln_conf_load() < 0) {
         return -1;
@@ -43,7 +44,7 @@ MLN_FUNC(, int, mln_framework_init, (struct mln_framework_attr *attr), (attr), {
     if (attr->global_init != NULL && attr->global_init() < 0)
         return -1;
 
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     if (mln_get_framework_status()) {
         if (mln_boot_params(attr->argc, attr->argv) < 0)
             return -1;
@@ -78,13 +79,13 @@ chl:
     } else {
 #endif
         if (mln_log_init(NULL) < 0) return -1;
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     }
 #endif
     return 0;
-})
+}
 
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 MLN_FUNC_VOID(static, void, mln_master_routine, (struct mln_framework_attr *attr), (attr), {
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);

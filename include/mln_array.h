@@ -13,7 +13,11 @@ typedef void (*array_pool_free_handler)(void *);
 typedef void (*array_free)(void *);
 
 typedef struct {
+#if defined(MSVC)
+    mln_u8ptr_t               elts;
+#else
     void                     *elts;
+#endif
     mln_size_t                size;
     mln_size_t                nalloc;
     mln_size_t                nelts;

@@ -5,6 +5,7 @@
 #ifndef __MLN_IOTHREAD_H
 #define __MLN_IOTHREAD_H
 
+#if !defined(MSVC)
 #include "mln_types.h"
 #include <pthread.h>
 
@@ -56,5 +57,7 @@ extern int mln_iothread_init(mln_iothread_t *t, mln_u32_t nthread, mln_iothread_
 extern void mln_iothread_destroy(mln_iothread_t *t);
 extern int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, mln_u32_t feedback);
 extern int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
+
+#endif
 
 #endif

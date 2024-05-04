@@ -7,11 +7,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#if !defined(MSVC)
 #include <unistd.h>
+#include <sys/time.h>
+#else
+#include "mln_utils.h"
+#endif
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/time.h>
 #include <errno.h>
 #include "mln_log.h"
 #include "mln_path.h"
@@ -31,8 +35,8 @@ _mln_sys_log_process(mln_log_t *log, \
 static inline void mln_file_lock(int fd);
 static inline void mln_file_unlock(int fd);
 static int mln_log_set_level(mln_log_t *log, mln_conf_t *cf, int is_init);
-static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
-#if !defined(__WIN32__)
+static inline int mln_log_write(mln_log_t *log, void *buf, mln_size_t size);
+#if !defined(MSVC)
 static void mln_log_atfork_lock(void);
 static void mln_log_atfork_unlock(void);
 #endif
@@ -45,14 +49,18 @@ static mln_logger_t _logger = _mln_sys_log_process;
 char log_err_level[] = "Log level permission deny.";
 char log_err_fmt[] = "Log message format error.";
 char log_path_cmd[] = "log_path";
+#if defined(MSVC)
+mln_log_t g_log = {2, 0, 0, 0, none, {0},{0},{0}};
+#else
 mln_log_t g_log = {(mln_spin_t)0, STDERR_FILENO, 0, 0, 0, none, {0},{0},{0}};
+#endif
 
 /*
  * file lock
  */
 static inline void mln_file_lock(int fd)
 {
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
     fl.l_type = F_WRLCK;
@@ -65,7 +73,7 @@ static inline void mln_file_lock(int fd)
 
 static inline void mln_file_unlock(int fd)
 {
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     struct flock fl;
     memset(&fl, 0, sizeof(fl));
     fl.l_type = F_UNLCK;
@@ -129,6 +137,7 @@ int mln_log_init(mln_conf_t *cf)
     log->init = 1;
     log->level = none;
     int ret = 0;
+#if !defined(MSVC)
     if ((ret = mln_spin_init(&(log->thread_lock))) != 0) {
         fprintf(stderr, "%s(): Init log's thread_lock failed. %s\n", __FUNCTION__, strerror(ret));
         return -1;
@@ -141,6 +150,7 @@ int mln_log_init(mln_conf_t *cf)
         mln_spin_destroy(&(log->thread_lock));
         return -1;
     }
+#endif
 
     if (mln_log_get_log(log, cf, 1) < 0) {
         fprintf(stderr, "%s(): Get log file failed.\n", __FUNCTION__);
@@ -186,7 +196,7 @@ mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
                     __FUNCTION__, log_path_cmd);
             return -1;
         }
-#if defined(__WIN32__)
+#if defined(MSVC)
         if (ci->val.s->len <= 1 || (ci->val.s->data)[1] != ':') {
 #else
         if ((ci->val.s->data)[0] != '/' && (ci->val.s->data)[0] != '.') {
@@ -202,7 +212,7 @@ mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
         ;
     memcpy(log->dir_path, path_str, p - path_str);
     log->dir_path[p - path_str] = 0;
-#if defined(__WIN32__)
+#if defined(MSVC)
     if (mkdir(log->dir_path) < 0) {
 #else
     if (mkdir(log->dir_path, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) < 0) {
@@ -213,16 +223,28 @@ mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
         }
     }
 
+#if defined(MSVC)
+    fd = open(path_str, O_WRONLY|O_CREAT|O_APPEND, _S_IREAD|_S_IWRITE);
+#else
     fd = open(path_str, O_WRONLY|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+#endif
     if (fd < 0) {
         fprintf(stderr, "%s(): open '%s' failed. %s\n", __FUNCTION__, path_str, strerror(errno));
         return -1;
     }
+#if defined(MSVC)
+    if (!is_init && \
+        log->fd > 0 && \
+        log->fd != _fileno(stdin) && \
+        log->fd != _fileno(stdout) && \
+        log->fd != _fileno(stderr))
+#else
     if (!is_init && \
         log->fd > 0 && \
         log->fd != STDIN_FILENO && \
         log->fd != STDOUT_FILENO && \
         log->fd != STDERR_FILENO)
+#endif
     {
         close(log->fd);
     }
@@ -233,7 +255,11 @@ mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
     if (is_init) {
         memset(log->pid_path, 0, M_LOG_PATH_LEN);
         snprintf(log->pid_path, M_LOG_PATH_LEN-1, "%s/melon.pid", log->dir_path);
+#if defined(MSVC)
+        fd = open(log->pid_path, O_WRONLY|O_CREAT|O_TRUNC, _S_IREAD|_S_IWRITE);
+#else
         fd = open(log->pid_path, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+#endif
         if (fd < 0) {
             fprintf(stderr, "%s(): open pid file failed. %s\n", __FUNCTION__, strerror(errno));
             return -1;
@@ -249,7 +275,7 @@ mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
     return 0;
 }
 
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 static void mln_log_atfork_lock(void)
 {
     mln_spin_lock(&(g_log.thread_lock));
@@ -264,14 +290,23 @@ static void mln_log_atfork_unlock(void)
 void mln_log_destroy(void)
 {
     mln_log_t *log = &g_log;
+#if defined(MSVC)
+    if (log->fd > 0 && \
+        log->fd != _fileno(stdin) && \
+        log->fd != _fileno(stdout) && \
+        log->fd != _fileno(stderr))
+#else
     if (log->fd > 0 && \
         log->fd != STDIN_FILENO && \
         log->fd != STDOUT_FILENO && \
         log->fd != STDERR_FILENO)
+#endif
     {
         close(log->fd);
     }
+#if !defined(MSVC)
     mln_spin_destroy(&(log->thread_lock));
+#endif
 }
 
 /*
@@ -331,12 +366,16 @@ static int mln_log_set_level(mln_log_t *log, mln_conf_t *cf, int is_init)
  */
 int mln_log_reload(void *data)
 {
+#if !defined(MSVC)
     mln_spin_lock(&(g_log.thread_lock));
+#endif
     mln_log_get_log(&g_log, mln_conf(), 0);
     mln_file_lock(g_log.fd);
     int ret = mln_log_set_level(&g_log, mln_conf(), 0);
     mln_file_unlock(g_log.fd);
+#if !defined(MSVC)
     mln_spin_unlock(&(g_log.thread_lock));
+#endif
     return ret;
 }
 
@@ -350,7 +389,9 @@ void _mln_sys_log(mln_log_level_t level, \
                   char *msg, \
                   ...)
 {
+#if !defined(MSVC)
     mln_spin_lock(&(g_log.thread_lock));
+#endif
     mln_file_lock(g_log.fd);
     va_list arg;
     va_start(arg, msg);
@@ -358,42 +399,64 @@ void _mln_sys_log(mln_log_level_t level, \
         _logger(&g_log, level, file, func, line, msg, arg);
     va_end(arg);
     mln_file_unlock(g_log.fd);
+#if !defined(MSVC)
     mln_spin_unlock(&(g_log.thread_lock));
+#endif
 }
 
-static inline ssize_t mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
+static inline int mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
 {
-    ssize_t ret = write(log->fd, buf, size);
+    int ret = write(log->fd, buf, size);
     if (log->init && !log->in_daemon) {
+#if defined(MSVC)
+        ret = write(_fileno(stderr), buf, size);
+#else
         ret = write(STDERR_FILENO, buf, size);
+#endif
     }
     return ret;
 }
 
-static inline ssize_t mln_log_level_write(mln_log_t *log, mln_log_level_t level)
+static inline int mln_log_level_write(mln_log_t *log, mln_log_level_t level)
 {
-    ssize_t ret = 0;
+    int ret = 0;
 
     switch (level) {
         case report:
             ret = write(log->fd, (void *)"REPORT: ", 8);
             if (log->init && !log->in_daemon)
+#if defined(MSVC)
+                ret = write(_fileno(stderr), (void *)"REPORT: ", 17);
+#else
                 ret = write(STDERR_FILENO, (void *)"\e[34mREPORT\e[0m: ", 17);
+#endif
             break;
         case debug:
             ret = write(log->fd, (void *)"DEBUG: ", 7);
             if (log->init && !log->in_daemon)
+#if defined(MSVC)
+                ret = write(_fileno(stderr), (void *)"DEBUG: ", 16);
+#else
                 ret = write(STDERR_FILENO, (void *)"\e[32mDEBUG\e[0m: ", 16);
+#endif
             break;
         case warn:
             ret = write(log->fd, (void *)"WARN: ", 6);
             if (log->init && !log->in_daemon)
+#if defined(MSVC)
+                ret = write(_fileno(stderr), (void *)"WARN: ", 15);
+#else
                 ret = write(STDERR_FILENO, (void *)"\e[33mWARN\e[0m: ", 15);
+#endif
             break;
         case error:
             ret = write(log->fd, (void *)"ERROR: ", 7);
             if (log->init && !log->in_daemon)
+#if defined(MSVC)
+                ret = write(_fileno(stderr), (void *)"ERROR: ", 16);
+#else
                 ret = write(STDERR_FILENO, (void *)"\e[31mERROR\e[0m: ", 16);
+#endif
             break;
         default:
             break;
@@ -401,13 +464,17 @@ static inline ssize_t mln_log_level_write(mln_log_t *log, mln_log_level_t level)
     return ret;
 }
 
-ssize_t mln_log_writen(void *buf, mln_size_t size)
+int mln_log_writen(void *buf, mln_size_t size)
 {
+#if !defined(MSVC)
     mln_spin_lock(&(g_log.thread_lock));
+#endif
     mln_file_lock(g_log.fd);
-    ssize_t n = mln_log_write(&g_log, buf, size);
+    int n = mln_log_write(&g_log, buf, size);
     mln_file_unlock(g_log.fd);
+#if !defined(MSVC)
     mln_spin_unlock(&(g_log.thread_lock));
+#endif
     return n;
 }
 
@@ -481,17 +548,7 @@ _mln_sys_log_process(mln_log_t *log, \
             {
                 memset(line_str, 0, sizeof(line_str));
                 mln_sauto_t num = va_arg(arg, long);
-#if defined(__WIN32__)
-  #if defined(i386) || defined(__arm__)
                 int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
-  #elif defined(__pentiumpro__)
-                int n = snprintf(line_str, sizeof(line_str)-1, "%I64d", num);
-  #else
-                int n = snprintf(line_str, sizeof(line_str)-1, "%lld", num);
-  #endif
-#else
-                int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
-#endif
                 mln_log_write(log, (void *)line_str, n);
                 break;
             }
@@ -552,10 +609,7 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'i':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(__WIN32__) && defined(__pentiumpro__)
-                long long num = va_arg(arg, long long);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%I64d", num);
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__)
                 long long num = va_arg(arg, long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%lld", num);
 #else
@@ -568,10 +622,7 @@ _mln_sys_log_process(mln_log_t *log, \
             case 'I':
             {
                 memset(line_str, 0, sizeof(line_str));
-#if defined(__WIN32__) && defined(__pentiumpro__)
-                unsigned long long num = va_arg(arg, unsigned long long);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%I64u", num);
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__)
                 unsigned long long num = va_arg(arg, unsigned long long);
                 int n = snprintf(line_str, sizeof(line_str)-1, "%llu", num);
 #else

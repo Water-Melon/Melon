@@ -12,7 +12,11 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
+#if defined(MSVC)
+#include "mln_utils.h"
+#else
 #include <sys/time.h>
+#endif
 
 MLN_CHAIN_FUNC_DECLARE(static inline, \
                        reg_file, \
@@ -69,7 +73,7 @@ MLN_FUNC_VOID(, void, mln_fileset_destroy, (mln_fileset_t *fs), (fs), {
 })
 
 
-MLN_FUNC(, mln_file_t *, mln_file_open, (mln_fileset_t *fs, const char *filepath), (fs, filepath), {
+MLN_FUNC(, mln_file_t *, mln_file_open, (mln_fileset_t *fs, char *filepath), (fs, filepath), {
     mln_rbtree_node_t *rn;
     mln_file_t *f, tmpf;
     mln_string_t path;
@@ -162,7 +166,8 @@ MLN_FUNC_VOID(static, void, mln_file_free, (void *pfile), (pfile), {
     mln_alloc_free(f);
 })
 
-MLN_FUNC(, mln_file_t *, mln_file_tmp_open, (mln_alloc_t *pool), (pool), {
+mln_file_t *mln_file_tmp_open(mln_alloc_t *pool)
+{
     char dir_path[512] = {0};
     char tmp_path[1024] = {0};
     struct timeval now;
@@ -170,7 +175,7 @@ MLN_FUNC(, mln_file_t *, mln_file_tmp_open, (mln_alloc_t *pool), (pool), {
     mln_file_t *f;
 
     snprintf(dir_path, sizeof(dir_path)-1, "%s", mln_path_tmpfile());
-#if defined(__WIN32__)
+#if defined(MSVC)
     if (mkdir(dir_path) < 0) {
 #else
     if (mkdir(dir_path, S_IRWXU) < 0) {
@@ -197,7 +202,11 @@ lp:
     gettimeofday(&now, NULL);
     suffix = now.tv_sec * 1000000 + now.tv_usec;
     snprintf(tmp_path, sizeof(tmp_path)-1, "%s/mln_tmp_%lu.tmp", dir_path, suffix);
+#if defined(MSVC)
+    f->fd = open(tmp_path, O_RDWR|O_CREAT|O_EXCL, _S_IREAD|_S_IWRITE|_S_IEXEC);
+#else
     f->fd = open(tmp_path, O_RDWR|O_CREAT|O_EXCL, S_IRWXU);
+#endif
     if (f->fd < 0) {
         if (errno == EEXIST) {
             memset(tmp_path, 0, sizeof(tmp_path));
@@ -210,7 +219,7 @@ lp:
     f->mtime = f->ctime = f->atime = now.tv_sec;
 
     return f;
-})
+}
 
 
 MLN_CHAIN_FUNC_DEFINE(static inline, \

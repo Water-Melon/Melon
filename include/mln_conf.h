@@ -71,7 +71,9 @@ struct mln_conf_s {
     mln_conf_domain_cb_t           search;
     mln_conf_domain_cb_t           insert;
     mln_conf_domain_cb_t           remove;
+#if !defined(MSVC)
     mln_ipc_cb_t                  *cb;
+#endif
 };
 
 typedef struct mln_conf_hook_s {

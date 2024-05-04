@@ -22,6 +22,7 @@ typedef struct {
  * init & free
  */
 #define mln_string(s) {(mln_u8ptr_t)s, sizeof(s)-1, 1, 0, 1}
+#if !defined(MSVC)
 #define mln_string_set(pstring,s) \
     ({\
         (pstring)->data = (mln_u8ptr_t)(s);\
@@ -60,6 +61,12 @@ typedef struct {
         }\
     }\
 })
+#else
+extern mln_string_t *mln_string_set(mln_string_t *str, char *s);
+extern mln_string_t *mln_string_nset(mln_string_t *str, char *s, mln_u64_t n);
+extern mln_string_t *mln_string_ref(mln_string_t *s);
+extern void mln_string_free(mln_string_t *s);
+#endif
 
 
 extern mln_string_t *mln_string_new(const char *s);

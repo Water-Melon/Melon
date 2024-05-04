@@ -33,9 +33,7 @@ static inline void *mln_alloc_shm_set_bitmap(mln_alloc_shm_t *as, mln_off_t Boff
 static inline mln_alloc_shm_t *mln_alloc_shm_new_block(mln_alloc_t *pool, mln_off_t *Boff, mln_off_t *boff, mln_size_t size);
 static inline void mln_alloc_free_shm(void *ptr);
 
-MLN_FUNC(static inline, mln_alloc_shm_t *, mln_alloc_shm_new, \
-         (mln_alloc_t *pool, mln_size_t size, int is_large), \
-         (pool, size, is_large), \
+static inline mln_alloc_shm_t *mln_alloc_shm_new(mln_alloc_t *pool, mln_size_t size, int is_large)
 {
     int n, i, j;
     mln_alloc_shm_t *shm, *tmp;
@@ -88,21 +86,19 @@ MLN_FUNC(static inline, mln_alloc_shm_t *, mln_alloc_shm_new, \
     }
 
     return shm;
-})
+}
 
-MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, \
-         (mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock), \
-         (size, locker, lock, unlock), \
+mln_alloc_t *mln_alloc_shm_init(mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock)
 {
     mln_alloc_t *pool;
-#if defined(__WIN32__)
+#if defined(MSVC)
     HANDLE handle;
 #endif
 
     if (size < M_ALLOC_SHM_DEFAULT_SIZE+1024 || locker == NULL || lock == NULL || unlock == NULL)
         return NULL;
 
-#if defined(__WIN32__)
+#if defined(MSVC)
     if ((handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                     NULL,
                                     PAGE_READWRITE,
@@ -141,15 +137,20 @@ MLN_FUNC(, mln_alloc_t *, mln_alloc_shm_init, \
     pool->parent = NULL;
     pool->large_used_head = pool->large_used_tail = NULL;
     pool->shm_head = pool->shm_tail = NULL;
+#if defined(MSVC)
+    pool->mem = (mln_u8ptr_t)pool;
+#else
     pool->mem = pool;
+#endif
     pool->shm_size = size;
     pool->locker = locker;
     pool->lock = lock;
     pool->unlock = unlock;
     return pool;
-})
+}
 
-MLN_FUNC(, mln_alloc_t *, mln_alloc_init, (mln_alloc_t *parent), (parent), {
+mln_alloc_t *mln_alloc_init(mln_alloc_t *parent)
+{
     mln_alloc_t *pool;
 
 #ifdef __DEBUG__
@@ -183,7 +184,7 @@ MLN_FUNC(, mln_alloc_t *, mln_alloc_init, (mln_alloc_t *parent), (parent), {
     pool->lock = NULL;
     pool->unlock = NULL;
     return pool;
-})
+}
 
 MLN_FUNC_VOID(static inline, void, mln_alloc_mgr_table_init, (mln_alloc_mgr_t *tbl), (tbl), {
     int i, j;
@@ -209,7 +210,8 @@ MLN_FUNC_VOID(static inline, void, mln_alloc_mgr_table_init, (mln_alloc_mgr_t *t
     }
 })
 
-MLN_FUNC_VOID(, void, mln_alloc_destroy, (mln_alloc_t *pool), (pool), {
+void mln_alloc_destroy(mln_alloc_t *pool)
+{
     if (pool == NULL) return;
 
     mln_alloc_t *parent = pool->parent;
@@ -235,7 +237,7 @@ MLN_FUNC_VOID(, void, mln_alloc_destroy, (mln_alloc_t *pool), (pool), {
         if (parent != NULL) mln_alloc_free(pool);
         else free(pool);
     } else {
-#if defined(__WIN32__)
+#if defined(MSVC)
         HANDLE handle = pool->map_handle;
         UnmapViewOfFile(pool->mem);
         CloseHandle(handle);
@@ -247,9 +249,10 @@ MLN_FUNC_VOID(, void, mln_alloc_destroy, (mln_alloc_t *pool), (pool), {
     }
     if (parent != NULL && mln_alloc_is_shm(parent))
         (void)parent->unlock(parent->locker);
-})
+}
 
-MLN_FUNC(, void *, mln_alloc_m, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
+void *mln_alloc_m(mln_alloc_t *pool, mln_size_t size)
+{
 #ifdef __DEBUG__
     return malloc(size);
 #else
@@ -346,10 +349,9 @@ out:
     ++(blk->chunk->refer);
     return blk->data;
 #endif
-})
+}
 
-MLN_FUNC(static inline, mln_alloc_mgr_t *, mln_alloc_get_mgr_by_size, \
-         (mln_alloc_mgr_t *tbl, mln_size_t size), (tbl, size), \
+static inline mln_alloc_mgr_t *mln_alloc_get_mgr_by_size(mln_alloc_mgr_t *tbl, mln_size_t size)
 {
     if (size > tbl[M_ALLOC_MGR_LEN-1].blk_size)
         return NULL;
@@ -373,9 +375,10 @@ MLN_FUNC(static inline, mln_alloc_mgr_t *, mln_alloc_get_mgr_by_size, \
     if (am[off].blk_size >= size) return &am[off];
     if (am[off+1].blk_size >= size) return &am[off+1];
     return &am[off+2];
-})
+}
 
-MLN_FUNC(, void *, mln_alloc_c, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
+void *mln_alloc_c(mln_alloc_t *pool, mln_size_t size)
+{
 #ifdef __DEBUG__
     return calloc(1, size);
 #else
@@ -384,9 +387,10 @@ MLN_FUNC(, void *, mln_alloc_c, (mln_alloc_t *pool, mln_size_t size), (pool, siz
     memset(ptr, 0, size);
     return ptr;
 #endif
-})
+}
 
-MLN_FUNC(, void *, mln_alloc_re, (mln_alloc_t *pool, void *ptr, mln_size_t size), (pool, ptr, size), {
+void *mln_alloc_re(mln_alloc_t *pool, void *ptr, mln_size_t size)
+{
 #ifdef __DEBUG__
     return realloc(ptr, size);
 #else
@@ -407,9 +411,10 @@ MLN_FUNC(, void *, mln_alloc_re, (mln_alloc_t *pool, void *ptr, mln_size_t size)
     
     return new_ptr;
 #endif
-})
+}
 
-MLN_FUNC_VOID(, void, mln_alloc_free, (void *ptr), (ptr), {
+void mln_alloc_free(void *ptr)
+{
     if (ptr == NULL) {
         return;
     }
@@ -428,7 +433,8 @@ MLN_FUNC_VOID(, void, mln_alloc_free, (void *ptr), (ptr), {
 
     pool = blk->pool;
     if (pool->mem) {
-        return mln_alloc_free_shm(ptr);
+        mln_alloc_free_shm(ptr);
+        return;
     }
 
     if (blk->is_large) {
@@ -472,7 +478,7 @@ MLN_FUNC_VOID(, void, mln_alloc_free, (void *ptr), (ptr), {
             free(ch);
     }
 #endif
-})
+}
 
 MLN_FUNC(static inline, void *, mln_alloc_shm_m, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
     mln_alloc_shm_t *as;
@@ -499,7 +505,8 @@ new_block:
     return mln_alloc_shm_set_bitmap(as, Boff, boff, size);
 })
 
-MLN_FUNC(static inline, void *, mln_alloc_shm_large_m, (mln_alloc_t *pool, mln_size_t size), (pool, size), {
+static inline void *mln_alloc_shm_large_m(mln_alloc_t *pool, mln_size_t size)
+{
     mln_alloc_shm_t *as;
     mln_alloc_blk_t *blk;
 
@@ -515,7 +522,7 @@ MLN_FUNC(static inline, void *, mln_alloc_shm_large_m, (mln_alloc_t *pool, mln_s
     blk->is_large = 1;
     blk->in_used = 1;
     return blk->data;
-})
+}
 
 MLN_FUNC(static inline, mln_alloc_shm_t *, mln_alloc_shm_new_block, \
          (mln_alloc_t *pool, mln_off_t *Boff, mln_off_t *boff, mln_size_t size), \

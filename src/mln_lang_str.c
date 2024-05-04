@@ -172,8 +172,7 @@ MLN_FUNC(, mln_string_t *, mln_lang_str_var_tostring, \
     return __mln_lang_str_var_tostring(pool, var);
 })
 
-MLN_FUNC(static inline, mln_string_t *, __mln_lang_str_var_tostring, \
-         (mln_alloc_t *pool, mln_lang_var_t *var), (pool, var), \
+static inline mln_string_t *__mln_lang_str_var_tostring(mln_alloc_t *pool, mln_lang_var_t *var)
 {
     ASSERT(var != NULL && var->val != NULL);
     char buf[1024] = {0};
@@ -193,9 +192,7 @@ MLN_FUNC(static inline, mln_string_t *, __mln_lang_str_var_tostring, \
             n = snprintf(buf, sizeof(buf)-1, "Array");
             break;
         case M_LANG_VAL_TYPE_INT:
-#if defined(__WIN32__) && defined(__pentiumpro__)
-            n = snprintf(buf, sizeof(buf)-1, "%I64d", val->data.i);
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
             n = snprintf(buf, sizeof(buf)-1, "%lld", val->data.i);
 #else
             n = snprintf(buf, sizeof(buf)-1, "%ld", val->data.i);
@@ -219,7 +216,7 @@ MLN_FUNC(static inline, mln_string_t *, __mln_lang_str_var_tostring, \
     mln_string_t tmp;
     mln_string_nset(&tmp, buf, n);
     return mln_string_pool_dup(pool, &tmp);
-})
+}
 
 MLN_FUNC(static, int, mln_lang_str_assign, \
          (mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2), \

@@ -4,6 +4,7 @@ There are two multi-threading modes supported in Melon, one of which is the thre
 
 **Note**: Only one thread pool is allowed per process.
 
+This module is not supported in the MSVC.
 
 
 ### Header file

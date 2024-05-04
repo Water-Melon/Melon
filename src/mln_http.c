@@ -3,10 +3,12 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
-#include <stdio.h>
-#include <unistd.h>
-#include "mln_types.h"
 #include "mln_http.h"
+#include <stdio.h>
+#if !defined(MSVC)
+#include <unistd.h>
+#endif
+#include "mln_types.h"
 #include "mln_func.h"
 
 
@@ -38,7 +40,11 @@ mln_http_generate_uri(struct mln_http_chain_s *hc);
 static int
 mln_http_generate_fields_hash_iterate_handler(mln_hash_t *h, void *key, void *val, void *data);
 static inline int
+#if defined(MSVC)
+mln_http_generate_write(struct mln_http_chain_s *hc, mln_u8ptr_t buf, mln_size_t size);
+#else
 mln_http_generate_write(struct mln_http_chain_s *hc, void *buf, mln_size_t size);
+#endif
 static inline int
 mln_http_generate_set_last_in_chain(struct mln_http_chain_s *hc);
 
@@ -601,9 +607,11 @@ MLN_FUNC(static inline, int, mln_http_generate_set_last_in_chain, \
     return M_HTTP_RET_OK;
 })
 
-MLN_FUNC(static inline, int, mln_http_generate_write, \
-         (struct mln_http_chain_s *hc, void *buf, mln_size_t size), \
-         (hc, buf, size), \
+#if defined(MSVC)
+static inline int mln_http_generate_write(struct mln_http_chain_s *hc, mln_u8ptr_t buf, mln_size_t size)
+#else
+static inline int mln_http_generate_write(struct mln_http_chain_s *hc, void *buf, mln_size_t size)
+#endif
 {
     mln_buf_t *cur;
     mln_http_t *http = hc->http;
@@ -668,7 +676,7 @@ MLN_FUNC(static inline, int, mln_http_generate_write, \
     }
 
     return M_HTTP_RET_OK;
-})
+}
 
 MLN_FUNC(static inline, int, mln_http_generate_version, \
          (struct mln_http_chain_s *hc), (hc), \
@@ -998,24 +1006,37 @@ MLN_FUNC(static, int, mln_http_hash_cmp, \
 /*
  * dump
  */
-MLN_FUNC_VOID(, void, mln_http_dump, (mln_http_t *http), (http), {
+void mln_http_dump(mln_http_t *http)
+{
     int rc = 1;
     printf("HTTP Dump:\n");
     if (http == NULL) return;
 
     if (http->uri != NULL) {
         printf("\tURI:[");fflush(stdout);
+#if defined(MSVC)
+        rc = write(_fileno(stdout), http->uri->data, http->uri->len);
+#else
         rc = write(STDOUT_FILENO, http->uri->data, http->uri->len);
+#endif
         printf("]\n");
     }
     if (http->args != NULL) {
         printf("\tARGS:[");fflush(stdout);
+#if defined(MSVC)
+        rc = write(_fileno(stdout), http->args->data, http->args->len);
+#else
         rc = write(STDOUT_FILENO, http->args->data, http->args->len);
+#endif
         printf("]\n");
     }
     if (http->response_msg != NULL) {
         printf("\tRESPONSE_MSG:[");fflush(stdout);
+#if defined(MSVC)
+        rc = write(_fileno(stdout), http->response_msg->data, http->response_msg->len);
+#else
         rc = write(STDOUT_FILENO, http->response_msg->data, http->response_msg->len);
+#endif
         printf("]\n");
     }
     printf("\tstatus_code:%u\n", http->status);
@@ -1025,7 +1046,7 @@ MLN_FUNC_VOID(, void, mln_http_dump, (mln_http_t *http), (http), {
     printf("\tfields:\n");
     if (rc <= 0) rc = 1;/*do nothing*/
     mln_hash_iterate(http->header_fields, mln_http_dump_iterate_handler, NULL);
-})
+}
 
 MLN_FUNC(static, int, mln_http_dump_iterate_handler, \
          (mln_hash_t *h, void *key, void *val, void *data), (h, key, val, data), \

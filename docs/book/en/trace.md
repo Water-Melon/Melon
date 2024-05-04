@@ -42,9 +42,12 @@ For Melang and its supporting library, please refer to [Melang Warehouse](https:
 
 ```c
 mln_trace(fmt, ...);
+
+//in msvc, the prototype will be
+mln_trace(ret, fmt, ...);
 ```
 
-Description: Send some data to the specified processing script. The parameters here are exactly the same as `fmt` and its variable parameters of the `mln_lang_ctx_pipe_send` function ([see this chapter for details](https://water-melon.github.io/Melon/en/melang.html)), Because the inside of this macro is to call the function to complete the message delivery.
+Description: Send some data to the specified processing script. The parameters here are exactly the same as `fmt` and its variable parameters of the `mln_lang_ctx_pipe_send` function ([see this chapter for details](https://water-melon.github.io/Melon/en/melang.html)), Because the inside of this macro is to call the function to complete the message delivery. In MSVC, the return value will be assigned to the parameter `ret`.
 
 return value:
 - `0` - on success

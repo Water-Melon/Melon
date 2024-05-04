@@ -2,12 +2,11 @@
 
 
 
-**Note**: This function is currently not supported under Windows.
-
 At the beginning of Melon's development, it was necessary to support the multi-process model, which was mainly due to Nginx and previous user-mode network program development experience. Therefore, multiprocessing in Melon also continues the asynchronous event pattern similar to Nginx.
 
 Let's use Melon to complete a multi-process example. Although this example is simple, users will find that in fact Melon does not interfere or even gives to the user great freedom of development.
 
+This feature is not supported in the MSVC.
 
 
 After installation, we first need to create a source file called `hello.c` to complete the desired function:

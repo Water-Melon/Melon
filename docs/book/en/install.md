@@ -1,28 +1,10 @@
 ## Installation
 
 
-<iframe width="100%" height="480px" src="https://www.youtube.com/embed/d0G-8BwLi30?si=XzbFCEcPADefc6_8" title="YouTube video player" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
+### UNIX
 
-On Windows, there is no difference between the installation of Windows and UNIX environments, you only need to install and configure `mingw` or `msys2`.
-
-If you install `mingw`, you may want to install `git bash` and `make` either. Install [MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds) with the installation settings:
-
-- `Version`: `8.1.0`
-
-- `Architecture`: `i686`
-
-- `Threads`: `posix`
-
-- `Exception`: `dwarf`
-
-- `Build revision`: `0`
-
-If you install `msys2`, you can use `pacman` to install any tool softwares you may need (e.g. `make`, `git`).
-
-
-
-To install Melon on UNIX, execute the following commands:
+To install Melon on UNIX environments (Linux and MacOSX), execute the following commands:
 
 ```bash
 $ git clone https://github.com/Water-Melon/Melon.git
@@ -31,34 +13,34 @@ $ make
 $ sudo make install
 ```
 
-Shell script `configure` has the following parameters:
+The `configure` script supports the following parameters:
 
-- `--prefix` The installation path of Melon library
-- `--melang-prefix` The installation path of the Melang script files that Melon used
-- `--cc` Set the C compiler that used to compile Melon
-- `--enable-wasm` Enable `webassembly` mode to generate webassembly format library
-- `--debug` Enable `debug` mode. If omited the generated library will not contain symbol information and macro `__DEBUG__`
-- `--func` Enable `func` mode. When enabled, the functions defined by `MLN_FUNC` and `MLN_FUNC_VOID` will enable entry and exit callbacks when called.
-- `--olevel=[O|O1|O2|O3|...]` The level of compilation optimization, the default is `O3`. The optimization is disabled if no content after `=`.
-- `--select=[all | module1,module2,...]` Selectively compile some modules. The default is `all` which means compiling all modules. Module names can be given in the document for each module.
-- `--disable-macro=[macro1,macro2,...]` disables the system calls or macros supported by the current operating system detected by `configure`. Currently, only the following is supported:
-  - `event`: used to control whether to disable detection of event-related system calls supported by a specific operating system platform. If disabled, `select` is used by default.
-  - `sendfile`: Controls whether to disable the `sendfile` system call.
-  - `writev`: Controls whether the `writev` system call is disabled.
-  - `unix98`: Controls whether to disable the `__USE_UNIX98` macro.
-  - `mmap`: Controls whether to disable `mmap` and `munmap` system calls.
-- `--help` Show help information
+- `--prefix`: Set the installation path for Melon.
+- `--melang-prefix`: Set the installation path for Melang scripts used in the Melon library.
+- `--cc`: Set the C compiler used for compiling Melon components.
+- `--enable-wasm`: Enable `webassembly` mode, which compiles and installs the Melon library in webassembly format.
+- `--debug`: Enable `debug` mode. If not enabled, the generated library will not include symbol information, and the `__DEBUG__` macro will not be enabled.
+- `--func`: Enable `func` mode, which enables entry and exit callbacks for functions defined using `MLN_FUNC` and `MLN_FUNC_VOID`.
+- `--olevel=[O|O1|O2|O3|...]`: Set the optimization level for compilation, default is `O3`. If nothing follows the `=`, optimization is disabled.
+- `--select=[all | module1,module2,...]`: Selectively compile specific modules. Default is `all` to compile all modules. Module names can be found in the respective module documentation.
+- `--disable-macro=[macro1,macro2,...]`: Disable system calls or macros detected by `configure` for the current operating system. Currently supported:
+  - `event`: Disable detection of event-related system calls supported by specific operating system platforms. If disabled, `select` is used by default.
+  - `sendfile`: Control whether to disable the `sendfile` system call.
+  - `writev`: Control whether to disable the `writev` system call.
+  - `unix98`: Control whether to disable the `__USE_UNIX98` macro.
+  - `mmap`: Control whether to disable the `mmap` and `munmap` system calls.
+- `--help`: Display help information for the `configure` script.
 
 
 
-Melon generates both dynamic and static libraries at the same time. For Linux systems, when using Melon's dynamic library, the path to the library needs to be added to the system configuration:
+Melon generates both a dynamic library (`libmelon.so`) and a static library (`libmelon_static.a`). For Linux systems, when using the dynamic library of Melon, you need to add the path of this library to the system configuration:
 
 ```bash
 $ sudo echo "/usr/local/melon/lib/" >> /etc/ld.so.conf
 $ sudo ldconfig
 ```
 
-Or use the command given below to solve dynamic library not found problem:
+Alternatively, you can use the `LD_LIBRARY_PATH` environment variable to solve the problem of not finding the dynamic library at runtime:
 
 ```shell
 $ export LD_LIBRARY_PATH=/path/to/melon/libdir:$LD_LIBRARY_PATH
@@ -66,7 +48,75 @@ $ export LD_LIBRARY_PATH=/path/to/melon/libdir:$LD_LIBRARY_PATH
 
 
 
-By default, Melon is installed in `/usr/local/melon` on UNIX and `$HOME/libmelon` on Windows.
+By default, Melon will be installed in `/usr/local/melon` on UNIX systems and in `$HOME/libmelon` on Windows.
+
+
+
+### Windows
+
+Windows platform supports two installation environments:
+
+- `msys2`
+- `msvc`
+
+
+
+#### msys2
+
+`msys2` fully supports Melon's features and is therefore the recommended installation method on Windows.
+
+##### Installing msys2 and dependencies
+
+`msys2` can be downloaded and installed from https://www.msys2.org/. Then, choose `MSYS2 UCRT64` to start the msys2 command line environment, and enter the following command to install the required dependencies:
+
+```
+pacman -S vim make gcc git
+```
+
+##### Installing Melon
+
+This step is exactly the same as the installation steps in the UNIX environment. After installation, you will get the `libmelon.dll` and `libmelon_static.lib` libraries.
+
+
+
+#### msvc
+
+`msvc` currently only supports partial module functionality. The following modules are currently not supported:
+
+- `class`
+- `iothread`
+- `thread_pool`
+- `spinlock`
+- `multi-process framework`
+- `multi-thread framework`
+
+To use `msvc`, you need to first install the [Visual Studio C/C++ IDE](https://visualstudio.microsoft.com/vs/features/cplusplus/). After installation, you can use the Powershell installed along with it to start the MSVC command line environment.
+
+After pulling the Melon library and change directory to the Melon codebase, execute:
+
+```
+build.bat
+```
+
+to compile and install.
+
+After installation, you will see the compiled static library `libmelon_static.lib` in the `lib` subdirectory. MSVC environment currently does not support generating dynamic libraries.
+
+One additional point to note is that the Melon library compiled with MSVC hard-codes the paths inside the `path` module, so the installation path is `HOME/libmelon`.
+
+MSVC currently only supports full installation and does not support selective module installation.
+
+
+
+### CMake
+
+Melon now supports full compilation and installation of the library using CMake. Simply execute the following command:
+
+```bash
+mkdir build
+cd build
+cmake ..
+```
 
 
 

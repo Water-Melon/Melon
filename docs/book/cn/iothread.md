@@ -2,11 +2,8 @@
 
 I/O线程算是一种另类线程池结构。但是这个组件主要用于图形界面类的应用。通常情况下，图形界面应用都会存在一个用户线程和一个I/O线程，这样当I/O处理时就不会无法响应用户的操作（如：点击）了。
 
+本模块在MSVC环境中暂不支持。
 
-
-### 视频介绍
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV1d8411X7Xk&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
 
 
 

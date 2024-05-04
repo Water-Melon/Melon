@@ -2,6 +2,7 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+#if !defined(MSVC)
 #include "mln_iothread.h"
 #include <string.h>
 #include <stdio.h>
@@ -10,11 +11,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include "mln_func.h"
-#if defined(__WIN32__)
-#include <winsock2.h>
-#else
 #include <sys/socket.h>
-#endif
 
 static inline void mln_iothread_fd_nonblock_set(int fd);
 static inline mln_iothread_msg_t *mln_iothread_msg_new(mln_u32_t type, void *data, int feedback);
@@ -207,11 +204,9 @@ MLN_FUNC_VOID(static inline, void, mln_iothread_msg_free, (mln_iothread_msg_t *m
 })
 
 MLN_FUNC_VOID(static inline, void, mln_iothread_fd_nonblock_set, (int fd), (fd), {
-#if defined(__WIN32__)
-    u_long opt = 1;
-    ioctlsocket(fd, FIONBIO, &opt);
-#else
     int flg = fcntl(fd, F_GETFL, NULL);
     fcntl(fd, F_SETFL, flg | O_NONBLOCK);
-#endif
 })
+
+#endif
+

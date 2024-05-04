@@ -5,7 +5,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(MSVC)
+#include "mln_utils.h"
+#else
 #include <sys/time.h>
+#endif
 #include "mln_types.h"
 #include "mln_func.h"
 

@@ -297,3 +297,12 @@ MLN_FUNC(, int, mln_rbtree_iterate, \
     return 0;
 })
 
+#if defined(MSVC)
+mln_rbtree_node_t *mln_rbtree_node_init(mln_rbtree_node_t *n, void *data)
+{
+    n->data = data;
+    n->nofree = 1;
+    return n;
+}
+#endif
+

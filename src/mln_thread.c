@@ -2,13 +2,14 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+
+#if !defined(MSVC)
+
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#if !defined(__WIN32__)
 #include <sys/socket.h>
 #include <dlfcn.h>
-#endif
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -750,4 +751,6 @@ MLN_FUNC(static, mln_thread_msgq_t *, mln_thread_msgq_init, \
 MLN_FUNC_VOID(static, void, mln_thread_msgq_destroy, (mln_thread_msgq_t *tmq), (tmq), {
     free(tmq);
 })
+
+#endif
 

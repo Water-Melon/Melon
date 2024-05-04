@@ -356,12 +356,11 @@ MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_data_matrix, \
     return matrix;
 })
 
-MLN_FUNC_VOID(, void, mln_rs_matrix_dump, (mln_rs_matrix_t *matrix), (matrix), {
+void mln_rs_matrix_dump(mln_rs_matrix_t *matrix)
+{
     if (matrix == NULL) return;
     mln_size_t i, sum = matrix->row * matrix->col;
-#if defined(__WIN32__) && !defined(__pentiumpro__)
-    printf("Matrix row:%llu col:%llu\n ", matrix->row, matrix->col);
-#elif defined(i386) || defined(__arm__) || defined(__WIN32__)
+#if defined(i386) || defined(__arm__) || defined(MSVC)
     printf("Matrix row:%u col:%u\n ", matrix->row, matrix->col);
 #else
     printf("Matrix row:%lu col:%lu\n ", matrix->row, matrix->col);
@@ -373,7 +372,7 @@ MLN_FUNC_VOID(, void, mln_rs_matrix_dump, (mln_rs_matrix_t *matrix), (matrix), {
         printf("%u ", matrix->data[i]);
     }
     printf("\n");
-})
+}
 
 /*mln_rs_result_t*/
 MLN_FUNC(static, mln_rs_result_t *, mln_rs_result_new, \

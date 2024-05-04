@@ -1,11 +1,6 @@
 ## 跟踪模式
 
 
-### 视频介绍
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV1p34y1V7FH&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
-
-
 
 跟踪模式用于收集使用Melon库的程序信息。大致过程如下：
 
@@ -49,9 +44,12 @@
 
 ```c
 mln_trace(fmt, ...);
+
+//msvc中，原型为
+mln_trace(ret, fmt, ...);
 ```
 
-描述：发送若干数据给指定的处理脚本。这里的参数，与`mln_lang_ctx_pipe_send`函数([详见此章节](https://water-melon.github.io/Melon/cn/melang.html))的`fmt`及其可变参数的内容完全一致，因为本宏内部就是调用该函数完成的消息传递。
+描述：发送若干数据给指定的处理脚本。这里的参数，与`mln_lang_ctx_pipe_send`函数([详见此章节](https://water-melon.github.io/Melon/cn/melang.html))的`fmt`及其可变参数的内容完全一致，因为本宏内部就是调用该函数完成的消息传递。msvc中，返回值会被赋予给参数`ret`。
 
 返回值：
 

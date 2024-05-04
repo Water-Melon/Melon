@@ -5,7 +5,11 @@
 #ifndef __MLN_DEFS_H
 #define __MLN_DEFS_H
 
+#if !defined(MSVC)
 #include <pthread.h>
+#else
+#include "mln_types.h"
+#endif
 #include "mln_func.h"
 
 #ifdef __DEBUG__
@@ -19,6 +23,15 @@
  * container_of and offsetof
  */
 #define mln_offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+#if defined(MSVC)
+#define mln_container_of(ptr, type, member, ret) do {\
+    type *__rptr = NULL;\
+    if ((ptr) != NULL) {\
+        __rptr = (type *)((char *)((const typeof(((type *)0)->member) *)(ptr)) - mln_offsetof(type, member));\
+    }\
+    (ret) = __rptr;\
+} while (0)
+#else
 #define mln_container_of(ptr, type, member) ({\
     type *__rptr = NULL;\
     if ((ptr) != NULL) {\
@@ -26,11 +39,12 @@
     }\
     __rptr;\
 })
+#endif
 
 /*
  * nonnull attribute
  */
-#if defined(__APPLE__) || defined(__WIN32__) || defined(__wasm__)
+#if defined(__APPLE__) || defined(MSVC) || defined(__wasm__)
 #define __NONNULL1(x)
 #define __NONNULL2(x,y)
 #define __NONNULL3(x,y,z)
@@ -71,6 +85,7 @@ extern int spin_trylock(void *lock);
 
 #else
 
+#if !defined(MSVC)
 /*
  * In FreeBSD, pthread_spin_init() will call calloc(),
  * so we cannot use these interfaces in FreeBSD to
@@ -84,6 +99,7 @@ extern int spin_trylock(void *lock);
 #define mln_spin_destroy(lock_ptr) \
     pthread_spin_destroy((lock_ptr))
 
+#endif
 #endif
 
 /*
@@ -142,7 +158,7 @@ extern int spin_trylock(void *lock);
     }\
 }
 
-#if defined(__WIN32__)
+#if defined(MSVC)
 extern int pipe(int fds[2]);
 extern int socketpair(int domain, int type, int protocol, int sv[2]);
 #define mln_socket_close closesocket
@@ -158,6 +174,28 @@ extern int socketpair(int domain, int type, int protocol, int sv[2]);
 
 #if defined(MLN_C99) && defined(__linux__)
 extern void usleep(unsigned long usec);
+#endif
+
+#if defined(MSVC)
+#include <windows.h>
+#include <string.h>
+#define MAX_PATH_LEN 260
+
+struct dirent {
+    char d_name[MAX_PATH_LEN];
+};
+
+typedef struct {
+    HANDLE hFind;
+    WIN32_FIND_DATAA findFileData;
+    char* path;
+    CRITICAL_SECTION lock;
+} DIR;
+
+extern DIR* opendir(const char* path);
+extern struct dirent* readdir(DIR* dirp);
+extern int closedir(DIR* dirp);
+extern int gettimeofday(struct timeval *tv, void *tz);
 #endif
 
 #define MLN_AUTHOR "Niklaus F.Schen"

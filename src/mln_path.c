@@ -8,6 +8,15 @@
 
 static char install_path[] = MLN_ROOT;
 
+#if defined(MSVC)
+static char conf_path[] = MLN_ROOT"\\conf\\melon.conf";
+
+static char tmpfile_path[] = MLN_ROOT"\\tmp";
+
+static char pid_path[] = MLN_ROOT"\\logs\\melon.pid";
+
+static char log_path[] = MLN_ROOT"\\logs\\melon.log";
+#else
 static char conf_path[] = MLN_ROOT"/conf/melon.conf";
 
 static char tmpfile_path[] = MLN_ROOT"/tmp";
@@ -15,6 +24,7 @@ static char tmpfile_path[] = MLN_ROOT"/tmp";
 static char pid_path[] = MLN_ROOT"/logs/melon.pid";
 
 static char log_path[] = MLN_ROOT"/logs/melon.log";
+#endif
 
 static char null_path[] = MLN_NULL;
 

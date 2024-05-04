@@ -6,6 +6,7 @@ The system calls used by events vary according to different operating system pla
 - kqueue
 - select
 
+This module is not thread-safe in the `MSVC` environment.
 
 
 ### Header file

@@ -3,14 +3,14 @@
  * Copyright (C) Niklaus F.Schen.
  */
 
-#if !defined(__WIN32__)
-#include <sys/resource.h>
-#include <pwd.h>
-#endif
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#if !defined(MSVC)
+#include <sys/resource.h>
+#include <pwd.h>
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <sys/types.h>
 #include <signal.h>
@@ -22,7 +22,7 @@
 
 static int
 mln_boot_help(const char *boot_str, const char *alias);
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 static int mln_set_id(void);
 static int
 mln_boot_reload(const char *boot_str, const char *alias);
@@ -38,7 +38,7 @@ long mon_days[2][12] = {
 };
 mln_boot_t boot_params[] = {
 {"--help", "-h", mln_boot_help, 0},
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 {"--reload", "-r", mln_boot_reload, 0},
 {"--stop", "-s", mln_boot_stop, 0}
 #endif
@@ -54,7 +54,8 @@ MLN_FUNC(, int, mln_sys_limit_modify, (void), (), {
     return mln_sys_nofile_modify();
 })
 
-MLN_FUNC(static, int, mln_sys_core_modify, (void), (), {
+static int mln_sys_core_modify(void)
+{
 #ifdef RLIMIT_CORE
     rlim_t core_file_size = 0;
 
@@ -94,9 +95,10 @@ MLN_FUNC(static, int, mln_sys_core_modify, (void), (), {
     }
 #endif
     return 0;
-})
+}
 
-MLN_FUNC(static, int, mln_sys_nofile_modify, (void), (), {
+static int mln_sys_nofile_modify(void)
+{
 #ifdef RLIMIT_NOFILE
     rlim_t nofile = 0;
 
@@ -136,9 +138,9 @@ MLN_FUNC(static, int, mln_sys_nofile_modify, (void), (), {
     }
 #endif
     return 0;
-})
+}
 
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 MLN_FUNC(, int, mln_daemon, (void), (), {
     int ret = mln_log_init(NULL);
     if (ret < 0) return ret;
@@ -284,7 +286,7 @@ MLN_FUNC(static, int, mln_boot_help, \
     return 0;
 })
 
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 MLN_FUNC(static, int, mln_boot_reload, \
          (const char *boot_str, const char *alias), \
          (boot_str, alias), \

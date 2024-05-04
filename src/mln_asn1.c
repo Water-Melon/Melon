@@ -69,7 +69,7 @@ MLN_FUNC(, mln_asn1_deresult_t *, mln_asn1_decode_chain, \
     mln_chain_t *c;
     mln_buf_t *b;
     mln_asn1_deresult_t *res;
-    ssize_t n;
+    int n;
 
     for (c = in; c != NULL; c = c->next) {
         if (c->buf == NULL) continue;

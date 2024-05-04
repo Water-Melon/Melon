@@ -4,6 +4,9 @@
  */
 #ifndef __MLN_THREAD_H
 #define __MLN_THREAD_H
+
+#if !defined(MSVC)
+
 #include "mln_connection.h"
 #include "mln_types.h"
 #include "mln_string.h"
@@ -99,5 +102,7 @@ extern void mln_thread_exit(int exit_code);
 extern void mln_thread_kill(mln_string_t *alias);
 extern void mln_thread_cleanup_set(void (*tcleanup)(void *), void *data);
 extern void mln_thread_module_set(mln_thread_module_t *modules, mln_size_t num);
+#endif
+
 #endif
 

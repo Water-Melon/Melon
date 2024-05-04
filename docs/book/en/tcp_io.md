@@ -35,7 +35,7 @@ typedef struct mln_buf_s {//Used to store data, and specify the data storage loc
     mln_off_t           file_last;//end offset of data within this file
     mln_file_t         *file;//File structure, see the introduction of the file collection section
     mln_u32_t           temporary:1;//Whether the memory pointed to by memory pointers such as start and pos is temporary (that is, does not need to be released)
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     mln_u32_t           mmap:1;//Whether it is the memory created by mmap, it is not supported under win
 #endif
     mln_u32_t           in_memory:1;//Is the data in memory

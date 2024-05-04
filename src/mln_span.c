@@ -10,7 +10,7 @@
 mln_span_stack_node_t *__mln_span_stack_top = NULL;
 mln_span_stack_node_t *__mln_span_stack_bottom = NULL;
 mln_span_t *mln_span_root = NULL;
-#if defined(__WIN32__)
+#if defined(MSVC)
 DWORD mln_span_registered_thread;
 #else
 pthread_t mln_span_registered_thread;
@@ -149,7 +149,7 @@ int mln_span_entry(void *fptr, const char *file, const char *func, int line, ...
 {
     mln_span_t *span;
 
-#if defined(__WIN32__)
+#if defined(MSVC)
     if (mln_span_registered_thread != GetCurrentThreadId()) return 0;
 #else
     if (!pthread_equal(mln_span_registered_thread, pthread_self())) return 0;
@@ -170,7 +170,7 @@ int mln_span_entry(void *fptr, const char *file, const char *func, int line, ...
 
 void mln_span_exit(void *fptr, const char *file, const char *func, int line, void *ret, ...)
 {
-#if defined(__WIN32__)
+#if defined(MSVC)
     if (mln_span_registered_thread != GetCurrentThreadId()) return;
 #else
     if (!pthread_equal(mln_span_registered_thread, pthread_self())) return;
@@ -197,6 +197,26 @@ static void __mln_span_dump(mln_span_t *s, mln_span_dump_cb_t cb, void *data, in
 
 void mln_span_dump(mln_span_dump_cb_t cb, void *data)
 {
-    return __mln_span_dump(mln_span_root, cb, data, 0);
+    __mln_span_dump(mln_span_root, cb, data, 0);
 }
+
+#if defined(MSVC)
+void mln_span_release(void)
+{
+    mln_span_free(mln_span_root);
+    mln_span_root = NULL;
+}
+
+mln_span_t *mln_span_move(void)
+{
+    mln_span_t *span = mln_span_root;
+    mln_span_root = NULL;
+    return span;
+}
+
+mln_u64_t mln_span_time_cost(mln_span_t *s)
+{
+    return (mln_u64_t)(s->end.tv_sec * 1000000 + s->end.tv_usec) - (s->begin.tv_sec * 1000000 + s->begin.tv_usec);
+}
+#endif
 

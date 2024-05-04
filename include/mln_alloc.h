@@ -6,7 +6,7 @@
 #ifndef __MLN_ALLOC_H
 #define __MLN_ALLOC_H
 
-#if defined(__WIN32__)
+#if defined(MSVC)
 #include <windows.h>
 #include <winbase.h>
 #else
@@ -74,7 +74,11 @@ typedef struct mln_alloc_shm_s {
     struct mln_alloc_shm_s   *prev;
     struct mln_alloc_shm_s   *next;
     mln_alloc_t              *pool;
+#if defined(MSVC)
+    mln_u8ptr_t               addr;
+#else
     void                     *addr;
+#endif
     mln_size_t                size;
     mln_u32_t                 nfree;
     mln_u32_t                 base:31;
@@ -83,12 +87,16 @@ typedef struct mln_alloc_shm_s {
 } mln_alloc_shm_t;
 
 struct mln_alloc_s {
+#if defined(MSVC)
+    mln_u8ptr_t               mem;
+#else
     void                     *mem;
+#endif
     mln_size_t                shm_size;
     void                     *locker;
     mln_alloc_shm_lock_cb_t   lock;
     mln_alloc_shm_lock_cb_t   unlock;
-#if defined(__WIN32__)
+#if defined(MSVC)
     HANDLE                    map_handle;
 #endif
     struct mln_alloc_s       *parent;

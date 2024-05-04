@@ -32,6 +32,7 @@ The approximate calling sequence of these callback functions is as follows:
 
 `master_process`/`worker_process` is called in the master/worker process under the multi-process model, and is used to make some global settings for a single process.
 
+In `MSVC`, there is no `main_thread`, `master_process`, or `worker_process`. The initialization process only returns after initializing configurations, logging, etc.
 
 
 ### Header file
@@ -55,9 +56,11 @@ struct mln_framework_attr {
     int                            argc; //Usually the argc of main
     char                         **argv; //Usually the argv of main
     mln_framework_init_t           global_init; //The initialization callback function is generally used to initialize global variables. The callback will be called after the configuration is loaded.
+#if !defined(MSVC)
     mln_framework_process_t        main_thread; //The main thread handler function, which we will dive into in the mutli-thread framework section
     mln_framework_process_t        master_process; //The main process handler function, which we will dive into in the multi-process framework section
     mln_framework_process_t        worker_process; //Worker process handlers, which we'll dive into in the multiprocessing framework section
+#endif
 };
 
 typedef int (*mln_framework_init_t)(void);

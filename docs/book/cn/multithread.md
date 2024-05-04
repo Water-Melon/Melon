@@ -2,7 +2,7 @@
 
 
 
-**注意**：Windows下目前不支持本功能。
+本功能在MSVC环境中暂不支持。
 
 多线程框架与前面介绍的线程池不同，是一种模块化线程。模块化线程是指，每一个线程都是一个独立的代码模块，都有各自对应的入口函数（类似于每一个 C 语言程序有一个 main 函数一样）。
 
@@ -40,11 +40,7 @@
                return -1;
            }
            memset(&msg, 0, sizeof(msg));
-   #if defined(__WIN32__)
-           int n = recv(fd, (char *)&msg, sizeof(msg), 0);
-   #else
            int n = recv(fd, &msg, sizeof(msg), 0);
-   #endif
            if (n != sizeof(msg)) {
                mln_log(debug, "recv error. n=%d. %s\n", n, strerror(errno));
                return -1;
@@ -74,11 +70,7 @@
            msg.c = 'N';
            msg.type = ITC_REQUEST;
            msg.need_clear = 1;
-   #if defined(__WIN32__)
-           int n = send(fd, (char *)&msg, sizeof(msg), 0);
-   #else
            int n = send(fd, &msg, sizeof(msg), 0);
-   #endif
            if (n != sizeof(msg)) {
                mln_log(debug, "send error. n=%d. %s\n", n, strerror(errno));
                mln_string_free(msg.dest);

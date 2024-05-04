@@ -2,11 +2,6 @@
 
 
 
-### 视频介绍
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV1Ju4y1d7Zg&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
-
-
 
 ### 头文件
 

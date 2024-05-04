@@ -66,31 +66,18 @@ Melon is a generic cross-platform C library. It contains many algorithms, data s
 
 ### Platform Support
 
-Melon was originally written for UNIX systems, so it is suitable for UNIX-like systems such as Linux and MacOS. And there are a few optimizations for Intel CPUs.
+- Linux
 
-At present, Melon has also completed the preliminary porting to Windows, so it can be used on Windows. However, because Windows differs greatly from the UNIX system in the creation process, some functions of the above `framework` are temporarily not supported in Windows.
+- MacOSX
+
+- Windows
+  - `msys2` (Fully supported)
+  - `msvc` (Partially supported)
 
 
 
-### Installation
 
-On Windows, please install `mingw` or `msys2`.
-
-If you install `mingw`, you may want to install `git bash` and `make` either. Install [MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds) with the installation settings:
-
-- `Version`: `8.1.0`
-
-- `Architecture`: `i686`
-
-- `Threads`: `posix`
-
-- `Exception`: `dwarf`
-
-- `Build revision`: `0`
-
-If you install `msys2`, you can use `pacman` to install any tool softwares you may need.
-
-Then execute these shell commands on git bash or terminal (on UNIX).
+### Quick Installation
 
 ```
 git clone https://github.com/Water-Melon/Melon.git
@@ -100,7 +87,7 @@ make
 make install
 ```
 
-For more `configure` options, please refer to [Official Document: Installation](http://doc.melonc.io/en/install.html).
+For installation on other operating systems or for more configure options, please refer to [Official Document: Installation](http://doc.melonc.io/en/install.html).
 
 
 

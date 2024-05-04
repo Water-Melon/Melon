@@ -2,11 +2,6 @@
 
 
 
-### 视频介绍
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV1ih4y1B7Fi&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
-
-
 
 ### 说明
 这里仅给出开发者所需要的结构定义和函数声明。

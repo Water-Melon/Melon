@@ -2,6 +2,7 @@
 
 Class template is used to provide a programming experience similar to object-oriented programming. The module provides several macros to implement object-oriented programming style.
 
+This module is not supported in the MSVC.
 
 
 ### Header file

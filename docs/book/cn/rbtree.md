@@ -5,14 +5,8 @@
 在红黑树组件中，有两种使用模式：
 
 - 基础用法
-- 内联用法
+- 内联用法 (`msvc`不支持)
 - 容器用法
-
-
-
-### 视频讲解
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV1hP411x7e4&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
 
 
 

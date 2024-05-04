@@ -2,14 +2,18 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#if defined(__WIN32__)
+#if defined(MSVC)
 #define _CRT_RAND_S
 #endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#if defined(MSVC)
+#include "mln_utils.h"
+#else
 #include <sys/time.h>
+#endif
 #include <math.h>
 #include "mln_bignum.h"
 #include "mln_func.h"
@@ -905,15 +909,14 @@ MLN_FUNC(static inline, int, __mln_bignum_div_word, \
     return 0;
 })
 
-MLN_FUNC_VOID(, void, mln_bignum_dump, (mln_bignum_t *bn), (bn), {
+void mln_bignum_dump(mln_bignum_t *bn)
+{
     fprintf(stderr, "Tag: %s\n", bn->tag==M_BIGNUM_POSITIVE?"+":"-");
     fprintf(stderr, "Length: %u\n", bn->length);
     mln_u32_t i;
     fprintf(stderr, "Data:\n");
     for (i = 0; i < M_BIGNUM_SIZE; ++i) {
-#if defined(__WIN32__) && defined(__pentiumpro__)
-        fprintf(stderr, "\t%I64x\n", bn->data[i]);
-#elif defined(__WIN32__) || defined(i386) || defined(__arm__) || defined(__wasm__)
+#if defined(MSVC) || defined(i386) || defined(__arm__) || defined(__wasm__)
         fprintf(stderr, "\t%llx\n", bn->data[i]);
 #else
         fprintf(stderr, "\t%lx\n", bn->data[i]);
@@ -921,7 +924,7 @@ MLN_FUNC_VOID(, void, mln_bignum_dump, (mln_bignum_t *bn), (bn), {
     }
     fprintf(stderr, "\n");
     fflush(stderr);
-})
+}
 
 /*
  * prime
@@ -982,8 +985,7 @@ MLN_FUNC(static inline, mln_u32_t, mln_bignum_witness, \
     return 0;
 })
 
-MLN_FUNC_VOID(static inline, void, mln_bignum_random_prime, \
-              (mln_bignum_t *bn, mln_u32_t bitwidth), (bn, bitwidth), \
+static inline void mln_bignum_random_prime(mln_bignum_t *bn, mln_u32_t bitwidth)
 {
     struct timeval tv;
     memset(bn, 0, sizeof(mln_bignum_t));
@@ -994,7 +996,7 @@ MLN_FUNC_VOID(static inline, void, mln_bignum_random_prime, \
     mln_s32_t i;
 
     for (i = 0; i < times; ++i) {
-#if defined(__WIN32__)
+#if defined(MSVC)
         rand_s(&val);
 #else
         val = (mln_u32_t)rand_r(&val);
@@ -1003,7 +1005,7 @@ MLN_FUNC_VOID(static inline, void, mln_bignum_random_prime, \
     }
 
     if ((off = bitwidth % 32)) {
-#if defined(__WIN32__)
+#if defined(MSVC)
         rand_s(&val);
         data[i] = ((mln_u64_t)val * 0xfdfd) & 0xffffffff;
 #else
@@ -1021,7 +1023,7 @@ MLN_FUNC_VOID(static inline, void, mln_bignum_random_prime, \
             if (data[i-1] == 0) {
                 gettimeofday(&tv, NULL);
                 val = tv.tv_sec*1000000+tv.tv_usec;
-#if defined(__WIN32__)
+#if defined(MSVC)
                 rand_s(&val);
                 data[i-1] = (mln_u32_t)val;
 #else
@@ -1033,11 +1035,9 @@ MLN_FUNC_VOID(static inline, void, mln_bignum_random_prime, \
             data[0] |= 1;
         }
     }
-})
+}
 
-MLN_FUNC_VOID(static inline, void, mln_bignum_random_scope, \
-              (mln_bignum_t *bn, mln_u32_t bitwidth, mln_bignum_t *max), \
-              (bn, bitwidth, max), \
+static inline void mln_bignum_random_scope(mln_bignum_t *bn, mln_u32_t bitwidth, mln_bignum_t *max)
 {
     mln_u32_t width;
     struct timeval tv;
@@ -1046,7 +1046,7 @@ MLN_FUNC_VOID(static inline, void, mln_bignum_random_scope, \
 lp:
     gettimeofday(&tv, NULL);
     val = tv.tv_sec*1000000+tv.tv_usec;
-#if defined(__WIN32__)
+#if defined(MSVC)
     rand_s(&val);
     width = val % bitwidth;
 #else
@@ -1054,7 +1054,7 @@ lp:
 #endif
     if (width < 2) goto lp;
     mln_bignum_random_prime(bn, width);
-})
+}
 
 MLN_FUNC(, int, mln_bignum_prime, (mln_bignum_t *res, mln_u32_t bitwidth), (res, bitwidth), {
     if (bitwidth > M_BIGNUM_BITS>>1 || bitwidth < 3) return -1;

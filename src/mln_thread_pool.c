@@ -2,6 +2,9 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
+
+#if !defined(MSVC)
+
 #include <time.h>
 #include <stdlib.h>
 #include "mln_thread_pool.h"
@@ -115,7 +118,6 @@ MLN_FUNC_VOID(static, void, mln_thread_pool_member_exit, (void *arg), (arg), {
 /*
  * thread_pool
  */
-#if !defined(__WIN32__)
 MLN_FUNC_VOID(static, void, mln_thread_pool_prepare, (void), (), {
     if (m_thread_pool_self == NULL) return;
     if (!m_thread_pool_self->locked)
@@ -142,7 +144,6 @@ MLN_FUNC_VOID(static, void, mln_thread_pool_child, (void), (), {
         mln_thread_pool_member_exit(fr);
     }
 })
-#endif
 
 MLN_FUNC(static, mln_thread_pool_t *, mln_thread_pool_new, \
          (struct mln_thread_pool_attr *tpattr, int *err), (tpattr, err), \
@@ -188,10 +189,9 @@ MLN_FUNC(static, mln_thread_pool_t *, mln_thread_pool_new, \
     tp->process_handler = tpattr->child_process_handler;
     tp->free_handler = tpattr->free_handler;
     tp->max = tpattr->max;
-#ifdef MLN_USE_UNIX98
+#if defined(MLN_USE_UNIX98) && !defined(MSYS2)
     if (tpattr->concurrency) pthread_setconcurrency(tpattr->concurrency);
 #endif
-#if !defined(__WIN32__)
     if ((rc = pthread_atfork(mln_thread_pool_prepare, \
                              mln_thread_pool_parent, \
                              mln_thread_pool_child)) != 0)
@@ -203,7 +203,6 @@ MLN_FUNC(static, mln_thread_pool_t *, mln_thread_pool_new, \
         *err = rc;
         return NULL;
     }
-#endif
     if ((m_thread_pool_self = mln_thread_pool_member_join(tp, 0)) == NULL) {
         pthread_attr_destroy(&(tp->attr));
         pthread_cond_destroy(&(tp->cond));
@@ -429,4 +428,6 @@ MLN_CHAIN_FUNC_DEFINE(static inline, \
                       mln_thread_pool_member_t, \
                       prev, \
                       next);
+
+#endif
 

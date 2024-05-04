@@ -2,16 +2,9 @@
 
 
 
-**注意**：Windows下目前不支持本功能。
+本功能在MSVC环境中暂不支持。
 
 Melon开发之初便是要支持多进程模型的，这一点也主要源于Nginx以及以往用户态网络程序开发经历。因此，Melon中的多进程也延续了类似Nginx的异步事件模式。
-
-
-
-### 视频介绍
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV1294y1k7kd&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
-
 
 
 

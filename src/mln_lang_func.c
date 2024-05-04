@@ -667,9 +667,7 @@ MLN_FUNC(static, int, mln_lang_func_reverse, \
     return -1;
 })
 
-MLN_FUNC(static, int, mln_lang_func_not, \
-         (mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2), \
-         (ctx, ret, op1, op2), \
+static int mln_lang_func_not(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2)
 {
     if (ctx->op_func_flag) {
         int rc = mln_lang_funccall_val_operator(ctx, &mln_lang_func_opr_names[33], ret, op1, op2);
@@ -688,7 +686,7 @@ MLN_FUNC(static, int, mln_lang_func_not, \
         return -1;
     }
     return 0;
-})
+}
 
 MLN_FUNC(static, int, mln_lang_func_pinc, \
          (mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2), \

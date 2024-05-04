@@ -11,7 +11,7 @@
 #elif defined(MLN_KQUEUE)
 #include <sys/event.h>
 #else
-#if defined(__WIN32__)
+#if defined(MSVC)
 #include <winsock2.h>
 #include <winsock2.h>
 #else
@@ -19,8 +19,12 @@
 #endif
 #endif
 #include <sys/types.h>
-#include <sys/time.h>
+#if !defined(MSVC)
 #include <unistd.h>
+#include <sys/time.h>
+#else
+#include "mln_utils.h"
+#endif
 #include <signal.h>
 #include "mln_rbtree.h"
 #include "mln_fheap.h"
@@ -107,9 +111,11 @@ struct mln_event_desc_s {
 };
 
 struct mln_event_s {
+#if !defined(MSVC)
     pthread_mutex_t          fd_lock;
     pthread_mutex_t          timer_lock;
     pthread_mutex_t          cb_lock;
+#endif
     dispatch_callback        callback;
     void                    *callback_data;
     mln_u32_t                is_break:1;

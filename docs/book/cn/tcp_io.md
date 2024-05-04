@@ -35,7 +35,7 @@ typedef struct mln_buf_s {//用于存放数据，且根据不同标识量指定�
     mln_off_t           file_last;//数据在本文件内的结束偏移
     mln_file_t         *file;//文件结构，参见文件集合部分的介绍
     mln_u32_t           temporary:1;//start、pos等内存指针指向的内存是否是临时的（即不需要释放的）
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     mln_u32_t           mmap:1;//是否是mmap创建的内存，win下暂不支持
 #endif
     mln_u32_t           in_memory:1;//数据是否在内存中

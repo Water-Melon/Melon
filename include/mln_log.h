@@ -21,7 +21,9 @@ typedef enum {
 } mln_log_level_t;
 
 typedef struct {
+#if !defined(MSVC)
     mln_spin_t      thread_lock;
+#endif
     int             fd;
     mln_u32_t       in_daemon:1;
     mln_u32_t       init:1;
@@ -55,7 +57,7 @@ extern void _mln_sys_log(mln_log_level_t level, \
                          ...);
 #define mln_log(err_lv,msg,...) \
     _mln_sys_log(err_lv, __FILE__, __FUNCTION__, __LINE__, msg, ## __VA_ARGS__)
-extern ssize_t mln_log_writen(void *buf, mln_size_t size);
+extern int mln_log_writen(void *buf, mln_size_t size);
 extern int mln_log_fd(void);
 extern char *mln_log_dir_path(void);
 extern char *mln_log_logfile_path(void);

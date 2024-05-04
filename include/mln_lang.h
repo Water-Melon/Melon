@@ -112,7 +112,9 @@ struct mln_lang_s {
     mln_lang_run_ctl_t               clear;
     ev_fd_handler                    launcher;
     mln_rbtree_t                    *alias_set;
+#if !defined(MSVC)
     pthread_mutex_t                  lock;
+#endif
 };
 
 typedef enum {
@@ -218,7 +220,9 @@ struct mln_lang_ctx_s {
     struct mln_lang_ctx_s           *next;
     mln_lang_symbol_node_t          *sym_head;
     mln_lang_symbol_node_t          *sym_tail;
+#if !defined(MSVC)
     pthread_t                        owner;
+#endif
     mln_string_t                    *alias;
     mln_u32_t                        sym_count:16;
     mln_u32_t                        ret_flag:1;
@@ -420,7 +424,9 @@ typedef struct {
 typedef struct {
     mln_lang_ctx_t                  *ctx;
     mln_array_t                      list;
+#if !defined(MSVC)
     pthread_mutex_t                  lock;
+#endif
     mln_lang_ctx_pipe_recv_cb_t      recv_handler;
     mln_u32_t                        subscribed:1;
     mln_u32_t                        padding:31;
@@ -439,8 +445,10 @@ extern mln_lang_method_t *mln_lang_methods[];
 
 
 #define mln_lang_ctx_is_quit(ctx)    ((ctx)->quit)
+#if !defined(MSVC)
 #define mln_lang_mutex_lock(lang)    pthread_mutex_lock(&(lang)->lock)
 #define mln_lang_mutex_unlock(lang)  pthread_mutex_unlock(&(lang)->lock)
+#endif
 #define mln_lang_task_empty(lang)    ((lang)->run_head == NULL && (lang)->wait_head == NULL)
 #define mln_lang_signal_get(lang)    ((lang)->signal)
 #define mln_lang_event_get(lang)     ((lang)->ev)
@@ -536,13 +544,13 @@ extern mln_lang_array_t *mln_lang_array_new(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern void mln_lang_array_free(mln_lang_array_t *array);
 extern int mln_lang_array_elem_exist(mln_lang_array_t *array, mln_lang_var_t *key) __NONNULL2(1,2);
 extern int mln_lang_ctx_resource_register(mln_lang_ctx_t *ctx, char *name, void *data, mln_lang_resource_free free_handler) __NONNULL2(1,2);
-extern void *mln_lang_ctx_resource_fetch(mln_lang_ctx_t *ctx, const char *name) __NONNULL2(1,2);
+extern void *mln_lang_ctx_resource_fetch(mln_lang_ctx_t *ctx, char *name) __NONNULL2(1,2);
 extern void mln_lang_ctx_set_ret_var(mln_lang_ctx_t *ctx, mln_lang_var_t *var) __NONNULL1(1);
 extern void mln_lang_ctx_suspend(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern void mln_lang_ctx_continue(mln_lang_ctx_t *ctx) __NONNULL1(1);
 extern int mln_lang_resource_register(mln_lang_t *lang, char *name, void *data, mln_lang_resource_free free_handler) __NONNULL2(1,2);
-extern void mln_lang_resource_cancel(mln_lang_t *lang, const char *name) __NONNULL2(1,2);
-extern void *mln_lang_resource_fetch(mln_lang_t *lang, const char *name) __NONNULL2(1,2);
+extern void mln_lang_resource_cancel(mln_lang_t *lang, char *name) __NONNULL2(1,2);
+extern void *mln_lang_resource_fetch(mln_lang_t *lang, char *name) __NONNULL2(1,2);
 extern int mln_lang_ctx_pipe_send(mln_lang_ctx_t *ctx, char *fmt, ...);
 extern int mln_lang_ctx_pipe_recv_handler_set(mln_lang_ctx_t *ctx, mln_lang_ctx_pipe_recv_cb_t recv_handler) __NONNULL1(1);
 

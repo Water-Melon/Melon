@@ -2,13 +2,17 @@
 /*
  * Copyright (C) Niklaus F.Schen.
  */
-#if defined(__WIN32__)
+#if defined(MSVC)
 #define _CRT_RAND_S
 #endif
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(MSVC)
+#include "mln_utils.h"
+#else
 #include <sys/time.h>
+#endif
 #include "mln_rsa.h"
 #include "mln_chain.h"
 #include "mln_md5.h"
@@ -148,9 +152,7 @@ in:
     return 0;
 })
 
-MLN_FUNC_VOID(static inline, void, mln_rsa_pub_padding, \
-              (mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen), \
-              (in, inlen, out, keylen), \
+static inline void mln_rsa_pub_padding(mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen)
 {
     mln_size_t j;
     struct timeval tv;
@@ -162,7 +164,7 @@ MLN_FUNC_VOID(static inline, void, mln_rsa_pub_padding, \
     val = tv.tv_sec*1000000+tv.tv_usec;
     for (j = keylen - inlen - 3; j > 0; --j) {
 lp:
-#if defined(__WIN32__)
+#if defined(MSVC)
         rand_s(&val);
         *out = val;
 #else
@@ -177,7 +179,7 @@ lp:
     }
     *out++ = 0;
     memcpy(out, in, inlen);
-})
+}
 
 MLN_FUNC_VOID(static inline, void, mln_rsa_pri_padding, \
               (mln_u8ptr_t in, mln_size_t inlen, mln_u8ptr_t out, mln_size_t keylen), \

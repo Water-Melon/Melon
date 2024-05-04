@@ -13,11 +13,6 @@
 
 
 
-### 视频讲解
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV148411R7Xt&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
-
-
 
 ### 头文件
 
@@ -63,7 +58,7 @@ RET(code)
 
 描述：根据给定的错误码`code`生成返回值。如果`code`为0，则表示无错。若`code`小于0则是不合法的错误值。若`code`大于0，则表示一个合法错误码。如果再此之前使用了`mln_error_callback_set`设置了回调函数，那么在返回值拼装完成后，回调函数会被调用。
 
-返回值：0或一个负值，0表示无错误，负值表示出错
+返回值：0或一个负值，0表示无错误，负值表示出错。`msvc`环境下，返回值将直接赋值给参数`code`，而不是像函数一样返回。
 
 
 

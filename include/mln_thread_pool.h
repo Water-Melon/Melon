@@ -5,6 +5,8 @@
 #ifndef __MLN_THREAD_POOL_H
 #define __MLN_THREAD_POOL_H
 
+#if !defined(MSVC)
+
 #ifdef MLN_USE_UNIX98
   #ifndef __USE_UNIX98
   #define __USE_UNIX98
@@ -75,4 +77,6 @@ extern int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr) __NONNULL1(1
 extern int mln_thread_pool_resource_add(void *data) __NONNULL1(1);
 extern void mln_thread_quit(void);
 extern void mln_thread_resource_info(struct mln_thread_pool_info *info);
+#endif
+
 #endif

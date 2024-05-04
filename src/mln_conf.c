@@ -12,14 +12,11 @@
 
 #define CONF_ERR(lex,TK,MSG); \
 {\
-    int rc = 1;\
     mln_string_t *path = mln_lex_get_cur_filename(lex);\
     fprintf(stderr, "Configuration error. ");\
     if (path != NULL) {\
-        rc = write(STDERR_FILENO, path->data, path->len);\
-        rc = write(STDERR_FILENO, ":", 1);\
+        fprintf(stderr, "%s:", (char *)(path->data));\
     }\
-    if (rc <= 0) rc = 1;/*do nothing*/\
     fprintf(stderr, "%d: \"%s\" %s.\n", (TK)->line, (char *)((TK)->text->data), MSG);\
 }
 
@@ -106,7 +103,7 @@ static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *u
 /*for hook*/
 static mln_conf_hook_t *mln_conf_hook_init(void);
 static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 static void mln_conf_reload_master_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
 static void mln_conf_reload_worker_handler(mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr);
 #endif
@@ -132,7 +129,8 @@ MLN_FUNC(static, mln_conf_lex_struct_t *, mln_conf_lex_sglq_handler, (mln_lex_t 
     return mln_conf_lex_new(lex, CONF_TK_CHAR);
 })
 
-MLN_FUNC(static inline, int, mln_get_char, (mln_lex_t *lex, char c), (lex, c), {
+static inline int mln_get_char(mln_lex_t *lex, char c)
+{
     if (c == '\\') {
         char n;
         if ((n = mln_lex_getchar(lex)) == MLN_ERR) return -1;
@@ -161,9 +159,11 @@ MLN_FUNC(static inline, int, mln_get_char, (mln_lex_t *lex, char c), (lex, c), {
             case 'r':
                 if (mln_lex_putchar(lex, '\r') == MLN_ERR) return -1;
                 break;
+#if !defined(MSVC)
             case 'e':
                 if (mln_lex_putchar(lex, '\e') == MLN_ERR) return -1;
                 break;
+#endif
             case 'v':
                 if (mln_lex_putchar(lex, '\v') == MLN_ERR) return -1;
                 break;
@@ -178,7 +178,7 @@ MLN_FUNC(static inline, int, mln_get_char, (mln_lex_t *lex, char c), (lex, c), {
         if (mln_lex_putchar(lex, c) == MLN_ERR) return -1;
     }
     return 0;
-})
+}
 
 MLN_FUNC(static, mln_conf_lex_struct_t *, mln_conf_lex_dblq_handler, (mln_lex_t *lex, void *data), (lex, data), {
     mln_lex_result_clean(lex);
@@ -303,7 +303,8 @@ MLN_FUNC(static, mln_conf_lex_struct_t *, mln_conf_token, (mln_lex_t *lex), (lex
 
 
 /*mln_conf_t*/
-MLN_FUNC(static inline, mln_conf_t *, mln_conf_init, (void), (), {
+static inline mln_conf_t *mln_conf_init(void)
+{
     mln_conf_t *cf;
     cf = (mln_conf_t *)malloc(sizeof(mln_conf_t));
     if (cf == NULL) {
@@ -350,7 +351,11 @@ MLN_FUNC(static inline, mln_conf_t *, mln_conf_init, (void), (), {
     conf_file_path[path_len] = '\0';
     mln_string_nset(&path, conf_file_path, path_len);
 
+#if defined(MSVC)
+    if (!_access(conf_file_path, 0)) {
+#else
     if (!access(conf_file_path, F_OK)) {
+#endif
         lattr.pool = pool;
         lattr.keywords = conf_keywords;
         memset(&hooks, 0, sizeof(hooks));
@@ -381,20 +386,25 @@ MLN_FUNC(static inline, mln_conf_t *, mln_conf_init, (void), (), {
         mln_conf_destroy(cf);
         return NULL;
     }
+#if !defined(MSVC)
     cf->cb = NULL;
+#endif
     return cf;
-})
+}
 
-MLN_FUNC_VOID(static, void, mln_conf_destroy, (mln_conf_t *cf), (cf), {
+static void mln_conf_destroy(mln_conf_t *cf)
+{
     if (cf == NULL) return;
     mln_conf_destroy_lex(cf);
     if (cf->domain != NULL) {
         mln_rbtree_free(cf->domain);
         cf->domain = NULL;
     }
+#if !defined(MSVC)
     if (cf->cb != NULL) mln_ipc_handler_unregister(cf->cb);
+#endif
     free(cf);
-})
+}
 
 MLN_FUNC_VOID(static inline, void, mln_conf_destroy_lex, (mln_conf_t *cf), (cf), {
     if (cf == NULL) return;
@@ -822,7 +832,8 @@ MLN_FUNC(static, int, _mln_conf_load, (mln_conf_t *cf, mln_conf_domain_t *curren
     return 0;
 })
 
-MLN_FUNC(, int, mln_conf_load, (void), (), {
+int mln_conf_load(void)
+{
     mln_string_t dname;
     mln_rbtree_node_t *rn;
     mln_conf_domain_t *cd, tmp;
@@ -847,7 +858,7 @@ MLN_FUNC(, int, mln_conf_load, (void), (), {
             return -1;
         }
     }
-#if !defined(__WIN32__)
+#if !defined(MSVC)
     if ((g_conf->cb = mln_ipc_handler_register(M_IPC_TYPE_CONF, mln_conf_reload_master_handler, mln_conf_reload_worker_handler, NULL, NULL)) == NULL) {
         mln_conf_destroy(g_conf);
         g_conf = NULL;
@@ -855,7 +866,7 @@ MLN_FUNC(, int, mln_conf_load, (void), (), {
     }
 #endif
     return 0;
-})
+}
 
 MLN_FUNC_VOID(, void, mln_conf_free, (void), (), {
     if (g_conf == NULL) return;
@@ -973,9 +984,7 @@ MLN_FUNC(static, int, mln_conf_dump_conf_iterate_handler, (mln_rbtree_node_t *no
     return 0;
 })
 
-MLN_FUNC(static, int, mln_conf_dump_domain_iterate_handler, \
-         (mln_rbtree_node_t *node, void *udata), (node, udata), \
-{
+MLN_FUNC(static, int, mln_conf_dump_domain_iterate_handler, (mln_rbtree_node_t *node, void *udata), (node, udata), {
     mln_conf_cmd_t *cc = (mln_conf_cmd_t *)mln_rbtree_node_data_get(node);
     printf("\t\tCOMMAND [%s]:\n", (char *)(cc->cmd_name->data));
     mln_s32_t i;
@@ -994,17 +1003,7 @@ MLN_FUNC(static, int, mln_conf_dump_domain_iterate_handler, \
                 printf("BOOL [%u]\n", ci->val.b);
                 break;
             case CONF_INT:
-#if defined(__WIN32__)
-  #if defined(i386) || defined(__arm__)
                 printf("INT [%ld]\n", ci->val.i);
-  #elif defined(__pentiumpro__)
-                printf("INT [%I64d]\n", ci->val.i);
-  #else
-                printf("INT [%lld]\n", ci->val.i);
-  #endif
-#else
-                printf("INT [%ld]\n", ci->val.i);
-#endif
                 break;
             case CONF_FLOAT:
                 printf("FLOAT [%f]\n", ci->val.f);
@@ -1027,7 +1026,7 @@ MLN_CHAIN_FUNC_DEFINE(static inline, \
 /*
  * ipc handlers
  */
-#if !defined(__WIN32__)
+#if !defined(MSVC)
 MLN_FUNC_VOID(static, void, mln_conf_reload_master_handler, \
               (mln_event_t *ev, void *f_ptr, void *buf, mln_u32_t len, void **udata_ptr), \
               (ev, f_ptr, buf, len, udata_ptr), \

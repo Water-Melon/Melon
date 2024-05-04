@@ -6,7 +6,8 @@
 #include "mln_chain.h"
 #include "mln_func.h"
 
-MLN_FUNC(, mln_buf_t *, mln_buf_new, (mln_alloc_t *pool), (pool), {
+mln_buf_t *mln_buf_new(mln_alloc_t *pool)
+{
     mln_buf_t *b = mln_alloc_m(pool, sizeof(mln_buf_t));
     b->left_pos = b->pos = b->last = NULL;
     b->start = b->end = NULL;
@@ -14,12 +15,12 @@ MLN_FUNC(, mln_buf_t *, mln_buf_new, (mln_alloc_t *pool), (pool), {
     b->file_left_pos = b->file_pos = b->file_last = 0;
     b->file = NULL;
     b->temporary = b->in_memory = b->in_file = 0;
-#if !defined(__WIN32__) && defined(MLN_MMAP)
+#if !defined(MSVC) && defined(MLN_MMAP)
     b->mmap = 0;
 #endif
     b->flush = b->sync = b->last_buf = b->last_in_chain = 0;
     return b;
-})
+}
 
 MLN_FUNC(, mln_chain_t *, mln_chain_new, (mln_alloc_t *pool), (pool), {
     mln_chain_t *c = mln_alloc_m(pool, sizeof(mln_chain_t));
@@ -28,7 +29,8 @@ MLN_FUNC(, mln_chain_t *, mln_chain_new, (mln_alloc_t *pool), (pool), {
     return c;
 })
 
-MLN_FUNC_VOID(, void, mln_buf_pool_release, (mln_buf_t *b), (b), {
+void mln_buf_pool_release(mln_buf_t *b)
+{
     if (b == NULL) return;
 
     if (b->shadow != NULL || b->temporary) {
@@ -37,7 +39,7 @@ MLN_FUNC_VOID(, void, mln_buf_pool_release, (mln_buf_t *b), (b), {
     }
 
     if (b->in_memory) {
-#if !defined(__WIN32__) && defined(MLN_MMAP)
+#if !defined(MSVC) && defined(MLN_MMAP)
         if (b->mmap) {
             if (b->start != NULL) {
                 munmap(b->start, b->end - b->start);
@@ -51,7 +53,7 @@ MLN_FUNC_VOID(, void, mln_buf_pool_release, (mln_buf_t *b), (b), {
             } else {
                 mln_alloc_free(b->pos);
             }
-#if !defined(__WIN32__) && defined(MLN_MMAP)
+#if !defined(MSVC) && defined(MLN_MMAP)
         }
 #endif
         mln_alloc_free(b);
@@ -65,7 +67,7 @@ MLN_FUNC_VOID(, void, mln_buf_pool_release, (mln_buf_t *b), (b), {
     }
 
     mln_alloc_free(b);
-})
+}
 
 MLN_FUNC_VOID(, void, mln_chain_pool_release, (mln_chain_t *c), (c), {
     if (c == NULL) return;
