@@ -102,7 +102,7 @@ to compile and install.
 
 After installation, you will see the compiled static library `libmelon_static.lib` in the `lib` subdirectory. MSVC environment currently does not support generating dynamic libraries.
 
-One additional point to note is that the Melon library compiled with MSVC hard-codes the paths inside the `path` module, so it is important to ensure that the paths for the corresponding configuration and log files match those in the library.
+One additional point to note is that the Melon library compiled with MSVC hard-codes the paths inside the `path` module, so the installation path is `HOME/libmelon`.
 
 MSVC currently only supports full installation and does not support selective module installation.
 
