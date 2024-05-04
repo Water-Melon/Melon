@@ -10,12 +10,6 @@ Melon中的资源开销（span）组件是用来测量C语言函数开销的，�
 
 
 
-### 视频介绍
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV1jZ4y1E7H9&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
-
-
-
 ### 头文件
 
 ```c
