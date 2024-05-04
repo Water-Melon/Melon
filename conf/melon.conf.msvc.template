@@ -1,0 +1,35 @@
+log_level "none";
+//user "root";
+daemon off;
+core_file_size "unlimited";
+//max_nofile 1024;
+worker_proc 1;
+framework off;
+log_path "{{ROOT}}\\logs\\melon.log";
+/*
+ * Configurations in the 'proc_exec' are the
+ * processes which are customized by user.
+ *
+ * Here is an example to show you how to
+ * spawn a program.
+ *     keepalive "/tmp/a.out" ["arg1" "arg2" ...]
+ * The command in this example is 'keepalive' that
+ * indicate master process to supervise this
+ * process. If process is killed, master process
+ * would restart this program.
+ * If you don't want master to restart it, you can
+ *     default "/tmp/a.out" ["arg1" "arg2" ...]
+ *
+ * But you should know that there is another
+ * arugment after the last argument you write here.
+ * That is the file descriptor which is used to
+ * communicate with master process.
+ */
+proc_exec {
+   // keepalive "/tmp/a";
+}
+thread_exec {
+//    restart "hello" "hello" "world";
+//    default "haha";
+}
+//trace_mode "trace/trace.m"; /* path or off */

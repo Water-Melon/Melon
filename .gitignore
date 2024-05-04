@@ -5,4 +5,3 @@ objs/
 bin/
 build/
 conf/melon.conf
-build.bat
