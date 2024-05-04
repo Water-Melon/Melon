@@ -5,7 +5,7 @@ This document explains how to use the red-black tree component.
 In the red-black tree component, there are two usage modes:
 
 - Basic Usage
-- Inline Usage
+- Inline Usage (not supported in `MSVC`)
 - Container Usage
 
 

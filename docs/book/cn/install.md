@@ -1,33 +1,10 @@
 ## 安装
 
 
-### 视频介绍
 
-<iframe src="//player.bilibili.com/player.html?bvid=BV1Lu411u7Z1&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
+### UNIX
 
-
-
-Windows与UNIX环境的安装并无差异，仅需要先行安装并配置`mingw`或`msys2`。
-
-如果你安装`mingw`, 那你也许也会想要安装`git bash`以及`make`，后续步骤与UNIX的完全一致。
-
-安装[MingW-W64-builds](https://www.mingw-w64.org/downloads/#mingw-builds)时请选择如下设置：
-
-- `Version`: `8.1.0`
-
-- `Architecture`: `i686`
-
-- `Threads`: `posix`
-
-- `Exception`: `dwarf`
-
-- `Build revision`: `0`
-
-如果你安装的是`msys2`，那么你可以使用`pacman`命令来安装一些你可能需要的工具，例如`git`，`make`等。
-
-
-
-UNIX环境下Melon的安装执行如下命令：
+UNIX环境（Linux和MacOSX）下Melon的安装执行如下命令：
 
 ```bash
 $ git clone https://github.com/Water-Melon/Melon.git
@@ -57,7 +34,7 @@ $ sudo make install
 
 
 
-Melon会同时生成动态库与静态库。对于Linux系统，在使用Melon的动态库时，需要将该库的路径加入到系统配置中：
+Melon会同时生成动态库（`libmelon.so`）与静态库（`libmelon_static.a`）。对于Linux系统，在使用Melon的动态库时，需要将该库的路径加入到系统配置中：
 
 ```bash
 $ sudo echo "/usr/local/melon/lib/" >> /etc/ld.so.conf
@@ -76,7 +53,73 @@ $ export LD_LIBRARY_PATH=/path/to/melon/libdir:$LD_LIBRARY_PATH
 
 
 
-#### Docker
+### Windows
+
+Windows平台支持两种安装方式：
+
+- `msys2`
+- `msvc`
+
+
+
+#### msys2
+
+`msys2`完全支持Melon的特性，因此也是Windows上的推荐安装方式。
+
+##### 安装msys2及依赖项
+
+`msys2`可以在 https://www.msys2.org/ 中进行下载和安装。随后选择`MSYS2 UCRT64`启动msys2命令行环境，并输入如下命令安装所需依赖：
+
+```
+pacman -S vim make gcc git
+```
+
+##### 安装Melon
+
+这一步与UNIX环境中的安装步骤就完全一样了。安装好后将得到`libmelon.dll`和`libmelon_static.lib`库。
+
+
+
+#### msvc
+
+`msvc`目前仅支持部分模块功能，如下是暂不支持的模块：
+
+- `class`
+- `iothread`
+- `thread_pool`
+- `自旋锁`
+- `多进程框架`
+- `多线程框架`
+
+要使用`msvc`，需要先行安装[Visual Studio C/C++ IDE](https://visualstudio.microsoft.com/vs/features/cplusplus/)。安装好后，可以使用跟随其一同安装好的Powershell启动MSVC命令行环境。
+
+拉取Melon库并切换至Melon代码库后，执行
+
+```
+build.bat
+```
+
+即可进行编译安装。安装好后，在`lib`子目录中将看到编译生成的静态库`libmelon_static.lib`。MSVC环境暂不支持生成动态库。
+
+额外需要注意的一点是，MSVC编译出来的Melon库，硬编码了`path`模块内的路径，因此需要注意相应的配置文件及日志文件的路径需要与之匹配。
+
+MSVC目前仅支持完全安装，暂不支持模块选择性编译。
+
+
+
+### CMake
+
+目前Melon支持了使用CMake完全编译安装库，执行如下命令即可：
+
+```bash
+mkdir build
+cd build
+cmake ..
+```
+
+
+
+### Docker
 
 可以直接使用如下命令拉取已构建好的Melon环境，其中也包含了Melang脚本所使用到的系统库
 

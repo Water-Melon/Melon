@@ -5,7 +5,7 @@ What is implemented in Melon is **minimum heap**.
 Similar to the red-black tree component, the Fibonacci heap component has three usages:
 
 - Basic Usage
-- Inline Usage
+- Inline Usage (not supported in `MSVC`)
 - Container Usage
 
 

@@ -1,6 +1,9 @@
 ## Log
 
 
+This module is not thread-safe in the `MSVC`.
+
+
 
 ### Header file
 

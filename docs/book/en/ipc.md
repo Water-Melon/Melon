@@ -1,5 +1,6 @@
 ## IPC module development
 
+This module is not supported in the MSVC.
 
 
 ### Header file

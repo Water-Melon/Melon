@@ -32,6 +32,8 @@
 
 `master_process`/`worker_process`是在多进程模型下，在主/工作进程中被调用的，用于针对单个进程进行一些全局设置。
 
+`msvc`中，不包含`main_thread`，`master_process`和`worker_process`。初始化流程仅对配置和日志等初始化后返回。
+
 
 
 ### 头文件
@@ -55,9 +57,11 @@ struct mln_framework_attr {
     int                            argc; //一般为main的argc
     char                         **argv; //一般为main的argv
     mln_framework_init_t           global_init; //初始化回调函数，一般用于初始化全局变量，该回调会在配置加载完成后被调用
+#if !defined(MSVC)
     mln_framework_process_t        main_thread; //主线程处理函数，我们将在多线程框架部分深入
     mln_framework_process_t        master_process; //主进程处理函数，我们将在多进程框架部分深入
     mln_framework_process_t        worker_process; //工作进程处理函数，我们将在多进程框架部分深入
+#endif
 };
 
 typedef int (*mln_framework_init_t)(void);

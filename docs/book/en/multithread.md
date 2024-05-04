@@ -2,12 +2,11 @@
 
 
 
-**Note**: This function is currently not supported under Windows.
-
 Different from the thread pool described above, the multi-threaded framework is a modular thread. Modular threads mean that each thread is an independent code module with its own corresponding entry function (similar to the fact that every C language program has a main function).
 
 > Since version 2.3.0, the multi-threading module is no longer integrated by writing code files in the threads directory under the Melon directory, but using the registration function to be registered and loaded by the user in the program. This decouples the thread module code from the Melon library in the directory structure.
 
+This feature is not supported in the MSVC.
 
 
 ### Development steps

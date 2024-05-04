@@ -2,6 +2,7 @@
 
 The spinlock in Melon will use different implementations according to different compilers and different CPU architectures.
 
+This module is not supported in the MSVC.
 
 
 ### Header file

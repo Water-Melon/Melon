@@ -1,10 +1,7 @@
 ## 日志
 
 
-
-### 视频介绍
-
-<iframe src="//player.bilibili.com/player.html?bvid=BV1V94y1x7rD&page=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" height="480px" width="100%"> </iframe>
+日志模块在`msvc`环境中将不是多线程安全的。
 
 
 

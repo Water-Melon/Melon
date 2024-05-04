@@ -2,6 +2,7 @@
 
 I/O thread is another kind of thread pool. But this component is mainly used for GUI applications. Usually, GUI applications will have one user thread and one I/O thread, so that when I/O is processed, it will not prevent to respond to user operations (such as click).
 
+This module is not supported in the MSVC.
 
 
 ### Header file

@@ -58,7 +58,7 @@ RET(code)
 
 Description: Generate a return value based on the given error code `code`. No error if `code` is 0. An invalid error value if `code` is less than 0. If `code` is greater than 0, it indicates a valid error code. If mln_error_callback_set was used to set a callback function before this, the callback function will be invoked after the return value is composed.
 
-Return value: 0 or a negative value, 0 means no error, negative value means error
+Return value: 0 or a negative value, 0 means no error, negative value means error. In the MSVC environment, the return value will be directly assigned to the `code`.
 
 
 
