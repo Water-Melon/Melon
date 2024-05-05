@@ -54,7 +54,7 @@ The meaning of each member of the parameter structure is as follows:
 - `main_data` User-defined data for the main thread.
 - `child_process_handler` The processing function of each child thread. This function has a parameter of the data structure pointer given when the main thread sends the task. The return value is `0` to indicate normal processing, and `non-0` to indicate abnormal processing. There will be log output.
 - `main_process_handler` The processing function of the main thread, this function has a parameter `main_data`, the return value `0` means normal processing, `non-0` means processing exceptions, and there will be log output when exceptions occur. **Under normal circumstances, the main thread processing function should not return at will. Once the return represents the end of the thread pool processing, the thread pool will be destroyed**.
-- `free_handler` is the resource release function. Its resource is the content pointed to by the data structure pointer issued by the main thread to the child thread.
+- `free_handler` is the resource release function. Its resource is the content pointed to by the data structure pointer issued by the main thread to the child thread. Note: This release function is only used to release resources that have not been processed or completed when the child thread exits or the thread pool is destroyed. In other words, any resource that has passed the callback of `child_process_handler` will be completely released by the child thread and will be released in `child_process_handler`.
 - `cond_timeout` is the idle sub-thread recycling timer, in milliseconds. When the child thread has no task processing and the waiting time exceeds the timer duration, it will exit by itself.
 - The maximum number of child threads allowed by the `max` thread pool.
 - `concurrency` is used for `pthread_setconcurrency` to set the parallel level reference value, but some systems do not implement this function, so this value should not be relied on too much. Under Linux, setting this value to zero means that the system can determine the degree of parallelism by itself.
@@ -140,6 +140,9 @@ int main(int argc, char *argv[])
 static int child_process_handler(void *data)
 {
     printf("%s\n", (char *)data);
+    free(data); //The data has been taken over by the child thread,
+                //so once this callback function is called,
+                //the resource release is no longer the responsibility of the main thread.
     return 0;
 }
 
@@ -157,6 +160,8 @@ static int main_process_handler(void *data)
         mln_thread_pool_resource_add(text);
         usleep(1000);
     }
+
+    return 0;
 }
 
 static void free_handler(void *data)

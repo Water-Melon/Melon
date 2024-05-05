@@ -55,7 +55,7 @@ typedef void (*mln_thread_data_free)(void *);
 - `main_data` 为主线程的用户自定义数据。
 - `child_process_handler` 每个子线程的处理函数，该函数有一个参数为主线程下发任务时给出的数据结构指针，返回值为`0`表示处理正常，`非0`表示处理异常，异常时会有日志输出。
 - `main_process_handler` 主线程的处理函数，该函数有一个参数为`main_data`，返回值为`0`表示处理正常，`非0`表示处理异常，异常时会有日志输出。**一般情况下，主线程处理函数不应随意自行返回，一旦返回代表线程池处理结束，线程池会被销毁**。
-- `free_handler` 为资源释放函数。其资源为主线程下发给子线程的数据结构指针所指向的内容。
+- `free_handler` 资源释放函数。其资源为主线程下发给子线程的数据结构指针所指向的内容。注意：这个释放函数仅在子线程退出或线程池销毁时，用于释放尚未被处理或处理完的资源。也就是说，任何经过了`child_process_handler`回调的资源，其释放将完全交由子线程负责，在`child_process_handler`中被释放。
 - `cond_timeout`为闲置子线程回收定时器，单位为毫秒。当子线程无任务处理，且等待时间超过该定时器时长后，会自行退出。
 - `max`线程池允许的最大子线程数量。
 - `concurrency`用于`pthread_setconcurrency`设置并行级别参考值，但部分系统并为实现该功能，因此不应该过多依赖该值。在Linux下，该值设为零表示交由本系统实现自行确定并行度。
@@ -141,6 +141,7 @@ int main(int argc, char *argv[])
 static int child_process_handler(void *data)
 {
     printf("%s\n", (char *)data);
+    free(data); //data已经被子线程接管，因此子线程的这个回调函数一旦被调用，资源释放就不再由主线程负责了
     return 0;
 }
 
@@ -158,6 +159,8 @@ static int main_process_handler(void *data)
         mln_thread_pool_resource_add(text);
         usleep(1000);
     }
+
+    return 0;
 }
 
 static void free_handler(void *data)
