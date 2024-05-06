@@ -885,22 +885,43 @@ MLN_FUNC(, int, mln_reg_match, \
 {
     int ret;
     mln_string_t *s;
+    mln_u8ptr_t p = text->data;
+    mln_size_t len = text->len;
 
-    ret = mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len, matches);
+again:
+    ret = mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)p, exp->len, len, matches);
     if (ret < 0) {
+        if (exp->len && exp->data[0] != '^' && len > 0) {
+            ++p, --len;
+            goto again;
+        }
         return -1;
     }
-    if (text->len - ret > 0) {
+    if (len - ret > 0) {
         if ((s = (mln_string_t *)mln_array_push(matches)) == NULL) {
             return -1;
         }
-        mln_string_nset(s, text->data, text->len - ret);
+        mln_string_nset(s, p, len - ret);
         return mln_array_nelts(matches);
     }
     return 0;
 })
 
 MLN_FUNC(, int, mln_reg_equal, (mln_string_t *exp, mln_string_t *text), (exp, text), {
-    return !mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)(text->data), exp->len, text->len, NULL);
+    int ret;
+    mln_u8ptr_t p = text->data;
+    mln_size_t len = text->len;
+
+again:
+    ret = mln_match_here(M_REGEXP_MASK_NEW, (char *)(exp->data), (char *)p, exp->len, len, NULL);
+    if (ret < 0) {
+        if (exp->len && exp->data[0] != '^' && len > 0) {
+            ++p, --len;
+            goto again;
+        }
+        return ret;
+    }
+
+    return ret && exp->len && exp->data[exp->len - 1] != '$'? 0: ret;
 })
 

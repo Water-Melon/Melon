@@ -96,8 +96,8 @@ mln_reg_match_result_get(res)
 int main(int argc, char *argv[])
 {
     mln_reg_match_result_t *res = NULL;
-    mln_string_t text = mln_string("Hello world");
-    mln_string_t exp = mln_string("(.*e(ll)o)");
+    mln_string_t text = mln_string("dabcde");
+    mln_string_t exp = mln_string("a.c.*e");
     mln_string_t *s;
     int i, n;
 
@@ -116,6 +116,10 @@ int main(int argc, char *argv[])
     }
 
     mln_reg_match_result_free(res);
+
+    n = mln_reg_equal(&exp, &text);
+    printf("equal returned %d\n", n);
+
     return 0;
 }
 ```
