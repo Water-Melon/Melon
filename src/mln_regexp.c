@@ -902,6 +902,13 @@ again:
             return -1;
         }
         mln_string_nset(s, p, len - ret);
+
+        if (ret >= exp->len) {
+            p += (len - ret);
+            len = ret;
+            goto again;
+        }
+
         return mln_array_nelts(matches);
     }
     return 0;

@@ -5,8 +5,8 @@
 int main(int argc, char *argv[])
 {
     mln_reg_match_result_t *res = NULL;
-    mln_string_t text = mln_string("dabcde");
-    mln_string_t exp = mln_string("a.c.*e");
+    mln_string_t text = mln_string("dabcdeadcbef");
+    mln_string_t exp = mln_string("a.c.e");
     mln_string_t *s;
     int i, n;
 
@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
 
     n = mln_reg_match(&exp, &text, res);
     assert(n);
+    printf("%d matched\n", n);
 
     s = mln_reg_match_result_get(res);
     for (i = 0; i < n; ++i) {
