@@ -895,7 +895,7 @@ again:
             ++p, --len;
             goto again;
         }
-        return -1;
+        return mln_array_nelts(matches);
     }
     if (len - ret > 0) {
         if ((s = (mln_string_t *)mln_array_push(matches)) == NULL) {
@@ -908,10 +908,8 @@ again:
             len = ret;
             goto again;
         }
-
-        return mln_array_nelts(matches);
     }
-    return 0;
+    return mln_array_nelts(matches);
 })
 
 MLN_FUNC(, int, mln_reg_equal, (mln_string_t *exp, mln_string_t *text), (exp, text), {
