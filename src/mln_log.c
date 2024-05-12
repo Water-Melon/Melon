@@ -102,39 +102,37 @@ mln_logger_t mln_log_logger_get(void)
  */
 int mln_log_init(mln_conf_t *cf)
 {
-    mln_u32_t in_daemon = 0;
+    mln_u32_t in_daemon = 0, init = 0;
     mln_conf_domain_t *cd;
     mln_conf_cmd_t *cc;
     mln_conf_item_t *ci;
     mln_log_t *log = &g_log;
     if (log->init) return 0;
 
-    if (cf == NULL) {
-        if (mln_conf_load() < 0) {
-            fprintf(stderr, "load configuration failed.\n");
+    if (cf == NULL) cf = mln_conf();
+    if (mln_conf_is_empty(cf))
+        fprintf(stdout, "[WARN] Load configuration failed. Logger won't be initialized.\n");
+    else {
+        if ((cd = cf->search(cf, "main")) == NULL) {
+            fprintf(stderr, "No such domain named 'main'\n");
             return -1;
         }
-        cf = mln_conf();
-    }
-
-    if ((cd = cf->search(cf, "main")) == NULL) {
-        fprintf(stderr, "No such domain named 'main'\n");
-        return -1;
-    }
-    if ((cc = cd->search(cd, "daemon")) != NULL) {
-        if ((ci = cc->search(cc, 1)) == NULL) {
-            fprintf(stderr, "Command 'daemon' need a parameter.\n");
-            return -1;
+        if ((cc = cd->search(cd, "daemon")) != NULL) {
+            if ((ci = cc->search(cc, 1)) == NULL) {
+                fprintf(stderr, "Command 'daemon' need a parameter.\n");
+                return -1;
+            }
+            if (ci->type != CONF_BOOL) {
+                fprintf(stderr, "Parameter type of command 'daemon' error.\n");
+                return -1;
+            }
+            if (ci->val.b) in_daemon = 1;
         }
-        if (ci->type != CONF_BOOL) {
-            fprintf(stderr, "Parameter type of command 'daemon' error.\n");
-            return -1;
-        }
-        if (ci->val.b) in_daemon = 1;
+        init = 1;
     }
 
     log->in_daemon = in_daemon;
-    log->init = 1;
+    log->init = init;
     log->level = none;
     int ret = 0;
 #if !defined(MSVC)
@@ -169,7 +167,7 @@ int mln_log_init(mln_conf_t *cf)
 static int
 mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init)
 {
-    if (cf == NULL) return -1;
+    if (mln_conf_is_empty(cf)) return 0;
 
     mln_conf_domain_t *cd;
     mln_conf_cmd_t *cc;
@@ -314,7 +312,7 @@ void mln_log_destroy(void)
  */
 static int mln_log_set_level(mln_log_t *log, mln_conf_t *cf, int is_init)
 {
-    if (cf == NULL) return 0;
+    if (mln_conf_is_empty(cf)) return 0;
 
     mln_conf_domain_t *cd = cf->search(cf, "main");
     if (cd == NULL) {

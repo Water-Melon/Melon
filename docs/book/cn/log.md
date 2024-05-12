@@ -140,6 +140,7 @@ mln_logger_t mln_log_logger_get(void);
 int main(int argc, char *argv[])
 {
     mln_log(debug, "This will be outputted to stderr\n");
+    mln_conf_load();
     mln_log_init(NULL);
     mln_log(debug, "This will be outputted to stderr and log file\n");
     return 0;

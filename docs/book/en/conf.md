@@ -291,6 +291,21 @@ Return value: the number of command item parameters
 
 
 
+#### mln_conf_is_empty
+
+```c
+mln_conf_is_empty(cf);
+```
+
+Description: Check if the configuration is empty.
+
+Return values:
+
+- `0` - Not empty
+- `Non-zero` - Empty
+
+
+
 ### Example
 
 ```c

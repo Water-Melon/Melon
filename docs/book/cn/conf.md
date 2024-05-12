@@ -293,6 +293,21 @@ mln_u32_t mln_conf_arg_num(mln_conf_cmd_t *cc);
 
 
 
+#### mln_conf_is_empty
+
+```c
+mln_conf_is_empty(cf);
+```
+
+描述：检查配置是否为空。
+
+返回值：
+
+- `0` - 非空
+- `非0` - 空
+
+
+
 ### 示例
 
 ```c

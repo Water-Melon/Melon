@@ -906,6 +906,9 @@ Their definitions can be found in melon/include/mln_types.h.
      f) void mln_conf_hook_unset(mln_conf_hook_t *hook);
         This interface is used to unset a callback function which has been set in the global reload chain.
 
+     g) mln_conf_is_empty(cf);
+        Check if the configuration is empty.
+
   11) Event
      Just like libevent, Melon's event module also integrates epoll, kqueue and select.
      It supports three kinds of event: timer event, signal event and file descriptor event.

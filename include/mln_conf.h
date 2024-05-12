@@ -86,6 +86,11 @@ typedef struct mln_conf_hook_s {
 /*
  * mln_conf_load should be called before any pthread_create
  */
+
+#define mln_conf_is_empty(cf) ((cf) == NULL || \
+    (mln_rbtree_node_num((cf)->domain) <= 1 && \
+    mln_rbtree_node_num(((mln_conf_domain_t *)(mln_rbtree_node_data_get(mln_rbtree_root((cf)->domain))))->cmd) == 0))
+
 extern int mln_conf_load(void);
 extern int mln_conf_reload(void);
 extern void mln_conf_free(void);

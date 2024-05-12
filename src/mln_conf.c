@@ -377,7 +377,7 @@ static inline mln_conf_t *mln_conf_init(void)
             return NULL;
         }
     } else {
-        fprintf(stderr, "[Warn] Configuration file [%s] not found.\n", conf_file_path);
+        fprintf(stderr, "[Warn] Configuration file [%s] not found, default configuration will be used.\n", conf_file_path);
         cf->lex = NULL;
     }
 
