@@ -126,15 +126,15 @@ int mln_json_array_init(mln_json_t *j);
 #### mln_json_decode
 
 ```c
-int mln_json_decode(mln_string_t *jstr, mln_json_t *out);
+int mln_json_decode(mln_string_t *jstr, mln_json_t *out, mln_json_policy_t *policy);
 ```
 
-描述：将JSON字符串`jstr`解析成数据结构，结果会被放入参数`out`中。
+描述：将JSON字符串`jstr`解析成数据结构，结果会被放入参数`out`中。`policy`为安全策略结构，由`mln_json_policy_init`进行初始化。
 
 返回值：
 
 - `0` - 成功
-- `-1` - 失败
+- `-1` - 失败, 如果`policy`不为`NULL`，则需要使用`mln_json_policy_error`检查具体违反了哪个安全限制条件。
 
 
 
@@ -346,6 +346,52 @@ mln_json_null_data_get(json)
 
 
 
+#### mln_json_policy_init
+
+```c
+mln_json_policy_init(policy, _depth, _keylen, _strlen, _elemnum, _kvnum);
+```
+
+描述：对`mln_json_policy_t`类型的`policy`进行初始化，剩余参数含义如下：
+
+- `_depth` JSON的最大嵌套层数。解析时，当遇到数组或对象时，嵌套层数会递增。数组或对象解析完成时，嵌套层数会递减。
+
+- `_keylen` 对象中key的最大长度。
+
+- `_strlen` 字符串值的最大长度。
+
+- `_elemnum` 最大数组元素个数。
+
+- `_kvnum` 最大对象key-value对个数。
+
+返回值：无
+
+
+
+#### mln_json_policy_error
+
+```c
+mln_json_policy_error(policy)
+```
+
+描述：从`mln_json_policy_t`类型的`policy`获取错误号。这个宏一般用于`mln_json_decode`返回`-1`时检查是否有违反安全策略的情况。
+
+返回值：`int`型错误号，错误号有如下值：
+
+- `M_JSON_OK` 没有违反安全策略。
+
+- `M_JSON_DEPTH` 嵌套层数过多。
+
+- `M_JSON_KEYLEN` 对象Key的长度超过限制。
+
+- `M_JSON_STRLEN` 字符串值的长度超过限制。
+
+- `M_JSON_ARRELEM` 数组元素个数超过限制。
+
+- `M_JSON_OBJKV` 对象key-value对个数超过限制。
+
+
+
 #### mln_json_parse
 
 ```c
@@ -496,7 +542,7 @@ int main(int argc, char *argv[])
     mln_string_t *res, exp = mln_string("protocols.0");
     mln_string_t tmp = mln_string("{\"paths\":[\"/mock\"],\"methods\":null,\"sources\":null,\"destinations\":null,\"name\":\"example_route\",\"headers\":null,\"hosts\":null,\"preserve_host\":false,\"regex_priority\":0,\"snis\":null,\"https_redirect_status_code\":426,\"tags\":null,\"protocols\":[\"http\",\"https\"],\"path_handling\":\"v0\",\"id\":\"52d58293-ae25-4c69-acc8-6dd729718a61\",\"updated_at\":1661345592,\"service\":{\"id\":\"c1e98b2b-6e77-476c-82ca-a5f1fb877e07\"},\"response_buffering\":true,\"strip_path\":true,\"request_buffering\":true,\"created_at\":1661345592}");
 
-    if (mln_json_decode(&tmp, &j) < 0) { //解码字符串，生成mln_json_t的结点
+    if (mln_json_decode(&tmp, &j, NULL) < 0) { //解码字符串，生成mln_json_t的结点
         fprintf(stderr, "decode error\n");
         return -1;
     }
@@ -566,9 +612,15 @@ static int handler(mln_json_t *j, void *data)
 static void parse(mln_string_t *p)
 {
     mln_json_t j;
+    mln_json_policy_t policy;
     mln_string_t exp = mln_string("resolutions");
-    mln_json_decode(p, &j);
+
+    mln_json_policy_init(policy, 3, 11, 10, 1, 2);
+
+    mln_json_decode(p, &j, &policy);
+
     mln_json_parse(&j, &exp, handler, NULL);
+
     mln_json_destroy(&j);
 }
 

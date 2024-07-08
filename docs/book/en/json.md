@@ -125,15 +125,15 @@ Return value:
 #### mln_json_decode
 
 ```c
-int mln_json_decode(mln_string_t *jstr, mln_json_t *out);
+int mln_json_decode(mln_string_t *jstr, mln_json_t *out, mln_json_policy_t *policy);
 ```
 
-Description: Parse the JSON string `jstr` into a data structure, and the result will be put into the parameter `out`.
+Description: Parse the JSON string `jstr` into a data structure, and the result will be put into the parameter `out`. The policy is a security policy structure initialized by mln_json_policy_init.
 
 Return value:
 
 - `0` - on success
-- `-1` - on failure
+- `-1` - on failure. If policy is not NULL, you need to use mln_json_policy_error to check which specific security constraint has been violated.
 
 
 
@@ -345,6 +345,52 @@ Return value:
 
 
 
+#### mln_json_policy_init
+
+```c
+mln_json_policy_init(policy, _depth, _keylen, _strlen, _elemnum, _kvnum);
+```
+
+Description: Initialize the `policy` of type `mln_json_policy_t`. The meanings of the remaining parameters are as follows:
+
+- `_depth` The maximum nesting depth of the JSON. During parsing, the nesting depth increases when encountering an array or object, and decreases when the array or object is fully parsed.
+
+- `_keylen` The maximum length of keys in objects.
+
+- `_strlen` The maximum length of string values.
+
+- `_elemnum` The maximum number of elements in an array.
+
+- `_kvnum` The maximum number of key-value pairs in an object.
+
+Return Value: None
+
+
+
+#### mln_json_policy_error
+
+```c
+mln_json_policy_error(policy)
+```
+
+Description: Get the error code from the `policy` of type `mln_json_policy_t`. This macro is typically used to check for security policy violations when `mln_json_decode` returns `-1`.
+
+Return Value: An int type error code with the following values:
+
+- `M_JSON_OK` No security policy violations.
+
+- `M_JSON_DEPTH` The nesting depth is too deep.
+
+- `M_JSON_KEYLEN` The length of the object key exceeds the limit.
+
+- `M_JSON_STRLEN` The length of the string value exceeds the limit.
+
+- `M_JSON_ARRELEM` The number of elements in the array exceeds the limit.
+
+- `M_JSON_OBJKV` The number of key-value pairs in the object exceeds the limit.
+
+
+
 #### mln_json_parse
 
 ```c
@@ -493,7 +539,7 @@ int main(int argc, char *argv[])
     mln_string_t *res, exp = mln_string("protocols.0");
     mln_string_t tmp = mln_string("{\"paths\":[\"/mock\"],\"methods\":null,\"sources\":null,\"destinations\":null,\"name\":\"example_route\",\"headers\":null,\"hosts\":null,\"preserve_host\":false,\"regex_priority\":0,\"snis\":null,\"https_redirect_status_code\":426,\"tags\":null,\"protocols\":[\"http\",\"https\"],\"path_handling\":\"v0\",\"id\":\"52d58293-ae25-4c69-acc8-6dd729718a61\",\"updated_at\":1661345592,\"service\":{\"id\":\"c1e98b2b-6e77-476c-82ca-a5f1fb877e07\"},\"response_buffering\":true,\"strip_path\":true,\"request_buffering\":true,\"created_at\":1661345592}");
 
-    if (mln_json_decode(&tmp, &j) < 0) { //Decode the string and generate the node of mln_json_t
+    if (mln_json_decode(&tmp, &j, NULL) < 0) { //Decode the string and generate the node of mln_json_t
         fprintf(stderr, "decode error\n");
         return -1;
     }
@@ -563,9 +609,15 @@ static int handler(mln_json_t *j, void *data)
 static void parse(mln_string_t *p)
 {
     mln_json_t j;
+    mln_json_policy_t policy;
     mln_string_t exp = mln_string("resolutions");
-    mln_json_decode(p, &j);
+
+    mln_json_policy_init(policy, 3, 11, 10, 1, 2);
+
+    mln_json_decode(p, &j, &policy);
+
     mln_json_parse(&j, &exp, handler, NULL);
+
     mln_json_destroy(&j);
 }
 

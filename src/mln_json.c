@@ -10,13 +10,13 @@
 
 static int mln_json_dump_obj_iterate_handler(mln_rbtree_node_t *node, void *data);
 static inline int
-mln_json_parse_json(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
+mln_json_parse_json(mln_json_t *j, char *jstr, int len, mln_uauto_t index, mln_json_policy_t *policy, int obj_key, mln_size_t depth);
 static inline int
-mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index);
+mln_json_parse_obj(mln_json_t *val, char *jstr, int len, mln_uauto_t index, mln_json_policy_t *policy, mln_size_t depth);
 static inline int
-mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index);
+mln_json_parse_array(mln_json_t *val, char *jstr, int len, mln_uauto_t index, mln_json_policy_t *policy, mln_size_t depth);
 static inline int
-mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index);
+mln_json_parse_string(mln_json_t *j, char *jstr, int len, mln_uauto_t index, mln_json_policy_t *policy, int obj_key);
 static mln_u8ptr_t
 mln_json_parse_string_fetch(mln_u8ptr_t jstr, int *len);
 static void mln_json_encode_utf8(unsigned int u, mln_u8ptr_t *b, int *count);
@@ -327,14 +327,14 @@ MLN_FUNC(static, int, mln_json_dump_obj_iterate_handler, \
 /*
  * decode
  */
-MLN_FUNC(, int, mln_json_decode, (mln_string_t *jstr, mln_json_t *out), (jstr, out), {
+MLN_FUNC(, int, mln_json_decode, (mln_string_t *jstr, mln_json_t *out, mln_json_policy_t *policy), (jstr, out, policy), {
     if (jstr == NULL || out == NULL) {
         return -1;
     }
 
     mln_json_init(out);
 
-    if (mln_json_parse_json(out, (char *)(jstr->data), jstr->len, 0) != 0) {
+    if (mln_json_parse_json(out, (char *)(jstr->data), jstr->len, 0, policy, 0, 0) != 0) {
         mln_json_destroy(out);
         return -1;
     }
@@ -347,8 +347,8 @@ MLN_FUNC(, int, mln_json_decode, (mln_string_t *jstr, mln_json_t *out), (jstr, o
 })
 
 MLN_FUNC(static inline, int, mln_json_parse_json, \
-         (mln_json_t *j, char *jstr, int len, mln_uauto_t index), \
-         (j, jstr, len, index), \
+         (mln_json_t *j, char *jstr, int len, mln_uauto_t index, mln_json_policy_t *policy, int obj_key, mln_size_t depth), \
+         (j, jstr, len, index, policy, obj_key, depth), \
 {
     if (jstr == NULL) {
         return -1;
@@ -363,11 +363,11 @@ MLN_FUNC(static inline, int, mln_json_parse_json, \
 
     switch (jstr[0]) {
         case '{':
-            return mln_json_parse_obj(j, jstr, len, index);
+            return mln_json_parse_obj(j, jstr, len, index, policy, depth);
         case '[':
-            return mln_json_parse_array(j, jstr, len, index);
+            return mln_json_parse_array(j, jstr, len, index, policy, depth);
         case '\"':
-            return mln_json_parse_string(j, jstr, len, index);
+            return mln_json_parse_string(j, jstr, len, index, policy, obj_key);
         default:
             if (mln_isdigit(jstr[0]) || jstr[0] == '-') {
                 return mln_json_parse_digit(j, jstr, len, index);
@@ -382,8 +382,8 @@ MLN_FUNC(static inline, int, mln_json_parse_json, \
 })
 
 MLN_FUNC(static inline, int, mln_json_parse_obj, \
-         (mln_json_t *val, char *jstr, int len, mln_uauto_t index), \
-         (val, jstr, len, index), \
+         (mln_json_t *val, char *jstr, int len, mln_uauto_t index, mln_json_policy_t *policy, mln_size_t depth), \
+         (val, jstr, len, index, policy, depth), \
 {
     int left;
     mln_json_t key, v;
@@ -396,12 +396,17 @@ MLN_FUNC(static inline, int, mln_json_parse_obj, \
 
     if (__mln_json_obj_init(val) < 0) return -1;
 
+    if (policy != NULL && policy->depth && depth + 1 > policy->depth) {
+        policy->error = M_JSON_DEPTH;
+        return -1;
+    }
+
 again:
     mln_json_init(&key);
     mln_json_init(&v);
     mln_json_jumpoff_blank(&jstr, &len);
     if (jstr[0] != '}') {
-        left = mln_json_parse_json(&key, jstr, len, 0);
+        left = mln_json_parse_json(&key, jstr, len, 0, policy, 1, depth + 1);
         if (left <= 0) {
             mln_json_destroy(&key);
             mln_json_destroy(&v);
@@ -440,7 +445,7 @@ again:
             return -1;
         }
 
-        left = mln_json_parse_json(&v, jstr, len, 0);
+        left = mln_json_parse_json(&v, jstr, len, 0, policy, 0, depth + 1);
         if (left <= 0) {
             mln_json_destroy(&key);
             mln_json_destroy(&v);
@@ -459,6 +464,11 @@ again:
         if (__mln_json_obj_update(val, &key, &v) < 0) {
             mln_json_destroy(&key);
             mln_json_destroy(&v);
+            return -1;
+        }
+
+        if (policy != NULL && policy->obj_kv_num && mln_rbtree_node_num(val->data.m_j_obj) > policy->obj_kv_num) {
+            policy->error = M_JSON_OBJKV;
             return -1;
         }
     }
@@ -480,8 +490,8 @@ again:
 })
 
 MLN_FUNC(static inline, int, mln_json_parse_array, \
-         (mln_json_t *val, char *jstr, int len, mln_uauto_t index), \
-         (val, jstr, len, index), \
+         (mln_json_t *val, char *jstr, int len, mln_uauto_t index, mln_json_policy_t *policy, mln_size_t depth), \
+         (val, jstr, len, index, policy, depth), \
 {
     int left;
     mln_json_t j;
@@ -494,10 +504,15 @@ MLN_FUNC(static inline, int, mln_json_parse_array, \
         return -1;
     }
 
+    if (policy != NULL && policy->depth && depth + 1 > policy->depth) {
+        policy->error = M_JSON_DEPTH;
+        return -1;
+    }
+
 again:
     mln_json_init(&j);
     if (jstr[0] != ']') {
-        left = mln_json_parse_json(&j, jstr, len, ++cnt);
+        left = mln_json_parse_json(&j, jstr, len, ++cnt, policy, 0, depth + 1);
         if (left <= 0) {
             mln_json_destroy(&j);
             return -1;
@@ -512,6 +527,11 @@ again:
 
     if (__mln_json_array_append(val, &j) < 0) {
         mln_json_destroy(&j);
+        return -1;
+    }
+
+    if (policy != NULL && policy->arr_elem_num && mln_array_nelts(val->data.m_j_array) > policy->arr_elem_num) {
+        policy->error = M_JSON_ARRELEM;
         return -1;
     }
 
@@ -538,8 +558,8 @@ again:
 })
 
 MLN_FUNC(static inline, int, mln_json_parse_string, \
-         (mln_json_t *j, char *jstr, int len, mln_uauto_t index), \
-         (j, jstr, len, index), \
+         (mln_json_t *j, char *jstr, int len, mln_uauto_t index, mln_json_policy_t *policy, int obj_key), \
+         (j, jstr, len, index, policy, obj_key), \
 {
     mln_u8_t *p, flag = 0;
     int plen, count = 0;
@@ -567,6 +587,22 @@ MLN_FUNC(static inline, int, mln_json_parse_string, \
     buf = mln_json_parse_string_fetch((mln_u8ptr_t)jstr, &count);
     if (buf == NULL) {
         return -1;
+    }
+
+    if (policy != NULL) {
+        if (obj_key) {
+            if (policy->key_len && count > policy->key_len) {
+                policy->error = M_JSON_KEYLEN;
+                free(buf);
+                return -1;
+            }
+        } else {
+            if (policy->str_len && count > policy->str_len) {
+                policy->error = M_JSON_STRLEN;
+                free(buf);
+                return -1;
+            }
+        }
     }
 
     str = mln_string_const_ndup((char *)buf, count);

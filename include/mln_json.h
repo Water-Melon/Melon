@@ -18,6 +18,16 @@
 #define M_JSON_V_TRUE           1
 #define M_JSON_V_NULL           NULL
 
+/*
+ * policy errors
+ */
+#define M_JSON_OK               0
+#define M_JSON_DEPTH            1
+#define M_JSON_KEYLEN           2
+#define M_JSON_STRLEN           3
+#define M_JSON_ARRELEM          4
+#define M_JSON_OBJKV            5
+
 typedef struct mln_json_s mln_json_t;
 typedef int (*mln_json_iterator_t)(mln_json_t *, void *);
 typedef int (*mln_json_object_iterator_t)(mln_json_t * /*key*/, mln_json_t * /*val*/, void *);
@@ -58,6 +68,15 @@ struct mln_json_call_attr {
     mln_json_call_func_t         callback;
     void                        *data;
 };
+
+typedef struct {
+    mln_size_t                   depth;
+    mln_size_t                   key_len;
+    mln_size_t                   str_len;
+    mln_size_t                   arr_elem_num;
+    mln_size_t                   obj_kv_num;
+    int                          error;
+} mln_json_policy_t;
 
 #define mln_json_is_object(json)                 ((json)->type == M_JSON_OBJECT)
 #define mln_json_is_array(json)                  ((json)->type == M_JSON_ARRAY)
@@ -112,6 +131,14 @@ struct mln_json_call_attr {
     mln_json_null_type_set(json);\
     json->data.m_j_null = NULL;\
 } while (0)
+#define mln_json_policy_init(policy, _depth, _keylen, _strlen, _elemnum, _kvnum) do {\
+    policy.depth = _depth;\
+    policy.key_len = _keylen;\
+    policy.str_len = _strlen;\
+    policy.arr_elem_num = _elemnum;\
+    policy.obj_kv_num = _kvnum;\
+    policy.error = M_JSON_OK;\
+} while (0)
 #else
 #define mln_json_string_init(j, s)             ({\
     mln_json_t *json = (j);\
@@ -138,7 +165,18 @@ struct mln_json_call_attr {
     mln_json_null_type_set(json);\
     json->data.m_j_null = NULL;\
 })
+#define mln_json_policy_init(policy, _depth, _keylen, _strlen, _elemnum, _kvnum) ({\
+    policy.depth = _depth;\
+    policy.key_len = _keylen;\
+    policy.str_len = _strlen;\
+    policy.arr_elem_num = _elemnum;\
+    policy.obj_kv_num = _kvnum;\
+    policy.error = M_JSON_OK;\
+})
 #endif
+
+#define mln_json_policy_error(policy) ((policy).error)
+
 extern int mln_json_obj_init(mln_json_t *j) __NONNULL1(1);
 extern int mln_json_array_init(mln_json_t *j) __NONNULL1(1);
 extern void mln_json_destroy(mln_json_t *j);
@@ -151,7 +189,7 @@ extern mln_uauto_t mln_json_array_length(mln_json_t *j) __NONNULL1(1);
 extern int mln_json_array_append(mln_json_t *j, mln_json_t *value) __NONNULL2(1,2);
 extern int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index) __NONNULL2(1,2);
 extern void mln_json_array_remove(mln_json_t *j, mln_uauto_t index);
-extern int mln_json_decode(mln_string_t *jstr, mln_json_t *out);
+extern int mln_json_decode(mln_string_t *jstr, mln_json_t *out, mln_json_policy_t *policy);
 extern mln_string_t *mln_json_encode(mln_json_t *j);
 extern int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data) __NONNULL2(1,2);
 extern int mln_json_generate(mln_json_t *j, char *fmt, ...) __NONNULL2(1,2);
