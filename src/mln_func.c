@@ -28,7 +28,7 @@ mln_func_exit_cb_t mln_func_exit_callback_get(void)
     return mln_func_exit;
 }
 
-#if defined(MLN_CONSTRUCTOR)
+#if defined(MLN_CONSTRUCTOR) && defined(IPPROTO_IP)
 #include "mln_rc.h"
 #include <string.h>
 #include <fcntl.h>
