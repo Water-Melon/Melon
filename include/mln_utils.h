@@ -44,7 +44,7 @@
 /*
  * nonnull attribute
  */
-#if defined(__APPLE__) || defined(MSVC) || defined(__wasm__)
+#if defined(__APPLE__) || defined(MSVC) || defined(__wasm__) || defined(__FreeBSD__)
 #define __NONNULL1(x)
 #define __NONNULL2(x,y)
 #define __NONNULL3(x,y,z)
