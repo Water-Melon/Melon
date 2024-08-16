@@ -38,7 +38,8 @@ typedef struct {
     mln_expr_udata_free  free;
 } mln_expr_val_t;
 
-typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, \
+typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *namespace, \
+                                         mln_string_t *name, \
                                          int is_func, \
                                          mln_array_t *args, \
                                          void *data);

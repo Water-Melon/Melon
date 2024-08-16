@@ -156,7 +156,7 @@ mln_expr_val_t *mln_expr_val_dup(mln_expr_val_t *val);
 ```c
 mln_expr_val_t *mln_expr_run(mln_string_t *exp, mln_expr_cb_t cb, void *data);
 
-typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_array_t *args, void *data);
+typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *namespace, mln_string_t *name, int is_func, mln_array_t *args, void *data);
 ```
 
 描述：运行表达式`exp`。表达式中的变量以及函数（和函数的参数）还有用户自定义数据`data`，都会被传递到回调函数`cb`中进行解析。开发者可以根据需求，定制化这些函数和变量的值。
@@ -168,29 +168,12 @@ typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_ar
 
 
 
-#### mln_expr_run
-
-```c
-mln_expr_val_t *mln_expr_run(mln_string_t *exp, mln_expr_cb_t cb, void *data);
-
-typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_array_t *args, void *data);
-```
-
-描述：运行表达式`exp`。表达式中的变量以及函数（和函数的参数）还有用户自定义数据`data`，都会被传递到回调函数`cb`中进行解析。开发者可以根据需求，定制化这些函数和变量的值。
-
-返回值：
-
-- 成功：`mln_expr_val_t`指针，存放运行结果。
-- 失败：`NULL`
-
-
-
-#### mln_expr_run_filr
+#### mln_expr_run_file
 
 ```c
 mln_expr_val_t *mln_expr_run_file(mln_string_t *path, mln_expr_cb_t cb, void *data);
 
-typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_array_t *args, void *data);
+typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *namespace, mln_string_t *name, int is_func, mln_array_t *args, void *data);
 ```
 
 描述：运行由`path`指定的文件中的表达式。表达式中的变量以及函数（和函数的参数）还有用户自定义数据`data`，都会被传递到回调函数`cb`中进行解析。开发者可以根据需求，定制化这些函数和变量的值。
@@ -209,30 +192,35 @@ typedef mln_expr_val_t *(*mln_expr_cb_t)(mln_string_t *name, int is_func, mln_ar
 #include "mln_log.h"
 #include <stdio.h>
 
-static mln_expr_val_t *var_expr_handler(mln_string_t *name, int is_func, mln_array_t *args, void *data)
+static mln_expr_val_t *var_expr_handler(mln_string_t *namespace, mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
     mln_string_t *s;
     mln_expr_val_t *ret;
+    mln_string_t anon = mln_string("anonymous namespace");
 
-    printf("%p %p %p\n", name, args, data);
     if (is_func)
-        mln_log(none, "%S %d %U %X\n", name, is_func, args->nelts, data);
+        mln_log(none, "%S %S %d %U %X\n", namespace? namespace: &anon, name, is_func, args->nelts, data);
     else
-        mln_log(none, "%S %d %X\n", name, is_func, data);
+        mln_log(none, "%S %S %d %X\n", namespace? namespace: &anon, name, is_func, data);
     if ((s = mln_string_dup(name)) == NULL) return NULL;
     ret = mln_expr_val_new(mln_expr_type_string, s, NULL);
     mln_string_free(s);
     return ret;
 }
 
-static mln_expr_val_t *func_expr_handler(mln_string_t *name, int is_func, mln_array_t *args, void *data)
+static mln_expr_val_t *func_expr_handler(mln_string_t *namespace, mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
     mln_expr_val_t *v, *p;
     int i;
     mln_string_t *s1 = NULL, *s2, *s3;
+    mln_string_t anon = mln_string("anonymous namespace");
 
-    if (!is_func)
+    if (is_func) {
+        mln_log(none, "%S %S %d %U %X\n", namespace? namespace: &anon, name, is_func, args->nelts, data);
+    } else {
+        mln_log(none, "%S %S %d %X\n", namespace? namespace: &anon, name, is_func, data);
         return mln_expr_val_new(mln_expr_type_string, name, NULL);
+    }
 
     for (i = 0, v = p = mln_array_elts(args); i < mln_array_nelts(args); v = p + (++i)) {
         if (s1 == NULL) {
@@ -253,8 +241,8 @@ static mln_expr_val_t *func_expr_handler(mln_string_t *name, int is_func, mln_ar
 
 int main(void)
 {
-    mln_string_t var_exp = mln_string("aaa bbb");
-    mln_string_t func_exp = mln_string("concat('abc', concat(aaa, 'bbb')) ccc concat('eee', concat(bbb, 'fff'))");
+    mln_string_t var_exp = mln_string(":aaa (a:b:c:bbb)");
+    mln_string_t func_exp = mln_string("abc:def:concat('abc', concat(aaa, 'bbb')) ccc concat('eee', concat(bbb, 'fff'))");
 
     mln_expr_val_t *v;
 
@@ -281,11 +269,16 @@ int main(void)
 执行结果：
 
 ```
-0x4bbb720 (nil) (nil)
-aaa 0 0
-0x4bbb830 (nil) (nil)
-bbb 0 0
-03/19/2024 00:17:17 UTC DEBUG: a.c:main:59: PID:2317789 4 bbb
-03/19/2024 00:17:17 UTC DEBUG: a.c:main:67: PID:2317789 4 eeebbbfff
+a:b:c bbb 0 0
+anonymous namespace aaa 1 1 0
+08/16/2024 14:13:59 UTC DEBUG: a.c:main:64: PID:792687 4 aaa
+anonymous namespace aaa 0 0
+anonymous namespace concat 1 2 0
+abc:def concat 1 2 0
+anonymous namespace ccc 0 0
+anonymous namespace bbb 0 0
+anonymous namespace concat 1 2 0
+anonymous namespace concat 1 2 0
+08/16/2024 14:13:59 UTC DEBUG: a.c:main:72: PID:792687 4 eeebbbfff
 ```
 

@@ -313,61 +313,80 @@ MLN_FUNC(static inline, int, mln_expr_parse, \
     mln_expr_struct_t *name, *tk;
     mln_array_t arr;
     mln_expr_val_t *v;
+    mln_string_t *tmp, *namespace = NULL;
 
 again:
     if ((name = *next) != NULL) {
         *next = NULL;
     } else {
         if ((name = mln_expr_token(lex)) == NULL) {
-            mln_expr_free(name);
+            if (name != NULL) mln_expr_free(name);
+            if (namespace != NULL) mln_string_free(namespace);
             return MLN_EXPR_RET_ERR;
         }
     }
     if ((type = name->type) == EXPR_TK_EOF) {
         *eof = 1;
-        mln_expr_free(name);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
         return MLN_EXPR_RET_OK;
     }
-    if (type == EXPR_TK_SPACE) {
-        mln_expr_free(name);
+    if (type == EXPR_TK_SPACE || type == EXPR_TK_COLON) {
+        if (name != NULL) mln_expr_free(name);
         goto again;
     }
     if (type == EXPR_TK_COMMA) {
-        mln_expr_free(name);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
         return MLN_EXPR_RET_COMMA;
     }
     if (type == EXPR_TK_RPAR) {
-        mln_expr_free(name);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
         return MLN_EXPR_RET_RPAR;
     }
     if (type == EXPR_TK_IF) {
-        mln_expr_free(name);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
         return mln_expr_parse_if(lex, cb, data, ret, eof, next);
     }
     if (type == EXPR_TK_LOOP) {
-        mln_expr_free(name);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
         return mln_expr_parse_loop(lex, cb, data, ret, eof, next);
     }
     if (type != EXPR_TK_ID) {
         rc = mln_expr_val_init(ret, name);
-        mln_expr_free(name);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
         return rc < 0? MLN_EXPR_RET_ERR: MLN_EXPR_RET_OK;
     }
 
 again2:
     if ((tk = mln_expr_token(lex)) == NULL) {
-        mln_expr_free(name);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
         return MLN_EXPR_RET_ERR;
     }
     if ((type = tk->type) == EXPR_TK_SPACE) {
         mln_expr_free(tk);
         goto again2;
     }
+    if (type == EXPR_TK_COLON) {
+        tmp = mln_string_pool_concat(mln_lex_get_pool(lex), namespace, name->text, tk->text);
+        mln_expr_free(tk);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
+        namespace = tmp;
+        name = NULL;
+        goto again;
+    }
     if (type != EXPR_TK_LPAR) {
-        v = cb(name->text, 0, NULL, data);
+        v = cb(namespace, name->text, 0, NULL, data);
         mln_expr_val_copy(ret, v);
         mln_expr_val_free(v);
-        mln_expr_free(name);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
         if ((type = tk->type) == EXPR_TK_EOF || type == EXPR_TK_COMMA) {
             mln_expr_free(tk);
         } else {
@@ -378,21 +397,24 @@ again2:
     mln_expr_free(tk);
 
     if (mln_array_init(&arr, (array_free)mln_expr_val_destroy, sizeof(mln_expr_val_t), MLN_EXPR_DEFAULT_ARGS) < 0) {
-        mln_expr_free(name);
+        if (name != NULL) mln_expr_free(name);
+        if (namespace != NULL) mln_string_free(namespace);
         return MLN_EXPR_RET_ERR;
     }
 
     v = NULL;
     while (1) {
         if (v == NULL && (v = (mln_expr_val_t *)mln_array_push(&arr)) == NULL) {
-            mln_expr_free(name);
+            if (name != NULL) mln_expr_free(name);
+            if (namespace != NULL) mln_string_free(namespace);
             mln_array_destroy(&arr);
             return MLN_EXPR_RET_ERR;
         }
         v->type = mln_expr_type_null;
         rc = mln_expr_parse(lex, cb, data, v, eof, next);
         if (rc == MLN_EXPR_RET_ERR) {
-            mln_expr_free(name);
+            if (name != NULL) mln_expr_free(name);
+            if (namespace != NULL) mln_string_free(namespace);
             mln_array_destroy(&arr);
             return MLN_EXPR_RET_ERR;
         }
@@ -402,17 +424,19 @@ again2:
         } else if (rc == MLN_EXPR_RET_OK) {
             v = NULL;
             if (*eof) {
-                mln_expr_free(name);
+                if (name != NULL) mln_expr_free(name);
+                if (namespace != NULL) mln_string_free(namespace);
                 mln_array_destroy(&arr);
                 return MLN_EXPR_RET_ERR;
             }
         }
     }
 
-    v = cb(name->text, 1, &arr, data);
+    v = cb(namespace, name->text, 1, &arr, data);
     mln_expr_val_copy(ret, v);
     mln_expr_val_free(v);
-    mln_expr_free(name);
+    if (name != NULL) mln_expr_free(name);
+    if (namespace != NULL) mln_string_free(namespace);
     mln_array_destroy(&arr);
     return v == NULL? MLN_EXPR_RET_ERR: MLN_EXPR_RET_OK;
 })
