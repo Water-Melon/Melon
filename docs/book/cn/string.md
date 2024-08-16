@@ -265,6 +265,30 @@ mln_string_t *mln_string_const_ref_dup(char *s);
 
 
 
+#### mln_string_concat
+
+```c
+mln_string_t *mln_string_concat(mln_string_t *s1, mln_string_t *s2, mln_string_t *sep);
+```
+
+描述：将字符串`s1`和`s2`拼接起来，并在中加增加`sep`作为分隔。
+
+返回值：成功则返回`mln_string_t`指针，否则返回`NULL`。
+
+
+
+#### mln_string_pool_concat
+
+```c
+mln_string_t *mln_string_pool_concat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2, mln_string_t *sep);
+```
+
+描述：将字符串`s1`和`s2`拼接起来，并在中加增加`sep`作为分隔。返回值指针及其数据所使用的内存均使用`pool`指定的内存池分配。
+
+返回值：成功则返回`mln_string_t`指针，否则返回`NULL`。
+
+
+
 #### mln_string_strseqcmp
 
 ```c

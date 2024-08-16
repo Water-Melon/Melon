@@ -265,16 +265,99 @@ MLN_FUNC(, mln_string_t *, mln_string_ref_dup, (mln_string_t *str), (str), {
 })
 
 MLN_FUNC(, mln_string_t *, mln_string_const_ref_dup, (char *s), (s), {
+    if (s == NULL) return NULL;
+
     mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t));
-    if (s == NULL) {
-        free(str);
-        return NULL;
-    }
+    if (str == NULL) return NULL;
+
     str->data = (mln_u8ptr_t)s;
     str->len = strlen(s);
     str->data_ref = 1;
     str->pool = 0;
     str->ref = 1;
+    return str;
+})
+
+MLN_FUNC(, mln_string_t *, mln_string_concat, (mln_string_t *s1, mln_string_t *s2, mln_string_t *sep), (s1, s2, sep), {
+    mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t));
+    if (str == NULL) return NULL;
+
+    mln_u8ptr_t p;
+    mln_size_t size = 0;
+
+    if (s1 != NULL) {
+        size += s1->len;
+        if (s2 != NULL && sep != NULL) size += sep->len;
+    }
+    if (s2 != NULL) size += s2->len;
+
+    if ((p = str->data = (mln_u8ptr_t)malloc(size + 1)) == NULL) {
+        free(str);
+        return NULL;
+    }
+
+    if (s1 != NULL) {
+        memcpy(p, s1->data, s1->len);
+        p += s1->len;
+        if (s2 != NULL && sep != NULL) {
+            memcpy(p, sep->data, sep->len);
+            p += sep->len;
+        }
+    }
+    if (s2 != NULL) {
+        memcpy(p, s2->data, s2->len);
+        p += s2->len;
+    }
+    *p = 0;
+
+    str->len = size;
+    str->data_ref = 0;
+    str->pool = 0;
+    str->ref = 1;
+
+    return str;
+})
+
+MLN_FUNC(, mln_string_t *, mln_string_pool_concat, \
+         (mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2, mln_string_t *sep), \
+         (pool, s1, s2, sep), \
+{
+    mln_string_t *str = (mln_string_t *)mln_alloc_m(pool, sizeof(mln_string_t));
+    if (str == NULL) return NULL;
+
+    mln_u8ptr_t p;
+    mln_size_t size = 0;
+
+    if (s1 != NULL) {
+        size += s1->len;
+        if (s2 != NULL && sep != NULL) size += sep->len;
+    }
+    if (s2 != NULL) size += s2->len;
+
+    if ((p = str->data = (mln_u8ptr_t)mln_alloc_m(pool, size + 1)) == NULL) {
+        mln_alloc_free(str);
+        return NULL;
+    }
+
+    if (s1 != NULL) {
+        memcpy(p, s1->data, s1->len);
+        p += s1->len;
+        if (s2 != NULL && sep != NULL) {
+            memcpy(p, sep->data, sep->len);
+            p += sep->len;
+        }
+    }
+    if (s2 != NULL) {
+        memcpy(p, s2->data, s2->len);
+        p += s2->len;
+    }
+    *p = 0;
+
+    str->len = size;
+    str->data_ref = 0;
+    str->pool = 1;
+    str->ref = 1;
+
     return str;
 })
 

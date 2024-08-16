@@ -265,6 +265,30 @@ Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
 
 
 
+#### mln_string_concat
+
+```c
+mln_string_t *mln_string_concat(mln_string_t *s1, mln_string_t *s2, mln_string_t *sep);
+```
+
+Description: Concatenate the strings s1 and s2, and add sep as a separator in between.
+
+Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
+
+
+
+#### mln_string_pool_concat
+
+```c
+mln_string_t *mln_string_pool_concat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2, mln_string_t *sep);
+```
+
+Description: Concatenate the strings s1 and s2, adding sep as a separator in between. The pointer to the return value and the memory used for its data are both allocated from the memory pool specified by pool.
+
+Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
+
+
+
 #### mln_string_strseqcmp
 
 ```c

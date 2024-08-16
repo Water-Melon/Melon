@@ -84,6 +84,8 @@ extern mln_string_t *mln_string_pool_alloc(mln_alloc_t *pool, mln_s32_t size) __
 extern mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size) __NONNULL1(1);
 extern mln_string_t *mln_string_ref_dup(mln_string_t *str) __NONNULL1(1);
 extern mln_string_t *mln_string_const_ref_dup(char *s);
+extern mln_string_t *mln_string_concat(mln_string_t *s1, mln_string_t *s2, mln_string_t *sep);
+extern mln_string_t *mln_string_pool_concat(mln_alloc_t *pool, mln_string_t *s1, mln_string_t *s2, mln_string_t *sep);
 
 /*
  * tool functions
