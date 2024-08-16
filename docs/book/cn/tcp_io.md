@@ -6,7 +6,7 @@ Windows中性能会相对低一些，因为win并未提供相关系统接口获�
 
 
 
-###头文件
+### 头文件
 
 ```c
 #include "mln_connection.h"
@@ -20,7 +20,7 @@ Windows中性能会相对低一些，因为win并未提供相关系统接口获�
 
 
 
-###相关结构
+### 相关结构
 
 ```c
 typedef struct mln_buf_s {//用于存放数据，且根据不同标识量指定数据存放位置（文件还是内存），同时还标出当前数据被处理的位置
@@ -56,11 +56,11 @@ typedef struct mln_chain_s { //buf单链表，用于tcp发送数据和接收数�
 
 
 
-###函数/宏
+### 函数/宏
 
 
 
-m####ln_buf_size
+#### mln_buf_size
 
 ```c
 mln_buf_size(pbuf)
@@ -72,7 +72,7 @@ mln_buf_size(pbuf)
 
 
 
-####mln_buf_left_size
+#### mln_buf_left_size
 
 ```c
 mln_buf_left_size(pbuf)
@@ -84,7 +84,7 @@ mln_buf_left_size(pbuf)
 
 
 
-####mln_chain_add
+#### mln_chain_add
 
 ```c
 mln_chain_add(pphead,pptail,c)
@@ -96,7 +96,7 @@ mln_chain_add(pphead,pptail,c)
 
 
 
-####mln_buf_new
+#### mln_buf_new
 
 ```c
 mln_buf_t *mln_buf_new(mln_alloc_t *pool);
@@ -108,7 +108,7 @@ mln_buf_t *mln_buf_new(mln_alloc_t *pool);
 
 
 
-####mln_chain_new
+#### mln_chain_new
 
 ```c
 mln_chain_t *mln_chain_new(mln_alloc_t *pool);
@@ -120,7 +120,7 @@ mln_chain_t *mln_chain_new(mln_alloc_t *pool);
 
 
 
-####mln_buf_pool_release
+#### mln_buf_pool_release
 
 ```c
 void mln_buf_pool_release(mln_buf_t *b);
@@ -132,7 +132,7 @@ void mln_buf_pool_release(mln_buf_t *b);
 
 
 
-####mln_chain_pool_release
+#### mln_chain_pool_release
 
 ```c
 void mln_chain_pool_release(mln_chain_t *c);
@@ -144,7 +144,7 @@ void mln_chain_pool_release(mln_chain_t *c);
 
 
 
-####mln_chain_pool_release_all
+#### mln_chain_pool_release_all
 
 ```c
 void mln_chain_pool_release_all(mln_chain_t *c);
@@ -156,7 +156,7 @@ void mln_chain_pool_release_all(mln_chain_t *c);
 
 
 
-####mln_tcp_conn_init
+#### mln_tcp_conn_init
 
 ```c
 int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd);
@@ -171,7 +171,7 @@ int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd);
 
 
 
-####mln_tcp_conn_destroy
+#### mln_tcp_conn_destroy
 
 ```c
 void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
@@ -183,7 +183,7 @@ void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
 
 
 
-####mln_tcp_conn_append_chain
+#### mln_tcp_conn_append_chain
 
 ```c
 void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chain_t *c_tail, int type);
@@ -199,7 +199,7 @@ void mln_tcp_conn_append_chain(mln_tcp_conn_t *tc, mln_chain_t *c_head, mln_chai
 
 
 
-####mln_tcp_conn_append
+#### mln_tcp_conn_append
 
 ```c
 void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type);
@@ -211,7 +211,7 @@ void mln_tcp_conn_append(mln_tcp_conn_t *tc, mln_chain_t *c, int type);
 
 
 
-####mln_tcp_conn_head
+#### mln_tcp_conn_head
 
 ```c
 mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type);
@@ -223,7 +223,7 @@ mln_chain_t *mln_tcp_conn_head(mln_tcp_conn_t *tc, int type);
 
 
 
-####mln_tcp_conn_remove
+#### mln_tcp_conn_remove
 
 ```c
 mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type);
@@ -235,7 +235,7 @@ mln_chain_t *mln_tcp_conn_remove(mln_tcp_conn_t *tc, int type);
 
 
 
-####mln_tcp_conn_pop
+#### mln_tcp_conn_pop
 
 ```c
 mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type);
@@ -247,7 +247,7 @@ mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type);
 
 
 
-####mln_tcp_conn_tail
+#### mln_tcp_conn_tail
 
 ```c
 mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type);
@@ -259,7 +259,7 @@ mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type);
 
 
 
-####mln_tcp_conn_send
+#### mln_tcp_conn_send
 
 ```c
 int mln_tcp_conn_send(mln_tcp_conn_t *tc);
@@ -279,7 +279,7 @@ int mln_tcp_conn_send(mln_tcp_conn_t *tc);
 
 
 
-####mln_tcp_conn_recv
+#### mln_tcp_conn_recv
 
 ```c
 int mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag);
@@ -301,7 +301,7 @@ int mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag);
 
 
 
-####mln_tcp_conn_send_empty
+#### mln_tcp_conn_send_empty
 
 ```c
 mln_tcp_conn_send_empty(pconn)
@@ -313,7 +313,7 @@ mln_tcp_conn_send_empty(pconn)
 
 
 
-####mln_tcp_conn_recv_empty
+#### mln_tcp_conn_recv_empty
 
 ```c
 mln_tcp_conn_recv_empty(pconn)
@@ -325,7 +325,7 @@ mln_tcp_conn_recv_empty(pconn)
 
 
 
-####mln_tcp_conn_sent_empty
+#### mln_tcp_conn_sent_empty
 
 ```c
 mln_tcp_conn_sent_empty(pconn)
@@ -337,7 +337,7 @@ mln_tcp_conn_sent_empty(pconn)
 
 
 
-####mln_tcp_conn_fd_get
+#### mln_tcp_conn_fd_get
 
 ```c
 mln_tcp_conn_fd_get(pconn)
@@ -349,7 +349,7 @@ mln_tcp_conn_fd_get(pconn)
 
 
 
-####mln_tcp_conn_fd_set
+#### mln_tcp_conn_fd_set
 
 ```c
 mln_tcp_conn_fd_set(pconn,fd)
@@ -361,7 +361,7 @@ mln_tcp_conn_fd_set(pconn,fd)
 
 
 
-####mln_tcp_conn_pool_get
+#### mln_tcp_conn_pool_get
 
 ```c
 mln_tcp_conn_pool_get(pconn)
@@ -373,7 +373,7 @@ mln_tcp_conn_pool_get(pconn)
 
 
 
-###示例
+### 示例
 
 本篇示例碍于篇幅，仅给出部分片段展示如何使用。
 
