@@ -4,6 +4,10 @@
 
 ### UNIX
 
+
+
+#### make
+
 UNIX环境（Linux和MacOSX）下Melon的安装执行如下命令：
 
 ```bash
@@ -50,6 +54,28 @@ $ export LD_LIBRARY_PATH=/path/to/melon/libdir:$LD_LIBRARY_PATH
 
 
 默认情况下，UNIX中Melon会被安装在`/usr/local/melon`下，Windows中会安装于`$HOME/libmelon`中。
+
+
+
+#### CMake
+
+Melon支持了使用CMake完全编译安装库，执行如下命令即可：
+
+```bash
+mkdir build
+cd build
+cmake ..
+```
+
+
+
+#### Bazel
+
+Melon支持了使用Bazel构建Melon库，执行如下命令即可：
+
+```bash
+bazel build //:melon
+```
 
 
 
@@ -104,18 +130,6 @@ build.bat
 额外需要注意的一点是，MSVC编译出来的Melon库，硬编码了`path`模块内的路径，因此安装路径被强制放在`HOME/libmelon`中。
 
 MSVC目前仅支持完全安装，暂不支持模块选择性编译。
-
-
-
-### CMake
-
-目前Melon支持了使用CMake完全编译安装库，执行如下命令即可：
-
-```bash
-mkdir build
-cd build
-cmake ..
-```
 
 
 

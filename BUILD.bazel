@@ -1,0 +1,19 @@
+cc_binary(
+    name = "melon",
+    srcs = glob(["src/*.c"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    linkshared = True,
+    copts = ["-DMLN_ROOT=\\\"/usr/local\\\"", "-DMLN_LANG_LIB=\\\"/usr/local/lib/melang\\\"", "-DMLN_LANG_DYLIB=\\\"/usr/local/lib/melang_dynamic\\\"", "-DMLN_NULL=\\\"/dev/null\\\""],
+    deps = [":melon_static"],
+)
+
+cc_library(
+    name = "melon_static",
+    srcs = glob(["src/*.c"]),
+    hdrs = glob(["include/**/*.h"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    linkstatic = True,
+    copts = ["-DMLN_ROOT=\\\"/usr/local\\\"", "-DMLN_LANG_LIB=\\\"/usr/local/lib/melang\\\"", "-DMLN_LANG_DYLIB=\\\"/usr/local/lib/melang_dynamic\\\"", "-DMLN_NULL=\\\"/dev/null\\\""],
+)

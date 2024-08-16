@@ -5,3 +5,5 @@ objs/
 bin/
 build/
 conf/melon.conf
+bazel-*
+MODULE.bazel*

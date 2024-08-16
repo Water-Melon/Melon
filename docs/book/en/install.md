@@ -4,6 +4,10 @@
 
 ### UNIX
 
+
+
+#### make
+
 To install Melon on UNIX environments (Linux and MacOSX), execute the following commands:
 
 ```bash
@@ -49,6 +53,28 @@ $ export LD_LIBRARY_PATH=/path/to/melon/libdir:$LD_LIBRARY_PATH
 
 
 By default, Melon will be installed in `/usr/local/melon` on UNIX systems and in `$HOME/libmelon` on Windows.
+
+
+
+#### CMake
+
+Melon supports full compilation and installation of the library using CMake. Simply execute the following command:
+
+```bash
+mkdir build
+cd build
+cmake ..
+```
+
+
+
+#### Bazel
+
+Melon supports full compilation and installation of the library using Bazel. Just execute the following command:
+
+```bash
+bazel build //:melon
+```
 
 
 
@@ -105,18 +131,6 @@ After installation, you will see the compiled static library `libmelon_static.li
 One additional point to note is that the Melon library compiled with MSVC hard-codes the paths inside the `path` module, so the installation path is `HOME/libmelon`.
 
 MSVC currently only supports full installation and does not support selective module installation.
-
-
-
-### CMake
-
-Melon now supports full compilation and installation of the library using CMake. Simply execute the following command:
-
-```bash
-mkdir build
-cd build
-cmake ..
-```
 
 
 
