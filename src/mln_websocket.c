@@ -270,10 +270,6 @@ MLN_FUNC(, int, mln_websocket_handshake_response_generate, \
     tmp = mln_http_field_iterator(http, &extension_key);
     if (tmp) {
         extension_val = mln_websocket_extension_tokens(ws->pool, tmp);
-        if (extension_val == NULL) {
-            if (protocol_val != NULL) mln_string_free(protocol_val);
-            return M_WS_RET_FAILED;
-        }
     }
 
     mln_string_t *accept = mln_websocket_accept_field(http);
@@ -345,6 +341,8 @@ MLN_FUNC(static, mln_string_t *, mln_websocket_extension_tokens, \
             size += (pos - (char *)(p->data) + 1);
         }
     }
+    if (!size) return NULL;
+
     --size;
     buf = (mln_s8ptr_t)mln_alloc_m(pool, size);
     if (buf == NULL) {
