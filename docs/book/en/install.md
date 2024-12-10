@@ -93,7 +93,7 @@ Windows platform supports two installation environments:
 
 ##### Installing msys2 and dependencies
 
-`msys2` can be downloaded and installed from https://www.msys2.org/. Then, choose `MSYS2 UCRT64` to start the msys2 command line environment, and enter the following command to install the required dependencies:
+`msys2` can be downloaded and installed from https://www.msys2.org/. Then, choose one of `MSYS2 MINGW32`, `MSYS2 MSYS`, `MSYS2 CLANG64` and `MSYS2 CLANGARM64` to start the msys2 command line environment, and enter the following command to install the required dependencies:
 
 ```
 pacman -S vim make gcc git

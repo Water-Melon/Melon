@@ -79,7 +79,18 @@ set_melang_default_paths() {
 }
 
 set_c_compilers() {
-    if ! case $sysname in MINGW*) false;; esac; then
+    if ! case $sysname in
+         MINGW*) false;;
+         MSYS*)  false;;
+      esac; then
+        case $MSYSTEM in
+            MINGW32|MSYS|CLANG64|CLANGARM64)
+                ;;
+            *)
+            echo "only support MINGW32, MSYS, CLANG64 and CLANGARM64"
+            exit 1
+            ;;
+        esac
         install_path=$HOME/libmelon
         cc="gcc"
         tcc="gcc"

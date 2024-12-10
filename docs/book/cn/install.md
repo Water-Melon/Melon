@@ -94,7 +94,7 @@ Windows平台支持两种安装方式：
 
 ##### 安装msys2及依赖项
 
-`msys2`可以在 https://www.msys2.org/ 中进行下载和安装。随后选择`MSYS2 UCRT64`启动msys2命令行环境，并输入如下命令安装所需依赖：
+`msys2`可以在 https://www.msys2.org/ 中进行下载和安装。随后选择`MSYS2 MINGW32`、`MSYS2 MSYS`、`MSYS2 CLANG64`、`MSYS2 CLANGARM64`中的任意一个启动msys2命令行环境，并输入如下命令安装所需依赖：
 
 ```
 pacman -S vim make gcc git
