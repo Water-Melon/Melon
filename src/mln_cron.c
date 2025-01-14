@@ -85,9 +85,7 @@ MLN_FUNC(static, long, mln_cron_parse_minute, (mln_string_t *smin, long min), (s
                 if (p == head || p > head + 2) return -1;
                 *p = 0;
                 tmp = atol((char *)head);
-                if (tmp < 1 || tmp >= 60) {
-                    return -1;
-                }
+                if (tmp < 1 || tmp >= 60) return -1;
                 if (tmp < min) tmp += 60;
                 if (!save) {
                     save = min == tmp? min + period: tmp;
@@ -110,7 +108,7 @@ MLN_FUNC(static, long, mln_cron_parse_minute, (mln_string_t *smin, long min), (s
     if (p > head) {
         if (p > head + 2) return -1;
         tmp = atol((char *)head);
-        if (tmp < 1 || tmp >= 60) return -1;
+        if (tmp < 0 || tmp >= 60) return -1;
         if (tmp < min) tmp += 60;
         if (!save) {
             save = min == tmp? min + period: tmp;
@@ -178,7 +176,7 @@ MLN_FUNC(static, long, mln_cron_parse_hour, \
     if (p > head) {
         if (p > head + 2) return -1;
         tmp = atol((char *)head);
-        if (tmp < 1 || tmp >= 24) return -1;
+        if (tmp < 0 || tmp >= 24) return -1;
         if (tmp < hour) tmp += 24;
         if (!save) {
             save = hour==tmp && !greater? hour + period: tmp;
@@ -394,6 +392,7 @@ MLN_FUNC(static, long, mln_cron_parse_week, \
     if (p > head) {
         if (p > head + 1) return -1;
         tmp = atol((char *)head);
+        if (tmp == 7) tmp = 0;
         if (tmp < 0 || tmp >= 7) return -1;
         if (tmp < week) tmp += 7;
         if (!save) {
