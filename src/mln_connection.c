@@ -64,7 +64,7 @@ static inline int mln_fd_is_nonblock(int fd)
  */
 
 MLN_FUNC(, int, mln_tcp_conn_init, (mln_tcp_conn_t *tc, int sockfd), (tc, sockfd), {
-    tc->pool = mln_alloc_init(NULL);
+    tc->pool = mln_alloc_init(NULL, 0);
     if (tc->pool == NULL) return -1;
     tc->rcv_head = tc->rcv_tail = NULL;
     tc->snd_head = tc->snd_tail = NULL;

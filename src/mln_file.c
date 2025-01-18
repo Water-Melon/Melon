@@ -33,7 +33,7 @@ MLN_FUNC(, mln_fileset_t *, mln_fileset_init, (mln_size_t max_file), (max_file),
         return NULL;
     }
 
-    fs->pool = mln_alloc_init(NULL);
+    fs->pool = mln_alloc_init(NULL, 0);
     if (fs->pool == NULL) {
         free(fs);
         return NULL;

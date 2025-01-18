@@ -30,7 +30,7 @@ int main(void)
     mln_lex_hooks_t hooks;
     mln_string_t code = mln_string("a + 1;\nb + a;\nc - b;\n");
 
-    assert((pool = mln_alloc_init(NULL)) != NULL);
+    assert((pool = mln_alloc_init(NULL, 0)) != NULL);
 
     lattr.pool = pool;
     lattr.keywords = NULL;

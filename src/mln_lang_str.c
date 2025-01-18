@@ -7,13 +7,6 @@
 #include <stdio.h>
 #include "mln_func.h"
 
-#ifdef __DEBUG__
-#include <assert.h>
-#define ASSERT(x) assert(x)
-#else
-#define ASSERT(x);
-#endif
-
 static inline mln_string_t *__mln_lang_str_var_tostring(mln_alloc_t *pool, mln_lang_var_t *var);
 static int
 mln_lang_str_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);

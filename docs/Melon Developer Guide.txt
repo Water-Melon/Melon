@@ -1299,10 +1299,11 @@ Their definitions can be found in melon/include/mln_types.h.
 
   16) Memory Pool
      The memory pool can help developer use memory more easily.
-     a) mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
+     a) mln_alloc_t *mln_alloc_init(mln_alloc_t *parent, mln_size_t capacity);
         Initialize a memory pool object.
         'parent' is another memory pool, which means a memory pool can be created by another pool.
         If 'parent' is NULL, memory pool will be created from heap.
+        `capacity` is the capacity limit of the pool. If it is set to `0`, the capacity would be unlimited.
 
      b) void mln_alloc_destroy(mln_alloc_t *pool);
         Destroy a memory pool object and free all memory blocks that it allocated.
@@ -1321,9 +1322,9 @@ Their definitions can be found in melon/include/mln_types.h.
      f) void mln_alloc_free(void *ptr);
         Free a memory block to a memory pool.
 
-     g) mln_alloc_t *mln_alloc_shm_init(mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock);
+     g) mln_alloc_t *mln_alloc_shm_init(mln_size_t capacity, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock);
         Initialize a shared memory pool.
-        `size` - shared memory size
+        `capacity` - shared memory capacity
         `locker` - lock
         `lock` - lock handler
         `unlock` - unlock handler
@@ -1332,6 +1333,18 @@ Their definitions can be found in melon/include/mln_types.h.
         Callback 'lock' can not be a trylock function.
         'lock' and 'unlock' will be called only in sub-pool functions.
         So user should lock or unlock by yourself when operate shared memory pool directly.
+
+     h) mln_size_t mln_alloc_available_capacity(mln_alloc_t *pool);
+        Retrieve the current available capacity of the memory pool (if a capacity limit is set for the memory pool).
+        For heap memory pools, when calling `mln_alloc_m`, several memory blocks similar in size to the requested allocation may be
+        pre-allocated. In such cases, the value returned by this function does not include the memory size of these pre-allocated
+        but unused blocks.
+
+        Heap Memory: If the second parameter (`capacity`) in `mln_alloc_init` is not `0`, the function returns the current
+        available memory size of the memory pool (refer to the note above for details). If it is `0`, the function returns
+        `MLN_ALLOC_INFINITE_SIZE`.
+
+        Shared Memory: Returns the total size of all available memory regions in bytes.
 
   17) Chain & Buf
      These two structures do not have interfaces to operate.

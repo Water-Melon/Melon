@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     mln_chain_t *c;
     mln_buf_t *b;
 
-    pool = mln_alloc_init(NULL);
+    pool = mln_alloc_init(NULL, 0);
     if (pool == NULL) {
         fprintf(stderr, "pool init failed.\n");
         return -1;

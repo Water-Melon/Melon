@@ -749,7 +749,7 @@ mln_lang_t *mln_lang_new(mln_event_t *ev, mln_lang_run_ctl_t signal, mln_lang_ru
     struct mln_rbtree_attr rbattr;
     mln_alloc_t *pool;
 
-    if ((pool = mln_alloc_init(NULL)) == NULL)
+    if ((pool = mln_alloc_init(NULL, 0)) == NULL)
         return NULL;
 
     if ((lang = (mln_lang_t *)mln_alloc_m(pool, sizeof(mln_lang_t))) == NULL) {
@@ -1026,7 +1026,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
         return NULL;
     }
     ctx->lang = lang;
-    if ((ctx->pool = mln_alloc_init(NULL)) == NULL) {
+    if ((ctx->pool = mln_alloc_init(NULL, 0)) == NULL) {
         mln_alloc_free(ctx);
         return NULL;
     }

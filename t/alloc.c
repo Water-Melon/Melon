@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     char *p;
     mln_alloc_t *pool;
 
-    pool = mln_alloc_init(NULL);
+    pool = mln_alloc_init(NULL, 0);
     if (pool == NULL) {
         fprintf(stderr, "pool init failed\n");
         return -1;

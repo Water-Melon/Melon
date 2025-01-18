@@ -88,7 +88,7 @@ int main(void)
     memset(&hooks, 0, sizeof(hooks));
     hooks.dblq_handler = (lex_hook)mln_test_dblq_handler;
 
-    if ((lattr.pool = mln_alloc_init(NULL)) != NULL);
+    if ((lattr.pool = mln_alloc_init(NULL, 0)) != NULL);
     lattr.keywords = keywords;
     lattr.hooks = &hooks;
     lattr.preprocess = 1;

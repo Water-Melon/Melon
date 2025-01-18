@@ -579,7 +579,7 @@ MLN_FUNC(SCOPE, int, PREFIX_NAME##_preprocess, (struct PREFIX_NAME##_preprocess_
     mln_string_t tmp;\
     mln_production_t *prod = attr->prod_tbl;\
     mln_production_t *prodend = attr->prod_tbl + attr->nr_prod;\
-    if ((pool = mln_alloc_init(NULL)) == NULL) {\
+    if ((pool = mln_alloc_init(NULL, 0)) == NULL) {\
         mln_log(error, "No memory.\n");\
         goto err2;\
     }\
