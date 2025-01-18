@@ -739,7 +739,7 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_run, (mln_string_t *exp, mln_expr_cb_t cb,
     hooks.dblq_handler = (lex_hook)mln_expr_dblq_handler;
     hooks.sglq_handler = (lex_hook)mln_expr_sglq_handler;
 
-    if ((pool = lattr.pool = mln_alloc_init(NULL)) == NULL) {
+    if ((pool = lattr.pool = mln_alloc_init(NULL, 0)) == NULL) {
         return NULL;
     }
     lattr.keywords = keywords;
@@ -798,7 +798,7 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_run_file, (mln_string_t *path, mln_expr_cb
     hooks.dblq_handler = (lex_hook)mln_expr_dblq_handler;
     hooks.sglq_handler = (lex_hook)mln_expr_sglq_handler;
 
-    if ((pool = lattr.pool = mln_alloc_init(NULL)) == NULL) {
+    if ((pool = lattr.pool = mln_alloc_init(NULL, 0)) == NULL) {
         return NULL;
     }
     lattr.keywords = keywords;

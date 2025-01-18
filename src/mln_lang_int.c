@@ -6,13 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef __DEBUG__
-#include <assert.h>
-#define ASSERT(x) assert(x)
-#else
-#define ASSERT(x);
-#endif
-
 static inline mln_s64_t mln_lang_int_var_toint(mln_lang_var_t *var);
 static inline double mln_lang_int_var_toreal(mln_lang_var_t *var);
 static int

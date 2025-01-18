@@ -30,10 +30,10 @@ Melon中，内存池分为两类：
 #### mln_alloc_init
 
 ```c
-mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
+mln_alloc_t *mln_alloc_init(mln_alloc_t *parent, mln_size_t capacity);
 ```
 
-描述：创建堆内存内存池。参数`parent`是一个内存池实例，该参数为`NULL`时，本函数创建的内存池将从堆中分配内存，若不为`NULL`时，则从`parent`所在池中分配内存。即池结构可级联。
+描述：创建堆内存内存池。参数`parent`是一个内存池实例，该参数为`NULL`时，本函数创建的内存池将从堆中分配内存，若不为`NULL`时，则从`parent`所在池中分配内存。即池结构可级联。`capacity`是用于限制内存池容量的，当它的值为`0`时，表示内存池容量不受限，也就是跟随系统内存容量。
 
 返回值：成功则返回内存池结构指针，否则返回`NULL`
 
@@ -42,14 +42,14 @@ mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
 #### mln_alloc_shm_init
 
 ```c
-mln_alloc_t *mln_alloc_shm_init(mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock);
+mln_alloc_t *mln_alloc_shm_init(mln_size_t capacity, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock);
 ```
 
 描述：创建共享内存内存池。
 
 参数：
 
-- `size` 本池建立时需要给出池大小`size`（单位字节），一旦创建完毕后则后续无法再扩大。
+- `capacity` 本池建立时需要给出池大小（单位字节），一旦创建完毕后则后续无法再扩大。
 - `locker` 是锁资源结构指针。
 - `lock` 是用于对锁资源加锁的回调函数，该函数参数为锁资源指针。若加锁失败则返回`非0`值。
 - `unlock` 是用于对锁资源解锁的回调函数，该函数参数为锁资源指针。若解锁失败则返回`非0`值。
@@ -123,6 +123,23 @@ void mln_alloc_free(void *ptr);
 描述：释放`ptr`指向的内存。**注意**：`ptr`必须为分配函数返回的地址，而不可以是分配的内存中某一个位置。
 
 返回值：无
+
+
+
+#### mln_alloc_available_capacity
+
+```c
+mln_size_t mln_alloc_available_capacity(mln_alloc_t *pool);
+```
+
+描述：获取当前内存池剩余可用容量（如果内存池设置了容量限制）。
+
+注意：对于堆内存池，当调用`mln_alloc_m`时会欲分配若干与申请大小相似的内存块。在这种情况下，本函数返回的数值并不包含这些被预分配且未被使用的块的内存大小。
+
+返回值：
+
+- 堆内存：若在`mln_alloc_init`时第二个参数（`capacity`）不为`0`，则返回当前内存池剩余可用内存大小（详情参考上面注意事项），若为`0`，则返回`M_ALLOC_INFINITE_SIZE`。
+- 共享内存：返回全部可用内存区的字节大小。
 
 
 

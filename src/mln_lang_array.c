@@ -6,13 +6,6 @@
 #include <stdio.h>
 #include "mln_func.h"
 
-#ifdef __DEBUG__
-#include <assert.h>
-#define ASSERT(x) assert(x)
-#else
-#define ASSERT(x);
-#endif
-
 static int
 mln_lang_array_assign(mln_lang_ctx_t *ctx, mln_lang_var_t **ret, mln_lang_var_t *op1, mln_lang_var_t *op2);
 static int

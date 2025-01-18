@@ -3769,7 +3769,7 @@ MLN_FUNC(, void *, mln_lang_ast_generate, \
     mln_alloc_t *internal_pool;
     mln_u8ptr_t ret;
 
-    if ((internal_pool = mln_alloc_init(NULL)) == NULL) {
+    if ((internal_pool = mln_alloc_init(NULL, 0)) == NULL) {
         return NULL;
     }
     lattr.pool = internal_pool;

@@ -32,10 +32,10 @@ Among them, the shared memory memory pool only allows data to be shared between 
 #### mln_alloc_init
 
 ```c
-mln_alloc_t *mln_alloc_init(mln_alloc_t *parent);
+mln_alloc_t *mln_alloc_init(mln_alloc_t *parent, mln_size_t capacity);
 ```
 
-Description: Create a heap memory memory pool. The parameter `parent` is a memory pool instance. When the parameter is `NULL`, the memory pool created by this function will allocate memory from the heap. If it is not `NULL`, it will allocate memory from the pool where `parent` is located. That is, the pool structure can be cascaded.
+Description: Create a heap memory memory pool. The parameter `parent` is a memory pool instance. When the parameter is `NULL`, the memory pool created by this function will allocate memory from the heap. If it is not `NULL`, it will allocate memory from the pool where `parent` is located. That is, the pool structure can be cascaded. `capacity` is used to limit the memory pool's capacity. When its value is `0`, it indicates that the memory pool capacity is unlimited, meaning it follows the system's available memory capacity.
 
 Return value: If successful, return the memory pool structure pointer, otherwise return `NULL`
 
@@ -44,14 +44,14 @@ Return value: If successful, return the memory pool structure pointer, otherwise
 #### mln_alloc_shm_init
     
 ```c
-mln_alloc_t *mln_alloc_shm_init(mln_size_t size, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock);                  
+mln_alloc_t *mln_alloc_shm_init(mln_size_t capacity, void *locker, mln_alloc_shm_lock_cb_t lock, mln_alloc_shm_lock_cb_t unlock);                  
 ``` 
     
 Description: Create a shared memory memory pool.
                                                                                                                                                
 Parameters:
                                                                                                                                                
-- `size` The pool size `size` (in bytes) needs to be given when creating this pool. Once created, it cannot be expanded later.
+- `capacity` The pool size (in bytes) needs to be given when creating this pool. Once created, it cannot be expanded later.
 - `locker` is the lock resource pointer.
 - `lock` is a callback function used to lock the lock resource. The function parameter is the lock resource pointer. If the lock fails, a `non-0` value is returned.
 - `unlock` is a callback function used to unlock the lock resource. The function parameter is the lock resource pointer. If unlocking fails, a `non-0` value is returned.
@@ -125,6 +125,23 @@ void mln_alloc_free(void *ptr);
 Description: Free the memory pointed to by `ptr`. **Note**: `ptr` must be the address returned by the allocation function, not a location in the allocated memory.
 
 Return value: none
+
+
+
+#### mln_alloc_available_capacity
+
+```c
+mln_size_t mln_alloc_available_capacity(mln_alloc_t *pool);
+```
+
+Description: Retrieve the current available capacity of the memory pool (if a capacity limit is set for the memory pool).
+
+Note: For heap memory pools, when calling `mln_alloc_m`, several memory blocks similar in size to the requested allocation may be pre-allocated. In such cases, the value returned by this function does not include the memory size of these pre-allocated but unused blocks.
+
+Return Values:
+
+Heap Memory: If the second parameter (`capacity`) in `mln_alloc_init` is not `0`, the function returns the current available memory size of the memory pool (refer to the note above for details). If it is `0`, the function returns `M_ALLOC_INFINITE_SIZE`.
+Shared Memory: Returns the total size of all available memory regions in bytes.
 
 
 
