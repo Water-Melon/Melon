@@ -61,15 +61,72 @@ typedef struct {
         }\
     }\
 })
+
+/*
+ * Single-alloc string dup: mln_string_t + data in one malloc.
+ * data_ref=1 tells mln_string_free not to free data separately.
+ */
+#define mln_string_new(s) ({\
+    const char *__src = (s);\
+    mln_string_t *__r;\
+    if (__src == NULL) {\
+        __r = (mln_string_t *)malloc(sizeof(mln_string_t) + 1);\
+        if (__r != NULL) {\
+            __r->data = (mln_u8ptr_t)(__r + 1);\
+            __r->data[0] = 0;\
+            __r->len = 0;\
+            __r->data_ref = 1; __r->pool = 0; __r->ref = 1;\
+        }\
+    } else {\
+        mln_u64_t __n = strlen(__src);\
+        __r = (mln_string_t *)malloc(sizeof(mln_string_t) + __n + 1);\
+        if (__r != NULL) {\
+            __r->data = (mln_u8ptr_t)(__r + 1);\
+            memcpy(__r->data, __src, __n);\
+            __r->data[__n] = 0;\
+            __r->len = __n;\
+            __r->data_ref = 1; __r->pool = 0; __r->ref = 1;\
+        }\
+    }\
+    __r;\
+})
+
+/*
+ * mln_string_dup is intentionally kept as a function call (not a macro)
+ * to prevent GCC -O3 from tracing the single-alloc buffer size into
+ * callers that modify the duplicated data in-place (e.g. mln_fec_xor),
+ * which triggers false -Wstringop-overflow warnings.
+ */
+extern mln_string_t *mln_string_dup(mln_string_t *str) __NONNULL1(1);
+
+#define mln_string_const_ndup(s, n) ({\
+    char *__src = (s);\
+    mln_s32_t __n = (n);\
+    mln_string_t *__r = NULL;\
+    if (__n >= 0) {\
+        __r = (mln_string_t *)malloc(sizeof(mln_string_t) + __n + 1);\
+        if (__r != NULL) {\
+            __r->data = (mln_u8ptr_t)(__r + 1);\
+            memcpy(__r->data, __src, __n);\
+            __r->data[__n] = 0;\
+            __r->len = __n;\
+            __r->data_ref = 1; __r->pool = 0; __r->ref = 1;\
+        }\
+    }\
+    __r;\
+})
+
 #else
 extern mln_string_t *mln_string_set(mln_string_t *str, char *s);
 extern mln_string_t *mln_string_nset(mln_string_t *str, char *s, mln_u64_t n);
 extern mln_string_t *mln_string_ref(mln_string_t *s);
 extern void mln_string_free(mln_string_t *s);
+extern mln_string_t *mln_string_new(const char *s);
+extern mln_string_t *mln_string_dup(mln_string_t *str) __NONNULL1(1);
+extern mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size) __NONNULL1(1);
 #endif
 
 
-extern mln_string_t *mln_string_new(const char *s);
 extern mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s);
 /*
  * mln_string_buf_new & mln_string_buf_pool_new
@@ -77,11 +134,9 @@ extern mln_string_t *mln_string_pool_new(mln_alloc_t *pool, const char *s);
  */
 extern mln_string_t *mln_string_buf_new(mln_u8ptr_t buf, mln_u64_t len);
 extern mln_string_t *mln_string_buf_pool_new(mln_alloc_t *pool, mln_u8ptr_t buf, mln_u64_t len);
-extern mln_string_t *mln_string_dup(mln_string_t *str) __NONNULL1(1);
 extern mln_string_t *mln_string_pool_dup(mln_alloc_t *pool, mln_string_t *str) __NONNULL2(1,2);
 extern mln_string_t *mln_string_alloc(mln_s32_t size);
 extern mln_string_t *mln_string_pool_alloc(mln_alloc_t *pool, mln_s32_t size) __NONNULL1(1);
-extern mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size) __NONNULL1(1);
 extern mln_string_t *mln_string_ref_dup(mln_string_t *str) __NONNULL1(1);
 extern mln_string_t *mln_string_const_ref_dup(char *s);
 extern mln_string_t *mln_string_concat(mln_string_t *s1, mln_string_t *s2, mln_string_t *sep);

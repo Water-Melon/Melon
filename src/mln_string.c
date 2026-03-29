@@ -143,43 +143,56 @@ MLN_FUNC(, mln_string_t *, mln_string_pool_new, (mln_alloc_t *pool, const char *
     return str;
 })
 
+#if defined(MSVC)
 MLN_FUNC(, mln_string_t *, mln_string_new, (const char *s), (s), {
-    mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t));
-    if (str == NULL) return NULL;
     if (s == NULL) {
-        str->data = NULL;
+        mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t) + 1);
+        if (str == NULL) return NULL;
+        str->data = (mln_u8ptr_t)(str + 1);
+        str->data[0] = 0;
         str->len = 0;
-        str->data_ref = 0;
+        str->data_ref = 1;
         str->pool = 0;
         str->ref = 1;
         return str;
     }
-    mln_s32_t len = strlen(s);
-    if ((str->data = (mln_u8ptr_t)malloc(len + 1)) == NULL) {
-        free(str);
-        return NULL;
-    }
+    mln_u64_t len = strlen(s);
+    mln_string_t *str = (mln_string_t *)malloc(sizeof(mln_string_t) + len + 1);
+    if (str == NULL) return NULL;
+    str->data = (mln_u8ptr_t)(str + 1);
     memcpy(str->data, s, len);
     str->data[len] = 0;
     str->len = len;
-    str->data_ref = 0;
+    str->data_ref = 1;
     str->pool = 0;
     str->ref = 1;
     return str;
 })
 
-MLN_FUNC(, mln_string_t *, mln_string_dup, (mln_string_t *str), (str), {
-    mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
+MLN_FUNC(, mln_string_t *, mln_string_const_ndup, (char *str, mln_s32_t size), (str, size), {
+    if (size < 0) return NULL;
+    mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t) + size + 1);
     if (s == NULL) return NULL;
-    if ((s->data = (mln_u8ptr_t)malloc(str->len + 1)) == NULL) {
-        free(s);
-        return NULL;
-    }
+    s->data = (mln_u8ptr_t)(s + 1);
+    memcpy(s->data, str, size);
+    s->data[size] = 0;
+    s->len = size;
+    s->data_ref = 1;
+    s->pool = 0;
+    s->ref = 1;
+    return s;
+})
+#endif
+
+MLN_FUNC(, mln_string_t *, mln_string_dup, (mln_string_t *str), (str), {
+    mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t) + str->len + 1);
+    if (s == NULL) return NULL;
+    s->data = (mln_u8ptr_t)(s + 1);
     if (str->data != NULL)
         memcpy(s->data, str->data, str->len);
     s->data[str->len] = 0;
     s->len = str->len;
-    s->data_ref = 0;
+    s->data_ref = 1;
     s->pool = 0;
     s->ref = 1;
     return s;
@@ -232,23 +245,6 @@ MLN_FUNC(, mln_string_t *, mln_string_pool_alloc, \
     s->len = size;
     s->data_ref = 0;
     s->pool = 1;
-    s->ref = 1;
-    return s;
-})
-
-MLN_FUNC(, mln_string_t *, mln_string_const_ndup, (char *str, mln_s32_t size), (str, size), {
-    if (size < 0) return NULL;
-    mln_string_t *s = (mln_string_t *)malloc(sizeof(mln_string_t));
-    if (s == NULL) return NULL;
-    if ((s->data = (mln_u8ptr_t)malloc(size + 1)) == NULL) {
-        free(s);
-        return NULL;
-    }
-    memcpy(s->data, str, size);
-    s->data[size] = 0;
-    s->len = size;
-    s->data_ref = 0;
-    s->pool = 0;
     s->ref = 1;
     return s;
 })

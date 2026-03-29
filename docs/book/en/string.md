@@ -133,13 +133,14 @@ Return value: none
 
 
 
+
 #### mln_string_new
 
 ```c
 mln_string_t *mln_string_new(const char *s);
 ```
 
-Description: Create a string structure based on the string constant `s`. At this time, the memory of the new string structure and its data part is allocated by the malloc library, and the content of `s` is copied into the `data` member.
+Description: Create a string structure from the string constant `s`, copying its content into the `data` member. If `s` is `NULL`, an empty string structure with `len` set to `0` is returned.
 
 Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
 
@@ -187,7 +188,7 @@ Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
 mln_string_t *mln_string_dup(mln_string_t *str);
 ```
 
-Description: A complete copy of `str` whose memory is allocated by malloc.
+Description: Create a complete copy of `str`.
 
 Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
 
@@ -235,7 +236,7 @@ Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
 mln_string_t *mln_string_const_ndup(char *str, mln_s32_t size);
 ```
 
-Description: Creates a new string object and copies only the first `size` bytes of data in `str`.
+Description: Create a new string object, copying only the first `size` bytes from `str`.
 
 Return value: return `mln_string_t` pointer on success, otherwise return `NULL`.
 

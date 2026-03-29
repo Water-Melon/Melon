@@ -2,7 +2,7 @@
 
 
 
-### Header file
+### Header File
 
 ```c
 #include "mln_json.h"
@@ -26,7 +26,7 @@
 mln_json_init(j)
 ```
 
-Description: Initialize JSON type node `j`, the node type is `NONE`.
+Description: Initialize JSON type node `j`, setting its type to `NONE`.
 
 Return value: None
 
@@ -38,7 +38,7 @@ Return value: None
 mln_json_string_init(j, s)
 ```
 
-Description: Initialize JSON type node `j` to string type and assign value `s` of type `mln_string_t *`. `s` will be taken over by the JSON structure. The caller needs to ensure the memory life cycle of `s` and cannot modify the content of `s`.
+Description: Initialize JSON type node `j` to string type and assign value `s` of type `mln_string_t *`. The JSON structure takes ownership of `s`; the caller must ensure `s` remains valid and must not modify its content.
 
 Return value: None
 
@@ -50,7 +50,7 @@ Return value: None
 mln_json_number_init(j, n)
 ```
 
-Description: Initialize the JSON type node `j` to a numeric type and assign a value `n` of type `double`.
+Description: Initialize JSON type node `j` to number type and assign a `double` value `n`.
 
 Return value: None
 
@@ -62,7 +62,7 @@ Return value: None
 mln_json_true_init(j)
 ```
 
-Description: Initialize JSON type node `j` to type `true`.
+Description: Initialize JSON type node `j` to `true` type.
 
 Return value: None
 
@@ -74,7 +74,7 @@ Return value: None
 mln_json_false_init(j)
 ```
 
-Description: Initialize the JSON type node `j` to the `false` type.
+Description: Initialize JSON type node `j` to `false` type.
 
 Return value: None
 
@@ -128,22 +128,22 @@ Return value:
 int mln_json_decode(mln_string_t *jstr, mln_json_t *out, mln_json_policy_t *policy);
 ```
 
-Description: Parse the JSON string `jstr` into a data structure, and the result will be put into the parameter `out`. The policy is a security policy structure initialized by mln_json_policy_init.
+Description: Parse the JSON string `jstr` into a data structure, storing the result in `out`. The `policy` parameter is a security policy structure initialized by `mln_json_policy_init`. On failure, `out` is automatically cleaned up — do not call `mln_json_destroy` on it.
 
 Return value:
 
 - `0` - on success
-- `-1` - on failure. If policy is not NULL, you need to use mln_json_policy_error to check which specific security constraint has been violated.
+- `-1` - on failure. If `policy` is not `NULL`, use `mln_json_policy_error` to check which security constraint was violated.
 
 
 
 #### mln_json_destroy
 
 ```c
-void mln_json_destroy(mln_json_t *j;
+void mln_json_destroy(mln_json_t *j);
 ```
 
-Description: Release the `j` node memory of type `mln_json_t`.
+Description: Free all memory held by the `mln_json_t` node `j`.
 
 Return value: None
 
@@ -155,7 +155,7 @@ Return value: None
 void mln_json_dump(mln_json_t *j, int n_space, char *prefix);
 ```
 
-Description: Output the details of json node `j` to standard output. `n_space` represents the current number of indented spaces, and `prefix` is the prefix of the output content.
+Description: Print the details of JSON node `j` to standard output. `n_space` specifies the current indentation level in spaces, and `prefix` is prepended to the output.
 
 Return value: None
 
@@ -164,12 +164,16 @@ Return value: None
 #### mln_json_encode
 
 ```c
-mln_string_t *mln_json_encode(mln_json_t *j);
+mln_string_t *mln_json_encode(mln_json_t *j, mln_u32_t flags);
 ```
 
-Description: Generate a JSON string from the `mln_json_t` node structure. The return value needs to be released by calling `mln_string_free` after use.
+Description: Serialize the `mln_json_t` node structure into a JSON text string. The caller must free the returned value with `mln_string_free`.
 
-Return value: `mln_string_t` string pointer is returned successfully, otherwise `NULL` is returned
+Flags:
+- `0` - Output as standard JSON text format (default)
+- `M_JSON_ENCODE_UNICODE` (0x1) - Escape non-ASCII characters (e.g. Chinese) to `\uXXXX` form
+
+Return value: An `mln_string_t` pointer on success, or `NULL` on failure
 
 
 
@@ -179,9 +183,9 @@ Return value: `mln_string_t` string pointer is returned successfully, otherwise 
 mln_json_t *mln_json_obj_search(mln_json_t *j, mln_string_t *key);
 ```
 
-Description: Search the value content with key `key` from object type node `j`.
+Description: Search for the value associated with `key` in the object type node `j`.
 
-Return value: If successful, return a value of type `mln_json_t`, otherwise return `NULL`
+Return value: The `mln_json_t` value on success, or `NULL` if not found
 
 
 
@@ -191,9 +195,9 @@ Return value: If successful, return a value of type `mln_json_t`, otherwise retu
 mln_json_t *mln_json_array_search(mln_json_t *j, mln_uauto_t index);
 ```
 
-Description: Search the element content with subscript `index` from array type node `j`.
+Description: Retrieve the element at index `index` from the array type node `j`.
 
-Return value: If successful, an element node of type `mln_json_t` is returned, otherwise `NULL` is returned.
+Return value: The `mln_json_t` element on success, or `NULL` if the index is out of range
 
 
 
@@ -203,9 +207,9 @@ Return value: If successful, an element node of type `mln_json_t` is returned, o
 mln_uauto_t mln_json_array_length(mln_json_t *j);
 ```
 
-Description: Get the length of the array. At this time `j` must be of array type.
+Description: Get the length of the array. `j` must be of array type.
 
-Return value: array length
+Return value: Array length
 
 
 
@@ -215,9 +219,21 @@ Return value: array length
 int mln_json_obj_update(mln_json_t *j, mln_json_t *key, mln_json_t *val);
 ```
 
-Description: Add the `key` and `val` pairs to the `j` JSON node. At this time, `j` needs to be an object type. If `key` already exists, the original `key` and `value` will be replaced by the new parameters. Therefore the parameters `key` and `val` will be taken over by `j` after the call.
+Description: Add the `key`-`val` pair to the object type JSON node `j`. If `key` already exists, the existing key and value are replaced. The function copies the contents of `key` and `val` internally; the caller does not need to heap-allocate them.
 
-Return value: Returns `0` on success, otherwise returns `-1`
+Return value: `0` on success, `-1` on failure
+
+
+
+#### mln_json_obj_element_num
+
+```c
+mln_size_t mln_json_obj_element_num(mln_json_t *j);
+```
+
+Description: Get the number of key-value pairs in the object type JSON node `j`.
+
+Return value: Number of key-value pairs
 
 
 
@@ -227,9 +243,9 @@ Return value: Returns `0` on success, otherwise returns `-1`
 int mln_json_array_append(mln_json_t *j, mln_json_t *value);
 ```
 
-Description: Add `value` to the JSON structure `j` of array type.
+Description: Append `value` to the end of the array type JSON node `j`. The function copies the contents of `value` internally.
 
-Return value: Returns `0` on success, otherwise returns `-1`
+Return value: `0` on success, `-1` on failure
 
 
 
@@ -239,9 +255,9 @@ Return value: Returns `0` on success, otherwise returns `-1`
 int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index);
 ```
 
-Description: Update `value` to the position where the index is `index` of the array type JSON structure `j`. If the subscript does not exist, it will fail.
+Description: Replace the element at index `index` in the array type JSON node `j` with `value`. Fails if the index does not exist. The function copies the contents of `value` internally.
 
-Return value: Returns `0` on success, otherwise returns `-1`
+Return value: `0` on success, `-1` on failure
 
 
 
@@ -251,7 +267,7 @@ Return value: Returns `0` on success, otherwise returns `-1`
 void mln_json_reset(mln_json_t *j);
 ```
 
-Description: Reset the JSON node `j` data structure and release its original data.
+Description: Reset JSON node `j` by releasing its data and restoring its type to `NONE`.
 
 Return value: None
 
@@ -263,9 +279,9 @@ Return value: None
 void mln_json_obj_remove(mln_json_t *j, mln_string_t *key);
 ```
 
-Description: Delete and release the key-value pair with key value `key` from the JSON structure `j` of the object type.
+Description: Remove and free the key-value pair with key `key` from the object type JSON node `j`.
 
-Return value: If it exists, return the JSON node corresponding to the value part, otherwise return `NULL`
+Return value: None
 
 
 
@@ -275,9 +291,9 @@ Return value: If it exists, return the JSON node corresponding to the value part
 void mln_json_array_remove(mln_json_t *j, mln_uauto_t index);
 ```
 
-Description: Delete and release the element with index `index` from the array type JSON node.
+Description: Remove and free the last element from the array type JSON node `j`. The `index` parameter must equal the last valid index (i.e., `length - 1`); it is used only for an assertion check in debug builds.
 
-Return value: Returns the element pointer if it exists, otherwise returns `NULL`
+Return value: None
 
 
 
@@ -294,9 +310,9 @@ mln_json_is_null(json)
 mln_json_is_none(json)
 ```
 
-Description: Determine the `json` type of the `mln_json_t` structure, which are: object, array, string, number, Boolean true, Boolean false, NULL, and no type.
+Description: Check the type of the `mln_json_t` node `json`. The types are, in order: object, array, string, number, true, false, null, none.
 
-Return value: Returns `non-0` if the conditions are met, otherwise returns `0`
+Return value: Non-zero if the condition is met, `0` otherwise
 
 
 
@@ -313,7 +329,7 @@ mln_json_false_type_set(json)
 mln_json_null_type_set(json)
 ```
 
-Description: Set the type for the `json` node of type `mln_json_t`, in order: no type, object, array, string, number, Boolean true, Boolean false, NULL.
+Description: Set the type for the `mln_json_t` node `json`. The types are, in order: none, object, array, string, number, true, false, null.
 
 Return value: None
 
@@ -331,17 +347,17 @@ mln_json_false_data_get(json)
 mln_json_null_data_get(json)
 ```
 
-Description: Get the data part of the corresponding type in the `json` node of type `mln_json_t`. The types are: object, array, string, number, Boolean true, Boolean false, and NULL.
+Description: Get the data portion of the corresponding type from the `mln_json_t` node `json`.
 
 Return value:
 
-- The object type is `mln_hash_t` type pointer
-- The array type is `mln_rbtree_t` type pointer
-- The string type is `mln_string_t` type pointer
-- The number type is a `double` type value
-- Boolean true for `mln_u8_t` type value
-- Boolean false for `mln_u8_t` type value
-- NULL type is a NULL value of type `mln_u8ptr_t`
+- Object type: `mln_json_obj_t` pointer
+- Array type: `mln_array_t` pointer
+- String type: `mln_string_t` pointer
+- Number type: `double` value
+- True type: `mln_u8_t` value
+- False type: `mln_u8_t` value
+- Null type: `mln_u8ptr_t` NULL value
 
 
 
@@ -351,19 +367,19 @@ Return value:
 mln_json_policy_init(policy, _depth, _keylen, _strlen, _elemnum, _kvnum);
 ```
 
-Description: Initialize the `policy` of type `mln_json_policy_t`. The meanings of the remaining parameters are as follows:
+Description: Initialize the `mln_json_policy_t` variable `policy`. The parameters are:
 
-- `_depth` The maximum nesting depth of the JSON. During parsing, the nesting depth increases when encountering an array or object, and decreases when the array or object is fully parsed.
+- `_depth` - Maximum nesting depth. During parsing, the depth increases when entering an array or object, and decreases when leaving. A value of `0` means no limit.
 
-- `_keylen` The maximum length of keys in objects.
+- `_keylen` - Maximum length of object keys. A value of `0` means no limit.
 
-- `_strlen` The maximum length of string values.
+- `_strlen` - Maximum length of string values. A value of `0` means no limit.
 
-- `_elemnum` The maximum number of elements in an array.
+- `_elemnum` - Maximum number of array elements. A value of `0` means no limit.
 
-- `_kvnum` The maximum number of key-value pairs in an object.
+- `_kvnum` - Maximum number of key-value pairs in an object. A value of `0` means no limit.
 
-Return Value: None
+Return value: None
 
 
 
@@ -373,37 +389,37 @@ Return Value: None
 mln_json_policy_error(policy)
 ```
 
-Description: Get the error code from the `policy` of type `mln_json_policy_t`. This macro is typically used to check for security policy violations when `mln_json_decode` returns `-1`.
+Description: Get the error code from the `mln_json_policy_t` variable `policy`. Typically used to check which security constraint was violated when `mln_json_decode` returns `-1`.
 
-Return Value: An int type error code with the following values:
+Return value: An `int` error code with the following possible values:
 
-- `M_JSON_OK` No security policy violations.
+- `M_JSON_OK` - No security policy violation.
 
-- `M_JSON_DEPTH` The nesting depth is too deep.
+- `M_JSON_DEPTH` - Nesting depth exceeded.
 
-- `M_JSON_KEYLEN` The length of the object key exceeds the limit.
+- `M_JSON_KEYLEN` - Object key length exceeded.
 
-- `M_JSON_STRLEN` The length of the string value exceeds the limit.
+- `M_JSON_STRLEN` - String value length exceeded.
 
-- `M_JSON_ARRELEM` The number of elements in the array exceeds the limit.
+- `M_JSON_ARRELEM` - Array element count exceeded.
 
-- `M_JSON_OBJKV` The number of key-value pairs in the object exceeds the limit.
+- `M_JSON_OBJKV` - Object key-value pair count exceeded.
 
 
 
-#### mln_json_parse
+#### mln_json_fetch
 
 ```c
-int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data)
+int mln_json_fetch(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data)
 
 typedef int (*mln_json_iterator_t)(mln_json_t *, void *);
 ```
 
 Description:
 
-From the JSON managed by the `j` node, obtain the matching `mln_json_t` child node according to `exp`. If there is a matching child node, the `iterator` callback function will be called for processing. `data` is User-defined data is passed in when `iterator` is called.
+Navigate the JSON tree rooted at `j` using the dot-separated expression `exp` to locate a matching child node. If a match is found and `iterator` is not `NULL`, the `iterator` callback is invoked with the matched node. `data` is user-defined data passed to `iterator`.
 
-Suppose we have the following JSON：
+Given the following JSON:
 
 ```
 {
@@ -414,16 +430,17 @@ Suppose we have the following JSON：
 }
 ```
 
-The content of `exp` is as follows:
+Example expressions:
 
-| Content | Meaning                                                      |
-| ------- | ------------------------------------------------------------ |
-| `a`     | Get the value with key a (each value is saved in the `mln_json_t` structure) |
-| `b`     | Get the value with key b                                     |
-| `a.0`   | Get the key a, and its value should be an array, and then get the 0th subscript element of the array |
-| `a.2.c` | Get the array corresponding to the value with key `a`, then get the array element with subscript `2`, which should be an object, and finally get the value with key `c` of the element object. This expression will cause `mln_json_parse` in this case returns `-1` because the array element with index `2` does not exist |
+| Expression | Meaning                                                      |
+| ---------- | ------------------------------------------------------------ |
+| `a`        | Get the value with key `a` (each value is an `mln_json_t` node) |
+| `b`        | Get the value with key `b`                                   |
+| `a.0`      | Get the element at index `0` of the array under key `a`      |
+| `a.1.c`    | Navigate into the array under key `a`, then element at index `1` (an object), then get the value with key `c` |
+| `a.2.c`    | Element at index `2` does not exist, so `mln_json_fetch` returns `-1` |
 
-Return value：
+Return value:
 
 - `0` - on success
 - `-1` - on failure
@@ -438,37 +455,38 @@ int mln_json_generate(mln_json_t *j, char *fmt, ...);
 
 Description:
 
-According to the format given by `fmt`, fill the subsequent arguments into `j`.
+Populate `j` according to the format string `fmt` using the subsequent variadic arguments.
 
-`fmt` supports the following format characters:
+Supported format specifiers in `fmt`:
 
-- `{}` - Indicates that what is inside the curly brackets is an object type. The key and value of the object are separated by `:`, and each group of key-value is separated by `,`.
-- `[]` - Indicates that what is in the square brackets is an array type, and each array element is separated by `,`.
-- `j` - Indicates that the variable parameter part is passed in a `mln_json_t` pointer.
-- `d` - Indicates that the variable parameter part is passed in a 32-bit signed value, such as `int` or `mln_s32_t`.
-- `D` - Indicates that the variable parameter part is passed in a 64-bit signed value, such as `long long` or `mln_s64_t`.
-- `u` - Indicates that the variable parameter part is passed in a 32-bit unsigned value, such as `unsigned int` or `mln_u32_t`.
-- `U` - Indicates that the variable parameter part is passed in a 64-bit unsigned value, such as `unsigned long long` or `mln_u64_t`.
-- `F` - Indicates that the variable parameter part is passed in a value of type `double`.
-- `t` - Indicates that a `true` is filled in at this position. This placeholder does not need to pass in the corresponding variable parameters.
-- `f` - Indicates that a `false` is filled in at this position. This placeholder does not need to pass in the corresponding variable parameters.
-- `n` - Indicates that a `null` is filled in at this position. This placeholder does not need to pass in the corresponding variable parameters.
-- `s` - Indicates that the variable parameter part is passed in a `char *` type string, such as `"Hello"`.
-- `S` - Indicates that the variable parameter part is passed in a `mln_string_t *` type string.
-- 'c' - Indicates that the variable parameter part is passed in a `struct mln_json_call_attr *` type structure. This structure contains two members `callback` and `data`. The meaning is: the value at this position is parsed by the function `callback` with user-defined `data`.
+- `{}` - Object type. Keys and values are separated by `:`, key-value pairs are separated by `,`.
+- `[]` - Array type. Elements are separated by `,`.
+- `j` - The variadic argument is a `mln_json_t` pointer.
+- `d` - The variadic argument is a 32-bit signed integer (e.g. `int`, `mln_s32_t`).
+- `D` - The variadic argument is a 64-bit signed integer (e.g. `long long`, `mln_s64_t`).
+- `u` - The variadic argument is a 32-bit unsigned integer (e.g. `unsigned int`, `mln_u32_t`).
+- `U` - The variadic argument is a 64-bit unsigned integer (e.g. `unsigned long long`, `mln_u64_t`).
+- `F` - The variadic argument is a `double` value.
+- `t` - Insert a `true` value. No corresponding variadic argument is needed.
+- `f` - Insert a `false` value. No corresponding variadic argument is needed.
+- `n` - Insert a `null` value. No corresponding variadic argument is needed.
+- `s` - The variadic argument is a `char *` string.
+- `S` - The variadic argument is a `mln_string_t *` string.
+- `c` - The variadic argument is a `struct mln_json_call_attr *` containing a `callback` function and `data` pointer. The value at this position is produced by invoking `callback` with `data`.
 
 Notes:
 
-1. Only the above format symbols can appear in `fmt`, and there cannot be any other types of symbols such as spaces, tabs, or enters.
-2. After successfully executing this function, the variable parameter corresponding to the format symbol `j` cannot be released, i.e. `mln_json_destroy` or `mln_json_reset`.
+1. Only the format specifiers listed above may appear in `fmt`. No spaces, tabs, newlines, or other characters are allowed.
+2. After a successful call, the JSON node passed via the `j` format specifier is taken over by the output. The caller must not call `mln_json_destroy` or `mln_json_reset` on it.
 
-For example:
+Example:
 
 ```c
+mln_json_init(&j);
 mln_json_generate(&j, "[{s:d,s:d,s:{s:d}},d]", "a", 1, "b", 3, "c", "d", 4, 5);
-mln_string_t *res = mln_json_encode(&j);
+mln_string_t *res = mln_json_encode(&j, 0);
 
-// The result is: [{"b":3,"c":{"d":4},"a":1},5]
+// The result is: [{"a":1,"b":3,"c":{"d":4}},5]
 ```
 
 Return value:
@@ -486,12 +504,13 @@ int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *
 typedef int (*mln_json_object_iterator_t)(mln_json_t * /*key*/, mln_json_t * /*val*/, void *);
 ```
 
-Description: Traverse each `key`-`value` pair in object `j`, and use `it` to process the key-value pair. `data` is user-defined data, which will be processed when `it` is called. and passed in.
+Description: Iterate over each key-value pair in the object `j`, invoking `it` for each pair. `data` is user-defined data passed to `it`.
 
-Return value
+Return value:
 
 - `0` - on success
 - `-1` - on failure
+
 
 
 #### mln_json_array_iterate
@@ -502,12 +521,15 @@ mln_json_array_iterate(j, it, data);
 typedef int (*mln_json_array_iterator_t)(mln_json_t *, void *);
 ```
 
-Description: Traverse each element in the array `j`, and use `it` to process the array elements. `data` is user-defined data, which will be passed in when `it` is called.
+Description: Iterate over each element in the array `j`, invoking `it` for each element. `data` is user-defined data passed to `it`.
 
-Return value
+Return value:
 
-- `0` - Success
-- `non-zero` - Failed or other meaning. Any `non-zero` value returned by `it` will interrupt the traversal of the array
+- `0` - on success
+- Non-zero - Failure or early termination. Any non-zero value returned by `it` stops the iteration.
+
+
+
 
 
 
@@ -534,31 +556,38 @@ static int handler(mln_json_t *j, void *data)
 
 int main(int argc, char *argv[])
 {
+    int i = 1024;
     mln_json_t j, k;
     struct mln_json_call_attr ca;
     mln_string_t *res, exp = mln_string("protocols.0");
     mln_string_t tmp = mln_string("{\"paths\":[\"/mock\"],\"methods\":null,\"sources\":null,\"destinations\":null,\"name\":\"example_route\",\"headers\":null,\"hosts\":null,\"preserve_host\":false,\"regex_priority\":0,\"snis\":null,\"https_redirect_status_code\":426,\"tags\":null,\"protocols\":[\"http\",\"https\"],\"path_handling\":\"v0\",\"id\":\"52d58293-ae25-4c69-acc8-6dd729718a61\",\"updated_at\":1661345592,\"service\":{\"id\":\"c1e98b2b-6e77-476c-82ca-a5f1fb877e07\"},\"response_buffering\":true,\"strip_path\":true,\"request_buffering\":true,\"created_at\":1661345592}");
 
-    if (mln_json_decode(&tmp, &j, NULL) < 0) { //Decode the string and generate the node of mln_json_t
+    /* Decode the string into an mln_json_t node */
+    if (mln_json_decode(&tmp, &j, NULL) < 0) {
         fprintf(stderr, "decode error\n");
         return -1;
     }
 
-    mln_json_parse(&j, &exp, handler, NULL); //Get the first element of the array whose key is protocols in the JSON and hand it to the handler for processing
+    /* Get the first element of the array under key "protocols" */
+    mln_json_fetch(&j, &exp, handler, NULL);
 
-    //Fill in user-defined data parsing structure
+    /* Set up the user-defined callback structure */
     ca.callback = callback;
     ca.data = &i;
-    //Generate JSON structure using format characters
-    mln_json_init(&k);//Uninitialized json variables must be initialized before mln_json_generate
+
+    /* Always initialize before calling mln_json_generate */
+    mln_json_init(&k);
     if (mln_json_generate(&k, "[{s:d,s:d,s:{s:d}},d,[],j,c]", "a", 1, "b", 3, "c", "d", 4, 5, &j, &ca) < 0) {
         fprintf(stderr, "generate failed\n");
         return -1;
     }
-    mln_json_generate(&k, "[s,d]", "g", 99);//These two elements will be added to the k array
-    res = mln_json_encode(&k); //Generate corresponding JSON string for the generated structure
+    /* These two elements are appended to the k array */
+    mln_json_generate(&k, "[s,d]", "g", 99);
+    /* Encode the structure to a JSON string */
+    res = mln_json_encode(&k, 0);
 
-    mln_json_destroy(&k); //Note, do not release j here, because k will release the memory in j
+    /* Do not destroy j separately — its contents are now owned by k */
+    mln_json_destroy(&k);
 
     if (res == NULL) {
         fprintf(stderr, "encode failed\n");
@@ -572,14 +601,14 @@ int main(int argc, char *argv[])
 }
 ```
 
-The output of this example:
+Output:
 
 ```
  type:string val:[http]
-[{"b":3,"c":{"d":4},"a":1},5,[],{"preserve_host":false,"name":"example_route","destinations":null,"methods":null,"tags":null,"hosts":null,"response_buffering":true,"snis":null,"https_redirect_status_code":426,"headers":null,"request_buffering":true,"sources":null,"strip_path":true,"protocols":["http","https"],"path_handling":"v0","created_at":1661345592,"id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"paths":["/mock"],"regex_priority":0,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"}},1024,"g",99]
+[{"a":1,"b":3,"c":{"d":4}},5,[],{"paths":["/mock"],"methods":null,"sources":null,"destinations":null,"name":"example_route","headers":null,"hosts":null,"preserve_host":false,"regex_priority":0,"snis":null,"https_redirect_status_code":426,"tags":null,"protocols":["http","https"],"path_handling":"v0","id":"52d58293-ae25-4c69-acc8-6dd729718a61","updated_at":1661345592,"service":{"id":"c1e98b2b-6e77-476c-82ca-a5f1fb877e07"},"response_buffering":true,"strip_path":true,"request_buffering":true,"created_at":1661345592},1024,"g",99]
 ```
 
-The first line is the output of `mln_dump` called in `handler`. The second line is the JSON string encoded by `mln_json_encode`.
+The first line is the output from `mln_json_dump` in `handler`. The second line is the JSON string produced by `mln_json_encode`.
 
 
 #### Example 2
@@ -616,7 +645,7 @@ static void parse(mln_string_t *p)
 
     mln_json_decode(p, &j, &policy);
 
-    mln_json_parse(&j, &exp, handler, NULL);
+    mln_json_fetch(&j, &exp, handler, NULL);
 
     mln_json_destroy(&j);
 }
@@ -629,7 +658,7 @@ int main(void)
 }
 ```
 
-The running result is:
+Output:
 
 ```
 width: 1280

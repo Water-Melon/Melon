@@ -9,14 +9,18 @@
 #include <stdlib.h>
 #include "mln_string.h"
 #include "mln_array.h"
-#include "mln_rbtree.h"
 
 #define M_JSON_LEN              31
-#define M_JSON_BUFLEN           512
+#define M_JSON_BUFLEN           1024
+#define M_JSON_OBJ_POOL         24
+#define M_JSON_ARRAY_NALLOC     4
 
 #define M_JSON_V_FALSE          0
 #define M_JSON_V_TRUE           1
 #define M_JSON_V_NULL           NULL
+
+#define M_JSON_ENCODE_DEFAULT   0x0
+#define M_JSON_ENCODE_UNICODE   0x1  /* escape non-ASCII to \uXXXX */
 
 /*
  * policy errors
@@ -45,10 +49,29 @@ enum json_type {
     M_JSON_NULL
 };
 
+/*
+ * Forward declarations for the lightweight JSON object hash table.
+ * Chain links are embedded in mln_json_kv_t to avoid per-entry
+ * heap allocation (unlike mln_hash_t which mallocs a 64-byte
+ * mln_hash_entry_t per KV).
+ */
+struct mln_json_kv_s;
+typedef struct mln_json_obj_s {
+    struct mln_json_kv_s       **tbl;       /* bucket array */
+    struct mln_json_kv_s        *head;      /* iteration list head */
+    struct mln_json_kv_s        *tail;      /* iteration list tail */
+    struct mln_json_kv_s        *pool;      /* inline KV pool base */
+    struct mln_json_kv_s        *freelist;  /* recycled pool slots */
+    mln_u32_t                    len;        /* number of buckets */
+    mln_u32_t                    nr_nodes;   /* number of entries */
+    mln_u32_t                    pool_used;  /* next free pool slot */
+    mln_u32_t                    pool_cap;   /* pool capacity */
+} mln_json_obj_t;
+
 struct mln_json_s {
     enum json_type               type;
     union {
-        mln_rbtree_t     *m_j_obj;
+        mln_json_obj_t   *m_j_obj;
         mln_array_t      *m_j_array;
         mln_string_t     *m_j_string;
         double            m_j_number;
@@ -58,10 +81,12 @@ struct mln_json_s {
     }                            data;
 };
 
-typedef struct {
+typedef struct mln_json_kv_s {
     mln_json_t                   key;
     mln_json_t                   val;
-    mln_rbtree_node_t            node;
+    struct mln_json_kv_s        *next;      /* hash chain */
+    struct mln_json_kv_s        *iter_next; /* insertion order - next */
+    struct mln_json_kv_s        *iter_prev; /* insertion order - prev */
 } mln_json_kv_t;
 
 struct mln_json_call_attr {
@@ -190,10 +215,11 @@ extern int mln_json_array_append(mln_json_t *j, mln_json_t *value) __NONNULL2(1,
 extern int mln_json_array_update(mln_json_t *j, mln_json_t *value, mln_uauto_t index) __NONNULL2(1,2);
 extern void mln_json_array_remove(mln_json_t *j, mln_uauto_t index);
 extern int mln_json_decode(mln_string_t *jstr, mln_json_t *out, mln_json_policy_t *policy);
-extern mln_string_t *mln_json_encode(mln_json_t *j);
-extern int mln_json_parse(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data) __NONNULL2(1,2);
+extern mln_string_t *mln_json_encode(mln_json_t *j, mln_u32_t flags);
+extern int mln_json_fetch(mln_json_t *j, mln_string_t *exp, mln_json_iterator_t iterator, void *data) __NONNULL2(1,2);
 extern int mln_json_generate(mln_json_t *j, char *fmt, ...) __NONNULL2(1,2);
 extern int mln_json_object_iterate(mln_json_t *j, mln_json_object_iterator_t it, void *data) __NONNULL2(1,2);
+extern mln_size_t mln_json_obj_element_num(mln_json_t *j) __NONNULL1(1);
 #if defined(MSVC)
 extern void mln_json_reset(mln_json_t *j);
 extern int mln_json_array_iterate(mln_json_t *j, mln_json_array_iterator_t it, void *data);
@@ -221,4 +247,3 @@ extern int mln_json_array_iterate(mln_json_t *j, mln_json_array_iterator_t it, v
 #endif
 
 #endif
-
