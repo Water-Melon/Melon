@@ -133,13 +133,14 @@ mln_string_free(pstr)
 
 
 
+
 #### mln_string_new
 
 ```c
 mln_string_t *mln_string_new(const char *s);
 ```
 
-描述：根据字符串常量`s`创建字符串结构，此时新字符串结构及其数据部分内存均由malloc库进行分配，并将`s`的内容拷贝进`data`成员中。
+描述：根据字符串常量`s`创建字符串结构，并将`s`的内容拷贝进`data`成员中。若`s`为`NULL`，则返回一个`len`为`0`的空字符串结构。
 
 返回值：成功则返回`mln_string_t`指针，否则返回`NULL`。
 
@@ -187,7 +188,7 @@ mln_string_t *mln_string_buf_pool_new(mln_alloc_t *pool, mln_u8ptr_t buf, mln_u6
 mln_string_t *mln_string_dup(mln_string_t *str);
 ```
 
-描述：完全复制一份`str`，其内存均由malloc进行分配。
+描述：完全复制一份`str`。
 
 返回值：成功则返回`mln_string_t`指针，否则返回`NULL`。
 

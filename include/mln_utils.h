@@ -112,32 +112,17 @@ extern int spin_trylock(void *lock);
 #define MLN_CHAIN_FUNC_DEFINE(scope,prefix,type,prev_ptr,next_ptr); \
     MLN_FUNC_VOID(scope, void, prefix##_chain_add, (type **head, type **tail, type *node), (head, tail, node), { \
         node->next_ptr = NULL;\
-        if (*head == NULL) {\
-            *head = node;\
-        } else {\
-            (*tail)->next_ptr = node;\
-        }\
-        node->prev_ptr = (*tail);\
+        node->prev_ptr = *tail;\
+        if (*tail != NULL) (*tail)->next_ptr = node;\
+        else *head = node;\
         *tail = node;\
     })\
     \
     MLN_FUNC_VOID(scope, void, prefix##_chain_del, (type **head, type **tail, type *node), (head, tail, node), { \
-        if (*head == node) {\
-            if (*tail == node) {\
-                *head = *tail = NULL;\
-            } else {\
-                *head = node->next_ptr;\
-                (*head)->prev_ptr = NULL;\
-            }\
-        } else {\
-            if (*tail == node) {\
-                *tail = node->prev_ptr;\
-                (*tail)->next_ptr = NULL;\
-            } else {\
-                node->prev_ptr->next_ptr = node->next_ptr;\
-                node->next_ptr->prev_ptr = node->prev_ptr;\
-            }\
-        }\
+        if (node->prev_ptr != NULL) node->prev_ptr->next_ptr = node->next_ptr;\
+        else *head = node->next_ptr;\
+        if (node->next_ptr != NULL) node->next_ptr->prev_ptr = node->prev_ptr;\
+        else *tail = node->prev_ptr;\
         node->prev_ptr = node->next_ptr = NULL;\
     })
 
