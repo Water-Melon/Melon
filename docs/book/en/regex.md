@@ -87,6 +87,42 @@ Return value: `mln_string_t` pointer
 
 
 
+### Supported Syntax
+
+The regular expression engine supports the following syntax elements:
+
+| Syntax | Description |
+|--------|-------------|
+| `.` | Match any single character |
+| `*` | Match zero or more of the preceding element |
+| `+` | Match one or more of the preceding element |
+| `?` | Match zero or one of the preceding element |
+| `*?` | Lazy star: match as few as possible |
+| `+?` | Lazy plus: match as few as possible (at least one) |
+| `??` | Lazy question: prefer zero match |
+| `{n,m}` | Match between n and m of the preceding element |
+| `^` | Anchor: match at start of text |
+| `$` | Anchor: match at end of text |
+| `[abc]` | Character class: match any of the listed characters |
+| `[a-z]` | Character range within a class |
+| `[^abc]` | Negated character class |
+| `(...)` | Capturing group |
+| `(?:...)` | Non-capturing group |
+| `a\|b` | Alternation (single-char atoms only; `cat\|dog` means `ca(t\|d)og`) |
+| `\d` / `\D` | Digit / non-digit |
+| `\w` / `\W` | Word character (`[a-zA-Z0-9_]`) / non-word character |
+| `\s` / `\S` | Whitespace / non-whitespace |
+| `\b` / `\B` | Word boundary / non-word boundary |
+| `\n` | Newline |
+| `\t` | Tab |
+| `\xHH` | Hex escape (e.g. `\x41` matches `A`) |
+| `(?i)` | Case-insensitive matching (placed at start of pattern) |
+| `\\` | Escaped literal backslash |
+
+**Note on alternation**: The `|` operator alternates adjacent single atoms, not full sub-expressions. Use groups for multi-character alternation: `(cat)|(dog)` is not supported; use `(cat|dog)` style grouping instead.
+
+
+
 ### Example
 
 ```c
