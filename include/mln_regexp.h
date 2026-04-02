@@ -14,6 +14,8 @@ typedef mln_array_t mln_reg_match_result_t;
 #define M_REGEXP_MASK_SQUARE  ((unsigned int)0x00800000)
 #define M_REGEXP_MASK_OR      ((unsigned int)0x01000000)
 #define M_REGEXP_MASK_NEW     ((unsigned int)0x02000000)
+#define M_REGEXP_MASK_NO_OR   ((unsigned int)0x04000000)
+#define M_REGEXP_MASK_ICASE   ((unsigned int)0x08000000)
 #define M_REGEXP_SPECIAL_MASK ((unsigned int)0x0000ffff)
 
 #define M_REGEXP_ALPHA          128
@@ -38,6 +40,11 @@ typedef mln_array_t mln_reg_match_result_t;
 #define M_REGEXP_PLUS           172
 #define M_REGEXP_SUB            173
 #define M_REGEXP_OR             174
+#define M_REGEXP_WORDBOUNDARY   175
+#define M_REGEXP_NOT_WORDBOUNDARY 176
+#define M_REGEXP_LAZY_STAR      177
+#define M_REGEXP_LAZY_PLUS      178
+#define M_REGEXP_LAZY_QUES      179
 
 
 #define mln_reg_match_result_new(prealloc) mln_array_new(NULL, sizeof(mln_string_t), (prealloc))
