@@ -33,6 +33,7 @@
 typedef struct {
     mln_u32_t bits;
     mln_u32_t w[60];
+    mln_u32_t dw[60];
 } mln_aes_t;
 
 
