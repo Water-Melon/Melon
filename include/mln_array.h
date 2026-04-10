@@ -7,8 +7,6 @@
 
 #include "mln_types.h"
 #include "mln_utils.h"
-#include <stdlib.h>
-#include <string.h>
 
 typedef void *(*array_pool_alloc_handler)(void *, mln_size_t);
 typedef void (*array_pool_free_handler)(void *);

@@ -158,6 +158,8 @@ MLN_FUNC(, int, mln_array_grow, (mln_array_t *arr, mln_size_t n), (arr, n), {
     mln_size_t num = arr->nalloc;
     mln_size_t need = n + arr->nelts;
 
+    if (need <= num) return 0;
+
     if (num == 0) num = 1;
     while (need > num) {
         num <<= 1;
