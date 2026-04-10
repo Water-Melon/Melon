@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include "mln_array.h"
+#include "mln_func.h"
 
 static int free_count = 0;
 
@@ -11,30 +12,26 @@ typedef struct {
     int i2;
 } test_t;
 
-static void test_free(void *data)
-{
+MLN_FUNC_VOID(static, void, test_free, (void *data), (data), {
     (void)data;
     ++free_count;
-}
+})
 
 /*
  * Simple pool: wraps malloc/free so we can exercise pool_init / pool_new paths.
  */
-static void *pool_alloc(void *pool, mln_size_t size)
-{
+MLN_FUNC(static, void *, pool_alloc, (void *pool, mln_size_t size), (pool, size), {
     (void)pool;
     return malloc(size);
-}
+})
 
-static void pool_dealloc(void *ptr)
-{
+MLN_FUNC_VOID(static, void, pool_dealloc, (void *ptr), (ptr), {
     free(ptr);
-}
+})
 
 /* ---- test helpers ---- */
 
-static void test_init_destroy(void)
-{
+MLN_FUNC_VOID(static, void, test_init_destroy, (void), (), {
     test_t *t;
     mln_size_t i;
     mln_array_t arr;
@@ -58,10 +55,9 @@ static void test_init_destroy(void)
 
     mln_array_destroy(&arr);
     printf("PASS test_init_destroy\n");
-}
+})
 
-static void test_new_free(void)
-{
+MLN_FUNC_VOID(static, void, test_new_free, (void), (), {
     test_t *t;
     mln_array_t *arr;
 
@@ -78,10 +74,9 @@ static void test_new_free(void)
 
     mln_array_free(arr);
     printf("PASS test_new_free\n");
-}
+})
 
-static void test_pop(void)
-{
+MLN_FUNC_VOID(static, void, test_pop, (void), (), {
     test_t *t;
     mln_array_t arr;
 
@@ -113,10 +108,9 @@ static void test_pop(void)
 
     mln_array_destroy(&arr);
     printf("PASS test_pop\n");
-}
+})
 
-static void test_reset(void)
-{
+MLN_FUNC_VOID(static, void, test_reset, (void), (), {
     test_t *t;
     mln_size_t i;
     mln_array_t arr;
@@ -143,10 +137,9 @@ static void test_reset(void)
 
     mln_array_destroy(&arr);
     printf("PASS test_reset\n");
-}
+})
 
-static void test_grow(void)
-{
+MLN_FUNC_VOID(static, void, test_grow, (void), (), {
     test_t *t;
     mln_array_t arr;
 
@@ -163,10 +156,9 @@ static void test_grow(void)
 
     mln_array_destroy(&arr);
     printf("PASS test_grow\n");
-}
+})
 
-static void test_macro_push_pop(void)
-{
+MLN_FUNC_VOID(static, void, test_macro_push_pop, (void), (), {
     test_t *t;
     mln_size_t i;
     mln_array_t arr;
@@ -194,10 +186,9 @@ static void test_macro_push_pop(void)
 
     mln_array_destroy(&arr);
     printf("PASS test_macro_push_pop\n");
-}
+})
 
-static void test_macro_pushn(void)
-{
+MLN_FUNC_VOID(static, void, test_macro_pushn, (void), (), {
     test_t *t;
     mln_size_t i;
     mln_array_t arr;
@@ -216,10 +207,9 @@ static void test_macro_pushn(void)
 
     mln_array_destroy(&arr);
     printf("PASS test_macro_pushn\n");
-}
+})
 
-static void test_pool_init_destroy(void)
-{
+MLN_FUNC_VOID(static, void, test_pool_init_destroy, (void), (), {
     int dummy_pool = 0; /* dummy pool object */
     test_t *t;
     mln_size_t i;
@@ -243,10 +233,9 @@ static void test_pool_init_destroy(void)
     mln_array_destroy(&arr);
     assert(free_count == 6);
     printf("PASS test_pool_init_destroy\n");
-}
+})
 
-static void test_pool_new_free(void)
-{
+MLN_FUNC_VOID(static, void, test_pool_new_free, (void), (), {
     int dummy_pool = 0;
     test_t *t;
     mln_array_t *arr;
@@ -262,10 +251,9 @@ static void test_pool_new_free(void)
 
     mln_array_free(arr);
     printf("PASS test_pool_new_free\n");
-}
+})
 
-static void test_free_callback(void)
-{
+MLN_FUNC_VOID(static, void, test_free_callback, (void), (), {
     test_t *t;
     mln_array_t *arr;
 
@@ -289,7 +277,7 @@ static void test_free_callback(void)
     mln_array_free(arr);
     assert(free_count == 3);
     printf("PASS test_free_callback\n");
-}
+})
 
 int main(void)
 {

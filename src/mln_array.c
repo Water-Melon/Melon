@@ -20,7 +20,7 @@ MLN_FUNC(, int, mln_array_init, \
     arr->pool_free = NULL;
     arr->free = free;
     if (nalloc > 0) {
-        arr->elts = malloc(nalloc * size);
+        arr->elts = (mln_u8ptr_t)malloc(nalloc * size);
         if (arr->elts == NULL) return -1;
     } else {
         arr->elts = NULL;
@@ -41,7 +41,7 @@ MLN_FUNC(, int, mln_array_pool_init, \
     arr->pool_free = pool_free;
     arr->free = free;
     if (nalloc > 0) {
-        arr->elts = pool_alloc(pool, nalloc * size);
+        arr->elts = (mln_u8ptr_t)pool_alloc(pool, nalloc * size);
         if (arr->elts == NULL) return -1;
     } else {
         arr->elts = NULL;
