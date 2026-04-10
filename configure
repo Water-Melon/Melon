@@ -113,10 +113,6 @@ set_c_compilers() {
     rm -fr .xcode .xcode.c
 }
 
-send_install_request() {
-    nohup curl http://register.melang.org/?$select_files -H "Referer: Melon Installation" 2> /dev/null 1>&2 &
-}
-
 before_get_params() {
     set_melang_default_paths
     set_c_compilers
@@ -559,7 +555,6 @@ generate_conf_file() {
 }
 
 after_get_params() {
-    send_install_request
     update_llvm_flag
     relocate_install_path
     update_debug_flag
