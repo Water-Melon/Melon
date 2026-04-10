@@ -51,5 +51,39 @@ extern void mln_array_reset(mln_array_t *arr);
 extern void *mln_array_push(mln_array_t *arr) __NONNULL1(1);
 extern void *mln_array_pushn(mln_array_t *arr, mln_size_t n) __NONNULL1(1);
 extern void mln_array_pop(mln_array_t *arr);
+extern int mln_array_grow(mln_array_t *arr, mln_size_t n) __NONNULL1(1);
+
+/*
+ * Inline macros for hot-path operations.
+ * These avoid function call overhead on the fast path (no reallocation needed).
+ * Use MLN_ARRAY_PUSH/MLN_ARRAY_PUSHN/MLN_ARRAY_POP for maximum performance.
+ */
+#define MLN_ARRAY_PUSH(arr, ret_ptr) do { \
+    mln_array_t *__arr = (arr); \
+    if (__arr->nelts >= __arr->nalloc) { \
+        if (mln_array_grow(__arr, 1) < 0) { (ret_ptr) = NULL; break; } \
+    } \
+    (ret_ptr) = (void *)((mln_u8ptr_t)__arr->elts + (__arr->nelts++) * __arr->size); \
+} while (0)
+
+#define MLN_ARRAY_PUSHN(arr, n, ret_ptr) do { \
+    mln_array_t *__arr = (arr); \
+    mln_size_t __n = (n); \
+    if (__arr->nelts + __n > __arr->nalloc) { \
+        if (mln_array_grow(__arr, __n) < 0) { (ret_ptr) = NULL; break; } \
+    } \
+    (ret_ptr) = (void *)((mln_u8ptr_t)__arr->elts + __arr->nelts * __arr->size); \
+    __arr->nelts += __n; \
+} while (0)
+
+#define MLN_ARRAY_POP(arr) do { \
+    mln_array_t *__arr = (arr); \
+    if (__arr != NULL && __arr->nelts) { \
+        if (__arr->free != NULL) \
+            __arr->free((void *)((mln_u8ptr_t)__arr->elts + (__arr->nelts - 1) * __arr->size)); \
+        --__arr->nelts; \
+    } \
+} while (0)
+
 #endif
 
