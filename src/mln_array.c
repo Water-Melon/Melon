@@ -12,14 +12,19 @@ MLN_FUNC(, int, mln_array_init, \
          (mln_array_t *arr, array_free free, mln_size_t size, mln_size_t nalloc), \
          (arr, free, size, nalloc), \
 {
-    arr->elts = NULL;
     arr->size = size;
-    arr->nalloc = 0;
+    arr->nalloc = nalloc;
     arr->nelts = 0;
     arr->pool = NULL;
     arr->pool_alloc = NULL;
     arr->pool_free = NULL;
     arr->free = free;
+    if (nalloc > 0) {
+        arr->elts = malloc(nalloc * size);
+        if (arr->elts == NULL) return -1;
+    } else {
+        arr->elts = NULL;
+    }
     return 0;
 })
 
@@ -28,14 +33,19 @@ MLN_FUNC(, int, mln_array_pool_init, \
           void *pool, array_pool_alloc_handler pool_alloc, array_pool_free_handler pool_free), \
          (arr, free, size, nalloc, pool, pool_alloc, pool_free), \
 {
-    arr->elts = NULL;
     arr->size = size;
-    arr->nalloc = 0;
+    arr->nalloc = nalloc;
     arr->nelts = 0;
     arr->pool = pool;
     arr->pool_alloc = pool_alloc;
     arr->pool_free = pool_free;
     arr->free = free;
+    if (nalloc > 0) {
+        arr->elts = pool_alloc(pool, nalloc * size);
+        if (arr->elts == NULL) return -1;
+    } else {
+        arr->elts = NULL;
+    }
     return 0;
 })
 
@@ -148,7 +158,7 @@ MLN_FUNC(, int, mln_array_grow, (mln_array_t *arr, mln_size_t n), (arr, n), {
     mln_size_t num = arr->nalloc;
     mln_size_t need = n + arr->nelts;
 
-    if (num < 4) num = 4;
+    if (num == 0) num = 1;
     while (need > num) {
         num <<= 1;
     }
