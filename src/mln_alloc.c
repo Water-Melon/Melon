@@ -403,7 +403,16 @@ static inline mln_alloc_mgr_t *mln_alloc_get_mgr_by_size(mln_alloc_mgr_t *tbl, m
      * cycles, versus the previous 64-iteration bit-scan fallback that
      * dominated the allocator's hot path on non-x86 targets.
      */
-    off = (sizeof(mln_size_t) << 3) - 1 - __builtin_clzl((unsigned long)size);
+    if (sizeof(mln_size_t) <= sizeof(unsigned int)) {
+        off = (sizeof(mln_size_t) << 3) - 1 -
+              __builtin_clz((unsigned int)size);
+    } else if (sizeof(mln_size_t) <= sizeof(unsigned long)) {
+        off = (sizeof(mln_size_t) << 3) - 1 -
+              __builtin_clzl((unsigned long)size);
+    } else {
+        off = (sizeof(mln_size_t) << 3) - 1 -
+              __builtin_clzll((unsigned long long)size);
+    }
 #elif defined(i386) || defined(__x86_64)
     {
         register mln_size_t _off = 0;
