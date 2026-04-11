@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
     char *p;
     mln_alloc_t *pool;
 
-    pool = mln_alloc_init(NULL);
+    pool = mln_alloc_init(NULL, 0);
     if (pool == NULL) {
         fprintf(stderr, "pool init failed\n");
         return -1;
@@ -178,4 +178,12 @@ int main(int argc, char *argv[])
     return 0;
 }
 ```
+
+
+
+### 实现说明
+
+堆内存池会把相同大小等级的分配请求归并到同一个 chunk 中，并通过一个 LIFO 的空闲块链表来响应小对象请求。因此，一次 `mln_alloc_m`/`mln_alloc_free` 在热路径上只需要对空闲链表做一次入队/出队，并更新所属 chunk 的引用计数，不再维护任何“已使用”链表。只有当某个 chunk 被完整归还若干轮之后，它才会被释放回父内存池或系统分配器，从而在突发负载下保持内存常驻、又不至于无限膨胀。
+
+分类 size 到对应 manager 的过程使用了 count-leading-zeros 指令（x86 上的 `bsr`、ARM64 上的 `clz`），使得分类开销只有寥寥几个周期。
 

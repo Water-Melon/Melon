@@ -192,13 +192,11 @@ MLN_FUNC_VOID(static inline, void, mln_alloc_mgr_table_init, (mln_alloc_mgr_t *t
         }
         am = &tbl[i];
         am->free_head = am->free_tail = NULL;
-        am->used_head = am->used_tail = NULL;
         am->chunk_head = am->chunk_tail = NULL;
         am->blk_size = blk_size + 1;
         if (i != 0) {
             amprev = &tbl[i-1];
             amprev->free_head = amprev->free_tail = NULL;
-            amprev->used_head = amprev->used_tail = NULL;
             amprev->chunk_head = amprev->chunk_tail = NULL;
             amprev->blk_size = (am->blk_size + tbl[i-2].blk_size) >> 1;
         }
@@ -342,24 +340,48 @@ oom:
         ch->mgr = am;
         ch->size = alloc_size;
         ptr += sizeof(mln_alloc_chunk_t);
-        for (n = 0; n < M_ALLOC_BLK_NUM; ++n) {
-            blk = (mln_alloc_blk_t *)ptr;
-            mln_blk_chain_add(&(am->free_head), &(am->free_tail), blk);
-            blk->pool = pool;
-            blk->data = ptr + sizeof(mln_alloc_blk_t);
-            blk->chunk = ch;
-            blk->blk_size = am->blk_size;
-            blk->is_large = blk->in_used = 0;
-            ch->blks[n] = blk;
-            ptr += size;
+        /*
+         * Batch-thread the fresh blocks into a doubly-linked free list.
+         * Inlined instead of calling mln_blk_chain_add per block so the
+         * chunk-refill cost is O(n) with only a handful of pointer writes.
+         */
+        {
+            mln_alloc_blk_t *prev_blk = am->free_tail;
+            for (n = 0; n < M_ALLOC_BLK_NUM; ++n) {
+                blk = (mln_alloc_blk_t *)ptr;
+                blk->prev = prev_blk;
+                blk->next = NULL;
+                if (prev_blk == NULL) am->free_head = blk;
+                else prev_blk->next = blk;
+                blk->pool = pool;
+                blk->data = ptr + sizeof(mln_alloc_blk_t);
+                blk->chunk = ch;
+                blk->blk_size = am->blk_size;
+                blk->is_large = blk->in_used = 0;
+                ch->blks[n] = blk;
+                prev_blk = blk;
+                ptr += size;
+            }
+            am->free_tail = prev_blk;
+            ch->blks[n] = NULL;
         }
-        ch->blks[n] = NULL;
     }
 
 out:
+    /*
+     * Hot path: pop from free_tail (LIFO — keeps the same block hot in
+     * cache across bursts) and bump the owning chunk's refcount. The
+     * former "used" doubly-linked list has been removed: nothing ever
+     * iterated it, and each alloc/free cycle now saves four pointer
+     * writes and a cache line touch.
+     */
     blk = am->free_tail;
-    mln_blk_chain_del(&(am->free_head), &(am->free_tail), blk);
-    mln_blk_chain_add(&(am->used_head), &(am->used_tail), blk);
+    {
+        mln_alloc_blk_t *prev_blk = blk->prev;
+        am->free_tail = prev_blk;
+        if (prev_blk == NULL) am->free_head = NULL;
+        else prev_blk->next = NULL;
+    }
     blk->in_used = 1;
     ++(blk->chunk->refer);
     return blk->data;
@@ -373,16 +395,39 @@ static inline mln_alloc_mgr_t *mln_alloc_get_mgr_by_size(mln_alloc_mgr_t *tbl, m
     if (size <= tbl[0].blk_size) return &tbl[0];
 
     mln_alloc_mgr_t *am = tbl;
-#if defined(i386) || defined(__x86_64)
-    register mln_size_t off = 0;
-    __asm__("bsr %1, %0":"=r"(off):"m"(size));
+    mln_size_t off;
+#if defined(__GNUC__) || defined(__clang__)
+    /*
+     * Use the compiler's count-leading-zeros intrinsic. On x86 this
+     * compiles to bsr, on aarch64 to clz — both are a handful of
+     * cycles, versus the previous 64-iteration bit-scan fallback that
+     * dominated the allocator's hot path on non-x86 targets.
+     */
+    if (sizeof(mln_size_t) <= sizeof(unsigned int)) {
+        off = (sizeof(mln_size_t) << 3) - 1 -
+              __builtin_clz((unsigned int)size);
+    } else if (sizeof(mln_size_t) <= sizeof(unsigned long)) {
+        off = (sizeof(mln_size_t) << 3) - 1 -
+              __builtin_clzl((unsigned long)size);
+    } else {
+        off = (sizeof(mln_size_t) << 3) - 1 -
+              __builtin_clzll((unsigned long long)size);
+    }
+#elif defined(i386) || defined(__x86_64)
+    {
+        register mln_size_t _off = 0;
+        __asm__("bsr %1, %0":"=r"(_off):"m"(size));
+        off = _off;
+    }
 #else
-    mln_size_t off = 0;
-    int i;
-    for (i = (sizeof(mln_size_t)<<3) - 1; i >= 0; --i) {
-        if (size & (((mln_size_t)1) << i)) {
-            off = i;
-            break;
+    {
+        int i;
+        off = 0;
+        for (i = (sizeof(mln_size_t)<<3) - 1; i >= 0; --i) {
+            if (size & (((mln_size_t)1) << i)) {
+                off = i;
+                break;
+            }
         }
     }
 #endif
@@ -479,8 +524,18 @@ void mln_alloc_free(void *ptr)
     ch = blk->chunk;
     am = ch->mgr;
     blk->in_used = 0;
-    mln_blk_chain_del(&(am->used_head), &(am->used_tail), blk);
-    mln_blk_chain_add(&(am->free_head), &(am->free_tail), blk);
+    /*
+     * Hot path: push to free_tail (matches alloc's LIFO pop) with an
+     * inlined chain_add. No "used" list to remove from anymore.
+     */
+    {
+        mln_alloc_blk_t *old_tail = am->free_tail;
+        blk->prev = old_tail;
+        blk->next = NULL;
+        if (old_tail == NULL) am->free_head = blk;
+        else old_tail->next = blk;
+        am->free_tail = blk;
+    }
     if (!--(ch->refer) && ++(ch->count) > M_ALLOC_CHUNK_COUNT) {
         mln_alloc_blk_t **blks = ch->blks;
         while (*blks != NULL) {

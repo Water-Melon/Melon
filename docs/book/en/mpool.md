@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
     char *p;
     mln_alloc_t *pool;
 
-    pool = mln_alloc_init(NULL);
+    pool = mln_alloc_init(NULL, 0);
     if (pool == NULL) {
         fprintf(stderr, "pool init failed\n");
         return -1;
@@ -180,4 +180,12 @@ int main(int argc, char *argv[])
     return 0;
 }
 ```
+
+
+
+### Implementation notes
+
+The heap memory pool groups same-sized allocations into chunks and serves small requests from an LIFO free list of pre-built blocks. Each `mln_alloc_m` / `mln_alloc_free` pair is therefore just a free-list push/pop plus a reference-count update on the owning chunk; there is no separate "used" list to maintain. A chunk is only returned to its parent (or the system allocator) after it has been completely emptied many times in a row, which keeps memory resident for bursty workloads without letting it grow unbounded.
+
+The size classifier uses a count-leading-zeros intrinsic so that routing a request to the right manager is a handful of cycles on both x86 and ARM64.
 

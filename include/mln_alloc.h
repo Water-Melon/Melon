@@ -26,7 +26,7 @@ typedef int (*mln_alloc_shm_lock_cb_t)(void *);
 #define M_ALLOC_BEGIN_OFF        ((mln_size_t)4)
 #define M_ALLOC_MGR_GRAIN_SIZE   2
 #define M_ALLOC_MGR_LEN          18*M_ALLOC_MGR_GRAIN_SIZE-(M_ALLOC_MGR_GRAIN_SIZE-1)
-#define M_ALLOC_BLK_NUM          4
+#define M_ALLOC_BLK_NUM          32
 #define M_ALLOC_CHUNK_COUNT      1023
 
 #define M_ALLOC_SHM_BITMAP_LEN   4096
@@ -73,8 +73,6 @@ struct mln_alloc_mgr_s {
     mln_size_t                blk_size;
     mln_alloc_blk_t          *free_head;
     mln_alloc_blk_t          *free_tail;
-    mln_alloc_blk_t          *used_head;
-    mln_alloc_blk_t          *used_tail;
     mln_alloc_chunk_t        *chunk_head;
     mln_alloc_chunk_t        *chunk_tail;
 };
