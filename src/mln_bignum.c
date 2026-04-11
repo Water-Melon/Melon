@@ -1292,13 +1292,9 @@ MLN_FUNC(, mln_string_t *, mln_bignum_tostring, (mln_bignum_t *n), (n), {
             }
         } else {
             /* Last chunk: emit only significant digits */
-            if (chunk == 0) {
-                /* nothing */
-            } else {
-                while (chunk > 0) {
-                    *p++ = (mln_u8_t)(chunk % 10) + '0';
-                    chunk /= 10;
-                }
+            while (chunk > 0) {
+                *p++ = (mln_u8_t)(chunk % 10) + '0';
+                chunk /= 10;
             }
         }
         dup = saved_q;
