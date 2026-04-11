@@ -311,7 +311,9 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_add, \
         dd[i] = sum & 0xffffffff;
     }
     for (; i < maxlen; ++i) {
-        mln_u64_t val = (i < dest->length ? dd[i] : 0) + (i < src->length ? sd[i] : 0) + carry;
+        mln_u64_t dest_val = i < dest->length ? dd[i] : 0;
+        mln_u64_t src_val = i < src->length ? sd[i] : 0;
+        mln_u64_t val = dest_val + src_val + carry;
         carry = val >> M_BIGNUM_SHIFT;
         dd[i] = val & 0xffffffff;
     }
