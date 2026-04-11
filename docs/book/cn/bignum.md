@@ -305,7 +305,7 @@ int mln_bignum_os2ip(mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t len);
 mln_string_t *mln_bignum_tostring(mln_bignum_t *n);
 ```
 
-描述：将大数`n`转换成十进制字符串。本函数因其性能较低，故应仅用于调试。不要忘记使用后将返回值使用`mln_string_free`进行释放。
+描述：将大数`n`转换成十进制字符串。不要忘记使用后将返回值使用`mln_string_free`进行释放。
 
 返回值：成功则返回十进制数字符串，否则返回`NULL`
 

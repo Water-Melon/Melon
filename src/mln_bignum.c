@@ -24,8 +24,6 @@ static inline int
 mln_bignum_assign_oct(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len);
 static inline int
 mln_bignum_assign_dec(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len);
-static void
-mln_bignum_dec_recursive(mln_u32_t rec_times, mln_u32_t loop_times, mln_bignum_t *tmp);
 static inline int
 __mln_bignum_bit_test(mln_bignum_t *bn, mln_u32_t index);
 static inline int
@@ -223,44 +221,61 @@ MLN_FUNC(static inline, int, mln_bignum_assign_dec, \
          (bn, sval, tag, len), \
 {
     if (len > M_BIGNUM_BITS/4) return -1;
-    mln_s8ptr_t p = sval + len -1;
-    mln_u32_t cnt;
-    mln_bignum_t tmp;
     memset(bn, 0, sizeof(mln_bignum_t));
     mln_bignum_positive(bn);
 
-    for (cnt = 0; p >= sval; --p, ++cnt) {
-        if (!mln_isdigit(*p)) return -1;
-        memset(&tmp, 0, sizeof(tmp));
-        mln_bignum_positive(&tmp);
-        mln_bignum_dec_recursive(cnt, *p-'0', &tmp);
-        __mln_bignum_add(bn, &tmp);
+    mln_s8ptr_t p = sval, end = sval + len;
+    mln_u64_t *data = bn->data;
+    mln_u32_t i;
+
+    /*
+     * Process 9 decimal digits at a time (10^9 < 2^32).
+     * For each chunk: bn = bn * multiplier + chunk_value
+     */
+    while (p < end) {
+        mln_u32_t chunk_len = 0;
+        mln_u64_t chunk_val = 0;
+        mln_u64_t multiplier = 1;
+
+        while (p < end && chunk_len < 9) {
+            if (!mln_isdigit(*p)) return -1;
+            chunk_val = chunk_val * 10 + (*p - '0');
+            multiplier *= 10;
+            ++p;
+            ++chunk_len;
+        }
+
+        /* bn = bn * multiplier + chunk_val */
+        mln_u64_t carry = 0;
+        for (i = 0; i < bn->length; ++i) {
+            mln_u64_t v = data[i] * multiplier + carry;
+            data[i] = v & 0xffffffff;
+            carry = v >> M_BIGNUM_SHIFT;
+        }
+        while (carry && i < M_BIGNUM_SIZE) {
+            data[i] = carry & 0xffffffff;
+            carry >>= M_BIGNUM_SHIFT;
+            ++i;
+        }
+        bn->length = i > bn->length ? i : bn->length;
+
+        /* add chunk_val */
+        carry = chunk_val;
+        for (i = 0; carry && i < M_BIGNUM_SIZE; ++i) {
+            mln_u64_t v = data[i] + carry;
+            data[i] = v & 0xffffffff;
+            carry = v >> M_BIGNUM_SHIFT;
+        }
+        if (i > bn->length) bn->length = i;
+    }
+
+    /* trim leading zeros */
+    while (bn->length > 0 && data[bn->length - 1] == 0) {
+        --(bn->length);
     }
 
     bn->tag = tag;
     return 0;
-})
-
-MLN_FUNC_VOID(static, void, mln_bignum_dec_recursive, \
-              (mln_u32_t rec_times, mln_u32_t loop_times, mln_bignum_t *tmp), \
-              (rec_times, loop_times, tmp), \
-{
-    if (!rec_times) {
-        mln_bignum_t one = {M_BIGNUM_POSITIVE, 1, {0}};
-        one.data[0] = 1;
-        memset(tmp, 0, sizeof(mln_bignum_t));
-        for (; loop_times > 0; --loop_times) {
-            __mln_bignum_add(tmp, &one);
-        }
-    } else {
-        mln_bignum_t val;
-        memset(&val, 0, sizeof(val));
-        mln_bignum_positive(&val);
-        mln_bignum_dec_recursive(rec_times-1, 10, &val);
-        for (; loop_times > 0; --loop_times) {
-            __mln_bignum_add(tmp, &val);
-        }
-    }
 })
 
 MLN_FUNC_VOID(, void, mln_bignum_add, (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), {
@@ -285,32 +300,36 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_add, \
     }
 
     mln_u64_t carry = 0;
-    mln_u64_t *dest_data = dest->data, *max, *min, *end;
-    if (dest->length < src->length) {
-        max = src->data;
-        min = dest->data;
-        end = max + src->length;
-    } else {
-        max = dest->data;
-        min = src->data;
-        end = max + dest->length;
-    }
+    mln_u32_t minlen = dest->length < src->length ? dest->length : src->length;
+    mln_u32_t maxlen = dest->length > src->length ? dest->length : src->length;
+    mln_u64_t *dd = dest->data, *sd = src->data;
+    mln_u32_t i;
 
-    for (; max < end; ++max, ++min, ++dest_data) {
-        *dest_data = *max + *min + carry;
-        carry = 0;
-        if (*dest_data >= M_BIGNUM_UMAX) {
-            *dest_data -= M_BIGNUM_UMAX;
-            carry = 1;
+    for (i = 0; i < minlen; ++i) {
+        mln_u64_t sum = dd[i] + sd[i] + carry;
+        carry = sum >> M_BIGNUM_SHIFT;
+        dd[i] = sum & 0xffffffff;
+    }
+    if (src->length > dest->length) {
+        for (; i < maxlen; ++i) {
+            mln_u64_t sum = sd[i] + carry;
+            carry = sum >> M_BIGNUM_SHIFT;
+            dd[i] = sum & 0xffffffff;
+        }
+    } else {
+        for (; i < maxlen && carry; ++i) {
+            mln_u64_t sum = dd[i] + carry;
+            carry = sum >> M_BIGNUM_SHIFT;
+            dd[i] = sum & 0xffffffff;
         }
     }
 
-    if (carry && dest_data < dest->data+M_BIGNUM_SIZE) {
-        *(dest_data++) += carry;
-        carry = 0;
+    if (carry && i < M_BIGNUM_SIZE) {
+        dd[i] = carry;
+        ++i;
     }
 
-    dest->length = dest_data - dest->data;
+    dest->length = i > dest->length ? i : dest->length;
 })
 
 MLN_FUNC_VOID(, void, mln_bignum_sub, (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), {
@@ -367,25 +386,32 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_sub, \
 MLN_FUNC_VOID(static inline, void, __mln_bignum_sub_core, \
               (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), \
 {
-    mln_u32_t borrow = 0;
-    mln_u64_t *dest_data = dest->data, *src_data = src->data;
-    mln_u64_t *end = dest->data + dest->length;
-    for (; dest_data < end; ++dest_data, ++src_data) {
-        if (*src_data + borrow > *dest_data) {
-            *dest_data = (*dest_data+M_BIGNUM_UMAX)-(*src_data+borrow);
+    mln_u64_t borrow = 0;
+    mln_u64_t *dd = dest->data, *sd = src->data;
+    mln_u32_t i, len = dest->length, slen = src->length;
+
+    for (i = 0; i < slen; ++i) {
+        mln_u64_t d = dd[i], s = sd[i] + borrow;
+        if (d < s) {
+            dd[i] = d + M_BIGNUM_UMAX - s;
             borrow = 1;
         } else {
-            *dest_data -= (*src_data + borrow);
+            dd[i] = d - s;
+            borrow = 0;
+        }
+    }
+    for (; i < len && borrow; ++i) {
+        if (dd[i] < borrow) {
+            dd[i] = dd[i] + M_BIGNUM_UMAX - borrow;
+        } else {
+            dd[i] -= borrow;
             borrow = 0;
         }
     }
 
     assert(borrow == 0);
-    dest_data = dest->data;
-    for (--end; end >= dest_data; --end) {
-        if (*end != 0) break;
-    }
-    dest->length = (end < dest_data)? 0: end - dest_data + 1;
+    while (len > 0 && dd[len - 1] == 0) --len;
+    dest->length = len;
 })
 
 MLN_FUNC_VOID(static inline, void, __mln_bignum_mul, \
@@ -404,27 +430,43 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_mul, \
         dest->tag = tag;
         return;
     }
-    mln_bignum_t res = {M_BIGNUM_POSITIVE, 0, {0}};
-    if (!__mln_bignum_abs_compare(dest, &res) || !__mln_bignum_abs_compare(src, &res)) {
-        *dest = res;
+    if (dest->length == 0 || src->length == 0) {
+        memset(dest, 0, sizeof(mln_bignum_t));
         return;
     }
 
-    mln_u64_t *data = res.data, tmp, *dest_data = dest->data, *src_data;
-    mln_u64_t *dend, *send, *last = res.data + M_BIGNUM_SIZE;
+    mln_bignum_t res;
+    mln_u64_t *rdata = res.data, *ddata = dest->data, *sdata = src->data;
+    mln_u32_t dlen = dest->length, slen = src->length;
+    mln_u32_t rmax = dlen + slen;
+    mln_u32_t i, j, rlen = 0;
 
-    for (dend = dest->data+dest->length; dest_data<dend; ++dest_data) {
-        src_data = src->data, send = src->data+src->length;
-        data = res.data + (dest_data - dest->data);
-        if (data >= last) continue;
-        for (; src_data<send && data < last; ++src_data, ++data) {
-            tmp = (*dest_data) * (*src_data) + *data;
-            *data = tmp % M_BIGNUM_UMAX;
-            if (data+1 < last) *(data+1) += (tmp >> M_BIGNUM_SHIFT);
+    if (rmax > M_BIGNUM_SIZE) rmax = M_BIGNUM_SIZE;
+    res.tag = M_BIGNUM_POSITIVE;
+    res.length = 0;
+    memset(rdata, 0, rmax * sizeof(mln_u64_t));
+
+    for (i = 0; i < dlen; ++i) {
+        mln_u64_t carry = 0;
+        mln_u64_t dv = ddata[i];
+        mln_u32_t jmax = rmax - i < slen ? rmax - i : slen;
+        if (dv == 0) continue;
+        for (j = 0; j < jmax; ++j) {
+            mln_u64_t v = dv * sdata[j] + rdata[i + j] + carry;
+            rdata[i + j] = v & 0xffffffff;
+            carry = v >> M_BIGNUM_SHIFT;
         }
+        while (carry && i + j < rmax) {
+            mln_u64_t v = rdata[i + j] + carry;
+            rdata[i + j] = v & 0xffffffff;
+            carry = v >> M_BIGNUM_SHIFT;
+            ++j;
+        }
+        if (i + j > rlen) rlen = i + j;
     }
-    res.length = (data - res.data);
-    if (data < last && *data != 0) ++(res.length);
+
+    res.length = rlen;
+    while (res.length > 0 && rdata[res.length - 1] == 0) --(res.length);
     res.tag = tag;
     *dest = res;
 })
@@ -1239,8 +1281,9 @@ MLN_FUNC(, mln_string_t *, mln_bignum_tostring, (mln_bignum_t *n), (n), {
     mln_u8_t tmp;
     mln_u32_t i, size = (n->length << 6);
     mln_bignum_t zero = mln_bignum_zero(), quotient;
-    mln_u32_t neg = mln_bignum_is_negative(n);
     mln_bignum_t dup = *n;
+    mln_bignum_positive(&dup);
+    mln_u32_t neg = mln_bignum_is_negative(n) && mln_bignum_compare(&dup, &zero) != 0;
 
     if (!size) ++size;
     if ((buf = (mln_u8ptr_t)malloc(size + 1)) == NULL) {
@@ -1248,14 +1291,39 @@ MLN_FUNC(, mln_string_t *, mln_bignum_tostring, (mln_bignum_t *n), (n), {
     }
 
     p = buf;
+
+    /*
+     * Divide by 10^9 at a time, then extract 9 digits from remainder.
+     * This reduces the number of expensive bignum divisions.
+     */
     while (mln_bignum_compare(&dup, &zero)) {
-        if (__mln_bignum_div_word(&dup, 10, &quotient) < 0) {
+        if (__mln_bignum_div_word(&dup, 1000000000LL, &quotient) < 0) {
             free(buf);
             return NULL;
         }
-        *p++ = (mln_u8_t)(dup.data[0]) + (mln_u8_t)'0';
-        dup = quotient;
+        mln_u32_t chunk = (mln_u32_t)(dup.data[0]);
+        mln_bignum_t saved_q = quotient;
+
+        /* Trim quotient length to skip leading zero words */
+        while (saved_q.length > 0 && saved_q.data[saved_q.length - 1] == 0)
+            --(saved_q.length);
+
+        if (saved_q.length > 0) {
+            /* Not the last chunk: emit exactly 9 digits */
+            for (i = 0; i < 9; ++i) {
+                *p++ = (mln_u8_t)(chunk % 10) + '0';
+                chunk /= 10;
+            }
+        } else {
+            /* Last chunk: emit only significant digits */
+            while (chunk > 0) {
+                *p++ = (mln_u8_t)(chunk % 10) + '0';
+                chunk /= 10;
+            }
+        }
+        dup = saved_q;
     }
+
     if (neg) *p++ = (mln_u8_t)'-';
 
     size = p - buf;
