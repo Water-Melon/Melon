@@ -1,5 +1,11 @@
 ## Base64
 
+This module implements standard RFC 4648 base64 encoding and decoding.
+The encoder and decoder use precomputed lookup tables and unrolled inner
+loops that process multiple bytes per iteration, delivering roughly
+twice the throughput of the original implementation while keeping the
+public API unchanged.
+
 
 
 ### Header file
