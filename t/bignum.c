@@ -499,6 +499,307 @@ MLN_FUNC_VOID(static, void, test_extend_eulid, (void), (), {
     printf("  test_extend_eulid passed\n");
 })
 
+/* ---- comprehensive arithmetic correctness tests ---- */
+
+static void check_add(const char *a_str, const char *b_str, const char *expected)
+{
+    mln_bignum_t a, b;
+    mln_bignum_assign(&a, (mln_s8ptr_t)a_str, strlen(a_str));
+    mln_bignum_assign(&b, (mln_s8ptr_t)b_str, strlen(b_str));
+    mln_bignum_add(&a, &b);
+    check_tostring(&a, expected);
+}
+
+static void check_sub(const char *a_str, const char *b_str, const char *expected)
+{
+    mln_bignum_t a, b;
+    mln_bignum_assign(&a, (mln_s8ptr_t)a_str, strlen(a_str));
+    mln_bignum_assign(&b, (mln_s8ptr_t)b_str, strlen(b_str));
+    mln_bignum_sub(&a, &b);
+    check_tostring(&a, expected);
+}
+
+static void check_mul(const char *a_str, const char *b_str, const char *expected)
+{
+    mln_bignum_t a, b;
+    mln_bignum_assign(&a, (mln_s8ptr_t)a_str, strlen(a_str));
+    mln_bignum_assign(&b, (mln_s8ptr_t)b_str, strlen(b_str));
+    mln_bignum_mul(&a, &b);
+    check_tostring(&a, expected);
+}
+
+static void check_div(const char *a_str, const char *b_str,
+                      const char *exp_q, const char *exp_r)
+{
+    mln_bignum_t a, b, q;
+    mln_bignum_assign(&a, (mln_s8ptr_t)a_str, strlen(a_str));
+    mln_bignum_assign(&b, (mln_s8ptr_t)b_str, strlen(b_str));
+    assert(mln_bignum_div(&a, &b, &q) == 0);
+    check_tostring(&q, exp_q);
+    check_tostring(&a, exp_r);
+}
+
+MLN_FUNC_VOID(static, void, test_add_correctness, (void), (), {
+    /* commutativity: a+b == b+a */
+    {
+        mln_bignum_t a, b, r1, r2;
+        mln_bignum_assign(&a, "123456789012345678901234567890", 30);
+        mln_bignum_assign(&b, "987654321098765432109876543210", 30);
+        r1 = a; mln_bignum_add(&r1, &b);
+        r2 = b; mln_bignum_add(&r2, &a);
+        assert(mln_bignum_compare(&r1, &r2) == 0);
+    }
+
+    /* identity: a+0 == a */
+    check_add("999999999999", "0", "999999999999");
+    check_add("0", "999999999999", "999999999999");
+
+    /* inverse: a + (-a) == 0 */
+    check_add("12345678901234567890", "-12345678901234567890", "0");
+
+    /* different-length operands (short + long) */
+    check_add("1", "99999999999999999999999999999", "100000000000000000000000000000");
+    check_add("99999999999999999999999999999", "1", "100000000000000000000000000000");
+
+    /* carry propagation across many words */
+    check_add("4294967295", "1", "4294967296");
+    check_add("8589934591", "1", "8589934592"); /* (2^33 - 1) + 1 */
+    check_add("18446744073709551615", "1", "18446744073709551616"); /* (2^64-1)+1 */
+
+    /* both negative */
+    check_add("-100", "-200", "-300");
+    check_add("-999999999999999", "-1", "-1000000000000000");
+
+    /* negative + positive where |neg| > |pos| */
+    check_add("-1000", "1", "-999");
+    check_add("-1000000000000000000", "999999999999999999", "-1");
+
+    /* positive + negative where |neg| > |pos| */
+    check_add("1", "-1000", "-999");
+
+    /* adding to self */
+    {
+        mln_bignum_t a;
+        mln_bignum_assign(&a, "12345678901234567890", 20);
+        mln_bignum_add(&a, &a);
+        check_tostring(&a, "24691357802469135780");
+    }
+
+    /* associativity: (a+b)+c == a+(b+c) */
+    {
+        mln_bignum_t a, b, c, r1, r2;
+        mln_bignum_assign(&a, "111111111111111111", 18);
+        mln_bignum_assign(&b, "222222222222222222", 18);
+        mln_bignum_assign(&c, "333333333333333333", 18);
+        r1 = a; mln_bignum_add(&r1, &b); mln_bignum_add(&r1, &c);
+        r2 = b; mln_bignum_add(&r2, &c); mln_bignum_add(&a, &r2); r2 = a;
+        assert(mln_bignum_compare(&r1, &r2) == 0);
+    }
+
+    printf("  test_add_correctness passed\n");
+})
+
+MLN_FUNC_VOID(static, void, test_sub_correctness, (void), (), {
+    /* a - a == 0 */
+    check_sub("12345678901234567890", "12345678901234567890", "0");
+
+    /* a - 0 == a */
+    check_sub("12345678901234567890", "0", "12345678901234567890");
+
+    /* 0 - a == -a */
+    check_sub("0", "42", "-42");
+    check_sub("0", "12345678901234567890", "-12345678901234567890");
+
+    /* basic subtraction */
+    check_sub("1000000000000000000", "1", "999999999999999999");
+
+    /* borrow propagation across many words */
+    check_sub("4294967296", "1", "4294967295");
+    check_sub("18446744073709551616", "1", "18446744073709551615");
+    check_sub("100000000000000000000000000000", "1", "99999999999999999999999999999");
+
+    /* different-length operands */
+    check_sub("100000000000000000000000000000", "99999999999999999999999999999",  "1");
+    check_sub("99999999999999999999999999999", "100000000000000000000000000000", "-1");
+
+    /* negative operands: (-a) - (-b) with different data lengths */
+    check_sub("-4294967296", "-100", "-4294967196");
+    check_sub("-100", "-4294967296", "4294967196");
+
+    /* mixed signs in sub: a - (-b) = a + b */
+    check_sub("100", "-200", "300");
+
+    /* negative minus positive: (-a) - b = -(a+b) */
+    check_sub("-100", "200", "-300");
+
+    /* large borrow chain */
+    check_sub("10000000000000000000000000000000000000",
+              "1",
+              "9999999999999999999999999999999999999");
+
+    /* sub then add back == original */
+    {
+        mln_bignum_t a, b, orig;
+        mln_bignum_assign(&a, "123456789012345678901234567890", 30);
+        mln_bignum_assign(&b, "987654321098765432109876543210", 30);
+        orig = a;
+        mln_bignum_sub(&a, &b);
+        mln_bignum_add(&a, &b);
+        assert(mln_bignum_compare(&a, &orig) == 0);
+    }
+
+    printf("  test_sub_correctness passed\n");
+})
+
+MLN_FUNC_VOID(static, void, test_mul_correctness, (void), (), {
+    /* commutativity: a*b == b*a */
+    {
+        mln_bignum_t a, b, r1, r2;
+        mln_bignum_assign(&a, "123456789", 9);
+        mln_bignum_assign(&b, "987654321", 9);
+        r1 = a; mln_bignum_mul(&r1, &b);
+        r2 = b; mln_bignum_mul(&r2, &a);
+        assert(mln_bignum_compare(&r1, &r2) == 0);
+    }
+
+    /* identity: a*1 == a */
+    check_mul("12345678901234567890", "1", "12345678901234567890");
+    check_mul("1", "12345678901234567890", "12345678901234567890");
+
+    /* zero: a*0 == 0 */
+    check_mul("12345678901234567890", "0", "0");
+    check_mul("0", "12345678901234567890", "0");
+
+    /* small multiplications */
+    check_mul("2", "3", "6");
+    check_mul("7", "11", "77");
+    check_mul("100", "100", "10000");
+
+    /* powers of 10 */
+    check_mul("1000000000", "1000000000", "1000000000000000000");
+
+    /* word-boundary multiplication (just above 2^32) */
+    check_mul("4294967296", "2", "8589934592");
+    check_mul("4294967296", "4294967296", "18446744073709551616");
+
+    /* mixed signs */
+    check_mul("100", "-3", "-300");
+    check_mul("-100", "3", "-300");
+    check_mul("-100", "-3", "300");
+
+    /* large multiplication */
+    check_mul("123456789012345678", "100000000000000000", "12345678901234567800000000000000000");
+
+    /* distributive: a*(b+c) == a*b + a*c */
+    {
+        mln_bignum_t a, b, c, bc, lhs, ab, ac;
+        mln_bignum_assign(&a, "123456789", 9);
+        mln_bignum_assign(&b, "111111111", 9);
+        mln_bignum_assign(&c, "222222222", 9);
+        /* lhs = a * (b+c) */
+        bc = b; mln_bignum_add(&bc, &c);
+        lhs = a; mln_bignum_mul(&lhs, &bc);
+        /* rhs = a*b + a*c */
+        ab = a; mln_bignum_mul(&ab, &b);
+        ac = a; mln_bignum_mul(&ac, &c);
+        mln_bignum_add(&ab, &ac);
+        assert(mln_bignum_compare(&lhs, &ab) == 0);
+    }
+
+    /* squaring */
+    check_mul("999999999", "999999999", "999999998000000001");
+    check_mul("100000001", "100000001", "10000000200000001");
+
+    printf("  test_mul_correctness passed\n");
+})
+
+MLN_FUNC_VOID(static, void, test_div_correctness, (void), (), {
+    /* basic divisions */
+    check_div("100", "10", "10", "0");
+    check_div("100", "3", "33", "1");
+    check_div("7", "2", "3", "1");
+    check_div("1000000", "7", "142857", "1");
+
+    /* divide by 1 */
+    check_div("12345678901234567890", "1", "12345678901234567890", "0");
+
+    /* divide 0 by anything */
+    check_div("0", "42", "0", "0");
+
+    /* smaller / larger == 0 remainder original */
+    check_div("3", "1000", "0", "3");
+    check_div("42", "999999999999999", "0", "42");
+
+    /* divide by self */
+    check_div("12345678901234567890", "12345678901234567890", "1", "0");
+
+    /* divide by zero should fail */
+    {
+        mln_bignum_t a, b, q;
+        mln_bignum_assign(&a, "42", 2);
+        mln_bignum_assign(&b, "0", 1);
+        assert(mln_bignum_div(&a, &b, &q) == -1);
+    }
+
+    /* large division */
+    check_div("123456789012345678901234567890", "1000000000",
+              "123456789012345678901", "234567890");
+
+    /* invariant: q*b + r == a */
+    {
+        mln_bignum_t a, b, q, r_bn, check;
+        mln_bignum_assign(&a, "123456789012345678901234567890", 30);
+        mln_bignum_assign(&b, "9999999999", 10);
+        r_bn = a;
+        assert(mln_bignum_div(&r_bn, &b, &q) == 0);
+        /* check = q * b + r */
+        check = q;
+        mln_bignum_mul(&check, &b);
+        mln_bignum_add(&check, &r_bn);
+        assert(mln_bignum_compare(&check, &a) == 0);
+    }
+
+    /* invariant with another pair */
+    {
+        mln_bignum_t a, b, q, r_bn, check;
+        mln_bignum_assign(&a, "999999999999999999999999999999", 30);
+        mln_bignum_assign(&b, "123456789", 9);
+        r_bn = a;
+        assert(mln_bignum_div(&r_bn, &b, &q) == 0);
+        check = q;
+        mln_bignum_mul(&check, &b);
+        mln_bignum_add(&check, &r_bn);
+        assert(mln_bignum_compare(&check, &a) == 0);
+    }
+
+    /* invariant with prime divisor */
+    {
+        mln_bignum_t a, b, q, r_bn, check;
+        mln_bignum_assign(&a, "1000000007000000049", 19);
+        mln_bignum_assign(&b, "1000000007", 10);
+        r_bn = a;
+        assert(mln_bignum_div(&r_bn, &b, &q) == 0);
+        check = q;
+        mln_bignum_mul(&check, &b);
+        mln_bignum_add(&check, &r_bn);
+        assert(mln_bignum_compare(&check, &a) == 0);
+    }
+
+    /* exact power-of-two division */
+    check_div("18446744073709551616", "4294967296", "4294967296", "0");
+
+    /* division with NULL quotient */
+    {
+        mln_bignum_t a, b;
+        mln_bignum_assign(&a, "1000", 4);
+        mln_bignum_assign(&b, "7", 1);
+        assert(mln_bignum_div(&a, &b, NULL) == 0);
+        check_tostring(&a, "6"); /* remainder of 1000/7 */
+    }
+
+    printf("  test_div_correctness passed\n");
+})
+
 /* ---- performance benchmarks ---- */
 
 MLN_FUNC_VOID(static, void, bench_assign_dec, (void), (), {
@@ -573,7 +874,7 @@ MLN_FUNC_VOID(static, void, bench_div, (void), (), {
     double t0 = now_us();
     for (i = 0; i < N; i++) {
         c = a;
-        mln_bignum_div(&c, &b, &q);
+        assert(mln_bignum_div(&c, &b, &q) == 0);
     }
     double t1 = now_us();
     printf("  div x%d: %.1f us\n", N, t1 - t0);
@@ -634,7 +935,7 @@ MLN_FUNC_VOID(static, void, bench_pwr, (void), (), {
     double t0 = now_us();
     for (i = 0; i < N; i++) {
         c = a;
-        mln_bignum_pwr(&c, &b, NULL);
+        assert(mln_bignum_pwr(&c, &b, NULL) == 0);
     }
     double t1 = now_us();
     printf("  pwr(10,30) x%d: %.1f us\n", N, t1 - t0);
@@ -642,9 +943,6 @@ MLN_FUNC_VOID(static, void, bench_pwr, (void), (), {
 
 int main(int argc, char *argv[])
 {
-    (void)argc;
-    (void)argv;
-
     printf("=== Feature Tests ===\n");
     test_init_and_zero();
     test_new_free();
@@ -664,20 +962,26 @@ int main(int argc, char *argv[])
     test_i2osp_os2ip();
     test_tostring();
     test_extend_eulid();
+    test_add_correctness();
+    test_sub_correctness();
+    test_mul_correctness();
+    test_div_correctness();
     printf("All feature tests passed!\n\n");
 
-    printf("=== Performance Benchmarks ===\n");
-    bench_assign_dec();
-    bench_assign_hex();
-    bench_add();
-    bench_sub();
-    bench_mul();
-    bench_div();
-    bench_shifts();
-    bench_compare();
-    bench_tostring();
-    bench_pwr();
-    printf("All benchmarks complete.\n");
+    if (argc > 1 && strcmp(argv[1], "--bench") == 0) {
+        printf("=== Performance Benchmarks ===\n");
+        bench_assign_dec();
+        bench_assign_hex();
+        bench_add();
+        bench_sub();
+        bench_mul();
+        bench_div();
+        bench_shifts();
+        bench_compare();
+        bench_tostring();
+        bench_pwr();
+        printf("All benchmarks complete.\n");
+    }
 
     return 0;
 }
