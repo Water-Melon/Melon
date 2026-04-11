@@ -84,6 +84,8 @@ MLN_FUNC(, mln_bignum_t *, mln_bignum_dup, (mln_bignum_t *bn), (bn), {
     target->tag = bn->tag;
     target->length = bn->length;
     memcpy(target->data, bn->data, bn->length*sizeof(mln_u64_t));
+    if (bn->length < M_BIGNUM_SIZE)
+        memset(target->data + bn->length, 0, (M_BIGNUM_SIZE - bn->length)*sizeof(mln_u64_t));
     return target;
 })
 
@@ -94,6 +96,8 @@ MLN_FUNC(, mln_bignum_t *, mln_bignum_pool_dup, (mln_alloc_t *pool, mln_bignum_t
     target->tag = bn->tag;
     target->length = bn->length;
     memcpy(target->data, bn->data, bn->length*sizeof(mln_u64_t));
+    if (bn->length < M_BIGNUM_SIZE)
+        memset(target->data + bn->length, 0, (M_BIGNUM_SIZE - bn->length)*sizeof(mln_u64_t));
     return target;
 })
 
@@ -301,21 +305,13 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_add, \
 
     mln_u64_t carry = 0;
     mln_u32_t maxlen = dest->length > src->length ? dest->length : src->length;
-    mln_u32_t minlen = dest->length < src->length ? dest->length : src->length;
     mln_u64_t *dd = dest->data, *sd = src->data;
     mln_u32_t i;
 
-    for (i = 0; i < minlen; ++i) {
+    for (i = 0; i < maxlen; ++i) {
         mln_u64_t sum = dd[i] + sd[i] + carry;
         carry = sum >> M_BIGNUM_SHIFT;
         dd[i] = sum & 0xffffffff;
-    }
-    for (; i < maxlen; ++i) {
-        mln_u64_t dest_val = i < dest->length ? dd[i] : 0;
-        mln_u64_t src_val = i < src->length ? sd[i] : 0;
-        mln_u64_t val = dest_val + src_val + carry;
-        carry = val >> M_BIGNUM_SHIFT;
-        dd[i] = val & 0xffffffff;
     }
 
     if (carry && i < M_BIGNUM_SIZE) {
@@ -382,10 +378,10 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_sub_core, \
 {
     mln_u64_t borrow = 0;
     mln_u64_t *dd = dest->data, *sd = src->data;
-    mln_u32_t i, len = dest->length, slen = src->length;
+    mln_u32_t i, len = dest->length;
 
     for (i = 0; i < len; ++i) {
-        mln_u64_t d = dd[i], s = (i < slen ? sd[i] : 0) + borrow;
+        mln_u64_t d = dd[i], s = sd[i] + borrow;
         if (d < s) {
             dd[i] = d + M_BIGNUM_UMAX - s;
             borrow = 1;
