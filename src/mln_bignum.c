@@ -436,21 +436,27 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_mul, \
     }
 
     mln_bignum_t res;
-    memset(&res, 0, sizeof(res));
     mln_u64_t *rdata = res.data, *ddata = dest->data, *sdata = src->data;
     mln_u32_t dlen = dest->length, slen = src->length;
+    mln_u32_t rmax = dlen + slen;
     mln_u32_t i, j, rlen = 0;
+
+    if (rmax > M_BIGNUM_SIZE) rmax = M_BIGNUM_SIZE;
+    res.tag = M_BIGNUM_POSITIVE;
+    res.length = 0;
+    memset(rdata, 0, rmax * sizeof(mln_u64_t));
 
     for (i = 0; i < dlen; ++i) {
         mln_u64_t carry = 0;
         mln_u64_t dv = ddata[i];
+        mln_u32_t jmax = rmax - i < slen ? rmax - i : slen;
         if (dv == 0) continue;
-        for (j = 0; j < slen && i + j < M_BIGNUM_SIZE; ++j) {
+        for (j = 0; j < jmax; ++j) {
             mln_u64_t v = dv * sdata[j] + rdata[i + j] + carry;
             rdata[i + j] = v & 0xffffffff;
             carry = v >> M_BIGNUM_SHIFT;
         }
-        while (carry && i + j < M_BIGNUM_SIZE) {
+        while (carry && i + j < rmax) {
             mln_u64_t v = rdata[i + j] + carry;
             rdata[i + j] = v & 0xffffffff;
             carry = v >> M_BIGNUM_SHIFT;

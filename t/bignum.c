@@ -941,7 +941,7 @@ MLN_FUNC_VOID(static, void, bench_pwr, (void), (), {
     printf("  pwr(10,30) x%d: %.1f us\n", N, t1 - t0);
 })
 
-int main(int argc, char *argv[])
+int main(void)
 {
     printf("=== Feature Tests ===\n");
     test_init_and_zero();
@@ -968,20 +968,18 @@ int main(int argc, char *argv[])
     test_div_correctness();
     printf("All feature tests passed!\n\n");
 
-    if (argc > 1 && strcmp(argv[1], "--bench") == 0) {
-        printf("=== Performance Benchmarks ===\n");
-        bench_assign_dec();
-        bench_assign_hex();
-        bench_add();
-        bench_sub();
-        bench_mul();
-        bench_div();
-        bench_shifts();
-        bench_compare();
-        bench_tostring();
-        bench_pwr();
-        printf("All benchmarks complete.\n");
-    }
+    printf("=== Performance Benchmarks ===\n");
+    bench_assign_dec();
+    bench_assign_hex();
+    bench_add();
+    bench_sub();
+    bench_mul();
+    bench_div();
+    bench_shifts();
+    bench_compare();
+    bench_tostring();
+    bench_pwr();
+    printf("All benchmarks complete.\n");
 
     return 0;
 }
