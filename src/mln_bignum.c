@@ -84,8 +84,6 @@ MLN_FUNC(, mln_bignum_t *, mln_bignum_dup, (mln_bignum_t *bn), (bn), {
     target->tag = bn->tag;
     target->length = bn->length;
     memcpy(target->data, bn->data, bn->length*sizeof(mln_u64_t));
-    if (bn->length < M_BIGNUM_SIZE)
-        memset(target->data + bn->length, 0, (M_BIGNUM_SIZE - bn->length)*sizeof(mln_u64_t));
     return target;
 })
 
@@ -96,8 +94,6 @@ MLN_FUNC(, mln_bignum_t *, mln_bignum_pool_dup, (mln_alloc_t *pool, mln_bignum_t
     target->tag = bn->tag;
     target->length = bn->length;
     memcpy(target->data, bn->data, bn->length*sizeof(mln_u64_t));
-    if (bn->length < M_BIGNUM_SIZE)
-        memset(target->data + bn->length, 0, (M_BIGNUM_SIZE - bn->length)*sizeof(mln_u64_t));
     return target;
 })
 
@@ -304,22 +300,36 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_add, \
     }
 
     mln_u64_t carry = 0;
+    mln_u32_t minlen = dest->length < src->length ? dest->length : src->length;
     mln_u32_t maxlen = dest->length > src->length ? dest->length : src->length;
     mln_u64_t *dd = dest->data, *sd = src->data;
     mln_u32_t i;
 
-    for (i = 0; i < maxlen; ++i) {
+    for (i = 0; i < minlen; ++i) {
         mln_u64_t sum = dd[i] + sd[i] + carry;
         carry = sum >> M_BIGNUM_SHIFT;
         dd[i] = sum & 0xffffffff;
     }
+    if (src->length > dest->length) {
+        for (; i < maxlen; ++i) {
+            mln_u64_t sum = sd[i] + carry;
+            carry = sum >> M_BIGNUM_SHIFT;
+            dd[i] = sum & 0xffffffff;
+        }
+    } else {
+        for (; i < maxlen && carry; ++i) {
+            mln_u64_t sum = dd[i] + carry;
+            carry = sum >> M_BIGNUM_SHIFT;
+            dd[i] = sum & 0xffffffff;
+        }
+    }
 
     if (carry && i < M_BIGNUM_SIZE) {
-        dd[i] += carry;
+        dd[i] = carry;
         ++i;
     }
 
-    dest->length = i;
+    dest->length = i > dest->length ? i : dest->length;
 })
 
 MLN_FUNC_VOID(, void, mln_bignum_sub, (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), {
@@ -378,15 +388,23 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_sub_core, \
 {
     mln_u64_t borrow = 0;
     mln_u64_t *dd = dest->data, *sd = src->data;
-    mln_u32_t i, len = dest->length;
+    mln_u32_t i, len = dest->length, slen = src->length;
 
-    for (i = 0; i < len; ++i) {
+    for (i = 0; i < slen; ++i) {
         mln_u64_t d = dd[i], s = sd[i] + borrow;
         if (d < s) {
             dd[i] = d + M_BIGNUM_UMAX - s;
             borrow = 1;
         } else {
             dd[i] = d - s;
+            borrow = 0;
+        }
+    }
+    for (; i < len && borrow; ++i) {
+        if (dd[i] < borrow) {
+            dd[i] = dd[i] + M_BIGNUM_UMAX - borrow;
+        } else {
+            dd[i] -= borrow;
             borrow = 0;
         }
     }
