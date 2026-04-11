@@ -6,14 +6,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#if defined(MSVC)
+#include <windows.h>
+#else
 #include <sys/time.h>
+#endif
 #include "mln_bignum.h"
 #include "mln_func.h"
 
 static double now_us(void) {
+#if defined(MSVC)
+    LARGE_INTEGER freq, cnt;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&cnt);
+    return (double)cnt.QuadPart / (double)freq.QuadPart * 1e6;
+#else
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return tv.tv_sec * 1e6 + tv.tv_usec;
+#endif
 }
 
 static void check_tostring(mln_bignum_t *bn, const char *expected)
@@ -466,6 +477,11 @@ MLN_FUNC_VOID(static, void, test_tostring, (void), (), {
     /* number with trailing zeros */
     mln_bignum_assign(&a, "10000000000000000000", 20);
     check_tostring(&a, "10000000000000000000");
+
+    /* negative zero should print as "0", not "-" */
+    mln_bignum_assign(&a, "0", 1);
+    mln_bignum_negative(&a);
+    check_tostring(&a, "0");
     printf("  test_tostring passed\n");
 })
 

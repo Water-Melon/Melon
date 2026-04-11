@@ -301,13 +301,19 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_add, \
 
     mln_u64_t carry = 0;
     mln_u32_t maxlen = dest->length > src->length ? dest->length : src->length;
+    mln_u32_t minlen = dest->length < src->length ? dest->length : src->length;
     mln_u64_t *dd = dest->data, *sd = src->data;
     mln_u32_t i;
 
-    for (i = 0; i < maxlen; ++i) {
+    for (i = 0; i < minlen; ++i) {
         mln_u64_t sum = dd[i] + sd[i] + carry;
         carry = sum >> M_BIGNUM_SHIFT;
         dd[i] = sum & 0xffffffff;
+    }
+    for (; i < maxlen; ++i) {
+        mln_u64_t val = (i < dest->length ? dd[i] : 0) + (i < src->length ? sd[i] : 0) + carry;
+        carry = val >> M_BIGNUM_SHIFT;
+        dd[i] = val & 0xffffffff;
     }
 
     if (carry && i < M_BIGNUM_SIZE) {
@@ -374,10 +380,10 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_sub_core, \
 {
     mln_u64_t borrow = 0;
     mln_u64_t *dd = dest->data, *sd = src->data;
-    mln_u32_t i, len = dest->length;
+    mln_u32_t i, len = dest->length, slen = src->length;
 
     for (i = 0; i < len; ++i) {
-        mln_u64_t d = dd[i], s = sd[i] + borrow;
+        mln_u64_t d = dd[i], s = (i < slen ? sd[i] : 0) + borrow;
         if (d < s) {
             dd[i] = d + M_BIGNUM_UMAX - s;
             borrow = 1;
@@ -1253,8 +1259,9 @@ MLN_FUNC(, mln_string_t *, mln_bignum_tostring, (mln_bignum_t *n), (n), {
     mln_u8_t tmp;
     mln_u32_t i, size = (n->length << 6);
     mln_bignum_t zero = mln_bignum_zero(), quotient;
-    mln_u32_t neg = mln_bignum_is_negative(n);
     mln_bignum_t dup = *n;
+    mln_bignum_positive(&dup);
+    mln_u32_t neg = mln_bignum_is_negative(n) && mln_bignum_compare(&dup, &zero) != 0;
 
     if (!size) ++size;
     if ((buf = (mln_u8ptr_t)malloc(size + 1)) == NULL) {
