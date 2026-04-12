@@ -8,7 +8,7 @@
 
 #include "mln_lex.h"
 #include "mln_types.h"
-#include "mln_rbtree.h"
+#include "mln_hash.h"
 #include "mln_string.h"
 #include "mln_ipc.h"
 
@@ -62,12 +62,12 @@ struct mln_conf_domain_s {
     mln_conf_cmd_cb_t              insert;
     mln_conf_cmd_cb_t              remove;
     mln_string_t                  *domain_name;
-    mln_rbtree_t                  *cmd;
+    mln_hash_t                    *cmd;
 };
 
 struct mln_conf_s {
     mln_lex_t                     *lex;
-    mln_rbtree_t                  *domain;
+    mln_hash_t                    *domain;
     mln_conf_domain_cb_t           search;
     mln_conf_domain_cb_t           insert;
     mln_conf_domain_cb_t           remove;
@@ -88,8 +88,7 @@ typedef struct mln_conf_hook_s {
  */
 
 #define mln_conf_is_empty(cf) ((cf) == NULL || \
-    (mln_rbtree_node_num((cf)->domain) <= 1 && \
-    mln_rbtree_node_num(((mln_conf_domain_t *)(mln_rbtree_node_data_get(mln_rbtree_root((cf)->domain))))->cmd) == 0))
+    ((cf)->domain->nr_nodes <= 1 && mln_conf_cmd_num((mln_conf_t *)(cf), "main") == 0))
 
 extern int mln_conf_load(void);
 extern int mln_conf_reload(void);
