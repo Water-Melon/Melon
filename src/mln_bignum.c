@@ -24,8 +24,6 @@ static inline int
 mln_bignum_assign_oct(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len);
 static inline int
 mln_bignum_assign_dec(mln_bignum_t *bn, mln_s8ptr_t sval, mln_u32_t tag, mln_u32_t len);
-static void
-mln_bignum_dec_recursive(mln_u32_t rec_times, mln_u32_t loop_times, mln_bignum_t *tmp);
 static inline int
 __mln_bignum_bit_test(mln_bignum_t *bn, mln_u32_t index);
 static inline int
@@ -223,44 +221,66 @@ MLN_FUNC(static inline, int, mln_bignum_assign_dec, \
          (bn, sval, tag, len), \
 {
     if (len > M_BIGNUM_BITS/4) return -1;
-    mln_s8ptr_t p = sval + len -1;
-    mln_u32_t cnt;
-    mln_bignum_t tmp;
+    mln_s8ptr_t p = sval, end = sval + len;
+    mln_u64_t *data = bn->data;
+    mln_u32_t i;
     memset(bn, 0, sizeof(mln_bignum_t));
     mln_bignum_positive(bn);
 
-    for (cnt = 0; p >= sval; --p, ++cnt) {
-        if (!mln_isdigit(*p)) return -1;
-        memset(&tmp, 0, sizeof(tmp));
-        mln_bignum_positive(&tmp);
-        mln_bignum_dec_recursive(cnt, *p-'0', &tmp);
-        __mln_bignum_add(bn, &tmp);
+    /*
+     * Process 9 decimal digits at a time.  multiplier reaches at most 10^9,
+     * and each data[] element holds a 32-bit value, so the intermediate
+     * product data[i] * multiplier fits in a 64-bit integer without overflow.
+     * The input length check (len <= M_BIGNUM_BITS/4) guarantees the result
+     * fits in M_BIGNUM_SIZE words; the overflow guards below catch any
+     * out-of-range input that slips past that check.
+     */
+    while (p < end) {
+        mln_u32_t chunk_len = 0;
+        mln_u64_t chunk_val = 0;
+        mln_u64_t multiplier = 1;
+
+        while (p < end && chunk_len < 9) {
+            if (!mln_isdigit(*p)) return -1;
+            chunk_val = chunk_val * 10 + (*p - '0');
+            multiplier *= 10;
+            ++p;
+            ++chunk_len;
+        }
+
+        /* bn = bn * multiplier + chunk_val */
+        mln_u64_t carry = 0;
+        for (i = 0; i < bn->length; ++i) {
+            mln_u64_t v = data[i] * multiplier + carry;
+            data[i] = v & 0xffffffff;
+            carry = v >> M_BIGNUM_SHIFT;
+        }
+        while (carry) {
+            if (i >= M_BIGNUM_SIZE) return -1;
+            data[i] = carry & 0xffffffff;
+            carry >>= M_BIGNUM_SHIFT;
+            ++i;
+        }
+        bn->length = i > bn->length ? i : bn->length;
+
+        /* add chunk_val */
+        carry = chunk_val;
+        for (i = 0; carry; ++i) {
+            if (i >= M_BIGNUM_SIZE) return -1;
+            mln_u64_t v = data[i] + carry;
+            data[i] = v & 0xffffffff;
+            carry = v >> M_BIGNUM_SHIFT;
+        }
+        if (i > bn->length) bn->length = i;
+    }
+
+    /* trim leading zeros */
+    while (bn->length > 0 && data[bn->length - 1] == 0) {
+        --(bn->length);
     }
 
     bn->tag = tag;
     return 0;
-})
-
-MLN_FUNC_VOID(static, void, mln_bignum_dec_recursive, \
-              (mln_u32_t rec_times, mln_u32_t loop_times, mln_bignum_t *tmp), \
-              (rec_times, loop_times, tmp), \
-{
-    if (!rec_times) {
-        mln_bignum_t one = {M_BIGNUM_POSITIVE, 1, {0}};
-        one.data[0] = 1;
-        memset(tmp, 0, sizeof(mln_bignum_t));
-        for (; loop_times > 0; --loop_times) {
-            __mln_bignum_add(tmp, &one);
-        }
-    } else {
-        mln_bignum_t val;
-        memset(&val, 0, sizeof(val));
-        mln_bignum_positive(&val);
-        mln_bignum_dec_recursive(rec_times-1, 10, &val);
-        for (; loop_times > 0; --loop_times) {
-            __mln_bignum_add(tmp, &val);
-        }
-    }
 })
 
 MLN_FUNC_VOID(, void, mln_bignum_add, (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), {
@@ -1188,6 +1208,8 @@ MLN_FUNC(, int, mln_bignum_os2ip, (mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t 
     }
 
     n->length = i? (data-n->data+1): (data-n->data);
+    while (n->length > 0 && n->data[n->length - 1] == 0)
+        --(n->length);
     return 0;
 })
 
@@ -1239,8 +1261,9 @@ MLN_FUNC(, mln_string_t *, mln_bignum_tostring, (mln_bignum_t *n), (n), {
     mln_u8_t tmp;
     mln_u32_t i, size = (n->length << 6);
     mln_bignum_t zero = mln_bignum_zero(), quotient;
-    mln_u32_t neg = mln_bignum_is_negative(n);
     mln_bignum_t dup = *n;
+    mln_bignum_positive(&dup);
+    mln_u32_t neg = mln_bignum_is_negative(n) && mln_bignum_compare(&dup, &zero) != 0;
 
     if (!size) ++size;
     if ((buf = (mln_u8ptr_t)malloc(size + 1)) == NULL) {
@@ -1248,13 +1271,36 @@ MLN_FUNC(, mln_string_t *, mln_bignum_tostring, (mln_bignum_t *n), (n), {
     }
 
     p = buf;
+    /*
+     * Divide by 10^9 at a time, then extract 9 digits from remainder.
+     * This reduces the number of expensive bignum divisions.
+     */
     while (mln_bignum_compare(&dup, &zero)) {
-        if (__mln_bignum_div_word(&dup, 10, &quotient) < 0) {
+        if (__mln_bignum_div_word(&dup, 1000000000LL, &quotient) < 0) {
             free(buf);
             return NULL;
         }
-        *p++ = (mln_u8_t)(dup.data[0]) + (mln_u8_t)'0';
-        dup = quotient;
+        mln_u32_t chunk = (mln_u32_t)(dup.data[0]);
+        mln_bignum_t saved_q = quotient;
+
+        /* Trim quotient length to skip leading zero words */
+        while (saved_q.length > 0 && saved_q.data[saved_q.length - 1] == 0)
+            --(saved_q.length);
+
+        if (saved_q.length > 0) {
+            /* Not the last chunk: emit exactly 9 digits */
+            for (i = 0; i < 9; ++i) {
+                *p++ = (mln_u8_t)(chunk % 10) + '0';
+                chunk /= 10;
+            }
+        } else {
+            /* Last chunk: emit only significant digits */
+            while (chunk > 0) {
+                *p++ = (mln_u8_t)(chunk % 10) + '0';
+                chunk /= 10;
+            }
+        }
+        dup = saved_q;
     }
     if (neg) *p++ = (mln_u8_t)'-';
 
