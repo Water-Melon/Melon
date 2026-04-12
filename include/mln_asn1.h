@@ -33,16 +33,20 @@
 #define M_ASN1_ID_OCTET_STRING      4
 #define M_ASN1_ID_NULL              5
 #define M_ASN1_ID_OBJECT_IDENTIFIER 6
+#define M_ASN1_ID_ENUMERATED        10
 #define M_ASN1_ID_UTF8STRING        12
+#define M_ASN1_ID_RELATIVE_OID      13
 #define M_ASN1_ID_SEQUENCE          16
 #define M_ASN1_ID_SEQUENCEOF        M_ASN1_ID_SEQUENCE
 #define M_ASN1_ID_SET               17
 #define M_ASN1_ID_SETOF             M_ASN1_ID_SET
+#define M_ASN1_ID_NUMERICSTRING     18
 #define M_ASN1_ID_PRINTABLESTRING   19
 #define M_ASN1_ID_T61STRING         20
 #define M_ASN1_ID_IA5STRING         22
 #define M_ASN1_ID_UTCTIME           23
 #define M_ASN1_ID_GENERALIZEDTIME   24
+#define M_ASN1_ID_BMPSTRING         30
 #define mln_asn1_is_single_id(id,idmacro) ((id) == (idmacro))
 
 typedef struct mln_asn1_deresult_s mln_asn1_deresult_t;
@@ -104,6 +108,9 @@ extern mln_asn1_enresult_t *mln_asn1_enresult_new(mln_alloc_t *pool) __NONNULL1(
 extern void mln_asn1_enresult_free(mln_asn1_enresult_t *res);
 extern int mln_asn1_encode_boolean(mln_asn1_enresult_t *res, mln_u8_t val) __NONNULL1(1);
 extern int mln_asn1_encode_integer(mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_t nints) __NONNULL2(1,2);
+extern int mln_asn1_encode_enumerated(mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_t nints) __NONNULL2(1,2);
+extern int mln_asn1_encode_numericstring(mln_asn1_enresult_t *res, mln_s8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
+extern int mln_asn1_encode_bmpstring(mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen) __NONNULL2(1,2);
 extern int mln_asn1_encode_bitstring(mln_asn1_enresult_t *res, mln_u8ptr_t bits, mln_u64_t nbits) __NONNULL2(1,2);
 extern int mln_asn1_encode_octetstring(mln_asn1_enresult_t *res, mln_u8ptr_t octets, mln_u64_t n) __NONNULL2(1,2);
 extern int mln_asn1_encode_null(mln_asn1_enresult_t *res) __NONNULL1(1);

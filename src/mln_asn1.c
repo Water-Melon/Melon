@@ -29,12 +29,9 @@ MLN_FUNC(static, mln_asn1_deresult_t *, mln_asn1_deresult_new, \
     res->pool = pool;
     res->code_buf = code;
     res->code_len = code_len;
-    res->contents = (mln_asn1_deresult_t **)mln_alloc_m(pool, M_ASN1_BUFSIZE*sizeof(mln_asn1_deresult_t *));
-    if (res->contents == NULL) {
-        mln_alloc_free(res);
-        return NULL;
-    }
-    res->max = M_ASN1_BUFSIZE;
+    /*lazy-allocate the contents array; primitives only need one slot for the payload*/
+    res->contents = NULL;
+    res->max = 0;
     res->pos = 0;
     res->_class = _class;
     res->is_struct = is_struct;
@@ -42,6 +39,23 @@ MLN_FUNC(static, mln_asn1_deresult_t *, mln_asn1_deresult_new, \
     res->free = free;
     return res;
 })
+
+static inline int mln_asn1_deresult_reserve(mln_asn1_deresult_t *res, mln_u32_t want)
+{
+    if (res->max >= want) return 0;
+    mln_u32_t nmax = res->max ? res->max : M_ASN1_BUFSIZE;
+    while (nmax < want) nmax += (nmax >> 1) + 1;
+    mln_asn1_deresult_t **ptr;
+    if (res->contents == NULL) {
+        ptr = (mln_asn1_deresult_t **)mln_alloc_m(res->pool, nmax * sizeof(mln_asn1_deresult_t *));
+    } else {
+        ptr = (mln_asn1_deresult_t **)mln_alloc_re(res->pool, res->contents, nmax * sizeof(mln_asn1_deresult_t *));
+    }
+    if (ptr == NULL) return -1;
+    res->contents = ptr;
+    res->max = nmax;
+    return 0;
+}
 
 MLN_FUNC_VOID(, void, mln_asn1_deresult_free, (mln_asn1_deresult_t *res), (res), {
     if (res == NULL) return;
@@ -137,30 +151,48 @@ inc:
         *err = M_ASN1_RET_INCOMPLETE;
         return NULL;
     }
-    /*Tag -- not support high-tag-number-form*/
+    /*Tag -- supports high-tag-number-form (X.690 8.1.2.4)*/
     ch = *p++;
     _class = (ch >> 6) & 0x3;
     struc = (ch >> 5) & 0x1;
     ident = ch & 0x1f;
+    if (ident == 0x1f) {
+        ident = 0;
+        do {
+            if (p >= end) goto inc;
+            ch = *p++;
+            if (ident & 0xfe000000) {/*overflow guard: keep within 28 bits*/
+                *err = M_ASN1_RET_ERROR;
+                return NULL;
+            }
+            ident = (ident << 7) | (ch & 0x7f);
+        } while (ch & 0x80);
+    }
 
+    if (p >= end) goto inc;
     /*length -- Don't support more than 8-byte length.*/
     ch = *p++;
     if (ch & 0x80) {
-        if ((ch & 0x7f) > sizeof(mln_u64_t)) {
+        mln_u32_t lb = ch & 0x7f;
+        if (lb == 0) {
+            /*indefinite form -- not supported*/
             *err = M_ASN1_RET_ERROR;
             return NULL;
         }
-        mln_u8_t tmp[8] = {0}, *q, *qend;
-        if (p+(ch&0x7f) >= end) goto inc;
-        memcpy(tmp, p, ch&0x7f);
-        p += (ch & 0x7f);
-        for (q = tmp, qend = tmp+(ch&0x7f); q < qend; ++q) {
-            length |= (*q << ((qend - q - 1) << 3));
+        if (lb > sizeof(mln_u64_t)) {
+            *err = M_ASN1_RET_ERROR;
+            return NULL;
         }
+        if (p + lb > end) goto inc;
+        mln_u8_t *q, *qend;
+        for (q = p, qend = p + lb; q < qend; ++q) {
+            length = (length << 8) | *q;
+        }
+        p += lb;
     } else {
         length = ch;
     }
-    if (end - p < length) goto inc;
+    if ((mln_u64_t)(end - p) < length) goto inc;
 
     if ((res = mln_asn1_deresult_new(pool, _class, struc, ident, *code, p-(*code)+length, free)) == NULL) {
         *err = M_ASN1_RET_ERROR;
@@ -175,22 +207,22 @@ inc:
                 return NULL;
             }
             if (res->pos >= res->max) {
-                res->max += (res->max >> 1);
-                mln_asn1_deresult_t **ptr;
-                if ((ptr = (mln_asn1_deresult_t **)mln_alloc_re(pool, \
-                                                                res->contents, \
-                                                                res->max*sizeof(mln_asn1_deresult_t *))) == NULL)
-                {
+                if (mln_asn1_deresult_reserve(res, res->pos + 1) < 0) {
                     res->free = 0;
                     mln_asn1_deresult_free(res);
                     *err = M_ASN1_RET_ERROR;
                     return NULL;
                 }
-                res->contents = ptr;
             }
             res->contents[res->pos++] = sub_res;
         }
     } else {
+        if (mln_asn1_deresult_reserve(res, 1) < 0) {
+            res->free = 0;
+            mln_asn1_deresult_free(res);
+            *err = M_ASN1_RET_ERROR;
+            return NULL;
+        }
         if ((sub_res = mln_asn1_deresult_new(pool, M_ASN1_CLASS_UNIVERSAL, 0, M_ASN1_ID_NONE, p, length, 0)) == NULL) {
             res->free = 0;
             mln_asn1_deresult_free(res);
@@ -549,9 +581,35 @@ MLN_FUNC(, int, mln_asn1_encode_integer, (mln_asn1_enresult_t *res, mln_u8ptr_t 
     if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
         return M_ASN1_RET_ERROR;
     }
-    
+
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_INTEGER);
+    mln_asn1_encode_length_fill(nints, p);
+    memcpy(p, ints, nints);
+
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
+        mln_alloc_free(buf);
+        return M_ASN1_RET_ERROR;
+    }
+    res->size += len;
+
+    return M_ASN1_RET_OK;
+})
+
+MLN_FUNC(, int, mln_asn1_encode_enumerated, (mln_asn1_enresult_t *res, mln_u8ptr_t ints, mln_u64_t nints), (res, ints, nints), {
+    mln_u64_t len = 0;
+    mln_alloc_t *pool;
+    mln_u8ptr_t buf, p;
+
+    mln_asn1_encode_length_calc(nints, len);
+
+    pool = mln_asn1_enresult_pool_get(res);
+    if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
+        return M_ASN1_RET_ERROR;
+    }
+
+    p = buf + 1;
+    buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_ENUMERATED);
     mln_asn1_encode_length_fill(nints, p);
     memcpy(p, ints, nints);
 
@@ -761,6 +819,64 @@ MLN_FUNC(, int, mln_asn1_encode_ia5string, (mln_asn1_enresult_t *res, mln_u8ptr_
 
     p = buf + 1;
     buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_IA5STRING);
+    mln_asn1_encode_length_fill(slen, p);
+    memcpy(p, s, slen);
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
+        mln_alloc_free(buf);
+        return M_ASN1_RET_ERROR;
+    }
+    res->size += len;
+
+    return M_ASN1_RET_OK;
+})
+
+MLN_FUNC(, int, mln_asn1_encode_numericstring, (mln_asn1_enresult_t *res, mln_s8ptr_t s, mln_u64_t slen), (res, s, slen), {
+    mln_s8ptr_t scan, end2;
+    for (scan = s, end2 = s + slen; scan < end2; ++scan) {
+        if (!((*scan >= '0' && *scan <= '9') || *scan == ' ')) return M_ASN1_RET_ERROR;
+    }
+
+    mln_u64_t len = 0;
+    mln_u8ptr_t buf, p;
+    mln_alloc_t *pool;
+
+    mln_asn1_encode_length_calc(slen, len);
+
+    pool = mln_asn1_enresult_pool_get(res);
+    if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
+        return M_ASN1_RET_ERROR;
+    }
+
+    p = buf + 1;
+    buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_NUMERICSTRING);
+    mln_asn1_encode_length_fill(slen, p);
+    memcpy(p, s, slen);
+    if (mln_asn1_encode_add_content(res, buf, len) < 0) {
+        mln_alloc_free(buf);
+        return M_ASN1_RET_ERROR;
+    }
+    res->size += len;
+
+    return M_ASN1_RET_OK;
+})
+
+MLN_FUNC(, int, mln_asn1_encode_bmpstring, (mln_asn1_enresult_t *res, mln_u8ptr_t s, mln_u64_t slen), (res, s, slen), {
+    /*BMPString is UCS-2, two bytes per character*/
+    if (slen & 1) return M_ASN1_RET_ERROR;
+
+    mln_u64_t len = 0;
+    mln_u8ptr_t buf, p;
+    mln_alloc_t *pool;
+
+    mln_asn1_encode_length_calc(slen, len);
+
+    pool = mln_asn1_enresult_pool_get(res);
+    if ((buf = (mln_u8ptr_t)mln_alloc_m(pool, len)) == NULL) {
+        return M_ASN1_RET_ERROR;
+    }
+
+    p = buf + 1;
+    buf[0] = (res->_class << 6) | ((res->is_struct)?(1<<5):0) | ((res->ident != M_ASN1_ID_NONE)? (res->ident & 0x1f): M_ASN1_ID_BMPSTRING);
     mln_asn1_encode_length_fill(slen, p);
     memcpy(p, s, slen);
     if (mln_asn1_encode_add_content(res, buf, len) < 0) {
@@ -1002,9 +1118,10 @@ MLN_FUNC(, int, mln_asn1_encode_implicit, \
          (res, ident, index), \
 {
     if (index >= res->pos) return M_ASN1_RET_ERROR;
+    if (ident > 30) return M_ASN1_RET_ERROR; /*high-tag-number rewrite unsupported here*/
     mln_string_t *s = &(res->contents[index]);
-    s->data[0] &= 0x20;
-    s->data[0] |= ((M_ASN1_CLASS_CONTEXT_SPECIFIC << 6)| ident);
+    /*preserve only the constructed bit, force context-specific class*/
+    s->data[0] = (s->data[0] & 0x20) | (M_ASN1_CLASS_CONTEXT_SPECIFIC << 6) | (ident & 0x1f);
     return M_ASN1_RET_OK;
 })
 
