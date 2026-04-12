@@ -373,7 +373,7 @@ static inline mln_conf_t *mln_conf_init(void)
     cf->insert = mln_conf_domain_insert;
     cf->remove = (mln_conf_domain_cb_t)mln_conf_domain_remove;
 
-    cf->domain = mln_hash_new_fast(mln_conf_hash_calc, mln_conf_hash_cmp, NULL, mln_conf_domain_val_free, CONF_HASH_LEN, 0, 0);
+    cf->domain = mln_hash_new_fast(mln_conf_hash_calc, mln_conf_hash_cmp, NULL, mln_conf_domain_val_free, CONF_HASH_LEN, 1, 1);
     if (cf->domain == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         free(cf);
@@ -486,7 +486,7 @@ MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_init, \
         free(cd);
         return NULL;
     }
-    cd->cmd = mln_hash_new_fast(mln_conf_hash_calc, mln_conf_hash_cmp, NULL, mln_conf_cmd_val_free, CONF_HASH_LEN, 0, 0);
+    cd->cmd = mln_hash_new_fast(mln_conf_hash_calc, mln_conf_hash_cmp, NULL, mln_conf_cmd_val_free, CONF_HASH_LEN, 1, 1);
     if (cd->cmd == NULL) {
         mln_string_free(cd->domain_name);
         free(cd);
@@ -731,6 +731,13 @@ MLN_FUNC(static, int, mln_conf_item_collect, \
     for (i = 0; i < cnt; ++i) {
         if (mln_conf_item_init(cf, tokens[i], &cc->arg_tbl[i]) < 0) {
             mln_u32_t j;
+            for (j = 0; j < i; ++j) {
+                if (cc->arg_tbl[j].type == CONF_STR)
+                    mln_string_free(cc->arg_tbl[j].val.s);
+            }
+            free(cc->arg_tbl);
+            cc->arg_tbl = NULL;
+            cc->n_args = 0;
             for (j = i; j < cnt; ++j)
                 mln_conf_lex_free(tokens[j]);
             if (tokens != stack_buf) free(tokens);
