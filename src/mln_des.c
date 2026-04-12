@@ -4,7 +4,6 @@
  */
 
 #include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include "mln_des.h"
 #include "mln_func.h"

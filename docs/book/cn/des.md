@@ -148,7 +148,7 @@ mln_3des_t *mln_3des_pool_new(mln_alloc_t *pool, mln_u64_t key1, mln_u64_t key2)
 void mln_3des_free(mln_3des_t *tdes);
 ```
 
-描述：释放`mln_3des_t`结构内存，该结构应由`mln_des_new`分配而来。
+描述：释放`mln_3des_t`结构内存，该结构应由`mln_3des_new`分配而来。
 
 返回值：无
 
@@ -160,7 +160,7 @@ void mln_3des_free(mln_3des_t *tdes);
 void mln_3des_pool_free(mln_3des_t *tdes);
 ```
 
-描述：释放`mln_des_t`结构内存，该结构应由`mln_des_pool_new`分配而来。
+描述：释放`mln_3des_t`结构内存，该结构应由`mln_3des_pool_new`分配而来。
 
 返回值：无
 
@@ -194,18 +194,33 @@ void mln_3des_buf(mln_3des_t *tdes, mln_u8ptr_t in, mln_uauto_t inlen, mln_u8ptr
 
 ```c
 #include <stdio.h>
+#include <string.h>
+#include <assert.h>
 #include "mln_des.h"
 
 int main(int argc, char *argv[])
 {
-    mln_3des_t d;
-    mln_u8_t text[9] = {0};
-    mln_u8_t cipher[9] = {0};
+    mln_des_t des;
+    mln_u64_t plain = 0x0123456789ABCDEFllu;
+    mln_u64_t cipher, decrypted;
 
-    mln_3des_init(&d, 0xffff, 0xff120000);
-    mln_3des_buf(&d, (mln_u8ptr_t)"Hi Tom!!", 11, cipher, sizeof(cipher), 0, 1);
-    mln_3des_buf(&d, cipher, sizeof(cipher)-1, text, sizeof(text), 0, 0);
-    printf("%s\n", text);
+    /* DES 单块加解密 */
+    mln_des_init(&des, 0x133457799BBCDFF1llu);
+    cipher = mln_des(&des, plain, 1);
+    decrypted = mln_des(&des, cipher, 0);
+    assert(decrypted == plain);
+    printf("DES single block OK\n");
+
+    /* 3DES 缓冲区加解密 */
+    mln_3des_t tdes;
+    mln_u8_t text[16] = {0};
+    mln_u8_t buf[16] = {0};
+
+    mln_3des_init(&tdes, 0xffff, 0xff120000);
+    mln_3des_buf(&tdes, (mln_u8ptr_t)"Hi Tom!!", 8, buf, sizeof(buf), 0, 1);
+    mln_3des_buf(&tdes, buf, 8, text, sizeof(text), 0, 0);
+    assert(memcmp(text, "Hi Tom!!", 8) == 0);
+    printf("%s\n", (char *)text);
 
     return 0;
 }
