@@ -9,6 +9,7 @@
 #include "mln_func.h"
 #include "mln_path.h"
 #include <stdlib.h>
+#include <string.h>
 
 #define CONF_ERR(lex,TK,MSG); \
 {\
@@ -19,6 +20,9 @@
     }\
     fprintf(stderr, "%d: \"%s\" %s.\n", (TK)->line, (char *)((TK)->text->data), MSG);\
 }
+
+#define CONF_HASH_LEN 31
+#define CONF_ITEM_STACK_SIZE 16
 
 static mln_conf_hook_t *g_conf_hook_head = NULL, *g_conf_hook_tail = NULL;
 static mln_conf_t *g_conf = NULL;
@@ -51,6 +55,11 @@ MLN_CHAIN_FUNC_DECLARE(static inline, \
 /*
  * declarations
  */
+/*hash functions*/
+static mln_u64_t mln_conf_hash_calc(mln_hash_t *h, void *key);
+static int mln_conf_hash_cmp(mln_hash_t *h, void *key1, void *key2);
+static void mln_conf_domain_val_free(void *data);
+static void mln_conf_cmd_val_free(void *data);
 /*for lex*/
 static mln_conf_lex_struct_t *
 mln_conf_token(mln_lex_t *lex) __NONNULL1(1);
@@ -69,19 +78,11 @@ static void
 mln_conf_domain_remove(mln_conf_t *cf, char *domain_name);
 static mln_conf_domain_t *
 mln_conf_domain_init(mln_conf_t *cf, mln_string_t *domain_name) __NONNULL2(1,2);
-static void
-mln_conf_domain_destroy(void *data);
-static int
-mln_conf_domain_cmp(const void *data1, const void *data2);
 static mln_conf_domain_t *
 mln_conf_domain_search(mln_conf_t *cf, char *domain_name) __NONNULL2(1,2);
 /*for mln_conf_cmd_t*/
 static mln_conf_cmd_t *
 mln_conf_cmd_init(mln_string_t *cmd_name) __NONNULL1(1);
-static void
-mln_conf_cmd_destroy(void *data);
-static int
-mln_conf_cmd_cmp(const void *data1, const void *data2);
 static mln_conf_cmd_t *
 mln_conf_cmd_search(mln_conf_domain_t *cd, char *cmd_name) __NONNULL2(1,2);
 static mln_conf_cmd_t *
@@ -97,9 +98,10 @@ static mln_conf_item_t *
 mln_conf_item_search(mln_conf_cmd_t *cmd, mln_u32_t index) __NONNULL1(1);
 static int
 mln_conf_item_update(mln_conf_cmd_t *cmd, mln_conf_item_t *items, mln_u32_t nitems);
-static int mln_conf_cmds_iterate_handler(mln_rbtree_node_t *node, void *udata);
-static int mln_conf_dump_conf_iterate_handler(mln_rbtree_node_t *node, void *udata);
-static int mln_conf_dump_domain_iterate_handler(mln_rbtree_node_t *node, void *udata);
+static int mln_conf_item_collect(mln_conf_t *cf, mln_conf_cmd_t *cc, mln_conf_lex_struct_t *first);
+static int mln_conf_cmds_iterate_handler(mln_hash_t *h, void *key, void *val, void *udata);
+static int mln_conf_dump_conf_iterate_handler(mln_hash_t *h, void *key, void *val, void *udata);
+static int mln_conf_dump_domain_iterate_handler(mln_hash_t *h, void *key, void *val, void *udata);
 /*for hook*/
 static mln_conf_hook_t *mln_conf_hook_init(void);
 static void mln_conf_hook_destroy(mln_conf_hook_t *ch);
@@ -302,6 +304,83 @@ MLN_FUNC(static, mln_conf_lex_struct_t *, mln_conf_token, (mln_lex_t *lex), (lex
 })
 
 
+/*
+ * hash functions
+ */
+MLN_FUNC(static, mln_u64_t, mln_conf_hash_calc, (mln_hash_t *h, void *key), (h, key), {
+    char *s = (char *)key;
+    mln_u64_t hash = 5381;
+    while (*s)
+        hash = ((hash << 5) + hash) + (unsigned char)*s++;
+    return hash % h->len;
+})
+
+MLN_FUNC(static, int, mln_conf_hash_cmp, (mln_hash_t *h, void *key1, void *key2), (h, key1, key2), {
+    (void)h;
+    return !strcmp((char *)key1, (char *)key2);
+})
+
+/*
+ * Inline fast-path search: avoids function pointer overhead of mln_hash_search
+ * by directly computing hash and comparing keys inline.
+ */
+static inline void *mln_conf_hash_search_inline(mln_hash_t *h, char *key)
+{
+    mln_u64_t hash = 5381;
+    char *s = key;
+    mln_hash_entry_t *entry;
+
+    while (*s)
+        hash = ((hash << 5) + hash) + (unsigned char)*s++;
+
+    entry = h->tbl[hash % h->len].head;
+    while (entry != NULL) {
+        if (!strcmp((char *)entry->key, key))
+            return entry->val;
+        entry = entry->next;
+    }
+    return NULL;
+}
+
+MLN_FUNC_VOID(static, void, mln_conf_domain_val_free, (void *data), (data), {
+    if (data == NULL) return;
+    mln_conf_domain_t *cd = (mln_conf_domain_t *)data;
+    if (cd->domain_name != NULL) {
+        mln_string_free(cd->domain_name);
+        cd->domain_name = NULL;
+    }
+    if (cd->cmd != NULL) {
+        mln_hash_free(cd->cmd, M_HASH_F_VAL);
+        cd->cmd = NULL;
+    }
+    free(cd);
+})
+
+MLN_FUNC_VOID(static, void, mln_conf_cmd_val_free, (void *data), (data), {
+    if (data == NULL) return;
+    mln_conf_cmd_t *cc = (mln_conf_cmd_t *)data;
+    if (cc->cmd_name != NULL) {
+        mln_string_free(cc->cmd_name);
+        cc->cmd_name = NULL;
+    }
+    if (cc->arg_tbl != NULL) {
+        mln_u32_t i;
+        mln_conf_item_t *ci;
+        for (i = 0; i < cc->n_args; ++i) {
+            ci = &(cc->arg_tbl[i]);
+            if (ci->type == CONF_NONE) continue;
+            if (ci->type == CONF_STR) {
+                mln_string_free(ci->val.s);
+                ci->val.s = NULL;
+            }
+        }
+        free(cc->arg_tbl);
+        cc->arg_tbl = NULL;
+        cc->n_args = 0;
+    }
+    free(cc);
+})
+
 /*mln_conf_t*/
 static inline mln_conf_t *mln_conf_init(void)
 {
@@ -315,13 +394,8 @@ static inline mln_conf_t *mln_conf_init(void)
     cf->insert = mln_conf_domain_insert;
     cf->remove = (mln_conf_domain_cb_t)mln_conf_domain_remove;
 
-    struct mln_rbtree_attr rbattr;
-    rbattr.pool = NULL;
-    rbattr.pool_alloc = NULL;
-    rbattr.pool_free = NULL;
-    rbattr.cmp = mln_conf_domain_cmp;
-    rbattr.data_free = mln_conf_domain_destroy;
-    if ((cf->domain = mln_rbtree_new(&rbattr)) == NULL) {
+    cf->domain = mln_hash_new_fast(mln_conf_hash_calc, mln_conf_hash_cmp, NULL, mln_conf_domain_val_free, CONF_HASH_LEN, 0, 0);
+    if (cf->domain == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         free(cf);
         return NULL;
@@ -336,14 +410,14 @@ static inline mln_conf_t *mln_conf_init(void)
 
     if ((pool = mln_alloc_init(NULL, 0)) == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
-        mln_rbtree_free(cf->domain);
+        mln_hash_free(cf->domain, M_HASH_F_VAL);
         free(cf);
         return NULL;
     }
     if ((conf_file_path = (char *)mln_alloc_m(pool, path_len + 1)) == NULL) {
         fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
         mln_alloc_destroy(pool);
-        mln_rbtree_free(cf->domain);
+        mln_hash_free(cf->domain, M_HASH_F_VAL);
         free(cf);
         return NULL;
     }
@@ -372,7 +446,7 @@ static inline mln_conf_t *mln_conf_init(void)
         if (cf->lex == NULL) {
             fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
             mln_alloc_destroy(pool);
-            mln_rbtree_free(cf->domain);
+            mln_hash_free(cf->domain, M_HASH_F_VAL);
             free(cf);
             return NULL;
         }
@@ -397,7 +471,7 @@ static void mln_conf_destroy(mln_conf_t *cf)
     if (cf == NULL) return;
     mln_conf_destroy_lex(cf);
     if (cf->domain != NULL) {
-        mln_rbtree_free(cf->domain);
+        mln_hash_free(cf->domain, M_HASH_F_VAL);
         cf->domain = NULL;
     }
 #if !defined(MSVC)
@@ -421,6 +495,7 @@ MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_init, \
          (mln_conf_t *cf, mln_string_t *domain_name), \
          (cf, domain_name), \
 {
+    (void)cf;
     mln_conf_domain_t *cd;
     cd = (mln_conf_domain_t *)malloc(sizeof(mln_conf_domain_t));
     if (cd == NULL) return NULL;
@@ -432,13 +507,8 @@ MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_init, \
         free(cd);
         return NULL;
     }
-    struct mln_rbtree_attr rbattr;
-    rbattr.pool = NULL;
-    rbattr.pool_alloc = NULL;
-    rbattr.pool_free = NULL;
-    rbattr.cmp = mln_conf_cmd_cmp;
-    rbattr.data_free = mln_conf_cmd_destroy;
-    if ((cd->cmd = mln_rbtree_new(&rbattr)) == NULL) {
+    cd->cmd = mln_hash_new_fast(mln_conf_hash_calc, mln_conf_hash_cmp, NULL, mln_conf_cmd_val_free, CONF_HASH_LEN, 0, 0);
+    if (cd->cmd == NULL) {
         mln_string_free(cd->domain_name);
         free(cd);
         return NULL;
@@ -446,67 +516,28 @@ MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_init, \
     return cd;
 })
 
-MLN_FUNC_VOID(static, void, mln_conf_domain_destroy, (void *data), (data), {
-    if (data == NULL) return;
-    mln_conf_domain_t *cd = (mln_conf_domain_t *)data;
-    if (cd->domain_name != NULL) {
-        mln_string_free(cd->domain_name);
-        cd->domain_name = NULL;
-    }
-    if (cd->cmd != NULL) {
-        mln_rbtree_free(cd->cmd);
-        cd->cmd = NULL;
-    }
-    free(cd);
-})
-
-MLN_FUNC(static, int, mln_conf_domain_cmp, (const void *data1, const void *data2), (data1, data2), {
-    mln_conf_domain_t *d1 = (mln_conf_domain_t *)data1;
-    mln_conf_domain_t *d2 = (mln_conf_domain_t *)data2;
-    return mln_string_strcmp(d1->domain_name, d2->domain_name);
-})
-
 MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_search, (mln_conf_t *cf, char *domain_name), (cf, domain_name), {
-    mln_string_t str;
-    mln_rbtree_node_t *rn;
-    mln_conf_domain_t tmp;
-    mln_string_set(&str, domain_name);
-    tmp.domain_name = &str;
-    rn = mln_rbtree_search(cf->domain, &tmp);
-    if (mln_rbtree_null(rn, cf->domain)) return NULL;
-    return (mln_conf_domain_t *)mln_rbtree_node_data_get(rn);
+    return (mln_conf_domain_t *)mln_conf_hash_search_inline(cf->domain, domain_name);
 })
 
 MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_insert, (mln_conf_t *cf, char *domain_name), (cf, domain_name), {
     mln_string_t name;
-    mln_rbtree_node_t *rn;
 
     mln_string_set(&name, domain_name);
     mln_conf_domain_t *cd = mln_conf_domain_init(cf, &name);
     if (cd == NULL) {
         return NULL;
     }
-    if ((rn = mln_rbtree_node_new(cf->domain, cd)) == NULL) {
-        mln_conf_domain_destroy((void *)cd);
+    if (mln_hash_insert(cf->domain, cd->domain_name->data, cd) < 0) {
+        mln_conf_domain_val_free((void *)cd);
         return NULL;
     }
-    mln_rbtree_insert(cf->domain, rn);
 
     return cd;
 })
 
 MLN_FUNC_VOID(static, void, mln_conf_domain_remove, (mln_conf_t *cf, char *domain_name), (cf, domain_name), {
-    mln_string_t dname;
-    mln_conf_domain_t cd;
-    mln_rbtree_node_t *rn;
-
-    mln_string_set(&dname, domain_name);
-    cd.domain_name = &dname;
-    rn = mln_rbtree_search(cf->domain, &cd);
-    if (!mln_rbtree_null(rn, cf->domain)) {
-        mln_rbtree_delete(cf->domain, rn);
-        mln_rbtree_node_free(cf->domain, rn);
-    }
+    mln_hash_remove(cf->domain, domain_name, M_HASH_F_VAL);
 })
 
 /*mln_conf_cmd_t*/
@@ -526,54 +557,14 @@ MLN_FUNC(static, mln_conf_cmd_t *, mln_conf_cmd_init, (mln_string_t *cmd_name), 
     return cc;
 })
 
-MLN_FUNC_VOID(static, void, mln_conf_cmd_destroy, (void *data), (data), {
-    if (data == NULL) return ;
-    mln_conf_cmd_t *cc = (mln_conf_cmd_t *)data;
-    if (cc->cmd_name != NULL) {
-        mln_string_free(cc->cmd_name);
-        cc->cmd_name = NULL;
-    }
-    if (cc->arg_tbl != NULL) {
-        mln_u32_t i;
-        mln_conf_item_t *ci;
-        for (i = 0; i<cc->n_args; ++i) {
-            ci = &(cc->arg_tbl[i]);
-            if (ci->type == CONF_NONE) continue;
-            if (ci->type == CONF_STR) {
-                mln_string_free(ci->val.s);
-                ci->val.s = NULL;
-            }
-        }
-        free(cc->arg_tbl);
-        cc->arg_tbl = NULL;
-        cc->n_args = 0;
-    }
-    free(cc);
-})
-
-MLN_FUNC(static, int, mln_conf_cmd_cmp, (const void *data1, const void *data2), (data1, data2), {
-    mln_conf_cmd_t *c1 = (mln_conf_cmd_t *)data1;
-    mln_conf_cmd_t *c2 = (mln_conf_cmd_t *)data2;
-    return mln_string_strcmp(c1->cmd_name, c2->cmd_name);
-})
-
 MLN_FUNC(static, mln_conf_cmd_t *, mln_conf_cmd_search, (mln_conf_domain_t *cd, char *cmd_name), (cd, cmd_name), {
-    mln_string_t str;
-    mln_conf_cmd_t cmd;
-    mln_rbtree_node_t *rn;
-
-    cmd.cmd_name = &str;
-    mln_string_set(&str, cmd_name);
-    rn = mln_rbtree_search(cd->cmd, &cmd);
-    if (mln_rbtree_null(rn, cd->cmd)) return NULL;
-    return (mln_conf_cmd_t *)mln_rbtree_node_data_get(rn);
+    return (mln_conf_cmd_t *)mln_conf_hash_search_inline(cd->cmd, cmd_name);
 })
 
 MLN_FUNC(static, mln_conf_cmd_t *, mln_conf_cmd_insert, \
          (mln_conf_domain_t *cd, char *cmd_name), (cd, cmd_name), \
 {
     mln_conf_cmd_t *cmd;
-    mln_rbtree_node_t *rn;
     mln_string_t cname;
 
     mln_string_set(&cname, cmd_name);
@@ -582,27 +573,16 @@ MLN_FUNC(static, mln_conf_cmd_t *, mln_conf_cmd_insert, \
     if (cmd == NULL) {
         return NULL;
     }
-    if ((rn = mln_rbtree_node_new(cd->cmd, cmd)) == NULL) {
-        mln_conf_cmd_destroy(cmd);
+    if (mln_hash_insert(cd->cmd, cmd->cmd_name->data, cmd) < 0) {
+        mln_conf_cmd_val_free(cmd);
         return NULL;
     }
-    mln_rbtree_insert(cd->cmd, rn);
 
     return cmd;
 })
 
 MLN_FUNC_VOID(static, void, mln_conf_cmd_remove, (mln_conf_domain_t *cd, char *cmd_name), (cd, cmd_name), {
-    mln_rbtree_node_t *rn;
-    mln_string_t cname;
-    mln_conf_cmd_t cmd;
-
-    mln_string_set(&cname, cmd_name);
-    cmd.cmd_name = &cname;
-    rn = mln_rbtree_search(cd->cmd, &cmd);
-    if (!mln_rbtree_null(rn, cd->cmd)) {
-        mln_rbtree_delete(cd->cmd, rn);
-        mln_rbtree_node_free(cd->cmd, rn);
-    }
+    mln_hash_remove(cd->cmd, cmd_name, M_HASH_F_VAL);
 })
 
 /*mln_conf_item_t*/
@@ -715,44 +695,79 @@ MLN_FUNC(static, int, mln_conf_item_update, \
 /*
  * load and free configurations
  */
-MLN_FUNC(static, int, mln_conf_item_recursive, \
-         (mln_conf_t *cf, mln_conf_cmd_t *cc, mln_conf_lex_struct_t *cls, mln_u32_t cnt), \
-         (cf, cc, cls, cnt), \
+MLN_FUNC(static, int, mln_conf_item_collect, \
+         (mln_conf_t *cf, mln_conf_cmd_t *cc, mln_conf_lex_struct_t *first), \
+         (cf, cc, first), \
 {
-    if (cls == NULL) {
-        fprintf(stderr, "%s:%d: Get token error. %s\n", __FUNCTION__, __LINE__, mln_lex_strerror(cf->lex));
-        return -1;
-    }
-    if (cls->type == CONF_TK_EOF) {
-        CONF_ERR(cf->lex, cls, "Invalid end of file");
-        mln_conf_lex_free(cls);
-        return -1;
-    }
-    if (cls->type == CONF_TK_SEMIC) {
-        if (!cnt) {
-            mln_conf_lex_free(cls);
-            return 0;
+    mln_conf_lex_struct_t *stack_buf[CONF_ITEM_STACK_SIZE];
+    mln_conf_lex_struct_t **tokens = stack_buf;
+    mln_u32_t cnt = 0, cap = CONF_ITEM_STACK_SIZE;
+    mln_conf_lex_struct_t *cls = first;
+    mln_u32_t i;
+
+    while (1) {
+        if (cls == NULL) {
+            fprintf(stderr, "%s:%d: Get token error. %s\n", __FUNCTION__, __LINE__, mln_lex_strerror(cf->lex));
+            goto err;
         }
-        cc->arg_tbl = (mln_conf_item_t *)calloc(cnt, sizeof(mln_conf_item_t));
-        if (cc->arg_tbl == NULL) {
-            fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
+        if (cls->type == CONF_TK_EOF) {
+            CONF_ERR(cf->lex, cls, "Invalid end of file");
             mln_conf_lex_free(cls);
-            return -1;
+            goto err;
         }
-        cc->n_args = cnt;
-        mln_conf_lex_free(cls);
+        if (cls->type == CONF_TK_SEMIC) {
+            mln_conf_lex_free(cls);
+            break;
+        }
+        if (cnt >= cap) {
+            mln_u32_t new_cap = cap << 1;
+            mln_conf_lex_struct_t **new_tokens;
+            if (tokens == stack_buf) {
+                new_tokens = (mln_conf_lex_struct_t **)malloc(new_cap * sizeof(mln_conf_lex_struct_t *));
+                if (new_tokens == NULL) { mln_conf_lex_free(cls); goto err; }
+                memcpy(new_tokens, stack_buf, cnt * sizeof(mln_conf_lex_struct_t *));
+            } else {
+                new_tokens = (mln_conf_lex_struct_t **)realloc(tokens, new_cap * sizeof(mln_conf_lex_struct_t *));
+                if (new_tokens == NULL) { mln_conf_lex_free(cls); goto err; }
+            }
+            tokens = new_tokens;
+            cap = new_cap;
+        }
+        tokens[cnt++] = cls;
+        cls = mln_conf_token(cf->lex);
+    }
+
+    if (cnt == 0) {
+        if (tokens != stack_buf) free(tokens);
         return 0;
     }
-    mln_conf_lex_struct_t *next = mln_conf_token(cf->lex);
-    if (mln_conf_item_recursive(cf, cc, next, cnt+1) < 0) {
-        mln_conf_lex_free(cls);
-        return -1;
+
+    cc->arg_tbl = (mln_conf_item_t *)calloc(cnt, sizeof(mln_conf_item_t));
+    if (cc->arg_tbl == NULL) {
+        fprintf(stderr, "%s:%d: No memory.\n", __FUNCTION__, __LINE__);
+        goto err;
     }
-    mln_conf_item_t *ci = &cc->arg_tbl[cnt];
-    int ret = mln_conf_item_init(cf, cls, ci);
-    mln_conf_lex_free(cls);
-    if (ret < 0) return -1;
+    cc->n_args = cnt;
+
+    for (i = 0; i < cnt; ++i) {
+        if (mln_conf_item_init(cf, tokens[i], &cc->arg_tbl[i]) < 0) {
+            mln_u32_t j;
+            for (j = i; j < cnt; ++j)
+                mln_conf_lex_free(tokens[j]);
+            if (tokens != stack_buf) free(tokens);
+            return -1;
+        }
+        mln_conf_lex_free(tokens[i]);
+    }
+
+    if (tokens != stack_buf) free(tokens);
     return 0;
+
+err:
+    for (i = 0; i < cnt; ++i)
+        mln_conf_lex_free(tokens[i]);
+    if (tokens != stack_buf) free(tokens);
+    return -1;
 })
 
 MLN_FUNC(static, int, _mln_conf_load, (mln_conf_t *cf, mln_conf_domain_t *current), (cf, current), {
@@ -823,10 +838,10 @@ MLN_FUNC(static, int, _mln_conf_load, (mln_conf_t *cf, mln_conf_domain_t *curren
             return -1;
         }
 
-        if (mln_conf_item_recursive(cf, cmd, next, 0) < 0) return -1;
+        if (mln_conf_item_collect(cf, cmd, next) < 0) return -1;
         /*
          * we don't need to free the pointer 'next' here,
-         * because it has already freed in mln_conf_item_recursive().
+         * because it has already freed in mln_conf_item_collect().
          */
     }
     return 0;
@@ -834,9 +849,7 @@ MLN_FUNC(static, int, _mln_conf_load, (mln_conf_t *cf, mln_conf_domain_t *curren
 
 int mln_conf_load(void)
 {
-    mln_string_t dname;
-    mln_rbtree_node_t *rn;
-    mln_conf_domain_t *cd, tmp;
+    mln_conf_domain_t *cd;
 
     if (g_conf != NULL) return 0;
 
@@ -844,11 +857,7 @@ int mln_conf_load(void)
 
     if (g_conf == NULL) return -1;
 
-    mln_string_set(&dname, default_domain);
-    tmp.domain_name = &dname;
-    rn = mln_rbtree_search(g_conf->domain, &tmp);
-
-    cd = (mln_conf_domain_t *)mln_rbtree_node_data_get(rn);
+    cd = (mln_conf_domain_t *)mln_conf_hash_search_inline(g_conf->domain, default_domain);
     if (g_conf->lex != NULL) {
         mln_s32_t ret = _mln_conf_load(g_conf, cd);
         mln_conf_destroy_lex(g_conf);
@@ -939,7 +948,7 @@ MLN_FUNC(, mln_conf_t *, mln_conf, (void), (), {
 MLN_FUNC(, mln_u32_t, mln_conf_cmd_num, (mln_conf_t *cf, char *domain), (cf, domain), {
     mln_conf_domain_t *cd = cf->search(cf, domain);
     if (cd == NULL) return 0;
-    return mln_rbtree_node_num(cd->cmd);
+    return cd->cmd->nr_nodes;
 })
 
 struct conf_cmds_scan_s {
@@ -953,15 +962,17 @@ MLN_FUNC_VOID(, void, mln_conf_cmds, (mln_conf_t *cf, char *domain, mln_conf_cmd
     struct conf_cmds_scan_s ccs;
     ccs.cc = v;
     ccs.pos = 0;
-    if (mln_rbtree_iterate(cd->cmd, mln_conf_cmds_iterate_handler, (void *)&ccs) < 0) {
+    if (mln_hash_iterate(cd->cmd, mln_conf_cmds_iterate_handler, (void *)&ccs) < 0) {
         mln_log(error, "Shouldn't be here.\n");
         abort();
     }
 })
 
-MLN_FUNC(static, int, mln_conf_cmds_iterate_handler, (mln_rbtree_node_t *node, void *udata), (node, udata), {
+MLN_FUNC(static, int, mln_conf_cmds_iterate_handler, (mln_hash_t *h, void *key, void *val, void *udata), (h, key, val, udata), {
+    (void)h;
+    (void)key;
     struct conf_cmds_scan_s *ccs = (struct conf_cmds_scan_s *)udata;
-    ccs->cc[(ccs->pos)++] = (mln_conf_cmd_t *)mln_rbtree_node_data_get(node);
+    ccs->cc[(ccs->pos)++] = (mln_conf_cmd_t *)val;
     return 0;
 })
 
@@ -972,20 +983,26 @@ MLN_FUNC(, mln_u32_t, mln_conf_arg_num, (mln_conf_cmd_t *cc), (cc), {
 /*
  * dump
  */
-MLN_FUNC_VOID(, void, mln_conf_dumpi, (void), (), {
+MLN_FUNC_VOID(, void, mln_conf_dump, (void), (), {
     printf("CONFIGURATIONS:\n");
-    mln_rbtree_iterate(g_conf->domain, mln_conf_dump_conf_iterate_handler, NULL);
+    mln_hash_iterate(g_conf->domain, mln_conf_dump_conf_iterate_handler, NULL);
 })
 
-MLN_FUNC(static, int, mln_conf_dump_conf_iterate_handler, (mln_rbtree_node_t *node, void *udata), (node, udata), {
-    mln_conf_domain_t *cd = (mln_conf_domain_t *)mln_rbtree_node_data_get(node);
+MLN_FUNC(static, int, mln_conf_dump_conf_iterate_handler, (mln_hash_t *h, void *key, void *val, void *udata), (h, key, val, udata), {
+    (void)h;
+    (void)key;
+    (void)udata;
+    mln_conf_domain_t *cd = (mln_conf_domain_t *)val;
     printf("\tDOMAIN [%s]:\n", (char *)(cd->domain_name->data));
-    mln_rbtree_iterate(cd->cmd, mln_conf_dump_domain_iterate_handler, NULL);
+    mln_hash_iterate(cd->cmd, mln_conf_dump_domain_iterate_handler, NULL);
     return 0;
 })
 
-MLN_FUNC(static, int, mln_conf_dump_domain_iterate_handler, (mln_rbtree_node_t *node, void *udata), (node, udata), {
-    mln_conf_cmd_t *cc = (mln_conf_cmd_t *)mln_rbtree_node_data_get(node);
+MLN_FUNC(static, int, mln_conf_dump_domain_iterate_handler, (mln_hash_t *h, void *key, void *val, void *udata), (h, key, val, udata), {
+    (void)h;
+    (void)key;
+    (void)udata;
+    mln_conf_cmd_t *cc = (mln_conf_cmd_t *)val;
     printf("\t\tCOMMAND [%s]:\n", (char *)(cc->cmd_name->data));
     mln_s32_t i;
     mln_conf_item_t *ci;
