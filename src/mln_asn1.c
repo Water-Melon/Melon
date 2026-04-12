@@ -167,6 +167,11 @@ inc:
             }
             ident = (ident << 7) | (ch & 0x7f);
         } while (ch & 0x80);
+        if (ident < 0x1f) {
+            /* high-tag form must encode a value >= 31 (minimally encoded) */
+            *err = M_ASN1_RET_ERROR;
+            return NULL;
+        }
     }
 
     if (p >= end) goto inc;

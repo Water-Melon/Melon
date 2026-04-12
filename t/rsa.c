@@ -83,7 +83,7 @@ static void bench_rsa(mln_alloc_t *pool, mln_rsa_key_t *pub, mln_rsa_key_t *pri)
     int i;
     double t0, t1;
     mln_string_t tmp, *cipher, *plain, *sig;
-    char *msg = "BenchmarkPayload";
+    char *msg = "Bench";
     mln_string_nset(&tmp, msg, strlen(msg));
 
     /* public encrypt bench */

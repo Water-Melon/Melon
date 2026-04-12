@@ -147,8 +147,8 @@ mln_alloc_t *mln_alloc_init(mln_alloc_t *parent, mln_size_t capacity)
 {
     mln_alloc_t *pool;
 
-    (void)mln_blk_chain_add;
 #ifdef __DEBUG__
+    (void)mln_blk_chain_add;
     (void)mln_blk_chain_del;
     (void)mln_chunk_chain_add;
     (void)mln_alloc_get_mgr_by_size;

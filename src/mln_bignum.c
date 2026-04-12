@@ -305,32 +305,51 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_add, \
     }
 
     mln_u64_t carry = 0;
-    mln_u64_t *dest_data = dest->data, *max, *min, *end;
-    if (dest->length < src->length) {
-        max = src->data;
-        min = dest->data;
-        end = max + src->length;
-    } else {
-        max = dest->data;
-        min = src->data;
-        end = max + dest->length;
+    mln_u32_t minlen = dest->length < src->length ? dest->length : src->length;
+    mln_u32_t maxlen = dest->length > src->length ? dest->length : src->length;
+    mln_u64_t *dd = dest->data, *sd = src->data;
+    mln_u32_t i;
+
+    /* Phase 1: both operands contribute */
+    for (i = 0; i < minlen; ++i) {
+        mln_u64_t sum = dd[i] + sd[i] + carry;
+        carry = 0;
+        if (sum >= M_BIGNUM_UMAX) {
+            sum -= M_BIGNUM_UMAX;
+            carry = 1;
+        }
+        dd[i] = sum;
     }
 
-    for (; max < end; ++max, ++min, ++dest_data) {
-        *dest_data = *max + *min + carry;
-        carry = 0;
-        if (*dest_data >= M_BIGNUM_UMAX) {
-            *dest_data -= M_BIGNUM_UMAX;
-            carry = 1;
+    /* Phase 2: only the longer operand contributes */
+    if (src->length > dest->length) {
+        for (; i < maxlen; ++i) {
+            mln_u64_t sum = sd[i] + carry;
+            carry = 0;
+            if (sum >= M_BIGNUM_UMAX) {
+                sum -= M_BIGNUM_UMAX;
+                carry = 1;
+            }
+            dd[i] = sum;
+        }
+    } else {
+        for (; i < maxlen && carry; ++i) {
+            mln_u64_t sum = dd[i] + carry;
+            carry = 0;
+            if (sum >= M_BIGNUM_UMAX) {
+                sum -= M_BIGNUM_UMAX;
+                carry = 1;
+            }
+            dd[i] = sum;
         }
     }
 
-    if (carry && dest_data < dest->data+M_BIGNUM_SIZE) {
-        *(dest_data++) += carry;
-        carry = 0;
+    if (carry && i < M_BIGNUM_SIZE) {
+        dd[i] = carry;
+        ++i;
     }
 
-    dest->length = dest_data - dest->data;
+    dest->length = i > dest->length ? i : dest->length;
 })
 
 MLN_FUNC_VOID(, void, mln_bignum_sub, (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), {
@@ -388,24 +407,36 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_sub_core, \
               (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), \
 {
     mln_u32_t borrow = 0;
-    mln_u64_t *dest_data = dest->data, *src_data = src->data;
-    mln_u64_t *end = dest->data + dest->length;
-    for (; dest_data < end; ++dest_data, ++src_data) {
-        if (*src_data + borrow > *dest_data) {
-            *dest_data = (*dest_data+M_BIGNUM_UMAX)-(*src_data+borrow);
+    mln_u64_t *dd = dest->data, *sd = src->data;
+    mln_u32_t i, len = dest->length, slen = src->length;
+
+    /* Phase 1: subtract src words from dest */
+    for (i = 0; i < slen; ++i) {
+        mln_u64_t s = sd[i] + borrow;
+        if (dd[i] < s) {
+            dd[i] = dd[i] + M_BIGNUM_UMAX - s;
             borrow = 1;
         } else {
-            *dest_data -= (*src_data + borrow);
+            dd[i] -= s;
+            borrow = 0;
+        }
+    }
+
+    /* Phase 2: propagate borrow through remaining dest words */
+    for (; i < len && borrow; ++i) {
+        if (dd[i] < borrow) {
+            dd[i] = dd[i] + M_BIGNUM_UMAX - borrow;
+        } else {
+            dd[i] -= borrow;
             borrow = 0;
         }
     }
 
     assert(borrow == 0);
-    dest_data = dest->data;
-    for (--end; end >= dest_data; --end) {
-        if (*end != 0) break;
-    }
-    dest->length = (end < dest_data)? 0: end - dest_data + 1;
+
+    /* Trim leading zero words */
+    while (len > 0 && dd[len - 1] == 0) --len;
+    dest->length = len;
 })
 
 MLN_FUNC_VOID(static inline, void, __mln_bignum_mul, \
@@ -424,27 +455,41 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_mul, \
         dest->tag = tag;
         return;
     }
-    mln_bignum_t res = {M_BIGNUM_POSITIVE, 0, {0}};
-    if (!__mln_bignum_abs_compare(dest, &res) || !__mln_bignum_abs_compare(src, &res)) {
-        *dest = res;
+    if (dest->length == 0 || src->length == 0) {
+        memset(dest, 0, sizeof(mln_bignum_t));
         return;
     }
 
-    mln_u64_t *data = res.data, tmp, *dest_data = dest->data, *src_data;
-    mln_u64_t *dend, *send, *last = res.data + M_BIGNUM_SIZE;
+    mln_bignum_t res;
+    memset(&res, 0, sizeof(mln_bignum_t));
+    mln_u64_t *rdata = res.data;
+    mln_u32_t dlen = dest->length, slen = src->length;
+    mln_u32_t rmax = dlen + slen;
+    mln_u32_t i, j, rlen = 0;
 
-    for (dend = dest->data+dest->length; dest_data<dend; ++dest_data) {
-        src_data = src->data, send = src->data+src->length;
-        data = res.data + (dest_data - dest->data);
-        if (data >= last) continue;
-        for (; src_data<send && data < last; ++src_data, ++data) {
-            tmp = (*dest_data) * (*src_data) + *data;
-            *data = tmp % M_BIGNUM_UMAX;
-            if (data+1 < last) *(data+1) += (tmp >> M_BIGNUM_SHIFT);
+    if (rmax > M_BIGNUM_SIZE) rmax = M_BIGNUM_SIZE;
+
+    for (i = 0; i < dlen; ++i) {
+        mln_u64_t carry = 0;
+        mln_u64_t dv = dest->data[i];
+        mln_u32_t jmax = rmax - i < slen ? rmax - i : slen;
+        if (dv == 0) continue;
+        for (j = 0; j < jmax; ++j) {
+            mln_u64_t v = dv * src->data[j] + rdata[i + j] + carry;
+            rdata[i + j] = v & 0xffffffff;
+            carry = v >> M_BIGNUM_SHIFT;
         }
+        while (carry && i + j < rmax) {
+            mln_u64_t v = rdata[i + j] + carry;
+            rdata[i + j] = v & 0xffffffff;
+            carry = v >> M_BIGNUM_SHIFT;
+            ++j;
+        }
+        if (i + j > rlen) rlen = i + j;
     }
-    res.length = (data - res.data);
-    if (data < last && *data != 0) ++(res.length);
+
+    res.length = rlen;
+    while (res.length > 0 && rdata[res.length - 1] == 0) --(res.length);
     res.tag = tag;
     *dest = res;
 })

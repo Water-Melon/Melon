@@ -24,11 +24,14 @@
 #include "mln_func.h"
 
 /*
- * Fast, reasonably-strong CSPRNG state used for PKCS#1 v1.5 type-2 padding.
- * xorshift64* kernel, re-seeded opportunistically from /dev/urandom so we do
- * not depend on a deterministic rand_r() seed.  This is markedly stronger than
- * the previous implementation and also substantially faster because we avoid
- * the per-byte gettimeofday() dance on the fallback path.
+ * PRNG state used for PKCS#1 v1.5 type-2 padding byte generation.
+ * xorshift64* kernel, seeded from /dev/urandom (or CryptGenRandom on Windows)
+ * so we avoid the per-byte gettimeofday() dance of the previous implementation.
+ *
+ * NOTE: xorshift64* is NOT a cryptographically-secure PRNG.  It is used here
+ * only because PKCS#1 v1.5 padding requires non-zero random bytes and this
+ * generator is fast and well-seeded.  For applications that need a true CSPRNG,
+ * read directly from /dev/urandom or use an OS-backed API.
  */
 static inline mln_u64_t mln_rsa_seed64(void)
 {
@@ -269,38 +272,26 @@ MLN_FUNC(, mln_string_t *, mln_RSAESPKCS1V15_public_encrypt, \
          (mln_rsa_key_t *pub, mln_string_t *text), (pub, text), \
 {
     mln_size_t nlen = mln_bignum_get_length(&(pub->n)) << 2;
-    mln_size_t k;
     mln_u8ptr_t buf, p;
-    mln_u8ptr_t in = text->data;
     mln_string_t *ret;
-    mln_size_t i, len = text->len, sum;
 
     if (nlen < 12) return NULL;
-    k = nlen - 11;
+    /* RFC 8017: RSAES-PKCS1-v1_5 only supports messages of length <= k-11 */
+    if (text->len > nlen - 11) return NULL;
 
-    /*number of full blocks, plus a tail if anything is left*/
-    sum = ((len / k) + ((len % k) != 0)) * nlen;
-    if (sum == 0) sum = nlen; /*allow empty input → single padded block*/
-    buf = (mln_u8ptr_t)malloc(sum);
+    buf = (mln_u8ptr_t)malloc(nlen);
     if (buf == NULL) return NULL;
     p = buf;
 
-    do {
+    {
         mln_bignum_t num = mln_bignum_zero();
-        i = len > k ? k : len;
-
-        mln_rsa_pub_padding(in, i, p, nlen);
+        mln_rsa_pub_padding(text->data, text->len, p, nlen);
         if (mln_bignum_os2ip(&num, p, nlen) < 0) goto err;
         if (mln_rsa_rsaep_rsadp(pub, &num, &num) < 0) goto err;
         if (mln_bignum_i2osp(&num, p, nlen) < 0) goto err;
+    }
 
-        len -= i;
-        in += i;
-        p += nlen;
-    } while (len > 0);
-
-    /*transfer ownership of buf directly: avoids an extra alloc+memcpy*/
-    ret = mln_string_buf_new(buf, sum);
+    ret = mln_string_buf_new(buf, nlen);
     if (ret == NULL) goto err;
     return ret;
 err:
@@ -356,34 +347,26 @@ MLN_FUNC(, mln_string_t *, mln_RSAESPKCS1V15_private_encrypt, \
          (mln_rsa_key_t *pri, mln_string_t *text), (pri, text), \
 {
     mln_size_t nlen = mln_bignum_get_length(&(pri->n)) << 2;
-    mln_size_t k;
     mln_u8ptr_t buf, p;
-    mln_u8ptr_t in = text->data;
     mln_string_t *ret;
-    mln_size_t i, len = text->len, sum;
 
     if (nlen < 12) return NULL;
-    k = nlen - 11;
+    /* RFC 8017: RSAES-PKCS1-v1_5 only supports messages of length <= k-11 */
+    if (text->len > nlen - 11) return NULL;
 
-    sum = ((len / k) + ((len % k) != 0)) * nlen;
-    if (sum == 0) sum = nlen;
-    if ((p = buf = (mln_u8ptr_t)malloc(sum)) == NULL) return NULL;
+    buf = (mln_u8ptr_t)malloc(nlen);
+    if (buf == NULL) return NULL;
+    p = buf;
 
-    do {
+    {
         mln_bignum_t num = mln_bignum_zero();
-        i = len > k ? k : len;
-
-        mln_rsa_pri_padding(in, i, p, nlen);
+        mln_rsa_pri_padding(text->data, text->len, p, nlen);
         if (mln_bignum_os2ip(&num, p, nlen) < 0) goto err;
         if (mln_rsa_rsaep_rsadp(pri, &num, &num) < 0) goto err;
         if (mln_bignum_i2osp(&num, p, nlen) < 0) goto err;
+    }
 
-        p += nlen;
-        len -= i;
-        in += i;
-    } while (len > 0);
-
-    ret = mln_string_buf_new(buf, sum);
+    ret = mln_string_buf_new(buf, nlen);
     if (ret == NULL) goto err;
     return ret;
 err:
