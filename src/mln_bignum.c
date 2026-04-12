@@ -221,16 +221,19 @@ MLN_FUNC(static inline, int, mln_bignum_assign_dec, \
          (bn, sval, tag, len), \
 {
     if (len > M_BIGNUM_BITS/4) return -1;
-    memset(bn, 0, sizeof(mln_bignum_t));
-    mln_bignum_positive(bn);
-
     mln_s8ptr_t p = sval, end = sval + len;
     mln_u64_t *data = bn->data;
     mln_u32_t i;
+    memset(bn, 0, sizeof(mln_bignum_t));
+    mln_bignum_positive(bn);
 
     /*
-     * Process 9 decimal digits at a time (10^9 < 2^32).
-     * For each chunk: bn = bn * multiplier + chunk_value
+     * Process 9 decimal digits at a time.  multiplier reaches at most 10^9,
+     * and each data[] element holds a 32-bit value, so the intermediate
+     * product data[i] * multiplier fits in a 64-bit integer without overflow.
+     * The input length check (len <= M_BIGNUM_BITS/4) guarantees the result
+     * fits in M_BIGNUM_SIZE words; the overflow guards below catch any
+     * out-of-range input that slips past that check.
      */
     while (p < end) {
         mln_u32_t chunk_len = 0;
@@ -252,7 +255,8 @@ MLN_FUNC(static inline, int, mln_bignum_assign_dec, \
             data[i] = v & 0xffffffff;
             carry = v >> M_BIGNUM_SHIFT;
         }
-        while (carry && i < M_BIGNUM_SIZE) {
+        while (carry) {
+            if (i >= M_BIGNUM_SIZE) return -1;
             data[i] = carry & 0xffffffff;
             carry >>= M_BIGNUM_SHIFT;
             ++i;
@@ -261,7 +265,8 @@ MLN_FUNC(static inline, int, mln_bignum_assign_dec, \
 
         /* add chunk_val */
         carry = chunk_val;
-        for (i = 0; carry && i < M_BIGNUM_SIZE; ++i) {
+        for (i = 0; carry; ++i) {
+            if (i >= M_BIGNUM_SIZE) return -1;
             mln_u64_t v = data[i] + carry;
             data[i] = v & 0xffffffff;
             carry = v >> M_BIGNUM_SHIFT;
@@ -305,22 +310,37 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_add, \
     mln_u64_t *dd = dest->data, *sd = src->data;
     mln_u32_t i;
 
+    /* Phase 1: both operands contribute */
     for (i = 0; i < minlen; ++i) {
         mln_u64_t sum = dd[i] + sd[i] + carry;
-        carry = sum >> M_BIGNUM_SHIFT;
-        dd[i] = sum & 0xffffffff;
+        carry = 0;
+        if (sum >= M_BIGNUM_UMAX) {
+            sum -= M_BIGNUM_UMAX;
+            carry = 1;
+        }
+        dd[i] = sum;
     }
+
+    /* Phase 2: only the longer operand contributes */
     if (src->length > dest->length) {
         for (; i < maxlen; ++i) {
             mln_u64_t sum = sd[i] + carry;
-            carry = sum >> M_BIGNUM_SHIFT;
-            dd[i] = sum & 0xffffffff;
+            carry = 0;
+            if (sum >= M_BIGNUM_UMAX) {
+                sum -= M_BIGNUM_UMAX;
+                carry = 1;
+            }
+            dd[i] = sum;
         }
     } else {
         for (; i < maxlen && carry; ++i) {
             mln_u64_t sum = dd[i] + carry;
-            carry = sum >> M_BIGNUM_SHIFT;
-            dd[i] = sum & 0xffffffff;
+            carry = 0;
+            if (sum >= M_BIGNUM_UMAX) {
+                sum -= M_BIGNUM_UMAX;
+                carry = 1;
+            }
+            dd[i] = sum;
         }
     }
 
@@ -386,20 +406,23 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_sub, \
 MLN_FUNC_VOID(static inline, void, __mln_bignum_sub_core, \
               (mln_bignum_t *dest, mln_bignum_t *src), (dest, src), \
 {
-    mln_u64_t borrow = 0;
+    mln_u32_t borrow = 0;
     mln_u64_t *dd = dest->data, *sd = src->data;
     mln_u32_t i, len = dest->length, slen = src->length;
 
+    /* Phase 1: subtract src words from dest */
     for (i = 0; i < slen; ++i) {
-        mln_u64_t d = dd[i], s = sd[i] + borrow;
-        if (d < s) {
-            dd[i] = d + M_BIGNUM_UMAX - s;
+        mln_u64_t s = sd[i] + borrow;
+        if (dd[i] < s) {
+            dd[i] = dd[i] + M_BIGNUM_UMAX - s;
             borrow = 1;
         } else {
-            dd[i] = d - s;
+            dd[i] -= s;
             borrow = 0;
         }
     }
+
+    /* Phase 2: propagate borrow through remaining dest words */
     for (; i < len && borrow; ++i) {
         if (dd[i] < borrow) {
             dd[i] = dd[i] + M_BIGNUM_UMAX - borrow;
@@ -410,6 +433,8 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_sub_core, \
     }
 
     assert(borrow == 0);
+
+    /* Trim leading zero words */
     while (len > 0 && dd[len - 1] == 0) --len;
     dest->length = len;
 })
@@ -436,23 +461,21 @@ MLN_FUNC_VOID(static inline, void, __mln_bignum_mul, \
     }
 
     mln_bignum_t res;
-    mln_u64_t *rdata = res.data, *ddata = dest->data, *sdata = src->data;
+    memset(&res, 0, sizeof(mln_bignum_t));
+    mln_u64_t *rdata = res.data;
     mln_u32_t dlen = dest->length, slen = src->length;
     mln_u32_t rmax = dlen + slen;
     mln_u32_t i, j, rlen = 0;
 
     if (rmax > M_BIGNUM_SIZE) rmax = M_BIGNUM_SIZE;
-    res.tag = M_BIGNUM_POSITIVE;
-    res.length = 0;
-    memset(rdata, 0, rmax * sizeof(mln_u64_t));
 
     for (i = 0; i < dlen; ++i) {
         mln_u64_t carry = 0;
-        mln_u64_t dv = ddata[i];
+        mln_u64_t dv = dest->data[i];
         mln_u32_t jmax = rmax - i < slen ? rmax - i : slen;
         if (dv == 0) continue;
         for (j = 0; j < jmax; ++j) {
-            mln_u64_t v = dv * sdata[j] + rdata[i + j] + carry;
+            mln_u64_t v = dv * src->data[j] + rdata[i + j] + carry;
             rdata[i + j] = v & 0xffffffff;
             carry = v >> M_BIGNUM_SHIFT;
         }
@@ -1230,6 +1253,8 @@ MLN_FUNC(, int, mln_bignum_os2ip, (mln_bignum_t *n, mln_u8ptr_t buf, mln_size_t 
     }
 
     n->length = i? (data-n->data+1): (data-n->data);
+    while (n->length > 0 && n->data[n->length - 1] == 0)
+        --(n->length);
     return 0;
 })
 
@@ -1291,7 +1316,6 @@ MLN_FUNC(, mln_string_t *, mln_bignum_tostring, (mln_bignum_t *n), (n), {
     }
 
     p = buf;
-
     /*
      * Divide by 10^9 at a time, then extract 9 digits from remainder.
      * This reduces the number of expensive bignum divisions.
@@ -1323,7 +1347,6 @@ MLN_FUNC(, mln_string_t *, mln_bignum_tostring, (mln_bignum_t *n), (n), {
         }
         dup = saved_q;
     }
-
     if (neg) *p++ = (mln_u8_t)'-';
 
     size = p - buf;
