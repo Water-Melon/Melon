@@ -320,27 +320,6 @@ MLN_FUNC(static, int, mln_conf_hash_cmp, (mln_hash_t *h, void *key1, void *key2)
     return !strcmp((char *)key1, (char *)key2);
 })
 
-/*
- * Inline fast-path search: avoids function pointer overhead of mln_hash_search
- * by directly computing hash and comparing keys inline.
- */
-static inline void *mln_conf_hash_search_inline(mln_hash_t *h, char *key)
-{
-    mln_u64_t hash = 5381;
-    char *s = key;
-    mln_hash_entry_t *entry;
-
-    while (*s)
-        hash = ((hash << 5) + hash) + (unsigned char)*s++;
-
-    entry = h->tbl[hash % h->len].head;
-    while (entry != NULL) {
-        if (!strcmp((char *)entry->key, key))
-            return entry->val;
-        entry = entry->next;
-    }
-    return NULL;
-}
 
 MLN_FUNC_VOID(static, void, mln_conf_domain_val_free, (void *data), (data), {
     if (data == NULL) return;
@@ -517,7 +496,7 @@ MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_init, \
 })
 
 MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_search, (mln_conf_t *cf, char *domain_name), (cf, domain_name), {
-    return (mln_conf_domain_t *)mln_conf_hash_search_inline(cf->domain, domain_name);
+    return (mln_conf_domain_t *)mln_hash_search(cf->domain, domain_name);
 })
 
 MLN_FUNC(static, mln_conf_domain_t *, mln_conf_domain_insert, (mln_conf_t *cf, char *domain_name), (cf, domain_name), {
@@ -558,7 +537,7 @@ MLN_FUNC(static, mln_conf_cmd_t *, mln_conf_cmd_init, (mln_string_t *cmd_name), 
 })
 
 MLN_FUNC(static, mln_conf_cmd_t *, mln_conf_cmd_search, (mln_conf_domain_t *cd, char *cmd_name), (cd, cmd_name), {
-    return (mln_conf_cmd_t *)mln_conf_hash_search_inline(cd->cmd, cmd_name);
+    return (mln_conf_cmd_t *)mln_hash_search(cd->cmd, cmd_name);
 })
 
 MLN_FUNC(static, mln_conf_cmd_t *, mln_conf_cmd_insert, \
@@ -857,7 +836,7 @@ int mln_conf_load(void)
 
     if (g_conf == NULL) return -1;
 
-    cd = (mln_conf_domain_t *)mln_conf_hash_search_inline(g_conf->domain, default_domain);
+    cd = (mln_conf_domain_t *)mln_hash_search(g_conf->domain, default_domain);
     if (g_conf->lex != NULL) {
         mln_s32_t ret = _mln_conf_load(g_conf, cd);
         mln_conf_destroy_lex(g_conf);
