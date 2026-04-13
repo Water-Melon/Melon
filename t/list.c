@@ -326,10 +326,56 @@ static void test_performance(void)
         total += t1 - t0;
     }
 
-    printf("  Performance (%d ops x %d rounds):\n", N, rounds);
+    printf("  add/remove (%d ops x %d rounds):\n", N, rounds);
     printf("    Total: %.4f sec\n", total);
     printf("    Avg:   %.4f sec per round\n", total / rounds);
     printf("    Ops:   %.0f ops/sec\n", (double)N * 2 * rounds / total);
+
+    /* Benchmark for_each iteration */
+    mln_list_t s;
+    mln_list_init(&s);
+    for (i = 0; i < N; ++i) {
+        nodes[i].val = i;
+        mln_list_add(&s, &nodes[i].node);
+    }
+
+    total = 0;
+    for (int r = 0; r < rounds; ++r) {
+        volatile long sum = 0;
+        mln_list_t *lnode;
+        t0 = now_sec();
+        mln_list_for_each(lnode, &s) {
+            test_t *t = mln_container_of(lnode, test_t, node);
+            sum += t->val;
+        }
+        t1 = now_sec();
+        total += t1 - t0;
+    }
+
+    printf("  for_each (%d elements x %d rounds):\n", N, rounds);
+    printf("    Total: %.4f sec\n", total);
+    printf("    Avg:   %.4f sec per round\n", total / rounds);
+
+    double safe_total = 0;
+    for (int r = 0; r < rounds; ++r) {
+        volatile long sum = 0;
+        mln_list_t *lnode, *tmp;
+        t0 = now_sec();
+        mln_list_for_each_safe(lnode, tmp, &s) {
+            test_t *t = mln_container_of(lnode, test_t, node);
+            sum += t->val;
+        }
+        t1 = now_sec();
+        safe_total += t1 - t0;
+    }
+
+    printf("  for_each_safe (%d elements x %d rounds):\n", N, rounds);
+    printf("    Total: %.4f sec\n", safe_total);
+    printf("    Avg:   %.4f sec per round\n", safe_total / rounds);
+
+    for (i = 0; i < N; ++i) {
+        mln_list_remove(&s, &nodes[i].node);
+    }
 
     free(nodes);
 }
