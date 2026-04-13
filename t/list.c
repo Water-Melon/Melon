@@ -2,7 +2,6 @@
 #include "mln_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 #include <time.h>
 
@@ -10,43 +9,6 @@ typedef struct {
     int        val;
     mln_list_t node;
 } test_t;
-
-/* ---- Old implementation for performance comparison ---- */
-typedef struct old_list_s {
-    struct old_list_s *next;
-    struct old_list_s *prev;
-} old_list_t;
-
-typedef struct {
-    int        val;
-    old_list_t node;
-} old_test_t;
-
-__attribute__((noinline))
-static void old_list_add(old_list_t *sentinel, old_list_t *node)
-{
-    node->next = NULL;
-    node->prev = sentinel->next;
-    if (sentinel->next != NULL)
-        sentinel->next->next = node;
-    else
-        sentinel->prev = node;
-    sentinel->next = node;
-}
-
-__attribute__((noinline))
-static void old_list_remove(old_list_t *sentinel, old_list_t *node)
-{
-    if (node->prev != NULL)
-        node->prev->next = node->next;
-    else
-        sentinel->prev = node->next;
-    if (node->next != NULL)
-        node->next->prev = node->prev;
-    else
-        sentinel->next = node->prev;
-    node->prev = node->next = NULL;
-}
 
 static double now_sec(void)
 {
@@ -73,6 +35,21 @@ static void test_null_init_and_empty(void)
     mln_list_t s = mln_list_null();
     assert(mln_list_head(&s) == NULL);
     assert(mln_list_tail(&s) == NULL);
+
+    /* for_each on empty null-initialized list must not crash */
+    int count = 0;
+    mln_list_t *lnode;
+    mln_list_for_each(lnode, &s) {
+        count++;
+    }
+    assert(count == 0);
+
+    mln_list_t *tmp;
+    mln_list_for_each_safe(lnode, tmp, &s) {
+        count++;
+    }
+    assert(count == 0);
+
     printf("  PASS: null init and empty\n");
 }
 
@@ -328,50 +305,33 @@ static void test_performance(void)
 {
     int N = 5000000;
     int i, rounds = 3;
-    double old_total = 0, new_total = 0;
+    double total = 0;
     double t0, t1;
 
-    old_test_t *old_nodes = (old_test_t *)calloc(N, sizeof(old_test_t));
-    test_t     *new_nodes = (test_t *)calloc(N, sizeof(test_t));
-    assert(old_nodes != NULL && new_nodes != NULL);
+    test_t *nodes = (test_t *)calloc(N, sizeof(test_t));
+    assert(nodes != NULL);
 
     for (int r = 0; r < rounds; ++r) {
-        /* Old: extern function call (noinline) */
-        old_list_t old_s = {NULL, NULL};
+        mln_list_t s;
+        mln_list_init(&s);
         t0 = now_sec();
         for (i = 0; i < N; ++i) {
-            old_nodes[i].val = i;
-            old_list_add(&old_s, &old_nodes[i].node);
+            nodes[i].val = i;
+            mln_list_add(&s, &nodes[i].node);
         }
         for (i = 0; i < N; ++i) {
-            old_list_remove(&old_s, &old_nodes[i].node);
+            mln_list_remove(&s, &nodes[i].node);
         }
         t1 = now_sec();
-        old_total += t1 - t0;
-
-        /* New: inline macro */
-        mln_list_t new_s;
-        mln_list_init(&new_s);
-        t0 = now_sec();
-        for (i = 0; i < N; ++i) {
-            new_nodes[i].val = i;
-            mln_list_add(&new_s, &new_nodes[i].node);
-        }
-        for (i = 0; i < N; ++i) {
-            mln_list_remove(&new_s, &new_nodes[i].node);
-        }
-        t1 = now_sec();
-        new_total += t1 - t0;
+        total += t1 - t0;
     }
 
-    double speedup = old_total / new_total;
     printf("  Performance (%d ops x %d rounds):\n", N, rounds);
-    printf("    Old (noinline func): %.4f sec\n", old_total);
-    printf("    New (inline macro):  %.4f sec\n", new_total);
-    printf("    Speedup: %.2fx\n", speedup);
+    printf("    Total: %.4f sec\n", total);
+    printf("    Avg:   %.4f sec per round\n", total / rounds);
+    printf("    Ops:   %.0f ops/sec\n", (double)N * 2 * rounds / total);
 
-    free(old_nodes);
-    free(new_nodes);
+    free(nodes);
 }
 
 /* ============================================================ */

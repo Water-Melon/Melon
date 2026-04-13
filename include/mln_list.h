@@ -25,12 +25,16 @@ typedef struct mln_list_s {
     ((node)->prev == (sentinel) ? NULL : (node)->prev)
 
 #define mln_list_for_each(node, sentinel) \
-    for ((node) = (sentinel)->next; (node) != (sentinel); (node) = (node)->next)
+    for ((node) = (((sentinel)->next == NULL || (sentinel)->next == (sentinel)) ? NULL : (sentinel)->next); \
+         (node) != NULL; \
+         (node) = (((node)->next == (sentinel)) ? NULL : (node)->next))
 
 #define mln_list_for_each_safe(node, tmp, sentinel) \
-    for ((node) = (sentinel)->next, (tmp) = (node)->next; \
-         (node) != (sentinel); \
-         (node) = (tmp), (tmp) = (node)->next)
+    for ((node) = (((sentinel)->next == NULL || (sentinel)->next == (sentinel)) ? NULL : (sentinel)->next), \
+         (tmp) = ((node) == NULL ? NULL : (((node)->next == (sentinel)) ? NULL : (node)->next)); \
+         (node) != NULL; \
+         (node) = (tmp), \
+         (tmp) = ((node) == NULL ? NULL : (((node)->next == (sentinel)) ? NULL : (node)->next)))
 
 #define mln_list_add(_sentinel, _node) do { \
     mln_list_t *__s = (_sentinel), *__n = (_node); \
