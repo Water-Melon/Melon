@@ -128,13 +128,37 @@ int main(void)
 
 
 
+#### mln_list_init
+
+```c
+mln_list_init(s)
+```
+
+描述：初始化循环双向链表的哨兵节点`s`。这是推荐的初始化方式。
+
+返回值：无
+
+
+
+#### mln_list_null
+
+```c
+mln_list_null()
+```
+
+描述：用于以花括号初始化器的方式初始化哨兵节点（如 `mln_list_t s = mln_list_null();`）。首次 `mln_list_add` 调用时会自动升级为循环链表结构。
+
+返回值：无
+
+
+
 #### mln_list_add
 
 ```c
-void mln_list_add(mln_list_t *sentinel, mln_list_t *node);
+mln_list_add(sentinel, node)
 ```
 
-描述：将结点`node`添加到双向链表`sentinel`中。
+描述：将结点`node`添加到双向链表`sentinel`的尾部。此为内联宏实现，性能最优。
 
 返回值：无
 
@@ -143,16 +167,16 @@ void mln_list_add(mln_list_t *sentinel, mln_list_t *node);
 #### mln_list_remove
 
 ```c
-void mln_list_remove(mln_list_t *sentinel, mln_list_t *node);
+mln_list_remove(sentinel, node)
 ```
 
-描述：将结点`node`从双向链表`sentinel`中移除。
+描述：将结点`node`从双向链表`sentinel`中移除。此为内联宏实现，性能最优。
 
 返回值：无
 
 
 
-### mln_list_head
+#### mln_list_head
 
 ```c
 mln_list_head(sentinel)
@@ -172,17 +196,17 @@ mln_list_head(sentinel)
 
 描述：获得双向链表的尾结点指针。
 
-返回值：首结点指针，若无则为`NULL`
+返回值：尾结点指针，若无则为`NULL`
 
 
 
 #### mln_list_next
 
 ```c
-mln_list_next(node)
+mln_list_next(sentinel, node)
 ```
 
-描述：获得当前结点`node`的下一个结点指针。
+描述：获得链表`sentinel`中当前结点`node`的下一个结点指针。
 
 返回值：下一个结点的指针，若无则为`NULL`
 
@@ -191,22 +215,34 @@ mln_list_next(node)
 #### mln_list_prev
 
 ```c
-mln_list_prev(node)
+mln_list_prev(sentinel, node)
 ```
 
-描述：获得当前结点`node`的前一个结点指针。
+描述：获得链表`sentinel`中当前结点`node`的前一个结点指针。
 
 返回值：前一个结点的指针，若无则为`NULL`
 
 
 
-#### mln_list_null
+#### mln_list_for_each
 
 ```c
-mln_list_null()
+mln_list_for_each(node, sentinel)
 ```
 
-描述：用于对队列初始化。
+描述：遍历链表中所有结点。`node`为`mln_list_t *`类型的循环变量，`sentinel`为哨兵节点指针。遍历期间**不要**删除结点，如需删除请使用`mln_list_for_each_safe`。
+
+返回值：无
+
+
+
+#### mln_list_for_each_safe
+
+```c
+mln_list_for_each_safe(node, tmp, sentinel)
+```
+
+描述：安全地遍历链表中所有结点，支持遍历期间删除结点。`node`和`tmp`为`mln_list_t *`类型变量，`sentinel`为哨兵节点指针。
 
 返回值：无
 
@@ -218,6 +254,7 @@ mln_list_null()
 #include "mln_list.h"
 #include "mln_utils.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 typedef struct {
     int        val;
@@ -228,7 +265,8 @@ int main(void)
 {
     int i;
     test_t *t;
-    mln_list_t sentinel = mln_list_null();
+    mln_list_t sentinel;
+    mln_list_init(&sentinel);
 
     for (i = 0; i < 3; ++i) {
         t = (test_t *)calloc(1, sizeof(*t));
@@ -237,11 +275,20 @@ int main(void)
         mln_list_add(&sentinel, &t->node);
         t->val = i;
     }
-    for (t = mln_container_of(mln_list_head(&sentinel), test_t, node); \
-         t != NULL; \
-         t = mln_container_of(mln_list_next(&t->node), test_t, node))
-    {
+
+    /* 使用 for_each 遍历 */
+    mln_list_t *lnode;
+    mln_list_for_each(lnode, &sentinel) {
+        t = mln_container_of(lnode, test_t, node);
         printf("%d\n", t->val);
+    }
+
+    /* 安全删除遍历 */
+    mln_list_t *tmp;
+    mln_list_for_each_safe(lnode, tmp, &sentinel) {
+        t = mln_container_of(lnode, test_t, node);
+        mln_list_remove(&sentinel, &t->node);
+        free(t);
     }
     return 0;
 }

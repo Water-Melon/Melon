@@ -127,13 +127,37 @@ Besides functions and macros, we only need to know that if we want to use the do
 
 
 
+#### mln_list_init
+
+```c
+mln_list_init(s)
+```
+
+Description: Initialize the sentinel node `s` for the circular doubly linked list. This is the preferred initialization method.
+
+Return value: None
+
+
+
+#### mln_list_null
+
+```c
+mln_list_null()
+```
+
+Description: Used to initialize the sentinel as a brace initializer (e.g. `mln_list_t s = mln_list_null();`). The first `mln_list_add` call will automatically upgrade to circular form.
+
+Return value: None
+
+
+
 #### mln_list_add
 
 ```c
-void mln_list_add(mln_list_t *sentinel, mln_list_t *node);
+mln_list_add(sentinel, node)
 ```
 
-Description: Add the node `node` to the doubly linked list `sentinel`.
+Description: Add the node `node` to the tail of the doubly linked list `sentinel`. This is an inline macro for maximum performance.
 
 Return value: None
 
@@ -142,16 +166,16 @@ Return value: None
 #### mln_list_remove
 
 ```c
-void mln_list_remove(mln_list_t *sentinel, mln_list_t *node);
+mln_list_remove(sentinel, node)
 ```
 
-Description: Remove the node `node` from the doubly linked list `sentinel`.
+Description: Remove the node `node` from the doubly linked list `sentinel`. This is an inline macro for maximum performance.
 
 Return value: None
 
 
 
-### mln_list_head
+#### mln_list_head
 
 ```c
 mln_list_head(sentinel)
@@ -171,17 +195,17 @@ Return value: the first node pointer, or `NULL` if there is no
 
 Description: Get the tail node pointer of the doubly linked list.
 
-Return value: the first node pointer, or `NULL` if there is no
+Return value: the tail node pointer, or `NULL` if there is no
 
 
 
 #### mln_list_next
 
 ```c
-mln_list_next(node)
+mln_list_next(sentinel, node)
 ```
 
-Description: Get the next node pointer of the current node `node`.
+Description: Get the next node pointer of the current node `node` in the list `sentinel`.
 
 Return value: pointer to the next node, or `NULL` if none
 
@@ -190,22 +214,34 @@ Return value: pointer to the next node, or `NULL` if none
 #### mln_list_prev
 
 ```c
-mln_list_prev(node)
+mln_list_prev(sentinel, node)
 ```
 
-Description: Get the previous node pointer of the current node `node`.
+Description: Get the previous node pointer of the current node `node` in the list `sentinel`.
 
 Return value: pointer to the previous node, or `NULL` if none
 
 
 
-#### mln_list_null
+#### mln_list_for_each
 
 ```c
-mln_list_null()
+mln_list_for_each(node, sentinel)
 ```
 
-Description: Used to initialize the queue.
+Description: Iterate over all nodes in the list. `node` is a `mln_list_t *` loop variable, `sentinel` is a pointer to the sentinel. Do **not** remove nodes during iteration; use `mln_list_for_each_safe` instead.
+
+Return value: None
+
+
+
+#### mln_list_for_each_safe
+
+```c
+mln_list_for_each_safe(node, tmp, sentinel)
+```
+
+Description: Iterate over all nodes in the list, safe for node removal. `node` and `tmp` are `mln_list_t *` variables, `sentinel` is a pointer to the sentinel.
 
 Return value: None
 
@@ -217,6 +253,7 @@ Return value: None
 #include "mln_list.h"
 #include "mln_utils.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 typedef struct {
     int        val;
@@ -227,7 +264,8 @@ int main(void)
 {
     int i;
     test_t *t;
-    mln_list_t sentinel = mln_list_null();
+    mln_list_t sentinel;
+    mln_list_init(&sentinel);
 
     for (i = 0; i < 3; ++i) {
         t = (test_t *)calloc(1, sizeof(*t));
@@ -236,11 +274,20 @@ int main(void)
         mln_list_add(&sentinel, &t->node);
         t->val = i;
     }
-    for (t = mln_container_of(mln_list_head(&sentinel), test_t, node); \
-         t != NULL; \
-         t = mln_container_of(mln_list_next(&t->node), test_t, node))
-    {
+
+    /* Iterate using for_each */
+    mln_list_t *lnode;
+    mln_list_for_each(lnode, &sentinel) {
+        t = mln_container_of(lnode, test_t, node);
         printf("%d\n", t->val);
+    }
+
+    /* Safe removal during iteration */
+    mln_list_t *tmp;
+    mln_list_for_each_safe(lnode, tmp, &sentinel) {
+        t = mln_container_of(lnode, test_t, node);
+        mln_list_remove(&sentinel, &t->node);
+        free(t);
     }
     return 0;
 }
