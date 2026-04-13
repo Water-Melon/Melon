@@ -80,17 +80,49 @@ static mln_u8_t mln_rs_gflog[] = {
 237, 130, 111,  20,  93, 122, 177, 150
 };
 
+static mln_u8_t mln_rs_gf_mul_table[256][256];
+static mln_u8_t mln_rs_gf_inv_table[256];
+
+#if !defined(MSVC)
+static pthread_once_t mln_rs_gf_once = PTHREAD_ONCE_INIT;
+#else
+static volatile long mln_rs_gf_tables_initialized = 0;
+#endif
+
+MLN_FUNC_VOID(static, void, mln_rs_gf_do_init_tables, (void), (), {
+    int i, j;
+
+    for (i = 0; i < 256; ++i) {
+        mln_rs_gf_mul_table[i][0] = 0;
+        mln_rs_gf_mul_table[0][i] = 0;
+    }
+    for (i = 1; i < 256; ++i) {
+        for (j = 1; j < 256; ++j) {
+            mln_rs_gf_mul_table[i][j] = mln_rs_gfilog[(mln_rs_gflog[i] + mln_rs_gflog[j]) % 255];
+        }
+    }
+
+    mln_rs_gf_inv_table[0] = 0;
+    for (i = 1; i < 256; ++i) {
+        mln_rs_gf_inv_table[i] = mln_rs_gfilog[(255 - mln_rs_gflog[i]) % 255];
+    }
+})
+
+static inline void mln_rs_gf_init_tables(void)
+{
+#if !defined(MSVC)
+    pthread_once(&mln_rs_gf_once, mln_rs_gf_do_init_tables);
+#else
+    if (!mln_rs_gf_tables_initialized) {
+        mln_rs_gf_do_init_tables();
+        InterlockedExchange(&mln_rs_gf_tables_initialized, 1);
+    }
+#endif
+}
+
 #define M_RS_GF_ADDSUB(dst,src) ((dst) ^= (src))
-#define M_RS_GF_MUL(dst,src) \
-  ((dst) = (((dst) == 0 || (src) == 0)? \
-             0: \
-             mln_rs_gfilog[(mln_rs_gflog[(dst)]+mln_rs_gflog[(src)])%255]))
-#define M_RS_GF_DIV(dst,src) \
-  ((dst) = (((dst) == 0 || (src) == 0)? \
-            0: \
-            mln_rs_gfilog[ (mln_rs_gflog[(dst)]<mln_rs_gflog[(src)]? \
-                             255-(mln_rs_gflog[(src)]-mln_rs_gflog[(dst)]): \
-                             mln_rs_gflog[(dst)]-mln_rs_gflog[(src)]) ]))
+#define M_RS_GF_MUL(dst,src) ((dst) = mln_rs_gf_mul_table[(dst)][(src)])
+#define M_RS_GF_DIV(dst,src) ((dst) = mln_rs_gf_mul_table[(dst)][mln_rs_gf_inv_table[(src)]])
 
 MLN_FUNC(static inline, mln_size_t, mln_rs_power_calc, (mln_size_t base, mln_size_t exp), (base, exp), {
     mln_s32_t i;
@@ -139,8 +171,8 @@ MLN_FUNC(static inline, mln_rs_matrix_t *, mln_rs_matrix_mul, \
         errno = EINVAL;
         return NULL;
     }
-    mln_u8_t dst, src, tmp;
-    mln_u8ptr_t data;
+    mln_u8_t tmp;
+    mln_u8ptr_t data, mul_row, m2_row, row_out;
     mln_size_t i, j, k;
     mln_rs_matrix_t *ret;
     mln_size_t m1row = m1->row, m1col = m1->col, m2col = m2->col;
@@ -157,13 +189,14 @@ MLN_FUNC(static inline, mln_rs_matrix_t *, mln_rs_matrix_mul, \
     }
 
     for (i = 0; i < m1row; ++i) {
+        row_out = data + i * m2col;
         for (k = 0; k < m1col; ++k) {
-            tmp = m1data[i*m1col+k];
+            tmp = m1data[i * m1col + k];
+            if (tmp == 0) continue;
+            mul_row = mln_rs_gf_mul_table[tmp];
+            m2_row = m2data + k * m2col;
             for (j = 0; j < m2col; ++j) {
-                dst = tmp;
-                src = m2data[k*m2col+j];
-                M_RS_GF_MUL(dst, src);
-                M_RS_GF_ADDSUB(data[i*m2col+j], dst);
+                row_out[j] ^= mul_row[m2_row[j]];
             }
         }
     }
@@ -180,7 +213,8 @@ MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_inverse, \
     }
     mln_rs_matrix_t *ret;
     register mln_u8ptr_t data, origin = matrix->data;
-    mln_u8_t tmp, dst;
+    mln_u8_t tmp, inv_tmp;
+    mln_u8ptr_t mul_row;
     mln_size_t i, j, k, m;
     mln_size_t n = matrix->row * matrix->col;
     mln_size_t len = matrix->row;
@@ -227,58 +261,25 @@ MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_inverse, \
             return NULL;
         }
 
-        tmp = origin[i + m];
+        inv_tmp = mln_rs_gf_inv_table[origin[i + m]];
         for (j = 0; j < len; ++j) {
-            M_RS_GF_DIV(origin[i + j], tmp);
-            M_RS_GF_DIV(data[i + j], tmp);
+            origin[i + j] = mln_rs_gf_mul_table[origin[i + j]][inv_tmp];
+            data[i + j] = mln_rs_gf_mul_table[data[i + j]][inv_tmp];
         }
         for (j = 0; j < n; j += len) {
             if (j != i) {
                 tmp = origin[j + m];
+                if (tmp == 0) continue;
+                mul_row = mln_rs_gf_mul_table[tmp];
                 for (k = 0; k < len; ++k) {
-                    dst = origin[i + k];
-                    M_RS_GF_MUL(dst, tmp);
-                    M_RS_GF_ADDSUB(origin[j + k], dst);
-                    dst = data[i + k];
-                    M_RS_GF_MUL(dst, tmp);
-                    M_RS_GF_ADDSUB(data[j + k], dst);
+                    origin[j + k] ^= mul_row[origin[i + k]];
+                    data[j + k] ^= mul_row[data[i + k]];
                 }
             }
         }
     }
 
     return ret;
-})
-
-MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_co_matrix, \
-         (mln_size_t row, mln_size_t addition_row), (row, addition_row), \
-{
-    mln_u8ptr_t data, p;
-    mln_size_t i, j, k;
-    mln_rs_matrix_t *matrix;
-
-    if ((data = (mln_u8ptr_t)malloc((row+addition_row)*row)) == NULL) {
-        errno = ENOMEM;
-        return NULL;
-    }
-
-    for (i = 0, p = data; i < row; ++i) {
-        for (k = 0; k < row; ++k) {
-            *p++ = k==i? 1: 0;
-        }
-    }
-    for (j = 1; i < row+addition_row; ++i, ++j) {
-        for (k = 1; k <= row; ++k) {
-            *p++ = (mln_u8_t)mln_rs_power_calc(k, j-1);
-        }
-    }
-
-    if ((matrix = mln_rs_matrix_new(row+addition_row, row, data, 0)) == NULL) {
-        free(data);
-        errno = ENOMEM;
-        return NULL;
-    }
-    return matrix;
 })
 
 MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_co_inverse_matrix, \
@@ -396,6 +397,33 @@ MLN_FUNC_VOID(, void, mln_rs_result_free, (mln_rs_result_t *result), (result), {
     free(result);
 })
 
+MLN_FUNC(static, mln_rs_matrix_t *, mln_rs_matrix_parity_matrix, \
+         (mln_size_t n, mln_size_t k), (n, k), \
+{
+    mln_u8ptr_t data, p;
+    mln_size_t i, j;
+    mln_rs_matrix_t *matrix;
+
+    if ((data = (mln_u8ptr_t)malloc(k * n)) == NULL) {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    p = data;
+    for (i = 0; i < k; ++i) {
+        for (j = 1; j <= n; ++j) {
+            *p++ = (mln_u8_t)mln_rs_power_calc(j, i);
+        }
+    }
+
+    if ((matrix = mln_rs_matrix_new(k, n, data, 0)) == NULL) {
+        free(data);
+        errno = ENOMEM;
+        return NULL;
+    }
+    return matrix;
+})
+
 /*
  * Reed-Solomon operations
  */
@@ -404,37 +432,49 @@ MLN_FUNC(, mln_rs_result_t *, mln_rs_encode, \
          (data_vector, len, n, k), \
 {
     mln_rs_result_t *result;
-    mln_rs_matrix_t *matrix, *co_matrix, *res_matrix;
+    mln_rs_matrix_t *data_matrix, *parity_co, *parity_result;
+    mln_u8ptr_t output;
 
     if (data_vector == NULL || !len || !n || !k) {
         errno = EINVAL;
         return NULL;
     }
 
-    if ((matrix = mln_rs_matrix_new(n, len, data_vector, 1)) == NULL) {
-        errno = ENOMEM;
-        return NULL;
-    }
-    if ((co_matrix = mln_rs_matrix_co_matrix(n, k)) == NULL) {
-        mln_rs_matrix_free(matrix);
-        errno = ENOMEM;
-        return NULL;
-    }
-    res_matrix = mln_rs_matrix_mul(co_matrix, matrix);
-    mln_rs_matrix_free(matrix);
-    mln_rs_matrix_free(co_matrix);
-    if (res_matrix == NULL) {
-        errno = ENOMEM;
-        return NULL;
-    }
+    mln_rs_gf_init_tables();
 
-    if ((result = mln_rs_result_new(res_matrix->data, n+k, (n+k)*len)) == NULL) {
-        mln_rs_matrix_free(res_matrix);
+    if ((output = (mln_u8ptr_t)malloc((n + k) * len)) == NULL) {
         errno = ENOMEM;
         return NULL;
     }
-    res_matrix->is_ref = 1;
-    mln_rs_matrix_free(res_matrix);
+    memcpy(output, data_vector, n * len);
+
+    if ((parity_co = mln_rs_matrix_parity_matrix(n, k)) == NULL) {
+        free(output);
+        errno = ENOMEM;
+        return NULL;
+    }
+    if ((data_matrix = mln_rs_matrix_new(n, len, data_vector, 1)) == NULL) {
+        mln_rs_matrix_free(parity_co);
+        free(output);
+        errno = ENOMEM;
+        return NULL;
+    }
+    parity_result = mln_rs_matrix_mul(parity_co, data_matrix);
+    mln_rs_matrix_free(data_matrix);
+    mln_rs_matrix_free(parity_co);
+    if (parity_result == NULL) {
+        free(output);
+        errno = ENOMEM;
+        return NULL;
+    }
+    memcpy(output + n * len, parity_result->data, k * len);
+    mln_rs_matrix_free(parity_result);
+
+    if ((result = mln_rs_result_new(output, n + k, (n + k) * len)) == NULL) {
+        free(output);
+        errno = ENOMEM;
+        return NULL;
+    }
     return result;
 })
 
@@ -449,6 +489,9 @@ MLN_FUNC(, mln_rs_result_t *, mln_rs_decode, \
         errno = EINVAL;
         return NULL;
     }
+
+    mln_rs_gf_init_tables();
+
     if (!k) {
         if ((data = (mln_u8ptr_t)malloc(len*n)) == NULL) {
             errno = ENOMEM;
