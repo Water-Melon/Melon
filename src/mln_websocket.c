@@ -26,6 +26,9 @@ static int mln_websocket_iterate_set_fields(mln_hash_t *h, void *key, void *val,
 static mln_string_t *mln_websocket_client_handshake_key_generate(mln_alloc_t *pool);
 static mln_string_t *mln_websocket_extension_tokens(mln_alloc_t *pool, mln_string_t *in);
 static mln_u32_t mln_websocket_masking_key_generate(void);
+static int mln_websocket_is_valid_status_code(mln_u16_t status);
+static int mln_websocket_is_valid_utf8(mln_u8ptr_t data, mln_size_t len);
+static void mln_websocket_unmask_xor4(mln_u8ptr_t data, mln_size_t len, mln_u32_t masking_key);
 
 MLN_FUNC(, int, mln_websocket_init, (mln_websocket_t *ws, mln_http_t *http), (ws, http), {
     struct mln_hash_attr hattr;
@@ -88,7 +91,7 @@ MLN_FUNC(, mln_websocket_t *, mln_websocket_new, (mln_http_t *http), (http), {
     mln_websocket_t *ws = (mln_websocket_t *)mln_alloc_m(mln_http_pool_get(http), sizeof(mln_websocket_t));
     if (ws == NULL) return NULL;
     if (mln_websocket_init(ws, http) < 0) {
-        free(ws);
+        mln_alloc_free(ws);
         return NULL;
     }
     return ws;
@@ -161,12 +164,13 @@ MLN_FUNC(, int, mln_websocket_validate, (mln_websocket_t *ws), (ws), {
     mln_string_t upgrade_key = mln_string("Upgrade");
     mln_string_t upgrade_val = mln_string("websocket");
     mln_string_t connection_key = mln_string("Connection");
+    mln_string_t upgrade_str = mln_string("Upgrade");
     mln_string_t *tmp;
 
     tmp = mln_http_field_get(http, &upgrade_key);
     if (tmp == NULL || mln_string_strcasecmp(tmp, &upgrade_val)) return M_WS_RET_NOTWS;
     tmp = mln_http_field_get(http, &connection_key);
-    if (tmp == NULL || mln_string_strcasecmp(tmp, &upgrade_key)) return M_WS_RET_NOTWS;
+    if (tmp == NULL || mln_string_strstr(tmp, &upgrade_str) == NULL) return M_WS_RET_NOTWS;
     int ret = mln_websocket_validate_accept(http, ws->key);
     if (ret != M_WS_RET_OK) return ret;
     if (mln_http_type_get(http) != M_HTTP_RESPONSE) return M_WS_RET_ERROR;
@@ -360,7 +364,7 @@ MLN_FUNC(static, mln_string_t *, mln_websocket_extension_tokens, \
         }
         buf[size++] = ',';
     }
-    buf[--size] = '0';
+    buf[--size] = '\0';
     mln_string_slice_free(array);
     mln_string_free(tmp);
 
@@ -633,6 +637,68 @@ MLN_FUNC(, int, mln_websocket_pong_generate, \
     return mln_websocket_generate(ws, out_cnode);
 })
 
+MLN_FUNC(static, int, mln_websocket_is_valid_status_code, (mln_u16_t status), (status), {
+    if (status >= 1000 && status <= 1003) return 1;
+    if (status == 1004) return 0;
+    if (status == 1005 || status == 1006) return 0;
+    if (status >= 1007 && status <= 1011) return 1;
+    if (status >= 1012 && status <= 1014) return 1;
+    if (status == 1015) return 0;
+    if (status >= 3000 && status <= 3999) return 1;
+    if (status >= 4000 && status <= 4999) return 1;
+    return 0;
+})
+
+MLN_FUNC(static, int, mln_websocket_is_valid_utf8, (mln_u8ptr_t data, mln_size_t len), (data, len), {
+    mln_size_t i = 0;
+    mln_u8_t byte;
+    while (i < len) {
+        byte = data[i];
+        if ((byte & 0x80) == 0) {
+            i += 1;
+        } else if ((byte & 0xE0) == 0xC0) {
+            if (i + 1 >= len) return 0;
+            if ((data[i+1] & 0xC0) != 0x80) return 0;
+            i += 2;
+        } else if ((byte & 0xF0) == 0xE0) {
+            if (i + 2 >= len) return 0;
+            if ((data[i+1] & 0xC0) != 0x80) return 0;
+            if ((data[i+2] & 0xC0) != 0x80) return 0;
+            i += 3;
+        } else if ((byte & 0xF8) == 0xF0) {
+            if (i + 3 >= len) return 0;
+            if ((data[i+1] & 0xC0) != 0x80) return 0;
+            if ((data[i+2] & 0xC0) != 0x80) return 0;
+            if ((data[i+3] & 0xC0) != 0x80) return 0;
+            i += 4;
+        } else {
+            return 0;
+        }
+    }
+    return 1;
+})
+
+MLN_FUNC(static, void, mln_websocket_unmask_xor4, (mln_u8ptr_t data, mln_size_t len, mln_u32_t masking_key), (data, len, masking_key), {
+    mln_size_t i = 0;
+    mln_u8_t tmpkey[4];
+    tmpkey[0] = (masking_key >> 24) & 0xff;
+    tmpkey[1] = (masking_key >> 16) & 0xff;
+    tmpkey[2] = (masking_key >> 8) & 0xff;
+    tmpkey[3] = masking_key & 0xff;
+
+    mln_size_t aligned = len & ~3;
+    mln_u32_t *ptr32 = (mln_u32_t *)data;
+    mln_u32_t *key32 = (mln_u32_t *)tmpkey;
+    mln_size_t j;
+    for (j = 0; j < aligned; j += 4) {
+        ptr32[j/4] ^= *key32;
+    }
+
+    for (i = aligned; i < len; ++i) {
+        data[i] ^= tmpkey[i % 4];
+    }
+})
+
 MLN_FUNC(static, mln_u32_t, mln_websocket_masking_key_generate, (void), (), {
     struct timeval tv;
     mln_uauto_t tmp = (mln_uauto_t)&tv;
@@ -747,8 +813,21 @@ MLN_FUNC(, int, mln_websocket_generate, \
             *p++ = ((mln_websocket_get_status(ws) >> 8) & 0xff) ^ tmpkey[i++%4];
             *p++ = (mln_websocket_get_status(ws) & 0xff) ^ tmpkey[i++%4];
         }
-        for (j = 0; i < clen; ++i, ++j) {
-            *p++ = pc[j] ^ tmpkey[i%4];
+
+        mln_size_t remaining = clen - (opcode == M_WS_OPCODE_CLOSE ? 2 : 0);
+        mln_size_t aligned = remaining & ~3;
+        mln_size_t k;
+        mln_u32_t *ptr32 = (mln_u32_t *)p;
+        mln_u32_t *src32 = (mln_u32_t *)pc;
+        mln_u32_t key32 = m;
+
+        for (k = 0; k < aligned; k += 4) {
+            ptr32[k/4] = src32[k/4] ^ key32;
+        }
+        p += aligned;
+
+        for (j = aligned; j < remaining; ++j) {
+            *p++ = pc[j] ^ tmpkey[j%4];
         }
     } else {
         if (opcode == M_WS_OPCODE_CLOSE) {
@@ -851,6 +930,9 @@ againm:
     }
 
     if (len) {
+        if ((b1 & 0xf) >= M_WS_OPCODE_CLOSE && len > 125) {
+            return M_WS_RET_ERROR;
+        }
         if ((b1&0xf) == M_WS_OPCODE_CLOSE && len > 1) {
             mln_u16_t status = 0;
 
@@ -926,22 +1008,48 @@ againc:
 
     if (mln_websocket_get_maskbit(ws)) {
         mln_u8_t tmpkey[4];
-        mln_u16_t status = mln_websocket_get_status(ws);
+        mln_u16_t close_status = mln_websocket_get_status(ws);
         tmpkey[0] = (masking_key >> 24) & 0xff;
         tmpkey[1] = (masking_key >> 16) & 0xff;
         tmpkey[2] = (masking_key >> 8) & 0xff;
         tmpkey[3] = masking_key & 0xff;
-        i = 0;
-        if (mln_websocket_get_opcode(ws) == M_WS_OPCODE_CLOSE && status != 0) {
-            status = ((((status >> 8) & 0xff) ^ tmpkey[i++%4]) << 8) | (status & 0xff);
-            status = (((status >> 8) & 0xff) << 8) | ((status & 0xff) ^ tmpkey[i++%4]);
-            mln_websocket_set_status(ws, status);
+        if (mln_websocket_get_opcode(ws) == M_WS_OPCODE_CLOSE && close_status != 0) {
+            mln_u16_t unmasked_status = (mln_u16_t)((((close_status >> 8) & 0xff) ^ tmpkey[0]) << 8) | \
+                                        (mln_u16_t)(((close_status & 0xff) ^ tmpkey[1]) & 0xff);
+            if (!mln_websocket_is_valid_status_code(unmasked_status)) {
+                if (content != NULL) mln_alloc_free(content);
+                return M_WS_RET_ERROR;
+            }
+            mln_websocket_set_status(ws, unmasked_status);
         }
-        if (content != NULL) {
-            for (tmp = 0; tmp < len; ++tmp) {
-                content[tmp] ^= tmpkey[i++%4];
+        if (content != NULL && len > 0) {
+            mln_websocket_unmask_xor4(content, len, masking_key);
+        }
+    } else {
+        if ((b1 & 0x40) || (b1 & 0x20) || (b1 & 0x10)) {
+            if (mln_websocket_get_ext_handler(ws) == NULL) {
+                if (content != NULL) mln_alloc_free(content);
+                return M_WS_RET_ERROR;
             }
         }
+        if ((b1 & 0xf) == M_WS_OPCODE_CLOSE && mln_websocket_get_status(ws) != 0) {
+            if (!mln_websocket_is_valid_status_code(mln_websocket_get_status(ws))) {
+                if (content != NULL) mln_alloc_free(content);
+                return M_WS_RET_ERROR;
+            }
+        }
+    }
+
+    if ((b1 & 0xf) == M_WS_OPCODE_TEXT && content != NULL && len > 0) {
+        if (!mln_websocket_is_valid_utf8(content, len)) {
+            if (content != NULL) mln_alloc_free(content);
+            return M_WS_RET_ERROR;
+        }
+    }
+
+    if ((b1 & 0xf) >= M_WS_OPCODE_CLOSE && !mln_websocket_get_fin(ws)) {
+        if (content != NULL) mln_alloc_free(content);
+        return M_WS_RET_ERROR;
     }
 
     if (mln_websocket_get_ext_handler(ws) != NULL) {

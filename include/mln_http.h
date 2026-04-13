@@ -11,7 +11,7 @@
 #include "mln_alloc.h"
 
 #define M_HTTP_HASH_LEN                        31
-#define M_HTTP_GENERATE_ALLOC_SIZE             1024
+#define M_HTTP_GENERATE_ALLOC_SIZE             4096
 
 /*http type*/
 #define M_HTTP_UNKNOWN                         0

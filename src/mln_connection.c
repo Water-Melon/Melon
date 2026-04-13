@@ -70,6 +70,7 @@ MLN_FUNC(, int, mln_tcp_conn_init, (mln_tcp_conn_t *tc, int sockfd), (tc, sockfd
     tc->snd_head = tc->snd_tail = NULL;
     tc->sent_head = tc->sent_tail = NULL;
     tc->sockfd = sockfd;
+    tc->nonblock = mln_fd_is_nonblock(sockfd);
     return 0;
 })
 
@@ -257,7 +258,7 @@ MLN_FUNC(static inline, int, mln_tcp_conn_send_chain_memory, (mln_tcp_conn_t *tc
     int proc_vec, nvec = 256;
     struct iovec vector[256];
 
-    if (mln_fd_is_nonblock(tc->sockfd)) {
+    if (tc->nonblock) {
         while (1) {
             proc_vec = 0;
             for (c = tc->snd_head; c != NULL; c = c->next) {
@@ -368,14 +369,14 @@ blk:
 #else
 static inline int mln_tcp_conn_send_chain_memory(mln_tcp_conn_t *tc)
 {
-    mln_u8_t buf[8192], *p;
+    mln_u8_t buf[16384], *p;
     mln_chain_t *c;
     mln_buf_t *b;
     mln_size_t left_size;
     register mln_size_t buf_left_size;
     int n, is_done = 0;
 
-    if (mln_fd_is_nonblock(tc->sockfd)) {
+    if (tc->nonblock) {
         while (1) {
             p = buf;
             left_size = sizeof(buf);
@@ -509,7 +510,7 @@ MLN_FUNC(static inline, int, mln_tcp_conn_send_chain_file, (mln_tcp_conn_t *tc),
     mln_buf_t *b;
     mln_size_t buf_left_size;
 
-    if (mln_fd_is_nonblock(sockfd)) {
+    if (tc->nonblock) {
         while ((c = tc->snd_head) != NULL) {
             if ((b = c->buf) == NULL) {
                 c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
@@ -579,10 +580,10 @@ static inline int mln_tcp_conn_send_chain_file(mln_tcp_conn_t *tc)
     int n;
     mln_buf_t *b;
     mln_chain_t *c;
-    mln_u8_t buf[4096];
+    mln_u8_t buf[16384];
     mln_size_t len, buf_left_size;
 
-    if (mln_fd_is_nonblock(sockfd)) {
+    if (tc->nonblock) {
         while ((c = tc->snd_head) != NULL) {
             if ((b = c->buf) == NULL) {
                 c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
@@ -708,12 +709,30 @@ MLN_FUNC(static inline, mln_chain_t *, mln_tcp_conn_pop_inline, \
     return rc;
 })
 
+MLN_FUNC_VOID(, void, mln_tcp_conn_move_sent, (mln_tcp_conn_t *tc), (tc), {
+    if (tc->snd_head == NULL) return;
+
+    if (tc->sent_tail == NULL) {
+        tc->sent_head = tc->snd_head;
+        tc->sent_tail = tc->snd_tail;
+    } else {
+        tc->sent_tail->next = tc->snd_head;
+        tc->sent_tail = tc->snd_tail;
+    }
+    tc->snd_head = tc->snd_tail = NULL;
+})
+
+MLN_FUNC(, int, mln_tcp_conn_send_chain, (mln_tcp_conn_t *tc, mln_chain_t *chain), (tc, chain), {
+    mln_tcp_conn_append_chain(tc, chain, NULL, M_C_SEND);
+    return mln_tcp_conn_send(tc);
+})
+
 MLN_FUNC(, int, mln_tcp_conn_recv, (mln_tcp_conn_t *tc, mln_u32_t flag), (tc, flag), {
     ASSERT(flag == M_C_TYPE_MEMORY || flag == M_C_TYPE_FILE);
 
     int n;
 
-    if (mln_fd_is_nonblock(tc->sockfd)) {
+    if (tc->nonblock) {
 goon_non:
         while ((n = mln_tcp_conn_recv_chain(tc, flag)) > 0) {
             /*do nothing*/
@@ -730,7 +749,7 @@ goon_blk:
     }
 
     if (errno == EINTR) {
-        if (mln_fd_is_nonblock(tc->sockfd)) {
+        if (tc->nonblock) {
             goto goon_non;
         } else {
             goto goon_blk;
@@ -784,7 +803,7 @@ MLN_FUNC(static inline, int, mln_tcp_conn_recv_chain, \
 static inline int mln_tcp_conn_recv_chain_file(int sockfd, mln_alloc_t *pool, mln_buf_t *b, mln_buf_t *last)
 {
     int n;
-    mln_u8_t buf[1024];
+    mln_u8_t buf[8192];
 
 #if defined(MSVC)
     n = recv(sockfd, (char *)buf, sizeof(buf), 0);
@@ -819,16 +838,16 @@ static inline int mln_tcp_conn_recv_chain_mem(int sockfd, mln_alloc_t *pool, mln
     mln_u8ptr_t buf;
     int n;
 
-    buf = (mln_u8ptr_t)mln_alloc_m(pool, 1024);
+    buf = (mln_u8ptr_t)mln_alloc_m(pool, 4096);
     if (buf == NULL) {
         errno = ENOMEM;
         return -1;
     }
 
 #if defined(MSVC)
-    n = recv(sockfd, (char *)buf, 1024, 0);
+    n = recv(sockfd, (char *)buf, 4096, 0);
 #else
-    n = recv(sockfd, buf, 1024, 0);
+    n = recv(sockfd, buf, 4096, 0);
 #endif
     if (n <= 0) {
         mln_alloc_free(buf);

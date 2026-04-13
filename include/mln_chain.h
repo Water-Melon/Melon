@@ -58,8 +58,29 @@ typedef struct mln_chain_s {
     }\
 }
 
-extern mln_buf_t *mln_buf_new(mln_alloc_t *pool);
+/*
+ * Inline mln_buf_new for performance - avoids function call overhead
+ * on the hot allocation path.
+ */
+static inline mln_buf_t *mln_buf_new(mln_alloc_t *pool)
+{
+    mln_buf_t *b = mln_alloc_m(pool, sizeof(mln_buf_t));
+    if (b == NULL) return NULL;
+    b->left_pos = b->pos = b->last = NULL;
+    b->start = b->end = NULL;
+    b->shadow = NULL;
+    b->file_left_pos = b->file_pos = b->file_last = 0;
+    b->file = NULL;
+    b->temporary = b->in_memory = b->in_file = 0;
+#if !defined(MSVC) && defined(MLN_MMAP)
+    b->mmap = 0;
+#endif
+    b->flush = b->sync = b->last_buf = b->last_in_chain = 0;
+    return b;
+}
+
 extern mln_chain_t *mln_chain_new(mln_alloc_t *pool);
+extern mln_chain_t *mln_chain_new_with_buf(mln_alloc_t *pool);
 extern void mln_buf_pool_release(mln_buf_t *b);
 extern void mln_chain_pool_release(mln_chain_t *c);
 extern void mln_chain_pool_release_all(mln_chain_t *c);

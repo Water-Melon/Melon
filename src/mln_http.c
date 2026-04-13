@@ -123,6 +123,27 @@ mln_http_map_t mln_http_status[] = {
 {mln_string("Unparseable Response Headers"),    mln_string("600"), M_HTTP_UNPARSEABLE_RESPONSE_HEADERS}
 };
 
+/* Fast lookup table for common status codes */
+static struct {
+    mln_u32_t code;
+    mln_http_map_t *map_entry;
+} mln_http_status_lookup_table[] = {
+    {M_HTTP_CONTINUE, &mln_http_status[0]},
+    {M_HTTP_OK, &mln_http_status[3]},
+    {M_HTTP_CREATED, &mln_http_status[4]},
+    {M_HTTP_NO_CONTENT, &mln_http_status[7]},
+    {M_HTTP_MOVED_PERMANENTLY, &mln_http_status[11]},
+    {M_HTTP_MOVED_TEMPORARILY, &mln_http_status[12]},
+    {M_HTTP_BAD_REQUEST, &mln_http_status[18]},
+    {M_HTTP_UNAUTHORIZED, &mln_http_status[19]},
+    {M_HTTP_FORBIDDEN, &mln_http_status[21]},
+    {M_HTTP_NOT_FOUND, &mln_http_status[22]},
+    {M_HTTP_INTERNAL_SERVER_ERROR, &mln_http_status[43]},
+    {M_HTTP_NOT_IMPLEMENTED, &mln_http_status[44]},
+    {M_HTTP_BAD_GATEWAY, &mln_http_status[45]},
+    {M_HTTP_SERVICE_UNAVAILABLE, &mln_http_status[46]},
+};
+
 
 MLN_FUNC(, int, mln_http_parse, (mln_http_t *http, mln_chain_t **in), (http, in), {
     if (http == NULL) return M_HTTP_RET_ERROR;
@@ -160,15 +181,18 @@ MLN_FUNC(static inline, int, mln_http_line_length, \
             in = in->next;
             continue;
         }
-        for (p = b->left_pos, end = b->last; p < end; ++p) {
-            if (*p == (mln_u8_t)'\n') break;
-            ++length;
+        /* Use memchr for fast newline search instead of byte-by-byte loop */
+        end = b->last;
+        p = (mln_u8ptr_t)memchr((void *)b->left_pos, '\n', end - b->left_pos);
+        if (p != NULL) {
+            /* Found newline in this buffer */
+            length += (p - b->left_pos);
+            *len = length;
+            return M_HTTP_RET_DONE;
         }
-        if (p >= end) {
-            in = in->next;
-            continue;
-        }
-        break;
+        /* Newline not found, count all remaining bytes and continue */
+        length += (end - b->left_pos);
+        in = in->next;
     }
     if (in == NULL) return M_HTTP_RET_OK;
 
@@ -183,10 +207,50 @@ MLN_FUNC(static inline, int, mln_http_process_line, \
     int ret;
     mln_buf_t *b;
     mln_chain_t *c;
-    mln_u8ptr_t buf, p, last;
+    mln_u8ptr_t buf, p, last, line_buf;
     mln_alloc_t *pool = mln_http_pool_get(http);
     mln_u32_t type = mln_http_type_get(http);
+    mln_size_t actual_len = len;
+    int need_free = 1;
 
+    /* Fast path: Check if line fits in a single buffer without allocation */
+    c = *in;
+    if (c != NULL) {
+        b = c->buf;
+        if (b != NULL && !b->in_file && mln_buf_left_size(b) > 0) {
+            mln_u8ptr_t end = b->last;
+            mln_u8ptr_t newline_pos = (mln_u8ptr_t)memchr((void *)b->left_pos, '\n', end - b->left_pos);
+
+            if (newline_pos != NULL && newline_pos - b->left_pos == len) {
+                /* Line is entirely in this buffer - zero-copy path */
+                line_buf = b->left_pos;
+                need_free = 0;
+
+                /* Skip past the newline */
+                b->left_pos = newline_pos + 1;
+
+                /* Handle CRLF by checking for \r before \n */
+                if (actual_len > 0 && line_buf[actual_len - 1] == '\r') {
+                    actual_len--;
+                }
+
+                /* Check for empty line (signals end of headers) */
+                if (actual_len == 0) {
+                    mln_http_done_set(http, 1);
+                    return M_HTTP_RET_OK;
+                }
+
+                if (type == M_HTTP_UNKNOWN) {
+                    ret = mln_http_parse_headline(http, line_buf, actual_len);
+                } else {
+                    ret = mln_http_parse_field(http, line_buf, actual_len);
+                }
+                return ret;
+            }
+        }
+    }
+
+    /* Slow path: allocate buffer for multi-buffer or complex cases */
     buf = (mln_u8ptr_t)mln_alloc_m(pool, len+1);
     if (buf == NULL) {
         mln_http_error_set(http, M_HTTP_INTERNAL_SERVER_ERROR);
@@ -194,6 +258,7 @@ MLN_FUNC(static inline, int, mln_http_process_line, \
     }
     buf[len] = 0;
     p = buf;
+    line_buf = buf;
 
     while ((c = *in) != NULL) {
         b = c->buf;
@@ -212,27 +277,27 @@ MLN_FUNC(static inline, int, mln_http_process_line, \
         }
     }
 
-    for (last = buf + len - 1; last > buf; --last, --len) {
+    for (last = buf + len - 1; last > buf; --last, --actual_len) {
         if (*last != 0) break;
     }
-    if (len == 0 || (len == 1 && buf[0] == '\r')) {
+    if (actual_len == 0 || (actual_len == 1 && buf[0] == '\r')) {
         mln_alloc_free(buf);
         mln_http_done_set(http, 1);
         return M_HTTP_RET_OK;
     }
 
-    if (buf[len-1] == '\r') {
-        buf[len-1] = 0;
-        --len;
+    if (buf[actual_len-1] == '\r') {
+        buf[actual_len-1] = 0;
+        --actual_len;
     }
 
     if (type == M_HTTP_UNKNOWN) {
-        ret = mln_http_parse_headline(http, buf, len);
+        ret = mln_http_parse_headline(http, buf, actual_len);
     } else {
-        ret = mln_http_parse_field(http, buf, len);
+        ret = mln_http_parse_field(http, buf, actual_len);
     }
 
-    mln_alloc_free(buf);
+    if (need_free) mln_alloc_free(buf);
 
     return ret;
 })
@@ -260,15 +325,24 @@ MLN_FUNC(static inline, int, mln_http_parse_headline, \
             break;
     }
     mln_string_nset(&tmp, buf, p-buf);
-    send = http_version + sizeof(http_version)/sizeof(mln_string_t);
-    for (scan = http_version; scan < send; ++scan) {
-        if (!mln_string_strcasecmp(&tmp, scan)) break;
-    }
-    if (scan < send) {
-        type = M_HTTP_RESPONSE;
-        mln_http_type_set(http, M_HTTP_RESPONSE);
-        mln_http_version_set(http, scan - http_version);
+
+    /* Optimized dispatch: Check for HTTP/x.x version first (starts with "HTTP/") */
+    if (tmp.len >= 5 && (buf[0] == 'H' || buf[0] == 'h') && buf[4] == '/') {
+        /* Fast path for HTTP version strings */
+        send = http_version + sizeof(http_version)/sizeof(mln_string_t);
+        for (scan = http_version; scan < send; ++scan) {
+            if (!mln_string_strcasecmp(&tmp, scan)) break;
+        }
+        if (scan < send) {
+            type = M_HTTP_RESPONSE;
+            mln_http_type_set(http, M_HTTP_RESPONSE);
+            mln_http_version_set(http, scan - http_version);
+        } else {
+            mln_http_error_set(http, M_HTTP_BAD_REQUEST);
+            return M_HTTP_RET_ERROR;
+        }
     } else {
+        /* Check for HTTP methods */
         send = http_method + sizeof(http_method)/sizeof(mln_string_t);
         for (scan = http_method; scan < send; ++scan) {
             if (!mln_string_strcasecmp(&tmp, scan)) break;
@@ -277,7 +351,7 @@ MLN_FUNC(static inline, int, mln_http_parse_headline, \
             type = M_HTTP_REQUEST;
             mln_http_type_set(http, M_HTTP_REQUEST);
             mln_http_method_set(http, scan - http_method);
-        } else { 
+        } else {
             mln_http_error_set(http, M_HTTP_BAD_REQUEST);
             return M_HTTP_RET_ERROR;
         }
@@ -700,15 +774,27 @@ MLN_FUNC(static inline, int, mln_http_generate_version, \
 
 MLN_FUNC(static inline, int, mln_http_generate_status, (struct mln_http_chain_s *hc), (hc), {
     mln_u32_t status = mln_http_status_get(hc->http);
-    mln_http_map_t *map = mln_http_status;
-    mln_http_map_t *end = mln_http_status + sizeof(mln_http_status)/sizeof(mln_http_map_t);
+    mln_http_map_t *map = NULL;
+    int i;
 
-    for (; map < end; ++map) {
-        if (status == map->code) break;
+    /* Fast path: check lookup table for common codes */
+    for (i = 0; i < (int)(sizeof(mln_http_status_lookup_table)/sizeof(mln_http_status_lookup_table[0])); ++i) {
+        if (mln_http_status_lookup_table[i].code == status) {
+            map = mln_http_status_lookup_table[i].map_entry;
+            break;
+        }
     }
-    if (map >= end) {
-        mln_http_error_set(hc->http, M_HTTP_UNPARSEABLE_RESPONSE_HEADERS);
-        return M_HTTP_RET_ERROR;
+
+    /* Fallback: linear scan for uncommon codes */
+    if (map == NULL) {
+        mln_http_map_t *end = mln_http_status + sizeof(mln_http_status)/sizeof(mln_http_map_t);
+        for (map = mln_http_status; map < end; ++map) {
+            if (status == map->code) break;
+        }
+        if (map >= end) {
+            mln_http_error_set(hc->http, M_HTTP_UNPARSEABLE_RESPONSE_HEADERS);
+            return M_HTTP_RET_ERROR;
+        }
     }
 
     if (mln_http_generate_write(hc, map->code_str.data, map->code_str.len) == M_HTTP_RET_ERROR)
@@ -986,12 +1072,18 @@ MLN_FUNC_VOID(static, void, mln_http_hash_free, (void *data), (data), {
 })
 
 MLN_FUNC(static, mln_u64_t, mln_http_hash_calc, (mln_hash_t *h, void *key), (h, key), {
-    mln_u64_t index = 0;
+    /* FNV-1a inspired hash with case-insensitive lowercase normalization */
+    mln_u64_t index = 0x811c9dc5UL;  /* FNV offset basis */
     mln_string_t *s = (mln_string_t *)key;
     mln_u8ptr_t p, end = s->data + s->len;
 
     for (p = s->data; p < end; ++p) {
-        index += (((mln_u64_t)(*p)) * 3);
+        /* Case-insensitive: normalize to lowercase */
+        mln_u8_t c = *p;
+        if (c >= 'A' && c <= 'Z') c += 0x20;
+
+        index ^= c;
+        index *= 0x01000193UL;  /* FNV prime */
     }
 
     return index % h->len;
