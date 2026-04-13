@@ -82,11 +82,15 @@ static mln_u8_t mln_rs_gflog[] = {
 
 static mln_u8_t mln_rs_gf_mul_table[256][256];
 static mln_u8_t mln_rs_gf_inv_table[256];
-static int mln_rs_gf_tables_initialized = 0;
 
-MLN_FUNC_VOID(static, void, mln_rs_gf_init_tables, (void), (), {
+#if !defined(MSVC)
+static pthread_once_t mln_rs_gf_once = PTHREAD_ONCE_INIT;
+#else
+static volatile long mln_rs_gf_tables_initialized = 0;
+#endif
+
+MLN_FUNC_VOID(static, void, mln_rs_gf_do_init_tables, (void), (), {
     int i, j;
-    if (mln_rs_gf_tables_initialized) return;
 
     for (i = 0; i < 256; ++i) {
         mln_rs_gf_mul_table[i][0] = 0;
@@ -102,9 +106,19 @@ MLN_FUNC_VOID(static, void, mln_rs_gf_init_tables, (void), (), {
     for (i = 1; i < 256; ++i) {
         mln_rs_gf_inv_table[i] = mln_rs_gfilog[(255 - mln_rs_gflog[i]) % 255];
     }
-
-    mln_rs_gf_tables_initialized = 1;
 })
+
+static inline void mln_rs_gf_init_tables(void)
+{
+#if !defined(MSVC)
+    pthread_once(&mln_rs_gf_once, mln_rs_gf_do_init_tables);
+#else
+    if (!mln_rs_gf_tables_initialized) {
+        mln_rs_gf_do_init_tables();
+        InterlockedExchange(&mln_rs_gf_tables_initialized, 1);
+    }
+#endif
+}
 
 #define M_RS_GF_ADDSUB(dst,src) ((dst) ^= (src))
 #define M_RS_GF_MUL(dst,src) ((dst) = mln_rs_gf_mul_table[(dst)][(src)])
