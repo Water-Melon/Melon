@@ -53,6 +53,16 @@ static void test_empty_data(void)
     PASS();
 }
 
+static void test_empty_key(void)
+{
+    mln_u8_t s[256];
+    mln_u32_t i;
+
+    mln_rc4_init(s, (mln_u8ptr_t)"ignored", 0);
+    for (i = 0; i < 256; ++i) assert(s[i] == (mln_u8_t)i);
+    PASS();
+}
+
 static void test_short_key(void)
 {
     mln_u8_t s[256];
@@ -226,7 +236,6 @@ static void test_benchmark(void)
 
     clock_gettime(CLOCK_MONOTONIC, &t0);
     for (i = 0; i < iters; ++i) {
-        memset(s, 0, sizeof(s));
         mln_rc4_init(s, key, sizeof(key) - 1);
     }
     clock_gettime(CLOCK_MONOTONIC, &t1);
@@ -234,7 +243,6 @@ static void test_benchmark(void)
     printf("    init:        %.1f ns/op (%d iters)\n", init_ns / iters, iters);
 
     memset(data, 0xAB, sizeof(data));
-    memset(s, 0, sizeof(s));
     mln_rc4_init(s, key, sizeof(key) - 1);
     clock_gettime(CLOCK_MONOTONIC, &t0);
     for (i = 0; i < iters; ++i) {
@@ -277,6 +285,7 @@ int main(int argc, char *argv[])
     test_basic_encrypt_decrypt();
     test_single_byte();
     test_empty_data();
+    test_empty_key();
     test_short_key();
     test_long_key();
     test_different_keys_different_output();

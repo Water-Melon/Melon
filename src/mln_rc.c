@@ -8,7 +8,7 @@
 #include "mln_rc.h"
 #include "mln_func.h"
 
-static mln_u8_t rc4_identity[256] = {
+static const mln_u8_t rc4_identity[256] = {
       0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
      16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
      32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
@@ -37,6 +37,7 @@ MLN_FUNC_VOID(, void, mln_rc4_init, \
     mln_uauto_t pos = 0;
 
     memcpy(s, rc4_identity, 256);
+    if (len == 0) return;
     while (pos + len <= 256) {
         memcpy(kbuf + pos, key, len);
         pos += len;

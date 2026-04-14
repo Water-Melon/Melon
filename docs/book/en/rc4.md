@@ -26,7 +26,7 @@
 void mln_rc4_init(mln_u8ptr_t s, mln_u8ptr_t key, mln_uauto_t len);
 ```
 
-Description: The parameter `s` required to initialize RC4. `key` is the key content and `len` is the key length. `s` must be a 256-byte long memory area.
+Description: The parameter `s` required to initialize RC4. `key` is the key content and `len` is the key length. `s` must be a 256-byte long memory area. `len` must be greater than 0, that is, `key` cannot be empty.
 
 Return value: none
 
