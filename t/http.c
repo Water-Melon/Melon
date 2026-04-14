@@ -178,6 +178,7 @@ static void test_http_versions(void)
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
+    pool = mln_tcp_conn_pool_get(&conn);
 
     snprintf(req, sizeof(req), "GET / HTTP/1.1\r\nHost: test.com\r\n\r\n");
 
