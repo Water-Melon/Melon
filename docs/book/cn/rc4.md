@@ -26,7 +26,7 @@
 void mln_rc4_init(mln_u8ptr_t s, mln_u8ptr_t key, mln_uauto_t len);
 ```
 
-描述：初始化RC4所需参数`s`。`key`为密钥内容，`len`为密钥长度。`s`必须为长度为256字节长的内存区，且被初始化为0。
+描述：初始化RC4所需参数`s`。`key`为密钥内容，`len`为密钥长度。`s`必须为长度为256字节长的内存区。`len`必须大于0，且`key`必须指向至少`len`字节的有效密钥数据；不支持空密钥（`len == 0`）。
 
 返回值：无
 
@@ -55,7 +55,7 @@ void mln_rc4_calc(mln_u8ptr_t s, mln_u8ptr_t data, mln_uauto_t len);
 
 int main(int argc, char *argv[])
 {
-    mln_u8_t s[256] = {0};
+    mln_u8_t s[256];
     mln_u8_t text[] = "Hello";
 
     mln_rc4_init(s, (mln_u8ptr_t)"this is a key", sizeof("this is a key")-1);
