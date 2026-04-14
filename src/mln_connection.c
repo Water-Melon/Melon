@@ -52,9 +52,10 @@ static inline int mln_fd_is_nonblock(int fd)
 #if defined(MSVC)
     return 0; /* no useful API for getting this flag from socket */
 #else
+    if (fd < 0) return 0;
     int flg = fcntl(fd, F_GETFL, NULL);
-    ASSERT(flg >= 0);
-    return flg & O_NONBLOCK;
+    if (flg < 0) return 0;
+    return (flg & O_NONBLOCK) != 0;
 #endif
 }
 
