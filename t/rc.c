@@ -57,9 +57,17 @@ static void test_empty_key(void)
 {
     mln_u8_t s[256];
     mln_u32_t i;
+    mln_u8_t data[] = "test data";
+    mln_u8_t orig[sizeof(data)];
 
     mln_rc4_init(s, (mln_u8ptr_t)"ignored", 0);
     for (i = 0; i < 256; ++i) assert(s[i] == (mln_u8_t)i);
+
+    memcpy(orig, data, sizeof(data));
+    mln_rc4_calc(s, data, sizeof(data) - 1);
+    assert(memcmp(data, orig, sizeof(data) - 1) != 0);
+    mln_rc4_calc(s, data, sizeof(data) - 1);
+    assert(memcmp(data, orig, sizeof(data) - 1) == 0);
     PASS();
 }
 
