@@ -850,12 +850,14 @@ MLN_FUNC(, int, mln_websocket_generate, \
         }
 
         mln_size_t remaining = clen - (opcode == M_WS_OPCODE_CLOSE ? 2 : 0);
-        /* Build key rotated by mask_offset for remaining payload */
+        /* Build key rotated by mask_offset (0 or 2) for remaining payload */
         mln_u8_t rotkey[4];
-        rotkey[0] = tmpkey[mask_offset % 4];
-        rotkey[1] = tmpkey[(mask_offset + 1) % 4];
-        rotkey[2] = tmpkey[(mask_offset + 2) % 4];
-        rotkey[3] = tmpkey[(mask_offset + 3) % 4];
+        if (mask_offset == 0) {
+            memcpy(rotkey, tmpkey, 4);
+        } else {
+            rotkey[0] = tmpkey[2]; rotkey[1] = tmpkey[3];
+            rotkey[2] = tmpkey[0]; rotkey[3] = tmpkey[1];
+        }
         mln_size_t aligned = remaining & ~3;
         mln_size_t k;
         mln_u32_t key32_rot, word;

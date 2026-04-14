@@ -53,7 +53,7 @@ static inline int mln_fd_is_nonblock(int fd)
     return 0; /* no useful API for getting this flag from socket */
 #else
     if (fd < 0) return 0;
-    int flg = fcntl(fd, F_GETFL, NULL);
+    int flg = fcntl(fd, F_GETFL, 0);
     if (flg < 0) return 0;
     return (flg & O_NONBLOCK) != 0;
 #endif
@@ -89,7 +89,7 @@ MLN_FUNC(, int, mln_tcp_conn_set_nonblock, (mln_tcp_conn_t *tc, int nb), (tc, nb
         tc->nonblock = nb ? 1 : 0;
         return 0;
     }
-    int flg = fcntl(tc->sockfd, F_GETFL, NULL);
+    int flg = fcntl(tc->sockfd, F_GETFL, 0);
     if (flg < 0) return -1;
     if (nb) {
         if (fcntl(tc->sockfd, F_SETFL, flg | O_NONBLOCK) < 0) return -1;
