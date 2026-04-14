@@ -120,6 +120,18 @@ mln_chain_t *mln_chain_new(mln_alloc_t *pool);
 
 
 
+#### mln_chain_new_with_buf
+
+```c
+mln_chain_t *mln_chain_new_with_buf(mln_alloc_t *pool);
+```
+
+描述：从内存池`pool`中创建链结构，并为其分配一个`buf`结构。相当于先调用`mln_chain_new`再调用`mln_buf_new`的便捷函数。
+
+返回值：成功则返回链结构指针（其`buf`成员已被初始化），否则返回`NULL`
+
+
+
 #### mln_buf_pool_release
 
 ```c
@@ -301,6 +313,34 @@ int mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag);
 
 
 
+#### mln_tcp_conn_move_sent
+
+```c
+void mln_tcp_conn_move_sent(mln_tcp_conn_t *tc);
+```
+
+描述：将发送队列（send queue）中的所有链节点一次性移至已发送队列（sent queue）。移动后发送队列为空。此操作不释放任何资源，仅调整队列指针。
+
+返回值：无
+
+
+
+#### mln_tcp_conn_send_chain
+
+```c
+int mln_tcp_conn_send_chain(mln_tcp_conn_t *tc, mln_chain_t *chain);
+```
+
+描述：将`chain`追加到`tc`的发送队列后立刻调用`mln_tcp_conn_send`进行发送。是`mln_tcp_conn_append` + `mln_tcp_conn_send`的便捷函数。
+
+返回值：与`mln_tcp_conn_send`一致：
+
+- `M_C_FINISH`表示发送完成
+- `M_C_NOTYET`表示还有数据未发完
+- `M_C_ERROR`表示发送失败
+
+
+
 #### mln_tcp_conn_send_empty
 
 ```c
@@ -352,12 +392,24 @@ mln_tcp_conn_fd_get(pconn)
 #### mln_tcp_conn_fd_set
 
 ```c
-mln_tcp_conn_fd_set(pconn,fd)
+void mln_tcp_conn_fd_set(mln_tcp_conn_t *tc, int fd);
 ```
 
-描述：设置TCP结构中的套接字描述符为`fd`。
+描述：设置TCP结构中的套接字描述符为`fd`，并自动更新非阻塞标志位。
 
 返回值：无
+
+
+
+#### mln_tcp_conn_set_nonblock
+
+```c
+int mln_tcp_conn_set_nonblock(mln_tcp_conn_t *tc, int nb);
+```
+
+描述：设置或清除TCP连接的非阻塞模式。`nb`为非零值表示设置为非阻塞，为`0`表示设置为阻塞。本函数会通过`fcntl`更新底层套接字标志并同步`tc`内的`nonblock`标志位。
+
+返回值：成功则返回`0`，失败返回`-1`
 
 
 

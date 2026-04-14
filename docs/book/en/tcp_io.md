@@ -118,6 +118,18 @@ Return value: If successful, return the chain structure pointer, otherwise retur
 
 
 
+#### mln_chain_new_with_buf
+
+```c
+mln_chain_t *mln_chain_new_with_buf(mln_alloc_t *pool);
+```
+
+Description: Create a chain structure from the memory pool `pool` and allocate a `buf` structure for it. This is a convenience function equivalent to calling `mln_chain_new` followed by `mln_buf_new`.
+
+Return value: If successful, return the chain structure pointer (with its `buf` member initialized), otherwise return `NULL`
+
+
+
 #### mln_buf_pool_release
 
 ```c
@@ -299,6 +311,34 @@ return value:
 
 
 
+#### mln_tcp_conn_move_sent
+
+```c
+void mln_tcp_conn_move_sent(mln_tcp_conn_t *tc);
+```
+
+Description: Move all chain nodes from the send queue to the sent queue in one operation. After this call the send queue is empty. This operation does not release any resources, it only adjusts the queue pointers.
+
+Return value: none
+
+
+
+#### mln_tcp_conn_send_chain
+
+```c
+int mln_tcp_conn_send_chain(mln_tcp_conn_t *tc, mln_chain_t *chain);
+```
+
+Description: Append `chain` to the send queue of `tc` and immediately call `mln_tcp_conn_send` to send. This is a convenience function combining `mln_tcp_conn_append` and `mln_tcp_conn_send`.
+
+Return value: Same as `mln_tcp_conn_send`:
+
+- `M_C_FINISH` indicates that the transmission is completed
+- `M_C_NOTYET` indicates that there is still data to be sent
+- `M_C_ERROR` means sending failed
+
+
+
 #### mln_tcp_conn_send_empty
 
 ```c
@@ -350,12 +390,24 @@ Return value: socket descriptor
 #### mln_tcp_conn_fd_set
 
 ```c
-mln_tcp_conn_fd_set(pconn,fd)
+void mln_tcp_conn_fd_set(mln_tcp_conn_t *tc, int fd);
 ```
 
-Description: Set the socket descriptor in the TCP structure to `fd`.
+Description: Set the socket descriptor in the TCP structure to `fd` and automatically update the non-blocking flag.
 
 Return value: none
+
+
+
+#### mln_tcp_conn_set_nonblock
+
+```c
+int mln_tcp_conn_set_nonblock(mln_tcp_conn_t *tc, int nb);
+```
+
+Description: Set or clear the non-blocking mode on the TCP connection. A non-zero `nb` sets non-blocking mode, `0` sets blocking mode. This function updates the underlying socket flags via `fcntl` and synchronizes the `nonblock` flag in `tc`.
+
+Return value: return `0` on success, `-1` on failure
 
 
 

@@ -43,6 +43,7 @@ typedef struct {
     mln_chain_t *sent_head;
     mln_chain_t *sent_tail;
     int          sockfd;
+    mln_u32_t    nonblock:1;
 } mln_tcp_conn_t;
 
 
@@ -50,8 +51,9 @@ typedef struct {
 #define mln_tcp_conn_recv_empty(pconn) ((pconn)->rcv_head == NULL)
 #define mln_tcp_conn_sent_empty(pconn) ((pconn)->sent_head == NULL)
 #define mln_tcp_conn_fd_get(pconn) ((pconn)->sockfd)
-#define mln_tcp_conn_fd_set(pconn,fd) (pconn)->sockfd = (fd)
+extern void mln_tcp_conn_fd_set(mln_tcp_conn_t *tc, int fd) __NONNULL1(1);
 #define mln_tcp_conn_pool_get(pconn) ((pconn)->pool)
+extern int mln_tcp_conn_set_nonblock(mln_tcp_conn_t *tc, int nb) __NONNULL1(1);
 extern int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd) __NONNULL1(1);
 extern void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
 extern void
@@ -67,6 +69,8 @@ extern mln_chain_t *mln_tcp_conn_pop(mln_tcp_conn_t *tc, int type) __NONNULL1(1)
 extern mln_chain_t *mln_tcp_conn_tail(mln_tcp_conn_t *tc, int type) __NONNULL1(1);
 extern int mln_tcp_conn_send(mln_tcp_conn_t *tc) __NONNULL1(1);
 extern int mln_tcp_conn_recv(mln_tcp_conn_t *tc, mln_u32_t flag) __NONNULL1(1);
+extern void mln_tcp_conn_move_sent(mln_tcp_conn_t *tc) __NONNULL1(1);
+extern int mln_tcp_conn_send_chain(mln_tcp_conn_t *tc, mln_chain_t *chain) __NONNULL2(1,2);
 
 #endif
 

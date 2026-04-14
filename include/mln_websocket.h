@@ -161,5 +161,9 @@ extern int mln_websocket_ping_generate(mln_websocket_t *ws, mln_chain_t **out_cn
 extern int mln_websocket_pong_generate(mln_websocket_t *ws, mln_chain_t **out_cnode, mln_u32_t flags) __NONNULL2(1,2);
 extern int mln_websocket_generate(mln_websocket_t *ws, mln_chain_t **out_cnode) __NONNULL1(1);
 extern int mln_websocket_parse(mln_websocket_t *ws, mln_chain_t **in) __NONNULL1(1);
+/*
+ * These are internal helpers, not part of the public API.
+ * They are declared static in mln_websocket.c.
+ */
 
 #endif
