@@ -23,20 +23,6 @@ static long elapsed_us(struct timespec *start, struct timespec *end)
     return sec_diff * 1000000 + nsec_diff / 1000;
 }
 
-static mln_chain_t *create_chain_from_string(mln_alloc_t *pool, const char *str)
-{
-    mln_chain_t *c;
-    mln_buf_t *b;
-
-    assert((c = mln_chain_new(pool)) != NULL);
-    assert((b = mln_buf_new(pool)) != NULL);
-    c->buf = b;
-    b->start = b->pos = b->left_pos = (mln_u8ptr_t)(void *)str;
-    b->last = b->end = (mln_u8ptr_t)(void *)str + strlen(str);
-    b->temporary = 1;
-    return c;
-}
-
 static void test_is_websocket_detection(void)
 {
     mln_http_t *http;
@@ -114,13 +100,11 @@ static void test_websocket_text_frame_generate_simple(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t data[] = "hello";
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_TEXT);
@@ -142,13 +126,11 @@ static void test_websocket_text_frame_client_mode(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t data[] = "test";
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_TEXT);
@@ -171,13 +153,11 @@ static void test_websocket_binary_frame_generate(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t data[] = {0x00, 0x01, 0x02, 0x03, 0x04};
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_BINARY);
@@ -199,12 +179,10 @@ static void test_websocket_close_frame_with_status(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_CLOSE);
@@ -227,12 +205,10 @@ static void test_websocket_ping_frame(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_PING);
@@ -254,12 +230,10 @@ static void test_websocket_pong_frame(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_PONG);
@@ -281,13 +255,11 @@ static void test_websocket_fragmentation_start(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t data[] = "fragment1";
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_TEXT);
@@ -309,13 +281,11 @@ static void test_websocket_fragmentation_continue(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t data[] = "fragment2";
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_CONTINUE);
@@ -337,13 +307,11 @@ static void test_websocket_fragmentation_end(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t data[] = "fragment3";
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
     mln_websocket_set_opcode(ws, M_WS_OPCODE_CONTINUE);
@@ -397,13 +365,11 @@ static void test_websocket_reset(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t data[] = "test";
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
 
@@ -605,7 +571,6 @@ static void test_websocket_performance_generate_parse_roundtrip(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t data[128];
     struct timespec start, end;
@@ -615,7 +580,6 @@ static void test_websocket_performance_generate_parse_roundtrip(void)
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
 
@@ -650,7 +614,6 @@ static void test_websocket_stability_large_frames(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t *data;
     int i;
@@ -659,7 +622,6 @@ static void test_websocket_stability_large_frames(void)
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
 
@@ -695,7 +657,6 @@ static void test_websocket_stability_mixed_frames(void)
     mln_http_t *http;
     mln_websocket_t *ws;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *out = NULL;
     mln_u8_t data[] = "test payload";
     int i;
@@ -703,7 +664,6 @@ static void test_websocket_stability_mixed_frames(void)
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     assert((ws = mln_websocket_new(http)) != NULL);
 

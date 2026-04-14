@@ -23,6 +23,7 @@ static int e2e_body_len = 0;
 static int e2e_body_handler(mln_http_t *http, mln_chain_t **body_head, mln_chain_t **body_tail)
 {
     mln_chain_t *c;
+    (void)http; (void)body_tail;
     e2e_body_len = 0;
     for (c = *body_head; c != NULL; c = c->next) {
         if (c->buf == NULL) continue;
@@ -40,20 +41,6 @@ static long elapsed_us(struct timespec *start, struct timespec *end)
     long sec_diff = (long)(end->tv_sec - start->tv_sec);
     long nsec_diff = (long)(end->tv_nsec - start->tv_nsec);
     return sec_diff * 1000000 + nsec_diff / 1000;
-}
-
-static mln_chain_t *create_chain_from_string(mln_alloc_t *pool, const char *str)
-{
-    mln_chain_t *c;
-    mln_buf_t *b;
-
-    assert((c = mln_chain_new(pool)) != NULL);
-    assert((b = mln_buf_new(pool)) != NULL);
-    c->buf = b;
-    b->start = b->pos = b->left_pos = (mln_u8ptr_t)(void *)str;
-    b->last = b->end = (mln_u8ptr_t)(void *)str + strlen(str);
-    b->temporary = 1;
-    return c;
 }
 
 static void test_request_parse_get(void)
@@ -191,7 +178,6 @@ static void test_http_versions(void)
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     snprintf(req, sizeof(req), "GET / HTTP/1.1\r\nHost: test.com\r\n\r\n");
 
@@ -333,8 +319,8 @@ static void test_response_status_codes(void)
     for (i = 0; i < 7; i++) {
         assert(mln_tcp_conn_init(&conn, -1) == 0);
         assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-        /* Do not pre-set type; parser auto-detects */
         pool = mln_tcp_conn_pool_get(&conn);
+        /* Do not pre-set type; parser auto-detects */
 
         snprintf(resp, sizeof(resp), "HTTP/1.1 %s\r\n\r\n", tests[i].msg);
 
@@ -419,14 +405,12 @@ static void test_generate_request(void)
 {
     mln_http_t *http;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *c, *head = NULL, *tail = NULL;
     mln_string_t key, val;
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
 
-    pool = mln_tcp_conn_pool_get(&conn);
 
     mln_http_type_set(http, M_HTTP_REQUEST);
     mln_http_method_set(http, M_HTTP_GET);
@@ -456,14 +440,12 @@ static void test_generate_response(void)
 {
     mln_http_t *http;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *c, *head = NULL, *tail = NULL;
     mln_string_t key, val;
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
 
-    pool = mln_tcp_conn_pool_get(&conn);
 
     mln_http_type_set(http, M_HTTP_RESPONSE);
     mln_http_status_set(http, M_HTTP_OK);
@@ -628,7 +610,6 @@ static void test_stability_generate_multiple(void)
 {
     mln_http_t *http;
     mln_tcp_conn_t conn;
-    mln_alloc_t *pool;
     mln_chain_t *head, *tail;
     mln_string_t key, val;
     char val_str[256];
@@ -637,7 +618,6 @@ static void test_stability_generate_multiple(void)
 
     assert(mln_tcp_conn_init(&conn, -1) == 0);
     assert((http = mln_http_init(&conn, NULL, NULL)) != NULL);
-    pool = mln_tcp_conn_pool_get(&conn);
 
     mln_http_type_set(http, M_HTTP_RESPONSE);
     mln_http_version_set(http, M_HTTP_VERSION_1_1);

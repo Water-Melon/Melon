@@ -51,9 +51,9 @@ typedef struct {
 #define mln_tcp_conn_recv_empty(pconn) ((pconn)->rcv_head == NULL)
 #define mln_tcp_conn_sent_empty(pconn) ((pconn)->sent_head == NULL)
 #define mln_tcp_conn_fd_get(pconn) ((pconn)->sockfd)
-#define mln_tcp_conn_fd_set(pconn,fd) (pconn)->sockfd = (fd)
+extern void mln_tcp_conn_fd_set(mln_tcp_conn_t *tc, int fd) __NONNULL1(1);
 #define mln_tcp_conn_pool_get(pconn) ((pconn)->pool)
-#define mln_tcp_conn_set_nonblock(pconn,nb) (pconn)->nonblock = (nb)
+extern int mln_tcp_conn_set_nonblock(mln_tcp_conn_t *tc, int nb) __NONNULL1(1);
 extern int mln_tcp_conn_init(mln_tcp_conn_t *tc, int sockfd) __NONNULL1(1);
 extern void mln_tcp_conn_destroy(mln_tcp_conn_t *tc);
 extern void

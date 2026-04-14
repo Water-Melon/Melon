@@ -75,6 +75,33 @@ MLN_FUNC(, int, mln_tcp_conn_init, (mln_tcp_conn_t *tc, int sockfd), (tc, sockfd
     return 0;
 })
 
+MLN_FUNC_VOID(, void, mln_tcp_conn_fd_set, (mln_tcp_conn_t *tc, int fd), (tc, fd), {
+    tc->sockfd = fd;
+    tc->nonblock = mln_fd_is_nonblock(fd);
+})
+
+MLN_FUNC(, int, mln_tcp_conn_set_nonblock, (mln_tcp_conn_t *tc, int nb), (tc, nb), {
+#if defined(MSVC)
+    tc->nonblock = 0;
+    return 0;
+#else
+    if (tc->sockfd < 0) {
+        tc->nonblock = nb ? 1 : 0;
+        return 0;
+    }
+    int flg = fcntl(tc->sockfd, F_GETFL, NULL);
+    if (flg < 0) return -1;
+    if (nb) {
+        if (fcntl(tc->sockfd, F_SETFL, flg | O_NONBLOCK) < 0) return -1;
+        tc->nonblock = 1;
+    } else {
+        if (fcntl(tc->sockfd, F_SETFL, flg & ~O_NONBLOCK) < 0) return -1;
+        tc->nonblock = 0;
+    }
+    return 0;
+#endif
+})
+
 MLN_FUNC_VOID(, void, mln_tcp_conn_destroy, (mln_tcp_conn_t *tc), (tc), {
     if (tc == NULL) return;
 

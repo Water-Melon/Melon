@@ -157,6 +157,8 @@ MLN_FUNC(, int, mln_websocket_is_websocket, (mln_http_t *http), (http), {
     return M_WS_RET_OK;
 })
 
+static int mln_websocket_conn_has_upgrade_token(mln_string_t *val);
+
 MLN_FUNC(, int, mln_websocket_validate, (mln_websocket_t *ws), (ws), {
     mln_http_t *http = ws->http;
     if (mln_http_status_get(http) != M_HTTP_SWITCHING_PROTOCOLS) return M_WS_RET_NOTWS;
@@ -164,13 +166,12 @@ MLN_FUNC(, int, mln_websocket_validate, (mln_websocket_t *ws), (ws), {
     mln_string_t upgrade_key = mln_string("Upgrade");
     mln_string_t upgrade_val = mln_string("websocket");
     mln_string_t connection_key = mln_string("Connection");
-    mln_string_t upgrade_str = mln_string("Upgrade");
     mln_string_t *tmp;
 
     tmp = mln_http_field_get(http, &upgrade_key);
     if (tmp == NULL || mln_string_strcasecmp(tmp, &upgrade_val)) return M_WS_RET_NOTWS;
     tmp = mln_http_field_get(http, &connection_key);
-    if (tmp == NULL || mln_string_strstr(tmp, &upgrade_str) == NULL) return M_WS_RET_NOTWS;
+    if (tmp == NULL || !mln_websocket_conn_has_upgrade_token(tmp)) return M_WS_RET_NOTWS;
     int ret = mln_websocket_validate_accept(http, ws->key);
     if (ret != M_WS_RET_OK) return ret;
     if (mln_http_type_get(http) != M_HTTP_RESPONSE) return M_WS_RET_ERROR;
@@ -637,9 +638,29 @@ MLN_FUNC(, int, mln_websocket_pong_generate, \
     return mln_websocket_generate(ws, out_cnode);
 })
 
+static int mln_websocket_conn_has_upgrade_token(mln_string_t *val)
+{
+    mln_u8ptr_t p = val->data;
+    mln_u8ptr_t end = val->data + val->len;
+    while (p < end) {
+        while (p < end && (*p == ' ' || *p == '\t')) p++;
+        mln_u8ptr_t tok_start = p;
+        while (p < end && *p != ',') p++;
+        mln_u8ptr_t tok_end = p;
+        while (tok_end > tok_start && (tok_end[-1] == ' ' || tok_end[-1] == '\t')) tok_end--;
+        if ((mln_size_t)(tok_end - tok_start) == 7) {
+            mln_string_t tok;
+            tok.data = tok_start;
+            tok.len = 7;
+            if (!mln_string_const_strcasecmp(&tok, "Upgrade")) return 1;
+        }
+        if (p < end) p++;
+    }
+    return 0;
+}
+
 MLN_FUNC(static, int, mln_websocket_is_valid_status_code, (mln_u16_t status), (status), {
     if (status >= 1000 && status <= 1003) return 1;
-    if (status == 1004) return 0;
     if (status == 1005 || status == 1006) return 0;
     if (status >= 1007 && status <= 1011) return 1;
     if (status >= 1012 && status <= 1014) return 1;
@@ -651,25 +672,38 @@ MLN_FUNC(static, int, mln_websocket_is_valid_status_code, (mln_u16_t status), (s
 
 MLN_FUNC(static, int, mln_websocket_is_valid_utf8, (mln_u8ptr_t data, mln_size_t len), (data, len), {
     mln_size_t i = 0;
-    mln_u8_t byte;
+    mln_u8_t b0, b1, b2, b3;
+    mln_u32_t cp;
     while (i < len) {
-        byte = data[i];
-        if ((byte & 0x80) == 0) {
+        b0 = data[i];
+        if (b0 < 0x80) {
             i += 1;
-        } else if ((byte & 0xE0) == 0xC0) {
+        } else if ((b0 & 0xE0) == 0xC0) {
             if (i + 1 >= len) return 0;
-            if ((data[i+1] & 0xC0) != 0x80) return 0;
+            b1 = data[i+1];
+            if ((b1 & 0xC0) != 0x80) return 0;
+            cp = ((mln_u32_t)(b0 & 0x1F) << 6) | (b1 & 0x3F);
+            if (cp < 0x80) return 0;           /* overlong */
             i += 2;
-        } else if ((byte & 0xF0) == 0xE0) {
+        } else if ((b0 & 0xF0) == 0xE0) {
             if (i + 2 >= len) return 0;
-            if ((data[i+1] & 0xC0) != 0x80) return 0;
-            if ((data[i+2] & 0xC0) != 0x80) return 0;
+            b1 = data[i+1]; b2 = data[i+2];
+            if ((b1 & 0xC0) != 0x80) return 0;
+            if ((b2 & 0xC0) != 0x80) return 0;
+            cp = ((mln_u32_t)(b0 & 0x0F) << 12) | ((mln_u32_t)(b1 & 0x3F) << 6) | (b2 & 0x3F);
+            if (cp < 0x800) return 0;          /* overlong */
+            if (cp >= 0xD800 && cp <= 0xDFFF) return 0; /* surrogate halves */
             i += 3;
-        } else if ((byte & 0xF8) == 0xF0) {
+        } else if ((b0 & 0xF8) == 0xF0) {
             if (i + 3 >= len) return 0;
-            if ((data[i+1] & 0xC0) != 0x80) return 0;
-            if ((data[i+2] & 0xC0) != 0x80) return 0;
-            if ((data[i+3] & 0xC0) != 0x80) return 0;
+            b1 = data[i+1]; b2 = data[i+2]; b3 = data[i+3];
+            if ((b1 & 0xC0) != 0x80) return 0;
+            if ((b2 & 0xC0) != 0x80) return 0;
+            if ((b3 & 0xC0) != 0x80) return 0;
+            cp = ((mln_u32_t)(b0 & 0x07) << 18) | ((mln_u32_t)(b1 & 0x3F) << 12) |
+                 ((mln_u32_t)(b2 & 0x3F) << 6) | (b3 & 0x3F);
+            if (cp < 0x10000) return 0;        /* overlong */
+            if (cp > 0x10FFFF) return 0;       /* out of range */
             i += 4;
         } else {
             return 0;
@@ -801,34 +835,40 @@ MLN_FUNC(, int, mln_websocket_generate, \
 
     if (mln_websocket_get_maskbit(ws)) {
         mln_u8_t tmpkey[4];
-        mln_u32_t i, j, m = mln_websocket_get_masking_key(ws);
+        mln_u32_t m = mln_websocket_get_masking_key(ws);
         mln_u8ptr_t pc = (mln_u8ptr_t)content;
         *p++ = tmpkey[0] = ((m >> 24) & 0xff);
         *p++ = tmpkey[1] = ((m >> 16) & 0xff);
         *p++ = tmpkey[2] = ((m >> 8) & 0xff);
         *p++ = tmpkey[3] = (m & 0xff);
 
-        i = 0;
+        mln_u32_t mask_offset = 0;
         if (opcode == M_WS_OPCODE_CLOSE) {
-            *p++ = ((mln_websocket_get_status(ws) >> 8) & 0xff) ^ tmpkey[i++%4];
-            *p++ = (mln_websocket_get_status(ws) & 0xff) ^ tmpkey[i++%4];
+            *p++ = ((mln_websocket_get_status(ws) >> 8) & 0xff) ^ tmpkey[0];
+            *p++ = (mln_websocket_get_status(ws) & 0xff) ^ tmpkey[1];
+            mask_offset = 2;
         }
 
         mln_size_t remaining = clen - (opcode == M_WS_OPCODE_CLOSE ? 2 : 0);
+        /* Build key rotated by mask_offset for remaining payload */
+        mln_u8_t rotkey[4];
+        rotkey[0] = tmpkey[mask_offset % 4];
+        rotkey[1] = tmpkey[(mask_offset + 1) % 4];
+        rotkey[2] = tmpkey[(mask_offset + 2) % 4];
+        rotkey[3] = tmpkey[(mask_offset + 3) % 4];
         mln_size_t aligned = remaining & ~3;
         mln_size_t k;
-        mln_u32_t *ptr32 = (mln_u32_t *)p;
-        mln_u32_t *src32 = (mln_u32_t *)pc;
-        mln_u32_t key32;
-        memcpy(&key32, tmpkey, 4);
-
+        mln_u32_t key32_rot, word;
+        memcpy(&key32_rot, rotkey, 4);
         for (k = 0; k < aligned; k += 4) {
-            ptr32[k/4] = src32[k/4] ^ key32;
+            memcpy(&word, pc + k, 4);
+            word ^= key32_rot;
+            memcpy(p + k, &word, 4);
         }
         p += aligned;
-
+        mln_size_t j;
         for (j = aligned; j < remaining; ++j) {
-            *p++ = pc[j] ^ tmpkey[j%4];
+            *p++ = pc[j] ^ rotkey[j % 4];
         }
     } else {
         if (opcode == M_WS_OPCODE_CLOSE) {
@@ -1024,7 +1064,12 @@ againc:
             mln_websocket_set_status(ws, unmasked_status);
         }
         if (content != NULL && len > 0) {
-            mln_websocket_unmask_xor4(content, len, masking_key);
+            mln_u32_t unmask_key = masking_key;
+            if (mln_websocket_get_opcode(ws) == M_WS_OPCODE_CLOSE && close_status != 0) {
+                /* 2 status bytes consumed 2 mask positions; rotate key by 2 to continue */
+                unmask_key = (masking_key << 16) | (masking_key >> 16);
+            }
+            mln_websocket_unmask_xor4(content, len, unmask_key);
         }
     } else {
         if ((b1 & 0x40) || (b1 & 0x20) || (b1 & 0x10)) {
