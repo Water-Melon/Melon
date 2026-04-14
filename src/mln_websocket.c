@@ -819,7 +819,8 @@ MLN_FUNC(, int, mln_websocket_generate, \
         mln_size_t k;
         mln_u32_t *ptr32 = (mln_u32_t *)p;
         mln_u32_t *src32 = (mln_u32_t *)pc;
-        mln_u32_t key32 = m;
+        mln_u32_t key32;
+        memcpy(&key32, tmpkey, 4);
 
         for (k = 0; k < aligned; k += 4) {
             ptr32[k/4] = src32[k/4] ^ key32;

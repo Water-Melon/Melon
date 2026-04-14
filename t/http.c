@@ -4,7 +4,17 @@
 #include <assert.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include "mln_http.h"
+
+static void set_nonblock(int fd)
+{
+    int flags = fcntl(fd, F_GETFL, 0);
+    assert(flags >= 0);
+    assert(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0);
+}
 
 static long elapsed_us(struct timespec *start, struct timespec *end)
 {
@@ -641,6 +651,205 @@ static void test_stability_generate_multiple(void)
     mln_tcp_conn_destroy(&conn);
 }
 
+static void test_e2e_request_response(void)
+{
+    int fds[2];
+    mln_tcp_conn_t client_conn, server_conn;
+    mln_http_t *client_http, *server_http;
+    mln_chain_t *head, *tail, *c;
+    mln_string_t key, val;
+    int ret;
+
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]);
+    set_nonblock(fds[1]);
+
+    assert(mln_tcp_conn_init(&client_conn, fds[0]) == 0);
+    mln_tcp_conn_set_nonblock(&client_conn, 1);
+    assert((client_http = mln_http_init(&client_conn, NULL, NULL)) != NULL);
+
+    assert(mln_tcp_conn_init(&server_conn, fds[1]) == 0);
+    mln_tcp_conn_set_nonblock(&server_conn, 1);
+    assert((server_http = mln_http_init(&server_conn, NULL, NULL)) != NULL);
+
+    /* CLIENT: Generate HTTP GET request */
+    mln_http_type_set(client_http, M_HTTP_REQUEST);
+    mln_http_method_set(client_http, M_HTTP_GET);
+    mln_http_version_set(client_http, M_HTTP_VERSION_1_1);
+    mln_string_set(&key, "Host");
+    mln_string_set(&val, "127.0.0.1:8080");
+    assert(mln_http_field_set(client_http, &key, &val) == 0);
+
+    head = NULL; tail = NULL;
+    assert(mln_http_generate(client_http, &head, &tail) == M_HTTP_RET_DONE);
+    assert(head != NULL);
+    mln_tcp_conn_append_chain(&client_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&client_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* SERVER: Receive and parse request */
+    ret = mln_tcp_conn_recv(&server_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&server_conn, M_C_RECV);
+    assert(c != NULL);
+    ret = mln_http_parse(server_http, &c);
+    assert(ret == M_HTTP_RET_DONE);
+    assert(mln_http_method_get(server_http) == M_HTTP_GET);
+    assert(mln_http_type_get(server_http) == M_HTTP_REQUEST);
+    if (c != NULL) mln_chain_pool_release_all(c);
+
+    /* SERVER: Generate HTTP 200 OK response */
+    mln_http_reset(server_http);
+    mln_http_type_set(server_http, M_HTTP_RESPONSE);
+    mln_http_status_set(server_http, M_HTTP_OK);
+    mln_http_version_set(server_http, M_HTTP_VERSION_1_1);
+    mln_string_set(&key, "Content-Type");
+    mln_string_set(&val, "text/plain");
+    assert(mln_http_field_set(server_http, &key, &val) == 0);
+
+    head = NULL; tail = NULL;
+    assert(mln_http_generate(server_http, &head, &tail) == M_HTTP_RET_DONE);
+    assert(head != NULL);
+    mln_tcp_conn_append_chain(&server_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&server_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* CLIENT: Receive and parse response */
+    mln_http_reset(client_http);
+    ret = mln_tcp_conn_recv(&client_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&client_conn, M_C_RECV);
+    assert(c != NULL);
+    /* type is UNKNOWN after reset, parser auto-detects response from HTTP/1.1 prefix */
+    ret = mln_http_parse(client_http, &c);
+    assert(ret == M_HTTP_RET_DONE);
+    assert(mln_http_status_get(client_http) == M_HTTP_OK);
+    assert(mln_http_type_get(client_http) == M_HTTP_RESPONSE);
+    if (c != NULL) mln_chain_pool_release_all(c);
+
+    mln_http_destroy(client_http);
+    mln_http_destroy(server_http);
+    mln_tcp_conn_destroy(&client_conn);
+    mln_tcp_conn_destroy(&server_conn);
+    close(fds[0]);
+    close(fds[1]);
+
+    printf("[PASS] test_e2e_request_response\n");
+}
+
+static void test_e2e_post_with_body(void)
+{
+    int fds[2];
+    mln_tcp_conn_t client_conn, server_conn;
+    mln_http_t *client_http, *server_http;
+    mln_alloc_t *client_pool;
+    mln_chain_t *head, *tail, *c;
+    mln_string_t key, val;
+    const char *body_str = "hello";
+    int ret;
+
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]);
+    set_nonblock(fds[1]);
+
+    assert(mln_tcp_conn_init(&client_conn, fds[0]) == 0);
+    mln_tcp_conn_set_nonblock(&client_conn, 1);
+    assert((client_http = mln_http_init(&client_conn, NULL, NULL)) != NULL);
+    client_pool = mln_tcp_conn_pool_get(&client_conn);
+
+    assert(mln_tcp_conn_init(&server_conn, fds[1]) == 0);
+    mln_tcp_conn_set_nonblock(&server_conn, 1);
+    assert((server_http = mln_http_init(&server_conn, NULL, NULL)) != NULL);
+
+    /* CLIENT: Generate HTTP POST request headers */
+    mln_http_type_set(client_http, M_HTTP_REQUEST);
+    mln_http_method_set(client_http, M_HTTP_POST);
+    mln_http_version_set(client_http, M_HTTP_VERSION_1_1);
+
+    mln_string_set(&key, "Host");
+    mln_string_set(&val, "example.com");
+    assert(mln_http_field_set(client_http, &key, &val) == 0);
+    mln_string_set(&key, "Content-Length");
+    mln_string_set(&val, "5");
+    assert(mln_http_field_set(client_http, &key, &val) == 0);
+    mln_string_set(&key, "Content-Type");
+    mln_string_set(&val, "text/plain");
+    assert(mln_http_field_set(client_http, &key, &val) == 0);
+
+    head = NULL; tail = NULL;
+    assert(mln_http_generate(client_http, &head, &tail) == M_HTTP_RET_DONE);
+    assert(head != NULL);
+
+    /* CLIENT: Append body after headers.
+     * mln_http_generate may return tail=NULL, so walk chain to find real tail. */
+    mln_chain_t *body_chain;
+    mln_buf_t *body_buf;
+    assert((body_chain = mln_chain_new(client_pool)) != NULL);
+    assert((body_buf = mln_buf_new(client_pool)) != NULL);
+    body_chain->buf = body_buf;
+    body_buf->start = body_buf->pos = body_buf->left_pos = (mln_u8ptr_t)(void *)body_str;
+    body_buf->last = body_buf->end = (mln_u8ptr_t)(void *)body_str + strlen(body_str);
+    body_buf->temporary = 1;
+    body_buf->last_buf = 1;
+    body_buf->last_in_chain = 1;
+
+    /* Walk chain to find real tail, then append body */
+    mln_chain_t *real_tail = head;
+    while (real_tail->next != NULL) real_tail = real_tail->next;
+    real_tail->next = body_chain;
+    real_tail = body_chain;
+
+    mln_tcp_conn_append_chain(&client_conn, head, real_tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&client_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* SERVER: Receive and parse the POST request */
+    ret = mln_tcp_conn_recv(&server_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&server_conn, M_C_RECV);
+    assert(c != NULL);
+    ret = mln_http_parse(server_http, &c);
+    assert(ret == M_HTTP_RET_DONE);
+    assert(mln_http_method_get(server_http) == M_HTTP_POST);
+    if (c != NULL) mln_chain_pool_release_all(c);
+
+    /* SERVER: Generate HTTP 201 Created response */
+    mln_http_reset(server_http);
+    mln_http_type_set(server_http, M_HTTP_RESPONSE);
+    mln_http_status_set(server_http, M_HTTP_CREATED);
+    mln_http_version_set(server_http, M_HTTP_VERSION_1_1);
+    mln_string_set(&key, "Content-Type");
+    mln_string_set(&val, "application/json");
+    assert(mln_http_field_set(server_http, &key, &val) == 0);
+
+    head = NULL; tail = NULL;
+    assert(mln_http_generate(server_http, &head, &tail) == M_HTTP_RET_DONE);
+    assert(head != NULL);
+    mln_tcp_conn_append_chain(&server_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&server_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* CLIENT: Receive and parse response */
+    mln_http_reset(client_http);
+    ret = mln_tcp_conn_recv(&client_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&client_conn, M_C_RECV);
+    assert(c != NULL);
+    ret = mln_http_parse(client_http, &c);
+    assert(ret == M_HTTP_RET_DONE);
+    assert(mln_http_status_get(client_http) == M_HTTP_CREATED);
+    if (c != NULL) mln_chain_pool_release_all(c);
+
+    mln_http_destroy(client_http);
+    mln_http_destroy(server_http);
+    mln_tcp_conn_destroy(&client_conn);
+    mln_tcp_conn_destroy(&server_conn);
+    close(fds[0]);
+    close(fds[1]);
+
+    printf("[PASS] test_e2e_post_with_body\n");
+}
+
 int main(void)
 {
     printf("===== HTTP Module Tests =====\n\n");
@@ -674,6 +883,10 @@ int main(void)
     printf("\n=== Stability ===\n");
     test_stability_parse_multiple();
     test_stability_generate_multiple();
+
+    printf("\n=== E2E Socket Tests ===\n");
+    test_e2e_request_response();
+    test_e2e_post_with_body();
 
     printf("\n===== All tests passed! =====\n");
     return 0;

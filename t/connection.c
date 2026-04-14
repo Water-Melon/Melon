@@ -561,6 +561,187 @@ static void test_stability(void)
     printf("  PASS: stability test\n");
 }
 
+/* Test 11: recv returns M_C_CLOSED when peer closes connection */
+static void test_recv_closed(void)
+{
+    printf("Testing recv with closed connection...\n");
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+
+    mln_tcp_conn_t conn_recv;
+    assert(mln_tcp_conn_init(&conn_recv, fds[1]) == 0);
+
+    /* Close sender side to signal EOF */
+    close(fds[0]);
+
+    /* Recv should return M_C_CLOSED when peer closes */
+    int ret = mln_tcp_conn_recv(&conn_recv, M_C_TYPE_MEMORY);
+    assert(ret == M_C_CLOSED);
+
+    mln_tcp_conn_destroy(&conn_recv);
+    close(fds[1]);
+
+    printf("  PASS: recv closed connection\n");
+}
+
+/* Test 12: recv returns M_C_NOTYET on non-blocking socket with no data */
+static void test_recv_notyet_nonblock(void)
+{
+    printf("Testing recv on non-blocking socket (no data)...\n");
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+
+    mln_tcp_conn_t conn_recv;
+    assert(mln_tcp_conn_init(&conn_recv, fds[1]) == 0);
+
+    /* Set to non-blocking mode */
+    set_nonblock(fds[1]);
+    mln_tcp_conn_set_nonblock(&conn_recv, 1);
+
+    /* Recv with no data available should return M_C_NOTYET (EAGAIN) */
+    int ret = mln_tcp_conn_recv(&conn_recv, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET);
+
+    mln_tcp_conn_destroy(&conn_recv);
+    close(fds[0]);
+    close(fds[1]);
+
+    printf("  PASS: recv non-blocking no data\n");
+}
+
+/* Test 13: recv returns M_C_NOTYET on blocking socket after reading data */
+static void test_recv_notyet_blocking(void)
+{
+    printf("Testing recv on blocking socket...\n");
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+
+    mln_tcp_conn_t conn_send, conn_recv;
+    assert(mln_tcp_conn_init(&conn_send, fds[0]) == 0);
+    assert(mln_tcp_conn_init(&conn_recv, fds[1]) == 0);
+
+    mln_alloc_t *pool = mln_tcp_conn_pool_get(&conn_send);
+
+    /* Send some data */
+    const char *data = "test data";
+    int data_len = strlen(data);
+
+    mln_u8ptr_t buf = (mln_u8ptr_t)mln_alloc_m(pool, data_len + 1);
+    assert(buf != NULL);
+    memcpy(buf, data, data_len);
+
+    mln_chain_t *c = mln_chain_new(pool);
+    mln_buf_t *b = mln_buf_new(pool);
+    assert(c != NULL && b != NULL);
+
+    c->buf = b;
+    b->left_pos = b->pos = b->start = buf;
+    b->last = b->end = buf + data_len;
+    b->in_memory = 1;
+    b->last_buf = 1;
+    b->last_in_chain = 1;
+
+    mln_tcp_conn_append(&conn_send, c, M_C_SEND);
+
+    int ret = mln_tcp_conn_send(&conn_send);
+    assert(ret == M_C_FINISH);
+
+    /* Blocking recv should return M_C_NOTYET after reading data chunk */
+    ret = mln_tcp_conn_recv(&conn_recv, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET);
+
+    /* Verify data was received */
+    mln_chain_t *recv_chain = mln_tcp_conn_head(&conn_recv, M_C_RECV);
+    assert(recv_chain != NULL);
+
+    mln_tcp_conn_destroy(&conn_send);
+    mln_tcp_conn_destroy(&conn_recv);
+    close(fds[0]);
+    close(fds[1]);
+
+    printf("  PASS: recv blocking socket\n");
+}
+
+/* Test 14: recv returns M_C_ERROR on invalid fd */
+static void test_recv_error(void)
+{
+    printf("Testing recv with invalid fd...\n");
+
+    mln_tcp_conn_t conn;
+    assert(mln_tcp_conn_init(&conn, -1) == 0);
+
+    /* Recv on invalid fd should return M_C_ERROR */
+    int ret = mln_tcp_conn_recv(&conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_ERROR);
+
+    mln_tcp_conn_destroy(&conn);
+
+    printf("  PASS: recv error handling\n");
+}
+
+/* Test 15: recv with M_C_TYPE_MEMORY after partial send (nonblocking NOTYET) */
+static void test_recv_after_nonblock_send(void)
+{
+    printf("Testing recv after nonblocking send...\n");
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]);
+    set_nonblock(fds[1]);
+
+    mln_tcp_conn_t conn_send, conn_recv;
+    assert(mln_tcp_conn_init(&conn_send, fds[0]) == 0);
+    assert(mln_tcp_conn_init(&conn_recv, fds[1]) == 0);
+    mln_tcp_conn_set_nonblock(&conn_send, 1);
+    mln_tcp_conn_set_nonblock(&conn_recv, 1);
+
+    mln_alloc_t *pool = mln_tcp_conn_pool_get(&conn_send);
+
+    /* Send data */
+    const char *data = "nonblock test data";
+    int data_len = strlen(data);
+
+    mln_u8ptr_t buf = (mln_u8ptr_t)mln_alloc_m(pool, data_len + 1);
+    assert(buf != NULL);
+    memcpy(buf, data, data_len);
+
+    mln_chain_t *c = mln_chain_new(pool);
+    mln_buf_t *b = mln_buf_new(pool);
+    assert(c != NULL && b != NULL);
+
+    c->buf = b;
+    b->left_pos = b->pos = b->start = buf;
+    b->last = b->end = buf + data_len;
+    b->in_memory = 1;
+    b->last_buf = 1;
+    b->last_in_chain = 1;
+
+    mln_tcp_conn_append(&conn_send, c, M_C_SEND);
+
+    int ret = mln_tcp_conn_send(&conn_send);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Recv on nonblock - should get data or NOTYET */
+    ret = mln_tcp_conn_recv(&conn_recv, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET);
+
+    /* Verify data was received */
+    mln_chain_t *recv_chain = mln_tcp_conn_head(&conn_recv, M_C_RECV);
+    assert(recv_chain != NULL);
+    assert(recv_chain->buf != NULL);
+    assert(memcmp(recv_chain->buf->pos, data, data_len) == 0);
+
+    mln_tcp_conn_destroy(&conn_send);
+    mln_tcp_conn_destroy(&conn_recv);
+    close(fds[0]);
+    close(fds[1]);
+
+    printf("  PASS: recv after nonblock send\n");
+}
+
 int main(void)
 {
     printf("=== Connection Module Comprehensive Tests ===\n\n");
@@ -575,6 +756,11 @@ int main(void)
     test_multiple_cycles();
     test_performance();
     test_stability();
+    test_recv_closed();
+    test_recv_notyet_nonblock();
+    test_recv_notyet_blocking();
+    test_recv_error();
+    test_recv_after_nonblock_send();
 
     printf("\n=== All connection tests passed! ===\n");
     return 0;

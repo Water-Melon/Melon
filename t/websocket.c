@@ -3,8 +3,18 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/socket.h>
 #include "mln_websocket.h"
 #include "mln_http.h"
+
+static void set_nonblock(int fd)
+{
+    int flags = fcntl(fd, F_GETFL, 0);
+    assert(flags >= 0);
+    assert(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0);
+}
 
 static long elapsed_us(struct timespec *start, struct timespec *end)
 {
@@ -744,6 +754,407 @@ static void test_websocket_stability_mixed_frames(void)
     printf("[PASS] test_websocket_stability_mixed_frames (%d frames)\n", count);
 }
 
+static void test_e2e_text_echo(void)
+{
+    int socks[2];
+    mln_tcp_conn_t client_conn, server_conn;
+    mln_http_t *client_http, *server_http;
+    mln_websocket_t *client_ws, *server_ws;
+    mln_chain_t *head, *tail;
+    mln_chain_t *c;
+    mln_u8_t data[] = "Hello WebSocket";
+    int ret;
+
+    /* Create non-blocking socket pair */
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, socks) == 0);
+    set_nonblock(socks[0]);
+    set_nonblock(socks[1]);
+
+    /* Client side: generate handshake request */
+    assert(mln_tcp_conn_init(&client_conn, socks[0]) == 0);
+    mln_tcp_conn_set_nonblock(&client_conn, 1);
+    assert((client_http = mln_http_init(&client_conn, NULL, NULL)) != NULL);
+    assert((client_ws = mln_websocket_new(client_http)) != NULL);
+
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_handshake_request_generate(client_ws, &head, &tail) == M_WS_RET_OK);
+    assert(head != NULL);
+
+    mln_tcp_conn_append_chain(&client_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&client_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Server side: recv and parse HTTP request */
+    assert(mln_tcp_conn_init(&server_conn, socks[1]) == 0);
+    mln_tcp_conn_set_nonblock(&server_conn, 1);
+    assert((server_http = mln_http_init(&server_conn, NULL, NULL)) != NULL);
+
+    ret = mln_tcp_conn_recv(&server_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&server_conn, M_C_RECV);
+    assert(c != NULL);
+
+    assert(mln_http_parse(server_http, &c) == M_HTTP_RET_DONE);
+    assert(mln_websocket_is_websocket(server_http) >= 0);
+
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Server: generate handshake response */
+    assert((server_ws = mln_websocket_new(server_http)) != NULL);
+
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_handshake_response_generate(server_ws, &head, &tail) == M_WS_RET_OK);
+    assert(head != NULL);
+
+    mln_tcp_conn_append_chain(&server_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&server_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Client side: recv handshake response */
+    mln_http_reset(client_http);
+    ret = mln_tcp_conn_recv(&client_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&client_conn, M_C_RECV);
+    assert(c != NULL);
+
+    assert(mln_http_parse(client_http, &c) == M_HTTP_RET_DONE);
+
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Client: generate text frame with CLIENT flag */
+    mln_websocket_reset(client_ws);
+    mln_websocket_set_opcode(client_ws, M_WS_OPCODE_TEXT);
+    mln_websocket_set_fin(client_ws);
+    mln_websocket_set_maskbit(client_ws);
+
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_text_generate(client_ws, &head, data, sizeof(data) - 1, M_WS_FLAG_NEW | M_WS_FLAG_END | M_WS_FLAG_CLIENT) == M_WS_RET_OK);
+    assert(head != NULL);
+
+    mln_tcp_conn_append_chain(&client_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&client_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Server: recv and parse text frame */
+    mln_websocket_reset(server_ws);
+    ret = mln_tcp_conn_recv(&server_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&server_conn, M_C_RECV);
+    assert(c != NULL);
+
+    assert(mln_websocket_parse(server_ws, &c) == M_WS_RET_OK);
+    assert(mln_websocket_get_opcode(server_ws) == M_WS_OPCODE_TEXT);
+    assert(mln_websocket_get_content_len(server_ws) == sizeof(data) - 1);
+    assert(memcmp(mln_websocket_get_content(server_ws), data, sizeof(data) - 1) == 0);
+
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Server: generate echo response with SERVER flag */
+    mln_websocket_reset(server_ws);
+    mln_websocket_set_opcode(server_ws, M_WS_OPCODE_TEXT);
+    mln_websocket_set_fin(server_ws);
+
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_text_generate(server_ws, &head, data, sizeof(data) - 1, M_WS_FLAG_NEW | M_WS_FLAG_END | M_WS_FLAG_SERVER) == M_WS_RET_OK);
+    assert(head != NULL);
+
+    mln_tcp_conn_append_chain(&server_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&server_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Client: recv and parse echo response */
+    mln_websocket_reset(client_ws);
+    ret = mln_tcp_conn_recv(&client_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&client_conn, M_C_RECV);
+    assert(c != NULL);
+
+    assert(mln_websocket_parse(client_ws, &c) == M_WS_RET_OK);
+    assert(mln_websocket_get_opcode(client_ws) == M_WS_OPCODE_TEXT);
+    assert(mln_websocket_get_content_len(client_ws) == sizeof(data) - 1);
+    assert(memcmp(mln_websocket_get_content(client_ws), data, sizeof(data) - 1) == 0);
+
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Cleanup */
+    mln_websocket_free(client_ws);
+    mln_http_destroy(client_http);
+    mln_tcp_conn_destroy(&client_conn);
+
+    mln_websocket_free(server_ws);
+    mln_http_destroy(server_http);
+    mln_tcp_conn_destroy(&server_conn);
+
+    close(socks[0]);
+    close(socks[1]);
+
+    printf("[PASS] test_e2e_text_echo\n");
+}
+
+static void test_e2e_ping_pong(void)
+{
+    int socks[2];
+    mln_tcp_conn_t client_conn, server_conn;
+    mln_http_t *client_http, *server_http;
+    mln_websocket_t *client_ws, *server_ws;
+    mln_chain_t *head, *tail;
+    mln_chain_t *c;
+    int ret;
+
+    /* Create non-blocking socket pair */
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, socks) == 0);
+    set_nonblock(socks[0]);
+    set_nonblock(socks[1]);
+
+    /* Setup client */
+    assert(mln_tcp_conn_init(&client_conn, socks[0]) == 0);
+    mln_tcp_conn_set_nonblock(&client_conn, 1);
+    assert((client_http = mln_http_init(&client_conn, NULL, NULL)) != NULL);
+    assert((client_ws = mln_websocket_new(client_http)) != NULL);
+
+    /* Client handshake request */
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_handshake_request_generate(client_ws, &head, &tail) == M_WS_RET_OK);
+    mln_tcp_conn_append_chain(&client_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&client_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Setup server */
+    assert(mln_tcp_conn_init(&server_conn, socks[1]) == 0);
+    mln_tcp_conn_set_nonblock(&server_conn, 1);
+    assert((server_http = mln_http_init(&server_conn, NULL, NULL)) != NULL);
+
+    /* Server recv and parse */
+    ret = mln_tcp_conn_recv(&server_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&server_conn, M_C_RECV);
+    assert(c != NULL);
+    assert(mln_http_parse(server_http, &c) == M_HTTP_RET_DONE);
+    if (c != NULL) mln_chain_pool_release(c);
+
+    assert((server_ws = mln_websocket_new(server_http)) != NULL);
+
+    /* Server handshake response */
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_handshake_response_generate(server_ws, &head, &tail) == M_WS_RET_OK);
+    mln_tcp_conn_append_chain(&server_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&server_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Client recv response */
+    mln_http_reset(client_http);
+    ret = mln_tcp_conn_recv(&client_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&client_conn, M_C_RECV);
+    assert(c != NULL);
+    assert(mln_http_parse(client_http, &c) == M_HTTP_RET_DONE);
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Client: generate ping frame */
+    mln_websocket_reset(client_ws);
+    mln_websocket_set_opcode(client_ws, M_WS_OPCODE_PING);
+    mln_websocket_set_fin(client_ws);
+    mln_websocket_set_maskbit(client_ws);
+
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_ping_generate(client_ws, &head, M_WS_FLAG_CLIENT) == M_WS_RET_OK);
+    assert(head != NULL);
+
+    mln_tcp_conn_append_chain(&client_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&client_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Server: recv and parse ping */
+    mln_websocket_reset(server_ws);
+    ret = mln_tcp_conn_recv(&server_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&server_conn, M_C_RECV);
+    assert(c != NULL);
+
+    assert(mln_websocket_parse(server_ws, &c) == M_WS_RET_OK);
+    assert(mln_websocket_get_opcode(server_ws) == M_WS_OPCODE_PING);
+
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Server: generate pong response */
+    mln_websocket_reset(server_ws);
+    mln_websocket_set_opcode(server_ws, M_WS_OPCODE_PONG);
+    mln_websocket_set_fin(server_ws);
+
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_pong_generate(server_ws, &head, M_WS_FLAG_SERVER) == M_WS_RET_OK);
+    assert(head != NULL);
+
+    mln_tcp_conn_append_chain(&server_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&server_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Client: recv and parse pong */
+    mln_websocket_reset(client_ws);
+    ret = mln_tcp_conn_recv(&client_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&client_conn, M_C_RECV);
+    assert(c != NULL);
+
+    assert(mln_websocket_parse(client_ws, &c) == M_WS_RET_OK);
+    assert(mln_websocket_get_opcode(client_ws) == M_WS_OPCODE_PONG);
+
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Cleanup */
+    mln_websocket_free(client_ws);
+    mln_http_destroy(client_http);
+    mln_tcp_conn_destroy(&client_conn);
+
+    mln_websocket_free(server_ws);
+    mln_http_destroy(server_http);
+    mln_tcp_conn_destroy(&server_conn);
+
+    close(socks[0]);
+    close(socks[1]);
+
+    printf("[PASS] test_e2e_ping_pong\n");
+}
+
+static void test_e2e_close_handshake(void)
+{
+    int socks[2];
+    mln_tcp_conn_t client_conn, server_conn;
+    mln_http_t *client_http, *server_http;
+    mln_websocket_t *client_ws, *server_ws;
+    mln_chain_t *head, *tail;
+    mln_chain_t *c;
+    int ret;
+
+    /* Create non-blocking socket pair */
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, socks) == 0);
+    set_nonblock(socks[0]);
+    set_nonblock(socks[1]);
+
+    /* Setup client */
+    assert(mln_tcp_conn_init(&client_conn, socks[0]) == 0);
+    mln_tcp_conn_set_nonblock(&client_conn, 1);
+    assert((client_http = mln_http_init(&client_conn, NULL, NULL)) != NULL);
+    assert((client_ws = mln_websocket_new(client_http)) != NULL);
+
+    /* Client handshake request */
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_handshake_request_generate(client_ws, &head, &tail) == M_WS_RET_OK);
+    mln_tcp_conn_append_chain(&client_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&client_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Setup server */
+    assert(mln_tcp_conn_init(&server_conn, socks[1]) == 0);
+    mln_tcp_conn_set_nonblock(&server_conn, 1);
+    assert((server_http = mln_http_init(&server_conn, NULL, NULL)) != NULL);
+
+    /* Server recv and parse */
+    ret = mln_tcp_conn_recv(&server_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&server_conn, M_C_RECV);
+    assert(c != NULL);
+    assert(mln_http_parse(server_http, &c) == M_HTTP_RET_DONE);
+    if (c != NULL) mln_chain_pool_release(c);
+
+    assert((server_ws = mln_websocket_new(server_http)) != NULL);
+
+    /* Server handshake response */
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_handshake_response_generate(server_ws, &head, &tail) == M_WS_RET_OK);
+    mln_tcp_conn_append_chain(&server_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&server_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Client recv response */
+    mln_http_reset(client_http);
+    ret = mln_tcp_conn_recv(&client_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&client_conn, M_C_RECV);
+    assert(c != NULL);
+    assert(mln_http_parse(client_http, &c) == M_HTTP_RET_DONE);
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Client: generate close frame with status */
+    mln_websocket_reset(client_ws);
+    mln_websocket_set_opcode(client_ws, M_WS_OPCODE_CLOSE);
+    mln_websocket_set_fin(client_ws);
+    mln_websocket_set_status(client_ws, M_WS_STATUS_NORMAL_CLOSURE);
+    mln_websocket_set_maskbit(client_ws);
+
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_close_generate(client_ws, &head, "", 0, M_WS_FLAG_CLIENT) == M_WS_RET_OK);
+    assert(head != NULL);
+
+    mln_tcp_conn_append_chain(&client_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&client_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Server: recv and parse close frame */
+    mln_websocket_reset(server_ws);
+    ret = mln_tcp_conn_recv(&server_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&server_conn, M_C_RECV);
+    assert(c != NULL);
+
+    assert(mln_websocket_parse(server_ws, &c) == M_WS_RET_OK);
+    assert(mln_websocket_get_opcode(server_ws) == M_WS_OPCODE_CLOSE);
+
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Server: generate close frame response */
+    mln_websocket_reset(server_ws);
+    mln_websocket_set_opcode(server_ws, M_WS_OPCODE_CLOSE);
+    mln_websocket_set_fin(server_ws);
+    mln_websocket_set_status(server_ws, M_WS_STATUS_NORMAL_CLOSURE);
+
+    head = NULL;
+    tail = NULL;
+    assert(mln_websocket_close_generate(server_ws, &head, "", 0, M_WS_FLAG_SERVER) == M_WS_RET_OK);
+    assert(head != NULL);
+
+    mln_tcp_conn_append_chain(&server_conn, head, tail, M_C_SEND);
+    ret = mln_tcp_conn_send(&server_conn);
+    assert(ret == M_C_FINISH || ret == M_C_NOTYET);
+
+    /* Client: recv and parse close response */
+    mln_websocket_reset(client_ws);
+    ret = mln_tcp_conn_recv(&client_conn, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET || ret == M_C_FINISH);
+    c = mln_tcp_conn_remove(&client_conn, M_C_RECV);
+    assert(c != NULL);
+
+    assert(mln_websocket_parse(client_ws, &c) == M_WS_RET_OK);
+    assert(mln_websocket_get_opcode(client_ws) == M_WS_OPCODE_CLOSE);
+
+    if (c != NULL) mln_chain_pool_release(c);
+
+    /* Cleanup */
+    mln_websocket_free(client_ws);
+    mln_http_destroy(client_http);
+    mln_tcp_conn_destroy(&client_conn);
+
+    mln_websocket_free(server_ws);
+    mln_http_destroy(server_http);
+    mln_tcp_conn_destroy(&server_conn);
+
+    close(socks[0]);
+    close(socks[1]);
+
+    printf("[PASS] test_e2e_close_handshake\n");
+}
+
 int main(void)
 {
     printf("===== WebSocket Module Tests =====\n\n");
@@ -791,6 +1202,11 @@ int main(void)
     printf("\n=== Stability ===\n");
     test_websocket_stability_large_frames();
     test_websocket_stability_mixed_frames();
+
+    printf("\n=== E2E Socket Tests ===\n");
+    test_e2e_text_echo();
+    test_e2e_ping_pong();
+    test_e2e_close_handshake();
 
     printf("\n===== All WebSocket tests passed! =====\n");
     return 0;
