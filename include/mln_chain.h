@@ -6,6 +6,7 @@
 #ifndef __MLN_CHAIN_H
 #define __MLN_CHAIN_H
 
+#include <string.h>
 #include "mln_types.h"
 #include "mln_string.h"
 #include "mln_alloc.h"
@@ -66,6 +67,7 @@ static inline mln_buf_t *mln_buf_new(mln_alloc_t *pool)
 {
     mln_buf_t *b = mln_alloc_m(pool, sizeof(mln_buf_t));
     if (b == NULL) return NULL;
+    memset(b, 0, sizeof(mln_buf_t));
     b->left_pos = b->pos = b->last = NULL;
     b->start = b->end = NULL;
     b->shadow = NULL;
