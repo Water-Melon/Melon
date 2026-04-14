@@ -16,6 +16,25 @@ static void set_nonblock(int fd)
     assert(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0);
 }
 
+/* Body handler for E2E tests: captures remaining body chain for verification */
+static char e2e_body_buf[4096];
+static int e2e_body_len = 0;
+
+static int e2e_body_handler(mln_http_t *http, mln_chain_t **body_head, mln_chain_t **body_tail)
+{
+    mln_chain_t *c;
+    e2e_body_len = 0;
+    for (c = *body_head; c != NULL; c = c->next) {
+        if (c->buf == NULL) continue;
+        int sz = (int)(c->buf->last - c->buf->left_pos);
+        if (sz > 0 && e2e_body_len + sz < (int)sizeof(e2e_body_buf)) {
+            memcpy(e2e_body_buf + e2e_body_len, c->buf->left_pos, sz);
+            e2e_body_len += sz;
+        }
+    }
+    return M_HTTP_RET_DONE;
+}
+
 static long elapsed_us(struct timespec *start, struct timespec *end)
 {
     long sec_diff = (long)(end->tv_sec - start->tv_sec);
@@ -759,7 +778,11 @@ static void test_e2e_post_with_body(void)
 
     assert(mln_tcp_conn_init(&server_conn, fds[1]) == 0);
     mln_tcp_conn_set_nonblock(&server_conn, 1);
-    assert((server_http = mln_http_init(&server_conn, NULL, NULL)) != NULL);
+    assert((server_http = mln_http_init(&server_conn, NULL, e2e_body_handler)) != NULL);
+
+    /* Reset body capture buffer */
+    e2e_body_len = 0;
+    memset(e2e_body_buf, 0, sizeof(e2e_body_buf));
 
     /* CLIENT: Generate HTTP POST request headers */
     mln_http_type_set(client_http, M_HTTP_REQUEST);
@@ -790,12 +813,14 @@ static void test_e2e_post_with_body(void)
     body_buf->start = body_buf->pos = body_buf->left_pos = (mln_u8ptr_t)(void *)body_str;
     body_buf->last = body_buf->end = (mln_u8ptr_t)(void *)body_str + strlen(body_str);
     body_buf->temporary = 1;
+    body_buf->in_memory = 1;
     body_buf->last_buf = 1;
     body_buf->last_in_chain = 1;
 
-    /* Walk chain to find real tail, then append body */
+    /* Walk chain to find real tail, clear its last_in_chain, then append body */
     mln_chain_t *real_tail = head;
     while (real_tail->next != NULL) real_tail = real_tail->next;
+    if (real_tail->buf != NULL) real_tail->buf->last_in_chain = 0;
     real_tail->next = body_chain;
     real_tail = body_chain;
 
@@ -811,6 +836,11 @@ static void test_e2e_post_with_body(void)
     ret = mln_http_parse(server_http, &c);
     assert(ret == M_HTTP_RET_DONE);
     assert(mln_http_method_get(server_http) == M_HTTP_POST);
+
+    /* Verify parsed body content matches what was sent */
+    assert(e2e_body_len == (int)strlen(body_str));
+    assert(memcmp(e2e_body_buf, body_str, strlen(body_str)) == 0);
+
     if (c != NULL) mln_chain_pool_release_all(c);
 
     /* SERVER: Generate HTTP 201 Created response */

@@ -682,7 +682,70 @@ static void test_recv_error(void)
     printf("  PASS: recv error handling\n");
 }
 
-/* Test 15: recv with M_C_TYPE_MEMORY after partial send (nonblocking NOTYET) */
+/* Test 15: send returns M_C_FINISH when all data is successfully written */
+static void test_send_finish(void)
+{
+    printf("Testing send returns M_C_FINISH...\n");
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]);
+    set_nonblock(fds[1]);
+
+    mln_tcp_conn_t conn_send, conn_recv;
+    assert(mln_tcp_conn_init(&conn_send, fds[0]) == 0);
+    assert(mln_tcp_conn_init(&conn_recv, fds[1]) == 0);
+    mln_tcp_conn_set_nonblock(&conn_send, 1);
+    mln_tcp_conn_set_nonblock(&conn_recv, 1);
+
+    mln_alloc_t *pool = mln_tcp_conn_pool_get(&conn_send);
+
+    /* Send a small chunk - should complete immediately, returning M_C_FINISH */
+    const char *data = "M_C_FINISH test";
+    int data_len = strlen(data);
+
+    mln_u8ptr_t buf = (mln_u8ptr_t)mln_alloc_m(pool, data_len);
+    assert(buf != NULL);
+    memcpy(buf, data, data_len);
+
+    mln_chain_t *c = mln_chain_new(pool);
+    mln_buf_t *b = mln_buf_new(pool);
+    assert(c != NULL && b != NULL);
+    c->buf = b;
+    b->left_pos = b->pos = b->start = buf;
+    b->last = b->end = buf + data_len;
+    b->in_memory = 1;
+    b->last_buf = 1;
+    b->last_in_chain = 1;
+
+    mln_tcp_conn_append(&conn_send, c, M_C_SEND);
+
+    int ret = mln_tcp_conn_send(&conn_send);
+    assert(ret == M_C_FINISH);
+
+    /* After M_C_FINISH, send queue should be empty */
+    assert(mln_tcp_conn_head(&conn_send, M_C_SEND) == NULL);
+
+    /* Sent data should be in the SENT queue */
+    assert(mln_tcp_conn_head(&conn_send, M_C_SENT) != NULL);
+
+    /* Verify the receiver can read the data */
+    ret = mln_tcp_conn_recv(&conn_recv, M_C_TYPE_MEMORY);
+    assert(ret == M_C_NOTYET);
+    mln_chain_t *rc = mln_tcp_conn_head(&conn_recv, M_C_RECV);
+    assert(rc != NULL && rc->buf != NULL);
+    assert((int)(rc->buf->last - rc->buf->pos) == data_len);
+    assert(memcmp(rc->buf->pos, data, data_len) == 0);
+
+    mln_tcp_conn_destroy(&conn_send);
+    mln_tcp_conn_destroy(&conn_recv);
+    close(fds[0]);
+    close(fds[1]);
+
+    printf("  PASS: send returns M_C_FINISH\n");
+}
+
+/* Test 16: recv with M_C_TYPE_MEMORY after partial send (nonblocking NOTYET) */
 static void test_recv_after_nonblock_send(void)
 {
     printf("Testing recv after nonblocking send...\n");
@@ -760,6 +823,7 @@ int main(void)
     test_recv_notyet_nonblock();
     test_recv_notyet_blocking();
     test_recv_error();
+    test_send_finish();
     test_recv_after_nonblock_send();
 
     printf("\n=== All connection tests passed! ===\n");
