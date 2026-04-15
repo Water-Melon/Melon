@@ -293,7 +293,10 @@ MLN_FUNC(, int, mln_rbtree_iterate, \
 {
     mln_rbtree_node_t *nil = &(t->nil);
     mln_rbtree_node_t *n = t->root;
-    if (n == nil) return 0;
+    if (n == nil) {
+        t->iter = NULL;
+        return 0;
+    }
     while (n->left != nil) n = n->left;
     while (n != nil) {
         t->iter = rbtree_successor(t, n);
@@ -301,7 +304,6 @@ MLN_FUNC(, int, mln_rbtree_iterate, \
             t->iter = NULL;
             return -1;
         }
-        if (t->iter == NULL) break;
         n = t->iter;
     }
     t->iter = NULL;
