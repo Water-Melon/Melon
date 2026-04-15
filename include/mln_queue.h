@@ -53,7 +53,7 @@ extern int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void
 
 #define mln_queue_get(q) ({\
     mln_queue_t *_mq = (q);\
-    _mq->nr_element ? (void *)_mq->queue[_mq->head] : NULL;\
+    _mq->nr_element ? _mq->queue[_mq->head] : NULL;\
 })
 
 #define mln_queue_remove(q) ({\
@@ -67,7 +67,7 @@ extern int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void
 #define mln_queue_search(q, idx) ({\
     mln_queue_t *_mq = (q);\
     mln_uauto_t _mi = (idx);\
-    _mi >= _mq->nr_element ? NULL : (void *)_mq->queue[(_mq->head + _mi) & _mq->mask];\
+    _mi >= _mq->nr_element ? NULL : _mq->queue[(_mq->head + _mi) & _mq->mask];\
 })
 #endif
 

@@ -18,9 +18,8 @@ static inline mln_uauto_t mln_queue_roundup_pow2(mln_uauto_t n)
     n |= n >> 4;
     n |= n >> 8;
     n |= n >> 16;
-#if __SIZEOF_LONG__ > 4
-    n |= n >> 32;
-#endif
+    if (sizeof(mln_uauto_t) > 4)
+        n |= n >> 32;
     return n + 1;
 }
 
