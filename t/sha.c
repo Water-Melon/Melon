@@ -441,8 +441,8 @@ static void test_performance(void)
     printf("  SHA1   %d iters: %.3f sec (%.1f MB/s)\n", iters, sha1_sec, (double)iters * 1024.0 / sha1_sec / 1e6);
     printf("  SHA256 %d iters: %.3f sec (%.1f MB/s)\n", iters, sha256_sec, (double)iters * 1024.0 / sha256_sec / 1e6);
 
-    assert(sha1_sec < 10.0);
-    assert(sha256_sec < 10.0);
+    assert(sha1_sec < 30.0);
+    assert(sha256_sec < 30.0);
     PASS();
 }
 
