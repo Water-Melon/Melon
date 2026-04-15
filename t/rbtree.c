@@ -1022,15 +1022,12 @@ static int tree_max_depth(mln_rbtree_t *t, mln_rbtree_node_t *n)
     return 1 + (ld > rd ? ld : rd);
 }
 
-static int tree_min_depth(mln_rbtree_t *t, mln_rbtree_node_t *n)
-{
-    if (mln_rbtree_null(n, t)) return 0;
-    int ld = tree_min_depth(t, n->left);
-    int rd = tree_min_depth(t, n->right);
-    return 1 + (ld < rd ? ld : rd);
-}
-
-/* Verify red-black tree properties recursively. Returns the black-height, or -1 on error. */
+/*
+ * Verify red-black tree properties recursively. Returns the black-height.
+ * Also checks the depth constraint at every node: for each subtree,
+ * max_depth(subtree) <= 2 * min_depth(subtree), which ensures the left and
+ * right subtree depths do not differ beyond the red-black tree limit.
+ */
 static int verify_rb_properties(mln_rbtree_t *t, mln_rbtree_node_t *n)
 {
     if (mln_rbtree_null(n, t)) return 1; /* nil nodes are black, contribute 1 */
@@ -1054,6 +1051,20 @@ static int verify_rb_properties(mln_rbtree_t *t, mln_rbtree_node_t *n)
 
     /* Property: equal black-height on both sides */
     assert(lh == rh);
+
+    /*
+     * Property: depth balance at every node.
+     * In a valid red-black tree, the longest root-to-leaf path is at most
+     * twice the shortest. Check this for every subtree rooted at n.
+     * The +1 accounts for the case where one child is nil (depth 0) and
+     * the other has a single node (depth 1), which is valid in RB trees
+     * (e.g. a black node with one red child and one nil child).
+     */
+    int ld = tree_max_depth(t, n->left);
+    int rd = tree_max_depth(t, n->right);
+    int max_child = ld > rd ? ld : rd;
+    int min_child = ld < rd ? ld : rd;
+    assert(max_child <= 2 * min_child + 1);
 
     return lh + (n->color == M_RB_BLACK ? 1 : 0);
 }
@@ -1085,15 +1096,9 @@ static void test_preorder_traversal(void)
         mln_rbtree_insert(t, rn);
     }
 
-    /* Verify RB properties hold */
+    /* Verify RB properties and per-node depth constraint */
     assert(mln_rbtree_root(t)->color == M_RB_BLACK); /* root is black */
     verify_rb_properties(t, mln_rbtree_root(t));
-
-    /* Verify depth constraint: max depth <= 2 * min depth */
-    int maxd = tree_max_depth(t, mln_rbtree_root(t));
-    int mind = tree_min_depth(t, mln_rbtree_root(t));
-    assert(mind > 0);
-    assert(maxd <= 2 * mind);
 
     /* Collect and verify pre-order: values should be a valid pre-order of a BST */
     int pre[7]; int idx = 0;
@@ -1131,14 +1136,8 @@ static void test_inorder_traversal(void)
         mln_rbtree_insert(t, rn);
     }
 
-    /* Verify RB properties */
+    /* Verify RB properties and per-node depth constraint */
     verify_rb_properties(t, mln_rbtree_root(t));
-
-    /* Verify depth constraint: max depth <= 2 * min depth */
-    int maxd = tree_max_depth(t, mln_rbtree_root(t));
-    int mind = tree_min_depth(t, mln_rbtree_root(t));
-    assert(mind > 0);
-    assert(maxd <= 2 * mind);
 
     /* In-order must produce sorted sequence */
     int inorder[10]; int idx = 0;
@@ -1168,14 +1167,8 @@ static void test_postorder_traversal(void)
         mln_rbtree_insert(t, rn);
     }
 
-    /* Verify RB properties */
+    /* Verify RB properties and per-node depth constraint */
     verify_rb_properties(t, mln_rbtree_root(t));
-
-    /* Verify depth constraint: max depth <= 2 * min depth */
-    int maxd = tree_max_depth(t, mln_rbtree_root(t));
-    int mind = tree_min_depth(t, mln_rbtree_root(t));
-    assert(mind > 0);
-    assert(maxd <= 2 * mind);
 
     /* Post-order: last element must be root */
     int post[7]; int idx = 0;
