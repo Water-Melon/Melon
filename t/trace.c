@@ -34,6 +34,7 @@ static int test_trace_recv_cb(mln_lang_ctx_t *ctx, mln_lang_val_t *val)
         !memcmp(val->data.s->data, "trace-ping", sizeof("trace-ping") - 1))
     {
         trace_script_recv_ok = 1;
+        printf("trace script delivered message: %.*s\n", (int)val->data.s->len, val->data.s->data);
     }
     mln_event_break_set(mln_lang_event_get(ctx->lang));
     return 0;
