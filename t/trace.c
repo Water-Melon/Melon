@@ -16,6 +16,7 @@
 static int trace_init_cb_called = 0;
 static int trace_script_recv_called = 0;
 static int trace_script_recv_ok = 0;
+#define TRACE_SCRIPT_TEST_TIMEOUT_MS 1000
 
 static int test_trace_init_cb(mln_lang_ctx_t *ctx)
 {
@@ -116,38 +117,72 @@ static void test_trace_finalize_safe(void)
  */
 static void test_trace_script_interaction(void)
 {
-    static char script_path[] = "/tmp/melon_trace_test.m";
+    char *script_path = NULL;
+    size_t script_path_len;
+    const char *tmp_dir;
     static char script_code[] =
         "Pipe('subscribe');\n"
         "Pipe('send', 'trace-ping');\n"
         "Pipe('unsubscribe');\n";
-    FILE *fp;
-    mln_string_t path = mln_string(script_path);
-    mln_event_t *ev;
+    FILE *fp = NULL;
+    mln_string_t path;
+    mln_event_t *ev = NULL;
+    int fd = -1;
+    int ok = 0;
+    int script_created = 0;
 
     trace_script_recv_called = 0;
     trace_script_recv_ok = 0;
 
-    fp = fopen(script_path, "w");
-    assert(fp != NULL);
-    assert(fwrite(script_code, 1, sizeof(script_code) - 1, fp) == sizeof(script_code) - 1);
-    fclose(fp);
+    tmp_dir = getenv("TMPDIR");
+    if (tmp_dir == NULL || *tmp_dir == '\0') {
+        tmp_dir = "/tmp";
+    }
+    script_path_len = strlen(tmp_dir) + sizeof("/melon_trace_test.XXXXXX");
+    script_path = (char *)malloc(script_path_len);
+    if (script_path == NULL) goto cleanup;
+    if (snprintf(script_path, script_path_len, "%s/melon_trace_test.XXXXXX", tmp_dir) >= (int)script_path_len) {
+        goto cleanup;
+    }
 
+    fd = mkstemp(script_path);
+    if (fd < 0) goto cleanup;
+    script_created = 1;
+    fp = fdopen(fd, "w");
+    if (fp == NULL) {
+        close(fd);
+        goto cleanup;
+    }
+    if (fwrite(script_code, 1, sizeof(script_code) - 1, fp) != sizeof(script_code) - 1) {
+        fclose(fp);
+        fp = NULL;
+        goto cleanup;
+    }
+    fclose(fp);
+    fp = NULL;
+
+    mln_string_set(&path, script_path);
     ev = mln_event_new();
-    assert(ev != NULL);
-    assert(mln_trace_init(ev, &path) == 0);
-    assert(mln_trace_recv_handler_set(test_trace_recv_cb) == 0);
-    assert(mln_event_timer_set(ev, 1000, NULL, test_trace_timeout_handler) != NULL);
+    if (ev == NULL) goto cleanup;
+    if (mln_trace_init(ev, &path) < 0) goto cleanup;
+    if (mln_trace_recv_handler_set(test_trace_recv_cb) < 0) goto cleanup;
+    if (mln_event_timer_set(ev, TRACE_SCRIPT_TEST_TIMEOUT_MS, NULL, test_trace_timeout_handler) == NULL) goto cleanup;
 
     mln_event_dispatch(ev);
 
-    assert(trace_script_recv_called == 1);
-    assert(trace_script_recv_ok == 1);
-    printf("trace script interaction: OK\n");
+    if (trace_script_recv_called && trace_script_recv_ok) {
+        ok = 1;
+    }
 
+cleanup:
+    if (fp != NULL) fclose(fp);
+    if (ev != NULL) mln_event_free(ev);
     mln_trace_finalize();
-    mln_event_free(ev);
-    unlink(script_path);
+    if (script_created && script_path != NULL) unlink(script_path);
+    if (script_path != NULL) free(script_path);
+
+    assert(ok == 1);
+    printf("trace script interaction: OK\n");
 }
 
 /*
