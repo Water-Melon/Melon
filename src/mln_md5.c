@@ -20,10 +20,6 @@
 #endif
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC optimize("O3,unroll-loops")
-#endif
-
 static inline __M_MD5_ALWAYS_INLINE void mln_md5_transform(mln_u32_t *pa, mln_u32_t *pb, mln_u32_t *pc, mln_u32_t *pd, const mln_u8_t *blk);
 
 MLN_FUNC_VOID(, void, mln_md5_init, (mln_md5_t *m), (m), {
@@ -124,7 +120,9 @@ MLN_FUNC_VOID(, void, mln_md5_calc, \
     m->D = sd;
 })
 
-static inline __M_MD5_ALWAYS_INLINE void mln_md5_transform(mln_u32_t *pa, mln_u32_t *pb, mln_u32_t *pc, mln_u32_t *pd, const mln_u8_t *blk)
+MLN_FUNC_VOID(static inline __M_MD5_ALWAYS_INLINE, void, mln_md5_transform, \
+              (mln_u32_t *pa, mln_u32_t *pb, mln_u32_t *pc, mln_u32_t *pd, const mln_u8_t *blk), \
+              (pa, pb, pc, pd, blk), \
 {
     mln_u32_t a = *pa, b = *pb, c = *pc, d = *pd;
     mln_u32_t w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
@@ -227,7 +225,7 @@ static inline __M_MD5_ALWAYS_INLINE void mln_md5_transform(mln_u32_t *pa, mln_u3
     *pb += b;
     *pc += c;
     *pd += d;
-}
+})
 
 MLN_FUNC_VOID(, void, mln_md5_tobytes, \
               (mln_md5_t *m, mln_u8ptr_t buf, mln_u32_t len), (m, buf, len), \
