@@ -777,18 +777,20 @@ static void test_sequential_delete(void)
     PASS();
 }
 
-/* Test 22: delete during iterate */
+/* Test 22: delete current node during iterate */
 struct del_iter_ctx {
     mln_rbtree_t *t;
     int target;
     int visited;
+    int visited_bitmap[11]; /* 0-10 */
 };
 
-static int delete_during_iterate_handler(mln_rbtree_node_t *node, void *udata)
+static int delete_current_iterate_handler(mln_rbtree_node_t *node, void *udata)
 {
     struct del_iter_ctx *ctx = (struct del_iter_ctx *)udata;
     int val = *(int *)mln_rbtree_node_data_get(node);
     ctx->visited++;
+    ctx->visited_bitmap[val] = 1;
     if (val == ctx->target) {
         mln_rbtree_delete(ctx->t, node);
         mln_rbtree_node_free(ctx->t, node);
@@ -796,7 +798,7 @@ static int delete_during_iterate_handler(mln_rbtree_node_t *node, void *udata)
     return 0;
 }
 
-static void test_delete_during_iterate(void)
+static void test_delete_current_during_iterate(void)
 {
     int vals[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     int n = sizeof(vals) / sizeof(vals[0]);
@@ -818,13 +820,17 @@ static void test_delete_during_iterate(void)
     }
 
     struct del_iter_ctx ctx;
+    memset(&ctx, 0, sizeof(ctx));
     ctx.t = t;
     ctx.target = 5;
-    ctx.visited = 0;
 
-    int ret = mln_rbtree_iterate(t, delete_during_iterate_handler, &ctx);
+    int ret = mln_rbtree_iterate(t, delete_current_iterate_handler, &ctx);
     assert(ret == 0);
     assert(mln_rbtree_node_num(t) == (mln_uauto_t)(n - 1));
+    /* all 10 nodes visited (5 was visited then deleted) */
+    assert(ctx.visited == 10);
+    for (int i = 1; i <= 10; i++)
+        assert(ctx.visited_bitmap[i] == 1);
 
     /* verify target is gone */
     int key = 5;
@@ -835,7 +841,154 @@ static void test_delete_during_iterate(void)
     PASS();
 }
 
-/* Test 23: performance benchmark - insert + search */
+/* Test 23: delete NEXT node during iterate */
+struct del_next_ctx {
+    mln_rbtree_t *t;
+    int trigger_val;
+    int visited;
+    int visited_bitmap[11]; /* 0-10 */
+};
+
+static int delete_next_iterate_handler(mln_rbtree_node_t *node, void *udata)
+{
+    struct del_next_ctx *ctx = (struct del_next_ctx *)udata;
+    int val = *(int *)mln_rbtree_node_data_get(node);
+    ctx->visited++;
+    ctx->visited_bitmap[val] = 1;
+    if (val == ctx->trigger_val) {
+        /* delete the successor (next node) */
+        mln_rbtree_node_t *succ = mln_rbtree_successor(ctx->t, node);
+        if (!mln_rbtree_null(succ, ctx->t)) {
+            mln_rbtree_delete(ctx->t, succ);
+            mln_rbtree_node_free(ctx->t, succ);
+        }
+    }
+    return 0;
+}
+
+static void test_delete_next_during_iterate(void)
+{
+    int vals[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int n = sizeof(vals) / sizeof(vals[0]);
+    struct mln_rbtree_attr rbattr;
+
+    rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
+    rbattr.cmp = cmp_int;
+    rbattr.data_free = NULL;
+
+    mln_rbtree_t *t = mln_rbtree_new(&rbattr);
+    assert(t != NULL);
+
+    for (int i = 0; i < n; i++) {
+        mln_rbtree_node_t *rn = mln_rbtree_node_new(t, &vals[i]);
+        assert(rn != NULL);
+        mln_rbtree_insert(t, rn);
+    }
+
+    struct del_next_ctx ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.t = t;
+    ctx.trigger_val = 5; /* when visiting 5, delete 6 */
+
+    int ret = mln_rbtree_iterate(t, delete_next_iterate_handler, &ctx);
+    assert(ret == 0);
+    assert(mln_rbtree_node_num(t) == (mln_uauto_t)(n - 1));
+    /* 9 nodes visited: 1-5 and 7-10. Node 6 deleted before visited */
+    assert(ctx.visited == 9);
+    for (int i = 1; i <= 10; i++) {
+        if (i == 6)
+            assert(ctx.visited_bitmap[i] == 0);
+        else
+            assert(ctx.visited_bitmap[i] == 1);
+    }
+
+    /* verify 6 is gone, all others present */
+    int key = 6;
+    mln_rbtree_node_t *rn = mln_rbtree_search(t, &key);
+    assert(mln_rbtree_null(rn, t));
+    for (int i = 1; i <= 10; i++) {
+        if (i == 6) continue;
+        rn = mln_rbtree_search(t, &vals[i - 1]);
+        assert(!mln_rbtree_null(rn, t));
+    }
+
+    mln_rbtree_free(t);
+    PASS();
+}
+
+/* Test 24: delete BOTH current and next during iterate */
+struct del_both_ctx {
+    mln_rbtree_t *t;
+    int trigger_val;
+    int visited;
+    int visited_bitmap[11]; /* 0-10 */
+};
+
+static int delete_both_iterate_handler(mln_rbtree_node_t *node, void *udata)
+{
+    struct del_both_ctx *ctx = (struct del_both_ctx *)udata;
+    int val = *(int *)mln_rbtree_node_data_get(node);
+    ctx->visited++;
+    ctx->visited_bitmap[val] = 1;
+    if (val == ctx->trigger_val) {
+        /* delete the successor (next node) first */
+        mln_rbtree_node_t *succ = mln_rbtree_successor(ctx->t, node);
+        if (!mln_rbtree_null(succ, ctx->t)) {
+            mln_rbtree_delete(ctx->t, succ);
+            mln_rbtree_node_free(ctx->t, succ);
+        }
+        /* then delete the current node */
+        mln_rbtree_delete(ctx->t, node);
+        mln_rbtree_node_free(ctx->t, node);
+    }
+    return 0;
+}
+
+static void test_delete_both_during_iterate(void)
+{
+    int vals[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int n = sizeof(vals) / sizeof(vals[0]);
+    struct mln_rbtree_attr rbattr;
+
+    rbattr.pool = NULL;
+    rbattr.pool_alloc = NULL;
+    rbattr.pool_free = NULL;
+    rbattr.cmp = cmp_int;
+    rbattr.data_free = NULL;
+
+    mln_rbtree_t *t = mln_rbtree_new(&rbattr);
+    assert(t != NULL);
+
+    for (int i = 0; i < n; i++) {
+        mln_rbtree_node_t *rn = mln_rbtree_node_new(t, &vals[i]);
+        assert(rn != NULL);
+        mln_rbtree_insert(t, rn);
+    }
+
+    struct del_both_ctx ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.t = t;
+    ctx.trigger_val = 5; /* when visiting 5, delete 6 then 5 */
+
+    int ret = mln_rbtree_iterate(t, delete_both_iterate_handler, &ctx);
+    assert(ret == 0);
+    assert(mln_rbtree_node_num(t) == (mln_uauto_t)(n - 2));
+    /* 9 nodes visited: 1-5 and 7-10. 5 visited then deleted, 6 not visited */
+    assert(ctx.visited == 9);
+    for (int i = 1; i <= 10; i++) {
+        if (i == 6)
+            assert(ctx.visited_bitmap[i] == 0);
+        else
+            assert(ctx.visited_bitmap[i] == 1);
+    }
+
+    mln_rbtree_free(t);
+    PASS();
+}
+
+/* Test 25: performance benchmark - insert + search */
 static void test_performance_benchmark(void)
 {
     int count = 500000;
@@ -899,7 +1052,7 @@ static void test_performance_benchmark(void)
     PASS();
 }
 
-/* Test 24: performance benchmark - inline insert + search */
+/* Test 26: performance benchmark - inline insert + search */
 static void test_inline_performance_benchmark(void)
 {
     int count = 500000;
@@ -953,7 +1106,7 @@ static void test_inline_performance_benchmark(void)
     PASS();
 }
 
-/* Test 25: stability - repeated insert/delete/search cycles */
+/* Test 27: stability - repeated insert/delete/search cycles */
 static void test_stability(void)
 {
     int rounds = 1000;
@@ -1003,7 +1156,7 @@ static void test_stability(void)
     PASS();
 }
 
-/* Test 26: single node tree */
+/* Test 28: single node tree */
 static void test_single_node(void)
 {
     int val = 42;
@@ -1040,7 +1193,7 @@ static void test_single_node(void)
     PASS();
 }
 
-/* Test 27: reverse insert order */
+/* Test 29: reverse insert order */
 static void test_reverse_insert(void)
 {
     struct mln_rbtree_attr rbattr;
@@ -1100,7 +1253,9 @@ int main(void)
     test_duplicate_values();
     test_large_tree();
     test_sequential_delete();
-    test_delete_during_iterate();
+    test_delete_current_during_iterate();
+    test_delete_next_during_iterate();
+    test_delete_both_during_iterate();
     test_performance_benchmark();
     test_inline_performance_benchmark();
     test_stability();

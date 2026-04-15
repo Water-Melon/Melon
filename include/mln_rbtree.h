@@ -50,6 +50,7 @@ typedef struct rbtree_s {
     rbtree_free_data           data_free;
     mln_rbtree_node_t          nil;
     mln_rbtree_node_t         *root;
+    mln_rbtree_node_t         *iter;
     mln_uauto_t                nr_node;
 } mln_rbtree_t;
 
@@ -254,6 +255,7 @@ MLN_FUNC(static inline, mln_rbtree_node_t *, rbtree_successor, \
         }\
     }\
     tree->root = &(tree->nil);\
+    tree->iter = NULL;\
     tree->nr_node = 0;\
 })
 

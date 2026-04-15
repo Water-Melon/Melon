@@ -42,6 +42,7 @@ MLN_FUNC(, mln_rbtree_t *, mln_rbtree_new, (struct mln_rbtree_attr *attr), (attr
     t->nil.right = &(t->nil);
     t->nil.color = M_RB_BLACK;
     t->root = &(t->nil);
+    t->iter = NULL;
     t->nr_node = 0;
     return t;
 })
@@ -99,6 +100,7 @@ MLN_FUNC_VOID(, void, mln_rbtree_reset, (mln_rbtree_t *t), (t), {
         }
     }
     t->root = &(t->nil);
+    t->iter = NULL;
     t->nr_node = 0;
 })
 
@@ -188,6 +190,9 @@ MLN_FUNC_VOID(static inline, void, rbtree_transplant, \
 MLN_FUNC_VOID(, void, mln_rbtree_delete, (mln_rbtree_t *t, mln_rbtree_node_t *n), (t, n), {
     enum rbtree_color y_original_color;
     mln_rbtree_node_t *x, *y;
+    if (t->iter != NULL && t->iter == n) {
+        t->iter = rbtree_successor(t, n);
+    }
     y = n;
     y_original_color = y->color;
     if (n->left == &(t->nil)) {
@@ -287,15 +292,19 @@ MLN_FUNC(, int, mln_rbtree_iterate, \
          (t, handler, udata), \
 {
     mln_rbtree_node_t *nil = &(t->nil);
-    mln_rbtree_node_t *n = t->root, *next;
+    mln_rbtree_node_t *n = t->root;
     if (n == nil) return 0;
     while (n->left != nil) n = n->left;
     while (n != nil) {
-        next = rbtree_successor(t, n);
-        if (handler(n, udata) < 0)
+        t->iter = rbtree_successor(t, n);
+        if (handler(n, udata) < 0) {
+            t->iter = NULL;
             return -1;
-        n = next;
+        }
+        if (t->iter == NULL) break;
+        n = t->iter;
     }
+    t->iter = NULL;
     return 0;
 })
 

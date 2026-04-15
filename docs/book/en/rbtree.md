@@ -200,7 +200,7 @@ typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *udata);
 
 Description:
 
-Traverse each node in the red-black tree `t` in sorted (in-order) order. It supports deleting the current tree node during traversal.
+Traverse each node in the red-black tree `t` in sorted (in-order) order. It supports deleting the current tree node or the next tree node (in-order successor) during traversal.
 
 `handler` is an access function for traversing each node. The meanings of the two parameters of this function are as follows:
 
