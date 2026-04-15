@@ -1014,6 +1014,22 @@ static void postorder_collect(mln_rbtree_t *t, mln_rbtree_node_t *n, int *out, i
     out[(*idx)++] = *(int *)mln_rbtree_node_data_get(n);
 }
 
+static int tree_max_depth(mln_rbtree_t *t, mln_rbtree_node_t *n)
+{
+    if (mln_rbtree_null(n, t)) return 0;
+    int ld = tree_max_depth(t, n->left);
+    int rd = tree_max_depth(t, n->right);
+    return 1 + (ld > rd ? ld : rd);
+}
+
+static int tree_min_depth(mln_rbtree_t *t, mln_rbtree_node_t *n)
+{
+    if (mln_rbtree_null(n, t)) return 0;
+    int ld = tree_min_depth(t, n->left);
+    int rd = tree_min_depth(t, n->right);
+    return 1 + (ld < rd ? ld : rd);
+}
+
 /* Verify red-black tree properties recursively. Returns the black-height, or -1 on error. */
 static int verify_rb_properties(mln_rbtree_t *t, mln_rbtree_node_t *n)
 {
@@ -1073,6 +1089,12 @@ static void test_preorder_traversal(void)
     assert(mln_rbtree_root(t)->color == M_RB_BLACK); /* root is black */
     verify_rb_properties(t, mln_rbtree_root(t));
 
+    /* Verify depth constraint: max depth <= 2 * min depth */
+    int maxd = tree_max_depth(t, mln_rbtree_root(t));
+    int mind = tree_min_depth(t, mln_rbtree_root(t));
+    assert(mind > 0);
+    assert(maxd <= 2 * mind);
+
     /* Collect and verify pre-order: values should be a valid pre-order of a BST */
     int pre[7]; int idx = 0;
     preorder_collect(t, mln_rbtree_root(t), pre, &idx);
@@ -1112,6 +1134,12 @@ static void test_inorder_traversal(void)
     /* Verify RB properties */
     verify_rb_properties(t, mln_rbtree_root(t));
 
+    /* Verify depth constraint: max depth <= 2 * min depth */
+    int maxd = tree_max_depth(t, mln_rbtree_root(t));
+    int mind = tree_min_depth(t, mln_rbtree_root(t));
+    assert(mind > 0);
+    assert(maxd <= 2 * mind);
+
     /* In-order must produce sorted sequence */
     int inorder[10]; int idx = 0;
     inorder_collect(t, mln_rbtree_root(t), inorder, &idx);
@@ -1142,6 +1170,12 @@ static void test_postorder_traversal(void)
 
     /* Verify RB properties */
     verify_rb_properties(t, mln_rbtree_root(t));
+
+    /* Verify depth constraint: max depth <= 2 * min depth */
+    int maxd = tree_max_depth(t, mln_rbtree_root(t));
+    int mind = tree_min_depth(t, mln_rbtree_root(t));
+    assert(mind > 0);
+    assert(maxd <= 2 * mind);
 
     /* Post-order: last element must be root */
     int post[7]; int idx = 0;
