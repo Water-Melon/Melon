@@ -66,10 +66,6 @@ static void mln_ipc_handler_free(mln_ipc_handler_t *ih);
 /*
  * Hash table helpers for IPC handlers (replaces rbtree for O(1) lookup)
  */
-MLN_FUNC(static inline, mln_u32_t, mln_ipc_hash_index, (mln_u32_t type), (type), {
-    return type & M_IPC_HASH_MASK;
-})
-
 MLN_FUNC(static inline, mln_ipc_handler_t *, mln_ipc_hash_search, \
          (mln_ipc_handler_t **table, mln_u32_t type), (table, type), \
 {
