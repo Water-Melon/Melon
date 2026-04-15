@@ -137,7 +137,7 @@ MLN_FUNC_VOID(static inline __M_MD5_ALWAYS_INLINE, void, mln_md5_transform, \
     memcpy(&w14, blk + 56, 4); memcpy(&w15, blk + 60, 4);
 
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#define __M_MD5_SWAP32(x) (((x) >> 24) | (((x) >> 8) & 0xff00) | (((x) << 8) & 0xff0000) | ((x) << 24))
+#define __M_MD5_SWAP32(x) (((x) >> 24) | (((x) >> 8) & 0xff00) | (((x) << 8) & 0xff0000) | (((x) << 24) & 0xff000000u))
     w0  = __M_MD5_SWAP32(w0);  w1  = __M_MD5_SWAP32(w1);
     w2  = __M_MD5_SWAP32(w2);  w3  = __M_MD5_SWAP32(w3);
     w4  = __M_MD5_SWAP32(w4);  w5  = __M_MD5_SWAP32(w5);
