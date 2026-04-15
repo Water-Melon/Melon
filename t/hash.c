@@ -49,6 +49,68 @@ static int iterate_remove_cb(mln_hash_t *h, void *key, void *val, void *udata)
     return 0;
 }
 
+/* -- Globals for deferred-free verification -- */
+static int g_free_count = 0;
+static int g_in_handler_flag = 0;
+static int g_freed_in_handler = 0;
+
+static void counting_freer(void *p)
+{
+    g_free_count++;
+    if (g_in_handler_flag) g_freed_in_handler = 1;
+    free(p);
+}
+
+/*
+ * Callback: remove current node with M_HASH_F_KV during iteration.
+ * The key/val freers must NOT be called while we are still inside the handler
+ * (deferred removal). After handler returns, iterate must do the cleanup.
+ */
+static int iterate_remove_current_kv_cb(mln_hash_t *h, void *key, void *val, void *udata)
+{
+    int *count = (int *)udata;
+    (*count)++;
+    if (*(int *)key == 5) {
+        g_in_handler_flag = 1;
+        g_freed_in_handler = 0;
+        mln_hash_remove(h, key, M_HASH_F_KV);
+        /* At this point free must NOT have been called (deferred) */
+        g_in_handler_flag = 0;
+    }
+    return 0;
+}
+
+/*
+ * Callback: remove ALL even-keyed current nodes with M_HASH_F_KV.
+ * Tests that multiple deferred removals work across the whole iteration.
+ */
+static int iterate_remove_even_kv_cb(mln_hash_t *h, void *key, void *val, void *udata)
+{
+    int *count = (int *)udata;
+    (*count)++;
+    if (*(int *)key % 2 == 0)
+        mln_hash_remove(h, key, M_HASH_F_KV);
+    return 0;
+}
+
+/*
+ * Callback: update current node via mln_hash_update during iteration.
+ */
+static int g_update_new_val = 999;
+
+static int iterate_update_current_cb(mln_hash_t *h, void *key, void *val, void *udata)
+{
+    int *count = (int *)udata;
+    (*count)++;
+    if (*(int *)key == 5) {
+        void *pk = key;
+        void *pv = &g_update_new_val;
+        mln_hash_update(h, &pk, &pv);
+        /* pk/pv now hold old key/val pointers (swapped out) */
+    }
+    return 0;
+}
+
 /* -- tests -- */
 
 static void test_new_free(void)
@@ -270,6 +332,145 @@ static void test_iterate_with_remove(void)
     }
     CHECK(even_found == 0, "iterate_remove: even keys removed");
     CHECK(odd_found == 10, "iterate_remove: odd keys remain");
+    mln_hash_free(h, M_HASH_F_NONE);
+}
+
+/*
+ * Test: remove current node during iterate with actual key/val freers (M_HASH_F_KV).
+ * Verifies:
+ *   1) The freers are NOT called during the handler (deferred)
+ *   2) The freers ARE called after the handler returns
+ *   3) All N nodes are still visited
+ *   4) The removed key is gone; remaining keys are intact
+ */
+static void test_iterate_remove_current_deferred_free(void)
+{
+    mln_hash_t *h = mln_hash_new_fast(calc_handler, cmp_handler,
+                                       counting_freer, counting_freer,
+                                       101, 0, 0);
+    CHECK(h != NULL, "iterate_remove_deferred: new");
+    int i;
+    for (i = 0; i < 10; i++) {
+        int *k = (int *)malloc(sizeof(int));
+        int *v = (int *)malloc(sizeof(int));
+        *k = i;
+        *v = i * 100;
+        mln_hash_insert(h, k, v);
+    }
+
+    g_free_count = 0;
+    g_in_handler_flag = 0;
+    g_freed_in_handler = 0;
+
+    int count = 0;
+    int rc = mln_hash_iterate(h, iterate_remove_current_kv_cb, &count);
+    CHECK(rc == 0, "iterate_remove_deferred: returns 0");
+    CHECK(count == 10, "iterate_remove_deferred: all 10 nodes visited");
+    CHECK(g_freed_in_handler == 0,
+          "iterate_remove_deferred: free NOT called during handler (deferred)");
+    CHECK(g_free_count == 2,
+          "iterate_remove_deferred: key+val freed after handler returned");
+
+    /* key=5 must be gone */
+    int sk = 5;
+    CHECK(mln_hash_search(h, &sk) == NULL,
+          "iterate_remove_deferred: removed key=5 gone");
+
+    /* remaining 9 keys must still be findable */
+    int all_others = 1;
+    for (i = 0; i < 10; i++) {
+        if (i == 5) continue;
+        int ssk = i;
+        if (mln_hash_search(h, &ssk) == NULL) { all_others = 0; break; }
+    }
+    CHECK(all_others, "iterate_remove_deferred: other 9 keys remain");
+
+    mln_hash_free(h, M_HASH_F_KV);
+}
+
+/*
+ * Test: remove multiple current nodes during iterate with actual free.
+ * All even-keyed nodes are removed (with M_HASH_F_KV).
+ * Verifies that every node is visited, freed correctly, and odd keys survive.
+ */
+static void test_iterate_remove_multiple_current(void)
+{
+    mln_hash_t *h = mln_hash_new_fast(calc_handler, cmp_handler,
+                                       counting_freer, counting_freer,
+                                       101, 0, 0);
+    CHECK(h != NULL, "iterate_remove_multi: new");
+    int i;
+    for (i = 0; i < 20; i++) {
+        int *k = (int *)malloc(sizeof(int));
+        int *v = (int *)malloc(sizeof(int));
+        *k = i;
+        *v = i * 100;
+        mln_hash_insert(h, k, v);
+    }
+
+    g_free_count = 0;
+    int count = 0;
+    mln_hash_iterate(h, iterate_remove_even_kv_cb, &count);
+    CHECK(count == 20, "iterate_remove_multi: all 20 visited");
+    /* 10 even entries × 2 (key + val) = 20 frees */
+    CHECK(g_free_count == 20,
+          "iterate_remove_multi: 10 keys + 10 vals freed");
+
+    int even_count = 0, odd_count = 0;
+    for (i = 0; i < 20; i++) {
+        int sk = i;
+        if (mln_hash_search(h, &sk) != NULL) {
+            if (i % 2 == 0) even_count++;
+            else odd_count++;
+        }
+    }
+    CHECK(even_count == 0, "iterate_remove_multi: even keys gone");
+    CHECK(odd_count == 10, "iterate_remove_multi: odd keys remain");
+
+    mln_hash_free(h, M_HASH_F_KV);
+}
+
+/*
+ * Test: update current node via mln_hash_update during iterate.
+ * Verifies:
+ *   1) The in-place key/val swap works without breaking iteration
+ *   2) All nodes are visited
+ *   3) The updated node has the new value
+ *   4) Other nodes are unmodified
+ */
+static void test_iterate_update_current(void)
+{
+    mln_hash_t *h = mln_hash_new_fast(calc_handler, cmp_handler, NULL, NULL, 101, 0, 0);
+    CHECK(h != NULL, "iterate_update_current: new");
+    int keys[10], vals[10];
+    int i;
+    for (i = 0; i < 10; i++) {
+        keys[i] = i;
+        vals[i] = i * 100;
+        mln_hash_insert(h, &keys[i], &vals[i]);
+    }
+
+    g_update_new_val = 999;
+    int count = 0;
+    int rc = mln_hash_iterate(h, iterate_update_current_cb, &count);
+    CHECK(rc == 0, "iterate_update_current: returns 0");
+    CHECK(count == 10, "iterate_update_current: all 10 nodes visited");
+
+    /* key=5 should now map to g_update_new_val (999) */
+    int sk = 5;
+    int *v = (int *)mln_hash_search(h, &sk);
+    CHECK(v != NULL && *v == 999,
+          "iterate_update_current: key=5 val updated to 999");
+
+    /* all other keys should retain original values */
+    int all_ok = 1;
+    for (i = 0; i < 10; i++) {
+        if (i == 5) continue;
+        v = (int *)mln_hash_search(h, &keys[i]);
+        if (v == NULL || *v != i * 100) { all_ok = 0; break; }
+    }
+    CHECK(all_ok, "iterate_update_current: other vals unchanged");
+
     mln_hash_free(h, M_HASH_F_NONE);
 }
 
@@ -577,6 +778,9 @@ int main(int argc, char *argv[])
     test_update_new();
     test_iterate();
     test_iterate_with_remove();
+    test_iterate_remove_current_deferred_free();
+    test_iterate_remove_multiple_current();
+    test_iterate_update_current();
     test_search_iterator();
     test_reset();
     test_expandable();
