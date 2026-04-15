@@ -145,15 +145,7 @@ static void test_55_bytes(void)
     mln_md5_calc(&m, data, sizeof(data), 1);
     mln_md5_tostring(&m, output, sizeof(output));
     assert(strlen(output) == 32);
-    /* Verify against one-shot: result must be consistent */
-    {
-        mln_md5_t m2;
-        char out2[33] = {0};
-        mln_md5_init(&m2);
-        mln_md5_calc(&m2, data, sizeof(data), 1);
-        mln_md5_tostring(&m2, out2, sizeof(out2));
-        assert(strcmp(output, out2) == 0);
-    }
+    assert(strcmp(output, "10e495e8105224cf5aa00fd86b61ed44") == 0);
     PASS();
 }
 
@@ -169,6 +161,7 @@ static void test_56_bytes(void)
     mln_md5_calc(&m, data, sizeof(data), 1);
     mln_md5_tostring(&m, output, sizeof(output));
     assert(strlen(output) == 32);
+    assert(strcmp(output, "ddeabe78031243dc616e86065dfa8161") == 0);
     PASS();
 }
 

@@ -14,7 +14,9 @@
 #define __M_MD5_ALWAYS_INLINE
 #endif
 
-#if (defined(__x86_64__) || defined(__i386__)) && (defined(__GNUC__) || defined(__clang__))
+#if defined(MLN_MD5_ENABLE_BMI2_TARGET) && \
+    (defined(__x86_64__) || defined(__i386__)) && \
+    (defined(__GNUC__) || defined(__clang__))
 #if !defined(__BMI__) || !defined(__BMI2__)
 #pragma GCC target("bmi,bmi2")
 #endif
