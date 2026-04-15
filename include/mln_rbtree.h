@@ -35,8 +35,6 @@ struct mln_rbtree_attr {
 
 struct mln_rbtree_node_s {
     void                      *data;
-    struct mln_rbtree_node_s  *prev;
-    struct mln_rbtree_node_s  *next;
     struct mln_rbtree_node_s  *parent;
     struct mln_rbtree_node_s  *left;
     struct mln_rbtree_node_s  *right;
@@ -52,23 +50,9 @@ typedef struct rbtree_s {
     rbtree_free_data           data_free;
     mln_rbtree_node_t          nil;
     mln_rbtree_node_t         *root;
-    mln_rbtree_node_t         *min;
-    mln_rbtree_node_t         *head;
-    mln_rbtree_node_t         *tail;
-    mln_rbtree_node_t         *iter;
     mln_uauto_t                nr_node;
-    mln_u32_t                  del:1;
 } mln_rbtree_t;
 
-
-MLN_CHAIN_FUNC_DECLARE(static inline, \
-                       mln_rbtree, \
-                       mln_rbtree_node_t,);
-MLN_CHAIN_FUNC_DEFINE(static inline, \
-                      mln_rbtree, \
-                      mln_rbtree_node_t, \
-                      prev, \
-                      next);
 
 /*Left rotate*/
 MLN_FUNC_VOID(static inline, void, mln_rbtree_left_rotate, \
@@ -143,6 +127,29 @@ MLN_FUNC_VOID(static inline, void, rbtree_insert_fixup, \
     t->root->color = M_RB_BLACK;
 })
 
+/*Tree Minimum*/
+MLN_FUNC(static inline, mln_rbtree_node_t *, rbtree_minimum, \
+         (mln_rbtree_t *t, mln_rbtree_node_t *n), (t, n), \
+{
+    while (n->left != &(t->nil)) n = n->left;
+    return n;
+})
+
+/*In-order successor*/
+MLN_FUNC(static inline, mln_rbtree_node_t *, rbtree_successor, \
+         (mln_rbtree_t *t, mln_rbtree_node_t *n), (t, n), \
+{
+    mln_rbtree_node_t *nil = &(t->nil);
+    if (n->right != nil)
+        return rbtree_minimum(t, n->right);
+    mln_rbtree_node_t *p = n->parent;
+    while (p != nil && n == p->right) {
+        n = p;
+        p = p->parent;
+    }
+    return p;
+})
+
 #if !defined(MSVC)
 /*Insert*/
 #define mln_rbtree_inline_insert(t, n, compare) ({\
@@ -162,10 +169,7 @@ MLN_FUNC_VOID(static inline, void, rbtree_insert_fixup, \
     (n)->left = (n)->right = nil;\
     (n)->color = M_RB_RED;\
     rbtree_insert_fixup(tree, (n));\
-    if (tree->min == nil) tree->min = (n);\
-    else if (compare((n)->data, tree->min->data) < 0) tree->min = (n);\
     ++(tree->nr_node);\
-    mln_rbtree_chain_add(&(tree->head), &(tree->tail), (n));\
 })
 
 
@@ -206,21 +210,24 @@ MLN_FUNC_VOID(static inline, void, rbtree_insert_fixup, \
 
 
 /*rbtree_destroy*/
-/*
- * Warning: mln_lang_sys.c: mln_import is very dependent on this release order.
- * This release order ensures that the resources of the dynamic extension library
- * are released first, and then the import resources are released.
- * If the import resource is released before the dynamic library resource,
- * the function in the dynamic library cannot be read when the dynamic extension
- * resource is released, and the program terminates abnormally.
- */
 #define mln_rbtree_inline_free(t, freer) ({\
     mln_rbtree_t *tree = (t);\
     if (tree != NULL) {\
-        mln_rbtree_node_t *fr;\
-        while ((fr = tree->tail) != NULL) {\
-            mln_rbtree_chain_del(&(tree->head), &(tree->tail), fr);\
-            mln_rbtree_inline_node_free(tree, fr, freer);\
+        mln_rbtree_node_t *_fr = tree->root, *_nil = &(tree->nil);\
+        while (_fr != _nil) {\
+            if (_fr->left != _nil) {\
+                _fr = _fr->left;\
+            } else if (_fr->right != _nil) {\
+                _fr = _fr->right;\
+            } else {\
+                mln_rbtree_node_t *_p = _fr->parent;\
+                if (_p != _nil) {\
+                    if (_p->left == _fr) _p->left = _nil;\
+                    else _p->right = _nil;\
+                }\
+                mln_rbtree_inline_node_free(tree, _fr, freer);\
+                _fr = _p;\
+            }\
         }\
         if (tree->pool != NULL) tree->pool_free(tree);\
         else free(tree);\
@@ -230,16 +237,24 @@ MLN_FUNC_VOID(static inline, void, rbtree_insert_fixup, \
 
 #define mln_rbtree_inline_reset(t, freer) ({\
     mln_rbtree_t *tree = (t);\
-    mln_rbtree_node_t *fr;\
-    while ((fr = tree->tail) != NULL) {\
-        mln_rbtree_chain_del(&(tree->head), &(tree->tail), fr);\
-        mln_rbtree_inline_node_free(tree, fr, freer);\
+    mln_rbtree_node_t *_fr = tree->root, *_nil = &(tree->nil);\
+    while (_fr != _nil) {\
+        if (_fr->left != _nil) {\
+            _fr = _fr->left;\
+        } else if (_fr->right != _nil) {\
+            _fr = _fr->right;\
+        } else {\
+            mln_rbtree_node_t *_p = _fr->parent;\
+            if (_p != _nil) {\
+                if (_p->left == _fr) _p->left = _nil;\
+                else _p->right = _nil;\
+            }\
+            mln_rbtree_inline_node_free(tree, _fr, freer);\
+            _fr = _p;\
+        }\
     }\
     tree->root = &(tree->nil);\
-    tree->min = &(tree->nil);\
-    tree->iter = NULL;\
     tree->nr_node = 0;\
-    tree->del = 0;\
 })
 
 #define mln_rbtree_node_init(n, ud) ({\
