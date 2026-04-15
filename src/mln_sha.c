@@ -39,12 +39,8 @@
 #define __M_SHA1_W(t,wt) \
 ((wt)[(t)&0xf] = __M_SHA1_ROTATE_LEFT((wt)[((t)-3)&0xf]^(wt)[((t)-8)&0xf]^(wt)[((t)-14)&0xf]^(wt)[(t)&0xf], 1))
 
-static mln_u32_t k[4] = {
-    0x5A827999,
-    0x6ED9EBA1,
-    0x8F1BBCDC,
-    0xCA62C1D6
-};
+#define __M_SHA_LOAD32BE(w, p) \
+    ((w) = ((mln_u32_t)(p)[0] << 24) | ((mln_u32_t)(p)[1] << 16) | ((mln_u32_t)(p)[2] << 8) | (mln_u32_t)(p)[3])
 
 static inline void mln_sha1_calc_block(mln_sha1_t *s);
 
@@ -140,99 +136,110 @@ MLN_FUNC_VOID(, void, mln_sha1_calc, \
 })
 
 MLN_FUNC_VOID(static inline, void, mln_sha1_calc_block, (mln_sha1_t *s), (s), {
-    mln_u32_t i = 0, j = 0, group[16];
+    mln_u32_t group[16];
     mln_u32_t a = s->H0, b = s->H1, c = s->H2, d = s->H3, e = s->H4;
-    while (i < __M_SHA_BUFLEN) {
-        group[j] = 0;
-        group[j] |= ((s->buf[i++] & 0xff) << 24);
-        group[j] |= ((s->buf[i++] & 0xff) << 16);
-        group[j] |= ((s->buf[i++] & 0xff) << 8);
-        group[j++] |= ((s->buf[i++] & 0xff));
-    }
+    const mln_u8_t *p = s->buf;
 
-    __M_SHA1_FF1(a, b, c, d, e, group[0], k[0]);
-    __M_SHA1_FF1(e, a, b, c, d, group[1], k[0]);
-    __M_SHA1_FF1(d, e, a, b, c, group[2], k[0]);
-    __M_SHA1_FF1(c, d, e, a, b, group[3], k[0]);
-    __M_SHA1_FF1(b, c, d, e, a, group[4], k[0]);
-    __M_SHA1_FF1(a, b, c, d, e, group[5], k[0]);
-    __M_SHA1_FF1(e, a, b, c, d, group[6], k[0]);
-    __M_SHA1_FF1(d, e, a, b, c, group[7], k[0]);
-    __M_SHA1_FF1(c, d, e, a, b, group[8], k[0]);
-    __M_SHA1_FF1(b, c, d, e, a, group[9], k[0]);
-    __M_SHA1_FF1(a, b, c, d, e, group[10], k[0]);
-    __M_SHA1_FF1(e, a, b, c, d, group[11], k[0]);
-    __M_SHA1_FF1(d, e, a, b, c, group[12], k[0]);
-    __M_SHA1_FF1(c, d, e, a, b, group[13], k[0]);
-    __M_SHA1_FF1(b, c, d, e, a, group[14], k[0]);
-    __M_SHA1_FF1(a, b, c, d, e, group[15], k[0]);
-    __M_SHA1_FF1(e, a, b, c, d, __M_SHA1_W(16, group), k[0]);
-    __M_SHA1_FF1(d, e, a, b, c, __M_SHA1_W(17, group), k[0]);
-    __M_SHA1_FF1(c, d, e, a, b, __M_SHA1_W(18, group), k[0]);
-    __M_SHA1_FF1(b, c, d, e, a, __M_SHA1_W(19, group), k[0]);
+    __M_SHA_LOAD32BE(group[0],  p);
+    __M_SHA_LOAD32BE(group[1],  p + 4);
+    __M_SHA_LOAD32BE(group[2],  p + 8);
+    __M_SHA_LOAD32BE(group[3],  p + 12);
+    __M_SHA_LOAD32BE(group[4],  p + 16);
+    __M_SHA_LOAD32BE(group[5],  p + 20);
+    __M_SHA_LOAD32BE(group[6],  p + 24);
+    __M_SHA_LOAD32BE(group[7],  p + 28);
+    __M_SHA_LOAD32BE(group[8],  p + 32);
+    __M_SHA_LOAD32BE(group[9],  p + 36);
+    __M_SHA_LOAD32BE(group[10], p + 40);
+    __M_SHA_LOAD32BE(group[11], p + 44);
+    __M_SHA_LOAD32BE(group[12], p + 48);
+    __M_SHA_LOAD32BE(group[13], p + 52);
+    __M_SHA_LOAD32BE(group[14], p + 56);
+    __M_SHA_LOAD32BE(group[15], p + 60);
 
-    __M_SHA1_FF2(a, b, c, d, e, __M_SHA1_W(20, group), k[1]);
-    __M_SHA1_FF2(e, a, b, c, d, __M_SHA1_W(21, group), k[1]);
-    __M_SHA1_FF2(d, e, a, b, c, __M_SHA1_W(22, group), k[1]);
-    __M_SHA1_FF2(c, d, e, a, b, __M_SHA1_W(23, group), k[1]);
-    __M_SHA1_FF2(b, c, d, e, a, __M_SHA1_W(24, group), k[1]);
-    __M_SHA1_FF2(a, b, c, d, e, __M_SHA1_W(25, group), k[1]);
-    __M_SHA1_FF2(e, a, b, c, d, __M_SHA1_W(26, group), k[1]);
-    __M_SHA1_FF2(d, e, a, b, c, __M_SHA1_W(27, group), k[1]);
-    __M_SHA1_FF2(c, d, e, a, b, __M_SHA1_W(28, group), k[1]);
-    __M_SHA1_FF2(b, c, d, e, a, __M_SHA1_W(29, group), k[1]);
-    __M_SHA1_FF2(a, b, c, d, e, __M_SHA1_W(30, group), k[1]);
-    __M_SHA1_FF2(e, a, b, c, d, __M_SHA1_W(31, group), k[1]);
-    __M_SHA1_FF2(d, e, a, b, c, __M_SHA1_W(32, group), k[1]);
-    __M_SHA1_FF2(c, d, e, a, b, __M_SHA1_W(33, group), k[1]);
-    __M_SHA1_FF2(b, c, d, e, a, __M_SHA1_W(34, group), k[1]);
-    __M_SHA1_FF2(a, b, c, d, e, __M_SHA1_W(35, group), k[1]);
-    __M_SHA1_FF2(e, a, b, c, d, __M_SHA1_W(36, group), k[1]);
-    __M_SHA1_FF2(d, e, a, b, c, __M_SHA1_W(37, group), k[1]);
-    __M_SHA1_FF2(c, d, e, a, b, __M_SHA1_W(38, group), k[1]);
-    __M_SHA1_FF2(b, c, d, e, a, __M_SHA1_W(39, group), k[1]);
+    __M_SHA1_FF1(a, b, c, d, e, group[0], 0x5A827999);
+    __M_SHA1_FF1(e, a, b, c, d, group[1], 0x5A827999);
+    __M_SHA1_FF1(d, e, a, b, c, group[2], 0x5A827999);
+    __M_SHA1_FF1(c, d, e, a, b, group[3], 0x5A827999);
+    __M_SHA1_FF1(b, c, d, e, a, group[4], 0x5A827999);
+    __M_SHA1_FF1(a, b, c, d, e, group[5], 0x5A827999);
+    __M_SHA1_FF1(e, a, b, c, d, group[6], 0x5A827999);
+    __M_SHA1_FF1(d, e, a, b, c, group[7], 0x5A827999);
+    __M_SHA1_FF1(c, d, e, a, b, group[8], 0x5A827999);
+    __M_SHA1_FF1(b, c, d, e, a, group[9], 0x5A827999);
+    __M_SHA1_FF1(a, b, c, d, e, group[10], 0x5A827999);
+    __M_SHA1_FF1(e, a, b, c, d, group[11], 0x5A827999);
+    __M_SHA1_FF1(d, e, a, b, c, group[12], 0x5A827999);
+    __M_SHA1_FF1(c, d, e, a, b, group[13], 0x5A827999);
+    __M_SHA1_FF1(b, c, d, e, a, group[14], 0x5A827999);
+    __M_SHA1_FF1(a, b, c, d, e, group[15], 0x5A827999);
+    __M_SHA1_FF1(e, a, b, c, d, __M_SHA1_W(16, group), 0x5A827999);
+    __M_SHA1_FF1(d, e, a, b, c, __M_SHA1_W(17, group), 0x5A827999);
+    __M_SHA1_FF1(c, d, e, a, b, __M_SHA1_W(18, group), 0x5A827999);
+    __M_SHA1_FF1(b, c, d, e, a, __M_SHA1_W(19, group), 0x5A827999);
 
-    __M_SHA1_FF3(a, b, c, d, e, __M_SHA1_W(40, group), k[2]);
-    __M_SHA1_FF3(e, a, b, c, d, __M_SHA1_W(41, group), k[2]);
-    __M_SHA1_FF3(d, e, a, b, c, __M_SHA1_W(42, group), k[2]);
-    __M_SHA1_FF3(c, d, e, a, b, __M_SHA1_W(43, group), k[2]);
-    __M_SHA1_FF3(b, c, d, e, a, __M_SHA1_W(44, group), k[2]);
-    __M_SHA1_FF3(a, b, c, d, e, __M_SHA1_W(45, group), k[2]);
-    __M_SHA1_FF3(e, a, b, c, d, __M_SHA1_W(46, group), k[2]);
-    __M_SHA1_FF3(d, e, a, b, c, __M_SHA1_W(47, group), k[2]);
-    __M_SHA1_FF3(c, d, e, a, b, __M_SHA1_W(48, group), k[2]);
-    __M_SHA1_FF3(b, c, d, e, a, __M_SHA1_W(49, group), k[2]);
-    __M_SHA1_FF3(a, b, c, d, e, __M_SHA1_W(50, group), k[2]);
-    __M_SHA1_FF3(e, a, b, c, d, __M_SHA1_W(51, group), k[2]);
-    __M_SHA1_FF3(d, e, a, b, c, __M_SHA1_W(52, group), k[2]);
-    __M_SHA1_FF3(c, d, e, a, b, __M_SHA1_W(53, group), k[2]);
-    __M_SHA1_FF3(b, c, d, e, a, __M_SHA1_W(54, group), k[2]);
-    __M_SHA1_FF3(a, b, c, d, e, __M_SHA1_W(55, group), k[2]);
-    __M_SHA1_FF3(e, a, b, c, d, __M_SHA1_W(56, group), k[2]);
-    __M_SHA1_FF3(d, e, a, b, c, __M_SHA1_W(57, group), k[2]);
-    __M_SHA1_FF3(c, d, e, a, b, __M_SHA1_W(58, group), k[2]);
-    __M_SHA1_FF3(b, c, d, e, a, __M_SHA1_W(59, group), k[2]);
+    __M_SHA1_FF2(a, b, c, d, e, __M_SHA1_W(20, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(e, a, b, c, d, __M_SHA1_W(21, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(d, e, a, b, c, __M_SHA1_W(22, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(c, d, e, a, b, __M_SHA1_W(23, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(b, c, d, e, a, __M_SHA1_W(24, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(a, b, c, d, e, __M_SHA1_W(25, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(e, a, b, c, d, __M_SHA1_W(26, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(d, e, a, b, c, __M_SHA1_W(27, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(c, d, e, a, b, __M_SHA1_W(28, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(b, c, d, e, a, __M_SHA1_W(29, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(a, b, c, d, e, __M_SHA1_W(30, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(e, a, b, c, d, __M_SHA1_W(31, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(d, e, a, b, c, __M_SHA1_W(32, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(c, d, e, a, b, __M_SHA1_W(33, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(b, c, d, e, a, __M_SHA1_W(34, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(a, b, c, d, e, __M_SHA1_W(35, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(e, a, b, c, d, __M_SHA1_W(36, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(d, e, a, b, c, __M_SHA1_W(37, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(c, d, e, a, b, __M_SHA1_W(38, group), 0x6ED9EBA1);
+    __M_SHA1_FF2(b, c, d, e, a, __M_SHA1_W(39, group), 0x6ED9EBA1);
 
-    __M_SHA1_FF4(a, b, c, d, e, __M_SHA1_W(60, group), k[3]);
-    __M_SHA1_FF4(e, a, b, c, d, __M_SHA1_W(61, group), k[3]);
-    __M_SHA1_FF4(d, e, a, b, c, __M_SHA1_W(62, group), k[3]);
-    __M_SHA1_FF4(c, d, e, a, b, __M_SHA1_W(63, group), k[3]);
-    __M_SHA1_FF4(b, c, d, e, a, __M_SHA1_W(64, group), k[3]);
-    __M_SHA1_FF4(a, b, c, d, e, __M_SHA1_W(65, group), k[3]);
-    __M_SHA1_FF4(e, a, b, c, d, __M_SHA1_W(66, group), k[3]);
-    __M_SHA1_FF4(d, e, a, b, c, __M_SHA1_W(67, group), k[3]);
-    __M_SHA1_FF4(c, d, e, a, b, __M_SHA1_W(68, group), k[3]);
-    __M_SHA1_FF4(b, c, d, e, a, __M_SHA1_W(69, group), k[3]);
-    __M_SHA1_FF4(a, b, c, d, e, __M_SHA1_W(70, group), k[3]);
-    __M_SHA1_FF4(e, a, b, c, d, __M_SHA1_W(71, group), k[3]);
-    __M_SHA1_FF4(d, e, a, b, c, __M_SHA1_W(72, group), k[3]);
-    __M_SHA1_FF4(c, d, e, a, b, __M_SHA1_W(73, group), k[3]);
-    __M_SHA1_FF4(b, c, d, e, a, __M_SHA1_W(74, group), k[3]);
-    __M_SHA1_FF4(a, b, c, d, e, __M_SHA1_W(75, group), k[3]);
-    __M_SHA1_FF4(e, a, b, c, d, __M_SHA1_W(76, group), k[3]);
-    __M_SHA1_FF4(d, e, a, b, c, __M_SHA1_W(77, group), k[3]);
-    __M_SHA1_FF4(c, d, e, a, b, __M_SHA1_W(78, group), k[3]);
-    __M_SHA1_FF4(b, c, d, e, a, __M_SHA1_W(79, group), k[3]);
+    __M_SHA1_FF3(a, b, c, d, e, __M_SHA1_W(40, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(e, a, b, c, d, __M_SHA1_W(41, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(d, e, a, b, c, __M_SHA1_W(42, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(c, d, e, a, b, __M_SHA1_W(43, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(b, c, d, e, a, __M_SHA1_W(44, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(a, b, c, d, e, __M_SHA1_W(45, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(e, a, b, c, d, __M_SHA1_W(46, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(d, e, a, b, c, __M_SHA1_W(47, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(c, d, e, a, b, __M_SHA1_W(48, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(b, c, d, e, a, __M_SHA1_W(49, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(a, b, c, d, e, __M_SHA1_W(50, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(e, a, b, c, d, __M_SHA1_W(51, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(d, e, a, b, c, __M_SHA1_W(52, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(c, d, e, a, b, __M_SHA1_W(53, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(b, c, d, e, a, __M_SHA1_W(54, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(a, b, c, d, e, __M_SHA1_W(55, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(e, a, b, c, d, __M_SHA1_W(56, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(d, e, a, b, c, __M_SHA1_W(57, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(c, d, e, a, b, __M_SHA1_W(58, group), 0x8F1BBCDC);
+    __M_SHA1_FF3(b, c, d, e, a, __M_SHA1_W(59, group), 0x8F1BBCDC);
+
+    __M_SHA1_FF4(a, b, c, d, e, __M_SHA1_W(60, group), 0xCA62C1D6);
+    __M_SHA1_FF4(e, a, b, c, d, __M_SHA1_W(61, group), 0xCA62C1D6);
+    __M_SHA1_FF4(d, e, a, b, c, __M_SHA1_W(62, group), 0xCA62C1D6);
+    __M_SHA1_FF4(c, d, e, a, b, __M_SHA1_W(63, group), 0xCA62C1D6);
+    __M_SHA1_FF4(b, c, d, e, a, __M_SHA1_W(64, group), 0xCA62C1D6);
+    __M_SHA1_FF4(a, b, c, d, e, __M_SHA1_W(65, group), 0xCA62C1D6);
+    __M_SHA1_FF4(e, a, b, c, d, __M_SHA1_W(66, group), 0xCA62C1D6);
+    __M_SHA1_FF4(d, e, a, b, c, __M_SHA1_W(67, group), 0xCA62C1D6);
+    __M_SHA1_FF4(c, d, e, a, b, __M_SHA1_W(68, group), 0xCA62C1D6);
+    __M_SHA1_FF4(b, c, d, e, a, __M_SHA1_W(69, group), 0xCA62C1D6);
+    __M_SHA1_FF4(a, b, c, d, e, __M_SHA1_W(70, group), 0xCA62C1D6);
+    __M_SHA1_FF4(e, a, b, c, d, __M_SHA1_W(71, group), 0xCA62C1D6);
+    __M_SHA1_FF4(d, e, a, b, c, __M_SHA1_W(72, group), 0xCA62C1D6);
+    __M_SHA1_FF4(c, d, e, a, b, __M_SHA1_W(73, group), 0xCA62C1D6);
+    __M_SHA1_FF4(b, c, d, e, a, __M_SHA1_W(74, group), 0xCA62C1D6);
+    __M_SHA1_FF4(a, b, c, d, e, __M_SHA1_W(75, group), 0xCA62C1D6);
+    __M_SHA1_FF4(e, a, b, c, d, __M_SHA1_W(76, group), 0xCA62C1D6);
+    __M_SHA1_FF4(d, e, a, b, c, __M_SHA1_W(77, group), 0xCA62C1D6);
+    __M_SHA1_FF4(c, d, e, a, b, __M_SHA1_W(78, group), 0xCA62C1D6);
+    __M_SHA1_FF4(b, c, d, e, a, __M_SHA1_W(79, group), 0xCA62C1D6);
 
     s->H0 += a;
     s->H1 += b;
@@ -325,25 +332,6 @@ MLN_FUNC_VOID(, void, mln_sha1_dump, (mln_sha1_t *s), (s), {
  */
 
 static inline void mln_sha256_calc_block(mln_sha256_t *s);
-
-static mln_u32_t sha256_round_constant[] = {
-0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5,
-0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5,
-0xD807AA98, 0x12835B01, 0x243185BE, 0x550C7DC3,
-0x72BE5D74, 0x80DEB1FE, 0x9BDC06A7, 0xC19BF174,
-0xE49B69C1, 0xEFBE4786, 0x0FC19DC6, 0x240CA1CC,
-0x2DE92C6F, 0x4A7484AA, 0x5CB0A9DC, 0x76F988DA,
-0x983E5152, 0xA831C66D, 0xB00327C8, 0xBF597FC7,
-0xC6E00BF3, 0xD5A79147, 0x06CA6351, 0x14292967,
-0x27B70A85, 0x2E1B2138, 0x4D2C6DFC, 0x53380D13,
-0x650A7354, 0x766A0ABB, 0x81C2C92E, 0x92722C85,
-0xA2BFE8A1, 0xA81A664B, 0xC24B8B70, 0xC76C51A3,
-0xD192E819, 0xD6990624, 0xF40E3585, 0x106AA070,
-0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5,
-0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3,
-0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208,
-0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2
-};
 
 MLN_FUNC_VOID(, void, mln_sha256_init, (mln_sha256_t *s), (s), {
     s->H0 = 0x6a09e667;
@@ -443,19 +431,25 @@ MLN_FUNC_VOID(, void, mln_sha256_calc, \
 #define mln_sha256_Gamma0256(x) (mln_sha256_S((x), 7) ^ mln_sha256_S((x), 18) ^ mln_sha256_R((x), 3))
 #define mln_sha256_Gamma1256(x) (mln_sha256_S((x), 17) ^ mln_sha256_S((x), 19) ^ mln_sha256_R((x), 10))
 
-MLN_FUNC(static inline, mln_u32_t, mln_sha256_safe_add, (mln_u32_t x, mln_u32_t y), (x, y), {
-    mln_u32_t lsw = (x & 0xffff) + (y & 0xffff);
-    mln_u32_t msw = (x >> 16) + (y >> 16) + (lsw >> 16);
-    return (msw << 16) | (lsw & 0xffff);
-})
+#define __M_SHA256_ROUND(a,b,c,d,e,f,g,h,w,k) \
+{\
+    mln_u32_t _t1 = (h) + mln_sha256_Sigma1256(e) + mln_sha256_Ch((e),(f),(g)) + (k) + (w);\
+    mln_u32_t _t2 = mln_sha256_Sigma0256(a) + mln_sha256_Maj((a),(b),(c));\
+    (h) = (g); (g) = (f); (f) = (e); (e) = (d) + _t1;\
+    (d) = (c); (c) = (b); (b) = (a); (a) = _t1 + _t2;\
+}
 
 MLN_FUNC_VOID(static inline, void, mln_sha256_calc_block, (mln_sha256_t *s), (s), {
     mln_u32_t h0, h1, h2, h3, h4, h5, h6, h7;
-    mln_u32_t j, t1, t2;
-    mln_u32_t group[64] = {0};
+    mln_u32_t j;
+    mln_u32_t W[64];
+    const mln_u8_t *p = s->buf;
 
-    for (j = 0; j < __M_SHA_BUFLEN; ++j) {
-        group[j >> 2] |= (s->buf[j] << ((3 - j%4)<<3));
+    for (j = 0; j < 16; ++j, p += 4) {
+        __M_SHA_LOAD32BE(W[j], p);
+    }
+    for (j = 16; j < 64; ++j) {
+        W[j] = mln_sha256_Gamma1256(W[j-2]) + W[j-7] + mln_sha256_Gamma0256(W[j-15]) + W[j-16];
     }
 
     h0 = s->H0;
@@ -467,41 +461,79 @@ MLN_FUNC_VOID(static inline, void, mln_sha256_calc_block, (mln_sha256_t *s), (s)
     h6 = s->H6;
     h7 = s->H7;
 
-    for (j = 0; j < 64; ++j) {
-        if (j >= 16) {
-            group[j] = mln_sha256_safe_add(\
-                           mln_sha256_safe_add(\
-                               mln_sha256_safe_add(mln_sha256_Gamma1256(group[j-2]), group[j-7]), \
-                               mln_sha256_Gamma0256(group[j-15])), \
-                           group[j-16]);
-        }
-        t1 = mln_sha256_safe_add(\
-                 mln_sha256_safe_add(\
-                     mln_sha256_safe_add(\
-                         mln_sha256_safe_add(h7, mln_sha256_Sigma1256(h4)), \
-                         mln_sha256_Ch(h4, h5, h6)), \
-                     sha256_round_constant[j]), \
-                 group[j]);
-        t2 = mln_sha256_safe_add(mln_sha256_Sigma0256(h0), mln_sha256_Maj(h0, h1, h2));
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 0],0x428A2F98);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 1],0x71374491);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 2],0xB5C0FBCF);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 3],0xE9B5DBA5);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 4],0x3956C25B);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 5],0x59F111F1);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 6],0x923F82A4);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 7],0xAB1C5ED5);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 8],0xD807AA98);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[ 9],0x12835B01);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[10],0x243185BE);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[11],0x550C7DC3);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[12],0x72BE5D74);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[13],0x80DEB1FE);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[14],0x9BDC06A7);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[15],0xC19BF174);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[16],0xE49B69C1);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[17],0xEFBE4786);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[18],0x0FC19DC6);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[19],0x240CA1CC);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[20],0x2DE92C6F);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[21],0x4A7484AA);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[22],0x5CB0A9DC);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[23],0x76F988DA);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[24],0x983E5152);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[25],0xA831C66D);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[26],0xB00327C8);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[27],0xBF597FC7);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[28],0xC6E00BF3);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[29],0xD5A79147);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[30],0x06CA6351);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[31],0x14292967);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[32],0x27B70A85);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[33],0x2E1B2138);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[34],0x4D2C6DFC);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[35],0x53380D13);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[36],0x650A7354);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[37],0x766A0ABB);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[38],0x81C2C92E);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[39],0x92722C85);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[40],0xA2BFE8A1);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[41],0xA81A664B);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[42],0xC24B8B70);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[43],0xC76C51A3);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[44],0xD192E819);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[45],0xD6990624);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[46],0xF40E3585);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[47],0x106AA070);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[48],0x19A4C116);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[49],0x1E376C08);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[50],0x2748774C);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[51],0x34B0BCB5);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[52],0x391C0CB3);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[53],0x4ED8AA4A);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[54],0x5B9CCA4F);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[55],0x682E6FF3);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[56],0x748F82EE);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[57],0x78A5636F);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[58],0x84C87814);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[59],0x8CC70208);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[60],0x90BEFFFA);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[61],0xA4506CEB);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[62],0xBEF9A3F7);
+    __M_SHA256_ROUND(h0,h1,h2,h3,h4,h5,h6,h7,W[63],0xC67178F2);
 
-        h7 = h6;
-        h6 = h5;
-        h5 = h4;
-        h4 = mln_sha256_safe_add(h3, t1);
-        h3 = h2;
-        h2 = h1;
-        h1 = h0;
-        h0 = mln_sha256_safe_add(t1, t2);
-    }
-
-    s->H0 = mln_sha256_safe_add(h0, s->H0);
-    s->H1 = mln_sha256_safe_add(h1, s->H1);
-    s->H2 = mln_sha256_safe_add(h2, s->H2);
-    s->H3 = mln_sha256_safe_add(h3, s->H3);
-    s->H4 = mln_sha256_safe_add(h4, s->H4);
-    s->H5 = mln_sha256_safe_add(h5, s->H5);
-    s->H6 = mln_sha256_safe_add(h6, s->H6);
-    s->H7 = mln_sha256_safe_add(h7, s->H7);
+    s->H0 += h0;
+    s->H1 += h1;
+    s->H2 += h2;
+    s->H3 += h3;
+    s->H4 += h4;
+    s->H5 += h5;
+    s->H6 += h6;
+    s->H7 += h7;
 })
 
 MLN_FUNC_VOID(, void, mln_sha256_tobytes, (mln_sha256_t *s, mln_u8ptr_t buf, mln_u32_t len), (s, buf, len), {
