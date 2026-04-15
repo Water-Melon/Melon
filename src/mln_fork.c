@@ -10,7 +10,6 @@
 #include <signal.h>
 #include "mln_utils.h"
 #include "mln_fork.h"
-#include "mln_rbtree.h"
 #include "mln_log.h"
 #include "mln_conf.h"
 #include "mln_ipc.h"
@@ -23,19 +22,18 @@ mln_size_t child_error_bytes;
 mln_u32_t child_state;
 mln_u32_t cur_msg_len;
 mln_u8ptr_t child_msg_content;
+mln_size_t child_msg_buf_size;
 mln_u32_t cur_msg_type;
 mln_fork_t *worker_list_head = NULL;
 mln_fork_t *worker_list_tail = NULL;
-mln_rbtree_t *master_ipc_tree = NULL;
-mln_rbtree_t *worker_ipc_tree = NULL;
+static mln_ipc_handler_t *master_ipc_hash[M_IPC_HASH_BUCKETS];
+static mln_ipc_handler_t *worker_ipc_hash[M_IPC_HASH_BUCKETS];
 clr_handler rs_clr_handler = NULL;
 void *rs_clr_data = NULL;
 
 MLN_CHAIN_FUNC_DECLARE(static inline, \
                        worker_list, \
                        mln_fork_t, );
-static int
-mln_fork_rbtree_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
 static int
 do_fork_worker_process(mln_sauto_t n_worker_proc);
 static int
@@ -65,6 +63,57 @@ mln_ipc_fd_handler_worker_send(mln_event_t *ev, int fd, void *data);
 static inline mln_ipc_handler_t *mln_ipc_handler_new(mln_u32_t type, ipc_handler handler, void *data);
 static void mln_ipc_handler_free(mln_ipc_handler_t *ih);
 
+/*
+ * Hash table helpers for IPC handlers (replaces rbtree for O(1) lookup)
+ */
+MLN_FUNC(static inline, mln_u32_t, mln_ipc_hash_index, (mln_u32_t type), (type), {
+    return type & M_IPC_HASH_MASK;
+})
+
+MLN_FUNC(static inline, mln_ipc_handler_t *, mln_ipc_hash_search, \
+         (mln_ipc_handler_t **table, mln_u32_t type), (table, type), \
+{
+    mln_ipc_handler_t *ih = table[type & M_IPC_HASH_MASK];
+    while (ih != NULL) {
+        if (ih->type == type) return ih;
+        ih = ih->next;
+    }
+    return NULL;
+})
+
+MLN_FUNC(static, int, mln_ipc_hash_insert, \
+         (mln_ipc_handler_t **table, mln_ipc_handler_t *ih), (table, ih), \
+{
+    mln_u32_t idx = ih->type & M_IPC_HASH_MASK;
+    mln_ipc_handler_t **p = &table[idx];
+    while (*p != NULL) {
+        if ((*p)->type == ih->type) {
+            ih->next = (*p)->next;
+            mln_ipc_handler_free(*p);
+            *p = ih;
+            return 0;
+        }
+        p = &((*p)->next);
+    }
+    ih->next = NULL;
+    *p = ih;
+    return 0;
+})
+
+MLN_FUNC_VOID(static, void, mln_ipc_hash_destroy, (mln_ipc_handler_t **table), (table), {
+    mln_u32_t i;
+    mln_ipc_handler_t *ih, *next;
+    for (i = 0; i < M_IPC_HASH_BUCKETS; ++i) {
+        ih = table[i];
+        while (ih != NULL) {
+            next = ih->next;
+            mln_ipc_handler_free(ih);
+            ih = next;
+        }
+        table[i] = NULL;
+    }
+})
+
 /*pre-fork*/
 MLN_FUNC(, int, mln_fork_prepare, (void), (), {
     if (signal(SIGCHLD, SIG_IGN) == SIG_ERR) {
@@ -83,49 +132,18 @@ MLN_FUNC(, int, mln_fork_prepare, (void), (), {
     child_error_bytes = 0;
     cur_msg_len = 0;
     child_msg_content = NULL;
+    child_msg_buf_size = 0;
     cur_msg_type = 0;
-    struct mln_rbtree_attr rbattr;
-    rbattr.pool = NULL;
-    rbattr.pool_alloc = NULL;
-    rbattr.pool_free = NULL;
-    rbattr.cmp = mln_fork_rbtree_cmp;
-    rbattr.data_free = (rbtree_free_data)mln_ipc_handler_free;
-    if ((master_ipc_tree = mln_rbtree_new(&rbattr)) == NULL) {
-        mln_log(error, "No memory.\n");
-        if (mln_tcp_conn_fd_get(&master_conn) >= 0)
-            mln_socket_close(mln_tcp_conn_fd_get(&master_conn));
-        mln_tcp_conn_destroy(&master_conn);
-        return -1;
-    }
-    if ((worker_ipc_tree = mln_rbtree_new(&rbattr)) == NULL) {
-        mln_log(error, "No memory.\n");
-        mln_rbtree_free(master_ipc_tree);
-        master_ipc_tree = NULL;
-        if (mln_tcp_conn_fd_get(&master_conn) >= 0)
-            mln_socket_close(mln_tcp_conn_fd_get(&master_conn));
-        mln_tcp_conn_destroy(&master_conn);
-        return -1;
-    }
+    memset(master_ipc_hash, 0, sizeof(master_ipc_hash));
+    memset(worker_ipc_hash, 0, sizeof(worker_ipc_hash));
     if (mln_ipc_set_process_handlers() < 0) {
         mln_log(error, "No memory.\n");
-        mln_rbtree_free(worker_ipc_tree);
-        worker_ipc_tree = NULL;
-        mln_rbtree_free(master_ipc_tree);
-        master_ipc_tree = NULL;
         if (mln_tcp_conn_fd_get(&master_conn) >= 0)
             mln_socket_close(mln_tcp_conn_fd_get(&master_conn));
         mln_tcp_conn_destroy(&master_conn);
         return -1;
     }
     return 0;
-})
-
-MLN_FUNC(static, int, mln_fork_rbtree_cmp, (const void *k1, const void *k2), (k1, k2), {
-    mln_ipc_handler_t *ih1 = (mln_ipc_handler_t *)k1;
-    mln_ipc_handler_t *ih2 = (mln_ipc_handler_t *)k2;
-    if (ih1->type > ih2->type) return 1;
-    else if (ih1->type == ih2->type) return 0;
-    return -1;
 })
 
 /*mln_fork_t*/
@@ -146,6 +164,7 @@ MLN_FUNC(static, mln_fork_t *, mln_fork_init, (struct mln_fork_attr *attr), (att
     f->msg_type = 0;
     f->error_bytes = 0;
     f->msg_content = NULL;
+    f->msg_buf_size = 0;
     f->etype = attr->etype;
     f->stype = attr->stype;
     worker_list_chain_add(&worker_list_head, &worker_list_tail, f);
@@ -160,7 +179,9 @@ MLN_FUNC_VOID(static, void, mln_fork_destroy, (mln_fork_t *f, int free_args), (f
     }
     if (f->msg_content != NULL) {
         free(f->msg_content);
+        f->msg_content = NULL;
     }
+    f->msg_buf_size = 0;
     if (mln_tcp_conn_fd_get(&(f->conn)) >= 0)
         mln_socket_close(mln_tcp_conn_fd_get(&(f->conn)));
     mln_tcp_conn_destroy(&(f->conn));
@@ -373,10 +394,9 @@ MLN_FUNC(static, int, do_fork_core, \
     } else if (pid == 0) {
         mln_socket_close(fds[0]);
         mln_fork_destroy_all();
-        mln_rbtree_free(master_ipc_tree);
+        mln_ipc_hash_destroy(master_ipc_hash);
         if (rs_clr_handler != NULL)
             rs_clr_handler(rs_clr_data);
-        master_ipc_tree = NULL;
         mln_tcp_conn_fd_set(&master_conn, fds[1]);
         signal(SIGCHLD, SIG_DFL);
         if (write(fds[1], " ", 1) < 0)
@@ -394,19 +414,7 @@ MLN_FUNC(, int, mln_fork_master_ipc_handler_set, \
 {
     mln_ipc_handler_t *ih = mln_ipc_handler_new(type, handler, data);
     if (ih == NULL) return -1;
-
-    mln_rbtree_node_t *rn = mln_rbtree_search(master_ipc_tree, ih);
-    if (mln_rbtree_node_data_get(rn) != NULL) {
-        mln_rbtree_delete(master_ipc_tree, rn);
-        mln_rbtree_node_free(master_ipc_tree, rn);
-    }
-    rn = mln_rbtree_node_new(master_ipc_tree, ih);
-    if (rn == NULL) {
-        mln_ipc_handler_free(ih);
-        return -1;
-    }
-    mln_rbtree_insert(master_ipc_tree, rn);
-    return 0;
+    return mln_ipc_hash_insert(master_ipc_hash, ih);
 })
 /*mln_set_worker_ipc_handler*/
 MLN_FUNC(, int, mln_fork_worker_ipc_handler_set, \
@@ -415,19 +423,7 @@ MLN_FUNC(, int, mln_fork_worker_ipc_handler_set, \
 {
     mln_ipc_handler_t *ih = mln_ipc_handler_new(type, handler, data);
     if (ih == NULL) return -1;
-
-    mln_rbtree_node_t *rn = mln_rbtree_search(worker_ipc_tree, ih);
-    if (mln_rbtree_node_data_get(rn) != NULL) {
-        mln_rbtree_delete(worker_ipc_tree, rn);
-        mln_rbtree_node_free(worker_ipc_tree, rn);
-    }
-    rn = mln_rbtree_node_new(worker_ipc_tree, ih);
-    if (rn == NULL) {
-        mln_ipc_handler_free(ih);
-        return -1;
-    }
-    mln_rbtree_insert(worker_ipc_tree, rn);
-    return 0;
+    return mln_ipc_hash_insert(worker_ipc_hash, ih);
 })
 
 MLN_FUNC(static inline, mln_ipc_handler_t *, mln_ipc_handler_new, \
@@ -440,6 +436,7 @@ MLN_FUNC(static inline, mln_ipc_handler_t *, mln_ipc_handler_new, \
     ih->handler = handler;
     ih->data = data;
     ih->type = type;
+    ih->next = NULL;
     return ih;
 })
 
@@ -619,33 +616,31 @@ MLN_FUNC_VOID(static, void, mln_ipc_fd_handler_master_process, (mln_event_t *ev,
             }
             case STATE_LENGTH:
             {
-                if (f->msg_content == NULL) {
-                    f->msg_content = malloc(f->msg_len);
-                    if (f->msg_content == NULL) {
+                /* Buffer reuse: only realloc when message is larger than current buffer */
+                if (f->msg_buf_size < f->msg_len) {
+                    void *new_buf = realloc(f->msg_content, f->msg_len);
+                    if (new_buf == NULL) {
                         f->error_bytes = f->msg_len;
                         f->state = STATE_IDLE;
                         break;
                     }
+                    f->msg_content = new_buf;
+                    f->msg_buf_size = f->msg_len;
                 }
                 if (mln_ipc_get_buf_with_len(tc, f->msg_content, f->msg_len) < 0) {
                     return;
                 }
                 memcpy(&(f->msg_type), f->msg_content, M_F_TYPELEN);
                 f->state = STATE_IDLE;
-                mln_ipc_handler_t ih;
-                ih.type = f->msg_type;
-                mln_rbtree_node_t *rn = mln_rbtree_search(master_ipc_tree, &ih);
-                if (!mln_rbtree_null(rn, master_ipc_tree)) {
-                    mln_ipc_handler_t *ihp = (mln_ipc_handler_t *)mln_rbtree_node_data_get(rn);
-                    if (ihp->handler != NULL)
-                        ihp->handler(ev, \
-                                     f, \
-                                     f->msg_content+M_F_TYPELEN, \
-                                     f->msg_len-M_F_TYPELEN, \
-                                     &(ihp->data));
+                /* O(1) hash lookup instead of O(log n) rbtree search */
+                mln_ipc_handler_t *ihp = mln_ipc_hash_search(master_ipc_hash, f->msg_type);
+                if (ihp != NULL && ihp->handler != NULL) {
+                    ihp->handler(ev, \
+                                 f, \
+                                 (mln_u8ptr_t)(f->msg_content)+M_F_TYPELEN, \
+                                 f->msg_len-M_F_TYPELEN, \
+                                 &(ihp->data));
                 }
-                free(f->msg_content);
-                f->msg_content = NULL;
                 break;
             }
             default:
@@ -727,33 +722,31 @@ MLN_FUNC_VOID(static, void, mln_ipc_fd_handler_worker_process, \
             }
             case STATE_LENGTH:
             {
-                if (child_msg_content == NULL) {
-                    child_msg_content = (mln_u8ptr_t)malloc(cur_msg_len);
-                    if (child_msg_content == NULL) {
+                /* Buffer reuse: only realloc when message is larger than current buffer */
+                if (child_msg_buf_size < cur_msg_len) {
+                    mln_u8ptr_t new_buf = (mln_u8ptr_t)realloc(child_msg_content, cur_msg_len);
+                    if (new_buf == NULL) {
                         child_error_bytes = cur_msg_len;
                         child_state = STATE_IDLE;
                         break;
                     }
+                    child_msg_content = new_buf;
+                    child_msg_buf_size = cur_msg_len;
                 }
                 if (mln_ipc_get_buf_with_len(tc, child_msg_content, cur_msg_len) < 0) {
                     return;
                 }
                 memcpy(&cur_msg_type, child_msg_content, M_F_TYPELEN);
                 child_state = STATE_IDLE;
-                mln_ipc_handler_t ih;
-                ih.type = cur_msg_type;
-                mln_rbtree_node_t *rn = mln_rbtree_search(worker_ipc_tree, &ih);
-                if (!mln_rbtree_null(rn, worker_ipc_tree)) {
-                    mln_ipc_handler_t *ihp = (mln_ipc_handler_t *)mln_rbtree_node_data_get(rn);
-                    if (ihp->handler != NULL)
-                        ihp->handler(ev, \
-                                     tc, \
-                                     child_msg_content+M_F_TYPELEN, \
-                                     cur_msg_len-M_F_TYPELEN, \
-                                     &(ihp->data));
+                /* O(1) hash lookup instead of O(log n) rbtree search */
+                mln_ipc_handler_t *ihp = mln_ipc_hash_search(worker_ipc_hash, cur_msg_type);
+                if (ihp != NULL && ihp->handler != NULL) {
+                    ihp->handler(ev, \
+                                 tc, \
+                                 child_msg_content+M_F_TYPELEN, \
+                                 cur_msg_len-M_F_TYPELEN, \
+                                 &(ihp->data));
                 }
-                free(child_msg_content);
-                child_msg_content = NULL;
                 break;
             }
             default:
@@ -941,4 +934,3 @@ MLN_CHAIN_FUNC_DEFINE(static inline, \
                       prev, \
                       next);
 #endif
-

@@ -78,10 +78,13 @@ struct mln_fork_s {
     mln_u32_t                msg_type;//message type
     mln_size_t               error_bytes;//bytes of error message
     void                    *msg_content;//message content
+    mln_size_t               msg_buf_size;//reusable buffer capacity for message content
     enum proc_exec_type      etype;//Whether the child process needs to be replaced by the exec image (exec) or not
     enum proc_state_type     stype;//Whether the child process needs to be restarted after exiting
 };
 ```
+
+> **Performance note**: IPC handler dispatch uses hash table for O(1) average lookup time. The `msg_content` buffer is reused across messages to avoid per-message allocation overhead.
 
 
 

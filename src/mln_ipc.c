@@ -16,11 +16,13 @@
  * All above operations mean that you can customize the send routine.
  */
 
-static mln_ipc_cb_t *ipcs_head = NULL;
-static mln_ipc_cb_t *ipcs_tail = NULL;
+/*
+ * Hash table for O(1) handler lookup by type, replacing linked list.
+ */
+#define IPC_CB_HASH_BUCKETS 32
+#define IPC_CB_HASH_MASK (IPC_CB_HASH_BUCKETS - 1)
 
-MLN_CHAIN_FUNC_DECLARE(static inline, mln_ipc, mln_ipc_cb_t, );
-MLN_CHAIN_FUNC_DEFINE(static inline, mln_ipc, mln_ipc_cb_t, prev, next);
+static mln_ipc_cb_t *ipc_cb_hash[IPC_CB_HASH_BUCKETS];
 
 MLN_FUNC(, mln_ipc_cb_t *, mln_ipc_handler_register, \
          (mln_u32_t type, ipc_handler master_handler, ipc_handler worker_handler, \
@@ -36,8 +38,12 @@ MLN_FUNC(, mln_ipc_cb_t *, mln_ipc_handler_register, \
     cb->master_data = master_data;
     cb->worker_data = worker_data;
     cb->type = type;
+    cb->prev = NULL;
 
-    mln_ipc_chain_add(&ipcs_head, &ipcs_tail, cb);
+    mln_u32_t idx = type & IPC_CB_HASH_MASK;
+    cb->next = ipc_cb_hash[idx];
+    if (cb->next != NULL) cb->next->prev = cb;
+    ipc_cb_hash[idx] = cb;
 
     return cb;
 })
@@ -45,17 +51,28 @@ MLN_FUNC(, mln_ipc_cb_t *, mln_ipc_handler_register, \
 MLN_FUNC_VOID(, void, mln_ipc_handler_unregister, (mln_ipc_cb_t *cb), (cb), {
     if (cb == NULL) return;
 
-    mln_ipc_chain_del(&ipcs_head, &ipcs_tail, cb);
+    mln_u32_t idx = cb->type & IPC_CB_HASH_MASK;
+    if (cb->prev != NULL) {
+        cb->prev->next = cb->next;
+    } else {
+        ipc_cb_hash[idx] = cb->next;
+    }
+    if (cb->next != NULL) {
+        cb->next->prev = cb->prev;
+    }
     free(cb);
 })
 
 MLN_FUNC(, int, mln_ipc_set_process_handlers, (void), (), {
+    mln_u32_t i;
     mln_ipc_cb_t *cb;
-    for (cb = ipcs_head; cb != NULL; cb = cb->next) {
-        if (mln_fork_master_ipc_handler_set(cb->type, cb->master_handler, cb->master_data) < 0)
-            return -1;
-        if (mln_fork_worker_ipc_handler_set(cb->type, cb->worker_handler, cb->worker_data) < 0)
-            return -1;
+    for (i = 0; i < IPC_CB_HASH_BUCKETS; ++i) {
+        for (cb = ipc_cb_hash[i]; cb != NULL; cb = cb->next) {
+            if (mln_fork_master_ipc_handler_set(cb->type, cb->master_handler, cb->master_data) < 0)
+                return -1;
+            if (mln_fork_worker_ipc_handler_set(cb->type, cb->worker_handler, cb->worker_data) < 0)
+                return -1;
+        }
     }
     return 0;
 })

@@ -11,9 +11,10 @@
 #include "mln_types.h"
 #include "mln_string.h"
 #include "mln_event.h"
-#include "mln_rbtree.h"
 
 #define THREAD_SOCKFD_LEN 128
+#define M_THREAD_HASH_BUCKETS 32
+#define M_THREAD_HASH_MASK (M_THREAD_HASH_BUCKETS - 1)
 
 typedef int (*mln_thread_entrance_t)(int, char **);
 
@@ -81,7 +82,7 @@ struct mln_thread_s {
     mln_thread_msgq_t         *local_tail;
     mln_thread_msgq_t         *dest_head;
     mln_thread_msgq_t         *dest_tail;
-    mln_rbtree_node_t         *node;
+    struct mln_thread_s       *hash_next;
 };
 
 extern void mln_thread_clear_msg(mln_thread_msg_t *msg);

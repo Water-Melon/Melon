@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/time.h>
 #include "mln_framework.h"
 #include "mln_log.h"
 #include "mln_thread.h"
@@ -70,6 +71,12 @@ static int haha(int argc, char **argv)
         return -1;
     }
     mln_log(debug, "!!!src:%S auto:%l char:%c\n", msg.src, msg.sauto, msg.c);
+
+    /* Verify message content integrity */
+    assert(msg.sauto == 9736);
+    assert(msg.c == 'N');
+    assert(msg.type == ITC_REQUEST);
+
     mln_thread_clear_msg(&msg);
 
     return 0;
@@ -83,6 +90,11 @@ static void hello_cleanup(void *data)
 static int hello(int argc, char **argv)
 {
     mln_thread_cleanup_set(hello_cleanup, NULL);
+
+    /* Performance test: measure ITC message send throughput */
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+
     int i;
     for (i = 0; i < 1; ++i)  {
         int fd = atoi(argv[argc-1]);
@@ -101,6 +113,11 @@ static int hello(int argc, char **argv)
             return -1;
         }
     }
+
+    gettimeofday(&end, NULL);
+    long elapsed_us = (end.tv_sec - start.tv_sec) * 1000000L + (end.tv_usec - start.tv_usec);
+    mln_log(debug, "ITC message send: %d messages in %ld us\n", 1, elapsed_us);
+
     usleep(1000000);
     exit(0);
     return 0;
@@ -140,4 +157,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
