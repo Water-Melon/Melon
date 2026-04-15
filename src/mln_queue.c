@@ -3,33 +3,52 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_queue.h"
+#undef mln_queue_append
+#undef mln_queue_get
+#undef mln_queue_remove
+#undef mln_queue_search
 #include "mln_func.h"
+
+static inline mln_uauto_t mln_queue_roundup_pow2(mln_uauto_t n)
+{
+    if (n == 0) return 1;
+    --n;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    if (sizeof(mln_uauto_t) > 4)
+        n |= n >> 32;
+    return n + 1;
+}
 
 MLN_FUNC(, mln_queue_t *, mln_queue_init, \
          (mln_uauto_t qlen, queue_free free_handler), (qlen, free_handler), \
 {
     mln_queue_t *q = (mln_queue_t *)malloc(sizeof(mln_queue_t));
     if (q == NULL) return NULL;
+    mln_uauto_t buf_size = mln_queue_roundup_pow2(qlen ? qlen : 1);
     q->qlen = qlen;
     q->nr_element = 0;
+    q->mask = buf_size - 1;
+    q->head = 0;
+    q->iter_i = -1;
     q->free_handler = free_handler;
-    q->queue = (void **)calloc(q->qlen, sizeof(void *));
+    q->queue = (void **)calloc(buf_size, sizeof(void *));
     if (q->queue == NULL) {
         free(q);
         return NULL;
     }
-    q->head = q->tail = q->queue;
     return q;
 })
 
 MLN_FUNC_VOID(, void, mln_queue_destroy, (mln_queue_t *q), (q), {
     if (q == NULL) return;
     if (q->free_handler != NULL) {
-        while (q->nr_element) {
-            q->free_handler(*(q->head));
-            if (++(q->head) >= q->queue+q->qlen)
-                q->head = q->queue;
-            --(q->nr_element);
+        mln_uauto_t i;
+        for (i = 0; i < q->nr_element; ++i) {
+            q->free_handler(q->queue[(q->head + i) & q->mask]);
         }
     }
     if (q->queue != NULL)
@@ -39,67 +58,72 @@ MLN_FUNC_VOID(, void, mln_queue_destroy, (mln_queue_t *q), (q), {
 
 MLN_FUNC(, int, mln_queue_append, (mln_queue_t *q, void *data), (q, data), {
     if (q->nr_element >= q->qlen) return -1;
-    *(q->tail)++ = data;
-    if (q->tail == q->queue + q->qlen)
-        q->tail = q->queue;
-    ++(q->nr_element);
+    q->queue[(q->head + q->nr_element) & q->mask] = data;
+    ++q->nr_element;
     return 0;
 })
 
 MLN_FUNC(, void *, mln_queue_get, (mln_queue_t *q), (q), {
     if (!q->nr_element) return NULL;
-    return *(q->head);
+    return q->queue[q->head];
 })
 
 MLN_FUNC_VOID(, void, mln_queue_remove, (mln_queue_t *q), (q), {
     if (!q->nr_element) return;
-    if (++(q->head) >= q->queue + q->qlen)
-        q->head = q->queue;
-    --(q->nr_element);
+    q->head = (q->head + 1) & q->mask;
+    --q->nr_element;
+    if (q->iter_i >= 0)
+        --q->iter_i;
 })
 
 MLN_FUNC(, void *, mln_queue_search, (mln_queue_t *q, mln_uauto_t index), (q, index), {
     if (index >= q->nr_element) return NULL;
-    void **ptr = q->head + index;
-    if (ptr >= q->queue+q->qlen)
-        ptr = q->queue + (ptr - (q->queue + q->qlen));
-    return *ptr;
+    return q->queue[(q->head + index) & q->mask];
 })
 
 MLN_FUNC(, int, mln_queue_iterate, \
          (mln_queue_t *q, queue_iterate_handler handler, void *udata), \
          (q, handler, udata), \
 {
-    void **scan = q->head;
-    mln_uauto_t i = 0;
-    for (; i < q->nr_element; ++i) {
-        if (handler != NULL) {
-            if (handler(*scan, udata) < 0)
-                return -1;
+    if (handler == NULL) return 0;
+    q->iter_i = 0;
+    while (q->iter_i >= 0 && (mln_uauto_t)q->iter_i < q->nr_element) {
+        if (handler(q->queue[(q->head + q->iter_i) & q->mask], udata) < 0) {
+            q->iter_i = -1;
+            return -1;
         }
-        if (++scan >= q->queue + q->qlen)
-            scan = q->queue;
+        ++q->iter_i;
     }
+    q->iter_i = -1;
     return 0;
 })
 
 MLN_FUNC_VOID(, void, mln_queue_free_index, (mln_queue_t *q, mln_uauto_t index), (q, index), {
     if (index >= q->nr_element) return;
-    void **pos = q->head + index;
-    if (pos >= q->queue+q->qlen)
-        pos = q->queue + (pos - (q->queue + q->qlen));
-    void *save = *pos;
-    void **next = pos;
-    mln_uauto_t i, end = q->nr_element - index;
-    for (i = 0; i < end; ++i) {
-        if (++next >= q->queue + q->qlen)
-            next = q->queue;
-        *pos++ = *next;
-        if (pos >= q->queue + q->qlen)
-            pos = q->queue;
+    mln_uauto_t mask = q->mask;
+    mln_uauto_t rem = (q->head + index) & mask;
+    void *save = q->queue[rem];
+    mln_uauto_t buf_size = mask + 1;
+    mln_uauto_t count = q->nr_element - 1 - index;
+    if (count > 0) {
+        if (rem + count < buf_size) {
+            memmove(&q->queue[rem], &q->queue[rem + 1], count * sizeof(void *));
+        } else if (rem == mask) {
+            q->queue[mask] = q->queue[0];
+            if (count > 1)
+                memmove(&q->queue[0], &q->queue[1], (count - 1) * sizeof(void *));
+        } else {
+            mln_uauto_t first_part = mask - rem;
+            memmove(&q->queue[rem], &q->queue[rem + 1], first_part * sizeof(void *));
+            q->queue[mask] = q->queue[0];
+            mln_uauto_t rest = count - first_part - 1;
+            if (rest > 0)
+                memmove(&q->queue[0], &q->queue[1], rest * sizeof(void *));
+        }
     }
-    q->tail = pos;
-    --(q->nr_element);
+    --q->nr_element;
+    if (q->iter_i >= 0 && index <= (mln_uauto_t)q->iter_i)
+        --q->iter_i;
     if (q->free_handler != NULL)
         q->free_handler(save);
 })
