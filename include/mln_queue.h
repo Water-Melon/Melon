@@ -20,6 +20,7 @@ typedef struct {
     mln_uauto_t            nr_element;
     mln_uauto_t            mask;
     queue_free             free_handler;
+    mln_sauto_t            iter_i;
 } mln_queue_t;
 
 
@@ -61,6 +62,8 @@ extern int mln_queue_iterate(mln_queue_t *q, queue_iterate_handler handler, void
     if (_mq->nr_element) {\
         _mq->head = (_mq->head + 1) & _mq->mask;\
         --_mq->nr_element;\
+        if (_mq->iter_i >= 0)\
+            --_mq->iter_i;\
     }\
 })
 

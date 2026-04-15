@@ -33,6 +33,7 @@ MLN_FUNC(, mln_queue_t *, mln_queue_init, \
     q->nr_element = 0;
     q->mask = buf_size - 1;
     q->head = 0;
+    q->iter_i = -1;
     q->free_handler = free_handler;
     q->queue = (void **)calloc(buf_size, sizeof(void *));
     if (q->queue == NULL) {
@@ -71,6 +72,8 @@ MLN_FUNC_VOID(, void, mln_queue_remove, (mln_queue_t *q), (q), {
     if (!q->nr_element) return;
     q->head = (q->head + 1) & q->mask;
     --q->nr_element;
+    if (q->iter_i >= 0)
+        --q->iter_i;
 })
 
 MLN_FUNC(, void *, mln_queue_search, (mln_queue_t *q, mln_uauto_t index), (q, index), {
@@ -83,12 +86,15 @@ MLN_FUNC(, int, mln_queue_iterate, \
          (q, handler, udata), \
 {
     if (handler == NULL) return 0;
-    mln_uauto_t i, n = q->nr_element, h = q->head, m = q->mask;
-    void **buf = q->queue;
-    for (i = 0; i < n; ++i) {
-        if (handler(buf[(h + i) & m], udata) < 0)
+    q->iter_i = 0;
+    while (q->iter_i >= 0 && (mln_uauto_t)q->iter_i < q->nr_element) {
+        if (handler(q->queue[(q->head + q->iter_i) & q->mask], udata) < 0) {
+            q->iter_i = -1;
             return -1;
+        }
+        ++q->iter_i;
     }
+    q->iter_i = -1;
     return 0;
 })
 
@@ -116,6 +122,8 @@ MLN_FUNC_VOID(, void, mln_queue_free_index, (mln_queue_t *q, mln_uauto_t index),
         }
     }
     --q->nr_element;
+    if (q->iter_i >= 0 && index <= (mln_uauto_t)q->iter_i)
+        --q->iter_i;
     if (q->free_handler != NULL)
         q->free_handler(save);
 })
