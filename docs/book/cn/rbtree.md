@@ -200,7 +200,7 @@ typedef int (*rbtree_iterate_handler)(mln_rbtree_node_t *node, void *udata);
 
 描述：
 
-遍历红黑树`t`中每一个结点。且支持在遍历时删除树结点。
+按排序（中序）顺序遍历红黑树`t`中每一个结点。且支持在遍历时删除当前树结点。
 
 `handler`为遍历每个结点的访问函数，该函数的两个参数含义依次为：
 
