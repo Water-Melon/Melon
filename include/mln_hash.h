@@ -28,6 +28,10 @@ typedef enum mln_hash_flag {
     M_HASH_F_KV
 } mln_hash_flag_t;
 
+#define M_HASH_STATE_EMPTY     0
+#define M_HASH_STATE_OCCUPIED  1
+#define M_HASH_STATE_DELETED   2
+
 struct mln_hash_attr {
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
@@ -42,16 +46,14 @@ struct mln_hash_attr {
 };
 
 typedef struct mln_hash_entry_s {
-    struct mln_hash_entry_s *prev;
-    struct mln_hash_entry_s *next;
-    void                    *val;
     void                    *key;
-    struct mln_hash_entry_s *iter_prev;
-    struct mln_hash_entry_s *iter_next;
-    mln_hash_mgr_t          *mgr;
+    void                    *val;
+    mln_s32_t                iter_prev;
+    mln_s32_t                iter_next;
     mln_hash_flag_t          remove_flag;
+    mln_u32_t                state:2;
     mln_u32_t                removed:1;
-    mln_u32_t                padding:31;
+    mln_u32_t                padding:29;
 } mln_hash_entry_t;
 
 struct mln_hash_mgr_s {
@@ -60,7 +62,7 @@ struct mln_hash_mgr_s {
 };
 
 struct mln_hash_s {
-    mln_hash_mgr_t          *tbl;
+    mln_hash_entry_t        *tbl;
     mln_u64_t                len;
     hash_calc_handler        hash;
     hash_cmp_handler         cmp;
@@ -73,9 +75,10 @@ struct mln_hash_s {
     void                    *pool;
     hash_pool_alloc_handler  pool_alloc;
     hash_pool_free_handler   pool_free;
-    mln_hash_entry_t        *iter_head;
-    mln_hash_entry_t        *iter_tail;
+    mln_s32_t                iter_head;
+    mln_s32_t                iter_tail;
     mln_hash_entry_t        *iter;
+    mln_u32_t                nr_deleted;
 };
 
 extern int
