@@ -27,6 +27,13 @@ static void mln_sig_conf_reload(int signo);
 static int mln_conf_reload_iterate_handler(mln_event_t *ev, mln_fork_t *f, void *data);
 
 static mln_event_t *_ev = NULL;
+
+/*
+ * Cache framework mode to avoid repeated config lookups and string comparisons.
+ * 0 = not determined, 1 = multiprocess, 2 = multithread
+ */
+static int cached_framework_mode = 0;
+static mln_string_t *cached_framework_str = NULL;
 #endif
 
 
@@ -45,7 +52,18 @@ int mln_framework_init(struct mln_framework_attr *attr)
         return -1;
 
 #if !defined(MSVC)
-    if (mln_get_framework_status()) {
+    /* Cache the framework status to avoid repeated config lookups */
+    cached_framework_str = mln_get_framework_status();
+    if (cached_framework_str != NULL) {
+        mln_string_t proc_mode = mln_string("multiprocess");
+        if (!mln_string_strcmp(cached_framework_str, &proc_mode)) {
+            cached_framework_mode = 1;
+        } else {
+            cached_framework_mode = 2;
+        }
+    }
+
+    if (cached_framework_str) {
         if (mln_boot_params(attr->argc, attr->argv) < 0)
             return -1;
 
@@ -101,19 +119,13 @@ MLN_FUNC_VOID(static, void, mln_master_routine, (struct mln_framework_attr *attr
 })
 
 MLN_FUNC_VOID(static, void, mln_worker_routine, (struct mln_framework_attr *attr), (attr), {
-    int i_thread_mode;
-    mln_string_t proc_mode = mln_string("multiprocess");
-    mln_string_t *framework_mode = mln_get_framework_status();
     mln_event_t *ev = mln_event_new();
     if (ev == NULL) exit(1);
     if (_ev == NULL) _ev = ev;
     mln_fork_worker_events_set(ev);
 
-    if (!mln_string_strcmp(framework_mode, &proc_mode)) {
-        i_thread_mode = 0;
-    } else {
-        i_thread_mode = 1;
-    }
+    /* Use cached framework mode instead of string comparison */
+    int i_thread_mode = (cached_framework_mode == 2) ? 1 : 0;
 
     mln_trace_init(ev, mln_trace_path());
     if (i_thread_mode) {
@@ -197,4 +209,3 @@ MLN_FUNC(static, mln_string_t *, mln_get_framework_status, (void), (), {
     return NULL;
 })
 #endif
-

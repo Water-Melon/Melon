@@ -14,7 +14,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "mln_thread.h"
-#include "mln_rbtree.h"
 #include "mln_conf.h"
 #include "mln_log.h"
 #include "mln_func.h"
@@ -25,7 +24,7 @@
 __thread void (*thread_cleanup)(void *) = NULL;
 __thread void *thread_data = NULL;
 __thread mln_thread_t *m_thread = NULL;
-mln_rbtree_t *thread_tree = NULL;
+static mln_thread_t *thread_hash_table[M_THREAD_HASH_BUCKETS];
 char thread_domain[] = "thread_exec";
 char thread_s_restart[] = "restart";
 char thread_s_default[] = "default";
@@ -36,6 +35,13 @@ char thread_start_func[] = "thread_main";
  */
 static mln_thread_module_t *module_array = NULL;
 static mln_size_t module_array_num = 0;
+
+/*
+ * Free list for mln_thread_msgq_t to reduce malloc/free overhead
+ */
+static mln_thread_msgq_t *msgq_free_head = NULL;
+static mln_size_t msgq_free_count = 0;
+#define MSGQ_FREE_MAX 256
 
 /*
  * declarations
@@ -56,10 +62,6 @@ static void
 mln_thread_destroy(mln_thread_t *t);
 static void
 mln_thread_clear_msg_queue(mln_event_t *ev, mln_thread_t *t);
-static int
-mln_thread_rbtree_init(void);
-static int
-mln_thread_rbtree_cmp(const void *data1, const void *data2);
 static void *
 mln_thread_launcher(void *args);
 static void
@@ -80,6 +82,76 @@ static inline void *
 mln_get_module_entrance(char *alias);
 static inline int
 __mln_thread_create(mln_thread_t *t);
+
+/*
+ * Hash table helpers for thread lookup (replaces rbtree for O(1) lookup)
+ */
+MLN_FUNC(static inline, mln_u32_t, mln_thread_hash_fn, (mln_string_t *s), (s), {
+    mln_u32_t h = 5381;
+    mln_u8_t *p = s->data, *e = p + s->len;
+    while (p < e) h = ((h << 5) + h) + *p++;
+    return h & M_THREAD_HASH_MASK;
+})
+
+MLN_FUNC_VOID(static inline, void, mln_thread_hash_insert, (mln_thread_t *t), (t), {
+    mln_u32_t idx = mln_thread_hash_fn(t->alias);
+    t->hash_next = thread_hash_table[idx];
+    thread_hash_table[idx] = t;
+})
+
+MLN_FUNC(static inline, mln_thread_t *, mln_thread_hash_search, (mln_string_t *alias), (alias), {
+    mln_u32_t idx = mln_thread_hash_fn(alias);
+    mln_thread_t *t = thread_hash_table[idx];
+    while (t != NULL) {
+        if (!mln_string_strcmp(t->alias, alias)) return t;
+        t = t->hash_next;
+    }
+    return NULL;
+})
+
+MLN_FUNC_VOID(static, void, mln_thread_hash_remove, (mln_thread_t *t), (t), {
+    mln_u32_t idx = mln_thread_hash_fn(t->alias);
+    mln_thread_t **p = &thread_hash_table[idx];
+    while (*p != NULL) {
+        if (*p == t) {
+            *p = t->hash_next;
+            t->hash_next = NULL;
+            return;
+        }
+        p = &((*p)->hash_next);
+    }
+})
+
+/*
+ * Free list helpers for msgq nodes
+ */
+MLN_FUNC(static inline, mln_thread_msgq_t *, mln_thread_msgq_alloc, (void), (), {
+    if (msgq_free_head != NULL) {
+        mln_thread_msgq_t *tmq = msgq_free_head;
+        msgq_free_head = tmq->dest_next;
+        --msgq_free_count;
+        tmq->dest_next = NULL;
+        tmq->dest_prev = NULL;
+        tmq->local_next = NULL;
+        tmq->local_prev = NULL;
+        return tmq;
+    }
+    return (mln_thread_msgq_t *)malloc(sizeof(mln_thread_msgq_t));
+})
+
+MLN_FUNC_VOID(static inline, void, mln_thread_msgq_recycle, (mln_thread_msgq_t *tmq), (tmq), {
+    if (msgq_free_count < MSGQ_FREE_MAX) {
+        tmq->dest_next = msgq_free_head;
+        tmq->dest_prev = NULL;
+        tmq->local_next = NULL;
+        tmq->local_prev = NULL;
+        tmq->sender = NULL;
+        msgq_free_head = tmq;
+        ++msgq_free_count;
+    } else {
+        free(tmq);
+    }
+})
 
 
 /*
@@ -109,6 +181,7 @@ MLN_FUNC(static, mln_thread_t *, mln_thread_init, (struct mln_thread_attr *attr)
     t->local_tail = NULL;
     t->dest_head = NULL;
     t->dest_tail = NULL;
+    t->hash_next = NULL;
     return t;
 })
 
@@ -188,10 +261,8 @@ MLN_FUNC_VOID(, void, mln_thread_clear_msg, (mln_thread_msg_t *msg), (msg), {
  * load
  */
 MLN_FUNC(, int, mln_load_thread, (mln_event_t *ev), (ev), {
-    if (mln_thread_rbtree_init() < 0) {
-        mln_log(error, "No memory.\n");
-        return -1;
-    }
+    memset(thread_hash_table, 0, sizeof(thread_hash_table));
+
     mln_conf_t *cf = mln_conf();
     if (cf == NULL) {
         mln_log(error, "configuration messed up!\n");
@@ -204,8 +275,6 @@ MLN_FUNC(, int, mln_load_thread, (mln_event_t *ev), (ev), {
     mln_conf_cmd_t **v = (mln_conf_cmd_t **)calloc(nr_cmds, sizeof(mln_conf_cmd_t *));
     if (v == NULL) {
         mln_log(error, "No memory.\n");
-        mln_rbtree_free(thread_tree);
-        thread_tree = NULL;
         return -1;
     }
     mln_conf_cmds(cf, thread_domain, v);
@@ -328,7 +397,6 @@ MLN_FUNC(static, void *, mln_get_module_entrance, (char *alias), (alias), {
  * create_thread
  */
 MLN_FUNC(static inline, int, __mln_thread_create, (mln_thread_t *t), (t), {
-    mln_rbtree_node_t *rn;
     if (t->argv[t->argc-1] == NULL) {
         char *int_str = (char *)malloc(THREAD_SOCKFD_LEN);
         if (int_str == NULL) {
@@ -339,11 +407,8 @@ MLN_FUNC(static inline, int, __mln_thread_create, (mln_thread_t *t), (t), {
     }
     memset(t->argv[t->argc-1], 0, THREAD_SOCKFD_LEN);
     snprintf(t->argv[t->argc-1], THREAD_SOCKFD_LEN-1, "%d", t->peerfd);
-    if ((rn = mln_rbtree_node_new(thread_tree, t)) == NULL) {
-        mln_log(error, "No memory.\n");
-        return -1;
-    }
-    mln_rbtree_insert(thread_tree, rn);
+    /* Hash table insert instead of rbtree */
+    mln_thread_hash_insert(t);
     if (mln_event_fd_set(t->ev, \
                          mln_tcp_conn_fd_get(&(t->conn)), \
                          M_EV_RECV|M_EV_NONBLOCK, \
@@ -352,9 +417,7 @@ MLN_FUNC(static inline, int, __mln_thread_create, (mln_thread_t *t), (t), {
                          mln_main_thread_itc_recv_handler) < 0)
     {
         mln_log(error, "mln_event_fd_set failed.\n");
-        mln_rbtree_delete(thread_tree, rn);
-        mln_rbtree_node_free(thread_tree, rn);
-        t->node = NULL;
+        mln_thread_hash_remove(t);
         return -1;
     }
     int err;
@@ -366,13 +429,10 @@ MLN_FUNC(static inline, int, __mln_thread_create, (mln_thread_t *t), (t), {
                          M_EV_UNLIMITED, \
                          NULL, \
                          NULL);
-        mln_rbtree_delete(thread_tree, rn);
-        mln_rbtree_node_free(thread_tree, rn);
-        t->node = NULL;
+        mln_thread_hash_remove(t);
         return -1;
     }
     t->is_created = 1;
-    t->node = rn;
     return 0;
 })
 
@@ -461,8 +521,7 @@ MLN_FUNC_VOID(static, void, mln_main_thread_itc_recv_handler_process, \
     mln_tcp_conn_t *conn = &(t->conn);
     mln_thread_msg_t msg, *m;
     mln_thread_msgq_t *tmq;
-    mln_thread_t *target, tmp;
-    mln_rbtree_node_t *rn;
+    mln_thread_t *target;
 
     while (1) {
         if (mln_itc_get_buf_with_len(conn, &msg, sizeof(msg)) < 0) {
@@ -484,16 +543,15 @@ MLN_FUNC_VOID(static, void, mln_main_thread_itc_recv_handler_process, \
             continue;
         }
 
-        tmp.alias = m->dest;
-        rn = mln_rbtree_search(thread_tree, &tmp);
-        if (mln_rbtree_null(rn, thread_tree)) {
+        /* O(1) hash lookup instead of O(log n) rbtree search */
+        target = mln_thread_hash_search(m->dest);
+        if (target == NULL) {
             mln_log(report, "No such thread named '%s'.\n", (char *)(m->dest->data));
             mln_thread_clear_msg(&(tmq->msg));
             mln_thread_msgq_destroy(tmq);
             continue;
         }
 
-        target = (mln_thread_t *)mln_rbtree_node_data_get(rn);
         if (target->dest_head == NULL) {
             mln_event_fd_set(ev, \
                              mln_tcp_conn_fd_get(&(target->conn)), \
@@ -595,9 +653,7 @@ MLN_FUNC(static, int, mln_thread_deal_child_exit, \
 {
     mln_chain_t *c;
 
-    mln_rbtree_delete(thread_tree, t->node);
-    mln_rbtree_node_free(thread_tree, t->node);
-    t->node = NULL;
+    mln_thread_hash_remove(t);
     mln_event_fd_set(ev, \
                      mln_tcp_conn_fd_get(&(t->conn)), \
                      M_EV_CLR, \
@@ -666,30 +722,6 @@ MLN_FUNC(static, void *, mln_thread_launcher, (void *args), (args), {
     return NULL;
 })
 
- /*
-  * hash
-  */
-MLN_FUNC(static, int, mln_thread_rbtree_init, (void), (), {
-    struct mln_rbtree_attr rbattr;
-    rbattr.pool = NULL;
-    rbattr.pool_alloc = NULL;
-    rbattr.pool_free = NULL;
-    rbattr.cmp = mln_thread_rbtree_cmp;
-    rbattr.data_free = NULL;
-    if ((thread_tree = mln_rbtree_new(&rbattr)) == NULL) {
-        return -1;
-    }
-    return 0;
-})
-
-MLN_FUNC(static, int, mln_thread_rbtree_cmp, \
-         (const void *data1, const void *data2), (data1, data2), \
-{
-    mln_thread_t *t1 = (mln_thread_t *)data1;
-    mln_thread_t *t2 = (mln_thread_t *)data2;
-    return mln_string_strcmp(t1->alias, t2->alias);
-})
-
 /*
  * other apis
  */
@@ -708,12 +740,8 @@ MLN_FUNC_VOID(, void, mln_thread_exit, (int exit_code), (exit_code), {
 })
 
 MLN_FUNC_VOID(, void, mln_thread_kill, (mln_string_t *alias), (alias), {
-    mln_thread_t *t, tmp;
-    mln_rbtree_node_t *rn;
-    tmp.alias = alias;
-    rn = mln_rbtree_search(thread_tree, &tmp);
-    if (mln_rbtree_null(rn, thread_tree)) return;
-    t = (mln_thread_t *)mln_rbtree_node_data_get(rn);
+    mln_thread_t *t = mln_thread_hash_search(alias);
+    if (t == NULL) return;
     mln_socket_close(t->peerfd);
     t->peerfd = -1;
     pthread_cancel(t->tid);
@@ -741,7 +769,7 @@ MLN_CHAIN_FUNC_DEFINE(static inline, \
 MLN_FUNC(static, mln_thread_msgq_t *, mln_thread_msgq_init, \
          (mln_thread_t *sender, mln_thread_msg_t *msg), (sender, msg), \
 {
-    mln_thread_msgq_t *tmq = (mln_thread_msgq_t *)malloc(sizeof(mln_thread_msgq_t));
+    mln_thread_msgq_t *tmq = mln_thread_msgq_alloc();
     if (tmq == NULL) return NULL;
     tmq->sender = sender;
     memcpy(&(tmq->msg), msg, sizeof(mln_thread_msg_t));
@@ -749,8 +777,7 @@ MLN_FUNC(static, mln_thread_msgq_t *, mln_thread_msgq_init, \
 })
 
 MLN_FUNC_VOID(static, void, mln_thread_msgq_destroy, (mln_thread_msgq_t *tmq), (tmq), {
-    free(tmq);
+    mln_thread_msgq_recycle(tmq);
 })
 
 #endif
-

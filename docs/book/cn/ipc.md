@@ -79,10 +79,13 @@ struct mln_fork_s {
     mln_u32_t                msg_type;//消息类型
     mln_size_t               error_bytes;//错误消息类型数据大小
     void                    *msg_content;//消息内容
+    mln_size_t               msg_buf_size;//消息内容可复用缓冲区容量
     enum proc_exec_type      etype;//子进程是需要被替换执行映像的（exec）还是不需要的
     enum proc_state_type     stype;//子进程退出后是否需要被重新拉起
 };
 ```
+
+> **性能说明**：IPC处理器分发使用哈希表实现O(1)平均查找时间。`msg_content`缓冲区在消息间复用，避免了逐消息分配的开销。
 
 
 

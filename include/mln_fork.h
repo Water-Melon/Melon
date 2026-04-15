@@ -15,6 +15,9 @@
 #define M_F_TYPELEN   sizeof(mln_u32_t)
 #define M_F_LENLEN    sizeof(mln_u32_t)
 
+#define M_IPC_HASH_BUCKETS 64
+#define M_IPC_HASH_MASK    (M_IPC_HASH_BUCKETS - 1)
+
 typedef struct mln_fork_s mln_fork_t;
 
 typedef void (*clr_handler)(void *);
@@ -26,10 +29,11 @@ typedef void (*ipc_handler)(mln_event_t *, \
                             void *,/*buffer*/\
                             mln_u32_t,/*buffer length*/\
                             void **);/*user data pointer*/
-typedef struct {
+typedef struct mln_ipc_handler_s {
     ipc_handler              handler;
     void                    *data;
     mln_u32_t                type;
+    struct mln_ipc_handler_s *next;
 } mln_ipc_handler_t;
 
 enum proc_state_type {
@@ -63,6 +67,7 @@ struct mln_fork_s {
     mln_u32_t                msg_type;
     mln_size_t               error_bytes;
     void                    *msg_content;
+    mln_size_t               msg_buf_size;
     enum proc_exec_type      etype;
     enum proc_state_type     stype;
 };
