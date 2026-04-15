@@ -20,23 +20,26 @@
 
 ```c
 struct mln_hash_s {
+    mln_hash_entry_t        *tbl;//开放寻址表
+    mln_u64_t                len;//表长（槽位数）
+    hash_calc_handler        hash;//计算所属槽位的钩子函数
+    hash_cmp_handler         cmp;//键比较函数
+    hash_free_handler        key_freer;//key释放函数
+    hash_free_handler        val_freer;//value释放函数
+    mln_u32_t                nr_nodes;//表项数
+    mln_u32_t                threshold;//扩张阈值
+    mln_u32_t                expandable:1;//是否自动扩张
+    mln_u32_t                calc_prime:1;//表长是否自动计算为素数
     void                    *pool;//内存池，不使用可为NULL
     hash_pool_alloc_handler  pool_alloc;//内存池分配函数
     hash_pool_free_handler   pool_free;//内存池释放函数
-    hash_calc_handler        hash;//计算所属桶的钩子函数
-    hash_cmp_handler         cmp;//同一桶内链表节点比较函数
-    hash_free_handler        key_freer;//key释放函数
-    hash_free_handler        val_freer;//value释放函数
-    mln_hash_mgr_t          *tbl;//桶
-    mln_u64_t                len;//桶长
-    mln_u32_t                nr_nodes;//表项数
-    mln_u32_t                threshold;//扩张阈值
-    mln_u32_t                expandable:1;//是否自动扩张桶
-    mln_u32_t                calc_prime:1;//桶长是否自动计算为素数
+    ...
 };
 ```
 
-这里，我们主要关注`len`，因为在计算所属桶时，通常会对该值取模。
+哈希表内部采用开放寻址（线性探测）实现，条目内嵌在一个扁平数组中，无需为每个条目单独分配内存，具有优良的缓存局部性和性能。
+
+这里，我们主要关注`len`，因为在计算所属槽位时，通常会对该值取模。注意，开放寻址要求表中必须有空闲槽位，因此对于不可扩展的哈希表，条目数不能超过`len - 1`。
 
 
 
@@ -83,9 +86,9 @@ typedef void (*hash_pool_free_handler)(void *);
 
 `cmp`返回值：`0`为不相同，`非0`为相同。
 
-哈希表支持根据元素数量自动扩张桶长，但建议谨慎对待该选项，因为桶长扩张将伴随节点迁移，会产生相应计算和时间开销，因此慎用。
+哈希表支持根据元素数量自动扩张，但建议谨慎对待该选项，因为扩张将伴随条目迁移（重新哈希），会产生相应计算和时间开销，因此慎用。
 
-哈希表桶长建议为素数，因为对素数取模会相对均匀的将元素落入不同的桶中，避免部分桶链表过长。
+哈希表长建议为素数，因为对素数取模会相对均匀的将元素落入不同的槽位中，减少探测冲突。
 
 返回值：若成功则返回`0`，否则返回`-1`
 
@@ -143,9 +146,9 @@ typedef void (*hash_pool_free_handler)(void *);
 
 `cmp`返回值：`0`为不相同，`非0`为相同。
 
-哈希表支持根据元素数量自动扩张桶长，但建议谨慎对待该选项，因为桶长扩张将伴随节点迁移，会产生相应计算和时间开销，因此慎用。
+哈希表支持根据元素数量自动扩张，但建议谨慎对待该选项，因为扩张将伴随条目迁移（重新哈希），会产生相应计算和时间开销，因此慎用。
 
-哈希表桶长建议为素数，因为对素数取模会相对均匀的将元素落入不同的桶中，避免部分桶链表过长。
+哈希表长建议为素数，因为对素数取模会相对均匀的将元素落入不同的槽位中，减少探测冲突。
 
 返回值：若成功则返回哈希表结构指针，否则为`NULL`
 

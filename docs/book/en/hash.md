@@ -20,23 +20,26 @@
 
 ```c
 struct mln_hash_s {
+    mln_hash_entry_t        *tbl;//open addressing table
+    mln_u64_t                len;//table length (number of slots)
+    hash_calc_handler        hash;//callback to calculate the slot index
+    hash_cmp_handler         cmp;//key comparison function
+    hash_free_handler        key_freer;//key free function
+    hash_free_handler        val_freer;//value free function
+    mln_u32_t                nr_nodes;//number of nodes
+    mln_u32_t                threshold;//expansion threshold
+    mln_u32_t                expandable:1;//expansion flag
+    mln_u32_t                calc_prime:1;//prime flag for calculating table length as a prime number
     void                    *pool;//memory pool, it's an option, NULL means memory pool not activated
     hash_pool_alloc_handler  pool_alloc;//allocation function of memory pool
     hash_pool_free_handler   pool_free;//free function of memory pool
-    hash_calc_handler        hash;//callback to calculate the bucket index
-    hash_cmp_handler         cmp;//comparision function for comparing nodes in the same bucket
-    hash_free_handler        key_freer;//key free function
-    hash_free_handler        val_freer;//value free function
-    mln_hash_mgr_t          *tbl;//buckets
-    mln_u64_t                len;//bucket length
-    mln_u32_t                nr_nodes;//number of nodes
-    mln_u32_t                threshold;//bucket expansion Threshold
-    mln_u32_t                expandable:1;//expansion flag
-    mln_u32_t                calc_prime:1;//prime flag for calculating bucket length as a prime number
+    ...
 };
 ```
 
-Here, we mainly focus on `len`, because when calculating the belonging bucket, the value is usually modulo.
+The hash table uses open addressing with linear probing internally. Entries are stored inline in a flat array, eliminating per-entry memory allocation and providing excellent cache locality and performance.
+
+Here, we mainly focus on `len`, because when calculating the belonging slot, the value is usually modulo. Note that open addressing requires at least one empty slot in the table, so for non-expandable hash tables, the number of entries cannot exceed `len - 1`.
 
 
 
@@ -83,9 +86,9 @@ The return value of `hash` is a 64-bit integer offset, and the offset should not
 
 `cmp` return value: `0` means different, `non-0` means the same.
 
-The hash table supports automatic expansion of the bucket length based on the number of elements, but it is recommended to treat this option with caution, because the bucket length expansion will be accompanied by node migration, which will cause corresponding calculation and time overhead, so use it with caution.
+The hash table supports automatic expansion based on the number of elements, but it is recommended to treat this option with caution, because expansion will be accompanied by entry rehashing, which will cause corresponding calculation and time overhead, so use it with caution.
 
-It is recommended that the hash table bucket length be a prime number, because taking the modulo of a prime number will relatively evenly place elements into different buckets, preventing some bucket linked lists from being too long.
+It is recommended that the hash table length be a prime number, because taking the modulo of a prime number will relatively evenly place elements into different slots, reducing probe collisions.
 
 Return value: Returns `0` if successful, otherwise returns `-1`
 
@@ -143,9 +146,9 @@ The return value of `hash` is a 64-bit integer offset, and the offset should not
 
 `cmp` return value: `0` means different, `non-0` means the same.
 
-The hash table supports automatic expansion of the bucket length based on the number of elements, but it is recommended to treat this option with caution, because the bucket length expansion will be accompanied by node migration, which will cause corresponding calculation and time overhead, so use it with caution.
+The hash table supports automatic expansion based on the number of elements, but it is recommended to treat this option with caution, because expansion will be accompanied by entry rehashing, which will cause corresponding calculation and time overhead, so use it with caution.
 
-It is recommended that the hash table bucket length be a prime number, because taking the modulo of a prime number will relatively evenly place elements into different buckets, preventing some bucket linked lists from being too long.
+It is recommended that the hash table length be a prime number, because taking the modulo of a prime number will relatively evenly place elements into different slots, reducing probe collisions.
 
 Return value: If successful, returns the hash table structure pointer, otherwise `NULL`
 
