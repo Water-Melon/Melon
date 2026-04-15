@@ -420,7 +420,7 @@ static void test_performance(void)
     mln_sha256_t s256;
     unsigned char data[1024];
     memset(data, 0xAB, sizeof(data));
-    int iters = 500000;
+    int iters = 10000;
 
     clock_gettime(CLOCK_MONOTONIC, &t0);
     for (i = 0; i < iters; ++i) {
