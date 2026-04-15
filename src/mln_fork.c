@@ -616,6 +616,12 @@ MLN_FUNC_VOID(static, void, mln_ipc_fd_handler_master_process, (mln_event_t *ev,
             }
             case STATE_LENGTH:
             {
+                /* Validate message length before processing */
+                if (f->msg_len < M_F_TYPELEN) {
+                    f->error_bytes = f->msg_len;
+                    f->state = STATE_IDLE;
+                    break;
+                }
                 /* Buffer reuse: only realloc when message is larger than current buffer */
                 if (f->msg_buf_size < f->msg_len) {
                     void *new_buf = realloc(f->msg_content, f->msg_len);
@@ -722,6 +728,12 @@ MLN_FUNC_VOID(static, void, mln_ipc_fd_handler_worker_process, \
             }
             case STATE_LENGTH:
             {
+                /* Validate message length before processing */
+                if (cur_msg_len < M_F_TYPELEN) {
+                    child_error_bytes = cur_msg_len;
+                    child_state = STATE_IDLE;
+                    break;
+                }
                 /* Buffer reuse: only realloc when message is larger than current buffer */
                 if (child_msg_buf_size < cur_msg_len) {
                     mln_u8ptr_t new_buf = (mln_u8ptr_t)realloc(child_msg_content, cur_msg_len);

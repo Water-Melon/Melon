@@ -73,9 +73,9 @@ static int test_framework_global_init_fail(int argc, char *argv[])
 }
 
 /*
- * Performance test: measure framework init overhead
+ * Performance test: measure global_init callback overhead
  */
-static int test_framework_init_perf(int argc, char *argv[])
+static int test_callback_overhead_perf(int argc, char *argv[])
 {
     struct timeval start, end;
     int iterations = 1000;
@@ -100,8 +100,8 @@ int main(int argc, char *argv[])
     printf("In fact, `mln_framework_init` should be the last function called in `main`, so we don't need to release anything.\n");
 
     /* Test 1: Performance measurement of callback overhead */
-    printf("=== Test: Framework callback performance ===\n");
-    assert(test_framework_init_perf(argc, argv) == 0);
+    printf("=== Test: global_init callback overhead ===\n");
+    assert(test_callback_overhead_perf(argc, argv) == 0);
     printf("PASS\n");
 
     /* Test 2: Framework with global_init failure */

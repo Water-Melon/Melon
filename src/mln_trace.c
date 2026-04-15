@@ -10,7 +10,7 @@
 
 static mln_lang_t *trace_lang = NULL;
 static mln_lang_ctx_t *trace_ctx = NULL;
-static int trace_signal_fds[2];
+static int trace_signal_fds[2] = {-1, -1};
 static mln_trace_init_cb_t trace_init_cb = NULL;
 
 /*
@@ -27,37 +27,27 @@ static int mln_trace_lang_clear(mln_lang_t *lang);
 static void mln_trace_lang_ctx_return_handler(mln_lang_ctx_t *ctx);
 static void mln_trace_lang_check(mln_event_t *ev, void *data);
 
-/* Cache the trace path to avoid repeated config lookups */
-static mln_string_t *cached_trace_path = NULL;
-static int trace_path_cached = 0;
-
 MLN_FUNC(, mln_string_t *, mln_trace_path, (void), (), {
-    if (trace_path_cached) return cached_trace_path;
-
     mln_conf_t *cf;
     mln_conf_domain_t *cd;
     mln_conf_cmd_t *cc;
     mln_conf_item_t *ci;
 
     cf = mln_conf();
-    if (cf == NULL) { trace_path_cached = 1; return NULL; }
+    if (cf == NULL) return NULL;
 
     cd = cf->search(cf, "main");
-    if (cd == NULL) { trace_path_cached = 1; return NULL; }
+    if (cd == NULL) return NULL;
 
     cc = cd->search(cd, "trace_mode");
-    if (cc == NULL) { trace_path_cached = 1; return NULL; }
+    if (cc == NULL) return NULL;
 
     ci = cc->search(cc, 1);
-    if (mln_conf_arg_num(cc) != 1 || ci == NULL) { trace_path_cached = 1; return NULL; }
+    if (mln_conf_arg_num(cc) != 1 || ci == NULL) return NULL;
 
-    if (ci->type == CONF_STR) {
-        cached_trace_path = ci->val.s;
-        trace_path_cached = 1;
-        return cached_trace_path;
-    }
+    if (ci->type == CONF_STR)
+        return ci->val.s;
 
-    trace_path_cached = 1;
     return NULL;
 })
 
@@ -107,8 +97,14 @@ MLN_FUNC_VOID(, void, mln_trace_finalize, (void), (), {
     mln_lang_free(trace_lang);
     trace_lang = NULL;
     trace_ctx = NULL;
-    trace_path_cached = 0;
-    cached_trace_path = NULL;
+    if (trace_signal_fds[0] >= 0) {
+        close(trace_signal_fds[0]);
+        trace_signal_fds[0] = -1;
+    }
+    if (trace_signal_fds[1] >= 0) {
+        close(trace_signal_fds[1]);
+        trace_signal_fds[1] = -1;
+    }
 })
 
 MLN_FUNC_VOID(static, void, mln_trace_lang_check, (mln_event_t *ev, void *data), (ev, data), {

@@ -53,7 +53,8 @@ static void test_trace_path_no_config(void)
 {
     mln_string_t *path = mln_trace_path();
     /* Without trace_mode in config, should be NULL */
-    printf("trace_path (no config): %s\n", path ? "non-NULL" : "NULL");
+    assert(path == NULL);
+    printf("trace_path (no config): NULL (correct)\n");
 }
 
 /*
@@ -187,9 +188,9 @@ cleanup:
 }
 
 /*
- * Performance test: measure trace_path caching
+ * Performance test: measure trace_path lookup overhead
  */
-static void test_trace_path_cache_perf(void)
+static void test_trace_path_perf(void)
 {
     struct timeval start, end;
     int iterations = 100000;
@@ -202,7 +203,7 @@ static void test_trace_path_cache_perf(void)
     gettimeofday(&end, NULL);
 
     long elapsed_us = (end.tv_sec - start.tv_sec) * 1000000L + (end.tv_usec - start.tv_usec);
-    printf("trace_path cache perf: %d calls in %ld us (%.2f us/call)\n",
+    printf("trace_path perf: %d calls in %ld us (%.2f us/call)\n",
            iterations, elapsed_us, (double)elapsed_us / iterations);
 }
 
@@ -238,7 +239,7 @@ int main(int argc, char *argv[])
     test_trace_recv_handler_before_init();
     test_trace_finalize_safe();
     test_trace_script_interaction();
-    test_trace_path_cache_perf();
+    test_trace_path_perf();
 
     printf("All trace tests passed.\n");
     return 0;
