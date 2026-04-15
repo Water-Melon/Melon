@@ -111,6 +111,26 @@ static int iterate_update_current_cb(mln_hash_t *h, void *key, void *val, void *
     return 0;
 }
 
+/*
+ * Callback: remove a non-current node (the next key in insertion order)
+ * during iteration. Tests that mln_hash_iterate correctly follows
+ * the updated iter chain rather than a stale next_idx.
+ * Keys are inserted in order 0..N-1, so the iter chain is 0->1->2->...
+ * When visiting key K, we remove K+1 (the next entry, which is NOT the
+ * current iter node and therefore gets removed immediately).
+ */
+static int iterate_remove_next_cb(mln_hash_t *h, void *key, void *val, void *udata)
+{
+    int *count = (int *)udata;
+    (*count)++;
+    int next_key = *(int *)key + 1;
+    /* Only remove even-numbered next keys to create a mix */
+    if (next_key % 2 == 0 && next_key < 10) {
+        mln_hash_remove(h, &next_key, M_HASH_F_NONE);
+    }
+    return 0;
+}
+
 /* -- tests -- */
 
 static void test_new_free(void)
@@ -474,6 +494,53 @@ static void test_iterate_update_current(void)
     mln_hash_free(h, M_HASH_F_NONE);
 }
 
+/*
+ * Test: remove a non-current node (the next in the iter chain) during iterate.
+ * This verifies that mln_hash_iterate reads next_idx AFTER the handler returns,
+ * so that immediate removals of non-current nodes are reflected correctly.
+ *
+ * Setup: insert keys 0-9 in order (iter chain: 0->1->2->...->9).
+ * Handler: when visiting key K, removes K+1 if K+1 is even and < 10.
+ *   - visiting 1 => removes 2 (immediate, not deferred)
+ *   - visiting 3 => removes 4
+ *   - visiting 5 => removes 6
+ *   - visiting 7 => removes 8
+ * Expected visits: 0, 1, 3, 5, 7, 9 = 6 total (even keys 2,4,6,8 removed
+ * before being visited).
+ */
+static void test_iterate_remove_next_node(void)
+{
+    mln_hash_t *h = mln_hash_new_fast(calc_handler, cmp_handler, NULL, NULL, 101, 0, 0);
+    CHECK(h != NULL, "iterate_remove_next: new");
+    int keys[10];
+    int i;
+    for (i = 0; i < 10; i++) {
+        keys[i] = i;
+        mln_hash_insert(h, &keys[i], &keys[i]);
+    }
+
+    int count = 0;
+    int rc = mln_hash_iterate(h, iterate_remove_next_cb, &count);
+    CHECK(rc == 0, "iterate_remove_next: returns 0");
+    CHECK(count == 6, "iterate_remove_next: visited 6 nodes (skipped removed 2,4,6,8)");
+
+    /* Even keys 2,4,6,8 should be gone; 0 is even but was never a "next" target */
+    int sk;
+    sk = 0; CHECK(mln_hash_search(h, &sk) != NULL, "iterate_remove_next: key 0 remains");
+    sk = 2; CHECK(mln_hash_search(h, &sk) == NULL, "iterate_remove_next: key 2 removed");
+    sk = 4; CHECK(mln_hash_search(h, &sk) == NULL, "iterate_remove_next: key 4 removed");
+    sk = 6; CHECK(mln_hash_search(h, &sk) == NULL, "iterate_remove_next: key 6 removed");
+    sk = 8; CHECK(mln_hash_search(h, &sk) == NULL, "iterate_remove_next: key 8 removed");
+    /* Odd keys should all remain */
+    sk = 1; CHECK(mln_hash_search(h, &sk) != NULL, "iterate_remove_next: key 1 remains");
+    sk = 3; CHECK(mln_hash_search(h, &sk) != NULL, "iterate_remove_next: key 3 remains");
+    sk = 5; CHECK(mln_hash_search(h, &sk) != NULL, "iterate_remove_next: key 5 remains");
+    sk = 7; CHECK(mln_hash_search(h, &sk) != NULL, "iterate_remove_next: key 7 remains");
+    sk = 9; CHECK(mln_hash_search(h, &sk) != NULL, "iterate_remove_next: key 9 remains");
+
+    mln_hash_free(h, M_HASH_F_NONE);
+}
+
 static void test_search_iterator(void)
 {
     mln_hash_t *h = mln_hash_new_fast(calc_handler, cmp_handler, NULL, NULL, 101, 0, 0);
@@ -781,6 +848,7 @@ int main(int argc, char *argv[])
     test_iterate_remove_current_deferred_free();
     test_iterate_remove_multiple_current();
     test_iterate_update_current();
+    test_iterate_remove_next_node();
     test_search_iterator();
     test_reset();
     test_expandable();

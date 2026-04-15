@@ -453,14 +453,15 @@ MLN_FUNC(, int, mln_hash_iterate, \
     while (idx >= 0) {
         mln_hash_entry_t *cur = &h->tbl[idx];
         h->iter = cur;
-        mln_s32_t next_idx = cur->iter_next;
+        int aborted = 0;
 
         if (!cur->removed) {
             if (handler != NULL && handler(h, cur->key, cur->val, udata) < 0) {
-                h->iter = NULL;
-                return -1;
+                aborted = 1;
             }
         }
+
+        mln_s32_t next_idx = cur->iter_next;
 
         if (cur->removed) {
             mln_hash_flag_t rf = cur->remove_flag;
@@ -472,6 +473,11 @@ MLN_FUNC(, int, mln_hash_iterate, \
             cur->removed = 0;
             --(h->nr_nodes);
             ++(h->nr_deleted);
+        }
+
+        if (aborted) {
+            h->iter = NULL;
+            return -1;
         }
 
         idx = next_idx;
