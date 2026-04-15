@@ -821,6 +821,680 @@ static void test_iterate_remove_current_and_next(void)
     PASS();
 }
 
+/*
+ * Test: mln_queue_remove() called when head is a PREVIOUSLY visited element.
+ * This is the exact scenario from the issue: during iterate, if iter_i > 0
+ * and we call mln_queue_remove(), the head (already visited) is removed.
+ * Verify no element is visited twice.
+ *
+ * Queue: [1,2,3,4,5]. When visiting val>=3, call mln_queue_remove().
+ * Trace:
+ *   iter_i=0: visit 1 (no remove). ++iter_i->1
+ *   iter_i=1: visit 2 (no remove). ++iter_i->2
+ *   iter_i=2: visit 3. remove()-> head++, nr--=4, --iter_i->1. ++iter_i->2
+ *     queue[(new_head+2)&mask] = old element 4
+ *   iter_i=2: visit 4. remove()-> head++, nr--=3, --iter_i->1. ++iter_i->2
+ *     queue[(new_head+2)&mask] = old element 5
+ *   iter_i=2: visit 5. remove()-> head++, nr--=2, --iter_i->1. ++iter_i->2
+ *   2 < 2? No. Exit.
+ *   Visited: [1,2,3,4,5] each exactly once.
+ */
+static int iterate_remove_prev_via_queue_remove_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    if (val >= 3) {
+        mln_queue_remove(g_iter_q);
+    }
+    return 0;
+}
+
+static void test_iterate_remove_prev_via_queue_remove(void)
+{
+    int vals[] = {1, 2, 3, 4, 5};
+    int visited[5] = {0};
+    int *vp = visited;
+    int i;
+
+    mln_queue_t *q = mln_queue_init(5, NULL);
+    assert(q != NULL);
+    for (i = 0; i < 5; ++i)
+        assert(mln_queue_append(q, &vals[i]) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_remove_prev_via_queue_remove_handler, &vp) == 0);
+
+    int count = (int)(vp - visited);
+    assert(count == 5);
+    assert(visited[0] == 1);
+    assert(visited[1] == 2);
+    assert(visited[2] == 3);
+    assert(visited[3] == 4);
+    assert(visited[4] == 5);
+    /* 3 removes happened (at val 3,4,5), so 2 elements remain: 4 and 5 */
+    assert(mln_queue_element(q) == 2);
+    assert(*(int *)mln_queue_get(q) == 4);
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: free_index removing the TAIL (last) element during iteration.
+ * Queue: [1,2,3,4,5]. When visiting val==2, remove tail (index nr_element-1).
+ */
+static int iterate_remove_tail_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    if (val == 2) {
+        mln_uauto_t last = mln_queue_element(g_iter_q) - 1;
+        mln_queue_free_index(g_iter_q, last);
+    }
+    return 0;
+}
+
+static void test_iterate_free_index_tail(void)
+{
+    int vals[] = {1, 2, 3, 4, 5};
+    int visited[5] = {0};
+    int *vp = visited;
+    int i;
+
+    mln_queue_t *q = mln_queue_init(5, NULL);
+    assert(q != NULL);
+    for (i = 0; i < 5; ++i)
+        assert(mln_queue_append(q, &vals[i]) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_remove_tail_handler, &vp) == 0);
+
+    /*
+     * iter_i=0: visit 1. ++iter_i->1
+     * iter_i=1: visit 2. free_index(q,4) removes 5. index(4)>iter_i(1)->no adjust. ++iter_i->2
+     * iter_i=2: visit 3. ++iter_i->3
+     * iter_i=3: visit 4. 4<4? No. Exit.
+     * Visited: [1,2,3,4]. Value 5 removed without visiting.
+     */
+    int count = (int)(vp - visited);
+    assert(count == 4);
+    assert(visited[0] == 1);
+    assert(visited[1] == 2);
+    assert(visited[2] == 3);
+    assert(visited[3] == 4);
+    assert(mln_queue_element(q) == 4);
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: free_index removing a non-adjacent future element (iter_i+2 or beyond).
+ * Queue: [1,2,3,4,5]. When visiting val==1, remove index 3 (value 4).
+ */
+static int iterate_remove_future_nonadj_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    if (val == 1 && mln_queue_element(g_iter_q) > 3) {
+        mln_queue_free_index(g_iter_q, 3); /* remove value 4 */
+    }
+    return 0;
+}
+
+static void test_iterate_free_index_future_nonadj(void)
+{
+    int vals[] = {1, 2, 3, 4, 5};
+    int visited[5] = {0};
+    int *vp = visited;
+    int i;
+
+    mln_queue_t *q = mln_queue_init(5, NULL);
+    assert(q != NULL);
+    for (i = 0; i < 5; ++i)
+        assert(mln_queue_append(q, &vals[i]) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_remove_future_nonadj_handler, &vp) == 0);
+
+    /*
+     * iter_i=0: visit 1. free_index(q,3) removes val 4. index(3)>iter_i(0)->no adjust.
+     *   Queue: [1,2,3,5]. ++iter_i->1
+     * iter_i=1: visit 2. ++iter_i->2
+     * iter_i=2: visit 3. ++iter_i->3
+     * iter_i=3: visit 5. 4<4? No. Exit.
+     * Visited: [1,2,3,5]. Value 4 skipped (removed).
+     */
+    int count = (int)(vp - visited);
+    assert(count == 4);
+    assert(visited[0] == 1);
+    assert(visited[1] == 2);
+    assert(visited[2] == 3);
+    assert(visited[3] == 5);
+    assert(mln_queue_element(q) == 4);
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: remove BOTH current AND a previous element in one callback.
+ * Queue: [1,2,3,4,5]. When visiting val==3:
+ *   - free_index current (index matching val 3)
+ *   - free_index head (val 1, already visited)
+ */
+static int iterate_remove_current_and_prev_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    if (val == 3) {
+        /* Remove current first */
+        mln_uauto_t i;
+        for (i = 0; i < mln_queue_element(g_iter_q); ++i) {
+            if (mln_queue_search(g_iter_q, i) == data) {
+                mln_queue_free_index(g_iter_q, i);
+                break;
+            }
+        }
+        /* Now remove head (was val 1, already visited) */
+        if (mln_queue_element(g_iter_q) > 0) {
+            mln_queue_free_index(g_iter_q, 0);
+        }
+    }
+    return 0;
+}
+
+static void test_iterate_remove_current_and_prev(void)
+{
+    int vals[] = {1, 2, 3, 4, 5};
+    int visited[5] = {0};
+    int *vp = visited;
+    int i;
+
+    mln_queue_t *q = mln_queue_init(5, NULL);
+    assert(q != NULL);
+    for (i = 0; i < 5; ++i)
+        assert(mln_queue_append(q, &vals[i]) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_remove_current_and_prev_handler, &vp) == 0);
+
+    /*
+     * Queue: [1,2,3,4,5]
+     * iter_i=0: visit 1. No remove. ++iter_i->1.
+     * iter_i=1: visit 2. No remove. ++iter_i->2.
+     * iter_i=2: visit 3. Remove 3 at index 2 (<=iter_i(2) -> --iter_i=1). Queue: [1,2,4,5].
+     *   Remove head (1) at index 0 (<=iter_i(1) -> --iter_i=0). Queue: [2,4,5].
+     *   ++iter_i->1.
+     * iter_i=1: visit 4. ++iter_i->2.
+     * iter_i=2: visit 5. 3<3? No. Exit.
+     * Visited: [1,2,3,4,5].
+     */
+    int count = (int)(vp - visited);
+    assert(count == 5);
+    assert(visited[0] == 1);
+    assert(visited[1] == 2);
+    assert(visited[2] == 3);
+    assert(visited[3] == 4);
+    assert(visited[4] == 5);
+    assert(mln_queue_element(q) == 3); /* 2, 4, 5 remain */
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: selective mln_queue_remove() — only at a specific element, not every step.
+ * Queue: [1,2,3,4,5]. Only when visiting 4, call mln_queue_remove() once.
+ */
+static int iterate_selective_remove_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    if (val == 4) {
+        mln_queue_remove(g_iter_q); /* removes head (1) */
+    }
+    return 0;
+}
+
+static void test_iterate_selective_queue_remove(void)
+{
+    int vals[] = {1, 2, 3, 4, 5};
+    int visited[5] = {0};
+    int *vp = visited;
+    int i;
+
+    mln_queue_t *q = mln_queue_init(5, NULL);
+    assert(q != NULL);
+    for (i = 0; i < 5; ++i)
+        assert(mln_queue_append(q, &vals[i]) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_selective_remove_handler, &vp) == 0);
+
+    /*
+     * iter_i=0: visit 1. ++iter_i->1.
+     * iter_i=1: visit 2. ++iter_i->2.
+     * iter_i=2: visit 3. ++iter_i->3.
+     * iter_i=3: visit 4. remove()-> head++, nr--=4, --iter_i->2. ++iter_i->3.
+     * iter_i=3: visit 5. 4<4? No. Exit.
+     * Visited: [1,2,3,4,5] each once.
+     */
+    int count = (int)(vp - visited);
+    assert(count == 5);
+    assert(visited[0] == 1);
+    assert(visited[1] == 2);
+    assert(visited[2] == 3);
+    assert(visited[3] == 4);
+    assert(visited[4] == 5);
+    assert(mln_queue_element(q) == 4); /* 2,3,4,5 remain */
+    assert(*(int *)mln_queue_get(q) == 2);
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: wrap-around buffer with removals during iteration.
+ * Create a queue of size 4, push 4, pop 2, push 2 more so head wraps.
+ * Then iterate with removal to test wrap-around + iter_i interaction.
+ */
+static int iterate_wrap_remove_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    /* Remove current element */
+    mln_uauto_t i;
+    for (i = 0; i < mln_queue_element(g_iter_q); ++i) {
+        if (mln_queue_search(g_iter_q, i) == data) {
+            mln_queue_free_index(g_iter_q, i);
+            break;
+        }
+    }
+    return 0;
+}
+
+static void test_iterate_remove_wraparound(void)
+{
+    int vals[] = {10, 20, 30, 40, 50, 60};
+    int visited[4] = {0};
+    int *vp = visited;
+
+    /* buf_size=4, mask=3 for qlen=4 */
+    mln_queue_t *q = mln_queue_init(4, NULL);
+    assert(q != NULL);
+    /* Fill 4 */
+    assert(mln_queue_append(q, &vals[0]) == 0); /* slot 0: 10 */
+    assert(mln_queue_append(q, &vals[1]) == 0); /* slot 1: 20 */
+    assert(mln_queue_append(q, &vals[2]) == 0); /* slot 2: 30 */
+    assert(mln_queue_append(q, &vals[3]) == 0); /* slot 3: 40 */
+    /* Remove 2 from head */
+    mln_queue_remove(q); /* head=1 */
+    mln_queue_remove(q); /* head=2 */
+    /* Append 2 more — these wrap around */
+    assert(mln_queue_append(q, &vals[4]) == 0); /* slot 0: 50 */
+    assert(mln_queue_append(q, &vals[5]) == 0); /* slot 1: 60 */
+    /* Queue now: head=2, [30, 40, 50, 60] wrapping around buffer */
+    assert(mln_queue_element(q) == 4);
+    assert(*(int *)mln_queue_search(q, 0) == 30);
+    assert(*(int *)mln_queue_search(q, 1) == 40);
+    assert(*(int *)mln_queue_search(q, 2) == 50);
+    assert(*(int *)mln_queue_search(q, 3) == 60);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_wrap_remove_handler, &vp) == 0);
+
+    /* All 4 elements visited, all removed */
+    int count = (int)(vp - visited);
+    assert(count == 4);
+    assert(visited[0] == 30);
+    assert(visited[1] == 40);
+    assert(visited[2] == 50);
+    assert(visited[3] == 60);
+    assert(mln_queue_empty(q));
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: single element — remove it during iteration.
+ */
+static int iterate_remove_single_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    mln_queue_free_index(g_iter_q, 0);
+    return 0;
+}
+
+static void test_iterate_remove_single(void)
+{
+    int val = 42;
+    int visited[1] = {0};
+    int *vp = visited;
+
+    mln_queue_t *q = mln_queue_init(1, NULL);
+    assert(q != NULL);
+    assert(mln_queue_append(q, &val) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_remove_single_handler, &vp) == 0);
+
+    assert(vp - visited == 1);
+    assert(visited[0] == 42);
+    assert(mln_queue_empty(q));
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: abort iteration (return -1) AFTER removing an element.
+ * Queue: [1,2,3,4,5]. When visiting 3, remove it then return -1.
+ */
+static int iterate_remove_then_abort_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    if (val == 3) {
+        mln_uauto_t i;
+        for (i = 0; i < mln_queue_element(g_iter_q); ++i) {
+            if (mln_queue_search(g_iter_q, i) == data) {
+                mln_queue_free_index(g_iter_q, i);
+                break;
+            }
+        }
+        return -1; /* abort */
+    }
+    return 0;
+}
+
+static void test_iterate_remove_then_abort(void)
+{
+    int vals[] = {1, 2, 3, 4, 5};
+    int visited[5] = {0};
+    int *vp = visited;
+    int i;
+
+    mln_queue_t *q = mln_queue_init(5, NULL);
+    assert(q != NULL);
+    for (i = 0; i < 5; ++i)
+        assert(mln_queue_append(q, &vals[i]) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_remove_then_abort_handler, &vp) == -1);
+
+    int count = (int)(vp - visited);
+    assert(count == 3); /* visited 1, 2, 3 then aborted */
+    assert(visited[0] == 1);
+    assert(visited[1] == 2);
+    assert(visited[2] == 3);
+    /* 3 was removed, 4 and 5 still there, plus 1 and 2 */
+    assert(mln_queue_element(q) == 4);
+    /* iter_i should be reset to -1 after abort */
+    assert(q->iter_i == -1);
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: remove every other element using free_index during iteration.
+ * Queue: [1,2,3,4,5,6]. Remove elements with even values.
+ */
+static int iterate_remove_every_other_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    if (val % 2 == 0) {
+        /* Remove current even element */
+        mln_uauto_t i;
+        for (i = 0; i < mln_queue_element(g_iter_q); ++i) {
+            if (mln_queue_search(g_iter_q, i) == data) {
+                mln_queue_free_index(g_iter_q, i);
+                break;
+            }
+        }
+    }
+    return 0;
+}
+
+static void test_iterate_remove_every_other(void)
+{
+    int vals[] = {1, 2, 3, 4, 5, 6};
+    int visited[6] = {0};
+    int *vp = visited;
+    int i;
+
+    mln_queue_t *q = mln_queue_init(6, NULL);
+    assert(q != NULL);
+    for (i = 0; i < 6; ++i)
+        assert(mln_queue_append(q, &vals[i]) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_remove_every_other_handler, &vp) == 0);
+
+    /* All 6 visited; even values (2,4,6) removed */
+    int count = (int)(vp - visited);
+    assert(count == 6);
+    assert(visited[0] == 1);
+    assert(visited[1] == 2);
+    assert(visited[2] == 3);
+    assert(visited[3] == 4);
+    assert(visited[4] == 5);
+    assert(visited[5] == 6);
+    assert(mln_queue_element(q) == 3);
+    assert(*(int *)mln_queue_search(q, 0) == 1);
+    assert(*(int *)mln_queue_search(q, 1) == 3);
+    assert(*(int *)mln_queue_search(q, 2) == 5);
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: mln_queue_remove() multiple times in one callback.
+ * Queue: [1,2,3,4,5,6]. When visiting 5, call mln_queue_remove() twice.
+ */
+static int iterate_multi_remove_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    if (val == 5 && mln_queue_element(g_iter_q) >= 2) {
+        mln_queue_remove(g_iter_q);
+        mln_queue_remove(g_iter_q);
+    }
+    return 0;
+}
+
+static void test_iterate_multi_queue_remove(void)
+{
+    int vals[] = {1, 2, 3, 4, 5, 6};
+    int visited[6] = {0};
+    int *vp = visited;
+    int i;
+
+    mln_queue_t *q = mln_queue_init(6, NULL);
+    assert(q != NULL);
+    for (i = 0; i < 6; ++i)
+        assert(mln_queue_append(q, &vals[i]) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_multi_remove_handler, &vp) == 0);
+
+    /*
+     * iter_i=0: visit 1. ++iter_i->1.
+     * iter_i=1: visit 2. ++iter_i->2.
+     * iter_i=2: visit 3. ++iter_i->3.
+     * iter_i=3: visit 4. ++iter_i->4.
+     * iter_i=4: visit 5. Two removes: --iter_i->3, --iter_i->2. ++iter_i->3.
+     *   head advanced by 2 (skipped 1,2). nr=4. queue: [3,4,5,6].
+     * iter_i=3: visit 6. 4<4? No. Exit.
+     * Visited: [1,2,3,4,5,6].
+     */
+    int count = (int)(vp - visited);
+    assert(count == 6);
+    assert(visited[0] == 1);
+    assert(visited[1] == 2);
+    assert(visited[2] == 3);
+    assert(visited[3] == 4);
+    assert(visited[4] == 5);
+    assert(visited[5] == 6);
+    assert(mln_queue_element(q) == 4); /* 3,4,5,6 remain */
+    assert(*(int *)mln_queue_get(q) == 3);
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: wrap-around with mln_queue_remove() during iteration (previously visited head).
+ * Same as test_iterate_remove_prev_via_queue_remove but with wrapped buffer.
+ */
+static void test_iterate_remove_prev_via_queue_remove_wrap(void)
+{
+    int vals[] = {10, 20, 30, 40, 50, 60};
+    int visited[4] = {0};
+    int *vp = visited;
+
+    mln_queue_t *q = mln_queue_init(4, NULL);
+    assert(q != NULL);
+    /* Create wrap-around: fill 4, pop 2, push 2 */
+    assert(mln_queue_append(q, &vals[0]) == 0);
+    assert(mln_queue_append(q, &vals[1]) == 0);
+    assert(mln_queue_append(q, &vals[2]) == 0);
+    assert(mln_queue_append(q, &vals[3]) == 0);
+    mln_queue_remove(q);
+    mln_queue_remove(q);
+    assert(mln_queue_append(q, &vals[4]) == 0);
+    assert(mln_queue_append(q, &vals[5]) == 0);
+    /* Queue: head=2, [30,40,50,60] wrapping at boundary */
+
+    g_iter_q = q;
+    /* Reuse the handler that removes head when val >= some threshold */
+    /* Visit all, remove head when visiting val>=50 */
+    assert(mln_queue_iterate(q, iterate_remove_prev_via_queue_remove_handler, &vp) == 0);
+
+    /*
+     * iter_i=0: visit 30 (30<3, no remove). ++iter_i->1.
+     * iter_i=1: visit 40 (40<3, no remove). ++iter_i->2.
+     * Hmm, the handler checks val>=3 not val>=50. Let me re-check...
+     * Actually the handler checks (val >= 3), so ALL will trigger remove since 30>=3.
+     * That means:
+     * iter_i=0: visit 30. remove()-> head++, --iter_i->-1. ++iter_i->0.
+     * iter_i=0: visit 40. remove()-> head++, --iter_i->-1. ++iter_i->0.
+     * iter_i=0: visit 50. remove()-> head++, --iter_i->-1. ++iter_i->0.
+     * iter_i=0: visit 60. remove()-> head++, --iter_i->-1. ++iter_i->0.
+     * 0<0? No. Exit. Visited: [30,40,50,60].
+     */
+    int count = (int)(vp - visited);
+    assert(count == 4);
+    assert(visited[0] == 30);
+    assert(visited[1] == 40);
+    assert(visited[2] == 50);
+    assert(visited[3] == 60);
+    assert(mln_queue_empty(q));
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
+/*
+ * Test: remove all remaining elements at once during iteration.
+ * Queue: [1,2,3,4,5]. When visiting 3, remove everything from index 0 downward.
+ */
+static int iterate_remove_all_handler(void *data, void *udata)
+{
+    int val = *(int *)data;
+    int **visited = (int **)udata;
+    **visited = val;
+    (*visited)++;
+
+    if (val == 3) {
+        while (mln_queue_element(g_iter_q) > 0)
+            mln_queue_free_index(g_iter_q, 0);
+    }
+    return 0;
+}
+
+static void test_iterate_remove_all_at_once(void)
+{
+    int vals[] = {1, 2, 3, 4, 5};
+    int visited[5] = {0};
+    int *vp = visited;
+    int i;
+
+    mln_queue_t *q = mln_queue_init(5, NULL);
+    assert(q != NULL);
+    for (i = 0; i < 5; ++i)
+        assert(mln_queue_append(q, &vals[i]) == 0);
+
+    g_iter_q = q;
+    assert(mln_queue_iterate(q, iterate_remove_all_handler, &vp) == 0);
+
+    /*
+     * iter_i=0: visit 1. ++iter_i->1.
+     * iter_i=1: visit 2. ++iter_i->2.
+     * iter_i=2: visit 3. Remove all: index 0 (<=2, --iter_i=1), then 0 (<=1, --=0),
+     *   then 0 (<=0, --=-1), then 0 (iter_i<0, no adjust), then 0 (iter_i<0).
+     *   Queue empty. ++iter_i->0.
+     * 0 < 0? No (nr_element=0). Exit.
+     * Visited: [1,2,3].
+     */
+    int count = (int)(vp - visited);
+    assert(count == 3);
+    assert(visited[0] == 1);
+    assert(visited[1] == 2);
+    assert(visited[2] == 3);
+    assert(mln_queue_empty(q));
+
+    mln_queue_destroy(q);
+    g_iter_q = NULL;
+    PASS();
+}
+
 int main(int argc, char *argv[])
 {
     (void)argc; (void)argv;
@@ -852,6 +1526,18 @@ int main(int argc, char *argv[])
     test_iterate_remove_via_remove();
     test_iterate_remove_previous();
     test_iterate_remove_current_and_next();
+    test_iterate_remove_prev_via_queue_remove();
+    test_iterate_free_index_tail();
+    test_iterate_free_index_future_nonadj();
+    test_iterate_remove_current_and_prev();
+    test_iterate_selective_queue_remove();
+    test_iterate_remove_wraparound();
+    test_iterate_remove_single();
+    test_iterate_remove_then_abort();
+    test_iterate_remove_every_other();
+    test_iterate_multi_queue_remove();
+    test_iterate_remove_prev_via_queue_remove_wrap();
+    test_iterate_remove_all_at_once();
     test_benchmark();
     test_stability();
 
