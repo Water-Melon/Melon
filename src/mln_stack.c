@@ -4,41 +4,27 @@
  */
 
 #include <stdlib.h>
-#include "mln_func.h"
+#include <string.h>
 #include "mln_stack.h"
+#undef mln_stack_push
+#undef mln_stack_pop
+#include "mln_func.h"
 
-/*
- * declarations
- */
-MLN_CHAIN_FUNC_DECLARE(static inline, \
-                       mln_stack, \
-                       mln_stack_node_t, );
-static mln_stack_node_t *
-mln_stack_node_init(void *data);
-static void
-mln_stack_node_destroy(mln_stack_t *st, stack_free free_handler, mln_stack_node_t *sn);
+#define MLN_STACK_INIT_CAP 8
 
-/*
- * stack_node
- */
-MLN_FUNC(static, mln_stack_node_t *, mln_stack_node_init, (void *data), (data), {
-    mln_stack_node_t *sn = (mln_stack_node_t *)malloc(sizeof(mln_stack_node_t));
-    if (sn == NULL) return NULL;
-    sn->prev = NULL;
-    sn->next = NULL;
-    sn->data = data;
-    return sn;
-})
-
-MLN_FUNC_VOID(static, void, mln_stack_node_destroy, \
-              (mln_stack_t *st, stack_free free_handler, mln_stack_node_t *sn), \
-              (st, free_handler, sn), \
+static inline mln_uauto_t mln_stack_roundup_pow2(mln_uauto_t n)
 {
-    if (sn == NULL) return;
-    if (free_handler != NULL)
-        free_handler(sn->data);
-    free(sn);
-})
+    if (n == 0) return 1;
+    --n;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    if (sizeof(mln_uauto_t) > 4)
+        n |= n >> 32;
+    return n + 1;
+}
 
 /*
  * stack
@@ -49,8 +35,12 @@ MLN_FUNC(, mln_stack_t *, mln_stack_init, \
 {
     mln_stack_t *st = (mln_stack_t *)malloc(sizeof(mln_stack_t));
     if (st == NULL) return NULL;
-    st->bottom = NULL;
-    st->top = NULL;
+    st->cap = MLN_STACK_INIT_CAP;
+    st->buf = (void **)malloc(st->cap * sizeof(void *));
+    if (st->buf == NULL) {
+        free(st);
+        return NULL;
+    }
     st->nr_node = 0;
     st->free_handler = free_handler;
     st->copy_handler = copy_handler;
@@ -59,35 +49,37 @@ MLN_FUNC(, mln_stack_t *, mln_stack_init, \
 
 MLN_FUNC_VOID(, void, mln_stack_destroy, (mln_stack_t *st), (st), {
     if (st == NULL) return;
-
-    mln_stack_node_t *sn;
-
-    while ((sn = st->bottom) != NULL) {
-        mln_stack_chain_del(&(st->bottom), &(st->top), sn);
-        mln_stack_node_destroy(st, st->free_handler, sn);
+    if (st->free_handler != NULL) {
+        mln_uauto_t i;
+        for (i = 0; i < st->nr_node; ++i) {
+            st->free_handler(st->buf[i]);
+        }
     }
+    if (st->buf != NULL)
+        free(st->buf);
     free(st);
 })
 
 /*
- * chain
+ * grow
  */
-MLN_CHAIN_FUNC_DEFINE(static inline, \
-                      mln_stack, \
-                      mln_stack_node_t, \
-                      prev, \
-                      next);
-
+MLN_FUNC(, int, mln_stack_grow, (mln_stack_t *st), (st), {
+    mln_uauto_t new_cap = mln_stack_roundup_pow2(st->cap + 1);
+    void **new_buf = (void **)realloc(st->buf, new_cap * sizeof(void *));
+    if (new_buf == NULL) return -1;
+    st->buf = new_buf;
+    st->cap = new_cap;
+    return 0;
+})
 
 /*
  * push
  */
 MLN_FUNC(, int, mln_stack_push, (mln_stack_t *st, void *data), (st, data), {
-    mln_stack_node_t *sn;
-    sn = mln_stack_node_init(data);
-    if (sn == NULL) return -1;
-    mln_stack_chain_add(&(st->bottom), &(st->top), sn);
-    ++(st->nr_node);
+    if (st->nr_node >= st->cap) {
+        if (mln_stack_grow(st) < 0) return -1;
+    }
+    st->buf[st->nr_node++] = data;
     return 0;
 })
 
@@ -95,15 +87,9 @@ MLN_FUNC(, int, mln_stack_push, (mln_stack_t *st, void *data), (st, data), {
  * pop
  */
 MLN_FUNC(, void *, mln_stack_pop, (mln_stack_t *st), (st), {
-    mln_stack_node_t *sn = st->top;
-    if (sn == NULL) return NULL;
-    mln_stack_chain_del(&(st->bottom), &(st->top), sn);
-    --(st->nr_node);
-    void *ptr = sn->data;
-    mln_stack_node_destroy(st, NULL, sn);
-    return ptr;
+    if (!st->nr_node) return NULL;
+    return st->buf[--st->nr_node];
 })
-
 
 /*
  * dup
@@ -111,13 +97,13 @@ MLN_FUNC(, void *, mln_stack_pop, (mln_stack_t *st), (st), {
 MLN_FUNC(, mln_stack_t *, mln_stack_dup, (mln_stack_t *st, void *udata), (st, udata), {
     mln_stack_t *new_st = mln_stack_init(st->free_handler, st->copy_handler);
     if (new_st == NULL) return NULL;
-    mln_stack_node_t *scan;
+    mln_uauto_t i;
     void *data;
-    for (scan = st->bottom; scan != NULL; scan = scan->next) {
+    for (i = 0; i < st->nr_node; ++i) {
         if (new_st->copy_handler == NULL) {
-            data = scan->data;
+            data = st->buf[i];
         } else {
-            data = new_st->copy_handler(scan->data, udata);
+            data = new_st->copy_handler(st->buf[i], udata);
             if (data == NULL) {
                 mln_stack_destroy(new_st);
                 return NULL;
@@ -140,9 +126,9 @@ MLN_FUNC(, int, mln_stack_iterate, \
          (mln_stack_t *st, stack_iterate_handler handler, void *data), \
          (st, handler, data), \
 {
-    mln_stack_node_t *sn;
-    for (sn = st->top; sn != NULL; sn = sn->prev) {
-        if (handler(sn->data, data) < 0) return -1;
+    mln_sauto_t i;
+    for (i = (mln_sauto_t)st->nr_node - 1; i >= 0; --i) {
+        if (handler(st->buf[i], data) < 0) return -1;
     }
     return 0;
 })
