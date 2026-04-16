@@ -382,8 +382,12 @@ static void test_benchmark(void)
 
     clock_t end = clock();
     double elapsed = (double)(end - start) / CLOCKS_PER_SEC;
-    printf("    Benchmark: %d push+pop in %.4f sec (%.0f ops/sec)\n",
-           N, elapsed, (2.0 * N) / elapsed);
+    if (elapsed > 0) {
+        printf("    Benchmark: %d push+pop in %.4f sec (%.0f ops/sec)\n",
+               N, elapsed, (2.0 * N) / elapsed);
+    } else {
+        printf("    Benchmark: %d push+pop in %.4f sec\n", N, elapsed);
+    }
 
     assert(mln_stack_empty(st));
     mln_stack_destroy(st);
