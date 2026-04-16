@@ -762,6 +762,42 @@ static void test_udata_with_free(void)
     PASS();
 }
 
+static void test_udata_dup_non_mutating(void)
+{
+    TEST("udata dup: source retains free, dest gets free=NULL");
+    int mydata = 77;
+    mln_expr_val_t *v = mln_expr_val_new(mln_expr_type_udata, &mydata, udata_free_fn);
+    assert(v != NULL && v->free == udata_free_fn);
+    mln_expr_val_t *dup = mln_expr_val_dup(v);
+    assert(dup != NULL && dup->type == mln_expr_type_udata);
+    assert(dup->data.u == &mydata);
+    /* Source must NOT be mutated: free still set */
+    assert(v->free == udata_free_fn);
+    /* Dest is a borrowed reference: free is NULL */
+    assert(dup->free == NULL);
+    mln_expr_val_free(dup);
+    mln_expr_val_free(v);
+    PASS();
+}
+
+static void test_udata_copy_non_mutating(void)
+{
+    TEST("udata copy: source retains free, dest gets free=NULL");
+    int mydata = 88;
+    mln_expr_val_t *v = mln_expr_val_new(mln_expr_type_udata, &mydata, udata_free_fn);
+    assert(v != NULL && v->free == udata_free_fn);
+    mln_expr_val_t dest;
+    mln_expr_val_copy(&dest, v);
+    assert(dest.type == mln_expr_type_udata);
+    assert(dest.data.u == &mydata);
+    /* Source must NOT be mutated: free still set */
+    assert(v->free == udata_free_fn);
+    /* Dest is a borrowed reference: free is NULL */
+    assert(dest.free == NULL);
+    mln_expr_val_free(v);
+    PASS();
+}
+
 static void test_empty_expression(void)
 {
     TEST("empty expression");
@@ -2200,6 +2236,10 @@ int main(void)
     test_err_oversized_int();
     test_err_oversized_real();
     test_err_oversized_hex();
+
+    /* udata ownership semantics tests (review feedback round 4) */
+    test_udata_dup_non_mutating();
+    test_udata_copy_non_mutating();
 
     printf("\n=== Results: %d/%d passed ===\n", pass_count, test_count);
     return (pass_count == test_count) ? 0 : 1;
