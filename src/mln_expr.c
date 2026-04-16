@@ -305,8 +305,8 @@ MLN_FUNC_VOID(static inline, void, expr_scan_next, (expr_scan_t *s, expr_ft_t *t
                 if (s->pos < s->end && *s->pos == '.') goto parse_real;
                 tok->type = FT_OCT; tok->text = start; tok->len = (mln_size_t)(s->pos - start); return;
             }
-            if (EXPR_IS_DIGIT(nc)) {
-                /* non-octal digit (8/9) after leading '0' — invalid octal unless real */
+            if (nc == '8' || nc == '9') {
+                /* non-octal digit after leading '0' — invalid octal unless real */
                 s->pos++;
                 while (s->pos < s->end && EXPR_IS_DIGIT(*s->pos)) s->pos++;
                 if (s->pos < s->end && *s->pos == '.') goto parse_real;
