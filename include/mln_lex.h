@@ -242,7 +242,7 @@ MLN_FUNC(static inline, int, mln_lex_putchar, \
     }
     if (lex->result_pos >= lex->result_buf+lex->result_buf_len) {
         mln_u64_t len = lex->result_buf_len;
-        lex->result_buf_len <<= 1;
+        lex->result_buf_len = len ? (len << 1) : 1;
         mln_u8ptr_t tmp = lex->result_buf;
         if ((lex->result_buf = (mln_u8ptr_t)mln_alloc_re(lex->pool, tmp, lex->result_buf_len)) == NULL) {
             lex->result_buf = tmp;
