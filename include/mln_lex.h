@@ -690,6 +690,9 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         if (hooks->vertl_handler != NULL)  {PREFIX_NAME##_handlers[29].handler = hooks->vertl_handler; PREFIX_NAME##_handlers[29].data = hooks->vertl_data; }\
         if (hooks->rbrace_handler != NULL) {PREFIX_NAME##_handlers[30].handler = hooks->rbrace_handler;PREFIX_NAME##_handlers[30].data = hooks->rbrace_data;}\
         if (hooks->dash_handler != NULL)   {PREFIX_NAME##_handlers[31].handler = hooks->dash_handler;  PREFIX_NAME##_handlers[31].data = hooks->dash_data;  }\
+    })\
+    \
+    MLN_FUNC_VOID(SCOPE, void, PREFIX_NAME##_init_handler_tbl, (void), (), {\
         memset(PREFIX_NAME##_handler_tbl, 0, sizeof(PREFIX_NAME##_handler_tbl));\
         memset(PREFIX_NAME##_handler_data_tbl, 0, sizeof(PREFIX_NAME##_handler_data_tbl));\
         {\
@@ -1214,6 +1217,7 @@ goon:\
             (lex_ptr) = mln_lex_init((attr_ptr));\
             if ((lex_ptr) != NULL) {\
                 if ((attr_ptr)->hooks != NULL) PREFIX_NAME##_set_hooks((lex_ptr));\
+                PREFIX_NAME##_init_handler_tbl();\
                 (lex_ptr)->preprocess_data = lpd;\
             } else {\
                 mln_lex_preprocess_data_free(lpd);\
@@ -1221,7 +1225,10 @@ goon:\
         }\
     } else {\
         (lex_ptr) = mln_lex_init((attr_ptr));\
-        if ((lex_ptr) != NULL) PREFIX_NAME##_set_hooks((lex_ptr));\
+        if ((lex_ptr) != NULL) {\
+            if ((attr_ptr)->hooks != NULL) PREFIX_NAME##_set_hooks((lex_ptr));\
+            PREFIX_NAME##_init_handler_tbl();\
+        }\
     }
 
 /*
