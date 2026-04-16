@@ -429,6 +429,7 @@ again:
             return MLN_EXPR_RET_OK;
         }
         case FT_ID: break;
+        case FT_COLON: goto again;
         default:
             if (ns_str != NULL) mln_string_free(ns_str);
             return MLN_EXPR_RET_ERR;
@@ -447,41 +448,51 @@ again:
         goto again;
     }
 
-    if (tok.type != FT_LPAR) {
-        v = cb(ns_str, &name_str, 0, NULL, data);
-        if (v == NULL) { if (ns_str) mln_string_free(ns_str); expr_ft_free(&tok); return MLN_EXPR_RET_ERR; }
-        mln_expr_val_move(ret, v); free(v);
-        if (ns_str != NULL) mln_string_free(ns_str);
-        if (tok.type == FT_EOF || tok.type == FT_COMMA) return MLN_EXPR_RET_OK;
-        *next = tok;
-        return MLN_EXPR_RET_OK;
-    }
-
-    /* Function call */
+    /* Heap-allocate name for safe callback usage (zero-copy on data).
+     * This ensures callbacks can safely call mln_string_ref() on the
+     * name parameter, matching the lex-based parser's behavior. */
     {
-        mln_array_t arr;
-        int rc;
-        if (mln_array_init(&arr, (array_free)mln_expr_val_cleanup, sizeof(mln_expr_val_t), MLN_EXPR_DEFAULT_ARGS) < 0) {
-            if (ns_str) mln_string_free(ns_str); return MLN_EXPR_RET_ERR;
+        mln_string_t *name_heap = mln_string_ref_dup(&name_str);
+        if (name_heap == NULL) { if (ns_str) mln_string_free(ns_str); expr_ft_free(&tok); return MLN_EXPR_RET_ERR; }
+
+        if (tok.type != FT_LPAR) {
+            v = cb(ns_str, name_heap, 0, NULL, data);
+            if (v == NULL) { mln_string_free(name_heap); if (ns_str) mln_string_free(ns_str); expr_ft_free(&tok); return MLN_EXPR_RET_ERR; }
+            mln_expr_val_move(ret, v); free(v);
+            mln_string_free(name_heap);
+            if (ns_str != NULL) mln_string_free(ns_str);
+            if (tok.type == FT_EOF || tok.type == FT_COMMA) return MLN_EXPR_RET_OK;
+            *next = tok;
+            return MLN_EXPR_RET_OK;
         }
-        while (1) {
-            mln_expr_val_t *elem;
-            MLN_ARRAY_PUSH(&arr, elem);
-            if (elem == NULL) { if (ns_str) mln_string_free(ns_str); mln_array_destroy(&arr); return MLN_EXPR_RET_ERR; }
-            elem->type = mln_expr_type_null;
-            rc = expr_fast_parse(s, cb, data, elem, eof, next);
-            if (rc == MLN_EXPR_RET_ERR) { if (ns_str) mln_string_free(ns_str); mln_array_destroy(&arr); return MLN_EXPR_RET_ERR; }
-            if (rc == MLN_EXPR_RET_RPAR) { MLN_ARRAY_POP(&arr); break; }
-            else if (rc == MLN_EXPR_RET_OK) {
-                if (*eof) { if (ns_str) mln_string_free(ns_str); mln_array_destroy(&arr); return MLN_EXPR_RET_ERR; }
+
+        /* Function call */
+        {
+            mln_array_t arr;
+            int rc;
+            if (mln_array_init(&arr, (array_free)mln_expr_val_cleanup, sizeof(mln_expr_val_t), MLN_EXPR_DEFAULT_ARGS) < 0) {
+                mln_string_free(name_heap); if (ns_str) mln_string_free(ns_str); return MLN_EXPR_RET_ERR;
             }
+            while (1) {
+                mln_expr_val_t *elem;
+                MLN_ARRAY_PUSH(&arr, elem);
+                if (elem == NULL) { mln_string_free(name_heap); if (ns_str) mln_string_free(ns_str); mln_array_destroy(&arr); return MLN_EXPR_RET_ERR; }
+                elem->type = mln_expr_type_null;
+                rc = expr_fast_parse(s, cb, data, elem, eof, next);
+                if (rc == MLN_EXPR_RET_ERR) { mln_string_free(name_heap); if (ns_str) mln_string_free(ns_str); mln_array_destroy(&arr); return MLN_EXPR_RET_ERR; }
+                if (rc == MLN_EXPR_RET_RPAR) { MLN_ARRAY_POP(&arr); break; }
+                else if (rc == MLN_EXPR_RET_OK) {
+                    if (*eof) { mln_string_free(name_heap); if (ns_str) mln_string_free(ns_str); mln_array_destroy(&arr); return MLN_EXPR_RET_ERR; }
+                }
+            }
+            v = cb(ns_str, name_heap, 1, &arr, data);
+            if (v == NULL) { mln_string_free(name_heap); if (ns_str) mln_string_free(ns_str); mln_array_destroy(&arr); return MLN_EXPR_RET_ERR; }
+            mln_expr_val_move(ret, v); free(v);
+            mln_string_free(name_heap);
+            if (ns_str) mln_string_free(ns_str);
+            mln_array_destroy(&arr);
+            return MLN_EXPR_RET_OK;
         }
-        v = cb(ns_str, &name_str, 1, &arr, data);
-        if (v == NULL) { if (ns_str) mln_string_free(ns_str); mln_array_destroy(&arr); return MLN_EXPR_RET_ERR; }
-        mln_expr_val_move(ret, v); free(v);
-        if (ns_str) mln_string_free(ns_str);
-        mln_array_destroy(&arr);
-        return MLN_EXPR_RET_OK;
     }
 })
 

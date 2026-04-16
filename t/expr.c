@@ -174,6 +174,28 @@ static void udata_free_fn(void *p)
     (void)p;
 }
 
+/* Handler that uses mln_string_ref on name to test heap safety.
+ * If name is stack-allocated, this would cause use-after-free. */
+static mln_expr_val_t *
+ref_name_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
+{
+    mln_string_t *ref;
+    mln_expr_val_t *v;
+
+    if (is_func) {
+        /* For function calls, return function name as string via ref */
+        ref = mln_string_ref(name);
+        v = mln_expr_val_new(mln_expr_type_string, ref, NULL);
+        mln_string_free(ref);
+        return v;
+    }
+    /* For variables, use mln_string_ref (not dup) on name */
+    ref = mln_string_ref(name);
+    v = mln_expr_val_new(mln_expr_type_string, ref, NULL);
+    mln_string_free(ref);
+    return v;
+}
+
 /* --- Test functions --- */
 
 static void test_integer_dec(void)
@@ -1922,6 +1944,93 @@ static void test_err_stray_end(void)
     PASS();
 }
 
+/* =====================================================================
+ * API compatibility tests (review feedback round 2)
+ * ===================================================================== */
+
+/* Test: leading colon should be skipped like lex-based parser */
+static void test_leading_colon_variable(void)
+{
+    TEST("leading colon: ':x' parses like 'x'");
+    mln_string_t exp = mln_string(":x");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("x");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test: multiple leading colons should be skipped */
+static void test_multiple_leading_colons(void)
+{
+    TEST("multiple leading colons: '::x' parses like 'x'");
+    mln_string_t exp = mln_string("::x");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("x");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test: leading colon before function call */
+static void test_leading_colon_func(void)
+{
+    TEST("leading colon: ':concat(\"a\",\"b\")' works");
+    mln_string_t exp = mln_string(":concat(\"a\",\"b\")");
+    mln_expr_val_t *v = mln_expr_run(&exp, concat_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("ab");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test: colon before numeric constant */
+static void test_leading_colon_number(void)
+{
+    TEST("leading colon: ':42' parses like '42'");
+    mln_string_t exp = mln_string(":42");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 42) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test: callback name parameter is safe for mln_string_ref (variable) */
+static void test_cb_name_ref_variable(void)
+{
+    TEST("callback name ref safety: variable");
+    mln_string_t exp = mln_string("myvar");
+    mln_expr_val_t *v = mln_expr_run(&exp, ref_name_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("myvar");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test: callback name parameter is safe for mln_string_ref (function call) */
+static void test_cb_name_ref_function(void)
+{
+    TEST("callback name ref safety: function call");
+    mln_string_t exp = mln_string("myfunc(42)");
+    mln_expr_val_t *v = mln_expr_run(&exp, ref_name_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("myfunc");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
 int main(void)
 {
     printf("=== mln_expr tests ===\n");
@@ -2040,6 +2149,14 @@ int main(void)
     test_err_stray_else();
     test_err_stray_do();
     test_err_stray_end();
+
+    /* API compatibility tests (review feedback round 2) */
+    test_leading_colon_variable();
+    test_multiple_leading_colons();
+    test_leading_colon_func();
+    test_leading_colon_number();
+    test_cb_name_ref_variable();
+    test_cb_name_ref_function();
 
     printf("\n=== Results: %d/%d passed ===\n", pass_count, test_count);
     return (pass_count == test_count) ? 0 : 1;
