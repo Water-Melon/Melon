@@ -517,7 +517,7 @@ MLN_FUNC(static inline, int, expr_fast_parse_if, \
     mln_expr_val_cleanup(&v);
 
     if (next->type != FT_EOF) { expr_ft_move(&tok, next); } else expr_scan_next(s, &tok);
-    if (tok.type != FT_THEN) return MLN_EXPR_RET_ERR;
+    if (tok.type != FT_THEN) { expr_ft_free(&tok); return MLN_EXPR_RET_ERR; }
 
     if (is_true) {
         while (1) {
@@ -583,7 +583,7 @@ begin:
     mln_expr_val_cleanup(&v);
 
     if (next->type != FT_EOF) { expr_ft_move(&tok, next); } else expr_scan_next(s, &tok);
-    if (tok.type != FT_DO) return MLN_EXPR_RET_ERR;
+    if (tok.type != FT_DO) { expr_ft_free(&tok); return MLN_EXPR_RET_ERR; }
 
     if (is_true) {
         while (1) {

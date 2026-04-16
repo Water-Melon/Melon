@@ -2105,6 +2105,50 @@ static void test_err_oversized_hex(void)
     PASS();
 }
 
+/* =====================================================================
+ * Token leak fixes: if missing 'then', loop missing 'do' (review round 5)
+ * ===================================================================== */
+
+/* Test: 'if true x fi' — missing 'then', should error (not leak tok) */
+static void test_if_missing_then(void)
+{
+    TEST("error: if missing 'then' keyword");
+    mln_string_t exp = mln_string("if true x fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for if missing then"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: if with heap-backed string token where 'then' expected — no leak */
+static void test_if_missing_then_string_tok(void)
+{
+    TEST("error: if missing 'then' with string token (heap free)");
+    mln_string_t exp = mln_string("if true 'hello' fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for if missing then (string tok)"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: 'loop true x end' — missing 'do', should error (not leak tok) */
+static void test_loop_missing_do(void)
+{
+    TEST("error: loop missing 'do' keyword");
+    mln_string_t exp = mln_string("loop true x end");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for loop missing do"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: loop with heap-backed string token where 'do' expected — no leak */
+static void test_loop_missing_do_string_tok(void)
+{
+    TEST("error: loop missing 'do' with string token (heap free)");
+    mln_string_t exp = mln_string("loop true 'world' end");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for loop missing do (string tok)"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
 int main(void)
 {
     printf("=== mln_expr tests ===\n");
@@ -2236,6 +2280,12 @@ int main(void)
     test_err_oversized_int();
     test_err_oversized_real();
     test_err_oversized_hex();
+
+    /* Token leak fixes in if/loop early returns (review feedback round 5) */
+    test_if_missing_then();
+    test_if_missing_then_string_tok();
+    test_loop_missing_do();
+    test_loop_missing_do_string_tok();
 
     /* udata ownership semantics tests (review feedback round 4) */
     test_udata_dup_non_mutating();
