@@ -184,7 +184,7 @@ static void test_numbers_dec(void)
     assert(memcmp(ts->text->data, "42", 2) == 0);
     mln_test_free(ts);
 
-    /* Single "0" is octal in this lexer (starts with 0, length 1 -> goes to dec path) */
+    /* Single "0" is treated as decimal in this lexer (starts with 0, length 1 -> goes to dec path) */
     ts = mln_test_token(lex);
     assert(ts != NULL && ts->type == TEST_TK_DEC);
     mln_test_free(ts);
@@ -473,7 +473,7 @@ static void test_putchar_getchar(void)
     assert(c == 'X');
     assert(mln_lex_putchar(lex, c) == 0);
 
-    /* Now stepback + read token should yield EOF (we consumed 'X' manually) */
+    /* Reading a token now should yield EOF because the only input char was consumed manually. */
     mln_test_struct_t *ts = mln_test_token(lex);
     assert(ts != NULL && ts->type == TEST_TK_EOF);
     mln_test_free(ts);
