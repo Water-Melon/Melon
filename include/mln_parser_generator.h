@@ -78,6 +78,7 @@ typedef struct mln_pg_state_s {
     struct mln_pg_state_s    *next;
     struct mln_pg_state_s    *q_prev;
     struct mln_pg_state_s    *q_next;
+    mln_u64_t                 fingerprint;
     mln_u64_t                 nr_item;
 } mln_pg_state_t;
 
@@ -1152,16 +1153,22 @@ MLN_FUNC(SCOPE, int, PREFIX_NAME##_reduce_launcher, \
           mln_shift_t *sh, void *udata, int type), \
          (st, state, prod_tbl, sh, udata, type), \
 {\
+    mln_factor_t *rights_buf[16];\
     mln_factor_t **rights;\
-    rights = (mln_factor_t **)calloc(sh->nr_args, sizeof(mln_factor_t *));\
-    if (rights == NULL && sh->nr_args) {\
-        mln_log(error, "No memory.\n");\
-        return -1;\
+    if (sh->nr_args <= 16) {\
+        rights = rights_buf;\
+        memset(rights, 0, sh->nr_args * sizeof(mln_factor_t *));\
+    } else {\
+        rights = (mln_factor_t **)calloc(sh->nr_args, sizeof(mln_factor_t *));\
+        if (rights == NULL && sh->nr_args) {\
+            mln_log(error, "No memory.\n");\
+            return -1;\
+        }\
     }\
     mln_factor_t *left = PREFIX_NAME##_factor_init(NULL, M_P_NONTERM, sh->left_type, *state, 0, NULL);\
     if (left == NULL) {\
         mln_log(error, "No memory.\n");\
-        free(rights);\
+        if (sh->nr_args > 16) free(rights);\
         return -1;\
     }\
 \
@@ -1195,7 +1202,7 @@ MLN_FUNC(SCOPE, int, PREFIX_NAME##_reduce_launcher, \
     for (i = 0; i < sh->nr_args; ++i) {\
         PREFIX_NAME##_factor_destroy((void *)rights[i]);\
     }\
-    free(rights);\
+    if (sh->nr_args > 16) free(rights);\
     if (ret < 0 || mln_stack_push(st, (void *)left) < 0) {\
         mln_log(error, "No memory.\n");\
         PREFIX_NAME##_factor_destroy((void *)left);\

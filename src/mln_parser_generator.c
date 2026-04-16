@@ -146,13 +146,12 @@ MLN_FUNC(, int, mln_pg_token_rbtree_cmp, \
 })
 
 MLN_FUNC(, mln_u64_t, mln_pg_map_hash_calc, (mln_hash_t *h, void *key), (h, key), {
-    mln_u64_t sum = 0;
-    char *p = (char *)key;
+    mln_u64_t hash = 5381;
+    mln_u8_t *p = (mln_u8_t *)key;
     for (; *p != 0; ++p) {
-        sum += (*p * 65599);
-        sum %= h->len;
+        hash = ((hash << 5) + hash) + *p;
     }
-    return sum;
+    return hash % h->len;
 })
 
 MLN_FUNC(, int, mln_pg_map_hash_cmp, \
@@ -205,6 +204,17 @@ MLN_FUNC_VOID(, void, mln_pg_item_free, (mln_pg_item_t *item), (item), {
 /*
  * state
  */
+MLN_FUNC(static inline, mln_u64_t, mln_pg_item_hash, \
+         (mln_pg_rule_t *rule, mln_u32_t pos), (rule, pos), \
+{
+    mln_u64_t h = (mln_u64_t)(unsigned long)rule;
+    h ^= (mln_u64_t)pos * 2654435761ULL;
+    h ^= h >> 33;
+    h *= 0xff51afd7ed558ccdULL;
+    h ^= h >> 33;
+    return h;
+})
+
 MLN_FUNC(, mln_pg_state_t *, mln_pg_state_new, (void), (), {
     mln_pg_state_t *s = (mln_pg_state_t *)malloc(sizeof(mln_pg_state_t));
     if (s == NULL) return NULL;
@@ -215,6 +225,7 @@ MLN_FUNC(, mln_pg_state_t *, mln_pg_state_new, (void), (), {
     s->prev = NULL;
     s->next = NULL;
     s->q_next = NULL;
+    s->fingerprint = 0;
     s->nr_item = 0;
     return s;
 })
@@ -275,6 +286,10 @@ MLN_FUNC(static, int, mln_pg_calc_info_cmp, \
     if (s1->input < s2->input) return -1;
     if (s1->nr_item > s2->nr_item) return 1;
     if (s1->nr_item < s2->nr_item) return -1;
+    if (s1->fingerprint != s2->fingerprint) {
+        if (s1->fingerprint > s2->fingerprint) return 1;
+        return -1;
+    }
 
     mln_sauto_t nr_match = 0;
     mln_pg_item_t *it1, *it2;
@@ -533,6 +548,7 @@ MLN_FUNC(, int, mln_pg_closure, \
                     mln_item_chain_add(&(s->head), &(s->tail), new_it);
                     new_it->rule = pr;
                     new_it->pos = 0;
+                    s->fingerprint ^= mln_pg_item_hash(pr, 0);
                 }
                 if (item->pos + 1 < item->rule->nr_right) {
                     next_tk = item->rule->rights[item->pos+1];
@@ -571,7 +587,7 @@ MLN_FUNC(static, mln_pg_item_t *, mln_pg_rule_duplicate, \
          (s, r, pos), \
 {
     mln_pg_item_t *item;
-    for (item = s->head; item != NULL; item = item->next) {
+    for (item = s->tail; item != NULL; item = item->prev) {
         if (item->rule == r && item->pos == pos) {
             return item;
         }
@@ -649,6 +665,7 @@ MLN_FUNC(, int, mln_pg_goto, (struct mln_pg_calc_info_s *pci), (pci), {\
     new_it->rule = &pci->rule[0];
     mln_item_chain_add(&(s->head), &(s->tail), new_it);
     ++(s->nr_item);
+    s->fingerprint ^= mln_pg_item_hash(&pci->rule[0], 0);
     if ((rn = mln_rbtree_node_new(tree, s)) == NULL) {
         mln_log(error, "No memory.\n");
         mln_pg_state_free(s);
@@ -700,6 +717,7 @@ MLN_FUNC(, int, mln_pg_goto, (struct mln_pg_calc_info_s *pci), (pci), {\
                 it->read = tk;
                 new_it->rule = it->rule;
                 new_it->pos = it->pos + 1;
+                new_s->fingerprint ^= mln_pg_item_hash(it->rule, it->pos + 1);
                 if (mln_rbtree_iterate(it->lookahead_set, \
                                         mln_pg_goto_iterate_handler, \
                                         new_it) < 0)
