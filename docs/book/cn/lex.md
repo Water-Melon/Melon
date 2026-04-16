@@ -306,36 +306,48 @@ char mln_lex_getchar(mln_lex_t *lex);
 #### mln_lex_is_letter
 
 ```c
-int mln_lex_is_letter(char c);
+mln_lex_is_letter(c)
 ```
 
-描述：判断字符是否是下划线或字母。
+描述：判断字符是否是下划线或字母。该接口为宏定义，使用查表方式实现O(1)判断。
 
-返回值：是则返回`1`，否则返回`0`
+返回值：非零则是，`0`则否
 
 
 
 #### mln_lex_is_oct
 
 ```c
-int mln_lex_is_oct(char c);
+mln_lex_is_oct(c)
 ```
 
-描述：判断字符`c`是否是八进制数。
+描述：判断字符`c`是否是八进制数。该接口为宏定义，使用查表方式实现O(1)判断。
 
-返回值：是则返回`1`，否则返回`0`
+返回值：非零则是，`0`则否
 
 
 
 #### mln_lex_is_hex
 
 ```c
-int mln_lex_is_hex(char c);
+mln_lex_is_hex(c)
 ```
 
-描述：判断字符`c`是否是十六进制数。
+描述：判断字符`c`是否是十六进制数。该接口为宏定义，使用查表方式实现O(1)判断。
 
-返回值：是则返回`1`，否则返回`0`
+返回值：非零则是，`0`则否
+
+
+
+#### mln_lex_is_letdig
+
+```c
+mln_lex_is_letdig(c)
+```
+
+描述：判断字符`c`是否是字母、下划线或数字。该接口为宏定义，使用查表方式实现O(1)判断。
+
+返回值：非零则是，`0`则否
 
 
 

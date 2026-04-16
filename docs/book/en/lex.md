@@ -305,36 +305,48 @@ Return value: character
 #### mln_lex_is_letter
 
 ```c
-int mln_lex_is_letter(char c);
+mln_lex_is_letter(c)
 ```
 
-Description: Determines whether the character is an underscore or a letter.
+Description: Determines whether the character is an underscore or a letter. This is a macro that uses a lookup table for O(1) classification.
 
-Return value: `1` if yes, `0` otherwise
+Return value: non-zero if yes, `0` otherwise
 
 
 
 #### mln_lex_is_oct
 
 ```c
-int mln_lex_is_oct(char c);
+mln_lex_is_oct(c)
 ```
 
-Description: Check if the character `c` is an octal number.
+Description: Check if the character `c` is an octal digit. This is a macro that uses a lookup table for O(1) classification.
 
-Return value: `1` if yes, `0` otherwise
+Return value: non-zero if yes, `0` otherwise
 
 
 
 #### mln_lex_is_hex
 
 ```c
-int mln_lex_is_hex(char c);
+mln_lex_is_hex(c)
 ```
 
-Description: Determine if the character `c` is a hexadecimal number.
+Description: Determine if the character `c` is a hexadecimal digit. This is a macro that uses a lookup table for O(1) classification.
 
-Return value: `1` if yes, `0` otherwise
+Return value: non-zero if yes, `0` otherwise
+
+
+
+#### mln_lex_is_letdig
+
+```c
+mln_lex_is_letdig(c)
+```
+
+Description: Determine if the character `c` is a letter, underscore, or digit. This is a macro that uses a lookup table for O(1) classification.
+
+Return value: non-zero if yes, `0` otherwise
 
 
 
