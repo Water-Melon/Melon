@@ -509,22 +509,25 @@ MLN_FUNC(static inline, int, expr_fast_parse_if, \
             }
         }
     } else {
+        int found_else = 0;
         while (1) {
             expr_scan_next(s, &tok);
             if (tok.type == FT_IF) ++count;
             else if (tok.type == FT_EOF) return MLN_EXPR_RET_ERR;
-            else if (tok.type == FT_FI) --count;
-            else if (tok.type == FT_ELSE) { if (!count) break; }
+            else if (tok.type == FT_FI) { if (count-- == 0) break; }
+            else if (tok.type == FT_ELSE) { if (!count) { found_else = 1; break; } }
             expr_ft_free(&tok);
         }
-        while (1) {
-            if (next->type != FT_EOF) { tok = *next; next->type = FT_EOF; } else expr_scan_next(s, &tok);
-            if (tok.type == FT_FI) break;
-            *next = tok;
-            v.type = mln_expr_type_null;
-            if ((rc = expr_fast_parse(s, cb, data, &v, eof, next)) != MLN_EXPR_RET_OK) { mln_expr_val_cleanup(&v); return rc; }
-            if (*eof) { mln_expr_val_cleanup(&v); return MLN_EXPR_RET_ERR; }
-            mln_expr_val_replace(ret, &v);
+        if (found_else) {
+            while (1) {
+                if (next->type != FT_EOF) { tok = *next; next->type = FT_EOF; } else expr_scan_next(s, &tok);
+                if (tok.type == FT_FI) break;
+                *next = tok;
+                v.type = mln_expr_type_null;
+                if ((rc = expr_fast_parse(s, cb, data, &v, eof, next)) != MLN_EXPR_RET_OK) { mln_expr_val_cleanup(&v); return rc; }
+                if (*eof) { mln_expr_val_cleanup(&v); return MLN_EXPR_RET_ERR; }
+                mln_expr_val_replace(ret, &v);
+            }
         }
     }
     return MLN_EXPR_RET_OK;
@@ -781,21 +784,24 @@ lex_if_again:
             }
         }
     } else {
+        int found_else = 0;
         while (1) {
             if (*next != NULL) { tk = *next; *next = NULL; } else {
 lex_if_lp: if ((tk = mln_expr_token(lex)) == NULL) return MLN_EXPR_RET_ERR; }
             type = tk->type; mln_expr_free(tk);
-            if (type == EXPR_TK_IF) ++count; else if (type == EXPR_TK_EOF) return MLN_EXPR_RET_ERR; else if (type == EXPR_TK_FI) --count; else if (type == EXPR_TK_ELSE) { if (!count) break; }
+            if (type == EXPR_TK_IF) ++count; else if (type == EXPR_TK_EOF) return MLN_EXPR_RET_ERR; else if (type == EXPR_TK_FI) { if (count-- == 0) break; } else if (type == EXPR_TK_ELSE) { if (!count) { found_else = 1; break; } }
             goto lex_if_lp;
         }
-        while (1) {
-            if (*next != NULL) { tk = *next; *next = NULL; } else { if ((tk = mln_expr_token(lex)) == NULL) return MLN_EXPR_RET_ERR; }
-            if (tk->type == EXPR_TK_FI) break;
-            *next = tk;
-            v.type = mln_expr_type_null;
-            if ((rc = mln_expr_parse(lex, cb, data, &v, eof, next)) != MLN_EXPR_RET_OK) { mln_expr_val_cleanup(&v); return rc; }
-            if (*eof) { mln_expr_val_cleanup(&v); return MLN_EXPR_RET_ERR; }
-            mln_expr_val_replace(ret, &v);
+        if (found_else) {
+            while (1) {
+                if (*next != NULL) { tk = *next; *next = NULL; } else { if ((tk = mln_expr_token(lex)) == NULL) return MLN_EXPR_RET_ERR; }
+                if (tk->type == EXPR_TK_FI) break;
+                *next = tk;
+                v.type = mln_expr_type_null;
+                if ((rc = mln_expr_parse(lex, cb, data, &v, eof, next)) != MLN_EXPR_RET_OK) { mln_expr_val_cleanup(&v); return rc; }
+                if (*eof) { mln_expr_val_cleanup(&v); return MLN_EXPR_RET_ERR; }
+                mln_expr_val_replace(ret, &v);
+            }
         }
     }
     return MLN_EXPR_RET_OK;
