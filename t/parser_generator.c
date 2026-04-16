@@ -66,12 +66,15 @@ static void test_parse_basic(void)
 {
     printf("test_parse_basic\n");
     mln_alloc_t *pool = mln_alloc_init(NULL, 0);
+    if (pool == NULL) {
+        FAIL("setup failed (pool is NULL)");
+        return;
+    }
     mln_string_t code = mln_string("a + 1;\nb + a;\nc - b;\n");
     mln_lex_t *lex = make_lex(pool, &code);
     void *ptr = test_parser_generate(basic_prod, BASIC_NR, NULL);
-    if (pool == NULL || ptr == NULL) {
-        FAIL("setup failed (pool or parser generator is NULL)");
-        if (ptr) test_pg_data_free(ptr);
+    if (ptr == NULL) {
+        FAIL("setup failed (parser generator is NULL)");
         mln_lex_destroy(lex);
         mln_alloc_destroy(pool);
         return;
@@ -119,13 +122,16 @@ static void test_parse_with_callbacks(void)
 
     reduce_count = 0;
     mln_alloc_t *pool = mln_alloc_init(NULL, 0);
+    if (pool == NULL) {
+        FAIL("setup failed (pool is NULL)");
+        return;
+    }
     mln_string_t code = mln_string("a + 1;\nb + a;\nc - b;\n");
     mln_lex_t *lex = make_lex(pool, &code);
     void *ptr = test_parser_generate(cb_prod,
                     sizeof(cb_prod)/sizeof(mln_production_t), NULL);
-    if (pool == NULL || ptr == NULL) {
-        FAIL("setup failed (pool or parser generator is NULL)");
-        if (ptr) test_pg_data_free(ptr);
+    if (ptr == NULL) {
+        FAIL("setup failed (parser generator is NULL)");
         mln_lex_destroy(lex);
         mln_alloc_destroy(pool);
         return;
@@ -207,6 +213,7 @@ static void test_factor_copy_test(void)
     printf("test_factor_copy\n");
 
     mln_alloc_t *pool = mln_alloc_init(NULL, 0);
+    if (pool == NULL) { FAIL("pool alloc failed"); return; }
 
     /* copy of a nonterm factor (no lex dup needed) */
     mln_factor_t *src = test_factor_init(NULL, M_P_NONTERM, 7, 3, 99, NULL);
@@ -315,13 +322,16 @@ static void test_parse_error_recovery(void)
 {
     printf("test_parse_error_recovery\n");
     mln_alloc_t *pool = mln_alloc_init(NULL, 0);
+    if (pool == NULL) {
+        FAIL("setup failed (pool is NULL)");
+        return;
+    }
     /* Missing semicolons -> parse error */
     mln_string_t code = mln_string("a + b c\n");
     mln_lex_t *lex = make_lex(pool, &code);
     void *ptr = test_parser_generate(basic_prod, BASIC_NR, NULL);
-    if (pool == NULL || ptr == NULL) {
-        FAIL("setup failed (pool or parser generator is NULL)");
-        if (ptr) test_pg_data_free(ptr);
+    if (ptr == NULL) {
+        FAIL("setup failed (parser generator is NULL)");
         mln_lex_destroy(lex);
         mln_alloc_destroy(pool);
         return;
@@ -349,6 +359,7 @@ static void test_lex_dup_test(void)
     printf("test_lex_dup\n");
 
     mln_alloc_t *pool = mln_alloc_init(NULL, 0);
+    if (pool == NULL) { FAIL("pool alloc failed"); return; }
     mln_string_t code = mln_string("hello");
     mln_lex_t *lex = make_lex(pool, &code);
 
