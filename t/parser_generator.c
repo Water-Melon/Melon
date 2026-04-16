@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include <time.h>
 #include "mln_log.h"
 #include "mln_lex.h"
@@ -43,6 +44,7 @@ static mln_lex_t *make_lex(mln_alloc_t *pool, mln_string_t *code)
     lattr.data = code;
     lattr.env = NULL;
     mln_lex_init_with_hooks(test, lex, &lattr);
+    assert(lex != NULL);
     return lex;
 }
 
@@ -67,7 +69,13 @@ static void test_parse_basic(void)
     mln_string_t code = mln_string("a + 1;\nb + a;\nc - b;\n");
     mln_lex_t *lex = make_lex(pool, &code);
     void *ptr = test_parser_generate(basic_prod, BASIC_NR, NULL);
-
+    if (pool == NULL || ptr == NULL) {
+        FAIL("setup failed (pool or pg_data is NULL)");
+        if (ptr) test_pg_data_free(ptr);
+        mln_lex_destroy(lex);
+        mln_alloc_destroy(pool);
+        return;
+    }
     struct mln_parse_attr pattr;
     pattr.pool = pool;
     pattr.prod_tbl = basic_prod;
@@ -115,7 +123,13 @@ static void test_parse_with_callbacks(void)
     mln_lex_t *lex = make_lex(pool, &code);
     void *ptr = test_parser_generate(cb_prod,
                     sizeof(cb_prod)/sizeof(mln_production_t), NULL);
-
+    if (pool == NULL || ptr == NULL) {
+        FAIL("setup failed (pool or pg_data is NULL)");
+        if (ptr) test_pg_data_free(ptr);
+        mln_lex_destroy(lex);
+        mln_alloc_destroy(pool);
+        return;
+    }
     struct mln_parse_attr pattr;
     pattr.pool = pool;
     pattr.prod_tbl = cb_prod;
@@ -240,6 +254,7 @@ static void test_single_production(void)
 
     /* Parse a single identifier */
     mln_alloc_t *pool = mln_alloc_init(NULL, 0);
+    if (pool == NULL) { FAIL("pool alloc failed"); test_pg_data_free(ptr); return; }
     mln_string_t code = mln_string("hello");
     mln_lex_t *lex = make_lex(pool, &code);
     struct mln_parse_attr pattr;
@@ -276,6 +291,7 @@ static void test_multiple_alternatives(void)
     if (ptr == NULL) { FAIL("generate returned NULL"); return; }
 
     mln_alloc_t *pool = mln_alloc_init(NULL, 0);
+    if (pool == NULL) { FAIL("pool alloc failed"); test_pg_data_free(ptr); return; }
     mln_string_t code = mln_string("x; 42; y;\n");
     mln_lex_t *lex = make_lex(pool, &code);
     struct mln_parse_attr pattr;
@@ -303,7 +319,13 @@ static void test_parse_error_recovery(void)
     mln_string_t code = mln_string("a + b c\n");
     mln_lex_t *lex = make_lex(pool, &code);
     void *ptr = test_parser_generate(basic_prod, BASIC_NR, NULL);
-
+    if (pool == NULL || ptr == NULL) {
+        FAIL("setup failed (pool or pg_data is NULL)");
+        if (ptr) test_pg_data_free(ptr);
+        mln_lex_destroy(lex);
+        mln_alloc_destroy(pool);
+        return;
+    }
     struct mln_parse_attr pattr;
     pattr.pool = pool;
     pattr.prod_tbl = basic_prod;

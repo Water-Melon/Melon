@@ -4,6 +4,7 @@
  */
 
 #include <stdlib.h>
+#include <stdint.h>
 #include "mln_parser_generator.h"
 
 /*
@@ -207,7 +208,7 @@ MLN_FUNC_VOID(, void, mln_pg_item_free, (mln_pg_item_t *item), (item), {
 MLN_FUNC(static inline, mln_u64_t, mln_pg_item_hash, \
          (mln_pg_rule_t *rule, mln_u32_t pos), (rule, pos), \
 {
-    mln_u64_t h = (mln_u64_t)(unsigned long)rule;
+    mln_u64_t h = (mln_u64_t)(uintptr_t)rule;
     h ^= (mln_u64_t)pos * 2654435761ULL;
     h ^= h >> 33;
     h *= 0xff51afd7ed558ccdULL;
