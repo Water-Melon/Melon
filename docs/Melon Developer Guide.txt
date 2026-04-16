@@ -3265,8 +3265,8 @@ Their definitions can be found in melon/include/mln_types.h.
       b) void mln_expr_val_free(mln_expr_val_t *ev);
          Free an expression value object.
 
-      c) void mln_expr_val_copy(mln_expr_val_t *dest, mln_expr_val_t *src);
-         Copy an expression object from `src` to `dest`. For `udata`, ownership of the destructor is transferred to `dest` (source's `free` is cleared).
+      c) void mln_expr_val_copy_own(mln_expr_val_t *dest, mln_expr_val_t *src);
+         Copy an expression object from `src` to `dest`, transferring destructor ownership. For `udata`, `dest` receives the `free` callback (source's `free` is cleared).
 
       d) mln_expr_val_t *mln_expr_run(mln_string_t *exp, mln_expr_cb_t cb, void *data);
          Run a simple expression `exp`. `cb` will be called with user-data `data` when parsing variables and functions.
@@ -3274,8 +3274,8 @@ Their definitions can be found in melon/include/mln_types.h.
       e) mln_expr_val_t *mln_expr_run_file(mln_string_t *path, mln_expr_cb_t cb, void *data);
          Run the expression in the file indicated by `path`. `cb` will be called with user-data `data` when parsing variables and functions.
 
-      f) mln_expr_val_t *mln_expr_val_dup(mln_expr_val_t *val);
-         Duplicate an expression object from `val`. For `udata`, ownership of the destructor is transferred to the new value (source's `free` is cleared).
+      f) mln_expr_val_t *mln_expr_val_dup_own(mln_expr_val_t *val);
+         Duplicate an expression object from `val`, transferring destructor ownership. For `udata`, the new value receives the `free` callback (source's `free` is cleared).
 
 5. Framework Usage
    It is very easy to use this framework. Before we use it, we have to initialize it.

@@ -138,7 +138,7 @@ MLN_FUNC_VOID(, void, mln_expr_val_free, (mln_expr_val_t *ev), (ev), {
     free(ev);
 })
 
-MLN_FUNC(, mln_expr_val_t *, mln_expr_val_dup, (mln_expr_val_t *val), (val), {
+MLN_FUNC(, mln_expr_val_t *, mln_expr_val_dup_own, (mln_expr_val_t *val), (val), {
     mln_expr_val_t *v;
     if ((v = (mln_expr_val_t *)malloc(sizeof(mln_expr_val_t))) == NULL) return NULL;
     v->type = val->type;
@@ -153,7 +153,7 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_val_dup, (mln_expr_val_t *val), (val), {
     return v;
 })
 
-MLN_FUNC_VOID(, void, mln_expr_val_copy, (mln_expr_val_t *dest, mln_expr_val_t *src), (dest, src), {
+MLN_FUNC_VOID(, void, mln_expr_val_copy_own, (mln_expr_val_t *dest, mln_expr_val_t *src), (dest, src), {
     if (src == NULL) return;
     dest->type = src->type;
     switch (src->type) {

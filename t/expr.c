@@ -680,7 +680,7 @@ static void test_val_dup(void)
     mln_string_t s = mln_string("dup_test");
     mln_expr_val_t *orig = mln_expr_val_new(mln_expr_type_string, &s, NULL);
     assert(orig != NULL);
-    mln_expr_val_t *dup = mln_expr_val_dup(orig);
+    mln_expr_val_t *dup = mln_expr_val_dup_own(orig);
     assert(dup != NULL);
     assert(dup->type == mln_expr_type_string);
     assert(!mln_string_strcmp(dup->data.s, &s));
@@ -696,28 +696,28 @@ static void test_val_dup_all_types(void)
 
     /* null */
     v = mln_expr_val_new(mln_expr_type_null, NULL, NULL);
-    d = mln_expr_val_dup(v);
+    d = mln_expr_val_dup_own(v);
     assert(d != NULL && d->type == mln_expr_type_null);
     mln_expr_val_free(v); mln_expr_val_free(d);
 
     /* bool */
     mln_u8_t b = 0;
     v = mln_expr_val_new(mln_expr_type_bool, &b, NULL);
-    d = mln_expr_val_dup(v);
+    d = mln_expr_val_dup_own(v);
     assert(d != NULL && d->type == mln_expr_type_bool && d->data.b == 0);
     mln_expr_val_free(v); mln_expr_val_free(d);
 
     /* int */
     mln_s64_t i = -42;
     v = mln_expr_val_new(mln_expr_type_int, &i, NULL);
-    d = mln_expr_val_dup(v);
+    d = mln_expr_val_dup_own(v);
     assert(d != NULL && d->type == mln_expr_type_int && d->data.i == -42);
     mln_expr_val_free(v); mln_expr_val_free(d);
 
     /* real */
     double r = 2.718;
     v = mln_expr_val_new(mln_expr_type_real, &r, NULL);
-    d = mln_expr_val_dup(v);
+    d = mln_expr_val_dup_own(v);
     assert(d != NULL && d->type == mln_expr_type_real && d->data.r == 2.718);
     mln_expr_val_free(v); mln_expr_val_free(d);
 
@@ -730,11 +730,11 @@ static void test_val_copy(void)
     mln_s64_t i = 999;
     mln_expr_val_t *src = mln_expr_val_new(mln_expr_type_int, &i, NULL);
     mln_expr_val_t dest;
-    mln_expr_val_copy(&dest, src);
+    mln_expr_val_copy_own(&dest, src);
     assert(dest.type == mln_expr_type_int && dest.data.i == 999);
     mln_expr_val_free(src);
 
-    mln_expr_val_copy(&dest, NULL);
+    mln_expr_val_copy_own(&dest, NULL);
     PASS();
 }
 
@@ -744,7 +744,7 @@ static void test_udata_type(void)
     int mydata = 42;
     mln_expr_val_t *v = mln_expr_val_new(mln_expr_type_udata, &mydata, NULL);
     assert(v != NULL && v->type == mln_expr_type_udata && v->data.u == &mydata);
-    mln_expr_val_t *dup = mln_expr_val_dup(v);
+    mln_expr_val_t *dup = mln_expr_val_dup_own(v);
     assert(dup != NULL && dup->type == mln_expr_type_udata && dup->data.u == &mydata);
     mln_expr_val_free(v);
     mln_expr_val_free(dup);
@@ -768,7 +768,7 @@ static void test_udata_dup_non_mutating(void)
     int mydata = 77;
     mln_expr_val_t *v = mln_expr_val_new(mln_expr_type_udata, &mydata, udata_free_fn);
     assert(v != NULL && v->free == udata_free_fn);
-    mln_expr_val_t *dup = mln_expr_val_dup(v);
+    mln_expr_val_t *dup = mln_expr_val_dup_own(v);
     assert(dup != NULL && dup->type == mln_expr_type_udata);
     assert(dup->data.u == &mydata);
     /* Dest receives the destructor */
@@ -787,7 +787,7 @@ static void test_udata_copy_non_mutating(void)
     mln_expr_val_t *v = mln_expr_val_new(mln_expr_type_udata, &mydata, udata_free_fn);
     assert(v != NULL && v->free == udata_free_fn);
     mln_expr_val_t dest;
-    mln_expr_val_copy(&dest, v);
+    mln_expr_val_copy_own(&dest, v);
     assert(dest.type == mln_expr_type_udata);
     assert(dest.data.u == &mydata);
     /* Dest receives the destructor */
@@ -1137,7 +1137,7 @@ complex_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *
             int cond = 0;
             if (real_args[0]->type == mln_expr_type_bool) cond = real_args[0]->data.b;
             else if (real_args[0]->type == mln_expr_type_int) cond = real_args[0]->data.i != 0;
-            return mln_expr_val_dup(cond ? real_args[1] : real_args[2]);
+            return mln_expr_val_dup_own(cond ? real_args[1] : real_args[2]);
         }
         return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
     }
@@ -1160,7 +1160,7 @@ complex_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *
         return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
     }
     if (!mln_string_strcmp(name, &f_identity)) {
-        if (n >= 1) return mln_expr_val_dup(real_args[0]);
+        if (n >= 1) return mln_expr_val_dup_own(real_args[0]);
         return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
     }
     /* unknown function: return null */
@@ -1249,7 +1249,7 @@ complex_loop_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_arra
         return r;
     }
     if (!mln_string_strcmp(name, &f_identity)) {
-        if (n >= 1) return mln_expr_val_dup(real_args[0]);
+        if (n >= 1) return mln_expr_val_dup_own(real_args[0]);
         return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
     }
     return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
