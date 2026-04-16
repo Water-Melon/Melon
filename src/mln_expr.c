@@ -291,7 +291,7 @@ MLN_FUNC_VOID(static inline, void, expr_scan_next, (expr_scan_t *s, expr_ft_t *t
         mln_u8ptr_t start = s->pos;
         if (c == '0' && s->pos + 1 < s->end) {
             mln_u8_t nc = s->pos[1];
-            if (nc == 'x' || nc == 'X') {
+            if (nc == 'x') {
                 s->pos += 2;
                 if (s->pos >= s->end || !EXPR_IS_HEX(*s->pos)) {
                     tok->type = FT_ERR; tok->text = start; tok->len = (mln_size_t)(s->pos - start); return;
@@ -304,6 +304,13 @@ MLN_FUNC_VOID(static inline, void, expr_scan_next, (expr_scan_t *s, expr_ft_t *t
                 while (s->pos < s->end && EXPR_IS_OCT(*s->pos)) s->pos++;
                 if (s->pos < s->end && *s->pos == '.') goto parse_real;
                 tok->type = FT_OCT; tok->text = start; tok->len = (mln_size_t)(s->pos - start); return;
+            }
+            if (EXPR_IS_DIGIT(nc)) {
+                /* non-octal digit (8/9) after leading '0' — invalid octal unless real */
+                s->pos++;
+                while (s->pos < s->end && EXPR_IS_DIGIT(*s->pos)) s->pos++;
+                if (s->pos < s->end && *s->pos == '.') goto parse_real;
+                tok->type = FT_ERR; tok->text = start; tok->len = (mln_size_t)(s->pos - start); return;
             }
         }
         while (s->pos < s->end && EXPR_IS_DIGIT(*s->pos)) s->pos++;

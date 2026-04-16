@@ -230,8 +230,8 @@ static void test_integer_hex(void)
 
 static void test_integer_hex_upper(void)
 {
-    TEST("hexadecimal upper case");
-    mln_string_t exp = mln_string("0XAB");
+    TEST("hexadecimal upper case hex digits");
+    mln_string_t exp = mln_string("0xAB");
     mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
     if (v == NULL) { FAIL("run returned NULL"); return; }
     if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
@@ -1917,13 +1917,13 @@ static void test_err_hex_no_digits(void)
     PASS();
 }
 
-/* Test: 0X followed by non-hex char should return NULL */
+/* Test: 0x followed by non-hex char should return NULL */
 static void test_err_hex_no_digits_eof(void)
 {
-    TEST("error: 0X followed by non-hex");
-    mln_string_t exp = mln_string("0Xzz");
+    TEST("error: 0x followed by non-hex");
+    mln_string_t exp = mln_string("0xzz");
     mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
-    if (v != NULL) { FAIL("expected NULL for 0X with no hex digits"); mln_expr_val_free(v); return; }
+    if (v != NULL) { FAIL("expected NULL for 0x with no hex digits"); mln_expr_val_free(v); return; }
     PASS();
 }
 
@@ -2106,8 +2106,54 @@ static void test_err_oversized_hex(void)
 }
 
 /* =====================================================================
- * Token leak fixes: if missing 'then', loop missing 'do' (review round 5)
+ * Octal/hex consistency fixes (review round 6)
  * ===================================================================== */
+
+/* Test: "09" — non-octal digit after leading 0, should be invalid octal */
+static void test_err_invalid_octal_09(void)
+{
+    TEST("error: invalid octal '09'");
+    mln_string_t exp = mln_string("09");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for invalid octal 09"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: "08" — non-octal digit after leading 0, should be invalid octal */
+static void test_err_invalid_octal_08(void)
+{
+    TEST("error: invalid octal '08'");
+    mln_string_t exp = mln_string("08");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for invalid octal 08"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: "09.5" — non-octal digit after leading 0, but real due to '.' */
+static void test_invalid_octal_real_fallback(void)
+{
+    TEST("real fallback: '09.5' is valid real despite invalid octal prefix");
+    mln_string_t exp = mln_string("09.5");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_real) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.r < 9.4 || v->data.r > 9.6) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test: "0XAB" — uppercase X is not a hex prefix, so not parsed as hex */
+static void test_err_uppercase_hex_prefix(void)
+{
+    TEST("error: uppercase '0X' not recognized as hex prefix");
+    mln_string_t exp = mln_string("0XAB");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    /* 0XAB is parsed as 0 (dec) then XAB (identifier); last value is string "XAB" */
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("expected string type for XAB identifier"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
 
 /* Test: 'if true x fi' — missing 'then', should error (not leak tok) */
 static void test_if_missing_then(void)
@@ -2290,6 +2336,12 @@ int main(void)
     /* udata ownership semantics tests (review feedback round 4) */
     test_udata_dup_non_mutating();
     test_udata_copy_non_mutating();
+
+    /* Octal/hex consistency tests (review feedback round 6) */
+    test_err_invalid_octal_09();
+    test_err_invalid_octal_08();
+    test_invalid_octal_real_fallback();
+    test_err_uppercase_hex_prefix();
 
     printf("\n=== Results: %d/%d passed ===\n", pass_count, test_count);
     return (pass_count == test_count) ? 0 : 1;
