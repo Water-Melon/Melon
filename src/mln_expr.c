@@ -148,7 +148,7 @@ MLN_FUNC(, mln_expr_val_t *, mln_expr_val_dup, (mln_expr_val_t *val), (val), {
         case mln_expr_type_int: v->data.i = val->data.i; break;
         case mln_expr_type_real: v->data.r = val->data.r; break;
         case mln_expr_type_string: v->data.s = mln_string_ref(val->data.s); v->free = val->free; break;
-        default: v->data.u = val->data.u; v->free = NULL; break;
+        default: v->data.u = val->data.u; v->free = val->free; val->free = NULL; break;
     }
     return v;
 })
@@ -162,7 +162,7 @@ MLN_FUNC_VOID(, void, mln_expr_val_copy, (mln_expr_val_t *dest, mln_expr_val_t *
         case mln_expr_type_int: dest->data.i = src->data.i; break;
         case mln_expr_type_real: dest->data.r = src->data.r; break;
         case mln_expr_type_string: dest->data.s = mln_string_ref(src->data.s); dest->free = src->free; break;
-        default: dest->data.u = src->data.u; dest->free = NULL; break;
+        default: dest->data.u = src->data.u; dest->free = src->free; src->free = NULL; break;
     }
 })
 

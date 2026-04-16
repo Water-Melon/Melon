@@ -130,7 +130,7 @@ void mln_expr_val_free(mln_expr_val_t *ev);
 void mln_expr_val_copy(mln_expr_val_t *dest, mln_expr_val_t *src);
 ```
 
-描述：拷贝一个表达式值对象。将`src`的内容拷贝到`dest`中。对于值类型（null、bool、int、real），直接复制值。对于字符串类型，使用`mln_string_ref`通过引用计数共享字符串数据。对于`udata`类型，复制数据指针但将`dest`的`free`置为`NULL`——源对象保留析构函数的所有权。源对象不会被修改。
+描述：拷贝一个表达式值对象。将`src`的内容拷贝到`dest`中。对于值类型（null、bool、int、real），直接复制值。对于字符串类型，使用`mln_string_ref`通过引用计数共享字符串数据。对于`udata`类型，复制数据指针并将析构函数（`free`）的所有权转移给`dest`——源对象的`free`将被清除以防止双重释放。对于`udata`类型，这实际上是一个移动操作。
 
 返回值：无
 
@@ -142,7 +142,7 @@ void mln_expr_val_copy(mln_expr_val_t *dest, mln_expr_val_t *src);
 mln_expr_val_t *mln_expr_val_dup(mln_expr_val_t *val);
 ```
 
-描述：拷贝一个表达式值对象。与`mln_expr_val_copy`相似，但会分配一块全新的堆内存。对于`udata`类型，复制数据指针但将目标的`free`置为`NULL`——源对象保留析构函数的所有权。源对象不会被修改。
+描述：拷贝一个表达式值对象。与`mln_expr_val_copy`相似，但会分配一块全新的堆内存。对于`udata`类型，复制数据指针并将析构函数（`free`）的所有权转移给新值——源对象的`free`将被清除以防止双重释放。对于`udata`类型，这实际上是一个移动操作。
 
 返回值：
 

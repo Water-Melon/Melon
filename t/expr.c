@@ -764,17 +764,17 @@ static void test_udata_with_free(void)
 
 static void test_udata_dup_non_mutating(void)
 {
-    TEST("udata dup: source retains free, dest gets free=NULL");
+    TEST("udata dup: ownership transfers to dest");
     int mydata = 77;
     mln_expr_val_t *v = mln_expr_val_new(mln_expr_type_udata, &mydata, udata_free_fn);
     assert(v != NULL && v->free == udata_free_fn);
     mln_expr_val_t *dup = mln_expr_val_dup(v);
     assert(dup != NULL && dup->type == mln_expr_type_udata);
     assert(dup->data.u == &mydata);
-    /* Source must NOT be mutated: free still set */
-    assert(v->free == udata_free_fn);
-    /* Dest is a borrowed reference: free is NULL */
-    assert(dup->free == NULL);
+    /* Dest receives the destructor */
+    assert(dup->free == udata_free_fn);
+    /* Source's free is cleared (ownership transferred) */
+    assert(v->free == NULL);
     mln_expr_val_free(dup);
     mln_expr_val_free(v);
     PASS();
@@ -782,7 +782,7 @@ static void test_udata_dup_non_mutating(void)
 
 static void test_udata_copy_non_mutating(void)
 {
-    TEST("udata copy: source retains free, dest gets free=NULL");
+    TEST("udata copy: ownership transfers to dest");
     int mydata = 88;
     mln_expr_val_t *v = mln_expr_val_new(mln_expr_type_udata, &mydata, udata_free_fn);
     assert(v != NULL && v->free == udata_free_fn);
@@ -790,10 +790,10 @@ static void test_udata_copy_non_mutating(void)
     mln_expr_val_copy(&dest, v);
     assert(dest.type == mln_expr_type_udata);
     assert(dest.data.u == &mydata);
-    /* Source must NOT be mutated: free still set */
-    assert(v->free == udata_free_fn);
-    /* Dest is a borrowed reference: free is NULL */
-    assert(dest.free == NULL);
+    /* Dest receives the destructor */
+    assert(dest.free == udata_free_fn);
+    /* Source's free is cleared (ownership transferred) */
+    assert(v->free == NULL);
     mln_expr_val_free(v);
     PASS();
 }

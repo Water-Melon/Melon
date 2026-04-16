@@ -130,7 +130,7 @@ Return value: None
 void mln_expr_val_copy(mln_expr_val_t *dest, mln_expr_val_t *src);
 ```
 
-Description: Copy an expression value object into `dest`. For value types (null, bool, int, real), the value is copied directly. For strings, `mln_string_ref` is used to share the string data via reference counting. For `udata`, the data pointer is copied but `dest->free` is set to `NULL` — the source retains ownership of the destructor. The source is never modified.
+Description: Copy an expression value object into `dest`. For value types (null, bool, int, real), the value is copied directly. For strings, `mln_string_ref` is used to share the string data via reference counting. For `udata`, the data pointer is copied and ownership of the destructor (`free`) is transferred to `dest` — the source's `free` is cleared to prevent double-free. This is effectively a move for `udata`.
 
 Return value: None
 
@@ -142,7 +142,7 @@ Return value: None
 mln_expr_val_t *mln_expr_val_dup(mln_expr_val_t *val);
 ```
 
-Description: Duplicate an expression value object. Similar to `mln_expr_val_copy`, but allocates a completely new `mln_expr_val_t` on the heap. For `udata`, the data pointer is copied but the destination's `free` is set to `NULL` — the source retains ownership of the destructor. The source is never modified.
+Description: Duplicate an expression value object. Similar to `mln_expr_val_copy`, but allocates a completely new `mln_expr_val_t` on the heap. For `udata`, the data pointer is copied and ownership of the destructor (`free`) is transferred to the new value — the source's `free` is cleared to prevent double-free. This is effectively a move for `udata`.
 
 Return values:
 
