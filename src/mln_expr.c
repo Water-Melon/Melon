@@ -175,7 +175,8 @@ enum expr_ft {
     FT_EOF = 0, FT_ID, FT_DEC, FT_OCT, FT_HEX, FT_REAL,
     FT_STRING, FT_TRUE, FT_FALSE, FT_NULL,
     FT_IF, FT_THEN, FT_ELSE, FT_FI, FT_LOOP, FT_DO, FT_END,
-    FT_LPAR, FT_RPAR, FT_COMMA, FT_COLON
+    FT_LPAR, FT_RPAR, FT_COMMA, FT_COLON,
+    FT_ERR
 };
 
 typedef struct {
@@ -204,6 +205,16 @@ static inline void expr_ft_free(expr_ft_t *t)
         t->text = NULL;
         t->heap = 0;
     }
+}
+
+/* Transfer ownership of token from src to dest (move semantics). */
+static inline void expr_ft_move(expr_ft_t *dest, expr_ft_t *src)
+{
+    *dest = *src;
+    src->type = FT_EOF;
+    src->heap = 0;
+    src->text = NULL;
+    src->len = 0;
 }
 
 MLN_FUNC(static inline, int, expr_scan_string, \
@@ -273,7 +284,7 @@ MLN_FUNC_VOID(static inline, void, expr_scan_next, (expr_scan_t *s, expr_ft_t *t
     }
     if (c == '"' || c == '\'') {
         s->pos++;
-        if (expr_scan_string(s, tok, (char)c) < 0) tok->type = FT_EOF;
+        if (expr_scan_string(s, tok, (char)c) < 0) { tok->type = FT_ERR; tok->text = NULL; tok->len = 0; }
         return;
     }
     if (EXPR_IS_DIGIT(c)) {
@@ -282,6 +293,9 @@ MLN_FUNC_VOID(static inline, void, expr_scan_next, (expr_scan_t *s, expr_ft_t *t
             mln_u8_t nc = s->pos[1];
             if (nc == 'x' || nc == 'X') {
                 s->pos += 2;
+                if (s->pos >= s->end || !EXPR_IS_HEX(*s->pos)) {
+                    tok->type = FT_ERR; tok->text = start; tok->len = (mln_size_t)(s->pos - start); return;
+                }
                 while (s->pos < s->end && EXPR_IS_HEX(*s->pos)) s->pos++;
                 tok->type = FT_HEX; tok->text = start; tok->len = (mln_size_t)(s->pos - start); return;
             }
@@ -330,7 +344,7 @@ parse_real:
         tok->type = FT_ID; return;
     }
     s->pos++;
-    tok->type = FT_EOF; tok->text = NULL; tok->len = 0;
+    tok->type = FT_ERR; tok->text = NULL; tok->len = 0;
 })
 
 static inline int
@@ -348,7 +362,7 @@ MLN_FUNC(static inline, int, expr_fast_parse, \
     char *endp;
 
 again:
-    if (next->type != FT_EOF) { tok = *next; next->type = FT_EOF; }
+    if (next->type != FT_EOF) { expr_ft_move(&tok, next); }
     else expr_scan_next(s, &tok);
 
     switch (tok.type) {
@@ -415,7 +429,9 @@ again:
             return MLN_EXPR_RET_OK;
         }
         case FT_ID: break;
-        default: goto again;
+        default:
+            if (ns_str != NULL) mln_string_free(ns_str);
+            return MLN_EXPR_RET_ERR;
     }
 
     mln_string_nset(&name_str, tok.text, tok.len);
@@ -483,12 +499,12 @@ MLN_FUNC(static inline, int, expr_fast_parse_if, \
     is_true = mln_expr_val_is_true(&v);
     mln_expr_val_cleanup(&v);
 
-    if (next->type != FT_EOF) { tok = *next; next->type = FT_EOF; } else expr_scan_next(s, &tok);
+    if (next->type != FT_EOF) { expr_ft_move(&tok, next); } else expr_scan_next(s, &tok);
     if (tok.type != FT_THEN) return MLN_EXPR_RET_ERR;
 
     if (is_true) {
         while (1) {
-            if (next->type != FT_EOF) { tok = *next; next->type = FT_EOF; } else expr_scan_next(s, &tok);
+            if (next->type != FT_EOF) { expr_ft_move(&tok, next); } else expr_scan_next(s, &tok);
             if (tok.type == FT_ELSE) {
                 while (1) {
                     expr_scan_next(s, &tok);
@@ -520,7 +536,7 @@ MLN_FUNC(static inline, int, expr_fast_parse_if, \
         }
         if (found_else) {
             while (1) {
-                if (next->type != FT_EOF) { tok = *next; next->type = FT_EOF; } else expr_scan_next(s, &tok);
+                if (next->type != FT_EOF) { expr_ft_move(&tok, next); } else expr_scan_next(s, &tok);
                 if (tok.type == FT_FI) break;
                 *next = tok;
                 v.type = mln_expr_type_null;
@@ -549,12 +565,12 @@ begin:
     is_true = mln_expr_val_is_true(&v);
     mln_expr_val_cleanup(&v);
 
-    if (next->type != FT_EOF) { tok = *next; next->type = FT_EOF; } else expr_scan_next(s, &tok);
+    if (next->type != FT_EOF) { expr_ft_move(&tok, next); } else expr_scan_next(s, &tok);
     if (tok.type != FT_DO) return MLN_EXPR_RET_ERR;
 
     if (is_true) {
         while (1) {
-            if (next->type != FT_EOF) { tok = *next; next->type = FT_EOF; } else expr_scan_next(s, &tok);
+            if (next->type != FT_EOF) { expr_ft_move(&tok, next); } else expr_scan_next(s, &tok);
             if (tok.type == FT_END) break;
             *next = tok;
             v.type = mln_expr_type_null;
@@ -568,7 +584,7 @@ begin:
     } else {
         count = 0;
         while (1) {
-            if (next->type != FT_EOF) { tok = *next; next->type = FT_EOF; } else expr_scan_next(s, &tok);
+            if (next->type != FT_EOF) { expr_ft_move(&tok, next); } else expr_scan_next(s, &tok);
             if (tok.type == FT_LOOP) ++count;
             else if (tok.type == FT_EOF) return MLN_EXPR_RET_ERR;
             else if (tok.type == FT_END) { if (count-- == 0) break; }

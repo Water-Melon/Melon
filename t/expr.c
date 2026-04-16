@@ -1815,6 +1815,113 @@ static void test_stability_complex_loop(void)
     PASS();
 }
 
+/* =====================================================================
+ * Error handling tests (review feedback fixes)
+ *
+ * These verify that malformed expressions properly return NULL (error)
+ * instead of silently succeeding with a partial/wrong parse.
+ * ===================================================================== */
+
+/* Test: unterminated string should return NULL (FT_ERR from scanner) */
+static void test_err_unterminated_string(void)
+{
+    TEST("error: unterminated double-quoted string");
+    mln_string_t exp = mln_string("\"hello");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for unterminated string"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: invalid escape sequence in string should return NULL */
+static void test_err_invalid_escape(void)
+{
+    TEST("error: invalid escape sequence in string");
+    mln_string_t exp = mln_string("\"hello\\z\"");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for invalid escape"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: 0x with no hex digits should return NULL (FT_ERR) */
+static void test_err_hex_no_digits(void)
+{
+    TEST("error: 0x with no hex digits");
+    mln_string_t exp = mln_string("0x");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for 0x without digits"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: 0X followed by non-hex char should return NULL */
+static void test_err_hex_no_digits_eof(void)
+{
+    TEST("error: 0X followed by non-hex");
+    mln_string_t exp = mln_string("0Xzz");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for 0X with no hex digits"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: unknown/unhandled character (e.g. '@') should return NULL */
+static void test_err_unknown_char(void)
+{
+    TEST("error: unknown character '@'");
+    mln_string_t exp = mln_string("@");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for unknown char"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: stray 'then' keyword (not preceded by 'if') should return NULL */
+static void test_err_stray_then(void)
+{
+    TEST("error: stray 'then' keyword");
+    mln_string_t exp = mln_string("then 42");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for stray then"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: stray 'fi' keyword should return NULL */
+static void test_err_stray_fi(void)
+{
+    TEST("error: stray 'fi' keyword");
+    mln_string_t exp = mln_string("fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for stray fi"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: stray 'else' keyword should return NULL */
+static void test_err_stray_else(void)
+{
+    TEST("error: stray 'else' keyword");
+    mln_string_t exp = mln_string("else 'hello'");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for stray else"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: stray 'do' keyword should return NULL */
+static void test_err_stray_do(void)
+{
+    TEST("error: stray 'do' keyword");
+    mln_string_t exp = mln_string("do 42 end");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for stray do"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+/* Test: stray 'end' keyword should return NULL */
+static void test_err_stray_end(void)
+{
+    TEST("error: stray 'end' keyword");
+    mln_string_t exp = mln_string("end");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for stray end"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
 int main(void)
 {
     printf("=== mln_expr tests ===\n");
@@ -1921,6 +2028,18 @@ int main(void)
     /* Complex stability */
     test_stability_complex();
     test_stability_complex_loop();
+
+    /* Error handling tests (review feedback fixes) */
+    test_err_unterminated_string();
+    test_err_invalid_escape();
+    test_err_hex_no_digits();
+    test_err_hex_no_digits_eof();
+    test_err_unknown_char();
+    test_err_stray_then();
+    test_err_stray_fi();
+    test_err_stray_else();
+    test_err_stray_do();
+    test_err_stray_end();
 
     printf("\n=== Results: %d/%d passed ===\n", pass_count, test_count);
     return (pass_count == test_count) ? 0 : 1;
