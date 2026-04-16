@@ -241,16 +241,16 @@ MLN_FUNC(static inline, int, mln_lex_putchar, \
         lex->result_pos = lex->result_buf;
     }
     if (lex->result_pos >= lex->result_buf+lex->result_buf_len) {
-        mln_u64_t len = lex->result_buf_len + 1;
-        lex->result_buf_len += (len>>1);
+        mln_u64_t len = lex->result_buf_len;
+        lex->result_buf_len <<= 1;
         mln_u8ptr_t tmp = lex->result_buf;
         if ((lex->result_buf = (mln_u8ptr_t)mln_alloc_re(lex->pool, tmp, lex->result_buf_len)) == NULL) {
             lex->result_buf = tmp;
-            lex->result_buf_len = len - 1;
+            lex->result_buf_len = len;
             lex->error = MLN_LEX_ENMEM;
             return MLN_ERR;
         }
-        lex->result_pos = lex->result_buf + len - 1;
+        lex->result_pos = lex->result_buf + len;
     }
     *(lex->result_pos)++ = (mln_u8_t)c;
     return 0;
@@ -301,25 +301,111 @@ again:
     return (char)(*(in->pos)++);
 })
 
-MLN_FUNC(static inline, int, mln_lex_is_letter, (char c), (c), {
-    if (c == '_' || mln_isalpha(c))
-        return 1;
-    return 0;
-})
+/*
+ * Character classification lookup table for O(1) checks.
+ * Bit 0: letter (alpha or underscore)
+ * Bit 1: digit (0-9)
+ * Bit 2: hex digit
+ * Bit 3: octal digit
+ * Bit 4: letter or digit
+ */
+#define MLN_LEX_C_LETTER   0x01
+#define MLN_LEX_C_DIGIT    0x02
+#define MLN_LEX_C_HEX      0x04
+#define MLN_LEX_C_OCT      0x08
+#define MLN_LEX_C_LETDIG   0x10
+#define MLN_LEX_HANDLER_TBL_SIZE 128
 
-MLN_FUNC(static inline, int, mln_lex_is_oct, (char c), (c), {
-    if (c >= '0' && c < '8')
-        return 1;
-    return 0;
-})
+static const mln_u8_t mln_lex_char_class[256] = {
+    /* 0x00-0x0F */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    /* 0x10-0x1F */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    /* 0x20-0x2F: SP ! " # $ % & ' ( ) * + , - . / */
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    /* '0'-'7': DIGIT|HEX|OCT|LETDIG */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_OCT|MLN_LEX_C_LETDIG, /* 0 */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_OCT|MLN_LEX_C_LETDIG, /* 1 */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_OCT|MLN_LEX_C_LETDIG, /* 2 */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_OCT|MLN_LEX_C_LETDIG, /* 3 */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_OCT|MLN_LEX_C_LETDIG, /* 4 */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_OCT|MLN_LEX_C_LETDIG, /* 5 */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_OCT|MLN_LEX_C_LETDIG, /* 6 */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_OCT|MLN_LEX_C_LETDIG, /* 7 */
+    /* '8'-'9': DIGIT|HEX|LETDIG */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* 8 */
+    MLN_LEX_C_DIGIT|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* 9 */
+    /* 0x3A-0x3F: : ; < = > ? */
+    0,0,0,0,0,0,
+    /* 0x40: @ */
+    0,
+    /* 'A'-'F': LETTER|HEX|LETDIG */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* A */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* B */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* C */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* D */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* E */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* F */
+    /* 'G'-'Z': LETTER|LETDIG */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* G */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* H */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* I */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* J */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* K */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* L */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* M */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* N */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* O */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* P */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* Q */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* R */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* S */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* T */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* U */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* V */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* W */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* X */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* Y */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* Z */
+    /* 0x5B-0x5E: [ \ ] ^ */
+    0,0,0,0,
+    /* '_': LETTER|LETDIG */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG,
+    /* 0x60: ` */
+    0,
+    /* 'a'-'f': LETTER|HEX|LETDIG */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* a */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* b */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* c */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* d */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* e */
+    MLN_LEX_C_LETTER|MLN_LEX_C_HEX|MLN_LEX_C_LETDIG, /* f */
+    /* 'g'-'z': LETTER|LETDIG */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* g */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* h */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* i */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* j */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* k */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* l */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* m */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* n */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* o */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* p */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* q */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* r */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* s */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* t */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* u */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* v */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* w */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* x */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* y */
+    MLN_LEX_C_LETTER|MLN_LEX_C_LETDIG, /* z */
+    /* 0x7B-0xFF: all zeros */
+};
 
-MLN_FUNC(static inline, int, mln_lex_is_hex, (char c), (c), {
-    if (mln_isdigit(c) || \
-        (c >= 'a' && c <= 'f') || \
-        (c >= 'A' && c <= 'F'))
-        return 1;
-    return 0;
-})
+#define mln_lex_is_letter(c) (mln_lex_char_class[(mln_u8_t)(c)] & MLN_LEX_C_LETTER)
+#define mln_lex_is_oct(c)    (mln_lex_char_class[(mln_u8_t)(c)] & MLN_LEX_C_OCT)
+#define mln_lex_is_hex(c)    (mln_lex_char_class[(mln_u8_t)(c)] & MLN_LEX_C_HEX)
+#define mln_lex_is_letdig(c) (mln_lex_char_class[(mln_u8_t)(c)] & MLN_LEX_C_LETDIG)
 
 
 
@@ -567,6 +653,8 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         {'}',  (lex_hook)PREFIX_NAME##_rbrace_default_handler, NULL},\
         {'~',  (lex_hook)PREFIX_NAME##_dash_default_handler,   NULL} \
     };\
+    SCOPE lex_hook PREFIX_NAME##_handler_tbl[MLN_LEX_HANDLER_TBL_SIZE];\
+    SCOPE void *PREFIX_NAME##_handler_data_tbl[MLN_LEX_HANDLER_TBL_SIZE];\
     \
     MLN_FUNC_VOID(SCOPE, void, PREFIX_NAME##_set_hooks, (mln_lex_t *lex), (lex), {\
         mln_lex_hooks_t *hooks = &(lex->hooks);\
@@ -602,6 +690,15 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
         if (hooks->vertl_handler != NULL)  {PREFIX_NAME##_handlers[29].handler = hooks->vertl_handler; PREFIX_NAME##_handlers[29].data = hooks->vertl_data; }\
         if (hooks->rbrace_handler != NULL) {PREFIX_NAME##_handlers[30].handler = hooks->rbrace_handler;PREFIX_NAME##_handlers[30].data = hooks->rbrace_data;}\
         if (hooks->dash_handler != NULL)   {PREFIX_NAME##_handlers[31].handler = hooks->dash_handler;  PREFIX_NAME##_handlers[31].data = hooks->dash_data;  }\
+        memset(PREFIX_NAME##_handler_tbl, 0, sizeof(PREFIX_NAME##_handler_tbl));\
+        memset(PREFIX_NAME##_handler_data_tbl, 0, sizeof(PREFIX_NAME##_handler_data_tbl));\
+        {\
+            mln_s32_t __i, __end = sizeof(PREFIX_NAME##_handlers)/sizeof(mln_spechar_t);\
+            for (__i = 0; __i < __end; ++__i) {\
+                PREFIX_NAME##_handler_tbl[(int)PREFIX_NAME##_handlers[__i].sc] = PREFIX_NAME##_handlers[__i].handler;\
+                PREFIX_NAME##_handler_data_tbl[(int)PREFIX_NAME##_handlers[__i].sc] = PREFIX_NAME##_handlers[__i].data;\
+            }\
+        }\
     })\
     \
     MLN_FUNC(SCOPE, PREFIX_NAME##_struct_t *, PREFIX_NAME##_new, (mln_lex_t *lex, enum PREFIX_NAME##_enum type), (lex, type), {\
@@ -657,12 +754,8 @@ PREFIX_NAME##_type_t PREFIX_NAME##_token_type_array[] = {           \
     })\
     \
     MLN_FUNC(static inline, PREFIX_NAME##_struct_t *, PREFIX_NAME##_process_spec_char, (mln_lex_t *lex, char c), (lex, c), {\
-        mln_s32_t i;\
-        mln_s32_t end = sizeof(PREFIX_NAME##_handlers)/sizeof(mln_spechar_t);\
-        for (i = 0; i<end; ++i) {\
-            if (c == PREFIX_NAME##_handlers[i].sc) {\
-                return (PREFIX_NAME##_struct_t *)PREFIX_NAME##_handlers[i].handler(lex, PREFIX_NAME##_handlers[i].data);\
-            }\
+        if ((mln_u8_t)c < MLN_LEX_HANDLER_TBL_SIZE && PREFIX_NAME##_handler_tbl[(mln_u8_t)c] != NULL) {\
+            return (PREFIX_NAME##_struct_t *)PREFIX_NAME##_handler_tbl[(mln_u8_t)c](lex, PREFIX_NAME##_handler_data_tbl[(mln_u8_t)c]);\
         }\
         mln_lex_error_set(lex, MLN_LEX_EINVCHAR);\
         return NULL;\
@@ -698,7 +791,7 @@ lp:\
             default:\
                 {\
                     if (mln_lex_is_letter(c)) {\
-                        while (mln_lex_is_letter(c) || mln_isdigit(c)) {\
+                        while (mln_lex_is_letdig(c)) {\
                             if (mln_lex_putchar(lex, c) == MLN_ERR) return NULL;\
                             c = mln_lex_getchar(lex);\
                             if (c == MLN_ERR) return NULL;\
@@ -1128,7 +1221,7 @@ goon:\
         }\
     } else {\
         (lex_ptr) = mln_lex_init((attr_ptr));\
-        if ((lex_ptr) != NULL && (attr_ptr)->hooks != NULL) PREFIX_NAME##_set_hooks((lex_ptr));\
+        if ((lex_ptr) != NULL) PREFIX_NAME##_set_hooks((lex_ptr));\
     }
 
 /*
