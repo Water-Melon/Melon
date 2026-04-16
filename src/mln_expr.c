@@ -398,8 +398,11 @@ again:
         {
             char num[32];
             int base = (tok.type == FT_DEC) ? 10 : (tok.type == FT_OCT) ? 8 : 16;
-            mln_size_t len = tok.len >= sizeof(num)-1? sizeof(num)-1: tok.len;
-            memcpy(num, tok.text, len); num[len] = 0;
+            if (tok.len >= sizeof(num)) {
+                if (ns_str != NULL) mln_string_free(ns_str);
+                return MLN_EXPR_RET_ERR;
+            }
+            memcpy(num, tok.text, tok.len); num[tok.len] = 0;
             ret->type = mln_expr_type_int;
             ret->data.i = (mln_s64_t)strtoll(num, &endp, base);
             ret->free = NULL;
@@ -409,8 +412,11 @@ again:
         case FT_REAL:
         {
             char num[64];
-            mln_size_t len = tok.len >= sizeof(num)-1? sizeof(num)-1: tok.len;
-            memcpy(num, tok.text, len); num[len] = 0;
+            if (tok.len >= sizeof(num)) {
+                if (ns_str != NULL) mln_string_free(ns_str);
+                return MLN_EXPR_RET_ERR;
+            }
+            memcpy(num, tok.text, tok.len); num[tok.len] = 0;
             ret->type = mln_expr_type_real;
             ret->data.r = strtod(num, &endp);
             ret->free = NULL;
@@ -711,16 +717,16 @@ again:
             {
                 int base = (type == EXPR_TK_DEC) ? 10 : (type == EXPR_TK_OCT) ? 8 : 16;
                 char num[32];
-                mln_size_t len = name->text->len >= sizeof(num)-1? sizeof(num)-1: name->text->len;
-                memcpy(num, name->text->data, len); num[len] = 0;
+                if (name->text->len >= sizeof(num)) { mln_expr_free(name); if (namespace) mln_string_free(namespace); return MLN_EXPR_RET_ERR; }
+                memcpy(num, name->text->data, name->text->len); num[name->text->len] = 0;
                 ret->type = mln_expr_type_int; ret->data.i = (mln_s64_t)strtoll(num, &endp, base); ret->free = NULL;
                 break;
             }
             case EXPR_TK_REAL:
             {
                 char num[64];
-                mln_size_t len = name->text->len >= sizeof(num)-1? sizeof(num)-1: name->text->len;
-                memcpy(num, name->text->data, len); num[len] = 0;
+                if (name->text->len >= sizeof(num)) { mln_expr_free(name); if (namespace) mln_string_free(namespace); return MLN_EXPR_RET_ERR; }
+                memcpy(num, name->text->data, name->text->len); num[name->text->len] = 0;
                 ret->type = mln_expr_type_real; ret->data.r = strtod(num, &endp); ret->free = NULL;
                 break;
             }

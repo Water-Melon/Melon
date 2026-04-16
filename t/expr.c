@@ -28,6 +28,7 @@ static mln_expr_val_t *
 simple_var_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
     mln_string_t *s;
+    (void)ns; (void)args; (void)data;
     if (is_func) return NULL;
     s = mln_string_dup(name);
     if (s == NULL) return NULL;
@@ -41,6 +42,7 @@ concat_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *a
 {
     mln_expr_val_t *v, *p;
     int i;
+    (void)ns; (void)data;
     mln_string_t *s1 = NULL, *s2, *s3;
 
     if (!is_func) {
@@ -73,6 +75,7 @@ concat_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *a
 static mln_expr_val_t *
 if_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
+    (void)ns; (void)args; (void)data;
     mln_string_t true_str = mln_string("cond_true");
     mln_string_t then_var = mln_string("result_then");
     mln_string_t else_var = mln_string("result_else");
@@ -108,6 +111,7 @@ static int loop_counter = 0;
 static mln_expr_val_t *
 loop_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
+    (void)ns; (void)args; (void)data;
     mln_string_t cond_name = mln_string("cond");
     mln_string_t body_name = mln_string("body");
     mln_u8_t b;
@@ -136,6 +140,7 @@ loop_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *arg
 static mln_expr_val_t *
 ns_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
+    (void)args; (void)data;
     if (is_func) {
         /* For namespace function calls, return namespace+name concatenated */
         if (ns != NULL) {
@@ -179,6 +184,7 @@ static void udata_free_fn(void *p)
 static mln_expr_val_t *
 ref_name_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
+    (void)ns; (void)args; (void)data;
     mln_string_t *ref;
     mln_expr_val_t *v;
 
@@ -781,9 +787,8 @@ static void test_whitespace_only(void)
 static void test_if_with_func(void)
 {
     TEST("if with function call in body");
-    mln_string_t exp = mln_string("if cond_true then concat('yes', '!') fi");
-    /* Need a handler that handles both if conditions and concat */
-    /* Use a combined handler */
+    /* Use a boolean literal so the condition exercises real if evaluation. */
+    mln_string_t exp = mln_string("if true then concat('yes', '!') fi");
     mln_expr_val_t *v = mln_expr_run(&exp, concat_handler, NULL);
     if (v == NULL) { FAIL("run returned NULL"); return; }
     if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
@@ -989,6 +994,7 @@ static int complex_counter = 0;
 static mln_expr_val_t *
 complex_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
+    (void)data;
     mln_string_t s_x = mln_string("x");
     mln_string_t s_y = mln_string("y");
     mln_string_t s_z = mln_string("z");
@@ -1131,6 +1137,7 @@ static int complex_loop_max = 0;
 static mln_expr_val_t *
 complex_loop_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
 {
+    (void)data;
     mln_string_t s_cond = mln_string("cond");
     mln_string_t s_body = mln_string("body");
     mln_string_t s_flag = mln_string("flag");
@@ -2031,6 +2038,37 @@ static void test_cb_name_ref_function(void)
     PASS();
 }
 
+/* --- Oversized literal rejection tests --- */
+static void test_err_oversized_int(void)
+{
+    TEST("error: oversized integer literal (>=32 chars)");
+    /* 32 digit number exceeds the 32-byte buffer */
+    mln_string_t exp = mln_string("12345678901234567890123456789012");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for oversized int"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+static void test_err_oversized_real(void)
+{
+    TEST("error: oversized real literal (>=64 chars)");
+    /* 64+ char real exceeds the 64-byte buffer */
+    mln_string_t exp = mln_string("1.234567890123456789012345678901234567890123456789012345678901234");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for oversized real"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
+static void test_err_oversized_hex(void)
+{
+    TEST("error: oversized hex literal (>=32 chars)");
+    /* 0x + 31 hex digits = 33 chars, exceeds 32-byte buffer */
+    mln_string_t exp = mln_string("0x1234567890abcdef1234567890abcde");
+    mln_expr_val_t *v = mln_expr_run(&exp, simple_var_handler, NULL);
+    if (v != NULL) { FAIL("expected NULL for oversized hex"); mln_expr_val_free(v); return; }
+    PASS();
+}
+
 int main(void)
 {
     printf("=== mln_expr tests ===\n");
@@ -2157,6 +2195,11 @@ int main(void)
     test_leading_colon_number();
     test_cb_name_ref_variable();
     test_cb_name_ref_function();
+
+    /* Robustness tests (review feedback round 3) */
+    test_err_oversized_int();
+    test_err_oversized_real();
+    test_err_oversized_hex();
 
     printf("\n=== Results: %d/%d passed ===\n", pass_count, test_count);
     return (pass_count == test_count) ? 0 : 1;
