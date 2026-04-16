@@ -931,6 +931,890 @@ static void test_stability_all_types(void)
     PASS();
 }
 
+/*
+ * Helper: extract real args from expr args array.
+ * The expr parser inserts null entries as comma separators, so f(a, b) produces
+ * [a_val, null_sep, b_val]. This helper collects pointers to non-null entries.
+ * Returns the number of real arguments.
+ */
+static int extract_args(mln_array_t *args, mln_expr_val_t **out, int max_out)
+{
+    mln_expr_val_t *elts = (mln_expr_val_t *)mln_array_elts(args);
+    int total = (int)mln_array_nelts(args);
+    int count = 0, i;
+    for (i = 0; i < total && count < max_out; i++) {
+        if (elts[i].type != mln_expr_type_null)
+            out[count++] = &elts[i];
+    }
+    return count;
+}
+
+/* ======================================================================
+ * Universal handler for complex combination tests.
+ * Variables:  x -> int 10, y -> int 20, z -> int 0, flag -> bool true,
+ *             off -> bool false, msg -> string "hello", tag -> string "world",
+ *             counter -> tracks call count (int), anything else -> string(name)
+ * Functions:  add(a,b) -> int a+b, mul(a,b) -> int a*b,
+ *             cat(args...) -> string concatenation,
+ *             iif(cond,a,b) -> a if cond true else b,
+ *             len(s) -> int string length,
+ *             upper(s) -> string (returns "UPPER:" + s),
+ *             identity(v) -> v unchanged
+ * Namespace:  returns "NS(ns):name" string
+ * ====================================================================== */
+static int complex_counter = 0;
+
+static mln_expr_val_t *
+complex_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
+{
+    mln_string_t s_x = mln_string("x");
+    mln_string_t s_y = mln_string("y");
+    mln_string_t s_z = mln_string("z");
+    mln_string_t s_flag = mln_string("flag");
+    mln_string_t s_off = mln_string("off");
+    mln_string_t s_msg = mln_string("msg");
+    mln_string_t s_tag = mln_string("tag");
+    mln_string_t s_counter = mln_string("counter");
+
+    /* --- Namespace handling --- */
+    if (ns != NULL) {
+        /* Build "NS(ns):name" or for functions "NS(ns):name()" */
+        mln_string_t prefix = mln_string("NS(");
+        mln_string_t mid = mln_string("):");
+        mln_string_t *s1 = mln_string_strcat(&prefix, ns);
+        mln_string_t *s2 = mln_string_strcat(s1, &mid);
+        mln_string_free(s1);
+        mln_string_t *s3 = mln_string_strcat(s2, name);
+        mln_string_free(s2);
+        mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, s3, NULL);
+        mln_string_free(s3);
+        return r;
+    }
+
+    if (!is_func) {
+        /* Variable resolution */
+        if (!mln_string_strcmp(name, &s_x)) { mln_s64_t v = 10; return mln_expr_val_new(mln_expr_type_int, &v, NULL); }
+        if (!mln_string_strcmp(name, &s_y)) { mln_s64_t v = 20; return mln_expr_val_new(mln_expr_type_int, &v, NULL); }
+        if (!mln_string_strcmp(name, &s_z)) { mln_s64_t v = 0; return mln_expr_val_new(mln_expr_type_int, &v, NULL); }
+        if (!mln_string_strcmp(name, &s_flag)) { mln_u8_t v = 1; return mln_expr_val_new(mln_expr_type_bool, &v, NULL); }
+        if (!mln_string_strcmp(name, &s_off)) { mln_u8_t v = 0; return mln_expr_val_new(mln_expr_type_bool, &v, NULL); }
+        if (!mln_string_strcmp(name, &s_counter)) {
+            complex_counter++;
+            mln_s64_t v = complex_counter;
+            return mln_expr_val_new(mln_expr_type_int, &v, NULL);
+        }
+        if (!mln_string_strcmp(name, &s_msg)) {
+            mln_string_t tmp = mln_string("hello");
+            mln_string_t *s = mln_string_dup(&tmp);
+            mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, s, NULL);
+            mln_string_free(s);
+            return r;
+        }
+        if (!mln_string_strcmp(name, &s_tag)) {
+            mln_string_t tmp = mln_string("world");
+            mln_string_t *s = mln_string_dup(&tmp);
+            mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, s, NULL);
+            mln_string_free(s);
+            return r;
+        }
+        /* default: return string of the variable name */
+        {
+            mln_string_t *s = mln_string_dup(name);
+            if (s == NULL) return NULL;
+            mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, s, NULL);
+            mln_string_free(s);
+            return r;
+        }
+    }
+
+    /* --- Function handling --- */
+    mln_string_t f_add = mln_string("add");
+    mln_string_t f_mul = mln_string("mul");
+    mln_string_t f_cat = mln_string("cat");
+    mln_string_t f_iif = mln_string("iif");
+    mln_string_t f_len = mln_string("len");
+    mln_string_t f_upper = mln_string("upper");
+    mln_string_t f_identity = mln_string("identity");
+
+    mln_expr_val_t *real_args[32];
+    int n = extract_args(args, real_args, 32);
+
+    if (!mln_string_strcmp(name, &f_add)) {
+        if (n >= 2 && real_args[0]->type == mln_expr_type_int && real_args[1]->type == mln_expr_type_int) {
+            mln_s64_t v = real_args[0]->data.i + real_args[1]->data.i;
+            return mln_expr_val_new(mln_expr_type_int, &v, NULL);
+        }
+        return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+    }
+    if (!mln_string_strcmp(name, &f_mul)) {
+        if (n >= 2 && real_args[0]->type == mln_expr_type_int && real_args[1]->type == mln_expr_type_int) {
+            mln_s64_t v = real_args[0]->data.i * real_args[1]->data.i;
+            return mln_expr_val_new(mln_expr_type_int, &v, NULL);
+        }
+        return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+    }
+    if (!mln_string_strcmp(name, &f_cat)) {
+        mln_string_t *acc = NULL;
+        int i;
+        for (i = 0; i < n; i++) {
+            if (real_args[i]->type != mln_expr_type_string) continue;
+            if (acc == NULL) { acc = mln_string_ref(real_args[i]->data.s); continue; }
+            mln_string_t *tmp = mln_string_strcat(acc, real_args[i]->data.s);
+            mln_string_free(acc);
+            acc = tmp;
+        }
+        if (acc == NULL) return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+        mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, acc, NULL);
+        mln_string_free(acc);
+        return r;
+    }
+    if (!mln_string_strcmp(name, &f_iif)) {
+        if (n >= 3) {
+            int cond = 0;
+            if (real_args[0]->type == mln_expr_type_bool) cond = real_args[0]->data.b;
+            else if (real_args[0]->type == mln_expr_type_int) cond = real_args[0]->data.i != 0;
+            return mln_expr_val_dup(cond ? real_args[1] : real_args[2]);
+        }
+        return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+    }
+    if (!mln_string_strcmp(name, &f_len)) {
+        if (n >= 1 && real_args[0]->type == mln_expr_type_string) {
+            mln_s64_t v = (mln_s64_t)real_args[0]->data.s->len;
+            return mln_expr_val_new(mln_expr_type_int, &v, NULL);
+        }
+        mln_s64_t v = 0;
+        return mln_expr_val_new(mln_expr_type_int, &v, NULL);
+    }
+    if (!mln_string_strcmp(name, &f_upper)) {
+        if (n >= 1 && real_args[0]->type == mln_expr_type_string) {
+            mln_string_t prefix = mln_string("UPPER:");
+            mln_string_t *s = mln_string_strcat(&prefix, real_args[0]->data.s);
+            mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, s, NULL);
+            mln_string_free(s);
+            return r;
+        }
+        return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+    }
+    if (!mln_string_strcmp(name, &f_identity)) {
+        if (n >= 1) return mln_expr_val_dup(real_args[0]);
+        return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+    }
+    /* unknown function: return null */
+    return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+}
+
+/* --- Loop+counter handler for complex loop tests --- */
+static int complex_loop_max = 0;
+
+static mln_expr_val_t *
+complex_loop_handler(mln_string_t *ns, mln_string_t *name, int is_func, mln_array_t *args, void *data)
+{
+    mln_string_t s_cond = mln_string("cond");
+    mln_string_t s_body = mln_string("body");
+    mln_string_t s_flag = mln_string("flag");
+    mln_string_t s_off = mln_string("off");
+    mln_string_t s_x = mln_string("x");
+    mln_string_t s_msg = mln_string("msg");
+
+    /* namespace */
+    if (ns != NULL) {
+        mln_string_t *s = mln_string_dup(name);
+        if (s == NULL) return NULL;
+        mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, s, NULL);
+        mln_string_free(s);
+        return r;
+    }
+
+    if (!is_func) {
+        if (!mln_string_strcmp(name, &s_cond)) {
+            mln_u8_t b = (complex_counter < complex_loop_max) ? 1 : 0;
+            return mln_expr_val_new(mln_expr_type_bool, &b, NULL);
+        }
+        if (!mln_string_strcmp(name, &s_body)) {
+            complex_counter++;
+            mln_s64_t v = complex_counter;
+            return mln_expr_val_new(mln_expr_type_int, &v, NULL);
+        }
+        if (!mln_string_strcmp(name, &s_flag)) { mln_u8_t b = 1; return mln_expr_val_new(mln_expr_type_bool, &b, NULL); }
+        if (!mln_string_strcmp(name, &s_off)) { mln_u8_t b = 0; return mln_expr_val_new(mln_expr_type_bool, &b, NULL); }
+        if (!mln_string_strcmp(name, &s_x)) { mln_s64_t v = 10; return mln_expr_val_new(mln_expr_type_int, &v, NULL); }
+        if (!mln_string_strcmp(name, &s_msg)) {
+            mln_string_t tmp = mln_string("hello");
+            mln_string_t *s = mln_string_dup(&tmp);
+            mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, s, NULL);
+            mln_string_free(s);
+            return r;
+        }
+        {
+            mln_string_t *s = mln_string_dup(name);
+            if (s == NULL) return NULL;
+            mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, s, NULL);
+            mln_string_free(s);
+            return r;
+        }
+    }
+
+    /* functions: add, cat, identity */
+    mln_string_t f_add = mln_string("add");
+    mln_string_t f_cat = mln_string("cat");
+    mln_string_t f_identity = mln_string("identity");
+    mln_expr_val_t *real_args[32];
+    int n = extract_args(args, real_args, 32);
+
+    if (!mln_string_strcmp(name, &f_add)) {
+        if (n >= 2 && real_args[0]->type == mln_expr_type_int && real_args[1]->type == mln_expr_type_int) {
+            mln_s64_t v = real_args[0]->data.i + real_args[1]->data.i;
+            return mln_expr_val_new(mln_expr_type_int, &v, NULL);
+        }
+        return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+    }
+    if (!mln_string_strcmp(name, &f_cat)) {
+        mln_string_t *acc = NULL;
+        int i;
+        for (i = 0; i < n; i++) {
+            if (real_args[i]->type != mln_expr_type_string) continue;
+            if (acc == NULL) { acc = mln_string_ref(real_args[i]->data.s); continue; }
+            mln_string_t *tmp = mln_string_strcat(acc, real_args[i]->data.s);
+            mln_string_free(acc);
+            acc = tmp;
+        }
+        if (acc == NULL) return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+        mln_expr_val_t *r = mln_expr_val_new(mln_expr_type_string, acc, NULL);
+        mln_string_free(acc);
+        return r;
+    }
+    if (!mln_string_strcmp(name, &f_identity)) {
+        if (n >= 1) return mln_expr_val_dup(real_args[0]);
+        return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+    }
+    return mln_expr_val_new(mln_expr_type_null, NULL, NULL);
+}
+
+/* =====================================================================
+ * Complex combination tests
+ * ===================================================================== */
+
+/* Test 1: if-then with nested function calls inside both branches */
+static void test_complex_if_with_nested_funcs(void)
+{
+    TEST("complex: if-then-else with nested function calls");
+    /* if flag then cat(upper(msg), ' ', tag) else cat('no', 'pe') fi
+     * flag=true -> cat(upper("hello"), " ", "world") = cat("UPPER:hello", " ", "world") = "UPPER:hello world"
+     */
+    mln_string_t exp = mln_string("if flag then cat(upper(msg), ' ', tag) else cat('no', 'pe') fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("UPPER:hello world");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 2: if false branch with deeply nested functions */
+static void test_complex_if_false_nested_funcs(void)
+{
+    TEST("complex: if-else false branch with deeply nested funcs");
+    /* if off then identity(x) else add(mul(x, y), add(x, y)) fi
+     * off=false -> add(mul(10,20), add(10,20)) = add(200, 30) = 230
+     */
+    mln_string_t exp = mln_string("if off then identity(x) else add(mul(x, y), add(x, y)) fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 230) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 3: Nested if-else-if (3 levels deep) */
+static void test_complex_triple_nested_if(void)
+{
+    TEST("complex: triple nested if-else");
+    /* if flag then
+     *   if flag then
+     *     if off then 'deep_wrong' else cat('triple', '_', 'nested') fi
+     *   else 'mid_wrong' fi
+     * else 'outer_wrong' fi
+     * => cat("triple","_","nested") = "triple_nested"
+     */
+    mln_string_t exp = mln_string(
+        "if flag then "
+            "if flag then "
+                "if off then 'deep_wrong' else cat('triple', '_', 'nested') fi "
+            "else 'mid_wrong' fi "
+        "else 'outer_wrong' fi"
+    );
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("triple_nested");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 4: Multiple expressions with if in the middle */
+static void test_complex_multi_expr_with_if(void)
+{
+    TEST("complex: multiple expressions with if in middle");
+    /* 42 if flag then add(x, y) fi 'end_marker'
+     * 42 -> ret=42, if flag then add(10,20) fi -> ret=30, 'end_marker' -> ret='end_marker'
+     */
+    mln_string_t exp = mln_string("42 if flag then add(x, y) fi 'end_marker'");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("end_marker");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 5: Loop containing if-else in body */
+static void test_complex_loop_with_if_body(void)
+{
+    TEST("complex: loop containing if-else in body");
+    /* loop cond do if flag then body else 0 fi end
+     * loops 3 times, each time flag=true so body increments counter
+     */
+    complex_counter = 0;
+    complex_loop_max = 3;
+    mln_string_t exp = mln_string("loop cond do if flag then body else 'skip' fi end");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_loop_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 3) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    if (complex_counter != 3) { FAIL("counter wrong"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 6: Loop containing function call in body */
+static void test_complex_loop_with_func_body(void)
+{
+    TEST("complex: loop with function calls in body");
+    /* loop cond do add(body, x) end -> loops 4 times, last = add(4, 10) = 14 */
+    complex_counter = 0;
+    complex_loop_max = 4;
+    mln_string_t exp = mln_string("loop cond do add(body, x) end");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_loop_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 14) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 7: Function calling function calling function (4 levels) with mixed types */
+static void test_complex_deep_func_chain(void)
+{
+    TEST("complex: 4-level deep function chain with mixed types");
+    /* add(add(add(x, y), mul(x, x)), add(y, y))
+     * = add(add(30, 100), 40) = add(130, 40) = 170
+     */
+    mln_string_t exp = mln_string("add(add(add(x, y), mul(x, x)), add(y, y))");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 170) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 8: String concatenation with escapes inside if */
+static void test_complex_string_escape_in_if(void)
+{
+    TEST("complex: string escapes inside if branches");
+    /* if flag then cat("hello\\nworld", '\\t', "end") fi
+     * -> cat("hello\nworld", "\t", "end") = "hello\nworld\tend"
+     */
+    mln_string_t exp = mln_string("if flag then cat(\"hello\\nworld\", '\\t', \"end\") fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("hello\nworld\tend");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 9: Namespace + function + if combination */
+static void test_complex_ns_func_if(void)
+{
+    TEST("complex: namespace + function + if combination");
+    /* if flag then mod:sub:identity(cat('ns', '_', 'test')) fi
+     * flag=true, mod:sub:identity -> handler sees ns="mod:sub", name="identity"
+     * -> returns "NS(mod:sub):identity" (namespace handler doesn't call args)
+     */
+    mln_string_t exp = mln_string("if flag then mod:sub:identity(cat('ns', '_', 'test')) fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("NS(mod:sub):identity");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 10: Multiple if-else blocks sequentially */
+static void test_complex_sequential_ifs(void)
+{
+    TEST("complex: multiple sequential if blocks");
+    /* if off then 'skip1' else 'first' fi  if flag then add(x, y) fi  if off then 'skip2' fi
+     * -> 'first', then 30, then null (no else). Last non-trivial = depends on impl.
+     * Actually last expr result is kept. 'if off then skip2 fi' with no else => null stays from loop.
+     * Last result should be what the loop last produced.
+     */
+    mln_string_t exp = mln_string("if off then 'skip1' else 'first' fi if flag then add(x, y) fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 30) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 11: if with constants (hex, oct, real) in branches */
+static void test_complex_if_with_all_constants(void)
+{
+    TEST("complex: if branches with hex, oct, real constants");
+    /* if flag then 0xff else 0777 fi -> flag=true -> 255 */
+    mln_string_t exp = mln_string("if flag then 0xff else 0777 fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 255) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+
+    /* if off then 0xff else 3.14 fi -> off=false -> 3.14 */
+    mln_string_t exp2 = mln_string("if off then 0xff else 3.14 fi");
+    v = mln_expr_run(&exp2, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL (2)"); return; }
+    if (v->type != mln_expr_type_real) { FAIL("wrong type (2)"); mln_expr_val_free(v); return; }
+    if (v->data.r < 3.13 || v->data.r > 3.15) { FAIL("wrong value (2)"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 12: Long expression - function chain with many args and nested calls */
+static void test_complex_long_func_chain(void)
+{
+    TEST("complex: long function chain with many args");
+    /* cat(cat('a','b','c'), cat('d','e'), cat(upper('f'), cat('g','h')), 'i', 'j')
+     * = cat("abc", "de", "UPPER:fgh", "i", "j") = "abcdeUPPER:fghij"
+     */
+    mln_string_t exp = mln_string(
+        "cat(cat('a', 'b', 'c'), cat('d', 'e'), cat(upper('f'), cat('g', 'h')), 'i', 'j')"
+    );
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("abcdeUPPER:fghij");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 13: Loop followed by if */
+static void test_complex_loop_then_if(void)
+{
+    TEST("complex: loop followed by if expression");
+    /* loop cond do body end if flag then 'after_loop' fi
+     * loop runs 2 times, then 'after_loop'
+     */
+    complex_counter = 0;
+    complex_loop_max = 2;
+    mln_string_t exp = mln_string("loop cond do body end if flag then 'after_loop' fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_loop_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("after_loop");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 14: if before loop */
+static void test_complex_if_then_loop(void)
+{
+    TEST("complex: if expression followed by loop");
+    /* if flag then 'before' fi loop cond do body end
+     * flag=true -> 'before', then loop 3 times -> last body=3
+     */
+    complex_counter = 0;
+    complex_loop_max = 3;
+    mln_string_t exp = mln_string("if flag then 'before' fi loop cond do body end");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_loop_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 3) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 15: Very long expression with 10+ mixed elements */
+static void test_complex_very_long_mixed(void)
+{
+    TEST("complex: very long mixed expression (10+ elements)");
+    /* 42 true 'hello' 0xff null 3.14 false 0777 "world\\n" add(x, y) cat('a', 'b') if flag then 'yes' fi
+     * Last result is from 'if flag then yes fi' = "yes"
+     */
+    mln_string_t exp = mln_string(
+        "42 true 'hello' 0xff null 3.14 false 0777 \"world\\n\" add(x, y) cat('a', 'b') if flag then 'yes' fi"
+    );
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("yes");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 16: if with function results as condition (true int) */
+static void test_complex_if_func_condition(void)
+{
+    TEST("complex: if with function result as condition");
+    /* if x then 'nonzero' else 'zero' fi
+     * x=10 (int, truthy) -> 'nonzero'
+     */
+    mln_string_t exp = mln_string("if x then 'nonzero' else 'zero' fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("nonzero");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+
+    /* if z then 'nonzero' else 'zero' fi   z=0 (falsy) */
+    mln_string_t exp2 = mln_string("if z then 'nonzero' else 'zero' fi");
+    v = mln_expr_run(&exp2, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL (2)"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type (2)"); mln_expr_val_free(v); return; }
+    mln_string_t expected2 = mln_string("zero");
+    if (mln_string_strcmp(v->data.s, &expected2)) { FAIL("wrong value (2)"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 17: Deep nested if with else chains */
+static void test_complex_if_else_cascade(void)
+{
+    TEST("complex: if-else cascade (4 levels, alternating true/false)");
+    /* if flag then
+     *   if off then 'L2_wrong' else
+     *     if flag then
+     *       if off then 'L4_wrong' else add(mul(x, y), x) fi
+     *     else 'L3_wrong' fi
+     *   fi
+     * else 'L1_wrong' fi
+     * => add(mul(10,20), 10) = add(200, 10) = 210
+     */
+    mln_string_t exp = mln_string(
+        "if flag then "
+            "if off then 'L2_wrong' else "
+                "if flag then "
+                    "if off then 'L4_wrong' else add(mul(x, y), x) fi "
+                "else 'L3_wrong' fi "
+            "fi "
+        "else 'L1_wrong' fi"
+    );
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 210) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 18: Loop with nested if + func in body */
+static void test_complex_loop_if_func_ns(void)
+{
+    TEST("complex: loop with if + func in body");
+    /* loop cond do
+     *   if flag then body fi
+     * end
+     * loops 2 times, each time flag=true: body increments counter
+     */
+    complex_counter = 0;
+    complex_loop_max = 2;
+    mln_string_t exp = mln_string("loop cond do if flag then body fi end");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_loop_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 2) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 19: Multiple function + namespace + constants in one long expression */
+static void test_complex_mixed_all_features(void)
+{
+    TEST("complex: all features in one expression");
+    /* ns1:ns2:myvar  add(x, y) cat(upper(msg), ' ', tag, '!') 42 if flag then mul(x, x) else 0 fi
+     * Sequence:
+     *   ns1:ns2:myvar -> handler returns NS(ns1:ns2):myvar -> ret
+     *   add(10, 20) -> 30 -> ret
+     *   cat(upper("hello"), " ", "world", "!") -> cat("UPPER:hello", " ", "world", "!") -> "UPPER:hello world!" -> ret
+     *   42 -> ret
+     *   if flag then mul(10,10) else 0 fi -> 100 -> ret
+     * Final result: 100
+     */
+    mln_string_t exp = mln_string(
+        "ns1:ns2:myvar add(x, y) cat(upper(msg), ' ', tag, '!') 42 if flag then mul(x, x) else 0 fi"
+    );
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 100) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 20: Complex expression with all constant types and escapes */
+static void test_complex_all_constants_expr(void)
+{
+    TEST("complex: expression with every constant type");
+    /* 0 0xff 0777 3.14 true false null 'single' "double" "esc\\n\\t" 42
+     * Last result: 42
+     */
+    mln_string_t exp = mln_string("0 0xff 0777 3.14 true false null 'single' \"double\" \"esc\\n\\t\" 42");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_int) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    if (v->data.i != 42) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 21: Function with many args (>8 = beyond MLN_EXPR_DEFAULT_ARGS) */
+static void test_complex_many_func_args(void)
+{
+    TEST("complex: function with >8 arguments (array growth)");
+    /* cat('a','b','c','d','e','f','g','h','i','j') = "abcdefghij" */
+    mln_string_t exp = mln_string("cat('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("abcdefghij");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 22: if with string condition (truthy = non-empty) */
+static void test_complex_if_string_condition(void)
+{
+    TEST("complex: if with string condition (truthy check)");
+    /* if msg then 'truthy' else 'falsy' fi    msg="hello" (non-empty=true) -> 'truthy' */
+    mln_string_t exp = mln_string("if msg then 'truthy' else 'falsy' fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("truthy");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 23: if with null condition (falsy) */
+static void test_complex_if_null_condition(void)
+{
+    TEST("complex: if with null condition (falsy check)");
+    /* if null then 'wrong' else 'correct' fi -> null is falsy -> 'correct' */
+    mln_string_t exp = mln_string("if null then 'wrong' else 'correct' fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("correct");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 24: Very long expression with 20+ tokens */
+static void test_complex_20_token_expr(void)
+{
+    TEST("complex: 20+ token expression with mixed features");
+    /* cat('start', '_') add(x, mul(y, x)) if flag then cat(upper('test'), ':', tag) else 'fail' fi
+     *   cat('start','_') -> "start_" -> ret
+     *   add(10, mul(20,10)) = add(10, 200) = 210 -> ret
+     *   if true then cat("UPPER:test", ":", "world") = "UPPER:test:world" -> ret
+     * Final: "UPPER:test:world"
+     */
+    mln_string_t exp = mln_string(
+        "cat('start', '_') add(x, mul(y, x)) if flag then cat(upper('test'), ':', tag) else 'fail' fi"
+    );
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("UPPER:test:world");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* Test 25: Loop that runs 0 times followed by complex expression */
+static void test_complex_zero_loop_then_expr(void)
+{
+    TEST("complex: zero-iteration loop then complex expression");
+    complex_counter = 100;
+    complex_loop_max = 3;
+    mln_string_t exp = mln_string("loop cond do body end if flag then cat('after', '_', 'zero') fi");
+    mln_expr_val_t *v = mln_expr_run(&exp, complex_loop_handler, NULL);
+    if (v == NULL) { FAIL("run returned NULL"); return; }
+    if (v->type != mln_expr_type_string) { FAIL("wrong type"); mln_expr_val_free(v); return; }
+    mln_string_t expected = mln_string("after_zero");
+    if (mln_string_strcmp(v->data.s, &expected)) { FAIL("wrong value"); mln_expr_val_free(v); return; }
+    mln_expr_val_free(v);
+    PASS();
+}
+
+/* =====================================================================
+ * Complex expression benchmarks
+ * ===================================================================== */
+
+static void test_benchmark_complex_nested_if(void)
+{
+    TEST("benchmark: complex nested if-else with functions");
+    mln_string_t exp = mln_string(
+        "if flag then "
+            "if off then 'wrong' else "
+                "if flag then add(mul(x, y), add(x, y)) else 'wrong' fi "
+            "fi "
+        "else 'wrong' fi"
+    );
+    int iterations = 50000;
+    struct timespec start, end;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+        if (v == NULL) { FAIL("NULL during benchmark"); return; }
+        mln_expr_val_free(v);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    double avg_us = (elapsed / iterations) * 1e6;
+    printf("PASS (%d iters, avg %.3f us/op, %.0f ops/sec)\n", iterations, avg_us, iterations / elapsed);
+    pass_count++;
+}
+
+static void test_benchmark_complex_long_expr(void)
+{
+    TEST("benchmark: long mixed expression (all features)");
+    mln_string_t exp = mln_string(
+        "ns1:ns2:myvar add(x, y) cat(upper(msg), ' ', tag, '!') 42 if flag then mul(x, x) else 0 fi"
+    );
+    int iterations = 50000;
+    struct timespec start, end;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+        if (v == NULL) { FAIL("NULL during benchmark"); return; }
+        mln_expr_val_free(v);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    double avg_us = (elapsed / iterations) * 1e6;
+    printf("PASS (%d iters, avg %.3f us/op, %.0f ops/sec)\n", iterations, avg_us, iterations / elapsed);
+    pass_count++;
+}
+
+static void test_benchmark_complex_loop_if(void)
+{
+    TEST("benchmark: loop with if + body in body");
+    int iterations = 10000;
+    struct timespec start, end;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        complex_counter = 0;
+        complex_loop_max = 3;
+        mln_string_t exp = mln_string("loop cond do if flag then body fi end");
+        mln_expr_val_t *v = mln_expr_run(&exp, complex_loop_handler, NULL);
+        if (v == NULL) { FAIL("NULL during benchmark"); return; }
+        mln_expr_val_free(v);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    double avg_us = (elapsed / iterations) * 1e6;
+    printf("PASS (%d iters, avg %.3f us/op, %.0f ops/sec)\n", iterations, avg_us, iterations / elapsed);
+    pass_count++;
+}
+
+static void test_benchmark_complex_deep_funcs(void)
+{
+    TEST("benchmark: deep func chain (4 levels, 8 args)");
+    mln_string_t exp = mln_string(
+        "cat(cat('a', 'b', 'c'), cat('d', 'e'), cat(upper('f'), cat('g', 'h')), 'i', 'j')"
+    );
+    int iterations = 50000;
+    struct timespec start, end;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (int i = 0; i < iterations; i++) {
+        mln_expr_val_t *v = mln_expr_run(&exp, complex_handler, NULL);
+        if (v == NULL) { FAIL("NULL during benchmark"); return; }
+        mln_expr_val_free(v);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    double avg_us = (elapsed / iterations) * 1e6;
+    printf("PASS (%d iters, avg %.3f us/op, %.0f ops/sec)\n", iterations, avg_us, iterations / elapsed);
+    pass_count++;
+}
+
+/* =====================================================================
+ * Complex expression stability tests
+ * ===================================================================== */
+
+static void test_stability_complex(void)
+{
+    TEST("stability: 5K complex diverse expressions");
+
+    mln_string_t exprs[] = {
+        mln_string("if flag then cat(upper(msg), ' ', tag) else cat('no', 'pe') fi"),
+        mln_string("add(add(add(x, y), mul(x, x)), add(y, y))"),
+        mln_string("cat(cat('a', 'b', 'c'), cat('d', 'e'), 'f')"),
+        mln_string("if off then 'skip' else add(mul(x, y), add(x, y)) fi"),
+        mln_string("ns1:ns2:myvar add(x, y) if flag then mul(x, x) fi"),
+        mln_string("if flag then if off then 'wrong' else add(x, y) fi else 'fail' fi"),
+        mln_string("42 true 'hello' 0xff null 3.14 false 0777 if flag then 'yes' fi"),
+        mln_string("cat('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"),
+        mln_string("if null then 'wrong' else if msg then 'correct' else 'fail' fi fi"),
+        mln_string("cat(upper('test'), ':', tag) add(x, mul(y, x))"),
+    };
+    int n = sizeof(exprs) / sizeof(exprs[0]);
+
+    for (int i = 0; i < 5000; i++) {
+        mln_expr_val_t *v = mln_expr_run(&exprs[i % n], complex_handler, NULL);
+        if (v == NULL) { FAIL("NULL during stability"); return; }
+        mln_expr_val_free(v);
+    }
+    PASS();
+}
+
+static void test_stability_complex_loop(void)
+{
+    TEST("stability: 2K loop + if + func expressions");
+    for (int i = 0; i < 2000; i++) {
+        complex_counter = 0;
+        complex_loop_max = 2;
+        mln_string_t exp = mln_string("loop cond do if flag then body fi end");
+        mln_expr_val_t *v = mln_expr_run(&exp, complex_loop_handler, NULL);
+        if (v == NULL) { FAIL("NULL during stability"); return; }
+        mln_expr_val_free(v);
+    }
+    PASS();
+}
+
 int main(void)
 {
     printf("=== mln_expr tests ===\n");
@@ -1000,6 +1884,43 @@ int main(void)
     test_stability();
     test_stability_if_loop();
     test_stability_all_types();
+
+    /* Complex combination tests */
+    test_complex_if_with_nested_funcs();
+    test_complex_if_false_nested_funcs();
+    test_complex_triple_nested_if();
+    test_complex_multi_expr_with_if();
+    test_complex_loop_with_if_body();
+    test_complex_loop_with_func_body();
+    test_complex_deep_func_chain();
+    test_complex_string_escape_in_if();
+    test_complex_ns_func_if();
+    test_complex_sequential_ifs();
+    test_complex_if_with_all_constants();
+    test_complex_long_func_chain();
+    test_complex_loop_then_if();
+    test_complex_if_then_loop();
+    test_complex_very_long_mixed();
+    test_complex_if_func_condition();
+    test_complex_if_else_cascade();
+    test_complex_loop_if_func_ns();
+    test_complex_mixed_all_features();
+    test_complex_all_constants_expr();
+    test_complex_many_func_args();
+    test_complex_if_string_condition();
+    test_complex_if_null_condition();
+    test_complex_20_token_expr();
+    test_complex_zero_loop_then_expr();
+
+    /* Complex benchmarks (with avg processing time) */
+    test_benchmark_complex_nested_if();
+    test_benchmark_complex_long_expr();
+    test_benchmark_complex_loop_if();
+    test_benchmark_complex_deep_funcs();
+
+    /* Complex stability */
+    test_stability_complex();
+    test_stability_complex_loop();
 
     printf("\n=== Results: %d/%d passed ===\n", pass_count, test_count);
     return (pass_count == test_count) ? 0 : 1;
