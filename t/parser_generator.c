@@ -70,7 +70,7 @@ static void test_parse_basic(void)
     mln_lex_t *lex = make_lex(pool, &code);
     void *ptr = test_parser_generate(basic_prod, BASIC_NR, NULL);
     if (pool == NULL || ptr == NULL) {
-        FAIL("setup failed (pool or pg_data is NULL)");
+        FAIL("setup failed (pool or parser generator is NULL)");
         if (ptr) test_pg_data_free(ptr);
         mln_lex_destroy(lex);
         mln_alloc_destroy(pool);
@@ -124,7 +124,7 @@ static void test_parse_with_callbacks(void)
     void *ptr = test_parser_generate(cb_prod,
                     sizeof(cb_prod)/sizeof(mln_production_t), NULL);
     if (pool == NULL || ptr == NULL) {
-        FAIL("setup failed (pool or pg_data is NULL)");
+        FAIL("setup failed (pool or parser generator is NULL)");
         if (ptr) test_pg_data_free(ptr);
         mln_lex_destroy(lex);
         mln_alloc_destroy(pool);
@@ -320,7 +320,7 @@ static void test_parse_error_recovery(void)
     mln_lex_t *lex = make_lex(pool, &code);
     void *ptr = test_parser_generate(basic_prod, BASIC_NR, NULL);
     if (pool == NULL || ptr == NULL) {
-        FAIL("setup failed (pool or pg_data is NULL)");
+        FAIL("setup failed (pool or parser generator is NULL)");
         if (ptr) test_pg_data_free(ptr);
         mln_lex_destroy(lex);
         mln_alloc_destroy(pool);
