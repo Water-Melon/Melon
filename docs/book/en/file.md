@@ -33,7 +33,7 @@ typedef struct mln_file_s {
 } mln_file_t;
 struct mln_fileset_s {
     mln_alloc_t       *pool; //file set 
-    mln_rbtree_t      *reg_file_tree;
+    mln_hash_t        *reg_file_hash;
     mln_file_t        *reg_free_head;
     mln_file_t        *reg_free_tail;
     mln_size_t         max_file;
