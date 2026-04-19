@@ -81,7 +81,7 @@ mln_span_stop();
 mln_span_release();
 ```
 
-描述：释放本次测量的测量值结构。**注意：**这个宏函数应在`mln_span_stop`之后被调用，否则将可能出现内存访问异常。
+描述：释放本次测量的测量值结构及内部内存池。**注意：**这个宏函数应在`mln_span_stop`之后被调用，否则将可能出现内存访问异常。
 
 返回值：无
 
@@ -93,9 +93,21 @@ mln_span_release();
 mln_span_move();
 ```
 
-描述：获取本次测量的测量值结构，并将指向该结构的全局指针置`NULL`。**注意：**这个宏函数应在`mln_span_stop`之后被调用，否则将出现不可预知的错误。
+描述：获取本次测量的测量值结构，并将指向该结构的全局指针置`NULL`。**注意：**这个宏函数应在`mln_span_stop`之后被调用，否则将出现不可预知的错误。使用`mln_span_move`获取到的`mln_span_t`结构在使用完毕后，应先调用`mln_span_free`释放它，然后调用`mln_span_pool_free`释放内部内存池。
 
 返回值：`mln_span_t`指针
+
+
+
+#### mln_span_pool_free
+
+```c
+void mln_span_pool_free(void);
+```
+
+描述：释放内部使用的内存池和栈缓冲区。该函数会在`mln_span_release`中被自动调用。如果使用`mln_span_move`获取了测量结构，在调用`mln_span_free`释放后，需要手动调用此函数释放内存池。
+
+返回值：无
 
 
 
