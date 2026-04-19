@@ -27,16 +27,9 @@ typedef struct mln_span_s {
     struct mln_span_s            *next;
 } mln_span_t;
 
-typedef struct mln_span_stack_node_s {
-    mln_span_t                   *span;
-    struct mln_span_stack_node_s *next;
-} mln_span_stack_node_t;
-
 typedef void (*mln_span_dump_cb_t)(mln_span_t *s, int level, void *data);
 
 
-extern mln_span_stack_node_t *__mln_span_stack_top;
-extern mln_span_stack_node_t *__mln_span_stack_bottom;
 extern mln_span_t *mln_span_root;
 #if defined(MSVC)
 extern DWORD mln_span_registered_thread;
@@ -45,6 +38,7 @@ extern pthread_t mln_span_registered_thread;
 #endif
 
 extern void mln_span_stack_free(void);
+extern void mln_span_pool_free(void);
 extern mln_span_t *mln_span_new(mln_span_t *parent, const char *file, const char *func, int line);
 extern void mln_span_free(mln_span_t *s);
 extern int mln_span_entry(void *fptr, const char *file, const char *func, int line, ...);
@@ -52,27 +46,27 @@ extern void mln_span_exit(void *fptr, const char *file, const char *func, int li
 
 #if defined(MSVC)
 #define mln_span_start() do {\
+    mln_span_stack_free();\
+    mln_span_root = NULL;\
     mln_func_entry_callback_set(mln_span_entry);\
     mln_func_exit_callback_set(mln_span_exit);\
     mln_span_registered_thread = GetCurrentThreadId();\
-    mln_span_root = NULL;\
-    __mln_span_stack_top = __mln_span_stack_bottom = NULL;\
-    mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
+    mln_span_entry(NULL, __FILE__, __FUNCTION__, __LINE__);\
 } while (0)
 #else
 #define mln_span_start() ({\
+    mln_span_stack_free();\
+    mln_span_root = NULL;\
     mln_func_entry_callback_set(mln_span_entry);\
     mln_func_exit_callback_set(mln_span_exit);\
     mln_span_registered_thread = pthread_self();\
-    __mln_span_stack_top = __mln_span_stack_bottom = NULL;\
-    mln_span_root = NULL;\
-    mln_span_entry(__FILE__, __FUNCTION__, __LINE__);\
+    mln_span_entry(NULL, __FILE__, __FUNCTION__, __LINE__);\
 })
 #endif
 
 #if !defined(MSVC)
 #define mln_span_stop() ({\
-    mln_span_exit(__FILE__, __FUNCTION__, __LINE__, NULL);\
+    mln_span_exit(NULL, __FILE__, __FUNCTION__, __LINE__, NULL);\
     mln_func_entry_callback_set(NULL);\
     mln_func_exit_callback_set(NULL);\
     mln_span_stack_free();\
@@ -81,6 +75,7 @@ extern void mln_span_exit(void *fptr, const char *file, const char *func, int li
 #define mln_span_release() ({\
     mln_span_free(mln_span_root);\
     mln_span_root = NULL;\
+    mln_span_pool_free();\
 })
 
 #define mln_span_move() ({\
@@ -96,7 +91,7 @@ extern void mln_span_exit(void *fptr, const char *file, const char *func, int li
 })
 #else
 #define mln_span_stop() do {\
-    mln_span_exit(__FILE__, __FUNCTION__, __LINE__, NULL);\
+    mln_span_exit(NULL, __FILE__, __FUNCTION__, __LINE__, NULL);\
     mln_func_entry_callback_set(NULL);\
     mln_func_exit_callback_set(NULL);\
     mln_span_stack_free();\
@@ -112,4 +107,3 @@ extern mln_u64_t mln_span_time_cost(mln_span_t *s);
 
 extern void mln_span_dump(mln_span_dump_cb_t cb, void *data);
 #endif
-

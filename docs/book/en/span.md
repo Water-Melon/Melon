@@ -81,7 +81,7 @@ Return value: None
 mln_span_release();
 ```
 
-Description: Release the structure containing the measured values for this measurement. **Note**: This macro function should be called after `mln_span_stop`, otherwise, it may lead to memory access exceptions.
+Description: Release the structure containing the measured values for this measurement and the internal memory pool. **Note**: This macro function should be called after `mln_span_stop`, otherwise, it may lead to memory access exceptions.
 
 Return value: None
 
@@ -93,9 +93,21 @@ Return value: None
 mln_span_move();
 ```
 
-Description: Retrieve the structure containing the measured values for this measurement and set the global pointer pointing to this structure to `NULL`. **Note**: This macro function should be called after `mln_span_stop`, otherwise, unpredictable errors may occur.
+Description: Retrieve the structure containing the measured values for this measurement and set the global pointer pointing to this structure to `NULL`. **Note**: This macro function should be called after `mln_span_stop`, otherwise, unpredictable errors may occur. After using the returned `mln_span_t` structure, call `mln_span_free` to free it, then call `mln_span_pool_free` to release the internal memory pool.
 
 Return value: Pointer to `mln_span_t`
+
+
+
+#### mln_span_pool_free
+
+```c
+void mln_span_pool_free(void);
+```
+
+Description: Release the internal memory pool and stack buffers. This function is called automatically by `mln_span_release`. If you use `mln_span_move` to retrieve the measurement structure, you need to call this function manually after calling `mln_span_free` to release the internal memory pool.
+
+Return value: None
 
 
 
