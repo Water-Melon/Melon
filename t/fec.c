@@ -615,6 +615,10 @@ static void test_encode_invalid_params(void)
     packlen[0] = 1443;
     assert(mln_fec_encode(fec, packets, packlen, 1, 1) == NULL);
 
+    /* n not divisible by group_size */
+    packlen[0] = 100;
+    assert(mln_fec_encode(fec, packets, packlen, 1, 2) == NULL);
+
     mln_fec_free(fec);
     PASS();
 }
@@ -709,6 +713,286 @@ static void test_group_size_16(void)
     mln_fec_result_free(dec);
     mln_fec_free(enc_fec);
     mln_fec_free(dec_fec);
+    PASS();
+}
+
+/* Helper: build RTP packet with CSRC list */
+static uint16_t build_rtp_csrc(uint8_t *buf, uint16_t seq, uint8_t pt,
+                                uint32_t ts, uint32_t ssrc,
+                                uint32_t *csrc, uint8_t cc,
+                                const uint8_t *payload, uint16_t payload_len)
+{
+    uint8_t i;
+    buf[0] = 0x80 | (cc & 0x0f);
+    buf[1] = pt & 0x7f;
+    buf[2] = (uint8_t)(seq >> 8);
+    buf[3] = (uint8_t)(seq & 0xff);
+    buf[4] = (uint8_t)(ts >> 24);
+    buf[5] = (uint8_t)(ts >> 16);
+    buf[6] = (uint8_t)(ts >> 8);
+    buf[7] = (uint8_t)(ts & 0xff);
+    buf[8] = (uint8_t)(ssrc >> 24);
+    buf[9] = (uint8_t)(ssrc >> 16);
+    buf[10] = (uint8_t)(ssrc >> 8);
+    buf[11] = (uint8_t)(ssrc & 0xff);
+    for (i = 0; i < cc; ++i) {
+        buf[12 + i*4]     = (uint8_t)(csrc[i] >> 24);
+        buf[12 + i*4 + 1] = (uint8_t)(csrc[i] >> 16);
+        buf[12 + i*4 + 2] = (uint8_t)(csrc[i] >> 8);
+        buf[12 + i*4 + 3] = (uint8_t)(csrc[i] & 0xff);
+    }
+    if (payload != NULL && payload_len > 0)
+        memcpy(buf + 12 + cc * 4, payload, payload_len);
+    return (uint16_t)(12 + cc * 4 + payload_len);
+}
+
+/* Helper: build RTP packet with extension header */
+static uint16_t build_rtp_ext(uint8_t *buf, uint16_t seq, uint8_t pt,
+                               uint32_t ts, uint32_t ssrc,
+                               uint16_t ext_id, uint16_t ext_words,
+                               const uint8_t *payload, uint16_t payload_len)
+{
+    uint16_t ext_len = 4 + ext_words * 4;
+    buf[0] = 0x90; /* V=2, X=1 */
+    buf[1] = pt & 0x7f;
+    buf[2] = (uint8_t)(seq >> 8);
+    buf[3] = (uint8_t)(seq & 0xff);
+    buf[4] = (uint8_t)(ts >> 24);
+    buf[5] = (uint8_t)(ts >> 16);
+    buf[6] = (uint8_t)(ts >> 8);
+    buf[7] = (uint8_t)(ts & 0xff);
+    buf[8] = (uint8_t)(ssrc >> 24);
+    buf[9] = (uint8_t)(ssrc >> 16);
+    buf[10] = (uint8_t)(ssrc >> 8);
+    buf[11] = (uint8_t)(ssrc & 0xff);
+    /* Extension header */
+    buf[12] = (uint8_t)(ext_id >> 8);
+    buf[13] = (uint8_t)(ext_id & 0xff);
+    buf[14] = (uint8_t)(ext_words >> 8);
+    buf[15] = (uint8_t)(ext_words & 0xff);
+    memset(buf + 16, 0xEE, ext_words * 4); /* extension data */
+    if (payload != NULL && payload_len > 0)
+        memcpy(buf + 12 + ext_len, payload, payload_len);
+    return (uint16_t)(12 + ext_len + payload_len);
+}
+
+static void test_csrc_roundtrip(void)
+{
+    mln_fec_t *enc_fec = mln_fec_new();
+    mln_fec_t *dec_fec = mln_fec_new();
+    assert(enc_fec != NULL && dec_fec != NULL);
+    mln_fec_set_pt(enc_fec, 127);
+    mln_fec_set_pt(dec_fec, 127);
+
+    uint8_t pkt_bufs[2][512];
+    uint8_t *packets[2];
+    uint16_t packlen[2];
+    uint8_t payload[60];
+    uint32_t csrc[2] = {0x11111111, 0x22222222};
+    int i;
+
+    for (i = 0; i < 2; ++i) {
+        memset(payload, 'C' + i, sizeof(payload));
+        packlen[i] = build_rtp_csrc(pkt_bufs[i], (uint16_t)(400 + i), 96,
+                                     4000, 0xDDDDDDDD, csrc, 2,
+                                     payload, sizeof(payload));
+        packets[i] = pkt_bufs[i];
+    }
+
+    mln_fec_result_t *enc = mln_fec_encode(enc_fec, packets, packlen, 2, 2);
+    assert(enc != NULL);
+
+    size_t fec_len;
+    uint8_t *fec_pkt = mln_fec_get_result(enc, 0, fec_len);
+    uint8_t fec_copy[1500];
+    memcpy(fec_copy, fec_pkt, fec_len);
+
+    /* Lose first packet */
+    uint8_t *dec_packets[2];
+    uint16_t dec_packlen[2];
+    dec_packets[0] = packets[1];
+    dec_packlen[0] = packlen[1];
+    dec_packets[1] = fec_copy;
+    dec_packlen[1] = (uint16_t)fec_len;
+
+    mln_fec_result_t *dec = mln_fec_decode(dec_fec, dec_packets, dec_packlen, 2);
+    assert(dec != NULL);
+    assert(mln_fec_get_result_num(dec) == 1);
+
+    size_t rec_len;
+    uint8_t *recovered = mln_fec_get_result(dec, 0, rec_len);
+    assert(recovered != NULL);
+    assert(rec_len == packlen[0]);
+
+    /* Verify CSRC and payload are recovered correctly */
+    assert(memcmp(recovered + 12, pkt_bufs[0] + 12, packlen[0] - 12) == 0);
+    /* Verify CC field is preserved */
+    assert((recovered[0] & 0x0f) == 2);
+
+    mln_fec_result_free(enc);
+    mln_fec_result_free(dec);
+    mln_fec_free(enc_fec);
+    mln_fec_free(dec_fec);
+    PASS();
+}
+
+static void test_extension_header_roundtrip(void)
+{
+    mln_fec_t *enc_fec = mln_fec_new();
+    mln_fec_t *dec_fec = mln_fec_new();
+    assert(enc_fec != NULL && dec_fec != NULL);
+    mln_fec_set_pt(enc_fec, 127);
+    mln_fec_set_pt(dec_fec, 127);
+
+    uint8_t pkt_bufs[2][512];
+    uint8_t *packets[2];
+    uint16_t packlen[2];
+    uint8_t payload[40];
+    int i;
+
+    for (i = 0; i < 2; ++i) {
+        memset(payload, 'E' + i, sizeof(payload));
+        packlen[i] = build_rtp_ext(pkt_bufs[i], (uint16_t)(450 + i), 96,
+                                    4500, 0xBBBBBBBB, 0xBEDE, 2,
+                                    payload, sizeof(payload));
+        packets[i] = pkt_bufs[i];
+    }
+
+    mln_fec_result_t *enc = mln_fec_encode(enc_fec, packets, packlen, 2, 2);
+    assert(enc != NULL);
+
+    size_t fec_len;
+    uint8_t *fec_pkt = mln_fec_get_result(enc, 0, fec_len);
+    uint8_t fec_copy[1500];
+    memcpy(fec_copy, fec_pkt, fec_len);
+
+    /* Lose second packet */
+    uint8_t *dec_packets[2];
+    uint16_t dec_packlen[2];
+    dec_packets[0] = packets[0];
+    dec_packlen[0] = packlen[0];
+    dec_packets[1] = fec_copy;
+    dec_packlen[1] = (uint16_t)fec_len;
+
+    mln_fec_result_t *dec = mln_fec_decode(dec_fec, dec_packets, dec_packlen, 2);
+    assert(dec != NULL);
+    assert(mln_fec_get_result_num(dec) == 1);
+
+    size_t rec_len;
+    uint8_t *recovered = mln_fec_get_result(dec, 0, rec_len);
+    assert(recovered != NULL);
+    assert(rec_len == packlen[1]);
+
+    /* Verify extension header and payload recovered */
+    assert(memcmp(recovered + 12, pkt_bufs[1] + 12, packlen[1] - 12) == 0);
+    /* Verify X bit is preserved */
+    assert((recovered[0] & 0x10) == 0x10);
+
+    mln_fec_result_free(enc);
+    mln_fec_result_free(dec);
+    mln_fec_free(enc_fec);
+    mln_fec_free(dec_fec);
+    PASS();
+}
+
+static void test_padding_alignment(void)
+{
+    mln_fec_t *fec = mln_fec_new();
+    assert(fec != NULL);
+    mln_fec_set_pt(fec, 127);
+
+    /* Test with various payload sizes to exercise all padding cases */
+    uint16_t payload_sizes[] = {1, 2, 3, 4, 5, 10, 13, 14, 15, 16, 99, 100};
+    int ntest = (int)(sizeof(payload_sizes) / sizeof(payload_sizes[0]));
+    int t;
+
+    for (t = 0; t < ntest; ++t) {
+        uint8_t pkt_buf[1442];
+        uint8_t *packets[1];
+        uint16_t packlen[1];
+        uint8_t payload[100];
+
+        memset(payload, 0xAA, payload_sizes[t]);
+        packlen[0] = build_rtp(pkt_buf, (uint16_t)(2000 + t), 96,
+                               20000, 0x44444444, payload, payload_sizes[t]);
+        packets[0] = pkt_buf;
+
+        mln_fec_result_t *enc = mln_fec_encode(fec, packets, packlen, 1, 1);
+        assert(enc != NULL);
+
+        size_t fec_len;
+        uint8_t *fec_pkt = mln_fec_get_result(enc, 0, fec_len);
+        assert(fec_pkt != NULL);
+
+        /* FEC packet length must be 4-byte aligned */
+        assert((fec_len % 4) == 0);
+
+        /* If padding bit is set, last byte indicates padding count */
+        if (fec_pkt[0] & 0x20) {
+            uint8_t pad_count = fec_pkt[fec_len - 1];
+            assert(pad_count >= 1 && pad_count <= 3);
+        }
+
+        /* Verify roundtrip: lose the only packet, recover via FEC */
+        uint8_t fec_copy[1500];
+        memcpy(fec_copy, fec_pkt, fec_len);
+
+        mln_fec_t *dec_fec = mln_fec_new();
+        mln_fec_set_pt(dec_fec, 127);
+
+        uint8_t *dec_packets[1] = {fec_copy};
+        uint16_t dec_packlen[1] = {(uint16_t)fec_len};
+
+        mln_fec_result_t *dec = mln_fec_decode(dec_fec, dec_packets, dec_packlen, 1);
+        assert(dec != NULL);
+        assert(mln_fec_get_result_num(dec) == 1);
+
+        size_t rec_len;
+        uint8_t *recovered = mln_fec_get_result(dec, 0, rec_len);
+        assert(recovered != NULL);
+        assert(rec_len == packlen[0]);
+        assert(memcmp(recovered + 12, pkt_buf + 12, packlen[0] - 12) == 0);
+
+        mln_fec_result_free(enc);
+        mln_fec_result_free(dec);
+        mln_fec_free(dec_fec);
+    }
+
+    mln_fec_free(fec);
+    PASS();
+}
+
+static void test_n_not_multiple_of_group_size(void)
+{
+    mln_fec_t *fec = mln_fec_new();
+    assert(fec != NULL);
+    mln_fec_set_pt(fec, 127);
+
+    uint8_t pkt_bufs[5][128];
+    uint8_t *packets[5];
+    uint16_t packlen[5];
+    uint8_t payload[40];
+    int i;
+
+    for (i = 0; i < 5; ++i) {
+        memset(payload, (uint8_t)i, sizeof(payload));
+        packlen[i] = build_rtp(pkt_bufs[i], (uint16_t)(3000 + i), 96,
+                               30000, 0x55555555, payload, sizeof(payload));
+        packets[i] = pkt_bufs[i];
+    }
+
+    /* n=5, group_size=4 -> not divisible, should fail */
+    assert(mln_fec_encode(fec, packets, packlen, 5, 4) == NULL);
+
+    /* n=5, group_size=3 -> not divisible, should fail */
+    assert(mln_fec_encode(fec, packets, packlen, 5, 3) == NULL);
+
+    /* n=4, group_size=4 -> OK */
+    mln_fec_result_t *enc = mln_fec_encode(fec, packets, packlen, 4, 4);
+    assert(enc != NULL);
+    mln_fec_result_free(enc);
+
+    mln_fec_free(fec);
     PASS();
 }
 
@@ -880,6 +1164,10 @@ int main(int argc, char *argv[])
     test_encode_invalid_params();
     test_decode_invalid_params();
     test_group_size_16();
+    test_csrc_roundtrip();
+    test_extension_header_roundtrip();
+    test_padding_alignment();
+    test_n_not_multiple_of_group_size();
     test_performance();
     test_stability();
 

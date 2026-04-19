@@ -202,6 +202,7 @@ MLN_FUNC(static, mln_string_t *, mln_fec_generate_fecpacket, \
     len += M_FEC_RTP_FIXEDLEN;
     buf[0] |= 0x80;
     if ((mod = (len % 4))) {
+        mod = 4 - mod;
         buf[len + mod - 1] = mod;
         buf[0] |= 0x20;
         len += mod;
@@ -233,7 +234,8 @@ MLN_FUNC(, mln_fec_result_t *, mln_fec_encode, \
         packlen == NULL || \
         !n || \
         group_size > 48 || \
-        !group_size)
+        !group_size || \
+        n % group_size)
     {
         errno = EINVAL;
         return NULL;
