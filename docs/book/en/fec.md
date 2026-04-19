@@ -58,7 +58,7 @@ Description: Generate a corresponding FEC message for a given RTP message, where
 
 - `packets` RTP packet array, each element is an RTP packet. **Note**: Here is the complete RTP message (including header and body).
 - `packlen` RTP packet length array, each element corresponds to an element in `packets`.
-- `n` is the number of RTP packets.
+- `n` is the number of RTP packets. `n` must be a multiple of `group_size`, otherwise the function returns `NULL`.
 - `group_size` indicates that one FEC packet is generated for every `group_size` RTP packet, that is, this function may generate multiple FEC packets at a time.
 
 Return value: return `mln_fec_result_t` structure pointer if successful, otherwise return `NULL`

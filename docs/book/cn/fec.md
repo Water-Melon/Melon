@@ -58,7 +58,7 @@ mln_fec_result_t *mln_fec_encode(mln_fec_t *fec, uint8_t *packets[], uint16_t pa
 
 - `packets` RTP报文数组，每个元素是一个RTP报文。**注意**：这里是完整的RTP报文（含头和体）。
 - `packlen` RTP报文长度数组，每个元素与`packets`中元素一一对应。
-- `n`为RTP报文个数。
+- `n`为RTP报文个数。`n`必须是`group_size`的整数倍，否则函数返回`NULL`。
 - `group_size` 指出每`group_size`个RTP报文生成一个FEC报文，即本函数可能一次生成多个FEC报文。
 
 返回值：成功则返回`mln_fec_result_t`结构指针，否则返回`NULL`
