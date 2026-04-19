@@ -36,6 +36,11 @@ long mon_days[2][12] = {
     {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
     {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 };
+/* prefix sums: mon_days_prefix[leap][m] = sum of days for months 0..m-1 */
+static long mon_days_prefix[2][13] = {
+    {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365},
+    {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366}
+};
 mln_boot_t boot_params[] = {
 {"--help", "-h", mln_boot_help, 0},
 #if !defined(MSVC)
@@ -348,26 +353,30 @@ MLN_FUNC(static inline, int, mln_is_leap, (long year), (year), {
 })
 
 MLN_FUNC_VOID(, void, mln_time2utc, (time_t tm, struct utctime *uc), (tm, uc), {
-    long days = tm / 86400;
-    long subsec = tm % 86400;
-    long month, year;
-    long cnt = 0;
-    uc->year = uc->month = 0;
-    while ((mln_is_leap(1970+uc->year)? (cnt+366): (cnt+365)) <= days) {
-        if (mln_is_leap(1970+uc->year)) cnt += 366;
-        else cnt += 365;
-        ++(uc->year);
-    }
-    uc->year += 1970;
-    int is_leap_year = mln_is_leap(uc->year);
-    long subdays = days - cnt;
-    cnt = 0;
-    while (cnt + mon_days[is_leap_year][uc->month] <= subdays) {
-        cnt += mon_days[is_leap_year][uc->month];
-        ++(uc->month);
-    }
-    ++(uc->month);
-    uc->day = subdays - cnt + 1;
+    /*
+     * O(1) civil date algorithm (era-based decomposition).
+     * Shift epoch to 0000-03-01 so Feb (leap day) is last month of the year,
+     * then decompose using 400/100/4/1-year cycles.
+     */
+    long days = (long)(tm / 86400);
+    long subsec = (long)(tm % 86400);
+    long z, era, doe, yoe, y, doy, mp, d, m, month, year;
+
+    /* shift to days since 0000-03-01 */
+    z = days + 719468;
+    era = (z >= 0 ? z : z - 146096) / 146097;
+    doe = z - era * 146097;
+    yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    y = yoe + era * 400;
+    doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    mp = (5 * doy + 2) / 153;
+    d = doy - (153 * mp + 2) / 5 + 1;
+    m = mp < 10 ? mp + 3 : mp - 9;
+    y += (m <= 2);
+
+    uc->year = y;
+    uc->month = m;
+    uc->day = d;
     uc->hour = subsec / 3600;
     uc->minute = (subsec % 3600) / 60;
     uc->second = (subsec % 3600) % 60;
@@ -377,77 +386,33 @@ MLN_FUNC_VOID(, void, mln_time2utc, (time_t tm, struct utctime *uc), (tm, uc), {
 })
 
 MLN_FUNC(, time_t, mln_utc2time, (struct utctime *uc), (uc), {
-    time_t ret = 0;
-    long year = uc->year - 1, month = uc->month - 2;
-    int is_leap_year = mln_is_leap(uc->year);
+    /*
+     * O(1) reverse civil date algorithm.
+     * Shift March-based year so leap day is at end of cycle,
+     * then compute days since epoch directly.
+     */
+    long y = uc->year;
+    long m = uc->month;
+    long d = uc->day;
+    long era, yoe, doy, doe, days;
 
-    for (; year >= 1970; --year) {
-        ret += (mln_is_leap(year)? 366: 365);
-    }
-    for (; month >= 0; --month) {
-        ret += (mon_days[is_leap_year][month]);
-    }
-    ret += (uc->day - 1);
-    ret *= 86400;
-    ret += (uc->hour * 3600 + uc->minute * 60 + uc->second);
+    y -= (m <= 2);
+    era = (y >= 0 ? y : y - 399) / 400;
+    yoe = y - era * 400;
+    doy = (153 * (m > 2 ? m - 3 : m + 9) + 2) / 5 + d - 1;
+    doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    days = era * 146097 + doe - 719468;
 
-    return ret;
+    return (time_t)(days * 86400 + uc->hour * 3600 + uc->minute * 60 + uc->second);
 })
 
 MLN_FUNC_VOID(, void, mln_utc_adjust, (struct utctime *uc), (uc), {
-    long adj = 0, month, year;
-
-    if (uc->second >= 60) {
-        adj = uc->second / 60;
-        uc->second %= 60;
-    }
-    if (adj) {
-        uc->minute += adj;
-        adj = 0;
-    }
-    if (uc->minute >= 60) {
-        adj = uc->minute / 60;
-        uc->minute %= 60;
-    }
-    if (adj) {
-        uc->hour += adj;
-        adj = 0;
-    }
-    if (uc->hour >= 24) {
-        adj = uc->hour / 24;
-        uc->hour %= 24;
-    }
-    if (adj) {
-        uc->day += adj;
-        adj = 0;
-    }
-    year = uc->year;
-    month = uc->month;
-again:
-    if (uc->day > mon_days[mln_is_leap(year)][month-1]) {
-        adj = 1;
-        uc->day -= mon_days[mln_is_leap(year)][month-1];
-        if (++month > 12) {
-            month = 1;
-            ++year;
-        }
-        goto again;
-    }
-    if (adj) {
-        uc->month = month;
-        uc->year = year;
-        adj = 0;
-    }
-    if (uc->month-1 >= 12) {
-        adj = (uc->month - 1) / 12;
-        uc->month = (uc->month - 1) % 12 + 1;
-    }
-    if (adj) {
-        uc->year += adj;
-    }
-    month = uc->month < 3? uc->month + 12: uc->month;
-    year = uc->month < 3? uc->year - 1: uc->year;
-    uc->week = (uc->day + 1 + 2 * month + 3 * (month + 1) / 5 + year + (year >> 2) - year / 100 + year / 400) % 7;
+    /*
+     * O(1) adjust: normalize by converting to epoch seconds
+     * and decomposing back via the O(1) civil date routines.
+     */
+    time_t total = mln_utc2time(uc);
+    mln_time2utc(total, uc);
 })
 
 MLN_FUNC(, long, mln_month_days, (long year, long month), (year, month), {
@@ -458,7 +423,6 @@ MLN_FUNC(, int, mln_s2time, (time_t *tm, mln_string_t *s, int type), (tm, s, typ
     mln_u8ptr_t p, end;
     time_t year = 0, month = 0, day = 0;
     time_t hour = 0, minute = 0, second = 0;
-    time_t tmp;
 
     switch (type) {
         case M_TOOLS_TIME_UTC:
@@ -506,12 +470,15 @@ MLN_FUNC(, int, mln_s2time, (time_t *tm, mln_string_t *s, int type), (tm, s, typ
         return -1;
     }
 
-    for (tmp = 1970; tmp < year; ++tmp) {
-        day += (mln_is_leap(tmp)? 366: 365);
+    /* O(1) year-to-days: count leap years with formula instead of loop */
+    {
+        long y1 = year - 1, y0 = 1969;
+        long leap1 = y1 / 4 - y1 / 100 + y1 / 400;
+        long leap0 = y0 / 4 - y0 / 100 + y0 / 400;
+        day += 365 * (year - 1970) + (leap1 - leap0);
     }
-    for (--month, tmp = 0; tmp < month; ++tmp) {
-        day += (mon_days[mln_is_leap(year)][tmp]);
-    }
+    /* O(1) month-to-days via prefix sum */
+    day += mon_days_prefix[mln_is_leap(year)][month - 1];
     --day;
     *tm = day * 86400;
     if (hour || minute || second) {
