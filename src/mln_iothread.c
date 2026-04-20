@@ -14,8 +14,8 @@
 #include <sys/socket.h>
 
 static inline void mln_iothread_fd_nonblock_set(int fd);
-static inline mln_iothread_msg_t *mln_iothread_msg_new(mln_u32_t type, void *data, int feedback);
-static inline void mln_iothread_msg_free(mln_iothread_msg_t *msg);
+static inline mln_iothread_msg_t *mln_iothread_msg_alloc(mln_iothread_t *t, mln_u32_t type, void *data, mln_u32_t feedback);
+static inline void mln_iothread_msg_recycle(mln_iothread_t *t, mln_iothread_msg_t *msg);
 MLN_CHAIN_FUNC_DECLARE(static inline, mln_iothread_msg, mln_iothread_msg_t,);
 MLN_CHAIN_FUNC_DEFINE(static inline, mln_iothread_msg, mln_iothread_msg_t, prev, next);
 
@@ -26,13 +26,10 @@ MLN_FUNC(, int, mln_iothread_init, \
     mln_u32_t i;
     int fds[2];
 
-    if (!nthread || entry == NULL) {
-        return -1;
-    }
+    if (!nthread || entry == NULL) return -1;
 
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
-        return -1;
-    }
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) return -1;
+
     t->io_fd = fds[0];
     t->user_fd = fds[1];
     mln_iothread_fd_nonblock_set(t->io_fd);
@@ -42,21 +39,27 @@ MLN_FUNC(, int, mln_iothread_init, \
     t->handler = handler;
     pthread_mutex_init(&(t->io_lock), NULL);
     pthread_mutex_init(&(t->user_lock), NULL);
+    pthread_mutex_init(&(t->free_lock), NULL);
+    pthread_mutex_init(&(t->feedback_lock), NULL);
+    pthread_cond_init(&(t->feedback_cond), NULL);
     t->io_head = t->io_tail = NULL;
     t->user_head = t->user_tail = NULL;
+    t->free_head = NULL;
+    t->free_count = 0;
     t->nthread = nthread;
 
     if ((t->tids = (pthread_t *)calloc(t->nthread, sizeof(pthread_t))) == NULL) {
         mln_socket_close(fds[0]);
         mln_socket_close(fds[1]);
+        pthread_mutex_destroy(&(t->io_lock));
+        pthread_mutex_destroy(&(t->user_lock));
+        pthread_mutex_destroy(&(t->free_lock));
+        pthread_mutex_destroy(&(t->feedback_lock));
+        pthread_cond_destroy(&(t->feedback_cond));
         return -1;
     }
     for (i = 0; i < t->nthread; ++i) {
         if (pthread_create(t->tids + i, NULL, t->entry, t->args) != 0) {
-            mln_iothread_destroy(t);
-            return -1;
-        }
-        if (pthread_detach(t->tids[i]) != 0) {
             mln_iothread_destroy(t);
             return -1;
         }
@@ -66,7 +69,10 @@ MLN_FUNC(, int, mln_iothread_init, \
 })
 
 MLN_FUNC_VOID(, void, mln_iothread_destroy, (mln_iothread_t *t), (t), {
+    mln_iothread_msg_t *msg;
+
     if (t == NULL) return;
+
     if (t->tids != NULL) {
         mln_u32_t i;
         for (i = 0; i < t->nthread; ++i) {
@@ -77,6 +83,25 @@ MLN_FUNC_VOID(, void, mln_iothread_destroy, (mln_iothread_t *t), (t), {
     }
     mln_socket_close(t->io_fd);
     mln_socket_close(t->user_fd);
+
+    while ((msg = t->io_head) != NULL) {
+        t->io_head = msg->next;
+        free(msg);
+    }
+    while ((msg = t->user_head) != NULL) {
+        t->user_head = msg->next;
+        free(msg);
+    }
+    while ((msg = t->free_head) != NULL) {
+        t->free_head = msg->next;
+        free(msg);
+    }
+
+    pthread_mutex_destroy(&(t->io_lock));
+    pthread_mutex_destroy(&(t->user_lock));
+    pthread_mutex_destroy(&(t->free_lock));
+    pthread_mutex_destroy(&(t->feedback_lock));
+    pthread_cond_destroy(&(t->feedback_cond));
 })
 
 MLN_FUNC(, int, mln_iothread_send, \
@@ -100,11 +125,8 @@ MLN_FUNC(, int, mln_iothread_send, \
         tail = &(t->user_tail);
     }
 
-    if ((msg = mln_iothread_msg_new(type, data, feedback)) == NULL)
+    if ((msg = mln_iothread_msg_alloc(t, type, data, feedback)) == NULL)
         return -1;
-
-    if (feedback)
-        pthread_mutex_lock(&(msg->mutex));
 
     pthread_mutex_lock(plock);
 
@@ -112,18 +134,24 @@ MLN_FUNC(, int, mln_iothread_send, \
 
     if (*head == *tail && *head == msg && send(fd, " ", 1, 0) != 1) {
         mln_iothread_msg_chain_del(head, tail, msg);
-        if (feedback) pthread_mutex_unlock(&(msg->mutex));
         pthread_mutex_unlock(plock);
-        mln_iothread_msg_free(msg);
+        mln_iothread_msg_recycle(t, msg);
         return 1;
     }
 
     pthread_mutex_unlock(plock);
 
     if (feedback) {
-        pthread_mutex_lock(&(msg->mutex));
-        pthread_mutex_unlock(&(msg->mutex));
-        mln_iothread_msg_free(msg);
+        int __spins = 256;
+        while (__spins-- > 0 && !msg->done)
+            ;
+        if (!msg->done) {
+            pthread_mutex_lock(&(t->feedback_lock));
+            while (!msg->done)
+                pthread_cond_wait(&(t->feedback_cond), &(t->feedback_lock));
+            pthread_mutex_unlock(&(t->feedback_lock));
+        }
+        mln_iothread_msg_recycle(t, msg);
     }
 
     return 0;
@@ -131,10 +159,12 @@ MLN_FUNC(, int, mln_iothread_send, \
 
 MLN_FUNC(, int, mln_iothread_recv, (mln_iothread_t *t, mln_iothread_ep_type_t from), (t, from), {
     int fd, n = 0;
-    mln_s8_t c;
+    mln_s8_t buf[64];
     pthread_mutex_t *plock;
-    mln_iothread_msg_t *msg, *pos;
+    mln_iothread_msg_t *msg, *batch_head;
     mln_iothread_msg_t **head, **tail;
+
+    pthread_testcancel();
 
     if (from == io_thread) {
         fd = t->user_fd;
@@ -150,56 +180,79 @@ MLN_FUNC(, int, mln_iothread_recv, (mln_iothread_t *t, mln_iothread_ep_type_t fr
 
     pthread_mutex_lock(plock);
 
-    pos = *head;
-    while ((msg = *head) != NULL) {
-        mln_iothread_msg_chain_del(head, tail, msg);
+    batch_head = *head;
+    if (batch_head != NULL) {
+        *head = *tail = NULL;
+        (void)recv(fd, buf, sizeof(buf), 0);
+    }
+
+    pthread_mutex_unlock(plock);
+
+    while ((msg = batch_head) != NULL) {
+        batch_head = msg->next;
+        msg->prev = msg->next = NULL;
         if (t->handler != NULL)
             t->handler(t, from, msg);
         if (msg->feedback) {
-            if (!msg->hold)
-                pthread_mutex_unlock(&(msg->mutex));
+            if (!msg->hold) {
+                pthread_mutex_lock(&(t->feedback_lock));
+                msg->done = 1;
+                pthread_cond_broadcast(&(t->feedback_cond));
+                pthread_mutex_unlock(&(t->feedback_lock));
+            }
         } else {
-            mln_iothread_msg_free(msg);
+            mln_iothread_msg_recycle(t, msg);
         }
         ++n;
     }
 
-    if (pos != *head)
-        (void)recv(fd, &c, 1, 0);
-
-    pthread_mutex_unlock(plock);
-
     return n;
 })
 
-
-MLN_FUNC(static inline, mln_iothread_msg_t *, mln_iothread_msg_new, \
-         (mln_u32_t type, void *data, int feedback), (type, data, feedback), \
+MLN_FUNC(static inline, mln_iothread_msg_t *, mln_iothread_msg_alloc, \
+         (mln_iothread_t *t, mln_u32_t type, void *data, mln_u32_t feedback), \
+         (t, type, data, feedback), \
 {
-    mln_iothread_msg_t *msg = (mln_iothread_msg_t *)malloc(sizeof(mln_iothread_msg_t));
-    if (msg == NULL)
-        return NULL;
+    mln_iothread_msg_t *msg = NULL;
 
-    msg->feedback = feedback;
-    msg->hold = 0;
+    pthread_mutex_lock(&(t->free_lock));
+    if (t->free_head != NULL) {
+        msg = t->free_head;
+        t->free_head = msg->next;
+        t->free_count--;
+    }
+    pthread_mutex_unlock(&(t->free_lock));
+
+    if (msg == NULL) {
+        msg = (mln_iothread_msg_t *)malloc(sizeof(mln_iothread_msg_t));
+        if (msg == NULL) return NULL;
+    }
+
+    msg->owner = t;
     msg->type = type;
     msg->data = data;
+    msg->feedback = feedback ? 1 : 0;
+    msg->hold = 0;
+    msg->done = 0;
     msg->prev = msg->next = NULL;
 
-    if (feedback && pthread_mutex_init(&(msg->mutex), NULL) != 0) {
-        free(msg);
-        return NULL;
-    }
     return msg;
 })
 
-MLN_FUNC_VOID(static inline, void, mln_iothread_msg_free, (mln_iothread_msg_t *msg), (msg), {
-    if (msg == NULL)
+MLN_FUNC_VOID(static inline, void, mln_iothread_msg_recycle, \
+              (mln_iothread_t *t, mln_iothread_msg_t *msg), (t, msg), \
+{
+    if (msg == NULL) return;
+
+    pthread_mutex_lock(&(t->free_lock));
+    if (t->free_count < MLN_IOTHREAD_FREE_MAX) {
+        msg->next = t->free_head;
+        t->free_head = msg;
+        t->free_count++;
+        pthread_mutex_unlock(&(t->free_lock));
         return;
-
-    if (msg->feedback)
-        pthread_mutex_destroy(&(msg->mutex));
-
+    }
+    pthread_mutex_unlock(&(t->free_lock));
     free(msg);
 })
 
@@ -209,4 +262,3 @@ MLN_FUNC_VOID(static inline, void, mln_iothread_fd_nonblock_set, (int fd), (fd),
 })
 
 #endif
-

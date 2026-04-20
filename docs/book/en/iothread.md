@@ -57,7 +57,7 @@ Return value: none
 #### mln_iothread_send
 
 ```c
-extern int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, int feedback);
+extern int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, mln_u32_t feedback);
 
 typedef enum {
     io_thread,
@@ -90,7 +90,7 @@ Return value: The number of received messages.
 #### mln_iothread_sockfd_get
 
 ```c
- mln_iothread_iofd_get(p)
+ mln_iothread_sockfd_get(p,t)
 ```
 
 Description: According to the value of `t`, get the communication socket of the I/O thread or user thread from the `mln_iothread_t` structure pointed to by `p` . Usually to add it to an event.

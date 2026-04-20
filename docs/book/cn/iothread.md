@@ -59,7 +59,7 @@ void mln_iothread_destroy(mln_iothread_t *t);
 #### mln_iothread_send
 
 ```c
-extern int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, int feedback);
+extern int mln_iothread_send(mln_iothread_t *t, mln_u32_t type, void *data, mln_iothread_ep_type_t to, mln_u32_t feedback);
 ```
 
 描述：发送一个消息类型为`type`，消息数据为`data`的消息给`to`的一端，并根据`feedback`来确定是否阻塞等待反馈。
@@ -87,7 +87,7 @@ int mln_iothread_recv(mln_iothread_t *t, mln_iothread_ep_type_t from);
 #### mln_iothread_sockfd_get
 
 ```c
- mln_iothread_iofd_get(p,t)
+ mln_iothread_sockfd_get(p,t)
 ```
 
 描述：从`p`所指代的`mln_iothread_t`结构中，根据`t`的值，获取I/O线程或用户线程的通信套接字。一般是为了将其加入到事件中。
