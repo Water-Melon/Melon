@@ -20,6 +20,16 @@ extern void mln_matrix_free(mln_matrix_t *matrix);
 extern mln_matrix_t *
 mln_matrix_mul(mln_matrix_t *m1, mln_matrix_t *m2) __NONNULL2(1,2);
 extern mln_matrix_t *mln_matrix_inverse(mln_matrix_t *matrix);
+extern mln_matrix_t *
+mln_matrix_add(mln_matrix_t *m1, mln_matrix_t *m2) __NONNULL2(1,2);
+extern mln_matrix_t *
+mln_matrix_sub(mln_matrix_t *m1, mln_matrix_t *m2) __NONNULL2(1,2);
+extern mln_matrix_t *
+mln_matrix_scalar_mul(double scalar, mln_matrix_t *matrix) __NONNULL1(2);
+extern mln_matrix_t *
+mln_matrix_transpose(mln_matrix_t *matrix) __NONNULL1(1);
+extern double
+mln_matrix_det(mln_matrix_t *matrix);
 extern void mln_matrix_dump(mln_matrix_t *matrix);
 #endif
 

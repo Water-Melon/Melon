@@ -75,9 +75,69 @@ Return value: Returns the result matrix pointer if successful, otherwise returns
 mln_matrix_t *mln_matrix_inverse(mln_matrix_t *matrix);
 ```
 
-Description: Matrix inversion. **Note**: Matrix inversion requires that the matrix is a square matrix.
+Description: Matrix inversion. **Note**: Matrix inversion requires that the matrix is a square matrix. This function does not modify the input matrix.
 
 Return value: Returns the result matrix pointer if successful, otherwise returns `NULL`
+
+
+
+#### mln_matrix_add
+
+```c
+mln_matrix_t *mln_matrix_add(mln_matrix_t *m1, mln_matrix_t *m2);
+```
+
+Description: Matrix addition. Both matrices must have the same dimensions.
+
+Return value: Returns the result matrix pointer if successful, otherwise returns `NULL`
+
+
+
+#### mln_matrix_sub
+
+```c
+mln_matrix_t *mln_matrix_sub(mln_matrix_t *m1, mln_matrix_t *m2);
+```
+
+Description: Matrix subtraction. Both matrices must have the same dimensions.
+
+Return value: Returns the result matrix pointer if successful, otherwise returns `NULL`
+
+
+
+#### mln_matrix_scalar_mul
+
+```c
+mln_matrix_t *mln_matrix_scalar_mul(double scalar, mln_matrix_t *matrix);
+```
+
+Description: Scalar multiplication. Multiply every element of the matrix by `scalar`.
+
+Return value: Returns the result matrix pointer if successful, otherwise returns `NULL`
+
+
+
+#### mln_matrix_transpose
+
+```c
+mln_matrix_t *mln_matrix_transpose(mln_matrix_t *matrix);
+```
+
+Description: Matrix transpose.
+
+Return value: Returns the result matrix pointer if successful, otherwise returns `NULL`
+
+
+
+#### mln_matrix_det
+
+```c
+double mln_matrix_det(mln_matrix_t *matrix);
+```
+
+Description: Compute the determinant of a square matrix using LU decomposition with partial pivoting. This function does not modify the input matrix.
+
+Return value: Returns the determinant value. Returns `0.0` and sets `errno` to `EINVAL` if the matrix is `NULL` or not a square matrix.
 
 
 

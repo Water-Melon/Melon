@@ -75,9 +75,69 @@ mln_matrix_t *mln_matrix_mul(mln_matrix_t *m1, mln_matrix_t *m2);
 mln_matrix_t *mln_matrix_inverse(mln_matrix_t *matrix);
 ```
 
-描述：矩阵求逆。**注意**：矩阵求逆要求是该矩阵为方阵。
+描述：矩阵求逆。**注意**：矩阵求逆要求是该矩阵为方阵。此函数不会修改输入矩阵。
 
 返回值：成功则返回结果矩阵指针，否则返回`NULL`
+
+
+
+#### mln_matrix_add
+
+```c
+mln_matrix_t *mln_matrix_add(mln_matrix_t *m1, mln_matrix_t *m2);
+```
+
+描述：矩阵加法。两个矩阵必须具有相同的维度。
+
+返回值：成功则返回结果矩阵指针，否则返回`NULL`
+
+
+
+#### mln_matrix_sub
+
+```c
+mln_matrix_t *mln_matrix_sub(mln_matrix_t *m1, mln_matrix_t *m2);
+```
+
+描述：矩阵减法。两个矩阵必须具有相同的维度。
+
+返回值：成功则返回结果矩阵指针，否则返回`NULL`
+
+
+
+#### mln_matrix_scalar_mul
+
+```c
+mln_matrix_t *mln_matrix_scalar_mul(double scalar, mln_matrix_t *matrix);
+```
+
+描述：标量乘法。将矩阵中的每个元素乘以`scalar`。
+
+返回值：成功则返回结果矩阵指针，否则返回`NULL`
+
+
+
+#### mln_matrix_transpose
+
+```c
+mln_matrix_t *mln_matrix_transpose(mln_matrix_t *matrix);
+```
+
+描述：矩阵转置。
+
+返回值：成功则返回结果矩阵指针，否则返回`NULL`
+
+
+
+#### mln_matrix_det
+
+```c
+double mln_matrix_det(mln_matrix_t *matrix);
+```
+
+描述：使用LU分解与部分主元法计算方阵的行列式。此函数不会修改输入矩阵。
+
+返回值：返回行列式的值。若矩阵为`NULL`或不是方阵，则返回`0.0`并设置`errno`为`EINVAL`。
 
 
 
