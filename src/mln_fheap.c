@@ -40,6 +40,7 @@ MLN_FUNC(, mln_fheap_t *, mln_fheap_new, (void *min_val, struct mln_fheap_attr *
     fh->min = NULL;
     fh->root_list = NULL;
     fh->num = 0;
+    fh->free_list = NULL;
     return fh;
 })
 
@@ -62,6 +63,7 @@ MLN_FUNC(, mln_fheap_t *, mln_fheap_new_fast, \
     fh->min = NULL;
     fh->root_list = NULL;
     fh->num = 0;
+    fh->free_list = NULL;
     return fh;
 })
 
@@ -80,20 +82,16 @@ MLN_FUNC_VOID(, void, mln_fheap_insert, (mln_fheap_t *fh, mln_fheap_node_t *fn),
 MLN_FUNC(, mln_fheap_node_t *, mln_fheap_extract_min, (mln_fheap_t *fh), (fh), {
     mln_fheap_node_t *z = fh->min;
     if (z != NULL) {
-        mln_fheap_node_t *child;
-        while ((child = mln_fheap_remove_child(&(z->child))) != NULL) {
-            mln_fheap_add_child(&(fh->root_list), child);
-            child->parent = NULL;
-        }
-        mln_fheap_node_t *right = z->right;
+        mln_fheap_splice_children(&(fh->root_list), z->child);
+        z->child = NULL;
         mln_fheap_del_child(&(fh->root_list), z);
-        if (z == right) {
+        if (fh->root_list == NULL) {
             fh->min = NULL;
         } else {
-            fh->min = right;
+            fh->min = fh->root_list;
             mln_fheap_consolidate(fh, fh->cmp);
         }
-        --((fh)->num);
+        --(fh->num);
     }
     return z;
 })
@@ -121,9 +119,14 @@ MLN_FUNC_VOID(, void, mln_fheap_delete, (mln_fheap_t *fh, mln_fheap_node_t *node
 MLN_FUNC_VOID(, void, mln_fheap_free, (mln_fheap_t *fh), (fh), {
     if (fh == NULL) return;
 
-    mln_fheap_node_t *fn;
-    while ((fn = mln_fheap_extract_min(fh)) != NULL) {
-        mln_fheap_node_free(fh, fn);
+    mln_fheap_destroy_list(fh->root_list, fh->key_free, fh->pool, fh->pool_free);
+    {
+        mln_fheap_node_t *fl = fh->free_list, *tmp;
+        while (fl != NULL) {
+            tmp = fl; fl = fl->right;
+            if (fh->pool != NULL) fh->pool_free(tmp);
+            else free(tmp);
+        }
     }
     if (fh->pool != NULL) fh->pool_free(fh);
     else free(fh);
@@ -135,7 +138,10 @@ MLN_FUNC(, mln_fheap_node_t *, mln_fheap_node_new, (mln_fheap_t *fh, void *key),
 
     if (fh->pool != NULL)
         fn = (mln_fheap_node_t *)fh->pool_alloc(fh->pool, sizeof(mln_fheap_node_t));
-    else
+    else if (fh->free_list != NULL) {
+        fn = fh->free_list;
+        fh->free_list = fn->right;
+    } else
         fn = (mln_fheap_node_t *)malloc(sizeof(mln_fheap_node_t));
     if (fn == NULL) return NULL;
 
@@ -157,7 +163,7 @@ MLN_FUNC_VOID(, void, mln_fheap_node_free, (mln_fheap_t *fh, mln_fheap_node_t *f
         fh->key_free(fn->key);
     if (!fn->nofree) {
        if (fh->pool != NULL) fh->pool_free(fn);
-       else free(fn);
+       else { fn->right = fh->free_list; fh->free_list = fn; }
     }
 })
 

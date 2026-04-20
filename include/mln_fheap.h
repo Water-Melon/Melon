@@ -6,6 +6,7 @@
 #ifndef __MLN_FHEAP_H
 #define __MLN_FHEAP_H
 
+#include <stdlib.h>
 #include <string.h>
 #include "mln_types.h"
 #include "mln_func.h"
@@ -65,6 +66,7 @@ typedef struct {
     void                     *pool;
     fheap_pool_alloc_handler  pool_alloc;
     fheap_pool_free_handler   pool_free;
+    mln_fheap_node_t         *free_list;
 } mln_fheap_t;
 
 /*
@@ -104,6 +106,48 @@ MLN_FUNC_VOID(static inline, void, mln_fheap_del_child, \
     node->right = node->left = node;
 })
 
+MLN_FUNC_VOID(static inline, void, mln_fheap_splice_children, \
+              (mln_fheap_node_t **root_list, mln_fheap_node_t *child_list), \
+              (root_list, child_list), \
+{
+    if (child_list == NULL) return;
+    mln_fheap_node_t *c = child_list;
+    do {
+        c->parent = NULL;
+        c = c->right;
+    } while (c != child_list);
+    if (*root_list == NULL) {
+        *root_list = child_list;
+    } else {
+        mln_fheap_node_t *rl = (*root_list)->left;
+        mln_fheap_node_t *cl = child_list->left;
+        rl->right = child_list;
+        child_list->left = rl;
+        cl->right = *root_list;
+        (*root_list)->left = cl;
+    }
+})
+
+MLN_FUNC_VOID(static inline, void, mln_fheap_destroy_list, \
+              (mln_fheap_node_t *head, fheap_key_free kfree, void *pool, fheap_pool_free_handler pfree), \
+              (head, kfree, pool, pfree), \
+{
+    if (head == NULL) return;
+    head->left->right = NULL;
+    mln_fheap_node_t *w = head, *next;
+    while (w != NULL) {
+        next = w->right;
+        mln_fheap_destroy_list(w->child, kfree, pool, pfree);
+        if (kfree != NULL && w->key != NULL)
+            kfree(w->key);
+        if (!w->nofree) {
+            if (pool != NULL) pfree(w);
+            else free(w);
+        }
+        w = next;
+    }
+})
+
 MLN_FUNC_VOID(static inline, void, mln_fheap_link, \
               (mln_fheap_t *fh, mln_fheap_node_t *y, mln_fheap_node_t *x), \
               (fh, y, x), \
@@ -119,44 +163,65 @@ MLN_FUNC_VOID(static inline, void, mln_fheap_consolidate, \
               (mln_fheap_t *fh, fheap_cmp cmp), (fh, cmp), \
 {
     mln_fheap_node_t *array[FH_LGN];
-    memset(array, 0, sizeof(mln_fheap_node_t *)*FH_LGN);
-    mln_fheap_node_t *x, *y, *w, *tmp;
-    mln_size_t d, mark = 0;
-    for (w = fh->root_list; w != NULL && !(w == fh->root_list && mark);) {
-        if (w == fh->root_list) ++mark;
+    memset(array, 0, sizeof(mln_fheap_node_t *) * FH_LGN);
+    mln_fheap_node_t *w = fh->root_list;
+    if (w == NULL) { fh->min = NULL; return; }
+    mln_size_t root_count = 0;
+    mln_fheap_node_t *t = w;
+    do { root_count++; t = t->right; } while (t != w);
+    mln_fheap_node_t *x, *y, *next, *tmp;
+    mln_size_t d, i, max_d = 0;
+    for (i = 0; i < root_count; i++) {
+        next = w->right;
         x = w;
-        w = w->right;
+        x->left = x;
+        x->right = x;
         d = x->degree;
         while (array[d] != NULL) {
             y = array[d];
             if (!cmp(y->key, x->key)) {
-                tmp = x;
-                x = y;
-                y = tmp;
+                tmp = x; x = y; y = tmp;
             }
-            if (y == w) w = w->right;
-            mln_fheap_link(fh, y, x);
+            if (x->child == NULL) {
+                x->child = y;
+                y->left = y;
+                y->right = y;
+            } else {
+                y->right = x->child;
+                y->left = x->child->left;
+                x->child->left->right = y;
+                x->child->left = y;
+            }
+            y->parent = x;
+            ++(x->degree);
+            y->mark = FHEAP_FALSE;
             array[d] = NULL;
             ++d;
         }
         array[d] = x;
+        if (d > max_d) max_d = d;
+        w = next;
     }
+    fh->root_list = NULL;
     fh->min = NULL;
-    mln_size_t i;
-    mln_fheap_node_t *root_list = NULL;
-    for (i = 0; i<FH_LGN; ++i) {
+    for (i = 0; i <= max_d; ++i) {
         if (array[i] == NULL) continue;
-        mln_fheap_del_child(&(fh->root_list), array[i]);
-        mln_fheap_add_child(&root_list, array[i]);
-        array[i]->parent = NULL;
-        if (fh->min == NULL) {
-            fh->min = array[i];
+        mln_fheap_node_t *node = array[i];
+        node->parent = NULL;
+        if (fh->root_list == NULL) {
+            node->left = node;
+            node->right = node;
+            fh->root_list = node;
+            fh->min = node;
         } else {
-            if (!cmp(array[i]->key, fh->min->key))
-                fh->min = array[i];
+            node->right = fh->root_list;
+            node->left = fh->root_list->left;
+            fh->root_list->left->right = node;
+            fh->root_list->left = node;
+            if (!cmp(node->key, fh->min->key))
+                fh->min = node;
         }
     }
-    fh->root_list = root_list;
 })
 
 MLN_FUNC_VOID(static inline, void, mln_fheap_cut, \
@@ -222,17 +287,13 @@ MLN_FUNC(static inline, mln_fheap_node_t *, mln_fheap_remove_child, \
     if (cmp == NULL) cmp = (fh)->cmp;\
     mln_fheap_node_t *z = (fh)->min;\
     if (z != NULL) {\
-        mln_fheap_node_t *child;\
-        while ((child = mln_fheap_remove_child(&(z->child))) != NULL) {\
-            mln_fheap_add_child(&((fh)->root_list), child);\
-            child->parent = NULL;\
-        }\
-        mln_fheap_node_t *right = z->right;\
+        mln_fheap_splice_children(&((fh)->root_list), z->child);\
+        z->child = NULL;\
         mln_fheap_del_child(&((fh)->root_list), z);\
-        if (z == right) {\
+        if ((fh)->root_list == NULL) {\
             (fh)->min = NULL;\
         } else {\
-            (fh)->min = right;\
+            (fh)->min = (fh)->root_list;\
             mln_fheap_consolidate((fh), cmp);\
         }\
         --((fh)->num);\
@@ -275,16 +336,22 @@ MLN_FUNC(static inline, mln_fheap_node_t *, mln_fheap_remove_child, \
             f((fn)->key);\
         if (!(fn)->nofree) {\
            if ((fh)->pool != NULL) (fh)->pool_free((fn));\
-           else free((fn));\
+           else { (fn)->right = (fh)->free_list; (fh)->free_list = (fn); }\
         }\
     }\
 })
 
 #define mln_fheap_inline_free(fh, compare, freer) ({\
     if ((fh) != NULL) {\
-        mln_fheap_node_t *fn;\
-        while ((fn = mln_fheap_inline_extract_min((fh), (compare))) != NULL) {\
-            mln_fheap_inline_node_free((fh), fn, freer);\
+        fheap_key_free _kf = (fheap_key_free)(freer);\
+        if (_kf == NULL) _kf = (fh)->key_free;\
+        mln_fheap_destroy_list((fh)->root_list, _kf, (fh)->pool, (fh)->pool_free);\
+        { mln_fheap_node_t *_fl = (fh)->free_list;\
+          while (_fl != NULL) {\
+            mln_fheap_node_t *_fn = _fl; _fl = _fl->right;\
+            if ((fh)->pool != NULL) (fh)->pool_free(_fn);\
+            else free(_fn);\
+          }\
         }\
         if ((fh)->pool != NULL) (fh)->pool_free((fh));\
         else free((fh));\
