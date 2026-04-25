@@ -72,7 +72,21 @@ int mln_thread_pool_resource_add(void *data);
 
 描述：将资源`data`放入到资源池中。本函数仅应由主线程调用，用于主线程向子线程下发任务所用。
 
+实现上使用了一个无锁的进入栈（incoming），主线程仅通过原子CAS将节点挂入，从而避免与正在工作的子线程争抢全局互斥锁。仅当需要唤醒处于等待中的子线程或需要新建子线程时，主线程才会去获取互斥锁。
+
 返回值：成功则返回`0`，否则返回`非0`
+
+
+
+#### mln_thread_pool_resource_addn
+
+```c
+int mln_thread_pool_resource_addn(void **data, mln_size_t n);
+```
+
+描述：批量下发`n`个资源。仅应由主线程调用。`data`为长度至少为`n`的指针数组，每个元素为一个资源指针，含义与`mln_thread_pool_resource_add`相同。该函数会一次性将所有资源挂入资源池，因而比`n`次`mln_thread_pool_resource_add`大幅减少互斥锁与原子操作的开销，适用于一次性下发多个任务的场景。
+
+返回值：成功则返回`0`。当`data`中部分资源已成功挂入但因内存不足而无法完成全部时返回`ENOMEM`，已成功挂入的部分会被正常处理。
 
 
 

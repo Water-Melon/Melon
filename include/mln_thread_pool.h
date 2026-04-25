@@ -41,17 +41,30 @@ struct mln_thread_pool_s {
     pthread_mutex_t                    mutex;
     pthread_cond_t                     cond;
     pthread_attr_t                     attr;
+    /*
+     * Lock-free LIFO inbox. The single producer pushes here without the
+     * mutex, and any consumer atomically swaps the whole stack out into
+     * its FIFO main queue when its own queue runs dry.
+     */
+    mln_thread_pool_resource_t        *incoming;
+    /*
+     * FIFO main queue and free-list cache. Both are mutex-protected and
+     * only accessed by consumers (and shutdown paths).
+     */
     mln_thread_pool_resource_t        *res_chain_head;
     mln_thread_pool_resource_t        *res_chain_tail;
+    mln_thread_pool_resource_t        *res_free_list;
     mln_thread_pool_member_t          *child_head;
     mln_thread_pool_member_t          *child_tail;
     mln_u32_t                          max;
     mln_u32_t                          idle;
     mln_u32_t                          counter;
+    mln_u32_t                          waiters;
     mln_u32_t                          quit:1;
     mln_u32_t                          padding:31;
     mln_u64_t                          cond_timeout;/*ms*/
     mln_size_t                         n_res;
+    mln_size_t                         free_list_size;
     mln_thread_process                 process_handler;
     mln_thread_data_free               free_handler;
 };
@@ -75,6 +88,7 @@ struct mln_thread_pool_info {
 
 extern int mln_thread_pool_run(struct mln_thread_pool_attr *tpattr) __NONNULL1(1);
 extern int mln_thread_pool_resource_add(void *data) __NONNULL1(1);
+extern int mln_thread_pool_resource_addn(void **data, mln_size_t n) __NONNULL1(1);
 extern void mln_thread_quit(void);
 extern void mln_thread_resource_info(struct mln_thread_pool_info *info);
 #endif
