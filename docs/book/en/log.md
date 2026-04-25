@@ -105,6 +105,30 @@ Return value: PID file path string
 
 
 
+#### mln_log_writen
+
+```c
+int mln_log_writen(void *buf, mln_size_t size);
+```
+
+Description: Write raw data of `size` bytes from `buf` directly to the log file. This function is thread-safe and process-safe.
+
+Return value: the number of bytes written on success, `-1` on failure
+
+
+
+#### mln_log_fd
+
+```c
+int mln_log_fd(void);
+```
+
+Description: Get the file descriptor of the current log file.
+
+Return value: log file descriptor
+
+
+
 #### mln_log_logger_set
 
 ```c

@@ -105,6 +105,30 @@ char *mln_log_pid_path(void);
 
 
 
+#### mln_log_writen
+
+```c
+int mln_log_writen(void *buf, mln_size_t size);
+```
+
+描述：将`buf`中`size`字节的原始数据直接写入日志文件。该函数是线程安全和进程安全的。
+
+返回值：成功返回写入的字节数，失败返回`-1`
+
+
+
+#### mln_log_fd
+
+```c
+int mln_log_fd(void);
+```
+
+描述：获取当前日志文件的文件描述符。
+
+返回值：日志文件描述符
+
+
+
 #### mln_log_logger_set
 
 ```c
