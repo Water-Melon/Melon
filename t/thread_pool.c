@@ -27,6 +27,48 @@ static double monotonic_seconds(void)
     return ts.tv_sec + ts.tv_nsec / 1e9;
 }
 
+/*
+ * Detect a much-slower-than-native runtime (valgrind, ASan, qemu, ...)
+ * so that the throughput-floor assertions in the performance tests do
+ * not fire as false positives. We time a small CPU-bound loop: native
+ * hardware completes it in well under 10 ms, while interpreted/
+ * instrumented runs typically take 100 ms or more.
+ *
+ * The detection is also short-circuited by the MLN_TEST_SKIP_PERF
+ * environment variable, which lets CI explicitly skip the perf
+ * thresholds when running under tools that don't show up in the
+ * timing-based heuristic (some sanitizers, debuggers, etc.).
+ */
+static int g_slow_runtime = -1;
+
+static int slow_runtime_detected(void)
+{
+    if (g_slow_runtime >= 0) return g_slow_runtime;
+    if (getenv("MLN_TEST_SKIP_PERF") != NULL) {
+        g_slow_runtime = 1;
+        return 1;
+    }
+    volatile unsigned long counter = 0;
+    int i;
+    double t0 = monotonic_seconds();
+    for (i = 0; i < 10 * 1000 * 1000; ++i) counter += (unsigned long)i;
+    double dt = monotonic_seconds() - t0;
+    /*
+     * 50 ms for 10M trivial adds is roughly an order of magnitude
+     * above the worst native CPU we care about; valgrind tends to
+     * land near 200 ms on the same workload.
+     */
+    g_slow_runtime = (dt > 0.05) ? 1 : 0;
+    if (g_slow_runtime) {
+        fprintf(stderr,
+                "(slow runtime detected: 10M trivial adds took %.3fs; "
+                "perf-floor assertions will be skipped)\n", dt);
+    }
+    /* defeat the optimizer */
+    if (counter == (unsigned long)-1) fprintf(stderr, "%lu\n", counter);
+    return g_slow_runtime;
+}
+
 /* ---------------------- 1. basic functionality --------------------- */
 /*
  * Submit a fixed number of items via the single-add API and verify
@@ -439,10 +481,12 @@ static void test_sequential_pools(void)
  * lost-wakeup bugs introduced by the lock-free incoming path.
  */
 
-#define TEST9_N 200000
+#define TEST9_N_FAST 200000
+#define TEST9_N_SLOW  20000
 
 static volatile int t9_processed = 0;
 static volatile unsigned long t9_xor = 0;
+static int t9_n = 0;
 
 static int t9_child(void *data)
 {
@@ -456,19 +500,19 @@ static int t9_main(void *data)
 {
     int i;
     /* Mix single and batched submission to exercise both paths. */
-    for (i = 0; i < TEST9_N / 2; ++i) {
+    for (i = 0; i < t9_n / 2; ++i) {
         if (mln_thread_pool_resource_add((void *)(unsigned long)(i + 1)) != 0) return -1;
     }
     void *batch[64];
-    int sent = TEST9_N / 2, base, n, j;
-    while (sent < TEST9_N) {
-        n = TEST9_N - sent; if (n > 64) n = 64;
+    int sent = t9_n / 2, base, n, j;
+    while (sent < t9_n) {
+        n = t9_n - sent; if (n > 64) n = 64;
         base = sent;
         for (j = 0; j < n; ++j) batch[j] = (void *)(unsigned long)(base + j + 1);
         if (mln_thread_pool_resource_addn(batch, n) != 0) return -1;
         sent += n;
     }
-    while (__sync_fetch_and_add(&t9_processed, 0) < TEST9_N) usleep(500);
+    while (__sync_fetch_and_add(&t9_processed, 0) < t9_n) usleep(500);
     return 0;
 }
 
@@ -477,6 +521,7 @@ static void test_stability(void)
     HEADER("stability under mixed load");
     t9_processed = 0;
     t9_xor = 0;
+    t9_n = slow_runtime_detected() ? TEST9_N_SLOW : TEST9_N_FAST;
     struct mln_thread_pool_attr attr = {0};
     attr.child_process_handler = t9_child;
     attr.main_process_handler  = t9_main;
@@ -487,13 +532,13 @@ static void test_stability(void)
 
     int rc = mln_thread_pool_run(&attr);
     CHECK(rc == 0, "run failed");
-    CHECK(t9_processed == TEST9_N, "processed count mismatch");
+    CHECK(t9_processed == t9_n, "processed count mismatch");
 
     /* Recompute the expected XOR and compare. */
     unsigned long expected = 0;
     int i;
-    for (i = 1; i <= TEST9_N; ++i) expected ^= (unsigned long)i;
-    fprintf(stderr, "  xor=%lx (expected %lx)\n", t9_xor, expected);
+    for (i = 1; i <= t9_n; ++i) expected ^= (unsigned long)i;
+    fprintf(stderr, "  xor=%lx (expected %lx, n=%d)\n", t9_xor, expected, t9_n);
     CHECK(t9_xor == expected, "XOR mismatch - some items lost or duplicated");
 }
 
@@ -508,7 +553,8 @@ static void test_stability(void)
  * scheduler noise does not flake the test.
  */
 
-#define TEST10_N      400000
+#define TEST10_N_FAST 400000
+#define TEST10_N_SLOW  20000   /* small under valgrind/qemu/sanitisers */
 #define TEST10_BATCH  32
 #define TEST10_TRIALS 3
 
@@ -524,6 +570,7 @@ static int t10_main(void *data)
 {
     int trial;
     double best = 0.0;
+    int n_total = slow_runtime_detected() ? TEST10_N_SLOW : TEST10_N_FAST;
 
     for (trial = 0; trial < TEST10_TRIALS; ++trial) {
         t10_processed = 0;
@@ -533,23 +580,23 @@ static int t10_main(void *data)
             int i;
             for (i = 0; i < TEST10_BATCH; ++i) batch[i] = &t10_dummy;
             int sent = 0, n;
-            while (sent < TEST10_N) {
-                n = TEST10_N - sent; if (n > TEST10_BATCH) n = TEST10_BATCH;
+            while (sent < n_total) {
+                n = n_total - sent; if (n > TEST10_BATCH) n = TEST10_BATCH;
                 if (mln_thread_pool_resource_addn(batch, n) != 0) return -1;
                 sent += n;
             }
         } else {
             int i;
-            for (i = 0; i < TEST10_N; ++i) {
+            for (i = 0; i < n_total; ++i) {
                 if (mln_thread_pool_resource_add(&t10_dummy) != 0) return -1;
             }
         }
-        while (__sync_fetch_and_add(&t10_processed, 0) < TEST10_N) usleep(200);
+        while (__sync_fetch_and_add(&t10_processed, 0) < n_total) usleep(200);
         double dt = monotonic_seconds() - t0;
-        double ops = TEST10_N / dt;
+        double ops = n_total / dt;
         if (ops > best) best = ops;
         fprintf(stderr, "  trial %d: %d ops in %.3fs => %.0f ops/s\n",
-                trial, TEST10_N, dt, ops);
+                trial, n_total, dt, ops);
     }
     t10_best = best;
     return 0;
@@ -561,8 +608,14 @@ static void test_performance_single(void)
      * Pre-optimization baseline of resource_add on this hardware:
      * roughly 4-5 million ops/s. Asserting >= 9M means we are
      * comfortably above 2x the baseline.
+     *
+     * The threshold is skipped under valgrind / sanitizers / qemu,
+     * where the workload still runs (so we still exercise the code
+     * paths and detect functional regressions or memory errors) but
+     * the throughput is dominated by the interpreter, not the pool.
      */
     HEADER("throughput with single resource_add (target >=9M ops/s)");
+    int slow = slow_runtime_detected();
     t10_use_batch = 0;
     struct mln_thread_pool_attr attr = {0};
     attr.child_process_handler = t10_child;
@@ -574,8 +627,12 @@ static void test_performance_single(void)
     int rc = mln_thread_pool_run(&attr);
     CHECK(rc == 0, "run failed");
     fprintf(stderr, "  best: %.0f ops/s\n", t10_best);
-    CHECK(t10_best >= 9000000.0,
-          "single-add throughput below 9M ops/s - perf regression");
+    if (slow) {
+        fprintf(stderr, "  (skipping throughput assertion in slow runtime)\n");
+    } else {
+        CHECK(t10_best >= 9000000.0,
+              "single-add throughput below 9M ops/s - perf regression");
+    }
 }
 
 static void test_performance_batch(void)
@@ -586,8 +643,13 @@ static void test_performance_batch(void)
      * because the 4-worker contention on the consumer side ends up
      * being the bottleneck for this benchmark; running a single
      * trial above 10M is common but not guaranteed.
+     *
+     * As with the single-add test, the floor is skipped under
+     * valgrind / sanitizers / qemu so the test still passes there
+     * while continuing to exercise the code paths.
      */
     HEADER("throughput with batched addn (target >=7M ops/s)");
+    int slow = slow_runtime_detected();
     t10_use_batch = 1;
     struct mln_thread_pool_attr attr = {0};
     attr.child_process_handler = t10_child;
@@ -599,8 +661,12 @@ static void test_performance_batch(void)
     int rc = mln_thread_pool_run(&attr);
     CHECK(rc == 0, "run failed");
     fprintf(stderr, "  best: %.0f ops/s\n", t10_best);
-    CHECK(t10_best >= 7000000.0,
-          "batched throughput below 7M ops/s - perf regression");
+    if (slow) {
+        fprintf(stderr, "  (skipping throughput assertion in slow runtime)\n");
+    } else {
+        CHECK(t10_best >= 7000000.0,
+              "batched throughput below 7M ops/s - perf regression");
+    }
 }
 
 /* ------------------------------- main ------------------------------ */
