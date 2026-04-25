@@ -10,6 +10,7 @@
 #if !defined(MSVC)
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/uio.h>
 #else
 #include "mln_utils.h"
 #endif
@@ -42,6 +43,8 @@ static void mln_log_atfork_unlock(void);
 #endif
 static int mln_log_get_log(mln_log_t *log, mln_conf_t *cf, int is_init);
 static mln_logger_t _logger = _mln_sys_log_process;
+
+#define MLN_LOG_BUF_SIZE 4096
 
 /*
  * global variables
@@ -80,7 +83,7 @@ static inline void mln_file_unlock(int fd)
     fl.l_start = 0;
     fl.l_whence = SEEK_SET;
     fl.l_len = 0;
-    fcntl(fd, F_SETLKW, &fl); 
+    fcntl(fd, F_SETLKW, &fl);
 #endif
 }
 
@@ -368,9 +371,7 @@ int mln_log_reload(void *data)
     mln_spin_lock(&(g_log.thread_lock));
 #endif
     mln_log_get_log(&g_log, mln_conf(), 0);
-    mln_file_lock(g_log.fd);
     int ret = mln_log_set_level(&g_log, mln_conf(), 0);
-    mln_file_unlock(g_log.fd);
 #if !defined(MSVC)
     mln_spin_unlock(&(g_log.thread_lock));
 #endif
@@ -378,7 +379,145 @@ int mln_log_reload(void *data)
 }
 
 /*
- * reocrd log
+ * format log message into buffer
+ */
+static int mln_log_fmt_build(char *buf, int size, int pos, char *msg, va_list arg)
+{
+    int cnt = 0, n, remain;
+    char *q = msg;
+
+    while (*msg != 0 && pos < size - 1) {
+        if (*msg != '%') {
+            ++cnt;
+            ++msg;
+            continue;
+        }
+        if (cnt > 0) {
+            remain = size - 1 - pos;
+            if (cnt > remain) cnt = remain;
+            memcpy(buf + pos, q, cnt);
+            pos += cnt;
+        }
+        cnt = 0;
+        ++msg;
+        q = msg + 1;
+        remain = size - pos;
+        switch (*msg) {
+            case 's':
+            {
+                char *s = va_arg(arg, char *);
+                n = strlen(s);
+                if (n > remain - 1) n = remain - 1;
+                memcpy(buf + pos, s, n);
+                pos += n;
+                break;
+            }
+            case 'S':
+            {
+                mln_string_t *s = va_arg(arg, mln_string_t *);
+                n = (int)s->len;
+                if (n > remain - 1) n = remain - 1;
+                memcpy(buf + pos, s->data, n);
+                pos += n;
+                break;
+            }
+            case 'l':
+            {
+                mln_sauto_t num = va_arg(arg, long);
+                n = snprintf(buf + pos, remain, "%ld", num);
+                if (n > 0 && n < remain) pos += n;
+                break;
+            }
+            case 'd':
+            {
+                int num = va_arg(arg, int);
+                n = snprintf(buf + pos, remain, "%d", num);
+                if (n > 0 && n < remain) pos += n;
+                break;
+            }
+            case 'c':
+            {
+                int ch = va_arg(arg, int);
+                if (pos < size - 1) buf[pos++] = (char)ch;
+                break;
+            }
+            case 'f':
+            {
+                double f = va_arg(arg, double);
+                n = snprintf(buf + pos, remain, "%f", f);
+                if (n > 0 && n < remain) pos += n;
+                break;
+            }
+            case 'x':
+            {
+                int num = va_arg(arg, int);
+                n = snprintf(buf + pos, remain, "%x", num);
+                if (n > 0 && n < remain) pos += n;
+                break;
+            }
+            case 'X':
+            {
+                long num = va_arg(arg, long);
+                n = snprintf(buf + pos, remain, "%lx", num);
+                if (n > 0 && n < remain) pos += n;
+                break;
+            }
+            case 'u':
+            {
+                unsigned int num = va_arg(arg, unsigned int);
+                n = snprintf(buf + pos, remain, "%u", num);
+                if (n > 0 && n < remain) pos += n;
+                break;
+            }
+            case 'U':
+            {
+                unsigned long num = va_arg(arg, unsigned long);
+                n = snprintf(buf + pos, remain, "%lu", num);
+                if (n > 0 && n < remain) pos += n;
+                break;
+            }
+            case 'i':
+            {
+#if defined(MSVC) || defined(i386) || defined(__arm__)
+                long long num = va_arg(arg, long long);
+                n = snprintf(buf + pos, remain, "%lld", num);
+#else
+                long num = va_arg(arg, long);
+                n = snprintf(buf + pos, remain, "%ld", num);
+#endif
+                if (n > 0 && n < remain) pos += n;
+                break;
+            }
+            case 'I':
+            {
+#if defined(MSVC) || defined(i386) || defined(__arm__)
+                unsigned long long num = va_arg(arg, unsigned long long);
+                n = snprintf(buf + pos, remain, "%llu", num);
+#else
+                unsigned long num = va_arg(arg, unsigned long);
+                n = snprintf(buf + pos, remain, "%lu", num);
+#endif
+                if (n > 0 && n < remain) pos += n;
+                break;
+            }
+            default:
+                n = snprintf(buf + pos, remain, "%s\n", log_err_fmt);
+                if (n > 0 && n < remain) pos += n;
+                return pos;
+        }
+        ++msg;
+    }
+    if (cnt > 0 && pos < size - 1) {
+        int remain = size - 1 - pos;
+        if (cnt > remain) cnt = remain;
+        memcpy(buf + pos, q, cnt);
+        pos += cnt;
+    }
+    return pos;
+}
+
+/*
+ * record log
  */
 void _mln_sys_log(mln_log_level_t level, \
                   const char *file, \
@@ -387,16 +526,14 @@ void _mln_sys_log(mln_log_level_t level, \
                   char *msg, \
                   ...)
 {
+    if (_logger == NULL) return;
 #if !defined(MSVC)
     mln_spin_lock(&(g_log.thread_lock));
 #endif
-    mln_file_lock(g_log.fd);
     va_list arg;
     va_start(arg, msg);
-    if (_logger != NULL)
-        _logger(&g_log, level, file, func, line, msg, arg);
+    _logger(&g_log, level, file, func, line, msg, arg);
     va_end(arg);
-    mln_file_unlock(g_log.fd);
 #if !defined(MSVC)
     mln_spin_unlock(&(g_log.thread_lock));
 #endif
@@ -415,61 +552,12 @@ static inline int mln_log_write(mln_log_t *log, void *buf, mln_size_t size)
     return ret;
 }
 
-static inline int mln_log_level_write(mln_log_t *log, mln_log_level_t level)
-{
-    int ret = 0;
-
-    switch (level) {
-        case report:
-            ret = write(log->fd, (void *)"REPORT: ", 8);
-            if (log->init && !log->in_daemon)
-#if defined(MSVC)
-                ret = write(_fileno(stderr), (void *)"REPORT: ", 17);
-#else
-                ret = write(STDERR_FILENO, (void *)"\e[34mREPORT\e[0m: ", 17);
-#endif
-            break;
-        case debug:
-            ret = write(log->fd, (void *)"DEBUG: ", 7);
-            if (log->init && !log->in_daemon)
-#if defined(MSVC)
-                ret = write(_fileno(stderr), (void *)"DEBUG: ", 16);
-#else
-                ret = write(STDERR_FILENO, (void *)"\e[32mDEBUG\e[0m: ", 16);
-#endif
-            break;
-        case warn:
-            ret = write(log->fd, (void *)"WARN: ", 6);
-            if (log->init && !log->in_daemon)
-#if defined(MSVC)
-                ret = write(_fileno(stderr), (void *)"WARN: ", 15);
-#else
-                ret = write(STDERR_FILENO, (void *)"\e[33mWARN\e[0m: ", 15);
-#endif
-            break;
-        case error:
-            ret = write(log->fd, (void *)"ERROR: ", 7);
-            if (log->init && !log->in_daemon)
-#if defined(MSVC)
-                ret = write(_fileno(stderr), (void *)"ERROR: ", 16);
-#else
-                ret = write(STDERR_FILENO, (void *)"\e[31mERROR\e[0m: ", 16);
-#endif
-            break;
-        default:
-            break;
-    }
-    return ret;
-}
-
 int mln_log_writen(void *buf, mln_size_t size)
 {
 #if !defined(MSVC)
     mln_spin_lock(&(g_log.thread_lock));
 #endif
-    mln_file_lock(g_log.fd);
     int n = mln_log_write(&g_log, buf, size);
-    mln_file_unlock(g_log.fd);
 #if !defined(MSVC)
     mln_spin_unlock(&(g_log.thread_lock));
 #endif
@@ -486,159 +574,90 @@ _mln_sys_log_process(mln_log_t *log, \
                      va_list arg)
 {
     if (level < log->level) return;
-    int n;
-    struct timeval tv;
-    struct utctime uc;
-    gettimeofday(&tv, NULL);
-    mln_time2utc(tv.tv_sec, &uc);
-    char line_str[256] = {0};
+
+    char buf[MLN_LOG_BUF_SIZE];
+    int pos = 0, n;
+    int prefix_end = 0, level_end = 0;
+
+    /* timestamp */
     if (level > none) {
-        n = snprintf(line_str, sizeof(line_str)-1, \
-                         "%02ld/%02ld/%ld %02ld:%02ld:%02ld UTC ", \
-                         uc.month, uc.day, uc.year, \
-                         uc.hour, uc.minute, uc.second);
-        mln_log_write(log, (void *)line_str, n);
+        struct timeval tv;
+        struct utctime uc;
+        gettimeofday(&tv, NULL);
+        mln_time2utc(tv.tv_sec, &uc);
+        n = snprintf(buf, MLN_LOG_BUF_SIZE - 1, \
+                     "%02ld/%02ld/%ld %02ld:%02ld:%02ld UTC ", \
+                     uc.month, uc.day, uc.year, \
+                     uc.hour, uc.minute, uc.second);
+        if (n > 0 && n < MLN_LOG_BUF_SIZE - 1) pos = n;
     }
-    mln_log_level_write(log, level);
+    prefix_end = pos;
+
+    /* level prefix (plain, for log file) */
+    switch (level) {
+        case report:
+            if (pos + 8 < MLN_LOG_BUF_SIZE) { memcpy(buf + pos, "REPORT: ", 8); pos += 8; }
+            break;
+        case debug:
+            if (pos + 7 < MLN_LOG_BUF_SIZE) { memcpy(buf + pos, "DEBUG: ", 7); pos += 7; }
+            break;
+        case warn:
+            if (pos + 6 < MLN_LOG_BUF_SIZE) { memcpy(buf + pos, "WARN: ", 6); pos += 6; }
+            break;
+        case error:
+            if (pos + 7 < MLN_LOG_BUF_SIZE) { memcpy(buf + pos, "ERROR: ", 7); pos += 7; }
+            break;
+        default:
+            break;
+    }
+    level_end = pos;
+
+    /* file:func:line */
     if (level >= debug) {
-        memset(line_str, 0, sizeof(line_str));
-        mln_log_write(log, (void *)file, strlen(file));
-        mln_log_write(log, (void *)":", 1);
-        mln_log_write(log, (void *)func, strlen(func));
-        mln_log_write(log, (void *)":", 1);
-        n = snprintf(line_str, sizeof(line_str)-1, "%d", line);
-        mln_log_write(log, (void *)line_str, n);
-        mln_log_write(log, (void *)": ", 2);
-    }
-    
-    if (level > none) {
-        memset(line_str, 0, sizeof(line_str));
-        n = snprintf(line_str, sizeof(line_str)-1, "PID:%d ", getpid());
-        mln_log_write(log, (void *)line_str, n);
+        n = snprintf(buf + pos, MLN_LOG_BUF_SIZE - pos, "%s:%s:%d: ", file, func, line);
+        if (n > 0 && n < MLN_LOG_BUF_SIZE - pos) pos += n;
     }
 
-    int cnt = 0;
-    char *p = msg;
-    while (*msg != 0) {
-        if (*msg != '%') {
-            ++cnt;
-            ++msg;
-            continue;
-        }
-        mln_log_write(log, (void *)p, cnt);
-        cnt = 0;
-        ++msg;
-        p = msg + 1;
-        switch (*msg) {
-            case 's':
-            {
-                char *s = va_arg(arg, char *);
-                mln_log_write(log, (void *)s, strlen(s));
-                break;
-            }
-            case 'S':
-            {
-                mln_string_t *s = va_arg(arg, mln_string_t *);
-                mln_log_write(log, s->data, s->len);
-                break;
-            }
-            case 'l':
-            {
-                memset(line_str, 0, sizeof(line_str));
-                mln_sauto_t num = va_arg(arg, long);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
-                mln_log_write(log, (void *)line_str, n);
-                break;
-            }
-            case 'd':
-            {
-                memset(line_str, 0, sizeof(line_str));
-                int num = va_arg(arg, int);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%d", num);
-                mln_log_write(log, (void *)line_str, n);
-                break;
-            }
-            case 'c':
-            {
-                int ch = va_arg(arg, int);
-                mln_log_write(log, (void *)&ch, 1);
-                break;
-            }
-            case 'f':
-            {
-                double f = va_arg(arg, double);
-                memset(line_str, 0, sizeof(line_str));
-                int n = snprintf(line_str, sizeof(line_str)-1, "%f", f);
-                mln_log_write(log, (void *)line_str, n);
-                break;
-            }
-            case 'x':
-            {
-                memset(line_str, 0, sizeof(line_str));
-                int num = va_arg(arg, int);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%x", num);
-                mln_log_write(log, (void *)line_str, n);
-                break;
-            }
-            case 'X':
-            {
-                memset(line_str, 0, sizeof(line_str));
-                long num = va_arg(arg, long);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%lx", num);
-                mln_log_write(log, (void *)line_str, n);
-                break;
-            }
-            case 'u':
-            {
-                memset(line_str, 0, sizeof(line_str));
-                unsigned int num = va_arg(arg, unsigned int);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%u", num);
-                mln_log_write(log, (void *)line_str, n);
-                break;
-            }
-            case 'U':
-            {
-                memset(line_str, 0, sizeof(line_str));
-                unsigned long num = va_arg(arg, unsigned long);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%lu", num);
-                mln_log_write(log, (void *)line_str, n);
-                break;
-            }
-            case 'i':
-            {
-                memset(line_str, 0, sizeof(line_str));
-#if defined(MSVC) || defined(i386) || defined(__arm__)
-                long long num = va_arg(arg, long long);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%lld", num);
-#else
-                long num = va_arg(arg, long);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%ld", num);
-#endif
-                mln_log_write(log, (void *)line_str, n);
-                break;
-            }
-            case 'I':
-            {
-                memset(line_str, 0, sizeof(line_str));
-#if defined(MSVC) || defined(i386) || defined(__arm__)
-                unsigned long long num = va_arg(arg, unsigned long long);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%llu", num);
-#else
-                unsigned long num = va_arg(arg, unsigned long);
-                int n = snprintf(line_str, sizeof(line_str)-1, "%lu", num);
-#endif
-                mln_log_write(log, (void *)line_str, n);
-                break;
-            }
-            default:
-                mln_log_write(log, (void *)log_err_fmt, sizeof(log_err_fmt)-1);
-                mln_log_write(log, (void *)"\n", 1);
-                return;
-        }
-        ++msg;
+    /* PID */
+    if (level > none) {
+        n = snprintf(buf + pos, MLN_LOG_BUF_SIZE - pos, "PID:%d ", getpid());
+        if (n > 0 && n < MLN_LOG_BUF_SIZE - pos) pos += n;
     }
-    if (cnt)
-        mln_log_write(log, (void *)p, cnt);
+
+    /* format message body into buffer */
+    pos = mln_log_fmt_build(buf, MLN_LOG_BUF_SIZE, pos, msg, arg);
+
+    /* single write to log file */
+    n = write(log->fd, buf, pos);
+    if (n < 0) n = 0; /*suppress warning*/
+
+    /* single write to stderr (with color on non-MSVC) */
+    if (log->init && !log->in_daemon) {
+#if !defined(MSVC)
+        if (level > none && level <= error) {
+            static const char * const color_levels[] = {
+                "",
+                "\e[34mREPORT\e[0m: ",
+                "\e[32mDEBUG\e[0m: ",
+                "\e[33mWARN\e[0m: ",
+                "\e[31mERROR\e[0m: ",
+            };
+            static const int color_lens[] = {0, 17, 16, 15, 16};
+            struct iovec iov[3];
+            iov[0].iov_base = buf;
+            iov[0].iov_len = prefix_end;
+            iov[1].iov_base = (void *)color_levels[level];
+            iov[1].iov_len = color_lens[level];
+            iov[2].iov_base = buf + level_end;
+            iov[2].iov_len = pos - level_end;
+            n = writev(STDERR_FILENO, iov, 3);
+        } else {
+            n = write(STDERR_FILENO, buf, pos);
+        }
+#else
+        n = write(_fileno(stderr), buf, pos);
+#endif
+    }
 }
 
 /*
@@ -663,4 +682,3 @@ char *mln_log_pid_path(void)
 {
     return g_log.pid_path;
 }
-
