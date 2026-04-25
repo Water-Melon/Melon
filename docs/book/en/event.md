@@ -70,7 +70,7 @@ Return value: none
 ```c
 int mln_event_fd_set(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms, void *data, ev_fd_handler fd_handler);
 
-typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);s
+typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);
 ```
 
 Description: Set file descriptor event, where:

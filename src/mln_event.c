@@ -25,8 +25,6 @@ MLN_CHAIN_FUNC_DECLARE(static inline, \
                        mln_event_desc_t, );
 static inline void
 mln_event_desc_free(void *data);
-static int
-mln_event_rbtree_fd_cmp(const void *k1, const void *k2) __NONNULL2(1,2);
 static inline int
 mln_event_fd_timeout_cmp(const void *k1, const void *k2);
 static inline void
@@ -66,6 +64,113 @@ mln_event_fd_append_set(mln_event_t *event, \
 static int
 mln_event_fd_timeout_set(mln_event_t *ev, mln_event_desc_t *ed, int timeout_ms);
 
+/*
+ * Two-level page table for fd-indexed lookup.
+ * Level 1: page directory (ev_fd_pages[page_idx] -> page pointer)
+ * Level 2: each page holds M_EV_PAGE_SIZE (256) descriptor pointers
+ * Only used pages are allocated; empty pages are freed to reclaim memory.
+ */
+MLN_FUNC(static inline, int, mln_event_fd_page_dir_ensure, \
+         (mln_event_t *ev, int page_idx), (ev, page_idx), \
+{
+    if (page_idx < ev->ev_fd_pages_cap) return 0;
+    int new_cap = ev->ev_fd_pages_cap;
+    while (new_cap <= page_idx) new_cap <<= 1;
+    mln_event_desc_t ***new_pages = (mln_event_desc_t ***)realloc(ev->ev_fd_pages, \
+                                         (mln_size_t)new_cap * sizeof(mln_event_desc_t **));
+    if (new_pages == NULL) return -1;
+    int *new_cnt = (int *)realloc(ev->ev_fd_page_cnt, (mln_size_t)new_cap * sizeof(int));
+    if (new_cnt == NULL) {
+        ev->ev_fd_pages = new_pages; /* keep the expanded pages array */
+        return -1;
+    }
+    memset(new_pages + ev->ev_fd_pages_cap, 0, \
+           (mln_size_t)(new_cap - ev->ev_fd_pages_cap) * sizeof(mln_event_desc_t **));
+    memset(new_cnt + ev->ev_fd_pages_cap, 0, \
+           (mln_size_t)(new_cap - ev->ev_fd_pages_cap) * sizeof(int));
+    ev->ev_fd_pages = new_pages;
+    ev->ev_fd_page_cnt = new_cnt;
+    ev->ev_fd_pages_cap = new_cap;
+    return 0;
+})
+
+MLN_FUNC(static inline, int, mln_event_fd_array_ensure, \
+         (mln_event_t *ev, int fd), (ev, fd), \
+{
+    int page_idx = fd >> M_EV_PAGE_SHIFT;
+    if (mln_event_fd_page_dir_ensure(ev, page_idx) < 0)
+        return -1;
+    if (ev->ev_fd_pages[page_idx] == NULL) {
+        ev->ev_fd_pages[page_idx] = (mln_event_desc_t **)calloc(M_EV_PAGE_SIZE, sizeof(mln_event_desc_t *));
+        if (ev->ev_fd_pages[page_idx] == NULL) return -1;
+    }
+    return 0;
+})
+
+static inline mln_event_desc_t *mln_event_fd_array_get(mln_event_t *ev, int fd)
+{
+    int page_idx = fd >> M_EV_PAGE_SHIFT;
+    if (page_idx >= ev->ev_fd_pages_cap) return NULL;
+    mln_event_desc_t **page = ev->ev_fd_pages[page_idx];
+    if (page == NULL) return NULL;
+    return page[fd & M_EV_PAGE_MASK];
+}
+
+static inline void mln_event_fd_array_set(mln_event_t *ev, int fd, mln_event_desc_t *ed)
+{
+    int page_idx = fd >> M_EV_PAGE_SHIFT;
+    int slot = fd & M_EV_PAGE_MASK;
+    mln_event_desc_t **page = ev->ev_fd_pages[page_idx];
+    mln_event_desc_t *old = page[slot];
+    page[slot] = ed;
+    /* maintain per-page active count for automatic page reclaim */
+    if (old == NULL && ed != NULL) {
+        ev->ev_fd_page_cnt[page_idx]++;
+    } else if (old != NULL && ed == NULL) {
+        ev->ev_fd_page_cnt[page_idx]--;
+        if (ev->ev_fd_page_cnt[page_idx] == 0) {
+            free(page);
+            ev->ev_fd_pages[page_idx] = NULL;
+        }
+    }
+}
+
+/*
+ * free-list allocator for event descriptors
+ */
+MLN_FUNC(static inline, mln_event_desc_t *, mln_event_desc_alloc, \
+         (mln_event_t *ev), (ev), \
+{
+    mln_event_desc_t *ed = ev->ev_fd_free_head;
+    if (ed != NULL) {
+        ev->ev_fd_free_head = ed->next;
+        memset(ed, 0, sizeof(mln_event_desc_t));
+        return ed;
+    }
+    ed = (mln_event_desc_t *)malloc(sizeof(mln_event_desc_t));
+    if (ed != NULL)
+        memset(ed, 0, sizeof(mln_event_desc_t));
+    return ed;
+})
+
+MLN_FUNC_VOID(static inline, void, mln_event_desc_free_to_pool, \
+              (mln_event_t *ev, mln_event_desc_t *ed), (ev, ed), \
+{
+    ed->next = ev->ev_fd_free_head;
+    ev->ev_fd_free_head = ed;
+})
+
+/*
+ * cached time helper
+ */
+MLN_FUNC_VOID(static inline, void, mln_event_update_cached_time, \
+              (mln_event_t *ev), (ev), \
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    ev->cached_now_us = (mln_u64_t)tv.tv_sec * 1000000 + tv.tv_usec;
+})
+
 /*varliables*/
 mln_event_desc_t fheap_min = {
     NULL, NULL, NULL, NULL,
@@ -80,9 +185,6 @@ mln_event_desc_t fheap_min = {
 mln_event_t *mln_event_new(void)
 {
     int rc;
-#if defined(MSVC)
-    struct mln_rbtree_attr rbattr;
-#endif
     mln_event_t *ev;
     ev = (mln_event_t *)malloc(sizeof(mln_event_t));
     if (ev == NULL) {
@@ -90,19 +192,20 @@ mln_event_t *mln_event_new(void)
     }
     ev->callback = NULL;
     ev->callback_data = NULL;
-#if defined(MSVC)
-    rbattr.pool = NULL;
-    rbattr.pool_alloc = NULL;
-    rbattr.pool_free = NULL;
-    rbattr.cmp = mln_event_rbtree_fd_cmp;
-    rbattr.data_free = NULL;
-    ev->ev_fd_tree = mln_rbtree_new(&rbattr);
-#else
-    ev->ev_fd_tree = mln_rbtree_new(NULL);
-#endif
-    if (ev->ev_fd_tree == NULL) {
+    ev->ev_fd_free_head = NULL;
+    ev->cached_now_us = 0;
+
+    ev->ev_fd_pages_cap = M_EV_INIT_PAGES;
+    ev->ev_fd_pages = (mln_event_desc_t ***)calloc(M_EV_INIT_PAGES, sizeof(mln_event_desc_t **));
+    if (ev->ev_fd_pages == NULL) {
         goto err1;
     }
+    ev->ev_fd_page_cnt = (int *)calloc(M_EV_INIT_PAGES, sizeof(int));
+    if (ev->ev_fd_page_cnt == NULL) {
+        free(ev->ev_fd_pages);
+        goto err1;
+    }
+
     ev->ev_fd_wait_head = NULL;
     ev->ev_fd_wait_tail = NULL;
     ev->ev_fd_active_head = NULL;
@@ -178,7 +281,14 @@ err4:
 err3:
     mln_fheap_inline_free(ev->ev_fd_timeout_heap, mln_event_fd_timeout_cmp, NULL);
 err2:
-    mln_rbtree_free(ev->ev_fd_tree);
+    {
+        int _i;
+        for (_i = 0; _i < ev->ev_fd_pages_cap; _i++) {
+            if (ev->ev_fd_pages[_i]) free(ev->ev_fd_pages[_i]);
+        }
+        free(ev->ev_fd_pages);
+        free(ev->ev_fd_page_cnt);
+    }
 err1:
     free(ev);
     return NULL;
@@ -189,7 +299,14 @@ void mln_event_free(mln_event_t *ev)
     if (ev == NULL) return;
     mln_event_desc_t *ed;
     mln_fheap_inline_free(ev->ev_fd_timeout_heap, mln_event_fd_timeout_cmp, NULL);
-    mln_rbtree_free(ev->ev_fd_tree);
+    {
+        int _i;
+        for (_i = 0; _i < ev->ev_fd_pages_cap; _i++) {
+            if (ev->ev_fd_pages[_i]) free(ev->ev_fd_pages[_i]);
+        }
+        free(ev->ev_fd_pages);
+        free(ev->ev_fd_page_cnt);
+    }
     while ((ed = ev->ev_fd_wait_head) != NULL) {
         ev_fd_wait_chain_del(&(ev->ev_fd_wait_head), \
                              &(ev->ev_fd_wait_tail), \
@@ -211,6 +328,11 @@ void mln_event_free(mln_event_t *ev)
     pthread_mutex_destroy(&ev->timer_lock);
     pthread_mutex_destroy(&ev->cb_lock);
 #endif
+    /* free the free-list */
+    while ((ed = ev->ev_fd_free_head) != NULL) {
+        ev->ev_fd_free_head = ed->next;
+        free(ed);
+    }
     free(ev);
 }
 
@@ -224,9 +346,14 @@ MLN_FUNC_VOID(static inline, void, mln_event_desc_free, (void *data), (data), {
  */
 mln_event_timer_t *mln_event_timer_set(mln_event_t *event, mln_u32_t msec, void *data, ev_tm_handler tm_handler)
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    mln_uauto_t end = tv.tv_sec*1000000 + tv.tv_usec + msec*1000;
+    mln_uauto_t end;
+    if (event->cached_now_us != 0) {
+        end = event->cached_now_us + msec*1000;
+    } else {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        end = tv.tv_sec*1000000 + tv.tv_usec + msec*1000;
+    }
     mln_event_desc_t *ed;
     ed = (mln_event_desc_t *)malloc(sizeof(mln_event_desc_t));
     if (ed == NULL) {
@@ -241,14 +368,18 @@ mln_event_timer_t *mln_event_timer_set(mln_event_t *event, mln_u32_t msec, void 
     ed->next = NULL;
     ed->act_prev = NULL;
     ed->act_next = NULL;
-    mln_fheap_node_t *fn = mln_fheap_node_new(event->ev_timer_heap, ed);
-    if (fn == NULL) {
-        free(ed);
-        return NULL;
-    }
+    mln_fheap_node_t *fn;
 #if !defined(MSVC)
     pthread_mutex_lock(&event->timer_lock);
 #endif
+    fn = mln_fheap_node_new(event->ev_timer_heap, ed);
+    if (fn == NULL) {
+#if !defined(MSVC)
+        pthread_mutex_unlock(&event->timer_lock);
+#endif
+        free(ed);
+        return NULL;
+    }
     mln_fheap_inline_insert(event->ev_timer_heap, fn, mln_event_fheap_timer_cmp);
 #if !defined(MSVC)
     pthread_mutex_unlock(&event->timer_lock);
@@ -270,52 +401,47 @@ void mln_event_timer_cancel(mln_event_t *event, mln_event_timer_t *timer)
 
 static inline void mln_event_timer_process(mln_event_t *event)
 {
-    mln_uauto_t now;
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    now = tv.tv_sec * 1000000 + tv.tv_usec;
+    mln_uauto_t now = event->cached_now_us;
     mln_event_desc_t *ed;
     mln_fheap_node_t *fn;
 
-lp:
 #if !defined(MSVC)
     if (pthread_mutex_trylock(&event->timer_lock))
         return;
 #endif
 
-    fn = mln_fheap_minimum(event->ev_timer_heap);
-    if (fn == NULL) {
-#if !defined(MSVC)
-        pthread_mutex_unlock(&event->timer_lock);
-#endif
-        return;
-    }
-
-    ed = (mln_event_desc_t *)mln_fheap_node_key(fn);
-    if (ed->data.tm.end_tm > now) {
-#if !defined(MSVC)
-        pthread_mutex_unlock(&event->timer_lock);
-#endif
-        return;
-    }
+    for (;;) {
+        fn = mln_fheap_minimum(event->ev_timer_heap);
+        if (fn == NULL) break;
+        ed = (mln_event_desc_t *)mln_fheap_node_key(fn);
+        if (ed->data.tm.end_tm > now) break;
 
 #if defined(MSVC)
-    fn = mln_fheap_extract_min(event->ev_timer_heap);
+        fn = mln_fheap_extract_min(event->ev_timer_heap);
 #else
-    fn = mln_fheap_inline_extract_min(event->ev_timer_heap, mln_event_fheap_timer_cmp);
+        fn = mln_fheap_inline_extract_min(event->ev_timer_heap, mln_event_fheap_timer_cmp);
 #endif
+
+#if !defined(MSVC)
+        pthread_mutex_unlock(&event->timer_lock);
+#endif
+
+        if (ed->data.tm.handler != NULL)
+            ed->data.tm.handler(event, ed->data.tm.data);
+
+        mln_fheap_inline_node_free(event->ev_timer_heap, fn, mln_event_desc_free);
+
+        if (event->is_break) return;
+
+#if !defined(MSVC)
+        if (pthread_mutex_trylock(&event->timer_lock))
+            return;
+#endif
+    }
 
 #if !defined(MSVC)
     pthread_mutex_unlock(&event->timer_lock);
 #endif
-
-    if (ed->data.tm.handler != NULL)
-        ed->data.tm.handler(event, ed->data.tm.data);
-
-    mln_fheap_inline_node_free(event->ev_timer_heap, fn, mln_event_desc_free);
-
-    if (!event->is_break)
-        goto lp;
 }
 
 /*
@@ -326,17 +452,8 @@ void mln_event_fd_timeout_handler_set(mln_event_t *event, int fd, void *data, ev
 #if !defined(MSVC)
     pthread_mutex_lock(&event->fd_lock);
 #endif
-    mln_event_desc_t tmp;
-    memset(&tmp, 0, sizeof(tmp));
-    tmp.type = M_EV_FD;
-    tmp.data.fd.fd = fd;
-#if defined(MSVC)
-    mln_rbtree_node_t *rn = mln_rbtree_search(event->ev_fd_tree, &tmp);
-#else
-    mln_rbtree_node_t *rn = mln_rbtree_inline_search(event->ev_fd_tree, &tmp, mln_event_rbtree_fd_cmp);
-#endif
-    ASSERT(!mln_rbtree_null(rn, event->ev_fd_tree));
-    mln_event_desc_t *ed = (mln_event_desc_t *)mln_rbtree_node_data_get(rn);
+    mln_event_desc_t *ed = mln_event_fd_array_get(event, fd);
+    ASSERT(ed != NULL);
     ed->data.fd.timeout_data = data;
     ed->data.fd.timeout_handler = timeout_handler;
 #if !defined(MSVC)
@@ -348,6 +465,20 @@ int mln_event_fd_set(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms,
 {
     ASSERT(fd >= 0 && !(flag & ~M_EV_FD_MASK) && flag <= M_EV_CLR && !((flag & M_EV_NONBLOCK) && (flag & M_EV_BLOCK)));
 
+    /* Do fcntl outside the lock to reduce lock hold time */
+    if (flag != M_EV_CLR) {
+        if (flag & M_EV_APPEND) {
+            if (flag & M_EV_NONBLOCK) mln_event_fd_nonblock_set(fd);
+            if (flag & M_EV_BLOCK) mln_event_fd_block_set(fd);
+        } else {
+            if (flag & M_EV_NONBLOCK) {
+                mln_event_fd_nonblock_set(fd);
+            } else {
+                mln_event_fd_block_set(fd);
+            }
+        }
+    }
+
 #if !defined(MSVC)
     pthread_mutex_lock(&event->fd_lock);
 #endif
@@ -358,25 +489,15 @@ int mln_event_fd_set(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms,
 #endif
         return 0;
     }
-    mln_event_desc_t tmp;
-    memset(&tmp, 0, sizeof(tmp));
-    tmp.type = M_EV_FD;
-    tmp.data.fd.fd = fd;
-    mln_rbtree_node_t *rn;
-#if defined(MSVC)
-    rn = mln_rbtree_search(event->ev_fd_tree, &tmp);
-#else
-    rn = mln_rbtree_inline_search(event->ev_fd_tree, &tmp, mln_event_rbtree_fd_cmp);
-#endif
-    if (!mln_rbtree_null(rn, event->ev_fd_tree)) {
-        if (flag & M_EV_APPEND) {
-            if (flag & M_EV_NONBLOCK) mln_event_fd_nonblock_set(fd);
-            if (flag & M_EV_BLOCK) mln_event_fd_block_set(fd);
 
-            ASSERT(!(((mln_event_desc_t *)mln_rbtree_node_data_get(rn))->data.fd.is_clear));
+    mln_event_desc_t *ed = mln_event_fd_array_get(event, fd);
+
+    if (ed != NULL) {
+        if (flag & M_EV_APPEND) {
+            ASSERT(!(ed->data.fd.is_clear));
 
             if (mln_event_fd_append_set(event, \
-                                        (mln_event_desc_t *)mln_rbtree_node_data_get(rn), \
+                                        ed, \
                                         fd, \
                                         flag, \
                                         timeout_ms, \
@@ -390,19 +511,14 @@ int mln_event_fd_set(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms,
                 return -1;
             }
         } else {
-            if (flag & M_EV_NONBLOCK) {
-                mln_event_fd_nonblock_set(fd);
-            } else {
-                mln_event_fd_block_set(fd);
-            }
             if (mln_event_fd_normal_set(event, \
-                                        (mln_event_desc_t *)(rn->data), \
+                                        ed, \
                                         fd, \
                                         flag, \
                                         timeout_ms, \
                                         data, \
                                         fd_handler, \
-                                        ((mln_event_desc_t *)(rn->data))->data.fd.is_clear?0:1) < 0)
+                                        ed->data.fd.is_clear?0:1) < 0)
             {
 #if !defined(MSVC)
                 pthread_mutex_unlock(&event->fd_lock);
@@ -414,11 +530,6 @@ int mln_event_fd_set(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms,
         pthread_mutex_unlock(&event->fd_lock);
 #endif
         return 0;
-    }
-    if (flag & M_EV_NONBLOCK) {
-        mln_event_fd_nonblock_set(fd);
-    } else {
-        mln_event_fd_block_set(fd);
     }
     if (mln_event_fd_normal_set(event, NULL, fd, flag, timeout_ms, data, fd_handler, 0) < 0) {
 #if !defined(MSVC)
@@ -438,7 +549,7 @@ MLN_FUNC(static inline, int, mln_event_fd_normal_set, \
          (event, ed, fd, flag, timeout_ms, data, fd_handler, other_mark), \
 {
     if (ed == NULL) {
-        ed = (mln_event_desc_t *)malloc(sizeof(mln_event_desc_t));
+        ed = mln_event_desc_alloc(event);
         if (ed == NULL) {
             return -1;
         }
@@ -450,18 +561,20 @@ MLN_FUNC(static inline, int, mln_event_fd_normal_set, \
         ed->prev = NULL;
         ed->act_next = NULL;
         ed->act_prev = NULL;
-        mln_rbtree_node_t *rn;
-        rn = mln_rbtree_node_new(event->ev_fd_tree, ed);
-        if (rn == NULL) {
-            free(ed);
+        if (mln_event_fd_array_ensure(event, fd) < 0) {
+            mln_event_desc_free_to_pool(event, ed);
             return -1;
         }
-        mln_rbtree_inline_insert(event->ev_fd_tree, rn, mln_event_rbtree_fd_cmp);
+        mln_event_fd_array_set(event, fd, ed);
         ev_fd_wait_chain_add(&(event->ev_fd_wait_head), \
                              &(event->ev_fd_wait_tail), \
                              ed);
         if (mln_event_fd_timeout_set(event, ed, timeout_ms) < 0) {
-            free(ed);
+            mln_event_fd_array_set(event, fd, NULL);
+            ev_fd_wait_chain_del(&(event->ev_fd_wait_head), \
+                                 &(event->ev_fd_wait_tail), \
+                                 ed);
+            mln_event_desc_free_to_pool(event, ed);
             return -1;
         }
     } else {
@@ -508,21 +621,21 @@ static inline int mln_event_fd_append_set(mln_event_t *event, \
     if (other_mark) {\
         if (oneshot) {\
             ev.events = (flg)|EPOLLONESHOT;\
-            ev.data.ptr = ed;\
+            ev.data.fd = fd;\
             epoll_ctl(event->epollfd, EPOLL_CTL_MOD, fd, &ev);\
         } else {\
             ev.events = (flg);\
-            ev.data.ptr = ed;\
+            ev.data.fd = fd;\
             epoll_ctl(event->epollfd, EPOLL_CTL_MOD, fd, &ev);\
         }\
     } else {\
         if (oneshot) {\
             ev.events = (flg)|EPOLLONESHOT;\
-            ev.data.ptr = ed;\
+            ev.data.fd = fd;\
             epoll_ctl(event->epollfd, EPOLL_CTL_ADD, fd, &ev);\
         } else {\
             ev.events = (flg);\
-            ev.data.ptr = ed;\
+            ev.data.fd = fd;\
             epoll_ctl(event->epollfd, EPOLL_CTL_ADD, fd, &ev);\
         }\
     }
@@ -583,11 +696,11 @@ static inline int mln_event_fd_append_set(mln_event_t *event, \
     struct kevent ev;
     int oneshot = (flag & M_EV_ONESHOT)? 1: 0;
     if (!other_mark) {
-        EV_SET(&ev, fd, EVFILT_READ, EV_ADD|EV_ERROR|EV_DISABLE, 0, 0, ed);
+        EV_SET(&ev, fd, EVFILT_READ, EV_ADD|EV_ERROR|EV_DISABLE, 0, 0, (void *)(intptr_t)fd);
         if (kevent(event->kqfd, &ev, 1, NULL, 0, NULL) < 0) {
             ASSERT(0);
         }
-        EV_SET(&ev, fd, EVFILT_WRITE, EV_ADD|EV_ERROR|EV_DISABLE, 0, 0, ed);
+        EV_SET(&ev, fd, EVFILT_WRITE, EV_ADD|EV_ERROR|EV_DISABLE, 0, 0, (void *)(intptr_t)fd);
         if (kevent(event->kqfd, &ev, 1, NULL, 0, NULL) < 0) {
             ASSERT(0);
         }
@@ -595,7 +708,7 @@ static inline int mln_event_fd_append_set(mln_event_t *event, \
     if (flag & M_EV_RECV) {
         ed->flag |= M_EV_RECV;
         if (oneshot) ed->data.fd.rd_oneshot = 1;
-        EV_SET(&ev, fd, EVFILT_READ, EV_ENABLE, 0, 0, ed);
+        EV_SET(&ev, fd, EVFILT_READ, EV_ENABLE, 0, 0, (void *)(intptr_t)fd);
         if (kevent(event->kqfd, &ev, 1, NULL, 0, NULL) < 0) {
             ASSERT(0);
         }
@@ -605,7 +718,7 @@ static inline int mln_event_fd_append_set(mln_event_t *event, \
     if (flag & M_EV_SEND) {
         ed->flag |= M_EV_SEND;
         if (oneshot) ed->data.fd.wr_oneshot = 1;
-        EV_SET(&ev, fd, EVFILT_WRITE, EV_ENABLE, 0, 0, ed);
+        EV_SET(&ev, fd, EVFILT_WRITE, EV_ENABLE, 0, 0, (void *)(intptr_t)fd);
         if (kevent(event->kqfd, &ev, 1, NULL, 0, NULL) < 0) {
             ASSERT(0);
         }
@@ -667,11 +780,17 @@ MLN_FUNC(static, int, mln_event_fd_timeout_set, \
         return 0;
     }
     mln_fheap_node_t *fn;
-    struct timeval tv;
-    memset(&tv, 0, sizeof(tv));
-    gettimeofday(&tv, NULL);
+    mln_u64_t now;
+    if (ev->cached_now_us != 0) {
+        now = ev->cached_now_us;
+    } else {
+        struct timeval tv;
+        memset(&tv, 0, sizeof(tv));
+        gettimeofday(&tv, NULL);
+        now = (mln_u64_t)tv.tv_sec*1000000+tv.tv_usec;
+    }
     if (ef->timeout_node == NULL) {
-        ef->end_us = tv.tv_sec*1000000+tv.tv_usec+timeout_ms*1000;
+        ef->end_us = now+timeout_ms*1000;
         fn = mln_fheap_node_new(ev->ev_fd_timeout_heap, ed);
         if (fn == NULL) {
             return -1;
@@ -681,7 +800,7 @@ MLN_FUNC(static, int, mln_event_fd_timeout_set, \
     } else {
         fn = ef->timeout_node;
         mln_fheap_inline_delete(ev->ev_fd_timeout_heap, fn, mln_event_fd_timeout_copy, mln_event_fd_timeout_cmp);
-        ef->end_us = tv.tv_sec*1000000+tv.tv_usec+timeout_ms*1000;
+        ef->end_us = now+timeout_ms*1000;
         mln_fheap_inline_insert(ev->ev_fd_timeout_heap, fn, mln_event_fd_timeout_cmp);
     }
     return 0;
@@ -689,20 +808,11 @@ MLN_FUNC(static, int, mln_event_fd_timeout_set, \
 
 static inline void mln_event_fd_clr_set(mln_event_t *event, int fd)
 {
-    mln_event_desc_t tmp, *ed;
-    memset(&tmp, 0, sizeof(tmp));
-    tmp.type = M_EV_FD;
-    tmp.data.fd.fd = fd;
-    mln_rbtree_node_t *rn;
-#if defined(MSVC)
-    rn = mln_rbtree_search(event->ev_fd_tree, &tmp);
-#else
-    rn = mln_rbtree_inline_search(event->ev_fd_tree, &tmp, mln_event_rbtree_fd_cmp);
-#endif
-    if (mln_rbtree_null(rn, event->ev_fd_tree)) {
+    mln_event_desc_t *ed;
+    ed = mln_event_fd_array_get(event, fd);
+    if (ed == NULL) {
         return;
     }
-    ed = (mln_event_desc_t *)mln_rbtree_node_data_get(rn);
     if (ed->data.fd.timeout_node != NULL) {
         mln_fheap_inline_delete(event->ev_fd_timeout_heap, ed->data.fd.timeout_node, mln_event_fd_timeout_copy, mln_event_fd_timeout_cmp);
         mln_fheap_inline_node_free(event->ev_fd_timeout_heap, ed->data.fd.timeout_node, NULL);
@@ -712,13 +822,13 @@ static inline void mln_event_fd_clr_set(mln_event_t *event, int fd)
 #if defined(MLN_EPOLL)
     struct epoll_event ev;
     memset(&ev, 0, sizeof(ev));
-    ev.data.ptr = ed;
+    ev.data.fd = fd;
     epoll_ctl(event->epollfd, EPOLL_CTL_DEL, fd, &ev);
 #elif defined(MLN_KQUEUE)
     struct kevent ev;
-    EV_SET(&ev, fd, EVFILT_READ, EV_DELETE, 0, 0, ed);
+    EV_SET(&ev, fd, EVFILT_READ, EV_DELETE, 0, 0, (void *)(intptr_t)fd);
     kevent(event->kqfd, &ev, 1, NULL, 0, NULL);
-    EV_SET(&ev, fd, EVFILT_WRITE, EV_DELETE, 0, 0, ed);
+    EV_SET(&ev, fd, EVFILT_WRITE, EV_DELETE, 0, 0, (void *)(intptr_t)fd);
     kevent(event->kqfd, &ev, 1, NULL, 0, NULL);
 #else
     if (ed->flag & M_EV_RECV)
@@ -732,8 +842,7 @@ static inline void mln_event_fd_clr_set(mln_event_t *event, int fd)
         ed->data.fd.is_clear = 1;
         return;
     }
-    mln_rbtree_delete(event->ev_fd_tree, rn);
-    mln_rbtree_node_free(event->ev_fd_tree, rn);
+    mln_event_fd_array_set(event, fd, NULL);
     if (ed->data.fd.in_active) {
         ev_fd_active_chain_del(&(event->ev_fd_active_head), \
                                &(event->ev_fd_active_tail), \
@@ -744,7 +853,7 @@ static inline void mln_event_fd_clr_set(mln_event_t *event, int fd)
     ev_fd_wait_chain_del(&(event->ev_fd_wait_head), \
                          &(event->ev_fd_wait_tail), \
                          ed);
-    mln_event_desc_free(ed);
+    mln_event_desc_free_to_pool(event, ed);
 }
 
 /*
@@ -808,6 +917,8 @@ MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
     struct epoll_event events[M_EV_EPOLL_SIZE], *ev, mod_ev;
 
     while (1) {
+        mln_event_update_cached_time(event);
+
         if (!pthread_mutex_trylock(&event->cb_lock)) {
             dispatch_callback cb = event->callback;
             void *data = event->callback_data;
@@ -828,29 +939,22 @@ MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
         mln_event_timer_process(event);
         BREAK_OUT();
 
-        if (pthread_mutex_trylock(&event->fd_lock)) {
-            epoll_wait(event->unusedfd, events, M_EV_EPOLL_SIZE, M_EV_NOLOCK_TIMEOUT_MS);
-        } else {
-            nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, M_EV_TIMEOUT_MS);
-            if (nfds < 0) {
-                if (errno == EINTR) {
-                    pthread_mutex_unlock(&event->fd_lock);
-                    continue;
-                } else {
-                    ASSERT(0);
-                }
-            } else if (nfds == 0) {
-                pthread_mutex_unlock(&event->fd_lock);
-                epoll_wait(event->unusedfd, events, M_EV_EPOLL_SIZE, M_EV_NOLOCK_TIMEOUT_MS);
-                continue;
-            }
+        nfds = epoll_wait(event->epollfd, events, M_EV_EPOLL_SIZE, M_EV_TIMEOUT_MS);
+        if (nfds < 0) {
+            if (errno == EINTR) continue;
+            ASSERT(0);
+        }
+        if (nfds > 0) {
+            pthread_mutex_lock(&event->fd_lock);
             for (n = 0; n < nfds; ++n) {
+                int efd;
                 mod_event = 0;
                 oneshot = 0;
                 other_oneshot = 0;
                 ev = &events[n];
-                ed = (mln_event_desc_t *)(ev->data.ptr);
-                if (ed->data.fd.is_clear)
+                efd = ev->data.fd;
+                ed = mln_event_fd_array_get(event, efd);
+                if (ed == NULL || ed->data.fd.is_clear)
                     continue;
 
                 if (ev->events & EPOLLIN) {
@@ -935,13 +1039,13 @@ MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
                     }
                     memset(&mod_ev, 0, sizeof(mod_ev));
                     if (other_oneshot) {
-                        mod_ev.events = mod_event|EPOLLONESHOT;\
-                        mod_ev.data.ptr = ed;\
-                        epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+                        mod_ev.events = mod_event|EPOLLONESHOT;
+                        mod_ev.data.fd = efd;
+                        epoll_ctl(event->epollfd, EPOLL_CTL_MOD, efd, &mod_ev);
                     } else {
-                        mod_ev.events = mod_event;\
-                        mod_ev.data.ptr = ed;\
-                        epoll_ctl(event->epollfd, EPOLL_CTL_MOD, ed->data.fd.fd, &mod_ev);\
+                        mod_ev.events = mod_event;
+                        mod_ev.data.fd = efd;
+                        epoll_ctl(event->epollfd, EPOLL_CTL_MOD, efd, &mod_ev);
                     }
                 }
             }
@@ -957,6 +1061,8 @@ MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
     struct timespec ts;
 
     while (1) {
+        mln_event_update_cached_time(event);
+
         if (!pthread_mutex_trylock(&event->cb_lock)) {
             dispatch_callback cb = event->callback;
             void *data = event->callback_data;
@@ -977,32 +1083,21 @@ MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
         mln_event_timer_process(event);
         BREAK_OUT();
 
-        if (pthread_mutex_trylock(&event->fd_lock)) {
-            ts.tv_sec = 0;
-            ts.tv_nsec = M_EV_NOLOCK_TIMEOUT_NS;
-            kevent(event->unusedfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
-        } else {
-            ts.tv_sec = 0;
-            ts.tv_nsec = M_EV_TIMEOUT_NS;
-            nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
-            if (nfds < 0) {
-                if (errno == EINTR) {
-                    pthread_mutex_unlock(&event->fd_lock);
-                    continue;
-                } else {
-                    ASSERT(0);
-                }
-            } else if (nfds == 0) {
-                pthread_mutex_unlock(&event->fd_lock);
-                ts.tv_sec = 0;
-                ts.tv_nsec = M_EV_NOLOCK_TIMEOUT_NS;
-                kevent(event->unusedfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
-                continue;
-            }
+        ts.tv_sec = 0;
+        ts.tv_nsec = M_EV_TIMEOUT_NS;
+        nfds = kevent(event->kqfd, NULL, 0, events, M_EV_EPOLL_SIZE, &ts);
+        if (nfds < 0) {
+            if (errno == EINTR) continue;
+            ASSERT(0);
+        }
+        if (nfds > 0) {
+            pthread_mutex_lock(&event->fd_lock);
             for (n = 0; n < nfds; ++n) {
+                int efd;
                 ev = &events[n];
-                ed = (mln_event_desc_t *)(ev->udata);
-                if (ed->data.fd.is_clear)
+                efd = (int)(intptr_t)ev->udata;
+                ed = mln_event_fd_array_get(event, efd);
+                if (ed == NULL || ed->data.fd.is_clear)
                     continue;
 
                 if (ev->filter == EVFILT_READ) {
@@ -1019,7 +1114,7 @@ MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
                                                         1);
                         } else {
                             ed->data.fd.rd_oneshot = 0;
-                            EV_SET(&mod, ed->data.fd.fd, EVFILT_READ, EV_DISABLE, 0, 0, ed);
+                            EV_SET(&mod, ed->data.fd.fd, EVFILT_READ, EV_DISABLE, 0, 0, (void *)(intptr_t)ed->data.fd.fd);
                             if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
                                 ASSERT(0);
                             }
@@ -1043,7 +1138,7 @@ MLN_FUNC_VOID(, void, mln_event_dispatch, (mln_event_t *event), (event), {
                                                         1);
                         } else {
                             ed->data.fd.wr_oneshot = 0;
-                            EV_SET(&mod, ed->data.fd.fd, EVFILT_WRITE, EV_DISABLE, 0, 0, ed);
+                            EV_SET(&mod, ed->data.fd.fd, EVFILT_WRITE, EV_DISABLE, 0, 0, (void *)(intptr_t)ed->data.fd.fd);
                             if (kevent(event->kqfd, &mod, 1, NULL, 0, NULL) < 0) {
                                 ASSERT(0);
                             }
@@ -1097,6 +1192,8 @@ void mln_event_dispatch(mln_event_t *event)
     mln_u32_t move;
 
     while (1) {
+        mln_event_update_cached_time(event);
+
 #if !defined(MSVC)
         if (!pthread_mutex_trylock(&event->cb_lock)) {
             dispatch_callback cb = event->callback;
@@ -1120,59 +1217,59 @@ void mln_event_dispatch(mln_event_t *event)
         BREAK_OUT();
         mln_event_timer_process(event);
         BREAK_OUT();
-        event->select_fd = 1;
         FD_ZERO(rd_set);
         FD_ZERO(wr_set);
         FD_ZERO(err_set);
 
 #if !defined(MSVC)
-        if (pthread_mutex_trylock(&event->fd_lock)) {
-            tm.tv_sec = 0;
-            tm.tv_usec = M_EV_NOLOCK_TIMEOUT_US;
-            select(event->select_fd, rd_set, wr_set, err_set, &tm);
-        } else {
+        pthread_mutex_lock(&event->fd_lock);
 #endif
-            for (ed = event->ev_fd_wait_head; \
-                 ed != NULL; \
-                 ed = ed->next)
-            {
-                fd = ed->data.fd.fd;
-                if (ed->flag & M_EV_RECV) FD_SET(fd, rd_set);
-                if (ed->flag & M_EV_SEND) FD_SET(fd, wr_set);
-                if (ed->flag & M_EV_ERROR) FD_SET(fd, err_set);
-                if (fd >= event->select_fd)
-                    event->select_fd = fd + 1;
-            }
+        event->select_fd = 1;
+        for (ed = event->ev_fd_wait_head; \
+             ed != NULL; \
+             ed = ed->next)
+        {
+            fd = ed->data.fd.fd;
+            if (ed->flag & M_EV_RECV) FD_SET(fd, rd_set);
+            if (ed->flag & M_EV_SEND) FD_SET(fd, wr_set);
+            if (ed->flag & M_EV_ERROR) FD_SET(fd, err_set);
+            if (fd >= event->select_fd)
+                event->select_fd = fd + 1;
+        }
+#if !defined(MSVC)
+        {
+            int snap_select_fd = event->select_fd;
+            pthread_mutex_unlock(&event->fd_lock);
+
             tm.tv_sec = 0;
             tm.tv_usec = M_EV_TIMEOUT_US;
-            nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
+            nfds = select(snap_select_fd, rd_set, wr_set, err_set, &tm);
             if (nfds < 0) {
-#if !defined(MSVC)
                 if (errno == EINTR || errno == ENOMEM) {
-                    pthread_mutex_unlock(&event->fd_lock);
                     continue;
                 } else {
                     ASSERT(0);
                 }
-#else
-                continue;
-#endif
-            } else if (nfds == 0) {
-#if !defined(MSVC)
-                pthread_mutex_unlock(&event->fd_lock);
-#endif
-                tm.tv_sec = 0;
-                tm.tv_usec = M_EV_NOLOCK_TIMEOUT_US;
-                select(event->select_fd, rd_set, wr_set, err_set, &tm);
-                continue;
             }
-            ed = event->ev_fd_wait_head;
-            for (; nfds > 0 && ed != NULL; ed = ed->next) {
-                if (ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear)
+            if (nfds == 0) continue;
+
+            pthread_mutex_lock(&event->fd_lock);
+            for (fd = 0; fd < snap_select_fd && nfds > 0; fd++) {
+                int hit = 0;
+                if (FD_ISSET(fd, rd_set)) hit = 1;
+                if (FD_ISSET(fd, wr_set)) hit = 1;
+                if (FD_ISSET(fd, err_set)) hit = 1;
+                if (!hit) continue;
+
+                ed = mln_event_fd_array_get(event, fd);
+                if (ed == NULL || ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear) {
+                    if (FD_ISSET(fd, rd_set)) --nfds;
+                    if (FD_ISSET(fd, wr_set)) --nfds;
+                    if (FD_ISSET(fd, err_set)) --nfds;
                     continue;
+                }
 
                 move = 0;
-                fd = ed->data.fd.fd;
                 if (FD_ISSET(fd, rd_set)) {
                     ed->data.fd.active_flag |= M_EV_RECV;
                     if (ed->data.fd.rd_oneshot == 1) {
@@ -1207,8 +1304,65 @@ void mln_event_dispatch(mln_event_t *event)
                     ed->data.fd.in_active = 1;
                 }
             }
-#if !defined(MSVC)
             pthread_mutex_unlock(&event->fd_lock);
+        }
+#else
+        tm.tv_sec = 0;
+        tm.tv_usec = M_EV_TIMEOUT_US;
+        nfds = select(event->select_fd, rd_set, wr_set, err_set, &tm);
+        if (nfds < 0) {
+            continue;
+        }
+        if (nfds == 0) continue;
+        for (fd = 0; fd < event->select_fd && nfds > 0; fd++) {
+            int hit = 0;
+            if (FD_ISSET(fd, rd_set)) hit = 1;
+            if (FD_ISSET(fd, wr_set)) hit = 1;
+            if (FD_ISSET(fd, err_set)) hit = 1;
+            if (!hit) continue;
+
+            ed = mln_event_fd_array_get(event, fd);
+            if (ed == NULL || ed->data.fd.in_active || ed->data.fd.in_process || ed->data.fd.is_clear) {
+                if (FD_ISSET(fd, rd_set)) --nfds;
+                if (FD_ISSET(fd, wr_set)) --nfds;
+                if (FD_ISSET(fd, err_set)) --nfds;
+                continue;
+            }
+
+            move = 0;
+            if (FD_ISSET(fd, rd_set)) {
+                ed->data.fd.active_flag |= M_EV_RECV;
+                if (ed->data.fd.rd_oneshot == 1) {
+                    ed->flag &= (~M_EV_RECV);
+                    ed->data.fd.rd_oneshot = 0;
+                }
+                --nfds;
+                move = 1;
+            }
+            if (FD_ISSET(fd, wr_set)) {
+                ed->data.fd.active_flag |= M_EV_SEND;
+                if (ed->data.fd.wr_oneshot == 1) {
+                    ed->flag &= (~M_EV_SEND);
+                    ed->data.fd.wr_oneshot = 0;
+                }
+                --nfds;
+                move = 1;
+            }
+            if (FD_ISSET(fd, err_set)) {
+                ed->data.fd.active_flag |= M_EV_ERROR;
+                if (ed->data.fd.err_oneshot == 1) {
+                    ed->flag &= (~M_EV_ERROR);
+                    ed->data.fd.err_oneshot = 0;
+                }
+                --nfds;
+                move = 1;
+            }
+            if (move) {
+                ev_fd_active_chain_add(&(event->ev_fd_active_head), \
+                                       &(event->ev_fd_active_tail), \
+                                       ed);
+                ed->data.fd.in_active = 1;
+            }
         }
 #endif
     }
@@ -1312,10 +1466,7 @@ lp:
 
 static inline void mln_event_fd_timeout_process(mln_event_t *event)
 {
-    mln_u64_t now;
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    now = tv.tv_sec * 1000000 + tv.tv_usec;
+    mln_u64_t now = event->cached_now_us;
     mln_event_desc_t *ed;
     mln_fheap_node_t *fn;
     mln_event_fd_t *ef;
@@ -1377,17 +1528,9 @@ lp:
 #endif
 
     if (event->is_break) return;
+
     goto lp;
 }
-
-/*
- * rbtree functions
- */
-MLN_FUNC(static, int, mln_event_rbtree_fd_cmp, (const void *k1, const void *k2), (k1, k2), {
-    mln_event_desc_t *ed1 = (mln_event_desc_t *)k1;
-    mln_event_desc_t *ed2 = (mln_event_desc_t *)k2;
-    return ed1->data.fd.fd - ed2->data.fd.fd;
-})
 
 /*
  * fheap functions

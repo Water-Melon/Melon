@@ -26,11 +26,13 @@
 #include "mln_utils.h"
 #endif
 #include <signal.h>
-#include "mln_rbtree.h"
 #include "mln_fheap.h"
 
 /*common*/
-#define M_EV_HASH_LEN 64
+#define M_EV_PAGE_SHIFT   8
+#define M_EV_PAGE_SIZE    (1 << M_EV_PAGE_SHIFT)  /* 256 slots per page */
+#define M_EV_PAGE_MASK    (M_EV_PAGE_SIZE - 1)
+#define M_EV_INIT_PAGES   4  /* initial page-directory capacity: 4 pages = 1024 fds */
 #define M_EV_EPOLL_SIZE 1024 /*already ignored, see man epoll_create*/
 /*for fd*/
 #define M_EV_RECV ((mln_u32_t)0x1)
@@ -133,13 +135,17 @@ struct mln_event_s {
     fd_set                   err_set;
 #endif
 
-    mln_rbtree_t            *ev_fd_tree;
+    mln_event_desc_t      ***ev_fd_pages;      /* two-level page table */
+    int                     *ev_fd_page_cnt;   /* active fd count per page */
+    int                      ev_fd_pages_cap;  /* number of page slots in directory */
     mln_event_desc_t        *ev_fd_wait_head;
     mln_event_desc_t        *ev_fd_wait_tail;
     mln_event_desc_t        *ev_fd_active_head;
     mln_event_desc_t        *ev_fd_active_tail;
+    mln_event_desc_t        *ev_fd_free_head;
     mln_fheap_t             *ev_fd_timeout_heap;
     mln_fheap_t             *ev_timer_heap;
+    mln_u64_t                cached_now_us;
 };
 
 #define mln_event_break_set(ev) ((ev)->is_break = 1);

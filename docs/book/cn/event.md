@@ -70,7 +70,7 @@ void mln_event_dispatch(mln_event_t *event);
 ```c
 int mln_event_fd_set(mln_event_t *event, int fd, mln_u32_t flag, int timeout_ms, void *data, ev_fd_handler fd_handler);
 
-typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);s
+typedef void (*ev_fd_handler)  (mln_event_t *, int, void *);
 ```
 
 描述：设置文件描述符事件，其中：
