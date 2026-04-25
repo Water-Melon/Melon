@@ -71,7 +71,21 @@ int mln_thread_pool_resource_add(void *data);
 
 Description: Put the resource `data` into the resource pool. This function should only be called by the main thread, and is used by the main thread to issue tasks to the child threads.
 
+Internally the producer pushes onto a lock-free incoming stack with a single atomic CAS, so it does not contend with already-running workers for the pool mutex on the hot path. The mutex is only acquired when there is a parked worker that needs to be woken or when a new worker has to be spawned.
+
 Return value: return `0` if successful, otherwise return `not 0`
+
+
+
+#### mln_thread_pool_resource_addn
+
+```c
+int mln_thread_pool_resource_addn(void **data, mln_size_t n);
+```
+
+Description: Submit `n` tasks at once. Should only be called by the main thread. `data` must point to an array of at least `n` resource pointers, each interpreted exactly like the `data` argument to `mln_thread_pool_resource_add`. The whole batch is published to the pool with a single atomic CAS, which makes this call substantially cheaper than calling `mln_thread_pool_resource_add` `n` times when the caller already has multiple tasks ready.
+
+Return value: returns `0` on success. Returns `ENOMEM` if some items were enqueued but allocation for the rest failed; the items that were enqueued will still be processed normally.
 
 
 
