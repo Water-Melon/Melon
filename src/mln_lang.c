@@ -3,6 +3,7 @@
  * Copyright (C) Niklaus F.Schen.
  */
 #include "mln_lang.h"
+#include "mln_lang_vm.h"
 #if !defined(MSVC)
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -866,6 +867,49 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
         ctx->owner = pthread_self();
         pthread_mutex_unlock(&lang->lock);
 #endif
+        /* Phase F: try to compile + run the top-level on the VM the first
+         * time we touch this ctx. If compilation succeeds, the script's
+         * top-level runs to completion on the VM (synchronously) and we
+         * mark the ctx as quitting. If compilation fails, fall through to
+         * the AST stack walker (transition mode). MELANG_VM_OFF disables
+         * the VM path entirely for diagnostics. */
+        /* Phase F3 cutover: VM-driven, time-sliced execution. On the
+         * first dispatch for this ctx we compile the top-level stm
+         * chain and push the initial frame. Subsequent dispatches
+         * drive vm_step with a per-slice budget so multiple ctxs can
+         * time-share the event loop (Melang's coroutine model). */
+        if (getenv("MELANG_VM_OFF") == NULL) {
+            if (!ctx->vm_top_attempted) {
+                ctx->vm_top_attempted = 1;
+                int init_rc = mln_lang_vm_run_toplevel(ctx);
+                if (init_rc == 0) {
+                    __mln_lang_errmsg(ctx, "VM: top-level cannot be compiled (unsupported feature). Set MELANG_VM_OFF=1 to fall back to the AST walker.");
+                    ctx->quit = 1;
+                    goto quit;
+                }
+                if (init_rc < 0) {
+                    __mln_lang_errmsg(ctx, "VM: top-level init error.");
+                    ctx->quit = 1;
+                    goto quit;
+                }
+                /* Pop the AST stm node ctx_new pushed; we drive via VM. */
+                while (mln_lang_stack_top(ctx) != NULL) {
+                    mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
+                }
+            }
+            int step_rc = mln_lang_vm_step(ctx, M_LANG_DEFAULT_STEP);
+            if (step_rc < 0) {
+                ctx->quit = 1;
+                goto quit;
+            }
+            if (step_rc == 1) {
+                /* Frame stack empty — script done. */
+                ctx->quit = 1;
+                goto quit;
+            }
+            /* step_rc == 0 — yielded; will resume on next dispatch. */
+            goto out_after_vm_slice;
+        }
         for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
             if ((node = mln_lang_stack_top(ctx)) == NULL)
                 goto quit;
@@ -883,6 +927,7 @@ quit:
                 goto out;
             }
         }
+out_after_vm_slice:
         /*
          * ctx->ref == 0 means that this task is not suspended.
          * and the gc should not collect if the next step is
@@ -1083,6 +1128,10 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
 #if !defined(MSVC)
     ctx->owner = 0;
 #endif
+    ctx->val_freelist = NULL;
+    ctx->var_freelist = NULL;
+    ctx->val_freelist_count = 0;
+    ctx->var_freelist_count = 0;
     ctx->sym_count = 0;
     ctx->ret_flag = ctx->op_array_flag = ctx->op_bool_flag = ctx->op_func_flag = ctx->op_int_flag = \
     ctx->op_nil_flag = ctx->op_obj_flag = ctx->op_real_flag = ctx->op_str_flag = 0;
@@ -1685,6 +1734,15 @@ MLN_FUNC_VOID(static, void, mln_lang_symbol_node_free, (void *data), (data), {
             }
             break;
     }
+    /*
+     * Defensively clear the bucket pointer. Callers
+     * (mln_lang_scope_pop / __mln_lang_symbol_node_join) always remove
+     * ls from its bucket chain before reaching us, so this pointer is no
+     * longer needed for chain bookkeeping. Nulling it makes any
+     * accidental dereference fail loudly instead of silently returning
+     * stale data.
+     */
+    ls->bucket = NULL;
     if (ls->ctx != NULL && ls->ctx->sym_count < M_LANG_CACHE_COUNT) {
         mln_lang_sym_chain_add(&(ls->ctx->sym_head), &(ls->ctx->sym_tail), ls);
         ++(ls->ctx->sym_count);
@@ -1938,13 +1996,27 @@ MLN_FUNC(static inline, mln_lang_var_t *, __mln_lang_var_new, \
          (ctx, name, type, val, in_set), \
 {
     mln_lang_var_t *var;
-    if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+    /* Per-ctx freelist fast path; see __mln_lang_val_new for the same pattern. */
+    if ((var = ctx->var_freelist) != NULL) {
+        ctx->var_freelist = var->next;
+        --(ctx->var_freelist_count);
+    } else if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
         return NULL;
     }
+    var->ctx = ctx;
     var->type = type;
     if (name != NULL) {
         if ((var->name = mln_string_pool_dup(ctx->pool, name)) == NULL) {
-            mln_alloc_free(var);
+            /* Same return-to-freelist policy on the failure path so we don't
+             * thrash the slab. */
+            if (ctx->var_freelist_count < M_LANG_VAR_FREELIST_MAX) {
+                var->prev = NULL;
+                var->next = ctx->var_freelist;
+                ctx->var_freelist = var;
+                ++(ctx->var_freelist_count);
+            } else {
+                mln_alloc_free(var);
+            }
             return NULL;
         }
     } else {
@@ -1965,9 +2037,14 @@ MLN_FUNC(static inline, mln_lang_var_t *, __mln_lang_var_new_ref_string, \
          (ctx, name, type, val, in_set), \
 {
     mln_lang_var_t *var;
-    if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+    /* Per-ctx freelist fast path. */
+    if ((var = ctx->var_freelist) != NULL) {
+        ctx->var_freelist = var->next;
+        --(ctx->var_freelist_count);
+    } else if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
         return NULL;
     }
+    var->ctx = ctx;
     var->type = type;
     if (name != NULL) {
         var->name = mln_string_ref(name);
@@ -1988,16 +2065,29 @@ MLN_FUNC(static inline, mln_lang_var_t *, mln_lang_var_transform, \
          (ctx, realvar, defvar), \
 {
     mln_lang_var_t *var;
-    if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
+    /* Per-ctx freelist fast path. */
+    if ((var = ctx->var_freelist) != NULL) {
+        ctx->var_freelist = var->next;
+        --(ctx->var_freelist_count);
+    } else if ((var = (mln_lang_var_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t))) == NULL) {
         return NULL;
     }
+    var->ctx = ctx;
     var->type = defvar->type;
     ASSERT(defvar->name != NULL);
     var->name = mln_string_ref(defvar->name);
     if (var->type == M_LANG_VAR_NORMAL) {
         if ((var->val = mln_lang_val_dup(ctx, realvar->val)) == NULL) {
             mln_string_free(var->name);
-            mln_alloc_free(var);
+            /* Recycle the empty var shell; same policy as __mln_lang_var_new failure path. */
+            if (ctx->var_freelist_count < M_LANG_VAR_FREELIST_MAX) {
+                var->prev = NULL;
+                var->next = ctx->var_freelist;
+                ctx->var_freelist = var;
+                ++(ctx->var_freelist_count);
+            } else {
+                mln_alloc_free(var);
+            }
             return NULL;
         }
     } else {
@@ -2035,6 +2125,21 @@ MLN_FUNC_VOID(static inline, void, __mln_lang_var_free, (void *data), (data), {
     if (var->in_set != NULL) {
         mln_lang_set_detail_free(var->in_set);
         var->in_set = NULL;
+    }
+    /*
+     * Recycle the empty var shell into the owning ctx's freelist.
+     * After the field tear-down above, the shell carries no references.
+     */
+    {
+        mln_lang_ctx_t *ctx = var->ctx;
+        if (ctx != NULL && ctx->var_freelist_count < M_LANG_VAR_FREELIST_MAX) {
+            var->ref = 0;
+            var->prev = NULL;
+            var->next = ctx->var_freelist;
+            ctx->var_freelist = var;
+            ++(ctx->var_freelist_count);
+            return;
+        }
     }
     mln_alloc_free(var);
 })
@@ -2375,6 +2480,9 @@ MLN_FUNC(static inline, mln_lang_func_detail_t *, __mln_lang_func_detail_new, \
             return NULL;
         }
     }
+    /* Bytecode VM extension fields: lazily compiled on first call. */
+    lfd->vm_chunk = NULL;
+    lfd->vm_state = 0;
     return lfd;
 })
 
@@ -2388,6 +2496,10 @@ MLN_FUNC_VOID(static inline, void, __mln_lang_func_detail_free, \
     if (lfd == NULL) return;
     mln_array_destroy(&lfd->args);
     mln_array_destroy(&lfd->closure);
+    if (lfd->vm_chunk != NULL) {
+        mln_lang_vm_chunk_free((mln_lang_vm_chunk_t *)lfd->vm_chunk);
+        lfd->vm_chunk = NULL;
+    }
     mln_alloc_free(lfd);
 })
 
@@ -2520,9 +2632,18 @@ MLN_FUNC(static inline, mln_lang_val_t *, __mln_lang_val_new, \
          (mln_lang_ctx_t *ctx, mln_s32_t type, void *data), (ctx, type, data), \
 {
     mln_lang_val_t *val;
-    if ((val = (mln_lang_val_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_val_t))) == NULL) {
+    /*
+     * Per-ctx freelist fast path: pop a recycled mln_lang_val_t shell.
+     * The ->next field is repurposed as the freelist link while the val
+     * sits on the freelist. Bookkeeping fields are reset before return.
+     */
+    if ((val = ctx->val_freelist) != NULL) {
+        ctx->val_freelist = val->next;
+        --(ctx->val_freelist_count);
+    } else if ((val = (mln_lang_val_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_val_t))) == NULL) {
         return NULL;
     }
+    val->ctx = ctx;
     val->prev = val->next = NULL;
     switch (type) {
         case M_LANG_VAL_TYPE_NIL:
@@ -2555,7 +2676,16 @@ MLN_FUNC(static inline, mln_lang_val_t *, __mln_lang_val_new, \
             break;
         default:
             ASSERT(0);
-            mln_alloc_free(val);
+            /* Recycle the empty val shell to keep the freelist warm; same
+             * policy as the alloc-failure path elsewhere. */
+            if (ctx->val_freelist_count < M_LANG_VAL_FREELIST_MAX) {
+                val->prev = NULL;
+                val->next = ctx->val_freelist;
+                ctx->val_freelist = val;
+                ++(ctx->val_freelist_count);
+            } else {
+                mln_alloc_free(val);
+            }
             return NULL;
     }
     val->type = type;
@@ -2583,6 +2713,24 @@ MLN_FUNC_VOID(static inline, void, __mln_lang_val_free, (void *data), (data), {
         val->func = NULL;
     }
     mln_lang_val_data_free(val);
+    /*
+     * Recycle the empty shell into the owning ctx's freelist. After
+     * mln_lang_val_data_free above, val->type is NIL and val->data.i is 0,
+     * so the recycled shell carries no embedded resources. We stamp
+     * val->ref = 0 defensively in case anything inspects the shell while
+     * it's on the freelist.
+     */
+    {
+        mln_lang_ctx_t *ctx = val->ctx;
+        if (ctx != NULL && ctx->val_freelist_count < M_LANG_VAL_FREELIST_MAX) {
+            val->ref = 0;
+            val->prev = NULL;
+            val->next = ctx->val_freelist;
+            ctx->val_freelist = val;
+            ++(ctx->val_freelist_count);
+            return;
+        }
+    }
     mln_alloc_free(val);
 })
 
@@ -3689,9 +3837,20 @@ MLN_FUNC(static inline, int, mln_lang_stack_handler_block_return, \
         return 0;
     }
     mln_lang_stack_node_t *node;
-    if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, block->data.exp)) == NULL) {
-        __mln_lang_errmsg(ctx, "Stack is full.");
-        return -1;
+    {
+        mln_lang_exp_t *e = block->data.exp;
+        /* Cascade fold: see mln_lang_stack_handler_if for the rationale. */
+        if (e->next == NULL) {
+            if (e->jump == NULL)
+                mln_lang_generate_jump_ptr(e, M_LSNT_EXP);
+            if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(e->type), e->jump)) == NULL) {
+                __mln_lang_errmsg(ctx, "Stack is full.");
+                return -1;
+            }
+        } else if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, e)) == NULL) {
+            __mln_lang_errmsg(ctx, "Stack is full.");
+            return -1;
+        }
     }
     mln_lang_stack_map[node->type](ctx);
     return 0;
@@ -4113,7 +4272,24 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_if, (mln_lang_ctx_t *ctx), (c
         node->step = 1;
         mln_lang_ctx_reset_ret_var(ctx);
         if (i->condition != NULL) {
-            if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, i->condition)) == NULL) {
+            mln_lang_exp_t *cond = i->condition;
+            /*
+             * Cascade fold: a single-expression condition (no comma chain)
+             * has no real work for the exp handler beyond pushing
+             * exp->jump, so push that node directly and skip a round-trip
+             * through mln_lang_stack_handler_exp. Step 1 below pops
+             * whatever is on top — relativehigh / locate / factor / etc.
+             * — and the cleanup is identical to the EXP-wrapped case.
+             */
+            if (cond->next == NULL) {
+                if (cond->jump == NULL)
+                    mln_lang_generate_jump_ptr(cond, M_LSNT_EXP);
+                if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(cond->type), cond->jump)) == NULL) {
+                    __mln_lang_errmsg(ctx, "Stack is full.");
+                    ctx->quit = 1;
+                    return;
+                }
+            } else if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, cond)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
                 ctx->quit = 1;
                 return;
@@ -4889,6 +5065,37 @@ goon2:
         return;
     } else if (node->step == 3) {
         node->step = 4;
+        /*
+         * Fast path: int op int (no operator overload). Skips the methods
+         * table dispatch and the entry/type-check work in mln_lang_int_*
+         * comparators. Falls through to the slow path otherwise so other
+         * type combinations and operator overloads keep working.
+         */
+        if (!ctx->op_int_flag &&
+            mln_lang_var_val_type_get(node->ret_var) == M_LANG_VAL_TYPE_INT &&
+            ctx->ret_var != NULL &&
+            mln_lang_var_val_type_get(ctx->ret_var) == M_LANG_VAL_TYPE_INT)
+        {
+            mln_s64_t a = node->ret_var->val->data.i;
+            mln_s64_t b = ctx->ret_var->val->data.i;
+            mln_u8_t r;
+            switch (relativehigh->op) {
+                case M_RELATIVEHIGH_LESS:      r = (a <  b); break;
+                case M_RELATIVEHIGH_LESSEQ:    r = (a <= b); break;
+                case M_RELATIVEHIGH_GREATER:   r = (a >  b); break;
+                case M_RELATIVEHIGH_GREATEREQ: r = (a >= b); break;
+                default: ASSERT(0); r = 0; break;
+            }
+            if ((res = __mln_lang_var_create_bool(ctx, r, NULL)) == NULL) {
+                __mln_lang_errmsg(ctx, "No memory.");
+                ctx->quit = 1;
+                return;
+            }
+            mln_lang_stack_node_get_ctx_ret_var(node, ctx);
+            __mln_lang_ctx_set_ret_var(ctx, res);
+            goto goon4;
+        }
+        {
         mln_lang_op handler = NULL;
         mln_lang_method_t *method;
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
@@ -4934,6 +5141,7 @@ again:
             }
         } else {
             goto goon4;
+        }
         }
     } else if (node->step == 4) {
         if (node->call) {
@@ -5107,6 +5315,31 @@ goon2:
         return;
     } else if (node->step == 3) {
         node->step = 4;
+        /* Fast path: int op int (no operator overload). See relativehigh
+         * handler for the rationale. */
+        if (!ctx->op_int_flag &&
+            mln_lang_var_val_type_get(node->ret_var) == M_LANG_VAL_TYPE_INT &&
+            ctx->ret_var != NULL &&
+            mln_lang_var_val_type_get(ctx->ret_var) == M_LANG_VAL_TYPE_INT)
+        {
+            mln_s64_t a = node->ret_var->val->data.i;
+            mln_s64_t b = ctx->ret_var->val->data.i;
+            mln_s64_t r;
+            switch (addsub->op) {
+                case M_ADDSUB_PLUS: r = a + b; break;
+                case M_ADDSUB_SUB:  r = a - b; break;
+                default: ASSERT(0); r = 0; break;
+            }
+            if ((res = __mln_lang_var_create_int(ctx, r, NULL)) == NULL) {
+                __mln_lang_errmsg(ctx, "No memory.");
+                ctx->quit = 1;
+                return;
+            }
+            mln_lang_stack_node_get_ctx_ret_var(node, ctx);
+            __mln_lang_ctx_set_ret_var(ctx, res);
+            goto goon4;
+        }
+        {
         mln_lang_op handler = NULL;
         mln_lang_method_t *method;
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
@@ -5146,6 +5379,7 @@ again:
             }
         } else {
             goto goon4;
+        }
         }
     } else if (node->step == 4) {
         if (node->call) {
@@ -5213,6 +5447,42 @@ goon2:
         return;
     } else if (node->step == 3) {
         node->step = 4;
+        /* Fast path: int op int (no operator overload). For DIV/MOD we
+         * still need to bail to the slow path on b == 0 so the script
+         * sees the same error behaviour. */
+        if (!ctx->op_int_flag &&
+            mln_lang_var_val_type_get(node->ret_var) == M_LANG_VAL_TYPE_INT &&
+            ctx->ret_var != NULL &&
+            mln_lang_var_val_type_get(ctx->ret_var) == M_LANG_VAL_TYPE_INT)
+        {
+            mln_s64_t a = node->ret_var->val->data.i;
+            mln_s64_t b = ctx->ret_var->val->data.i;
+            mln_s64_t r;
+            int do_fast = 1;
+            switch (muldiv->op) {
+                case M_MULDIV_MUL: r = a * b; break;
+                case M_MULDIV_DIV:
+                    if (b == 0) { do_fast = 0; r = 0; }
+                    else r = a / b;
+                    break;
+                case M_MULDIV_MOD:
+                    if (b == 0) { do_fast = 0; r = 0; }
+                    else r = a % b;
+                    break;
+                default: ASSERT(0); r = 0; break;
+            }
+            if (do_fast) {
+                if ((res = __mln_lang_var_create_int(ctx, r, NULL)) == NULL) {
+                    __mln_lang_errmsg(ctx, "No memory.");
+                    ctx->quit = 1;
+                    return;
+                }
+                mln_lang_stack_node_get_ctx_ret_var(node, ctx);
+                __mln_lang_ctx_set_ret_var(ctx, res);
+                goto goon4;
+            }
+        }
+        {
         mln_lang_op handler = NULL;
         mln_lang_method_t *method;
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
@@ -5255,6 +5525,7 @@ again:
             }
         } else {
             goto goon4;
+        }
         }
     } else if (node->step == 4) {
         if (node->call) {
@@ -5880,11 +6151,34 @@ mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *
 #endif
     } else {
         if (prototype->data.stm != NULL) {
-            scope->entry = prototype->data.stm;
-            if ((node = mln_lang_stack_push(ctx, M_LSNT_STM, prototype->data.stm)) == NULL) {
-                __mln_lang_errmsg(ctx, "Stack is full.");
-                return -1;
+            /* Phase F3: compiled EXTERNAL function. We push a VM frame
+             * onto ctx->vm_frame_top and return; the caller (a CALL
+             * opcode in vm_step or vm_run) detects the new top and
+             * defers post-processing until the frame's RETURN runs. */
+            if (getenv("MELANG_VM_OFF") != NULL) {
+                /* Diagnostic AST fallback. */
+                scope->entry = prototype->data.stm;
+                if ((node = mln_lang_stack_push(ctx, M_LSNT_STM, prototype->data.stm)) == NULL) {
+                    __mln_lang_errmsg(ctx, "Stack is full.");
+                    return -1;
+                }
+                return 0;
             }
+            if (prototype->vm_state == 0) {
+                prototype->vm_state = mln_lang_vm_try_compile(ctx, prototype);
+            }
+            if (prototype->vm_state == 1) {
+                /* Push a VM frame; the caller (a CALL opcode in the
+                 * outer dispatch loop) will detect the new top frame
+                 * and let it run. The frame's RETURN will push its
+                 * result onto the caller's operand stack. */
+                if (mln_lang_vm_push_frame_for_call(ctx, prototype) < 0) {
+                    return -1;
+                }
+                return 0;
+            }
+            __mln_lang_errmsg(ctx, "VM: function body cannot be compiled (unsupported feature). Set MELANG_VM_OFF=1 to fall back to the AST walker.");
+            return -1;
         }
     }
     return 0;
@@ -5903,6 +6197,51 @@ MLN_FUNC(static inline, int, mln_lang_funcall_run_add_args, \
     }
     return 0;
 })
+
+/* Non-static wrappers exposed to mln_lang_vm.c so the bytecode VM can call
+ * back into the AST machinery for function-call dispatch and scope unwinding.
+ * These are exported with explicit names (`_compat`) to keep the header
+ * surface minimal. */
+int
+mln_lang_stack_handler_funccall_run_compat(mln_lang_ctx_t *ctx,
+                                           mln_lang_stack_node_t *node,
+                                           mln_lang_funccall_val_t *funccall)
+{
+    return mln_lang_stack_handler_funccall_run(ctx, node, funccall);
+}
+
+int
+mln_lang_withdraw_until_func_compat(mln_lang_ctx_t *ctx)
+{
+    return mln_lang_withdraw_until_func(ctx);
+}
+
+/* Phase F compat wrappers exposed to mln_lang_vm.c. Each thinly wraps a
+ * static-inline helper from this file so the VM can drive the underlying
+ * primitives without going through the AST stack handlers. */
+mln_lang_set_detail_t *
+mln_lang_ctx_get_class_compat(mln_lang_ctx_t *ctx)
+{
+    return mln_lang_ctx_get_class(ctx);
+}
+
+mln_lang_object_t *
+mln_lang_object_new_compat(mln_lang_ctx_t *ctx, mln_lang_set_detail_t *in_set)
+{
+    return mln_lang_object_new(ctx, in_set);
+}
+
+void
+mln_lang_object_free_compat(mln_lang_object_t *obj)
+{
+    mln_lang_object_free(obj);
+}
+
+mln_lang_symbol_node_t *
+mln_lang_symbol_node_id_search_compat(mln_lang_ctx_t *ctx, mln_string_t *name)
+{
+    return mln_lang_symbol_node_id_search(ctx, name);
+}
 
 MLN_FUNC(static inline, mln_lang_array_t *, mln_lang_funccall_run_build_args, \
          (mln_lang_ctx_t *ctx), (ctx), \
