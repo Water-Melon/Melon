@@ -1610,6 +1610,7 @@ typedef struct mln_lang_vm_frame_s {
     int                         op_cap;
     mln_lang_var_t            **slots;
     int                         n_locals;
+    int                         slots_cap;   /* allocated capacity of slots[] (>= n_locals) */
     int                         n_bound;     /* args + closures */
     mln_lang_func_detail_t     *prototype;   /* for CALL_SELF; NULL for top-level */
     int                         discard_ret;      /* 1 = drop return val on pop */
@@ -1668,27 +1669,39 @@ static int vm_push_frame(mln_lang_ctx_t *ctx,
         ctx->vm_frame_freelist = f->prev;   /* prev is the freelist link */
         --(ctx->vm_frame_freelist_count);
         /* Save buffer pointers / capacities before zeroing control fields. */
-        mln_lang_var_t **saved_opstack    = f->opstack;
-        int              saved_op_cap     = f->op_cap;
-        mln_lang_var_t **saved_slots      = f->slots;
-        int              saved_slots_cap  = f->n_locals;  /* cap == n_locals when recycled */
+        mln_lang_var_t **saved_opstack   = f->opstack;
+        int              saved_op_cap    = f->op_cap;
+        mln_lang_var_t **saved_slots     = f->slots;
+        int              saved_slots_cap = f->slots_cap;
         memset(f, 0, sizeof(*f));
-        f->opstack = saved_opstack; f->op_cap  = saved_op_cap;
-        f->slots   = saved_slots;   /* n_locals will be set below */
+        f->opstack    = saved_opstack;
+        f->op_cap     = saved_op_cap;
+        f->slots      = saved_slots;
+        f->slots_cap  = saved_slots_cap;
         /* Grow opstack if the new call needs more stack depth. */
         if (f->op_cap < new_op_cap) {
             if (f->opstack) mln_alloc_free(f->opstack);
             f->opstack = (mln_lang_var_t **)mln_alloc_m(ctx->pool,
                              sizeof(mln_lang_var_t *) * new_op_cap);
-            if (f->opstack == NULL) { mln_alloc_free(f); return -1; }
+            if (f->opstack == NULL) {
+                /* Slots buffer is still valid; free it before the frame. */
+                if (f->slots) mln_alloc_free(f->slots);
+                mln_alloc_free(f);
+                return -1;
+            }
             f->op_cap = new_op_cap;
         }
         /* Grow slots if the new call has more locals. */
-        if (saved_slots_cap < new_n_locals) {
+        if (f->slots_cap < new_n_locals) {
             if (f->slots) mln_alloc_free(f->slots);
             f->slots = (mln_lang_var_t **)mln_alloc_m(ctx->pool,
                             sizeof(mln_lang_var_t *) * new_n_locals);
-            if (f->slots == NULL) { mln_alloc_free(f->opstack); mln_alloc_free(f); return -1; }
+            if (f->slots == NULL) {
+                mln_alloc_free(f->opstack);
+                mln_alloc_free(f);
+                return -1;
+            }
+            f->slots_cap = new_n_locals;
         }
     } else {
         f = (mln_lang_vm_frame_t *)mln_alloc_m(ctx->pool, sizeof(*f));
@@ -1704,6 +1717,7 @@ static int vm_push_frame(mln_lang_ctx_t *ctx,
             f->slots = (mln_lang_var_t **)mln_alloc_m(ctx->pool,
                             sizeof(mln_lang_var_t *) * new_n_locals);
             if (f->slots == NULL) goto fail;
+            f->slots_cap = new_n_locals;
         }
     }
 

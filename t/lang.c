@@ -632,22 +632,10 @@ int main(void)
 
             int ok1 = (multi_result1 == 20100);
             int ok2 = (multi_result2 == 610);
-            if (ok1 && ok2) {
-                ++g_n_pass;
-                printf("  PASS [multi_job1_sum200]\n");
-                printf("  PASS [multi_job2_fib15]\n");
-            } else {
-                if (!ok1) {
-                    fprintf(stderr, "  FAIL [multi_job1_sum200]: got %d expected 20100\n",
-                            multi_result1);
-                    ++g_n_fail;
-                }
-                if (!ok2) {
-                    fprintf(stderr, "  FAIL [multi_job2_fib15]: got %d expected 610\n",
-                            multi_result2);
-                    ++g_n_fail;
-                }
-            }
+            if (ok1) { ++g_n_pass; printf("  PASS [multi_job1_sum200]\n"); }
+            else     { ++g_n_fail; fprintf(stderr, "  FAIL [multi_job1_sum200]: got %d expected 20100\n", multi_result1); }
+            if (ok2) { ++g_n_pass; printf("  PASS [multi_job2_fib15]\n"); }
+            else     { ++g_n_fail; fprintf(stderr, "  FAIL [multi_job2_fib15]: got %d expected 610\n", multi_result2); }
         }
     }
 
