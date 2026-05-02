@@ -222,6 +222,31 @@ static void run_test(mln_lang_t *lang, mln_event_t *ev,
     run_test(lang, ev, name, code, EXPECT_NONE, 0, 0.0, NULL)
 
 /* =========================================================
+ * Multi-job test helpers (section 30)
+ * ========================================================= */
+
+static volatile int multi_done    = 0;
+static volatile int multi_result1 = -1;
+static volatile int multi_result2 = -1;
+
+typedef struct {
+    mln_event_t *ev;
+    int          job_id;   /* 1 or 2 */
+} multi_tc_t;
+
+static void multi_return_handler(mln_lang_ctx_t *ctx) {
+    multi_tc_t *mtc = (multi_tc_t *)mln_lang_ctx_data_get(ctx);
+    mln_lang_var_t *rv = ctx->ret_var;
+    int val = -1;
+    if (rv && rv->val && rv->val->type == M_LANG_VAL_TYPE_INT)
+        val = (int)rv->val->data.i;
+    if (mtc->job_id == 1) multi_result1 = val;
+    else                  multi_result2 = val;
+    if (++multi_done >= 2)
+        mln_event_break_set(mtc->ev);
+}
+
+/* =========================================================
  * main
  * ========================================================= */
 
@@ -523,6 +548,108 @@ int main(void)
      * ------------------------------------------------- */
     T_INT(lang, ev, "factorial_10",
           "@Fact(n) { if (n<=1) { return 1; } fi return n * Fact(n-1); } return Fact(10);", 3628800);
+
+    /* -------------------------------------------------
+     * 28. Tier 3 fix: continue inside for loop
+     *     Sum only odd numbers 1..9 = 1+3+5+7+9 = 25
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "for_continue",
+          "@F() { s=0; for (i=0; i<10; i++) { if (i%2==0) { continue; } fi s=s+i; } return s; } return F();", 25);
+
+    /* -------------------------------------------------
+     * 29. Reactive programming: Watch / Unwatch
+     *
+     *  Watch(var, func, userData) — func is called as func(newval, userData)
+     *  when var is assigned a new value.  Both arguments in func can be
+     *  reference params (&), which allows the callback to modify the
+     *  caller's variables.
+     * ------------------------------------------------- */
+    /* Basic: callback sets ud = new value of watched var */
+    T_INT(lang, ev, "watch_basic",
+          "@onChange(&nv, &ud) { ud = nv; } "
+          "x = 0; result = 99; "
+          "Watch(x, onChange, result); "
+          "x = 42; "
+          "return result;",
+          42);
+
+    /* Watch fires on each subsequent assignment */
+    T_INT(lang, ev, "watch_repeated",
+          "@cb(&nv, &ud) { ud = ud + nv; } "
+          "x = 0; acc = 0; "
+          "Watch(x, cb, acc); "
+          "x = 1; x = 2; x = 3; "
+          "return acc;",  /* 0+1+2+3 = 6 */
+          6);
+
+    /* Unwatch stops the callback from firing */
+    T_INT(lang, ev, "watch_unwatch",
+          "@cb(&nv, &ud) { ud = nv; } "
+          "x = 0; result = 0; "
+          "Watch(x, cb, result); "
+          "x = 10; "          /* triggers: result = 10 */
+          "Unwatch(x); "
+          "x = 99; "          /* no trigger: result stays 10 */
+          "return result;",
+          10);
+
+    /* -------------------------------------------------
+     * 30. Multiple scripts on the same event loop
+     *
+     *  Launch two jobs simultaneously.  The event loop runs them
+     *  cooperatively (time-sliced).  We break when BOTH jobs finish.
+     * ------------------------------------------------- */
+    {
+        /* Shared state for the two concurrent jobs */
+        multi_done = 0; multi_result1 = -1; multi_result2 = -1;
+        mln_event_break_reset(ev);
+
+        static multi_tc_t mtc1, mtc2;
+        mtc1.ev = ev; mtc1.job_id = 1;
+        mtc2.ev = ev; mtc2.job_id = 2;
+
+        /* Job 1: sum 1..200 = 20100 */
+        const char *code1 =
+            "@F() { s=0; for (i=1; i<=200; i++) { s=s+i; } return s; } return F();";
+        /* Job 2: fib(15) = 610 */
+        const char *code2 =
+            "@Fib(n) { if (n<=1) { return n; } fi return Fib(n-1)+Fib(n-2); } return Fib(15);";
+
+        mln_string_t src1, src2;
+        mln_string_nset(&src1, (mln_u8ptr_t)code1, strlen(code1));
+        mln_string_nset(&src2, (mln_u8ptr_t)code2, strlen(code2));
+
+        mln_lang_ctx_t *c1 = mln_lang_job_new(lang, NULL, M_INPUT_T_BUF,
+                                               &src1, &mtc1, multi_return_handler);
+        mln_lang_ctx_t *c2 = mln_lang_job_new(lang, NULL, M_INPUT_T_BUF,
+                                               &src2, &mtc2, multi_return_handler);
+
+        if (c1 == NULL || c2 == NULL) {
+            fprintf(stderr, "  FAIL [multi_concurrent]: job creation failed\n");
+            ++g_n_fail;
+        } else {
+            mln_event_dispatch(ev);  /* runs until both handlers call break_set */
+
+            int ok1 = (multi_result1 == 20100);
+            int ok2 = (multi_result2 == 610);
+            if (ok1 && ok2) {
+                ++g_n_pass;
+                printf("  PASS [multi_job1_sum200]\n");
+                printf("  PASS [multi_job2_fib15]\n");
+            } else {
+                if (!ok1) {
+                    fprintf(stderr, "  FAIL [multi_job1_sum200]: got %d expected 20100\n",
+                            multi_result1);
+                    ++g_n_fail;
+                }
+                if (!ok2) {
+                    fprintf(stderr, "  FAIL [multi_job2_fib15]: got %d expected 610\n",
+                            multi_result2);
+                    ++g_n_fail;
+                }
+            }
+        }
+    }
 
     /* -------------------------------------------------
      * Report

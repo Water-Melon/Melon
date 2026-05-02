@@ -1132,6 +1132,8 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->var_freelist = NULL;
     ctx->val_freelist_count = 0;
     ctx->var_freelist_count = 0;
+    ctx->vm_frame_freelist = NULL;
+    ctx->vm_frame_freelist_count = 0;
     ctx->sym_count = 0;
     ctx->ret_flag = ctx->op_array_flag = ctx->op_bool_flag = ctx->op_func_flag = ctx->op_int_flag = \
     ctx->op_nil_flag = ctx->op_obj_flag = ctx->op_real_flag = ctx->op_str_flag = 0;

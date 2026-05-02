@@ -199,6 +199,11 @@ typedef struct {
     int continue_pc;
     int breaks[16];
     int n_breaks;
+    /* For `for` loops: continue_pc is not yet known when compiling the body
+     * (it equals the mod_exp pc, which comes after the body).  Collect JUMP
+     * instruction indices here and patch them once mod_pc is known. */
+    int continues[16];
+    int n_continues;
 } loop_ctx_t;
 
 typedef struct {
@@ -517,6 +522,7 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             loop_ctx_t *lc = &c->loops[c->n_loops++];
             lc->continue_pc = -1;   /* continue not supported in switch */
             lc->n_breaks = 0;
+            lc->n_continues = 0;
 
             /* Emit each case body in order. Patch its JIT_TRUE to here. */
             int body_pcs[64];
@@ -556,6 +562,7 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             loop_ctx_t *lc = &c->loops[c->n_loops++];
             lc->continue_pc = loop_start;
             lc->n_breaks = 0;
+            lc->n_continues = 0;
 
             /* condition (or empty for `while (1)` style) */
             int sp_before = c->sp;
@@ -602,6 +609,8 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             if (c->n_loops >= MLN_VM_MAX_LOOPS) { bail(c); return; }
             loop_ctx_t *lc = &c->loops[c->n_loops++];
             lc->n_breaks = 0;
+            lc->n_continues = 0;
+            lc->continue_pc = -1;   /* for-loop: mod_exp pc not yet known */
 
             /* condition (optional) */
             int j_exit = -1;
@@ -614,38 +623,19 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
                 sp_pop(c, 1);
             }
 
-            /* body. continue lands BEFORE mod_exp, so set lc->continue_pc
-             * after we know mod_exp's pc — patch list approach. */
-            /* Using two-pass: emit body first, then mod_exp at "continue"
-             * landing, then JUMP back to cond. continue jumps to mod_exp. */
-            int body_start_breaks = lc->n_breaks;  /* current count */
-            (void)body_start_breaks;
-            /* Continue jumps will be patched after we know mod_exp pc. We
-             * collect them in a side list (re-use `breaks[]` is awkward
-             * because breaks have a different target). Use a fresh array. */
-            int continues[16];
-            int n_cont = 0;
-            lc->continue_pc = -1;     /* sentinel — see compile_block_continue */
-            /* To keep the data flow simple, we allow at most 16 `continue`s
-             * per for-loop. Track them in a private array via
-             * loop_ctx.continue_pc using positive value to mean "fixed pc"
-             * and negative to mean "collecting patches". For now, we
-             * implement `continue` only when continue_pc is fixed; for the
-             * for-loop we run the body with continue_pc temporarily set to
-             * the future mod_exp pc, but we don't yet know it. Workaround:
-             * compile body, then mod, then patch continues from a list. */
-            /* Hack: stash the continues array pointer and count in the
-             * loop_ctx via continue_pc = -(addr). Simpler — use a local
-             * var visible to compile_block_continue via a small global hack
-             * is messy. Just disallow `continue` inside for-loops in this
-             * pass. */
-            (void)continues; (void)n_cont;
-
+            /* Compile body.  Any `continue` inside will emit a JUMP with
+             * offset 0 and add its index to lc->continues[].  We patch all
+             * those jumps to mod_pc once we know it (after the body). */
             if (f->blockstm != NULL) compile_block(c, f->blockstm);
             if (!c->ok) { c->n_loops--; return; }
 
+            /* mod_exp (the i++ / i+=2 etc. step) */
             int mod_pc = (int)c->chunk->code_len;
-            (void)mod_pc;
+            /* Patch all `continue` JUMPs collected during body compilation. */
+            for (int i = 0; i < lc->n_continues; ++i) {
+                c->chunk->code[lc->continues[i]].b =
+                    (mln_s16_t)(mod_pc - (lc->continues[i] + 1));
+            }
             if (f->mod_exp != NULL) {
                 int sp_before = c->sp;
                 compile_exp(c, f->mod_exp);
@@ -741,12 +731,16 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
         case M_BLOCK_CONTINUE: {
             if (c->n_loops == 0) { bail(c); return; }
             loop_ctx_t *lc = &c->loops[c->n_loops - 1];
-            /* Only supported when continue_pc is a real (>=0) target —
-             * i.e. inside a `while` loop. For-loops in this pass refuse
-             * continue. */
-            if (lc->continue_pc < 0) { bail(c); return; }
-            int j = emit(c, MLN_VOP_JUMP, 0, 0);
-            c->chunk->code[j].b = (mln_s16_t)(lc->continue_pc - (j + 1));
+            if (lc->continue_pc >= 0) {
+                /* while loop: continue_pc is already known */
+                int j = emit(c, MLN_VOP_JUMP, 0, 0);
+                c->chunk->code[j].b = (mln_s16_t)(lc->continue_pc - (j + 1));
+            } else {
+                /* for loop: continue_pc not yet known — record patch index */
+                if (lc->n_continues >= 16) { bail(c); return; }
+                int j = emit(c, MLN_VOP_JUMP, 0, 0);
+                lc->continues[lc->n_continues++] = j;
+            }
             return;
         }
         case M_BLOCK_IF: {
@@ -1661,25 +1655,64 @@ static int vm_push_frame(mln_lang_ctx_t *ctx,
                           int owns_top, int discard_ret)
 {
     if (chunk == NULL) return -1;
-    mln_lang_vm_frame_t *f = (mln_lang_vm_frame_t *)mln_alloc_m(ctx->pool, sizeof(*f));
-    if (f == NULL) return -1;
-    memset(f, 0, sizeof(*f));
-    f->chunk = chunk;
-    f->prototype = prototype;
-    f->n_locals = (int)chunk->n_locals;
-    f->n_bound = n_args + n_closures;
-    f->op_cap = (int)(chunk->max_stack + 4);
-    f->discard_ret = discard_ret;
-    f->owns_top = owns_top;
 
-    if (f->op_cap > 0) {
-        f->opstack = (mln_lang_var_t **)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t *) * f->op_cap);
-        if (f->opstack == NULL) goto fail;
+    int new_op_cap   = (int)(chunk->max_stack + 4);
+    int new_n_locals = (int)chunk->n_locals;
+
+    /* Try the per-ctx vm_frame freelist before hitting the pool allocator.
+     * A recycled frame keeps its opstack and slots buffers; we only
+     * re-allocate them when the cached capacity is insufficient. */
+    mln_lang_vm_frame_t *f = NULL;
+    if (ctx->vm_frame_freelist != NULL) {
+        f = (mln_lang_vm_frame_t *)ctx->vm_frame_freelist;
+        ctx->vm_frame_freelist = f->prev;   /* prev is the freelist link */
+        --(ctx->vm_frame_freelist_count);
+        /* Save buffer pointers / capacities before zeroing control fields. */
+        mln_lang_var_t **saved_opstack    = f->opstack;
+        int              saved_op_cap     = f->op_cap;
+        mln_lang_var_t **saved_slots      = f->slots;
+        int              saved_slots_cap  = f->n_locals;  /* cap == n_locals when recycled */
+        memset(f, 0, sizeof(*f));
+        f->opstack = saved_opstack; f->op_cap  = saved_op_cap;
+        f->slots   = saved_slots;   /* n_locals will be set below */
+        /* Grow opstack if the new call needs more stack depth. */
+        if (f->op_cap < new_op_cap) {
+            if (f->opstack) mln_alloc_free(f->opstack);
+            f->opstack = (mln_lang_var_t **)mln_alloc_m(ctx->pool,
+                             sizeof(mln_lang_var_t *) * new_op_cap);
+            if (f->opstack == NULL) { mln_alloc_free(f); return -1; }
+            f->op_cap = new_op_cap;
+        }
+        /* Grow slots if the new call has more locals. */
+        if (saved_slots_cap < new_n_locals) {
+            if (f->slots) mln_alloc_free(f->slots);
+            f->slots = (mln_lang_var_t **)mln_alloc_m(ctx->pool,
+                            sizeof(mln_lang_var_t *) * new_n_locals);
+            if (f->slots == NULL) { mln_alloc_free(f->opstack); mln_alloc_free(f); return -1; }
+        }
+    } else {
+        f = (mln_lang_vm_frame_t *)mln_alloc_m(ctx->pool, sizeof(*f));
+        if (f == NULL) return -1;
+        memset(f, 0, sizeof(*f));
+        if (new_op_cap > 0) {
+            f->opstack = (mln_lang_var_t **)mln_alloc_m(ctx->pool,
+                             sizeof(mln_lang_var_t *) * new_op_cap);
+            if (f->opstack == NULL) goto fail;
+            f->op_cap = new_op_cap;
+        }
+        if (new_n_locals > 0) {
+            f->slots = (mln_lang_var_t **)mln_alloc_m(ctx->pool,
+                            sizeof(mln_lang_var_t *) * new_n_locals);
+            if (f->slots == NULL) goto fail;
+        }
     }
-    if (f->n_locals > 0) {
-        f->slots = (mln_lang_var_t **)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t *) * f->n_locals);
-        if (f->slots == NULL) goto fail;
-    }
+
+    f->chunk     = chunk;
+    f->prototype = prototype;
+    f->n_locals  = new_n_locals;
+    f->n_bound   = n_args + n_closures;
+    f->discard_ret = discard_ret;
+    f->owns_top    = owns_top;
 
     /* Bind args + closures from scope sym chain; create body locals. */
     mln_lang_scope_t *scope = ctx->scope_top;
@@ -1756,9 +1789,18 @@ static int vm_pop_frame_with_ret(mln_lang_ctx_t *ctx, mln_lang_var_t *ret)
     mln_lang_func_detail_t *proto_to_free = owns ? f->prototype : NULL;
     mln_lang_vm_frame_t *prev = f->prev;
 
-    if (f->opstack) mln_alloc_free(f->opstack);
-    if (f->slots) mln_alloc_free(f->slots);
-    mln_alloc_free(f);
+    /* Recycle the frame to the freelist when under the cap.  Frames keep
+     * their opstack and slots allocations so that the next push can reuse
+     * them without calling mln_alloc_m for the inner arrays. */
+    if (ctx->vm_frame_freelist_count < M_LANG_FRAME_FREELIST_MAX) {
+        f->prev = (mln_lang_vm_frame_t *)ctx->vm_frame_freelist;
+        ctx->vm_frame_freelist = f;
+        ++(ctx->vm_frame_freelist_count);
+    } else {
+        if (f->opstack) mln_alloc_free(f->opstack);
+        if (f->slots)   mln_alloc_free(f->slots);
+        mln_alloc_free(f);
+    }
     ctx->vm_frame_top = prev;
 
     if (chunk_to_free) mln_lang_vm_chunk_free(chunk_to_free);

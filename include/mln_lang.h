@@ -201,8 +201,11 @@ struct mln_lang_scope_s {
 /* Cap on the number of recycled mln_lang_val_t / mln_lang_var_t we cache on
  * the per-ctx freelists. Beyond this we fall back to the slab allocator so
  * memory does not grow unbounded for long-running scripts. */
-#define M_LANG_VAL_FREELIST_MAX  4096
-#define M_LANG_VAR_FREELIST_MAX  4096
+#define M_LANG_VAL_FREELIST_MAX    4096
+#define M_LANG_VAR_FREELIST_MAX    4096
+/* Cap on the vm_frame_t freelist.  Frames are larger (opstack + slots) so a
+ * smaller cap is fine; 64 covers deep recursion warm-up in most scripts. */
+#define M_LANG_FRAME_FREELIST_MAX  64
 
 struct mln_lang_ctx_s {
     mln_lang_t                      *lang;
@@ -236,6 +239,12 @@ struct mln_lang_ctx_s {
     mln_lang_var_t                  *var_freelist;
     mln_size_t                       val_freelist_count;
     mln_size_t                       var_freelist_count;
+    /* Recycled mln_lang_vm_frame_t objects.  Linked via the frame's own
+     * `prev` pointer (which is unused while the frame is off the active
+     * vm_frame_top chain).  Frames carry their opstack and slots buffers
+     * so they can be reused without re-allocating those inner arrays. */
+    void                            *vm_frame_freelist;
+    mln_size_t                       vm_frame_freelist_count;
     mln_u32_t                        sym_count:16;
     mln_u32_t                        ret_flag:1;
     /*flags for operator overloading*/
