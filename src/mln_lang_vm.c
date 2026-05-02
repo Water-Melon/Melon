@@ -1620,6 +1620,10 @@ typedef struct mln_lang_vm_frame_s {
                                                    *   ctx->ret_var capture are deferred until
                                                    *   the async completion handler calls
                                                    *   mln_lang_ctx_continue() and resumes us */
+    /* DUAL-PURPOSE: when the frame is on the active vm_frame_top chain
+     * (the call stack), prev points to the enclosing frame.  When the
+     * frame is recycled onto ctx->vm_frame_freelist, prev is reused as
+     * the freelist link.  A frame is never on both chains simultaneously. */
     struct mln_lang_vm_frame_s *prev;
 } mln_lang_vm_frame_t;
 

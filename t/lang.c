@@ -604,7 +604,7 @@ int main(void)
         multi_done = 0; multi_result1 = -1; multi_result2 = -1;
         mln_event_break_reset(ev);
 
-        static multi_tc_t mtc1, mtc2;
+        multi_tc_t mtc1, mtc2;
         mtc1.ev = ev; mtc1.job_id = 1;
         mtc2.ev = ev; mtc2.job_id = 2;
 
