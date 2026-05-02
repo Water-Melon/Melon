@@ -1591,8 +1591,13 @@ typedef struct mln_lang_vm_frame_s {
     int                         n_locals;
     int                         n_bound;     /* args + closures */
     mln_lang_func_detail_t     *prototype;   /* for CALL_SELF; NULL for top-level */
-    int                         discard_ret; /* 1 = drop return val on pop */
-    int                         owns_top;    /* 1 = top-level synthetic, free chunk + proto */
+    int                         discard_ret;      /* 1 = drop return val on pop */
+    int                         owns_top;         /* 1 = top-level synthetic, free chunk + proto */
+    int                         awaiting_return;  /* 1 = INTERNAL call suspended via
+                                                   *   mln_lang_ctx_suspend(); scope-pop and
+                                                   *   ctx->ret_var capture are deferred until
+                                                   *   the async completion handler calls
+                                                   *   mln_lang_ctx_continue() and resumes us */
     struct mln_lang_vm_frame_s *prev;
 } mln_lang_vm_frame_t;
 
@@ -1781,6 +1786,28 @@ static int dispatch_one(mln_lang_ctx_t *ctx)
     /* Implicit return nil when pc reaches end of code. */
     if (frame->pc >= frame->chunk->code_len) {
         return vm_pop_frame_with_ret(ctx, NULL);
+    }
+
+    /* Resume from a suspended INTERNAL call: the ctx was resumed via
+     * mln_lang_ctx_continue() so ctx->ret_var now holds the real result
+     * set by the async completion handler.  Pop the preserved function
+     * scope and push the return value onto our opstack, then fall through
+     * to normal opcode dispatch so the next instruction runs this turn. */
+    if (frame->awaiting_return) {
+        if (mln_lang_withdraw_until_func_compat(ctx) < 0) return -1;
+        frame->awaiting_return = 0;
+        mln_lang_var_t *resume_ret = ctx->ret_var;
+        ctx->ret_var = NULL;
+        if (resume_ret == NULL) {
+            resume_ret = mln_lang_var_create_nil(ctx, NULL);
+            if (resume_ret == NULL) return -1;
+        }
+        if (vm_frame_grow_opstack(ctx, frame, 1) < 0) {
+            mln_lang_var_free(resume_ret);
+            return -1;
+        }
+        frame->opstack[frame->op_sp++] = resume_ret;
+        return 0;
     }
 
     mln_lang_vm_chunk_t *chunk = frame->chunk;
@@ -2040,6 +2067,16 @@ static int dispatch_one(mln_lang_ctx_t *ctx)
             if (FRAME_TOP(ctx) != saved_top) {
                 /* New VM frame pushed. Its RETURN will push ret to our
                  * opstack. Nothing more to do this iteration. */
+                return 0;
+            }
+            /* If the INTERNAL function suspended via mln_lang_ctx_suspend,
+             * do NOT pop the scope or capture ret_var yet — the async
+             * completion handler will update ctx->ret_var and then call
+             * mln_lang_ctx_continue.  Set awaiting_return so that the very
+             * next opcode dispatch (after ctx is resumed) pops the scope and
+             * pushes the real return value. */
+            if (ctx->ref) {
+                frame->awaiting_return = 1;
                 return 0;
             }
             /* Synchronous (INTERNAL). Pop scope and take ret_var. */
