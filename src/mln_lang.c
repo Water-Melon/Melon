@@ -1136,6 +1136,10 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->ret_flag = ctx->op_array_flag = ctx->op_bool_flag = ctx->op_func_flag = ctx->op_int_flag = \
     ctx->op_nil_flag = ctx->op_obj_flag = ctx->op_real_flag = ctx->op_str_flag = 0;
     ctx->quit = 0;
+    /* Phase F VM fields — must be explicit-zero because ctx is pool-allocated
+     * (mln_alloc_m, not calloc) and pool memory is not zero-initialised. */
+    ctx->vm_top_attempted = 0;
+    ctx->vm_frame_top = NULL;
 
     gcattr.pool = ctx->pool;
     gcattr.item_getter = (gc_item_getter)mln_lang_gc_item_getter;

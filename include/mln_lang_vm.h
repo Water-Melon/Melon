@@ -60,6 +60,17 @@ typedef enum {
     MLN_VOP_EQ,
     MLN_VOP_NE,
 
+    /* Bitwise / shift binary ops (pops 2, pushes 1).
+     * Integer fast-path: direct bit-operation. Non-int: methods-table
+     * (cor_handler / cand_handler / cxor_handler / lmov_handler / rmov_handler).
+     * NOTE: In Melang | & ^ << >> are NOT short-circuit; both operands are
+     * always evaluated before these opcodes are emitted. */
+    MLN_VOP_BOR,                /* a | b  — bitwise / logichigh OR  */
+    MLN_VOP_BAND,               /* a & b  — bitwise / logichigh AND */
+    MLN_VOP_BXOR,               /* a ^ b  — bitwise / logichigh XOR */
+    MLN_VOP_LSHIFT,             /* a << b — move left               */
+    MLN_VOP_RSHIFT,             /* a >> b — move right              */
+
     /* Control flow. b = signed offset relative to the next instruction. */
     MLN_VOP_JUMP,
     MLN_VOP_JUMP_IF_FALSE,      /* pops top */

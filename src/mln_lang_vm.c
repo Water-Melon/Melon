@@ -784,8 +784,15 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
 static void compile_exp(mln_lang_vm_compiler_t *c, mln_lang_exp_t *exp)
 {
     if (exp == NULL) { bail(c); return; }
-    if (exp->next != NULL) { bail(c); return; }   /* no comma chains */
     compile_assign(c, exp->assign);
+    /* Comma chain: compile each sub-expression, discard all intermediate
+     * results, keep the last.  The value of (a, b, c) is c. */
+    while (c->ok && exp->next != NULL) {
+        emit(c, MLN_VOP_POP, 0, 0);
+        sp_pop(c, 1);
+        exp = exp->next;
+        compile_assign(c, exp->assign);
+    }
 }
 
 static void compile_assign(mln_lang_vm_compiler_t *c, mln_lang_assign_t *a)
@@ -796,17 +803,20 @@ static void compile_assign(mln_lang_vm_compiler_t *c, mln_lang_assign_t *a)
         return;
     }
 
-    /* Map compound-assign ops to their bin-op equivalents. Returns -1 for
-     * M_ASSIGN_EQUAL (no compound) and -2 for unsupported (LMOVEQ/RMOVEQ/
-     * OREQ/ANDEQ/XOREQ — bitwise compound, rare). */
+    /* Map compound-assign ops to their bin-op equivalents. */
     int compound_op = -1;
     switch (a->op) {
-        case M_ASSIGN_EQUAL:                              break;
-        case M_ASSIGN_PLUSEQ: compound_op = MLN_VOP_ADD;  break;
-        case M_ASSIGN_SUBEQ:  compound_op = MLN_VOP_SUB;  break;
-        case M_ASSIGN_MULEQ:  compound_op = MLN_VOP_MUL;  break;
-        case M_ASSIGN_DIVEQ:  compound_op = MLN_VOP_DIV;  break;
-        case M_ASSIGN_MODEQ:  compound_op = MLN_VOP_MOD;  break;
+        case M_ASSIGN_EQUAL:                                break;
+        case M_ASSIGN_PLUSEQ:  compound_op = MLN_VOP_ADD;    break;
+        case M_ASSIGN_SUBEQ:   compound_op = MLN_VOP_SUB;    break;
+        case M_ASSIGN_MULEQ:   compound_op = MLN_VOP_MUL;    break;
+        case M_ASSIGN_DIVEQ:   compound_op = MLN_VOP_DIV;    break;
+        case M_ASSIGN_MODEQ:   compound_op = MLN_VOP_MOD;    break;
+        case M_ASSIGN_OREQ:    compound_op = MLN_VOP_BOR;    break;
+        case M_ASSIGN_ANDEQ:   compound_op = MLN_VOP_BAND;   break;
+        case M_ASSIGN_XOREQ:   compound_op = MLN_VOP_BXOR;   break;
+        case M_ASSIGN_LMOVEQ:  compound_op = MLN_VOP_LSHIFT; break;
+        case M_ASSIGN_RMOVEQ:  compound_op = MLN_VOP_RSHIFT; break;
         default: bail(c); return;
     }
 
@@ -938,25 +948,20 @@ static void compile_logichigh(mln_lang_vm_compiler_t *c, mln_lang_logichigh_t *n
 {
     if (n == NULL) { bail(c); return; }
     compile_relativelow(c, n->left);
+    /* Melang's logichigh operators (|, &, ^) are BITWISE, not short-circuit.
+     * The AST walker always evaluates both sides before calling cor/cand/cxor
+     * handlers.  Emit a plain binary opcode — no jump patching needed. */
     while (c->ok && n->op != M_LOGICHIGH_NONE) {
         if (n->right == NULL) { bail(c); return; }
-        emit(c, MLN_VOP_DUP, 0, 0);
-        sp_push(c, 1);
-        int j_short;
-        if (n->op == M_LOGICHIGH_OR) {
-            j_short = emit(c, MLN_VOP_JUMP_IF_TRUE, 0, 0);
-        } else if (n->op == M_LOGICHIGH_AND) {
-            j_short = emit(c, MLN_VOP_JUMP_IF_FALSE, 0, 0);
-        } else {
-            /* M_LOGICHIGH_XOR — no short-circuit possible, refuse. */
-            bail(c); return;
-        }
-        sp_pop(c, 1);
-        emit(c, MLN_VOP_POP, 0, 0);
-        sp_pop(c, 1);
         compile_relativelow(c, n->right->left);
         if (!c->ok) return;
-        c->chunk->code[j_short].b = (mln_s16_t)((int)c->chunk->code_len - (j_short + 1));
+        switch (n->op) {
+            case M_LOGICHIGH_OR:  emit(c, MLN_VOP_BOR,  0, 0); break;
+            case M_LOGICHIGH_AND: emit(c, MLN_VOP_BAND, 0, 0); break;
+            case M_LOGICHIGH_XOR: emit(c, MLN_VOP_BXOR, 0, 0); break;
+            default: bail(c); return;
+        }
+        sp_pop(c, 1);   /* binary op pops 2, pushes 1 */
         n = n->right;
     }
 }
@@ -1002,8 +1007,19 @@ static void compile_relativehigh(mln_lang_vm_compiler_t *c, mln_lang_relativehig
 static void compile_move(mln_lang_vm_compiler_t *c, mln_lang_move_t *n)
 {
     if (n == NULL) { bail(c); return; }
-    if (n->op != M_MOVE_NONE) { bail(c); return; }
     compile_addsub(c, n->left);
+    while (c->ok && n->op != M_MOVE_NONE) {
+        if (n->right == NULL) { bail(c); return; }
+        compile_addsub(c, n->right->left);
+        if (!c->ok) return;
+        switch (n->op) {
+            case M_MOVE_LMOVE: emit(c, MLN_VOP_LSHIFT, 0, 0); break;
+            case M_MOVE_RMOVE: emit(c, MLN_VOP_RSHIFT, 0, 0); break;
+            default: bail(c); return;
+        }
+        sp_pop(c, 1);
+        n = n->right;
+    }
 }
 
 static void compile_addsub(mln_lang_vm_compiler_t *c, mln_lang_addsub_t *n)
@@ -1515,6 +1531,11 @@ static mln_lang_var_t *apply_binop(mln_lang_ctx_t *ctx, mln_u8_t op,
             case MLN_VOP_GE: r = mln_lang_var_create_bool(ctx, (mln_u8_t)(ai >= bi), NULL); break;
             case MLN_VOP_EQ: r = mln_lang_var_create_bool(ctx, (mln_u8_t)(ai == bi), NULL); break;
             case MLN_VOP_NE: r = mln_lang_var_create_bool(ctx, (mln_u8_t)(ai != bi), NULL); break;
+            case MLN_VOP_BOR:    r = mln_lang_var_create_int(ctx, ai | bi, NULL); break;
+            case MLN_VOP_BAND:   r = mln_lang_var_create_int(ctx, ai & bi, NULL); break;
+            case MLN_VOP_BXOR:   r = mln_lang_var_create_int(ctx, ai ^ bi, NULL); break;
+            case MLN_VOP_LSHIFT: r = mln_lang_var_create_int(ctx, ai << bi, NULL); break;
+            case MLN_VOP_RSHIFT: r = mln_lang_var_create_int(ctx, ai >> bi, NULL); break;
             default: break;
         }
 done:
@@ -1537,6 +1558,11 @@ done:
             case MLN_VOP_GE:  handler = method->greale_handler;   break;
             case MLN_VOP_EQ:  handler = method->equal_handler;    break;
             case MLN_VOP_NE:  handler = method->nonequal_handler; break;
+            case MLN_VOP_BOR:    handler = method->cor_handler;   break;
+            case MLN_VOP_BAND:   handler = method->cand_handler;  break;
+            case MLN_VOP_BXOR:   handler = method->cxor_handler;  break;
+            case MLN_VOP_LSHIFT: handler = method->lmov_handler;  break;
+            case MLN_VOP_RSHIFT: handler = method->rmov_handler;  break;
             default: break;
         }
     }
@@ -1963,7 +1989,9 @@ static int dispatch_one(mln_lang_ctx_t *ctx)
         case MLN_VOP_ADD: case MLN_VOP_SUB: case MLN_VOP_MUL:
         case MLN_VOP_DIV: case MLN_VOP_MOD:
         case MLN_VOP_LT: case MLN_VOP_LE: case MLN_VOP_GT:
-        case MLN_VOP_GE: case MLN_VOP_EQ: case MLN_VOP_NE: {
+        case MLN_VOP_GE: case MLN_VOP_EQ: case MLN_VOP_NE:
+        case MLN_VOP_BOR: case MLN_VOP_BAND: case MLN_VOP_BXOR:
+        case MLN_VOP_LSHIFT: case MLN_VOP_RSHIFT: {
             mln_lang_var_t *b = POP();
             mln_lang_var_t *a = POP();
             mln_lang_var_t *r = apply_binop(ctx, insn.op, a, b);
