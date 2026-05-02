@@ -1864,8 +1864,19 @@ static int vm_fire_watcher(mln_lang_ctx_t *ctx, mln_lang_var_t *target_var);
 
 /* dispatch_one: execute one bytecode instruction on FRAME_TOP(ctx).
  * Returns 0 on success (frame may have changed via push/pop), -1 on
- * error. */
-static int dispatch_one(mln_lang_ctx_t *ctx)
+ * error.
+ *
+ * Marked always-inline so the compiler physically places the dispatch
+ * switch directly inside vm_step's hot loop, eliminating the call/ret
+ * overhead per instruction. */
+#if defined(__GNUC__) || defined(__clang__)
+# define MLN_VM_ALWAYS_INLINE __attribute__((always_inline))
+#elif defined(MSVC)
+# define MLN_VM_ALWAYS_INLINE __forceinline
+#else
+# define MLN_VM_ALWAYS_INLINE
+#endif
+static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
 {
     mln_lang_vm_frame_t *frame = FRAME_TOP(ctx);
     if (frame == NULL) return -1;
