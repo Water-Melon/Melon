@@ -504,7 +504,7 @@ int main(void)
     T_INT(lang, ev, "prec_paren",       "return (2 + 3) * 4;",               20);
     T_INT(lang, ev, "prec_div_mod",     "return 10 / 3 + 10 % 3;",           4);
     T_INT(lang, ev, "prec_neg",         "return -2 * 3;",                    -6);
-    T_INT(lang, ev, "prec_shift_arith", "return 1 + 2 << 1;",                6); /* (1+2)<<1 = 6 */
+    T_INT(lang, ev, "prec_shift_arith", "return 1 + 2 << 1;",                6); /* Melang: addsub > move, so (1+2)<<1 = 6 */
 
     /* -------------------------------------------------
      * 25. Dump() built-in smoke test (just checks it completes)
