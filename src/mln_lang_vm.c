@@ -1871,7 +1871,7 @@ static int vm_fire_watcher(mln_lang_ctx_t *ctx, mln_lang_var_t *target_var);
  * overhead per instruction. */
 #if defined(__GNUC__) || defined(__clang__)
 # define MLN_VM_ALWAYS_INLINE __attribute__((always_inline))
-#elif defined(MSVC)
+#elif defined(_MSC_VER)
 # define MLN_VM_ALWAYS_INLINE __forceinline
 #else
 # define MLN_VM_ALWAYS_INLINE
