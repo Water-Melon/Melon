@@ -803,7 +803,8 @@ static void compile_assign(mln_lang_vm_compiler_t *c, mln_lang_assign_t *a)
         return;
     }
 
-    /* Map compound-assign ops to their bin-op equivalents. */
+    /* Map compound-assign ops to their bin-op equivalents.
+     * compound_op stays -1 for M_ASSIGN_EQUAL (simple assignment, no binop). */
     int compound_op = -1;
     switch (a->op) {
         case M_ASSIGN_EQUAL:                                break;
