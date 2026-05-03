@@ -1841,6 +1841,26 @@ done:
     return r;
 }
 
+/* Create a nil variable named `name` in the current scope and return it.
+ * Returns NULL and sets an error message on OOM.
+ * Used by LOAD_GLOBAL and ASSIGN_GLOBAL to lazily create variables the
+ * first time they are referenced, matching the AST interpreter's semantics
+ * (src/mln_lang.c:6517-6536). */
+static mln_lang_var_t *vm_create_scope_var(mln_lang_ctx_t *ctx, mln_string_t *name)
+{
+    mln_lang_var_t *nv = mln_lang_var_create_nil(ctx, name);
+    if (nv == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, nv) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(nv);
+        return NULL;
+    }
+    return nv;
+}
+
 /* For STORE/ASSIGN: replace slot[i]'s value with the popped var's value.
  * Returns 0 on success, -1 on error. The popped var is consumed (freed). */
 static int slot_assign(mln_lang_ctx_t *ctx, mln_lang_var_t *slot_var,
@@ -2241,13 +2261,8 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 /* Variable not yet bound — create a nil slot in the current
                  * scope, matching AST interpreter semantics
                  * (src/mln_lang.c:6517-6536). */
-                mln_lang_var_t *nv = mln_lang_var_create_nil(ctx, name);
-                if (nv == NULL) { mln_lang_errmsg(ctx, "No memory."); return -1; }
-                if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, nv) < 0) {
-                    mln_lang_errmsg(ctx, "No memory.");
-                    mln_lang_var_free(nv);
-                    return -1;
-                }
+                mln_lang_var_t *nv = vm_create_scope_var(ctx, name);
+                if (nv == NULL) return -1;
                 ++(nv->ref);
                 PUSH(nv);
                 return 0;
@@ -2396,15 +2411,8 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_symbol_node_t *sym = mln_lang_symbol_node_search(ctx, name, 0);
             mln_lang_var_t *target;
             if (sym == NULL) {
-                target = mln_lang_var_create_nil(ctx, name);
+                target = vm_create_scope_var(ctx, name);
                 if (target == NULL) {
-                    mln_lang_errmsg(ctx, "No memory.");
-                    mln_lang_var_free(POP());
-                    return -1;
-                }
-                if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, target) < 0) {
-                    mln_lang_errmsg(ctx, "No memory.");
-                    mln_lang_var_free(target);
                     mln_lang_var_free(POP());
                     return -1;
                 }
