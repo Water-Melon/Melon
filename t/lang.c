@@ -836,7 +836,305 @@ int main(void)
     T_INT(lang, ev, "func_reads_global",
           "g = 10; @F() { return g; } return F();",                         10);
     T_INT(lang, ev, "func_modifies_global_compound",
-          "g = 5; @F() { g += 3; } F(); return g;",                         8);
+          "g = 5; @F() { g += 3; } F(); return g;                          ", 8);
+
+    /* =========================================================================
+     * The blocks below specifically target VM code paths that were added by
+     * the perf/lang commits ahead of origin/master.  Each test verifies the
+     * VM result matches the AST-walker semantics described in mln_lang.c.
+     * ========================================================================= */
+
+    /* -------------------------------------------------
+     * 37. Comma chains with 3+ elements (commit 7bb0fef enabled this in the
+     *     VM; previously the VM bailed for any chain longer than one node).
+     *     Value of (e1, e2, ..., en) is en; intermediate side effects must
+     *     still happen in order.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "comma_chain_5",
+          "@F() { return (10, 20, 30, 40, 50); } return F();",                50);
+    T_INT(lang, ev, "comma_chain_assigns",
+          "@F() { a=0; b=0; c=0; return (a=1, b=a+1, c=a+b, c+10); } return F();", 13);
+    T_INT(lang, ev, "comma_chain_in_for_init",
+          /* for-init isn't a comma in Melang grammar; use comma inside
+           * the post step expression instead */
+          "@F() { s=0; for (i=0; i<5; (s=s+i, i=i+1)) { } return s; } return F();", 10);
+
+    /* -------------------------------------------------
+     * 38. Bitwise/shift compound assignment on locals (commit 7bb0fef
+     *     wired |= &= ^= <<= >>= through new BOR/BAND/BXOR/LSHIFT/RSHIFT
+     *     opcodes; previously the VM bailed and fell back to AST).
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "compound_bor_local",
+          "@F() { a=3; a |= 5; return a; } return F();",                    7);
+    T_INT(lang, ev, "compound_band_local",
+          "@F() { a=7; a &= 4; return a; } return F();",                    4);
+    T_INT(lang, ev, "compound_bxor_local",
+          "@F() { a=6; a ^= 3; return a; } return F();",                    5);
+    T_INT(lang, ev, "compound_lshift_local",
+          "@F() { a=1; a <<= 5; return a; } return F();",                  32);
+    T_INT(lang, ev, "compound_rshift_local",
+          "@F() { a=64; a >>= 3; return a; } return F();",                  8);
+
+    /* -------------------------------------------------
+     * 39. Mixed int/real arithmetic and comparison.  The VM emits ADD/SUB/...
+     *     opcodes; when the runtime types are not both INT, dispatch falls
+     *     back to the methods table (mln_lang_int_plus, etc.) which promotes
+     *     int→real.  This exercises the non-fast-path branch in dispatch_one.
+     * ------------------------------------------------- */
+    T_REAL(lang, ev, "mixed_add",            "return 1 + 2.5;",                3.5);
+    T_REAL(lang, ev, "mixed_sub",            "return 5.5 - 2;",                3.5);
+    T_REAL(lang, ev, "mixed_mul",            "return 3 * 2.5;",                7.5);
+    T_REAL(lang, ev, "mixed_div",            "return 5 / 2.0;",                2.5);
+    T_TRUE(lang,  ev, "mixed_eq_true",       "return 2.0 == 2;");
+    T_FALSE(lang, ev, "mixed_eq_false",      "return 2.0 == 3;");
+    T_TRUE(lang,  ev, "mixed_lt",            "return 1 < 1.5;");
+    T_TRUE(lang,  ev, "mixed_ge",            "return 2.5 >= 2;");
+
+    /* -------------------------------------------------
+     * 40. Bitwise / shift on variables (not literals).  The VM has separate
+     *     fast-paths for INT-INT operands; these tests force both operands
+     *     through LOAD_LOCAL before the opcode, matching what real code does.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "bor_vars",
+          "@F() { a=3; b=5; return a | b; } return F();",                   7);
+    T_INT(lang, ev, "band_vars",
+          "@F() { a=6; b=5; return a & b; } return F();",                   4);
+    T_INT(lang, ev, "bxor_vars",
+          "@F() { a=6; b=5; return a ^ b; } return F();",                   3);
+    T_INT(lang, ev, "lshift_vars",
+          "@F() { a=1; b=4; return a << b; } return F();",                 16);
+    T_INT(lang, ev, "rshift_vars",
+          "@F() { a=64; b=2; return a >> b; } return F();",                16);
+    T_INT(lang, ev, "bitnot_var_chain",
+          "@F() { a=0xff; return ~a + 256; } return F();",                  0);
+
+    /* -------------------------------------------------
+     * 41. String equality / inequality.  Emits EQ / NE between non-INT
+     *     operands; dispatch falls back to mln_lang_str_equal.
+     * ------------------------------------------------- */
+    T_TRUE(lang,  ev, "str_eq_true",         "return 'abc' == 'abc';");
+    T_FALSE(lang, ev, "str_eq_false",        "return 'abc' == 'xyz';");
+    T_TRUE(lang,  ev, "str_ne_true",         "return 'foo' != 'bar';");
+
+    /* -------------------------------------------------
+     * 42. Closure with reference-capture: $(&n).  Sequential calls share
+     *     the captured variable through the same pointer; each call sees
+     *     the side effects of the previous one.  (Inline expressions like
+     *     c() + c() + c() have evaluation-order surprises in the AST
+     *     walker too — using sequential statements isolates the VM path.)
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "closure_ref_capture",
+          "@mc() { n=0; @b() $(&n) { n = n + 1; return n; } return b; } "
+          "c = mc(); a = c(); b = c(); d = c(); return a + b + d;",         6);
+    T_INT(lang, ev, "closure_ref_isolated",
+          /* Two independent counters from the same factory — the captured
+           * `n` must be per-call, not shared globally. */
+          "@mc() { n=0; @b() $(&n) { n=n+1; return n; } return b; } "
+          "c1 = mc(); c2 = mc(); c1(); c1(); c1(); return c2();",           1);
+
+    /* -------------------------------------------------
+     * 43. Function-as-value.  A bare identifier referring to a user-defined
+     *     function is loaded as a VAL_TYPE_FUNC variable and can be assigned
+     *     to a local, passed as an arg, or invoked through the local
+     *     (CALL_VALUE rather than CALL_SELF).
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "func_as_value_assign",
+          "@F() { return 42; } g = F; return g();",                        42);
+    T_INT(lang, ev, "func_as_value_arg",
+          "@Twice(x) { return x * 2; } "
+          "@Apply(f, n) { return f(n); } "
+          "return Apply(Twice, 21);",                                      42);
+    T_INT(lang, ev, "func_as_value_returned",
+          "@make() { @inner() { return 7; } return inner; } "
+          "f = make(); return f() + f();",                                 14);
+
+    /* -------------------------------------------------
+     * 44. Many-argument function (>2 args).  Exercises arg-binding and
+     *     populate_locals beyond the trivial case.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "func_seven_args",
+          "@F(a,b,c,d,e,f,g) { return a*1+b*2+c*3+d*4+e*5+f*6+g*7; } "
+          "return F(1,1,1,1,1,1,1);",                                       28);
+    T_INT(lang, ev, "func_seven_args_nontrivial",
+          "@F(a,b,c,d,e,f,g) { return a-b+c-d+e-f+g; } "
+          "return F(10,1,10,1,10,1,10);",                                   37);
+
+    /* -------------------------------------------------
+     * 45. Method calling another method on the same set via this.
+     *     CALL_METHOD opcode dispatches through the obj on the stack.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "method_calls_method",
+          "C { v; "
+          "  @add1() { this.v = this.v + 1; } "
+          "  @add3() { this.add1(); this.add1(); this.add1(); } "
+          "} "
+          "c = $C; c.v = 10; c.add3(); return c.v;",                       13);
+    T_INT(lang, ev, "method_simple_return",
+          "C { @id() { return 7; } @doit() { return this.id(); } } "
+          "c = $C; return c.doit();",                                       7);
+
+    /* -------------------------------------------------
+     * 46. Multi-level property access: o.i.v.  Each `.` lowers to a separate
+     *     GET_PROPERTY; the prev_was_property flag in the compiler is what
+     *     keeps the chain together for the final SET_PROPERTY.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "chained_property_read",
+          "Inner { v; } Outer { i; } "
+          "o = $Outer; o.i = $Inner; o.i.v = 99; return o.i.v;",           99);
+
+    /* -------------------------------------------------
+     * 47. Nested array literals (array of arrays) and 2-D indexing.
+     *     Each inner [..] is an ARRAY_PUT chain at compile time; the outer
+     *     consumes those vars as elements.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "array_of_arrays",
+          "m = [[1,2,3],[4,5,6],[7,8,9]]; return m[1][2];",                 6);
+    T_INT(lang, ev, "array_of_arrays_assign",
+          "m = [[0,0],[0,0]]; m[1][1] = 42; return m[1][1];",              42);
+
+    /* -------------------------------------------------
+     * 48. Array passed to a function (by value/sharing — Melang arrays are
+     *     reference-typed).  The callee should see the caller's contents.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "array_as_arg",
+          "@sum3(a) { return a[0] + a[1] + a[2]; } "
+          "return sum3([10, 20, 30]);",                                     60);
+
+    /* -------------------------------------------------
+     * 49. Empty array literal: `a = []` followed by index assignment.
+     *     Exercises the NEW_ARRAY opcode with no ARRAY_PUT entries, and
+     *     SET_INDEX growing the array on the fly.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "empty_array_grow",
+          "a = []; a[0] = 11; a[1] = 22; a[2] = 33; "
+          "return a[0] + a[1] + a[2];",                                     66);
+    T_NIL(lang, ev,  "empty_array_unset",
+          "a = []; return a[3];");
+
+    /* -------------------------------------------------
+     * 50. Deep recursion exercises the per-ctx vm_frame_t freelist.  The
+     *     freelist cap is M_LANG_FRAME_FREELIST_MAX = 64 (mln_lang.h), so
+     *     a depth-100 chain forces at least 36 fresh slab allocations on
+     *     top of the recycled frames. Returns 100 (one increment per frame).
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "deep_recursion_100",
+          "@F(n) { if (n<=0) { return 0; } fi return F(n-1) + 1; } "
+          "return F(100);",                                                100);
+
+    /* -------------------------------------------------
+     * 51. Dynamic-array growth in compile-time book-keeping (commit 345b09e).
+     *     The compiler used to keep fixed-size buffers for breaks (16),
+     *     continues (16), labels (32) and switch cases (64); the new
+     *     inline+pool buffers grow past those caps.  These three tests
+     *     deliberately overflow each one.
+     * ------------------------------------------------- */
+    {
+        /* 51a. >16 break statements in one loop. The script enters the
+         * while, hits the first break that triggers (k==5), but the
+         * compiler still has to record patches for ALL 20 breaks. */
+        char code[2048];
+        char *p = code;
+        p += snprintf(p, sizeof(code) - (p - code),
+                      "@F(k) { while (true) {");
+        for (int i = 0; i < 20; i++) {
+            p += snprintf(p, sizeof(code) - (p - code),
+                          " if (k==%d) { break; } fi", i);
+        }
+        p += snprintf(p, sizeof(code) - (p - code),
+                      " break; } return k * 100; } return F(5);");
+        T_INT(lang, ev, "many_breaks_20", code, 500);
+    }
+    {
+        /* 51b. >16 continue statements in one for-loop. */
+        char code[2048];
+        char *p = code;
+        p += snprintf(p, sizeof(code) - (p - code),
+                      "@F() { s=0; for (i=0; i<20; i++) {");
+        for (int i = 0; i < 20; i++) {
+            p += snprintf(p, sizeof(code) - (p - code),
+                          " if (i==%d) { continue; } fi", i);
+        }
+        p += snprintf(p, sizeof(code) - (p - code),
+                      " s = s + i; } return s; } return F();");
+        /* All 20 iterations skip; s stays 0. */
+        T_INT(lang, ev, "many_continues_20", code, 0);
+    }
+    {
+        /* 51c. >32 labels + gotos in one function. Goto L0; each label
+         * falls through to the next, so all 35 increment statements run. */
+        char code[4096];
+        char *p = code;
+        p += snprintf(p, sizeof(code) - (p - code),
+                      "@F() { s=0; goto L0;");
+        for (int i = 0; i < 35; i++) {
+            p += snprintf(p, sizeof(code) - (p - code),
+                          " L%d: s = s + 1;", i);
+        }
+        p += snprintf(p, sizeof(code) - (p - code),
+                      " return s; } return F();");
+        T_INT(lang, ev, "many_labels_35", code, 35);
+    }
+    {
+        /* 51d. >64 switch cases.  Pick a case in the middle so we know
+         * dispatch picks the right body. */
+        char code[8192];
+        char *p = code;
+        p += snprintf(p, sizeof(code) - (p - code),
+                      "@F(x) { switch (x) {");
+        for (int i = 0; i < 80; i++) {
+            p += snprintf(p, sizeof(code) - (p - code),
+                          " case %d: { return %d; }", i, i * 100);
+        }
+        p += snprintf(p, sizeof(code) - (p - code),
+                      " default: { return -1; } } } return F(70);");
+        T_INT(lang, ev, "many_cases_80", code, 7000);
+    }
+
+    /* -------------------------------------------------
+     * 52. Postfix ++/-- result on locals, when consumed inside an
+     *     arithmetic expression (rather than discarded).  Exercises
+     *     LOAD_LOCAL_INC/DEC's "push old, store new" path.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "postfix_in_expr",
+          "@F() { i=10; r = i++ + i; return r; } return F();",             21);
+    T_INT(lang, ev, "prefix_in_expr",
+          "@F() { i=10; r = ++i + i; return r; } return F();",             22);
+
+    /* -------------------------------------------------
+     * 53. Set field default + method that returns this.field.  Verifies
+     *     GET_PROPERTY on `this` inside a method.
+     *
+     *     NOTE: Melang has a known quirk (present in both AST walker and
+     *     VM) where a method whose body is `this.field = <param>` causes
+     *     the call to leave the object on the operand stack rather than
+     *     the field value, which then leaks into ret_var.  The compound
+     *     read-modify-write form `this.field = this.field + <expr>` is
+     *     the safe pattern used throughout the standard tests; we use it
+     *     here so the test is robust against that quirk.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "method_returns_this_field",
+          "Box { v; @get() { return this.v; } @bump() { this.v = this.v + 1; } } "
+          "b = $Box; b.v = 122; b.bump(); return b.get();",               123);
+
+    /* -------------------------------------------------
+     * 54. Compound assign with a non-trivial right-hand expression.
+     *     Confirms the RHS is fully reduced before the op-store back.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "compound_pluseq_expr_rhs",
+          "@F() { a=10; a += 2 * 3 + 4; return a; } return F();",          20);
+    T_INT(lang, ev, "compound_muleq_expr_rhs",
+          "@F() { a=2; a *= (1 + 2 + 3); return a; } return F();",         12);
+    T_INT(lang, ev, "compound_oreq_expr_rhs",
+          "@F() { a=1; a |= (2 | 4); return a; } return F();",              7);
+
+    /* -------------------------------------------------
+     * 55. Big iterative + recursive workload, larger than fib_10.
+     *     fib(20)=6765 is well past the int fast-path warm-up; if the VM
+     *     mishandles any call/return path we'll see it in the totals.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "fib_20",
+          "@Fib(n) { if (n<=2) { return 1; } fi return Fib(n-1) + Fib(n-2); } "
+          "return Fib(20);",                                             6765);
 
     /* -------------------------------------------------
      * Report
