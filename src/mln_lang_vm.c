@@ -191,20 +191,30 @@ static int chunk_grow_iconsts(mln_lang_vm_chunk_t *chunk)
 #define MLN_VM_MAX_LOCALS    255
 #define MLN_VM_MAX_LOOPS     16
 
+#define LOOP_INLINE_CAP 16
 typedef struct {
     /* For each enclosing loop (Phase C): the pc of the start of the loop
      * body's "continue" landing pad (for `continue`, jump here; for `for`
      * loops this is the mod_exp position), and a list of `break` jump
-     * patches we need to fix up to point at the post-loop instruction. */
+     * patches we need to fix up to point at the post-loop instruction.
+     * breaks/continues point to the inline buffers until they overflow,
+     * at which point a larger pool buffer is allocated and used instead. */
     int continue_pc;
-    int breaks[16];
-    int n_breaks;
-    /* For `for` loops: continue_pc is not yet known when compiling the body
-     * (it equals the mod_exp pc, which comes after the body).  Collect JUMP
-     * instruction indices here and patch them once mod_pc is known. */
-    int continues[16];
-    int n_continues;
+    int  breaks_buf[LOOP_INLINE_CAP];
+    int *breaks;
+    int  breaks_cap;
+    int  n_breaks;
+    /* For `for` loops: continue_pc is not yet known when compiling the body. */
+    int  continues_buf[LOOP_INLINE_CAP];
+    int *continues;
+    int  continues_cap;
+    int  n_continues;
 } loop_ctx_t;
+
+#define LABELS_INLINE_CAP 32
+#define GOTOS_INLINE_CAP  32
+typedef struct { mln_string_t *name; int pc;       } vm_label_entry_t;
+typedef struct { mln_string_t *name; int patch_pc; } vm_goto_entry_t;
 
 typedef struct {
     mln_lang_ctx_t              *ctx;
@@ -233,17 +243,17 @@ typedef struct {
      * we DUP'd the obj and the next FUNC must emit CALL_METHOD). */
     int                          prev_was_property;
 
-    /* Phase F4: labels and goto patches for goto/M_STM_LABEL. */
-    struct {
-        mln_string_t *name;
-        int           pc;
-    } labels[32];
-    int n_labels;
-    struct {
-        mln_string_t *name;
-        int           patch_pc;
-    } goto_patches[32];
-    int n_goto_patches;
+    /* Phase F4: labels and goto patches for goto/M_STM_LABEL.
+     * Inline buffers are used first; pool-allocated buffers are used when
+     * the inline capacity is exceeded. */
+    vm_label_entry_t  labels_buf[LABELS_INLINE_CAP];
+    vm_label_entry_t *labels;
+    int               labels_cap;
+    int               n_labels;
+    vm_goto_entry_t   goto_patches_buf[GOTOS_INLINE_CAP];
+    vm_goto_entry_t  *goto_patches;
+    int               goto_patches_cap;
+    int               n_goto_patches;
 } mln_lang_vm_compiler_t;
 
 static int emit(mln_lang_vm_compiler_t *c, mln_u8_t op, mln_u8_t a, mln_s16_t b)
@@ -343,6 +353,76 @@ static int find_local_slot(mln_lang_vm_compiler_t *c, mln_string_t *name)
 }
 
 static void bail(mln_lang_vm_compiler_t *c) { c->ok = 0; }
+
+static void loop_ctx_init(loop_ctx_t *lc) {
+    lc->continue_pc = -1;
+    lc->breaks = lc->breaks_buf;
+    lc->breaks_cap = LOOP_INLINE_CAP;
+    lc->n_breaks = 0;
+    lc->continues = lc->continues_buf;
+    lc->continues_cap = LOOP_INLINE_CAP;
+    lc->n_continues = 0;
+}
+
+/* Append a break-patch index to lc->breaks, growing the array from the
+ * pool if the inline capacity is exhausted. Returns 0 on success. */
+static int lc_push_break(mln_lang_vm_compiler_t *c, loop_ctx_t *lc, int pc) {
+    if (lc->n_breaks >= lc->breaks_cap) {
+        int new_cap = lc->breaks_cap * 2;
+        int *nb = (int *)mln_alloc_m(c->ctx->pool, sizeof(int) * new_cap);
+        if (nb == NULL) { bail(c); return -1; }
+        memcpy(nb, lc->breaks, sizeof(int) * lc->n_breaks);
+        lc->breaks = nb;
+        lc->breaks_cap = new_cap;
+    }
+    lc->breaks[lc->n_breaks++] = pc;
+    return 0;
+}
+
+static int lc_push_continue(mln_lang_vm_compiler_t *c, loop_ctx_t *lc, int pc) {
+    if (lc->n_continues >= lc->continues_cap) {
+        int new_cap = lc->continues_cap * 2;
+        int *nc = (int *)mln_alloc_m(c->ctx->pool, sizeof(int) * new_cap);
+        if (nc == NULL) { bail(c); return -1; }
+        memcpy(nc, lc->continues, sizeof(int) * lc->n_continues);
+        lc->continues = nc;
+        lc->continues_cap = new_cap;
+    }
+    lc->continues[lc->n_continues++] = pc;
+    return 0;
+}
+
+static int compiler_push_label(mln_lang_vm_compiler_t *c, mln_string_t *name, int pc) {
+    if (c->n_labels >= c->labels_cap) {
+        int new_cap = c->labels_cap * 2;
+        vm_label_entry_t *nl = (vm_label_entry_t *)mln_alloc_m(c->ctx->pool,
+                                    sizeof(vm_label_entry_t) * new_cap);
+        if (nl == NULL) { bail(c); return -1; }
+        memcpy(nl, c->labels, sizeof(vm_label_entry_t) * c->n_labels);
+        c->labels = nl;
+        c->labels_cap = new_cap;
+    }
+    c->labels[c->n_labels].name = name;
+    c->labels[c->n_labels].pc = pc;
+    c->n_labels++;
+    return 0;
+}
+
+static int compiler_push_goto(mln_lang_vm_compiler_t *c, mln_string_t *name, int patch_pc) {
+    if (c->n_goto_patches >= c->goto_patches_cap) {
+        int new_cap = c->goto_patches_cap * 2;
+        vm_goto_entry_t *ng = (vm_goto_entry_t *)mln_alloc_m(c->ctx->pool,
+                                  sizeof(vm_goto_entry_t) * new_cap);
+        if (ng == NULL) { bail(c); return -1; }
+        memcpy(ng, c->goto_patches, sizeof(vm_goto_entry_t) * c->n_goto_patches);
+        c->goto_patches = ng;
+        c->goto_patches_cap = new_cap;
+    }
+    c->goto_patches[c->n_goto_patches].name = name;
+    c->goto_patches[c->n_goto_patches].patch_pc = patch_pc;
+    c->n_goto_patches++;
+    return 0;
+}
 
 /* Allocate an anonymous scratch slot (no name → find_local_slot never
  * returns it) for use as a temporary save register.  Returns the slot
@@ -477,10 +557,7 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             /* Record (name, current pc) in labels table. Goto-patches that
              * reference this label can resolve to it (immediately for
              * backward gotos, at compile end for forward gotos). */
-            if (c->n_labels >= 32) { bail(c); return; }
-            c->labels[c->n_labels].name = stm->data.pos;
-            c->labels[c->n_labels].pc = (int)c->chunk->code_len;
-            c->n_labels++;
+            compiler_push_label(c, stm->data.pos, (int)c->chunk->code_len);
             return;
         }
         case M_STM_SWITCH: {
@@ -515,12 +592,27 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             if (!c->ok) return;
             if (c->sp != sp_before + 1) { bail(c); return; }
 
-            mln_lang_switchstm_t *cases[64];
-            int compare_jumps[64];     /* JIT_TRUE patches for non-default */
+#define SWITCH_INLINE_CAP 64
+            mln_lang_switchstm_t *cases_buf[SWITCH_INLINE_CAP];
+            int compare_jumps_buf[SWITCH_INLINE_CAP];
+            mln_lang_switchstm_t **cases = cases_buf;
+            int *compare_jumps = compare_jumps_buf;
+            int cases_cap = SWITCH_INLINE_CAP;
             int n_cases = 0;
             int default_idx = -1;
             for (mln_lang_switchstm_t *sst = sw->switchstm; sst != NULL; sst = sst->next) {
-                if (n_cases >= 64) { bail(c); return; }
+                if (n_cases >= cases_cap) {
+                    int new_cap = cases_cap * 2;
+                    mln_lang_switchstm_t **nc = (mln_lang_switchstm_t **)mln_alloc_m(
+                        c->ctx->pool, sizeof(*nc) * new_cap);
+                    int *nj = (int *)mln_alloc_m(c->ctx->pool, sizeof(int) * new_cap);
+                    if (nc == NULL || nj == NULL) { bail(c); return; }
+                    memcpy(nc, cases, sizeof(*nc) * n_cases);
+                    memcpy(nj, compare_jumps, sizeof(int) * n_cases);
+                    cases = nc;
+                    compare_jumps = nj;
+                    cases_cap = new_cap;
+                }
                 cases[n_cases] = sst;
                 if (sst->factor != NULL) {
                     emit(c, MLN_VOP_DUP, 0, 0);
@@ -543,12 +635,13 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             /* Push a switch loop_ctx so M_BLOCK_BREAK patches go here. */
             if (c->n_loops >= MLN_VM_MAX_LOOPS) { bail(c); return; }
             loop_ctx_t *lc = &c->loops[c->n_loops++];
-            lc->continue_pc = -1;   /* continue not supported in switch */
-            lc->n_breaks = 0;
-            lc->n_continues = 0;
+            loop_ctx_init(lc);
 
             /* Emit each case body in order. Patch its JIT_TRUE to here. */
-            int body_pcs[64];
+            int body_pcs_buf[SWITCH_INLINE_CAP];
+            int *body_pcs = (n_cases <= SWITCH_INLINE_CAP) ? body_pcs_buf :
+                (int *)mln_alloc_m(c->ctx->pool, sizeof(int) * (n_cases > 0 ? n_cases : 1));
+            if (body_pcs == NULL) { c->n_loops--; bail(c); return; }
             for (int i = 0; i < n_cases; ++i) {
                 body_pcs[i] = (int)c->chunk->code_len;
                 if (cases[i]->factor != NULL) {
@@ -585,9 +678,8 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             /* loop_ctx: continue lands at loop_start (re-evaluate condition). */
             if (c->n_loops >= MLN_VM_MAX_LOOPS) { bail(c); return; }
             loop_ctx_t *lc = &c->loops[c->n_loops++];
+            loop_ctx_init(lc);
             lc->continue_pc = loop_start;
-            lc->n_breaks = 0;
-            lc->n_continues = 0;
 
             /* condition (or empty for `while (1)` style) */
             int sp_before = c->sp;
@@ -596,7 +688,10 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
                 if (!c->ok) { c->n_loops--; return; }
                 if (c->sp != sp_before + 1) { bail(c); c->n_loops--; return; }
                 /* JIF_FALSE → exit */
-                lc->breaks[lc->n_breaks++] = emit(c, MLN_VOP_JUMP_IF_FALSE, 0, 0);
+                {
+                    int j_exit = emit(c, MLN_VOP_JUMP_IF_FALSE, 0, 0);
+                    if (lc_push_break(c, lc, j_exit) < 0) { c->n_loops--; return; }
+                }
                 sp_pop(c, 1);
             }
 
@@ -635,9 +730,7 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             int cond_pc = (int)c->chunk->code_len;
             if (c->n_loops >= MLN_VM_MAX_LOOPS) { bail(c); return; }
             loop_ctx_t *lc = &c->loops[c->n_loops++];
-            lc->n_breaks = 0;
-            lc->n_continues = 0;
-            lc->continue_pc = -1;   /* for-loop: mod_exp pc not yet known */
+            loop_ctx_init(lc);
 
             /* condition (optional) */
             int j_exit = -1;
@@ -743,19 +836,16 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
                 int j = emit(c, MLN_VOP_JUMP, 0, 0);
                 patch_jump(c, j, found);
             } else {
-                if (c->n_goto_patches >= 32) { bail(c); return; }
                 int j = emit(c, MLN_VOP_JUMP, 0, 0);
-                c->goto_patches[c->n_goto_patches].name = target;
-                c->goto_patches[c->n_goto_patches].patch_pc = j;
-                c->n_goto_patches++;
+                compiler_push_goto(c, target, j);
             }
             return;
         }
         case M_BLOCK_BREAK: {
             if (c->n_loops == 0) { bail(c); return; }
             loop_ctx_t *lc = &c->loops[c->n_loops - 1];
-            if (lc->n_breaks >= 16) { bail(c); return; }
-            lc->breaks[lc->n_breaks++] = emit(c, MLN_VOP_JUMP, 0, 0);
+            int j_brk = emit(c, MLN_VOP_JUMP, 0, 0);
+            lc_push_break(c, lc, j_brk);
             return;
         }
         case M_BLOCK_CONTINUE: {
@@ -767,9 +857,8 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
                 patch_jump(c, j, lc->continue_pc);
             } else {
                 /* for loop: continue_pc not yet known — record patch index */
-                if (lc->n_continues >= 16) { bail(c); return; }
                 int j = emit(c, MLN_VOP_JUMP, 0, 0);
-                lc->continues[lc->n_continues++] = j;
+                lc_push_continue(c, lc, j);
             }
             return;
         }
@@ -1661,18 +1750,12 @@ mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
     mln_size_t n_args = mln_array_nelts(&(prototype->args));
     if (n_args > MLN_VM_MAX_LOCALS) return -1;
 
-    /* Phase D: refuse if the script likely uses operator overload — any of
-     * the op_*_flag bits would imply user-defined arithmetic redirection,
-     * and our int-fast paths would skip those overrides. We could be more
-     * precise per-prototype, but this conservative gate is correct. */
-    if (ctx->op_int_flag || ctx->op_bool_flag || ctx->op_real_flag ||
-        ctx->op_str_flag || ctx->op_array_flag || ctx->op_obj_flag ||
-        ctx->op_func_flag || ctx->op_nil_flag) {
-        return -1;
-    }
-
     mln_lang_vm_compiler_t c;
     memset(&c, 0, sizeof(c));
+    c.labels = c.labels_buf;
+    c.labels_cap = LABELS_INLINE_CAP;
+    c.goto_patches = c.goto_patches_buf;
+    c.goto_patches_cap = GOTOS_INLINE_CAP;
     c.ctx       = ctx;
     c.prototype = prototype;
     c.ok        = 1;
@@ -1768,7 +1851,8 @@ static mln_lang_var_t *apply_binop(mln_lang_ctx_t *ctx, mln_u8_t op,
 {
     if (a->val != NULL && b->val != NULL &&
         a->val->type == M_LANG_VAL_TYPE_INT &&
-        b->val->type == M_LANG_VAL_TYPE_INT)
+        b->val->type == M_LANG_VAL_TYPE_INT &&
+        !ctx->op_int_flag)
     {
         mln_s64_t ai = a->val->data.i;
         mln_s64_t bi = b->val->data.i;
@@ -2460,6 +2544,33 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_var_t *a = POP();
             mln_lang_var_t *r = apply_binop(ctx, insn.op, a, b);
             if (r == NULL) return -1;
+            /* Operator overload: method handler returned a CALL val. */
+            if (r->val != NULL && r->val->type == M_LANG_VAL_TYPE_CALL) {
+                mln_lang_funccall_val_t *call = r->val->data.call;
+                r->val->data.call = NULL;  /* prevent double-free */
+                mln_lang_var_free(r);
+                mln_lang_vm_frame_t *saved_top = FRAME_TOP(ctx);
+                mln_lang_stack_node_t *cur_run_top = ctx->run_stack_top;
+                int rc_call = mln_lang_stack_handler_funccall_run_compat(ctx, cur_run_top, call);
+                mln_lang_funccall_val_free(call);
+                if (rc_call < 0) return -1;
+                if (FRAME_TOP(ctx) != saved_top) {
+                    return 0;
+                }
+                if (ctx->ref) {
+                    frame->awaiting_return = 1;
+                    return 0;
+                }
+                if (mln_lang_withdraw_until_func_compat(ctx) < 0) return -1;
+                mln_lang_var_t *ret = ctx->ret_var;
+                ctx->ret_var = NULL;
+                if (ret == NULL) {
+                    ret = mln_lang_var_create_nil(ctx, NULL);
+                    if (ret == NULL) return -1;
+                }
+                PUSH(ret);
+                return 0;
+            }
             PUSH(r);
             return 0;
         }
