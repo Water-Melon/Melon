@@ -1197,14 +1197,16 @@ static void compile_suffix(mln_lang_vm_compiler_t *c, mln_lang_suffix_t *n)
          * overwrites the property slot in-place (GET_PROPERTY returns a
          * reference to the actual slot, so a DUP would also see the new val). */
         int temp = alloc_temp_slot(c);
-        if (temp < 0) return;  /* bail already called */
+        if (temp < 0) return;  /* alloc_temp_slot already called bail(c) */
         /* Compile base object */
         compile_spec(c, lc->left);
         if (!c->ok) return;
-        emit(c, MLN_VOP_DUP, 0, 0);                              /* [obj, obj2] */
+        emit(c, MLN_VOP_DUP, 0, 0);
         sp_push(c, 1);
+        /* GET_PROPERTY pops obj2 (DUP'd top), pushes ref to the property
+         * slot variable.  Net effect: [obj, obj2] → [obj, old_val_ref],
+         * sp unchanged. */
         emit(c, MLN_VOP_GET_PROPERTY, 0, (mln_s16_t)idx);        /* [obj, old_val_ref] */
-        /* GET_PROPERTY pops obj2, pushes ref to prop var — sp unchanged */
         /* Save a VALUE copy into temp slot (STORE_LOCAL copies the val data,
          * so later SET_PROPERTY cannot overwrite this copy). */
         emit(c, MLN_VOP_STORE_LOCAL, (mln_u8_t)temp, 0);         /* [obj] */
@@ -1227,7 +1229,7 @@ static void compile_suffix(mln_lang_vm_compiler_t *c, mln_lang_suffix_t *n)
         if (lc->right.exp == NULL) { bail(c); return; }
         /* Allocate a scratch slot to hold old_val across the SET_INDEX. */
         int temp = alloc_temp_slot(c);
-        if (temp < 0) return;  /* bail already called */
+        if (temp < 0) return;  /* alloc_temp_slot already called bail(c) */
         /* Compile base array */
         compile_spec(c, lc->left);
         if (!c->ok) return;
@@ -2361,9 +2363,10 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
         }
         case MLN_VOP_SWAP2: {
             /* Swap the 2nd and 3rd elements from the top, leaving the top
-             * element in place.  Used to rearrange [obj, old_val, new_val]
-             * into [old_val, obj, new_val] before SET_PROPERTY so the old
-             * value survives as the postfix expression result. */
+             * element in place.  Transforms [a, b, c] (c=top) to [b, a, c].
+             * Used to reorder [arr, arr2, key, key2] → [arr, key, arr2, key2]
+             * so that GET_INDEX pops arr2 and key2 correctly for compound
+             * index read-modify-write (+=, -=, postfix ++/-- etc.). */
             if (frame->op_sp < 3) {
                 mln_lang_errmsg(ctx, "Stack underflow SWAP2.");
                 return -1;

@@ -125,11 +125,11 @@ typedef enum {
      * fires any watcher, then pushes the new value back (like ASSIGN_LOCAL).
      * Used for compound assignment and ++/-- on global lvalues. */
     MLN_VOP_ASSIGN_GLOBAL,      /* b = sconsts index of name */
-    /* Stack reorder helpers for postfix ++/-- on property lvalues.
-     * SWAP2 swaps the 2nd and 3rd elements from the top, leaving the
-     * top element unchanged.  Used to rearrange [obj, old, new] into
-     * [old, obj, new] before SET_PROPERTY so the old value survives as
-     * the expression result. */
+    /* Stack reorder helper for compound assignment and postfix ++/-- on index
+     * lvalues.  SWAP2 swaps the 2nd and 3rd elements from the top, leaving
+     * the top element unchanged.  Transforms [a, b, c] (c=top) to [b, a, c].
+     * Used to reorder [arr, arr2, key, key2] into [arr, key, arr2, key2]
+     * before GET_INDEX so the correct arr2/key2 pair is consumed. */
     MLN_VOP_SWAP2,              /* no operands; requires op_sp >= 3 */
     MLN_VOP_DEAD_AST,           /* sentinel: any path that the AST walker
                                  * would have taken is now an error. */
