@@ -867,23 +867,17 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
         ctx->owner = pthread_self();
         pthread_mutex_unlock(&lang->lock);
 #endif
-        /* Phase F: try to compile + run the top-level on the VM the first
-         * time we touch this ctx. If compilation succeeds, the script's
-         * top-level runs to completion on the VM (synchronously) and we
-         * mark the ctx as quitting. If compilation fails, fall through to
-         * the AST stack walker (transition mode). MELANG_VM_OFF disables
-         * the VM path entirely for diagnostics. */
-        /* Phase F3 cutover: VM-driven, time-sliced execution. On the
-         * first dispatch for this ctx we compile the top-level stm
-         * chain and push the initial frame. Subsequent dispatches
-         * drive vm_step with a per-slice budget so multiple ctxs can
-         * time-share the event loop (Melang's coroutine model). */
+        /* VM-driven, time-sliced execution. On the first dispatch for this
+         * ctx we compile the top-level stm chain and push the initial frame.
+         * Subsequent dispatches drive vm_step with a per-slice budget so
+         * multiple ctxs can time-share the event loop (Melang's coroutine
+         * model). MELANG_VM_OFF disables the VM path for diagnostics. */
         if (getenv("MELANG_VM_OFF") == NULL) {
             if (!ctx->vm_top_attempted) {
                 ctx->vm_top_attempted = 1;
                 int init_rc = mln_lang_vm_run_toplevel(ctx);
                 if (init_rc == 0) {
-                    __mln_lang_errmsg(ctx, "VM: top-level cannot be compiled (unsupported feature). Set MELANG_VM_OFF=1 to fall back to the AST walker.");
+                    __mln_lang_errmsg(ctx, "VM: top-level cannot be compiled (internal error).");
                     ctx->quit = 1;
                     goto quit;
                 }

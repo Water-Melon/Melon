@@ -222,7 +222,7 @@ static void run_test(mln_lang_t *lang, mln_event_t *ev,
     run_test(lang, ev, name, code, EXPECT_NONE, 0, 0.0, NULL)
 
 /* =========================================================
- * Multi-job test helpers (section 30)
+ * Multi-job test helpers (sections 31-32)
  * ========================================================= */
 
 static volatile int multi_done    = 0;
@@ -244,6 +244,32 @@ static void multi_return_handler(mln_lang_ctx_t *ctx) {
     else                  multi_result2 = val;
     if (++multi_done >= 2)
         mln_event_break_set(mtc->ev);
+}
+
+/* Error isolation: one script terminates on runtime error; the other
+ * should still complete normally.  Job 1 intentionally triggers a
+ * runtime error by calling a non-function value; job 2 returns 42. */
+static volatile int iso_done = 0;
+static volatile int iso_result_good = -1;  /* job 2 (valid) */
+static volatile int iso_job1_fired  = 0;   /* job 1 return_handler was called */
+
+typedef struct {
+    mln_event_t *ev;
+    int          job_id;
+} iso_tc_t;
+
+static void iso_return_handler(mln_lang_ctx_t *ctx) {
+    iso_tc_t *itc = (iso_tc_t *)mln_lang_ctx_data_get(ctx);
+    if (itc->job_id == 1) {
+        /* Expect this to fire even on error (return_handler always called). */
+        iso_job1_fired = 1;
+    } else {
+        mln_lang_var_t *rv = ctx->ret_var;
+        if (rv && rv->val && rv->val->type == M_LANG_VAL_TYPE_INT)
+            iso_result_good = (int)rv->val->data.i;
+    }
+    if (++iso_done >= 2)
+        mln_event_break_set(itc->ev);
 }
 
 /* =========================================================
@@ -661,6 +687,53 @@ int main(void)
             else     { ++g_n_fail; fprintf(stderr, "  FAIL [multi_job1_sum200]: got %d expected 20100\n", multi_result1); }
             if (ok2) { ++g_n_pass; printf("  PASS [multi_job2_fib15]\n"); }
             else     { ++g_n_fail; fprintf(stderr, "  FAIL [multi_job2_fib15]: got %d expected 610\n", multi_result2); }
+        }
+    }
+
+    /* -------------------------------------------------
+     * 32. Error isolation: a failing script must not affect other tasks
+     *
+     *  Launch two jobs simultaneously.  Job 1 intentionally causes a
+     *  runtime error (integer division by zero).  Job 2 is a simple
+     *  valid script that returns 42.  Both return_handlers must fire,
+     *  and job 2 must return the correct result.
+     * ------------------------------------------------- */
+    {
+        iso_done = 0; iso_result_good = -1; iso_job1_fired = 0;
+        mln_event_break_reset(ev);
+
+        iso_tc_t itc1, itc2;
+        itc1.ev = ev; itc1.job_id = 1;
+        itc2.ev = ev; itc2.job_id = 2;
+
+        /* Job 1: division by zero → runtime error */
+        const char *bad_code  = "x = 1 / 0; return x;";
+        /* Job 2: valid script */
+        const char *good_code = "return 42;";
+
+        mln_string_t s1, s2;
+        mln_string_nset(&s1, (mln_u8ptr_t)bad_code,  strlen(bad_code));
+        mln_string_nset(&s2, (mln_u8ptr_t)good_code, strlen(good_code));
+
+        mln_lang_ctx_t *ic1 = mln_lang_job_new(lang, NULL, M_INPUT_T_BUF,
+                                                &s1, &itc1, iso_return_handler);
+        mln_lang_ctx_t *ic2 = mln_lang_job_new(lang, NULL, M_INPUT_T_BUF,
+                                                &s2, &itc2, iso_return_handler);
+
+        if (ic1 == NULL || ic2 == NULL) {
+            fprintf(stderr, "  FAIL [error_isolation]: job creation failed\n");
+            ++g_n_fail;
+        } else {
+            mln_event_dispatch(ev);  /* runs until both handlers call break_set */
+
+            int ok_iso = (iso_job1_fired == 1) && (iso_result_good == 42);
+            if (ok_iso) { ++g_n_pass; printf("  PASS [error_isolation]\n"); }
+            else {
+                ++g_n_fail;
+                fprintf(stderr,
+                    "  FAIL [error_isolation]: job1_fired=%d, good_result=%d (expected 42)\n",
+                    iso_job1_fired, iso_result_good);
+            }
         }
     }
 
