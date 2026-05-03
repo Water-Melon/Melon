@@ -606,6 +606,8 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
                     mln_lang_switchstm_t **nc = (mln_lang_switchstm_t **)mln_alloc_m(
                         c->ctx->pool, sizeof(*nc) * new_cap);
                     int *nj = (int *)mln_alloc_m(c->ctx->pool, sizeof(int) * new_cap);
+                    /* Pool allocations are freed with ctx->pool at context
+                     * teardown; no explicit free is needed here. */
                     if (nc == NULL || nj == NULL) { bail(c); return; }
                     memcpy(nc, cases, sizeof(*nc) * n_cases);
                     memcpy(nj, compare_jumps, sizeof(int) * n_cases);
@@ -2544,10 +2546,14 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_var_t *a = POP();
             mln_lang_var_t *r = apply_binop(ctx, insn.op, a, b);
             if (r == NULL) return -1;
-            /* Operator overload: method handler returned a CALL val. */
+            /* Operator overload: method handler returned a CALL val (e.g. the
+             * user defined __int_plus_operator__ and op_int_flag is set).
+             * Extract the call before freeing r — null out data.call first so
+             * mln_lang_var_free(r) does not also free the call via val_free.
+             * Ownership of `call` transfers to us; we free it after the run. */
             if (r->val != NULL && r->val->type == M_LANG_VAL_TYPE_CALL) {
                 mln_lang_funccall_val_t *call = r->val->data.call;
-                r->val->data.call = NULL;  /* prevent double-free */
+                r->val->data.call = NULL;  /* detach: r no longer owns call */
                 mln_lang_var_free(r);
                 mln_lang_vm_frame_t *saved_top = FRAME_TOP(ctx);
                 mln_lang_stack_node_t *cur_run_top = ctx->run_stack_top;
