@@ -594,7 +594,7 @@ static inline void mln_lang_stack_node_free(void *data)
 #if defined(MSVC)
 static inline int mln_lang_scope_in(mln_lang_ctx_t *ctx, mln_lang_scope_t *s)
 {
-    if (s != NULL && s - ctx->scopes <= M_LANG_SCOPE_LEN) {
+    if (s != NULL && s >= ctx->scopes && s - ctx->scopes <= M_LANG_SCOPE_LEN) {
         return 1;
     }
     return 0;
@@ -654,7 +654,7 @@ static inline void mln_lang_scope_pop(mln_lang_ctx_t *ctx)
 #define mln_lang_scope_in(_ctx,_scope) ({\
     int in = 0;\
     mln_lang_scope_t *s = (_scope);\
-    if (s != NULL && s - (_ctx)->scopes <= M_LANG_SCOPE_LEN) {\
+    if (s != NULL && s >= (_ctx)->scopes && s - (_ctx)->scopes <= M_LANG_SCOPE_LEN) {\
         in = 1;\
     }\
     in;\

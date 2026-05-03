@@ -1221,15 +1221,24 @@ int main(void)
      * 59. Multiple operator overloads: __int_plus_operator__ and
      *     __int_mul_operator__ active at the same time.  Verifies that
      *     each opcode independently routes to its own overload.
+     *
+     * + overload: a+b+10 (the suppression guard prevents recursion
+     *   inside __int_plus_operator__ itself, but + IS overloaded when
+     *   executing inside the * overload body).
+     * * overload: a*b+100
+     *
+     * (3+4)*2:
+     *   1. (3+4) → __int_plus_operator__(3,4) → 3+4+10 = 17
+     *      (inner + ops are default because we're in the + overload scope)
+     *   2. 17*2 → __int_mul_operator__(17,2) → 17*2 + 100
+     *      * is default inside the * overload; but + is NOT suppressed here
+     *      → 34 + 100 calls __int_plus_operator__(34,100) → 34+100+10 = 144
      * ------------------------------------------------- */
     T_INT(lang, ev, "op_overload_plus_and_mul",
-          /* + overload: a+b+10, * overload: a*b+100
-           * (3+4)*2 without overloads = 14
-           * with overloads: (3 op+ 4) = 3+4+10=17, 17 op* 2 = 17*2+100=134 */
           "@__int_plus_operator__(a, b) { return a + b + 10; } "
           "@__int_mul_operator__(a, b)  { return a * b + 100; } "
           "return (3 + 4) * 2;",
-          134);  /* (3+4+10)=17, 17*2+100=134 */
+          144);  /* see comment above */
 
     /* -------------------------------------------------
      * Report
