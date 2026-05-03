@@ -337,6 +337,10 @@ int main(void)
     T_INT(lang, ev, "lshift",                "return 1 << 4;",                 16);
     T_INT(lang, ev, "rshift",                "return 16 >> 2;",                4);
     T_INT(lang, ev, "bitwise_chain",         "return (0xf0 & 0xff) | 0x0f;",   255);
+    /* Unary bitwise NOT ~ */
+    T_INT(lang, ev, "bitnot_zero",           "return ~0;",                     -1);
+    T_INT(lang, ev, "bitnot_ff",             "return ~0xff;",                  -256);
+    T_INT(lang, ev, "bitnot_expr",           "@F() { a=5; return ~a; } return F();", -6);
 
     /* -------------------------------------------------
      * 8. Assignment and compound assignment
@@ -557,9 +561,30 @@ int main(void)
           "@F() { s=0; for (i=0; i<10; i++) { if (i%2==0) { continue; } fi s=s+i; } return s; } return F();", 25);
 
     /* -------------------------------------------------
-     * 29. Reactive programming: Watch / Unwatch
+     * 29. Reference parameters (&x)
      *
-     *  Watch(var, func, userData) — func is called as func(newval, userData)
+     *  &x in a function call passes by reference, so the callee can
+     *  modify the caller's variable.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "ref_local",
+          "@inc(&v) { v = v + 1; } "
+          "@F() { a = 10; inc(&a); return a; } "
+          "return F();",
+          11);
+    T_INT(lang, ev, "ref_global_modify",
+          "@setG(&v, n) { v = n; } "
+          "g = 0; setG(&g, 99); return g;",
+          99);
+    T_INT(lang, ev, "ref_swap",
+          "@swap(&a, &b) { tmp = a; a = b; b = tmp; } "
+          "@F() { x = 3; y = 7; swap(&x, &y); return x * 10 + y; } "
+          "return F();",
+          73); /* x=7, y=3 → 73 */
+
+    /* -------------------------------------------------
+     * 30. Reactive programming: Watch / Unwatch
+     *
+     *  Watch(var, func, userData): func is called as func(newval, userData)
      *  when var is assigned a new value.  Both arguments in func can be
      *  reference params (&), which allows the callback to modify the
      *  caller's variables.
@@ -594,7 +619,7 @@ int main(void)
           10);
 
     /* -------------------------------------------------
-     * 30. Multiple scripts on the same event loop
+     * 31. Multiple scripts on the same event loop
      *
      *  Launch two jobs simultaneously.  The event loop runs them
      *  cooperatively (time-sliced).  We break when BOTH jobs finish.

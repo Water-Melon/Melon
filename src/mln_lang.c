@@ -6183,7 +6183,7 @@ mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *
                 }
                 return 0;
             }
-            __mln_lang_errmsg(ctx, "VM: function body cannot be compiled (unsupported feature). Set MELANG_VM_OFF=1 to fall back to the AST walker.");
+            __mln_lang_errmsg(ctx, "VM: function body cannot be compiled (internal error).");
             return -1;
         }
     }

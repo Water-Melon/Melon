@@ -355,6 +355,16 @@ static int alloc_local_slot(mln_lang_vm_compiler_t *c, mln_string_t *name)
 
 static void bail(mln_lang_vm_compiler_t *c) { c->ok = 0; }
 
+/* Patch the b-field of an already-emitted JUMP instruction at patch_pc so
+ * that execution transfers to target_pc.  Calls bail() if the signed 16-bit
+ * offset would overflow, preventing silent wrap-around in large functions. */
+static void patch_jump(mln_lang_vm_compiler_t *c, int patch_pc, int target_pc)
+{
+    int offset = target_pc - (patch_pc + 1);
+    if (offset < -32768 || offset > 32767) { bail(c); return; }
+    c->chunk->code[patch_pc].b = (mln_s16_t)offset;
+}
+
 /* Forward declarations. */
 static void compile_stm_chain(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm);
 static void compile_stm     (mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm);
@@ -529,8 +539,8 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             for (int i = 0; i < n_cases; ++i) {
                 body_pcs[i] = (int)c->chunk->code_len;
                 if (cases[i]->factor != NULL) {
-                    c->chunk->code[compare_jumps[i]].b =
-                        (mln_s16_t)(body_pcs[i] - (compare_jumps[i] + 1));
+                    patch_jump(c, compare_jumps[i], body_pcs[i]);
+                    if (!c->ok) { c->n_loops--; return; }
                 }
                 if (cases[i]->stm != NULL) {
                     compile_stm_chain(c, cases[i]->stm);
@@ -541,11 +551,13 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             /* Patch j_no_match: to default body if exists, else to end. */
             int end_pc = (int)c->chunk->code_len;
             int no_match_target = (default_idx >= 0) ? body_pcs[default_idx] : end_pc;
-            c->chunk->code[j_no_match].b = (mln_s16_t)(no_match_target - (j_no_match + 1));
+            patch_jump(c, j_no_match, no_match_target);
+            if (!c->ok) { c->n_loops--; return; }
 
             /* Patch break jumps from inside any case body to end_pc. */
             for (int i = 0; i < lc->n_breaks; ++i) {
-                c->chunk->code[lc->breaks[i]].b = (mln_s16_t)(end_pc - (lc->breaks[i] + 1));
+                patch_jump(c, lc->breaks[i], end_pc);
+                if (!c->ok) { c->n_loops--; return; }
             }
             c->n_loops--;
 
@@ -581,12 +593,14 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
 
             /* jump back to start */
             int j_back = emit(c, MLN_VOP_JUMP, 0, 0);
-            c->chunk->code[j_back].b = (mln_s16_t)(loop_start - (j_back + 1));
+            patch_jump(c, j_back, loop_start);
+            if (!c->ok) { c->n_loops--; return; }
 
             /* patch breaks */
             int after = (int)c->chunk->code_len;
             for (int i = 0; i < lc->n_breaks; ++i) {
-                c->chunk->code[lc->breaks[i]].b = (mln_s16_t)(after - (lc->breaks[i] + 1));
+                patch_jump(c, lc->breaks[i], after);
+                if (!c->ok) { c->n_loops--; return; }
             }
             c->n_loops--;
             return;
@@ -633,8 +647,8 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             int mod_pc = (int)c->chunk->code_len;
             /* Patch all `continue` JUMPs collected during body compilation. */
             for (int i = 0; i < lc->n_continues; ++i) {
-                c->chunk->code[lc->continues[i]].b =
-                    (mln_s16_t)(mod_pc - (lc->continues[i] + 1));
+                patch_jump(c, lc->continues[i], mod_pc);
+                if (!c->ok) { c->n_loops--; return; }
             }
             if (f->mod_exp != NULL) {
                 int sp_before = c->sp;
@@ -647,15 +661,18 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             }
             /* jump back to cond */
             int j_back = emit(c, MLN_VOP_JUMP, 0, 0);
-            c->chunk->code[j_back].b = (mln_s16_t)(cond_pc - (j_back + 1));
+            patch_jump(c, j_back, cond_pc);
+            if (!c->ok) { c->n_loops--; return; }
 
             /* exit landing */
             int after = (int)c->chunk->code_len;
             if (j_exit >= 0) {
-                c->chunk->code[j_exit].b = (mln_s16_t)(after - (j_exit + 1));
+                patch_jump(c, j_exit, after);
+                if (!c->ok) { c->n_loops--; return; }
             }
             for (int i = 0; i < lc->n_breaks; ++i) {
-                c->chunk->code[lc->breaks[i]].b = (mln_s16_t)(after - (lc->breaks[i] + 1));
+                patch_jump(c, lc->breaks[i], after);
+                if (!c->ok) { c->n_loops--; return; }
             }
             c->n_loops--;
             return;
@@ -711,7 +728,7 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
             }
             if (found >= 0) {
                 int j = emit(c, MLN_VOP_JUMP, 0, 0);
-                c->chunk->code[j].b = (mln_s16_t)(found - (j + 1));
+                patch_jump(c, j, found);
             } else {
                 if (c->n_goto_patches >= 32) { bail(c); return; }
                 int j = emit(c, MLN_VOP_JUMP, 0, 0);
@@ -734,7 +751,7 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
             if (lc->continue_pc >= 0) {
                 /* while loop: continue_pc is already known */
                 int j = emit(c, MLN_VOP_JUMP, 0, 0);
-                c->chunk->code[j].b = (mln_s16_t)(lc->continue_pc - (j + 1));
+                patch_jump(c, j, lc->continue_pc);
             } else {
                 /* for loop: continue_pc not yet known — record patch index */
                 if (lc->n_continues >= 16) { bail(c); return; }
@@ -759,13 +776,14 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
                 int j_end = emit(c, MLN_VOP_JUMP, 0, 0);
                 if (j_end < 0) return;
                 int else_target = (int)c->chunk->code_len;
-                c->chunk->code[jf].b = (mln_s16_t)(else_target - (jf + 1));
+                patch_jump(c, jf, else_target);
+                if (!c->ok) return;
                 compile_block(c, iff->elsestm);
                 if (!c->ok) return;
                 int end_target = (int)c->chunk->code_len;
-                c->chunk->code[j_end].b = (mln_s16_t)(end_target - (j_end + 1));
+                patch_jump(c, j_end, end_target);
             } else {
-                c->chunk->code[jf].b = (mln_s16_t)(after_then - (jf + 1));
+                patch_jump(c, jf, after_then);
             }
             return;
         }
@@ -934,7 +952,8 @@ static void compile_logiclow(mln_lang_vm_compiler_t *c, mln_lang_logiclow_t *n)
          * logichigh, and iterate via n = n->right. */
         compile_logichigh(c, n->right->left);
         if (!c->ok) return;
-        c->chunk->code[j_short].b = (mln_s16_t)((int)c->chunk->code_len - (j_short + 1));
+        patch_jump(c, j_short, (int)c->chunk->code_len);
+        if (!c->ok) return;
         n = n->right;
     }
 }
@@ -1261,6 +1280,32 @@ static void compile_spec(mln_lang_vm_compiler_t *c, mln_lang_spec_t *n)
             if (!c->ok) return;
             emit(c, MLN_VOP_NEG, 0, 0);
             return;
+        case M_SPEC_REVERSE:
+            compile_spec(c, n->data.spec);
+            if (!c->ok) return;
+            emit(c, MLN_VOP_BITNOT, 0, 0);
+            return;
+        case M_SPEC_REFER: {
+            /* &x — pass variable by reference.  Only identifiers may be
+             * referenced; the VM emits LOAD_LOCAL_REF / LOAD_GLOBAL_REF which
+             * push a VAR_REFER wrapper (ref=0) that funccall_run treats as a
+             * reference argument. */
+            mln_lang_spec_t *inner = n->data.spec;
+            if (inner == NULL || inner->op != M_SPEC_FACTOR) { bail(c); return; }
+            mln_lang_factor_t *f = inner->data.factor;
+            if (f == NULL || f->type != M_FACTOR_ID) { bail(c); return; }
+            int slot = find_local_slot(c, f->data.s_id);
+            if (slot >= 0) {
+                if (slot > 255) { bail(c); return; }
+                emit(c, MLN_VOP_LOAD_LOCAL_REF, (mln_u8_t)slot, 0);
+            } else {
+                int idx = add_sconst(c, f->data.s_id);
+                if (idx < 0 || idx > 32767) { bail(c); return; }
+                emit(c, MLN_VOP_LOAD_GLOBAL_REF, 0, (mln_s16_t)idx);
+            }
+            sp_push(c, 1);
+            return;
+        }
         case M_SPEC_INC: {
             /* Prefix ++x : pre-increment local. */
             mln_lang_spec_t *inner = n->data.spec;
@@ -1460,7 +1505,8 @@ mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
                 /* Undefined label. */
                 c.ok = 0; break;
             }
-            c.chunk->code[patch_pc].b = (mln_s16_t)(target - (patch_pc + 1));
+            patch_jump(&c, patch_pc, target);
+            if (!c.ok) break;
         }
     }
 
@@ -1746,11 +1792,11 @@ static int vm_push_frame(mln_lang_ctx_t *ctx,
     for (; i < f->n_locals; ++i) {
         mln_string_t *lname = (chunk->local_names != NULL) ? chunk->local_names[i] : NULL;
         mln_lang_var_t *nv = mln_lang_var_create_nil(ctx, lname);
-        if (nv == NULL) goto fail;
+        if (nv == NULL) goto fail_body_locals;
         if (lname != NULL) {
             if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, nv) < 0) {
                 mln_lang_var_free(nv);
-                goto fail;
+                goto fail_body_locals;
             }
             ++(nv->ref);
         } else {
@@ -1763,6 +1809,12 @@ static int vm_push_frame(mln_lang_ctx_t *ctx,
     ctx->vm_frame_top = f;
     return 0;
 
+fail_body_locals:
+    /* Some body-locals (slots[n_bound..i-1]) were already inserted into the
+     * function scope.  Pop the entire scope so the symbol table is left
+     * clean before we free the frame buffers. */
+    mln_lang_withdraw_until_func_compat(ctx);
+    /* fall through */
 fail:
     if (f->opstack) mln_alloc_free(f->opstack);
     if (f->slots) mln_alloc_free(f->slots);
@@ -2056,6 +2108,51 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 mln_lang_var_free(t);
                 PUSH(r);
             }
+            return 0;
+        }
+        case MLN_VOP_BITNOT: {
+            /* Unary bitwise NOT (~x).  Int fast-path; non-int uses reverse_handler. */
+            mln_lang_var_t *t = POP();
+            if (t->val != NULL && t->val->type == M_LANG_VAL_TYPE_INT) {
+                mln_lang_var_t *r = mln_lang_var_create_int(ctx, ~t->val->data.i, NULL);
+                mln_lang_var_free(t);
+                if (r == NULL) return -1;
+                PUSH(r);
+            } else {
+                mln_lang_method_t *method = (t->val != NULL) ? mln_lang_methods[t->val->type] : NULL;
+                mln_lang_op h = method ? method->reverse_handler : NULL;
+                mln_lang_var_t *r = NULL;
+                if (h == NULL || h(ctx, &r, t, NULL) < 0) {
+                    mln_lang_var_free(t);
+                    mln_lang_errmsg(ctx, "Operation NOT support.");
+                    return -1;
+                }
+                mln_lang_var_free(t);
+                PUSH(r);
+            }
+            return 0;
+        }
+        case MLN_VOP_LOAD_LOCAL_REF: {
+            /* Push a VAR_REFER wrapper (ref=0) sharing the slot's val.
+             * mln_lang_var_new bumps val->ref; var->ref stays 0 so that
+             * funccall_run recognises it as a by-reference argument. */
+            mln_lang_var_t *sv = frame->slots[insn.a];
+            mln_lang_var_t *rv = mln_lang_var_new(ctx, NULL, M_LANG_VAR_REFER, sv->val, NULL);
+            if (rv == NULL) return -1;
+            PUSH(rv);
+            return 0;
+        }
+        case MLN_VOP_LOAD_GLOBAL_REF: {
+            mln_string_t *name = chunk->sconsts[insn.b];
+            mln_lang_symbol_node_t *sym = mln_lang_symbol_node_search(ctx, name, 0);
+            if (sym == NULL || sym->type != M_LANG_SYMBOL_VAR) {
+                mln_lang_errmsg(ctx, "Undefined identifier.");
+                return -1;
+            }
+            mln_lang_var_t *rv = mln_lang_var_new(ctx, NULL, M_LANG_VAR_REFER,
+                                                  sym->data.var->val, NULL);
+            if (rv == NULL) return -1;
+            PUSH(rv);
             return 0;
         }
         case MLN_VOP_ADD: case MLN_VOP_SUB: case MLN_VOP_MUL:

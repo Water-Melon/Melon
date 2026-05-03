@@ -5,18 +5,16 @@
  * Bytecode VM for Melon's mln_lang interpreter.
  *
  * Design notes:
- *  - This VM is *additive*: the existing AST stack-walker in mln_lang.c is
- *    untouched and remains the source of truth for every script feature.
- *  - At each user function call (M_FUNC_EXTERNAL), we attempt to compile
- *    the body to bytecode once. If compilation succeeds, subsequent calls
- *    run on the VM, which is much faster than walking the AST. If the body
- *    uses a feature the compiler does not yet support, the function is
- *    permanently marked uncompilable and continues to use the AST walker.
- *  - The compiled function runs synchronously inside
- *    mln_lang_stack_handler_funccall_run, in the same way M_FUNC_INTERNAL
- *    callbacks do. Event-driven scheduling, Watch hooks, operator overload
- *    and lib_src .so callbacks all keep working because functions that use
- *    them are simply not compiled (compiler refuses).
+ *  - All Melang language features (arithmetic, bitwise ops including ~,
+ *    reference parameters (&x), control flow, closures, sets, eval/watch/
+ *    unwatch, operator overload guards, event-driven coroutine scheduling)
+ *    are compiled to bytecode and executed on this VM.
+ *  - The AST stack-walker in mln_lang.c remains present but is only used
+ *    when MELANG_VM_OFF=1 is set in the environment (diagnostic mode).
+ *  - Time-slicing (mln_lang_vm_step / M_LANG_DEFAULT_STEP) preserves
+ *    Melang's cooperative multi-ctx scheduling model.
+ *  - Watch reactivity: every slot/property/index assignment opcode fires
+ *    vm_fire_watcher, mirroring the three trigger sites in the AST walker.
  */
 #ifndef __MLN_LANG_VM_H
 #define __MLN_LANG_VM_H
@@ -114,6 +112,14 @@ typedef enum {
                                  * peek array on top, set arr[key]=val.
                                  * array stays on stack so the literal
                                  * compiler can chain entries. */
+    /* Unary bitwise NOT (~x).  Pops 1, pushes 1.
+     * Int fast-path: ~i.  Non-int: reverse_handler. */
+    MLN_VOP_BITNOT,
+    /* Reference-argument loads (&x).  Push a VAR_REFER wrapper (ref=0)
+     * that shares the referenced variable's val.  funccall_run detects
+     * ref==0 and passes the value by reference instead of by copy. */
+    MLN_VOP_LOAD_LOCAL_REF,     /* a = slot index */
+    MLN_VOP_LOAD_GLOBAL_REF,    /* b = sconsts index of name */
     MLN_VOP_DEAD_AST,           /* sentinel: any path that the AST walker
                                  * would have taken is now an error. */
 } mln_lang_vm_opcode_t;
