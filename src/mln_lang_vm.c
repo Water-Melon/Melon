@@ -640,7 +640,7 @@ static void compile_stm(mln_lang_vm_compiler_t *c, mln_lang_stm_t *stm)
             /* Emit each case body in order. Patch its JIT_TRUE to here. */
             int body_pcs_buf[SWITCH_INLINE_CAP];
             int *body_pcs = (n_cases <= SWITCH_INLINE_CAP) ? body_pcs_buf :
-                (int *)mln_alloc_m(c->ctx->pool, sizeof(int) * (n_cases > 0 ? n_cases : 1));
+                (int *)mln_alloc_m(c->ctx->pool, sizeof(int) * n_cases);
             if (body_pcs == NULL) { c->n_loops--; bail(c); return; }
             for (int i = 0; i < n_cases; ++i) {
                 body_pcs[i] = (int)c->chunk->code_len;
@@ -837,7 +837,7 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
                 patch_jump(c, j, found);
             } else {
                 int j = emit(c, MLN_VOP_JUMP, 0, 0);
-                compiler_push_goto(c, target, j);
+                if (compiler_push_goto(c, target, j) < 0) return;
             }
             return;
         }
@@ -845,7 +845,7 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
             if (c->n_loops == 0) { bail(c); return; }
             loop_ctx_t *lc = &c->loops[c->n_loops - 1];
             int j_brk = emit(c, MLN_VOP_JUMP, 0, 0);
-            lc_push_break(c, lc, j_brk);
+            if (lc_push_break(c, lc, j_brk) < 0) return;
             return;
         }
         case M_BLOCK_CONTINUE: {
@@ -858,7 +858,7 @@ static void compile_block(mln_lang_vm_compiler_t *c, mln_lang_block_t *block)
             } else {
                 /* for loop: continue_pc not yet known — record patch index */
                 int j = emit(c, MLN_VOP_JUMP, 0, 0);
-                lc_push_continue(c, lc, j);
+                if (lc_push_continue(c, lc, j) < 0) return;
             }
             return;
         }
