@@ -2124,7 +2124,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 mln_lang_var_t *r = NULL;
                 if (h == NULL || h(ctx, &r, t, NULL) < 0) {
                     mln_lang_var_free(t);
-                    mln_lang_errmsg(ctx, "Operation NOT support.");
+                    mln_lang_errmsg(ctx, "Operation not supported.");
                     return -1;
                 }
                 mln_lang_var_free(t);
