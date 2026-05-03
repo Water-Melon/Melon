@@ -1137,6 +1137,101 @@ int main(void)
           "return Fib(20);",                                             6765);
 
     /* -------------------------------------------------
+     * 56. Bitwise NOT operator (~).
+     *
+     * PR comment: "The VM compiler still bails out on several existing
+     * unary spec operators (for example ~/M_SPEC_REVERSE)."
+     * Resolution: MLN_VOP_BITNOT added and dispatched.
+     *
+     * Simple direct tests of ~x on various int values.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "bitnot_zero",
+          "return ~0;",                                                  -1);
+    T_INT(lang, ev, "bitnot_one",
+          "return ~1;",                                                  -2);
+    T_INT(lang, ev, "bitnot_minus1",
+          "return ~(-1);",                                                0);
+    T_INT(lang, ev, "bitnot_local",
+          "@F() { a = 5; return ~a; } return F();",                      -6);
+    T_INT(lang, ev, "bitnot_double",
+          "return ~~42;",                                                42);
+
+    /* -------------------------------------------------
+     * 57. Operator overload: __int_plus_operator__.
+     *
+     * PR comment: "This compile-time guard only looks at the
+     * operator-overload flags that are already set on the current
+     * context. Because the whole top-level chunk is compiled before
+     * later __* overload functions in the same script are bound,
+     * scripts that define an overload and then use the overloaded
+     * operator afterward will still be compiled down the non-overload
+     * VM path."
+     *
+     * Resolution: compile-time guard removed; apply_binop checks
+     * !ctx->op_int_flag at runtime on every dispatch.
+     *
+     * The overload function may safely use + itself (the re-entrancy
+     * guard in mln_lang_funccall_val_operator_overload_test detects
+     * the call inside the overload scope and falls back to default +).
+     * ------------------------------------------------- */
+    /* Basic: overload returns a+b+1 instead of a+b */
+    T_INT(lang, ev, "op_overload_plus_basic",
+          "@__int_plus_operator__(a, b) { return a + b + 1; } "
+          "return 3 + 4;",
+          8);  /* 3+4+1 = 8 */
+
+    /* Overload receives the correct operands */
+    T_INT(lang, ev, "op_overload_plus_operands",
+          "@__int_plus_operator__(a, b) { return a * 100 + b; } "
+          "return 5 + 7;",
+          507);  /* 5*100+7 = 507 */
+
+    /* -------------------------------------------------
+     * 58. vm_state caching with operator overloads.
+     *
+     * PR comment: "vm_state is cached permanently after the first call,
+     * but whether the VM path is valid depends on mutable per-context
+     * overload flags. If a function is compiled before a later __*
+     * overload definition runs, subsequent calls will keep executing
+     * the stale bytecode instead of switching to the overload-aware
+     * path."
+     *
+     * Resolution: apply_binop now checks ctx->op_int_flag at runtime
+     * on every call. The compiled bytecode is always valid; what changes
+     * is only whether the int fast-path is taken or the methods table.
+     *
+     * Test: compile @F() before defining __int_plus_operator__; call F()
+     * before and after the overload definition; verify the results differ.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "op_overload_after_compile",
+          /* F() is compiled with ADD opcode; no overload flag yet.
+           * First call: 10+5 = 15 (normal).
+           * Then __int_plus_operator__ is defined → op_int_flag = 1.
+           * Second call: apply_binop detects op_int_flag, routes through
+           * methods table, calls overload → 10+5+1 = 16.
+           * return r2 - r1 = 16 - 15 = 1 (SUB is not overloaded). */
+          "@F() { return 10 + 5; } "
+          "r1 = F(); "
+          "@__int_plus_operator__(a, b) { return a + b + 1; } "
+          "r2 = F(); "
+          "return r2 - r1;",
+          1);  /* 16 - 15 = 1 */
+
+    /* -------------------------------------------------
+     * 59. Multiple operator overloads: __int_plus_operator__ and
+     *     __int_mul_operator__ active at the same time.  Verifies that
+     *     each opcode independently routes to its own overload.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "op_overload_plus_and_mul",
+          /* + overload: a+b+10, * overload: a*b+100
+           * (3+4)*2 without overloads = 14
+           * with overloads: (3 op+ 4) = 3+4+10=17, 17 op* 2 = 17*2+100=134 */
+          "@__int_plus_operator__(a, b) { return a + b + 10; } "
+          "@__int_mul_operator__(a, b)  { return a * b + 100; } "
+          "return (3 + 4) * 2;",
+          134);  /* (3+4+10)=17, 17*2+100=134 */
+
+    /* -------------------------------------------------
      * Report
      * ------------------------------------------------- */
     printf("=== Results: %d passed, %d failed ===\n", g_n_pass, g_n_fail);
