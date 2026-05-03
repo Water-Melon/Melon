@@ -809,6 +809,36 @@ int main(void)
     }
 
     /* -------------------------------------------------
+     * 34. Assignment-as-expression for property and index lvalues.
+     *     `return (obj.x = v)` and `return (a[i] = v)` must return v.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "prop_assign_expr",
+          "C { v; } obj = $C; return (obj.v = 42);",                        42);
+    T_INT(lang, ev, "index_assign_expr",
+          "a = [0, 0, 0]; return (a[1] = 99);",                             99);
+    /* Chained: the result of an assignment can be used in a larger expr */
+    T_INT(lang, ev, "prop_assign_chain",
+          "C { v; } obj = $C; x = (obj.v = 7); return x + obj.v;",         14);
+
+    /* -------------------------------------------------
+     * 35. Reading an unbound identifier creates a nil variable (matches
+     *     AST interpreter semantics; must not abort the script).
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "unbound_read_nil",
+          "x = unbound_var; if (x == nil) { return 1; } fi return 0;",      1);
+
+    /* -------------------------------------------------
+     * 36. Assignment inside a function must update an existing outer
+     *     (global) variable, not shadow it with a new local.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "func_updates_global",
+          "g = 1; @F() { g = 2; } F(); return g;",                          2);
+    T_INT(lang, ev, "func_reads_global",
+          "g = 10; @F() { return g; } return F();",                         10);
+    T_INT(lang, ev, "func_modifies_global_compound",
+          "g = 5; @F() { g += 3; } F(); return g;",                         8);
+
+    /* -------------------------------------------------
      * Report
      * ------------------------------------------------- */
     printf("=== Results: %d passed, %d failed ===\n", g_n_pass, g_n_fail);

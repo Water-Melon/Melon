@@ -342,17 +342,6 @@ static int find_local_slot(mln_lang_vm_compiler_t *c, mln_string_t *name)
     return -1;
 }
 
-/* Allocate a fresh local slot; used when an assignment introduces a new
- * variable. Returns the slot index or -1 if we hit MLN_VM_MAX_LOCALS. */
-static int alloc_local_slot(mln_lang_vm_compiler_t *c, mln_string_t *name)
-{
-    if (c->n_locals >= MLN_VM_MAX_LOCALS) return -1;
-    int slot = (int)c->n_locals;
-    c->local_names[slot] = name;
-    c->n_locals++;
-    return slot;
-}
-
 static void bail(mln_lang_vm_compiler_t *c) { c->ok = 0; }
 
 /* Allocate an anonymous scratch slot (no name → find_local_slot never
@@ -430,23 +419,25 @@ static mln_lang_locate_t *unwrap_to_locate(mln_lang_logiclow_t *lhs)
     return sf->left;
 }
 
-/* Returns slot (or allocates) when the LHS is a plain identifier; -1 means
- * the LHS is something more complex (locate chain) and the caller should
- * use the chain-aware path instead. */
+/* Returns the local slot index when the LHS is a plain identifier that is
+ * already in local_names (arg or closure capture).  Returns -1 when the
+ * name is not a known local — the caller must then emit ASSIGN_GLOBAL so
+ * the runtime scope-chain search can find (or create) the variable.
+ * Returns -2 for non-identifier LHS forms (locate chains) so the caller
+ * can fall through to the property/index path. */
 static int extract_lhs_local(mln_lang_vm_compiler_t *c, mln_lang_logiclow_t *lhs)
 {
     mln_lang_locate_t *lc = unwrap_to_locate(lhs);
-    if (lc == NULL || lc->op != M_LOCATE_NONE || lc->next != NULL) return -1;
+    if (lc == NULL || lc->op != M_LOCATE_NONE || lc->next != NULL) return -2;
     mln_lang_spec_t *sp = lc->left;
-    if (sp == NULL || sp->op != M_SPEC_FACTOR) return -1;
+    if (sp == NULL || sp->op != M_SPEC_FACTOR) return -2;
     mln_lang_factor_t *fac = sp->data.factor;
-    if (fac == NULL || fac->type != M_FACTOR_ID) return -1;
-    int slot = find_local_slot(c, fac->data.s_id);
-    if (slot < 0) {
-        slot = alloc_local_slot(c, fac->data.s_id);
-        if (slot < 0) { bail(c); return -1; }
-    }
-    return slot;
+    if (fac == NULL || fac->type != M_FACTOR_ID) return -2;
+    /* Only return the slot if this name is already a known local (arg or
+     * closure capture).  New names go through ASSIGN_GLOBAL at runtime so
+     * that existing outer/global variables are updated rather than shadowed
+     * by a newly allocated frame slot. */
+    return find_local_slot(c, fac->data.s_id);
 }
 
 /* ====================================================================
@@ -857,7 +848,7 @@ static void compile_assign(mln_lang_vm_compiler_t *c, mln_lang_assign_t *a)
 
     if (a->right == NULL) { bail(c); return; }
 
-    /* Local assign: simple slot. */
+    /* Known local (arg / closure capture): emit ASSIGN_LOCAL. */
     int slot = extract_lhs_local(c, a->left);
     if (slot >= 0) {
         if (compound_op < 0) {
@@ -881,9 +872,38 @@ static void compile_assign(mln_lang_vm_compiler_t *c, mln_lang_assign_t *a)
         return;
     }
 
-    /* Locate-chain target: walk down.
-     * Both plain `=` (compound_op < 0) and compound ops (compound_op >= 0)
-     * are handled here for property and index lvalue chains. */
+    /* Bare identifier not in local_names: emit ASSIGN_GLOBAL so the runtime
+     * scope-chain search finds (or lazily creates) the correct variable,
+     * matching the AST interpreter (src/mln_lang.c:6508-6537). */
+    if (slot == -1) {
+        /* extract_lhs_local returns -1 only for M_FACTOR_ID not in locals. */
+        mln_lang_locate_t *bare = unwrap_to_locate(a->left);
+        /* bare is guaranteed non-NULL with op==NONE when slot==-1 */
+        mln_lang_factor_t *fac = bare->left->data.factor;
+        int gidx = add_sconst(c, fac->data.s_id);
+        if (gidx < 0 || gidx > 32767) { bail(c); return; }
+        if (compound_op < 0) {
+            int sp_before = c->sp;
+            compile_assign(c, a->right);
+            if (!c->ok) return;
+            if (c->sp != sp_before + 1) { bail(c); return; }
+            emit(c, MLN_VOP_ASSIGN_GLOBAL, 0, (mln_s16_t)gidx);
+            /* ASSIGN_GLOBAL pops val, pushes back — sp unchanged */
+        } else {
+            emit(c, MLN_VOP_LOAD_GLOBAL, 0, (mln_s16_t)gidx);
+            sp_push(c, 1);
+            int sp_before = c->sp;
+            compile_assign(c, a->right);
+            if (!c->ok) return;
+            if (c->sp != sp_before + 1) { bail(c); return; }
+            emit(c, (mln_u8_t)compound_op, 0, 0);
+            sp_pop(c, 1);
+            emit(c, MLN_VOP_ASSIGN_GLOBAL, 0, (mln_s16_t)gidx);
+        }
+        return;
+    }
+
+    /* slot == -2: LHS is a locate chain (property or index). */
 
     mln_lang_locate_t *locate = unwrap_to_locate(a->left);
     if (locate == NULL || locate->op == M_LOCATE_NONE) { bail(c); return; }
@@ -934,8 +954,8 @@ static void compile_assign(mln_lang_vm_compiler_t *c, mln_lang_assign_t *a)
             emit(c, (mln_u8_t)compound_op, 0, 0);
             sp_pop(c, 1);
         }
-        emit(c, MLN_VOP_SET_PROPERTY, 0, (mln_s16_t)idx);
-        sp_pop(c, 2);   /* pop val and obj */
+        emit(c, MLN_VOP_SET_PROPERTY, 1, (mln_s16_t)idx);
+        sp_pop(c, 1);   /* obj consumed; val pushed back as expression result */
     } else if (locate->op == M_LOCATE_INDEX) {
         if (locate->right.exp == NULL) { bail(c); return; }
         if (compound_op >= 0) {
@@ -964,8 +984,8 @@ static void compile_assign(mln_lang_vm_compiler_t *c, mln_lang_assign_t *a)
             emit(c, (mln_u8_t)compound_op, 0, 0);
             sp_pop(c, 1);
         }
-        emit(c, MLN_VOP_SET_INDEX, 0, 0);
-        sp_pop(c, 3);   /* pop val, key, arr */
+        emit(c, MLN_VOP_SET_INDEX, 1, 0);
+        sp_pop(c, 2);   /* arr+key consumed; val pushed back as expression result */
     } else {
         bail(c);
     }
@@ -1168,23 +1188,30 @@ static void compile_suffix(mln_lang_vm_compiler_t *c, mln_lang_suffix_t *n)
             sp_push(c, 1);
             return;
         }
-        /* Global path: LOAD_GLOBAL (old_val), DUP, LOAD 1, ADD/SUB,
-         * ASSIGN_GLOBAL (pops new_val, stores, pushes back), POP pushback.
-         * Result: old_val stays on the operand stack. */
+        /* Global postfix: DUP only adds a reference to the same var, so when
+         * ASSIGN_GLOBAL later modifies the var's value the "old" copy on the
+         * stack would also reflect the new value.  Use a scratch slot and
+         * STORE_LOCAL to make a true value-copy first, like the property and
+         * index suffix cases do. */
+        int temp = alloc_temp_slot(c);
+        if (temp < 0) return;   /* bail already called */
         int gidx = add_sconst(c, f->data.s_id);
         if (gidx < 0 || gidx > 32767) { bail(c); return; }
-        emit(c, MLN_VOP_LOAD_GLOBAL, 0, (mln_s16_t)gidx);  /* old_val */
+        emit(c, MLN_VOP_LOAD_GLOBAL, 0, (mln_s16_t)gidx);   /* [a_var] */
         sp_push(c, 1);
-        emit(c, MLN_VOP_DUP, 0, 0);                          /* old_val, old_val2 */
+        emit(c, MLN_VOP_STORE_LOCAL, (mln_u8_t)temp, 0);    /* value-copy to scratch; pops a_var */
+        sp_pop(c, 1);
+        emit(c, MLN_VOP_LOAD_LOCAL, (mln_u8_t)temp, 0);     /* [old_copy] */
         sp_push(c, 1);
-        emit_load_int_one(c);                                  /* old_val, old_val2, 1 */
+        emit_load_int_one(c);                                  /* [old_copy, 1] */
         if (!c->ok) return;
         emit(c, (n->op == M_SUFFIX_INC) ? MLN_VOP_ADD : MLN_VOP_SUB, 0, 0);
-        sp_pop(c, 1);                                          /* old_val, new_val */
-        emit(c, MLN_VOP_ASSIGN_GLOBAL, 0, (mln_s16_t)gidx);  /* ASSIGN_GLOBAL pushes back */
-        /* Stack: old_val, new_val(pushback) — pop the pushback */
-        emit(c, MLN_VOP_POP, 0, 0);
-        sp_pop(c, 1);                                          /* old_val */
+        sp_pop(c, 1);                                          /* [new_val] */
+        emit(c, MLN_VOP_ASSIGN_GLOBAL, 0, (mln_s16_t)gidx);  /* assigns, pushes back new_val */
+        emit(c, MLN_VOP_POP, 0, 0);                           /* pop the push-back */
+        sp_pop(c, 1);
+        emit(c, MLN_VOP_LOAD_LOCAL, (mln_u8_t)temp, 0);      /* [old_copy] — expression result */
+        sp_push(c, 1);
         return;
     }
 
@@ -1473,8 +1500,12 @@ static void compile_spec(mln_lang_vm_compiler_t *c, mln_lang_spec_t *n)
             int slot = find_local_slot(c, f->data.s_id);
             if (slot >= 0) {
                 emit(c, MLN_VOP_INC_LOCAL_LOAD, (mln_u8_t)slot, 0);
-            } else {
-                /* Global: LOAD_GLOBAL, add 1, ASSIGN_GLOBAL (pushes back new val) */
+                sp_push(c, 1);
+                return;
+            }
+            /* Global: LOAD_GLOBAL, add 1, ASSIGN_GLOBAL (pushes back new val).
+             * Return early so the outer sp_push below is not double-counted. */
+            {
                 int gidx = add_sconst(c, f->data.s_id);
                 if (gidx < 0 || gidx > 32767) { bail(c); return; }
                 emit(c, MLN_VOP_LOAD_GLOBAL, 0, (mln_s16_t)gidx);
@@ -1484,10 +1515,9 @@ static void compile_spec(mln_lang_vm_compiler_t *c, mln_lang_spec_t *n)
                 emit(c, MLN_VOP_ADD, 0, 0);
                 sp_pop(c, 1);
                 emit(c, MLN_VOP_ASSIGN_GLOBAL, 0, (mln_s16_t)gidx);
-                /* ASSIGN_GLOBAL pops and pushes back — sp unchanged */
+                /* sp = S+1, result (new val) on stack — return early */
+                return;
             }
-            sp_push(c, 1);
-            return;
         }
         case M_SPEC_DEC: {
             /* Prefix --x : pre-decrement.  Supports locals and globals. */
@@ -1498,7 +1528,11 @@ static void compile_spec(mln_lang_vm_compiler_t *c, mln_lang_spec_t *n)
             int slot = find_local_slot(c, f->data.s_id);
             if (slot >= 0) {
                 emit(c, MLN_VOP_DEC_LOCAL_LOAD, (mln_u8_t)slot, 0);
-            } else {
+                sp_push(c, 1);
+                return;
+            }
+            /* Global path: return early (same reason as M_SPEC_INC). */
+            {
                 int gidx = add_sconst(c, f->data.s_id);
                 if (gidx < 0 || gidx > 32767) { bail(c); return; }
                 emit(c, MLN_VOP_LOAD_GLOBAL, 0, (mln_s16_t)gidx);
@@ -1508,9 +1542,9 @@ static void compile_spec(mln_lang_vm_compiler_t *c, mln_lang_spec_t *n)
                 emit(c, MLN_VOP_SUB, 0, 0);
                 sp_pop(c, 1);
                 emit(c, MLN_VOP_ASSIGN_GLOBAL, 0, (mln_s16_t)gidx);
+                /* sp = S+1, result (new val) on stack — return early */
+                return;
             }
-            sp_push(c, 1);
-            return;
         }
         case M_SPEC_NEW: {
             /* `$Set` — instantiate a Set as an object. The set name is in
@@ -2203,8 +2237,23 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
         case MLN_VOP_LOAD_GLOBAL: {
             mln_string_t *name = chunk->sconsts[insn.b];
             mln_lang_symbol_node_t *sym = mln_lang_symbol_node_search(ctx, name, 0);
-            if (sym == NULL || sym->type != M_LANG_SYMBOL_VAR) {
-                mln_lang_errmsg(ctx, "Undefined identifier.");
+            if (sym == NULL) {
+                /* Variable not yet bound — create a nil slot in the current
+                 * scope, matching AST interpreter semantics
+                 * (src/mln_lang.c:6517-6536). */
+                mln_lang_var_t *nv = mln_lang_var_create_nil(ctx, name);
+                if (nv == NULL) { mln_lang_errmsg(ctx, "No memory."); return -1; }
+                if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, nv) < 0) {
+                    mln_lang_errmsg(ctx, "No memory.");
+                    mln_lang_var_free(nv);
+                    return -1;
+                }
+                ++(nv->ref);
+                PUSH(nv);
+                return 0;
+            }
+            if (sym->type != M_LANG_SYMBOL_VAR) {
+                mln_lang_errmsg(ctx, "Invalid token. Token is a SET name, not a value or function.");
                 return -1;
             }
             mln_lang_var_t *v = sym->data.var;
@@ -2339,26 +2388,43 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             return 0;
         }
         case MLN_VOP_ASSIGN_GLOBAL: {
-            /* Pop top, assign to the named global, fire watcher, push back.
-             * Behaves like ASSIGN_LOCAL but the target is resolved via the
-             * global scope search rather than a local slot. */
+            /* Pop top, assign to the named variable (searched via scope chain),
+             * fire watcher, push back.  When the name does not exist anywhere,
+             * create a nil slot in the current scope first — matching the AST
+             * interpreter's behavior for new-variable assignment. */
             mln_string_t *name = chunk->sconsts[insn.b];
             mln_lang_symbol_node_t *sym = mln_lang_symbol_node_search(ctx, name, 0);
-            if (sym == NULL || sym->type != M_LANG_SYMBOL_VAR) {
-                mln_lang_errmsg(ctx, "Undefined identifier.");
+            mln_lang_var_t *target;
+            if (sym == NULL) {
+                target = mln_lang_var_create_nil(ctx, name);
+                if (target == NULL) {
+                    mln_lang_errmsg(ctx, "No memory.");
+                    mln_lang_var_free(POP());
+                    return -1;
+                }
+                if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, target) < 0) {
+                    mln_lang_errmsg(ctx, "No memory.");
+                    mln_lang_var_free(target);
+                    mln_lang_var_free(POP());
+                    return -1;
+                }
+            } else if (sym->type != M_LANG_SYMBOL_VAR) {
+                mln_lang_errmsg(ctx, "Identifier is a SET name, not a variable.");
                 mln_lang_var_free(POP());
                 return -1;
+            } else {
+                target = sym->data.var;
             }
             mln_lang_var_t *v = POP();
-            if (slot_assign(ctx, sym->data.var, v) < 0) return -1;
-            if (vm_fire_watcher(ctx, sym->data.var) < 0) return -1;
+            if (slot_assign(ctx, target, v) < 0) return -1;
+            if (vm_fire_watcher(ctx, target) < 0) return -1;
             /* Push back so the assignment is usable as an expression. */
-            ++(sym->data.var->ref);
+            ++(target->ref);
             if (vm_frame_grow_opstack(ctx, frame, 1) < 0) {
-                --(sym->data.var->ref);
+                --(target->ref);
                 return -1;
             }
-            frame->opstack[frame->op_sp++] = sym->data.var;
+            frame->opstack[frame->op_sp++] = target;
             return 0;
         }
         case MLN_VOP_SWAP2: {
@@ -2748,7 +2814,14 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 return -1;
             }
             mln_lang_var_free(slot_var);
-            mln_lang_var_free(val);
+            if (insn.a) {
+                /* Push val back as expression result (assignment-as-expression
+                 * context: `return (obj.x = v)`, `(obj.x = v, ...)`, etc.).
+                 * compile_assign emits SET_PROPERTY with a=1 for this purpose. */
+                PUSH(val);
+            } else {
+                mln_lang_var_free(val);
+            }
             mln_lang_var_free(obj_op);
             return 0;
         }
@@ -2788,9 +2861,15 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 return -1;
             }
             mln_lang_var_free(slot_var);
-            mln_lang_var_free(val);
             mln_lang_var_free(key);
             mln_lang_var_free(arr);
+            if (insn.a) {
+                /* Push val back as expression result (assignment-as-expression
+                 * context).  compile_assign emits SET_INDEX with a=1. */
+                PUSH(val);
+            } else {
+                mln_lang_var_free(val);
+            }
             return 0;
         }
         case MLN_VOP_DEAD_AST:
