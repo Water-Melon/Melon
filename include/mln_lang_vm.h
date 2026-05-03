@@ -120,6 +120,17 @@ typedef enum {
      * ref==0 and passes the value by reference instead of by copy. */
     MLN_VOP_LOAD_LOCAL_REF,     /* a = slot index */
     MLN_VOP_LOAD_GLOBAL_REF,    /* b = sconsts index of name */
+    /* Global variable write.  b = sconsts index of name.
+     * Pops top, stores into the symbol found via global scope search,
+     * fires any watcher, then pushes the new value back (like ASSIGN_LOCAL).
+     * Used for compound assignment and ++/-- on global lvalues. */
+    MLN_VOP_ASSIGN_GLOBAL,      /* b = sconsts index of name */
+    /* Stack reorder helpers for postfix ++/-- on property lvalues.
+     * SWAP2 swaps the 2nd and 3rd elements from the top, leaving the
+     * top element unchanged.  Used to rearrange [obj, old, new] into
+     * [old, obj, new] before SET_PROPERTY so the old value survives as
+     * the expression result. */
+    MLN_VOP_SWAP2,              /* no operands; requires op_sp >= 3 */
     MLN_VOP_DEAD_AST,           /* sentinel: any path that the AST walker
                                  * would have taken is now an error. */
 } mln_lang_vm_opcode_t;

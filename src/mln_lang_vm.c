@@ -355,6 +355,28 @@ static int alloc_local_slot(mln_lang_vm_compiler_t *c, mln_string_t *name)
 
 static void bail(mln_lang_vm_compiler_t *c) { c->ok = 0; }
 
+/* Allocate an anonymous scratch slot (no name → find_local_slot never
+ * returns it) for use as a temporary save register.  Returns the slot
+ * index or -1 if the limit is reached (bail() is called for the caller). */
+static int alloc_temp_slot(mln_lang_vm_compiler_t *c)
+{
+    if (c->n_locals >= MLN_VM_MAX_LOCALS) { bail(c); return -1; }
+    int slot = (int)c->n_locals;
+    c->local_names[slot] = NULL;   /* anonymous */
+    c->n_locals++;
+    return slot;
+}
+
+/* Emit LOAD_INT 1 (adds the constant to iconsts if not already present).
+ * Used by ++/-- code generation for non-local lvalues. */
+static void emit_load_int_one(mln_lang_vm_compiler_t *c)
+{
+    int idx = add_iconst(c, 1);
+    if (idx < 0 || idx > 32767) { bail(c); return; }
+    emit(c, MLN_VOP_LOAD_INT, 0, (mln_s16_t)idx);
+    sp_push(c, 1);
+}
+
 /* Patch the b-field of an already-emitted JUMP instruction at patch_pc so
  * that execution transfers to target_pc.  Calls bail() if the signed 16-bit
  * offset would overflow, preventing silent wrap-around in large functions. */
@@ -859,9 +881,9 @@ static void compile_assign(mln_lang_vm_compiler_t *c, mln_lang_assign_t *a)
         return;
     }
 
-    /* Locate-chain target: walk down. Phase E: only plain `=` for chain
-     * targets (no compound). */
-    if (compound_op >= 0) { bail(c); return; }
+    /* Locate-chain target: walk down.
+     * Both plain `=` (compound_op < 0) and compound ops (compound_op >= 0)
+     * are handled here for property and index lvalue chains. */
 
     mln_lang_locate_t *locate = unwrap_to_locate(a->left);
     if (locate == NULL || locate->op == M_LOCATE_NONE) { bail(c); return; }
@@ -890,26 +912,58 @@ static void compile_assign(mln_lang_vm_compiler_t *c, mln_lang_assign_t *a)
         locate = locate->next;
     }
 
-    /* Final hop is the assignment target. */
+    /* Final hop is the assignment target.
+     * For compound ops, we need to read the current value first:
+     *   DUP the object (so SET can still use it), GET the value,
+     *   compile the RHS, apply the binary op, then SET.
+     * For plain assignment, just compile RHS and SET. */
     if (locate->op == M_LOCATE_PROPERTY) {
         int idx = add_sconst(c, locate->right.id);
         if (idx < 0 || idx > 32767) { bail(c); return; }
+        if (compound_op >= 0) {
+            emit(c, MLN_VOP_DUP, 0, 0);    /* [obj, obj2] */
+            sp_push(c, 1);
+            emit(c, MLN_VOP_GET_PROPERTY, 0, (mln_s16_t)idx);
+            /* GET_PROPERTY: pops obj2, pushes old_val — sp unchanged */
+        }
         int sp_before = c->sp;
         compile_assign(c, a->right);
         if (!c->ok) return;
         if (c->sp != sp_before + 1) { bail(c); return; }
+        if (compound_op >= 0) {
+            emit(c, (mln_u8_t)compound_op, 0, 0);
+            sp_pop(c, 1);
+        }
         emit(c, MLN_VOP_SET_PROPERTY, 0, (mln_s16_t)idx);
         sp_pop(c, 2);   /* pop val and obj */
     } else if (locate->op == M_LOCATE_INDEX) {
         if (locate->right.exp == NULL) { bail(c); return; }
+        if (compound_op >= 0) {
+            emit(c, MLN_VOP_DUP, 0, 0);    /* [arr, arr2] */
+            sp_push(c, 1);
+        }
         int sp_before = c->sp;
         compile_exp(c, locate->right.exp);
         if (!c->ok) return;
         if (c->sp != sp_before + 1) { bail(c); return; }
+        if (compound_op >= 0) {
+            /* Stack is [arr, arr2, key].  DUP key → [arr, arr2, key, key2].
+             * SWAP2 reorders 2nd and 3rd from top → [arr, key, arr2, key2].
+             * GET_INDEX now pops key2 (top) and arr2 (correct). */
+            emit(c, MLN_VOP_DUP, 0, 0);    /* [arr, arr2, key, key2] */
+            sp_push(c, 1);
+            emit(c, MLN_VOP_SWAP2, 0, 0);  /* [arr, key, arr2, key2] */
+            emit(c, MLN_VOP_GET_INDEX, 0, 0);
+            sp_pop(c, 1);  /* GET_INDEX: pops key2+arr2, pushes elem; net -1 */
+        }
         sp_before = c->sp;
         compile_assign(c, a->right);
         if (!c->ok) return;
         if (c->sp != sp_before + 1) { bail(c); return; }
+        if (compound_op >= 0) {
+            emit(c, (mln_u8_t)compound_op, 0, 0);
+            sp_pop(c, 1);
+        }
         emit(c, MLN_VOP_SET_INDEX, 0, 0);
         sp_pop(c, 3);   /* pop val, key, arr */
     } else {
@@ -1093,21 +1147,123 @@ static void compile_suffix(mln_lang_vm_compiler_t *c, mln_lang_suffix_t *n)
         compile_locate(c, n->left);
         return;
     }
-    /* `i++` / `i--`: only support when LHS is a local-id. */
+    /* `lv++` / `lv--`: support locals, globals, property, and index lvalues. */
     mln_lang_locate_t *lc = n->left;
-    if (lc == NULL || lc->op != M_LOCATE_NONE) { bail(c); return; }
-    mln_lang_spec_t *sp = lc->left;
-    if (sp == NULL || sp->op != M_SPEC_FACTOR) { bail(c); return; }
-    mln_lang_factor_t *f = sp->data.factor;
-    if (f == NULL || f->type != M_FACTOR_ID) { bail(c); return; }
-    int slot = find_local_slot(c, f->data.s_id);
-    if (slot < 0) { bail(c); return; }
-    switch (n->op) {
-        case M_SUFFIX_INC: emit(c, MLN_VOP_LOAD_LOCAL_INC, (mln_u8_t)slot, 0); break;
-        case M_SUFFIX_DEC: emit(c, MLN_VOP_LOAD_LOCAL_DEC, (mln_u8_t)slot, 0); break;
-        default: bail(c); return;
+    if (lc == NULL) { bail(c); return; }
+
+    /* ── Plain identifier: local or global ── */
+    if (lc->op == M_LOCATE_NONE && lc->next == NULL) {
+        mln_lang_spec_t *sp_node = lc->left;
+        if (sp_node == NULL || sp_node->op != M_SPEC_FACTOR) { bail(c); return; }
+        mln_lang_factor_t *f = sp_node->data.factor;
+        if (f == NULL || f->type != M_FACTOR_ID) { bail(c); return; }
+        int slot = find_local_slot(c, f->data.s_id);
+        if (slot >= 0) {
+            /* Local fast path */
+            switch (n->op) {
+                case M_SUFFIX_INC: emit(c, MLN_VOP_LOAD_LOCAL_INC, (mln_u8_t)slot, 0); break;
+                case M_SUFFIX_DEC: emit(c, MLN_VOP_LOAD_LOCAL_DEC, (mln_u8_t)slot, 0); break;
+                default: bail(c); return;
+            }
+            sp_push(c, 1);
+            return;
+        }
+        /* Global path: LOAD_GLOBAL (old_val), DUP, LOAD 1, ADD/SUB,
+         * ASSIGN_GLOBAL (pops new_val, stores, pushes back), POP pushback.
+         * Result: old_val stays on the operand stack. */
+        int gidx = add_sconst(c, f->data.s_id);
+        if (gidx < 0 || gidx > 32767) { bail(c); return; }
+        emit(c, MLN_VOP_LOAD_GLOBAL, 0, (mln_s16_t)gidx);  /* old_val */
+        sp_push(c, 1);
+        emit(c, MLN_VOP_DUP, 0, 0);                          /* old_val, old_val2 */
+        sp_push(c, 1);
+        emit_load_int_one(c);                                  /* old_val, old_val2, 1 */
+        if (!c->ok) return;
+        emit(c, (n->op == M_SUFFIX_INC) ? MLN_VOP_ADD : MLN_VOP_SUB, 0, 0);
+        sp_pop(c, 1);                                          /* old_val, new_val */
+        emit(c, MLN_VOP_ASSIGN_GLOBAL, 0, (mln_s16_t)gidx);  /* ASSIGN_GLOBAL pushes back */
+        /* Stack: old_val, new_val(pushback) — pop the pushback */
+        emit(c, MLN_VOP_POP, 0, 0);
+        sp_pop(c, 1);                                          /* old_val */
+        return;
     }
-    sp_push(c, 1);
+
+    /* ── Single-hop property: obj.x++ / obj.x-- ── */
+    if (lc->op == M_LOCATE_PROPERTY && lc->next == NULL) {
+        if (lc->right.id == NULL) { bail(c); return; }
+        int idx = add_sconst(c, lc->right.id);
+        if (idx < 0 || idx > 32767) { bail(c); return; }
+        /* Allocate a scratch slot to hold the old value before SET_PROPERTY
+         * overwrites the property slot in-place (GET_PROPERTY returns a
+         * reference to the actual slot, so a DUP would also see the new val). */
+        int temp = alloc_temp_slot(c);
+        if (temp < 0) return;  /* bail already called */
+        /* Compile base object */
+        compile_spec(c, lc->left);
+        if (!c->ok) return;
+        emit(c, MLN_VOP_DUP, 0, 0);                              /* [obj, obj2] */
+        sp_push(c, 1);
+        emit(c, MLN_VOP_GET_PROPERTY, 0, (mln_s16_t)idx);        /* [obj, old_val_ref] */
+        /* GET_PROPERTY pops obj2, pushes ref to prop var — sp unchanged */
+        /* Save a VALUE copy into temp slot (STORE_LOCAL copies the val data,
+         * so later SET_PROPERTY cannot overwrite this copy). */
+        emit(c, MLN_VOP_STORE_LOCAL, (mln_u8_t)temp, 0);         /* [obj] */
+        sp_pop(c, 1);
+        emit(c, MLN_VOP_LOAD_LOCAL, (mln_u8_t)temp, 0);          /* [obj, old_copy] */
+        sp_push(c, 1);
+        emit_load_int_one(c);                                      /* [obj, old_copy, 1] */
+        if (!c->ok) return;
+        emit(c, (n->op == M_SUFFIX_INC) ? MLN_VOP_ADD : MLN_VOP_SUB, 0, 0);
+        sp_pop(c, 1);                                              /* [obj, new_val] */
+        emit(c, MLN_VOP_SET_PROPERTY, 0, (mln_s16_t)idx);        /* pops new_val + obj */
+        sp_pop(c, 2);                                              /* [] */
+        emit(c, MLN_VOP_LOAD_LOCAL, (mln_u8_t)temp, 0);          /* [old_copy] */
+        sp_push(c, 1);
+        return;
+    }
+
+    /* ── Single-hop index: arr[i]++ / arr[i]-- ── */
+    if (lc->op == M_LOCATE_INDEX && lc->next == NULL) {
+        if (lc->right.exp == NULL) { bail(c); return; }
+        /* Allocate a scratch slot to hold old_val across the SET_INDEX. */
+        int temp = alloc_temp_slot(c);
+        if (temp < 0) return;  /* bail already called */
+        /* Compile base array */
+        compile_spec(c, lc->left);
+        if (!c->ok) return;
+        emit(c, MLN_VOP_DUP, 0, 0);                /* [arr, arr2] */
+        sp_push(c, 1);
+        /* Compile key */
+        int sp_before = c->sp;
+        compile_exp(c, lc->right.exp);
+        if (!c->ok) return;
+        if (c->sp != sp_before + 1) { bail(c); return; }
+        /* Stack: [arr, arr2, key].  DUP key, SWAP2 to get [arr, key, arr2, key2]
+         * so that GET_INDEX pops key2+arr2 correctly. */
+        emit(c, MLN_VOP_DUP, 0, 0);                /* [arr, arr2, key, key2] */
+        sp_push(c, 1);
+        emit(c, MLN_VOP_SWAP2, 0, 0);              /* [arr, key, arr2, key2] */
+        emit(c, MLN_VOP_GET_INDEX, 0, 0);           /* pops key2+arr2, pushes old_val_ref */
+        sp_pop(c, 1);                                /* [arr, key, old_val_ref] */
+        /* Save old_val into scratch slot (copies value, safe from SET_INDEX). */
+        emit(c, MLN_VOP_STORE_LOCAL, (mln_u8_t)temp, 0);
+        sp_pop(c, 1);                                /* [arr, key] */
+        /* Load old_val copy, add 1, produce new_val */
+        emit(c, MLN_VOP_LOAD_LOCAL, (mln_u8_t)temp, 0);
+        sp_push(c, 1);                               /* [arr, key, old_copy] */
+        emit_load_int_one(c);                        /* [arr, key, old_copy, 1] */
+        if (!c->ok) return;
+        emit(c, (n->op == M_SUFFIX_INC) ? MLN_VOP_ADD : MLN_VOP_SUB, 0, 0);
+        sp_pop(c, 1);                                /* [arr, key, new_val] */
+        emit(c, MLN_VOP_SET_INDEX, 0, 0);           /* pops new_val + key + arr */
+        sp_pop(c, 3);                                /* [] */
+        /* Reload old_val from scratch slot as expression result */
+        emit(c, MLN_VOP_LOAD_LOCAL, (mln_u8_t)temp, 0);
+        sp_push(c, 1);                               /* [old_val] */
+        return;
+    }
+
+    bail(c);
 }
 
 static void compile_locate(mln_lang_vm_compiler_t *c, mln_lang_locate_t *n)
@@ -1307,25 +1463,50 @@ static void compile_spec(mln_lang_vm_compiler_t *c, mln_lang_spec_t *n)
             return;
         }
         case M_SPEC_INC: {
-            /* Prefix ++x : pre-increment local. */
+            /* Prefix ++x : pre-increment.  Supports locals and globals. */
             mln_lang_spec_t *inner = n->data.spec;
             if (inner == NULL || inner->op != M_SPEC_FACTOR) { bail(c); return; }
             mln_lang_factor_t *f = inner->data.factor;
             if (f == NULL || f->type != M_FACTOR_ID) { bail(c); return; }
             int slot = find_local_slot(c, f->data.s_id);
-            if (slot < 0) { bail(c); return; }
-            emit(c, MLN_VOP_INC_LOCAL_LOAD, (mln_u8_t)slot, 0);
+            if (slot >= 0) {
+                emit(c, MLN_VOP_INC_LOCAL_LOAD, (mln_u8_t)slot, 0);
+            } else {
+                /* Global: LOAD_GLOBAL, add 1, ASSIGN_GLOBAL (pushes back new val) */
+                int gidx = add_sconst(c, f->data.s_id);
+                if (gidx < 0 || gidx > 32767) { bail(c); return; }
+                emit(c, MLN_VOP_LOAD_GLOBAL, 0, (mln_s16_t)gidx);
+                sp_push(c, 1);
+                emit_load_int_one(c);
+                if (!c->ok) return;
+                emit(c, MLN_VOP_ADD, 0, 0);
+                sp_pop(c, 1);
+                emit(c, MLN_VOP_ASSIGN_GLOBAL, 0, (mln_s16_t)gidx);
+                /* ASSIGN_GLOBAL pops and pushes back — sp unchanged */
+            }
             sp_push(c, 1);
             return;
         }
         case M_SPEC_DEC: {
+            /* Prefix --x : pre-decrement.  Supports locals and globals. */
             mln_lang_spec_t *inner = n->data.spec;
             if (inner == NULL || inner->op != M_SPEC_FACTOR) { bail(c); return; }
             mln_lang_factor_t *f = inner->data.factor;
             if (f == NULL || f->type != M_FACTOR_ID) { bail(c); return; }
             int slot = find_local_slot(c, f->data.s_id);
-            if (slot < 0) { bail(c); return; }
-            emit(c, MLN_VOP_DEC_LOCAL_LOAD, (mln_u8_t)slot, 0);
+            if (slot >= 0) {
+                emit(c, MLN_VOP_DEC_LOCAL_LOAD, (mln_u8_t)slot, 0);
+            } else {
+                int gidx = add_sconst(c, f->data.s_id);
+                if (gidx < 0 || gidx > 32767) { bail(c); return; }
+                emit(c, MLN_VOP_LOAD_GLOBAL, 0, (mln_s16_t)gidx);
+                sp_push(c, 1);
+                emit_load_int_one(c);
+                if (!c->ok) return;
+                emit(c, MLN_VOP_SUB, 0, 0);
+                sp_pop(c, 1);
+                emit(c, MLN_VOP_ASSIGN_GLOBAL, 0, (mln_s16_t)gidx);
+            }
             sp_push(c, 1);
             return;
         }
@@ -2155,6 +2336,43 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             PUSH(rv);
             return 0;
         }
+        case MLN_VOP_ASSIGN_GLOBAL: {
+            /* Pop top, assign to the named global, fire watcher, push back.
+             * Behaves like ASSIGN_LOCAL but the target is resolved via the
+             * global scope search rather than a local slot. */
+            mln_string_t *name = chunk->sconsts[insn.b];
+            mln_lang_symbol_node_t *sym = mln_lang_symbol_node_search(ctx, name, 0);
+            if (sym == NULL || sym->type != M_LANG_SYMBOL_VAR) {
+                mln_lang_errmsg(ctx, "Undefined identifier.");
+                mln_lang_var_free(POP());
+                return -1;
+            }
+            mln_lang_var_t *v = POP();
+            if (slot_assign(ctx, sym->data.var, v) < 0) return -1;
+            if (vm_fire_watcher(ctx, sym->data.var) < 0) return -1;
+            /* Push back so the assignment is usable as an expression. */
+            ++(sym->data.var->ref);
+            if (vm_frame_grow_opstack(ctx, frame, 1) < 0) {
+                --(sym->data.var->ref);
+                return -1;
+            }
+            frame->opstack[frame->op_sp++] = sym->data.var;
+            return 0;
+        }
+        case MLN_VOP_SWAP2: {
+            /* Swap the 2nd and 3rd elements from the top, leaving the top
+             * element in place.  Used to rearrange [obj, old_val, new_val]
+             * into [old_val, obj, new_val] before SET_PROPERTY so the old
+             * value survives as the postfix expression result. */
+            if (frame->op_sp < 3) {
+                mln_lang_errmsg(ctx, "Stack underflow SWAP2.");
+                return -1;
+            }
+            mln_lang_var_t *tmp = frame->opstack[frame->op_sp - 2];
+            frame->opstack[frame->op_sp - 2] = frame->opstack[frame->op_sp - 3];
+            frame->opstack[frame->op_sp - 3] = tmp;
+            return 0;
+        }
         case MLN_VOP_ADD: case MLN_VOP_SUB: case MLN_VOP_MUL:
         case MLN_VOP_DIV: case MLN_VOP_MOD:
         case MLN_VOP_LT: case MLN_VOP_LE: case MLN_VOP_GT:
@@ -2226,9 +2444,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
                 if (func) mln_lang_var_free(func);
                 if (obj)  mln_lang_var_free(obj);
-                frame->op_sp -= nargs + (is_self ? 0 : 1) - (is_method ? -1 : 0);
-                if (is_self) frame->op_sp -= 0;
-                else frame->op_sp -= 1 + (is_method ? 1 : 0);
+                frame->op_sp -= nargs + (is_self ? 0 : 1) + (is_method ? 1 : 0);
                 return -1;
             }
             call->prototype = callee_proto;

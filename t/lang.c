@@ -8,8 +8,8 @@
  *   - Logical operators (short-circuit): || &&
  *   - Comparison operators: == != < <= > >=
  *   - Unary: ! -
- *   - All assignment forms: = += -= *= /= %= |= &= ^= <<= >>=
- *   - Prefix / suffix ++ --
+ *   - All assignment forms: = += -= *= /= %= |= &= ^= <<= >>= on locals, properties, and indices
+ *   - Prefix / suffix ++ -- on locals, globals, properties, and indices
  *   - if / else / fi
  *   - while loop (break / continue)
  *   - for loop (break / continue)
@@ -606,6 +606,77 @@ int main(void)
           "@F() { x = 3; y = 7; swap(&x, &y); return x * 10 + y; } "
           "return F();",
           73); /* x=7, y=3 → 73 */
+
+    /* -------------------------------------------------
+     * 29a. Compound assignment on property lvalues: obj.x += 1
+     * -------------------------------------------------
+     * Verified: VM now lowers `obj.x += val` to a DUP+GET+binop+SET
+     * sequence rather than bailing out at compile time.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "prop_pluseq",
+          "Point { x; y; } "
+          "p = $Point; p.x = 3; p.x += 4; return p.x;",                   7);
+    T_INT(lang, ev, "prop_minuseq",
+          "Point { x; } p = $Point; p.x = 10; p.x -= 3; return p.x;",     7);
+    T_INT(lang, ev, "prop_muleq",
+          "Point { x; } p = $Point; p.x = 3;  p.x *= 4; return p.x;",    12);
+    T_INT(lang, ev, "prop_diveq",
+          "Point { x; } p = $Point; p.x = 20; p.x /= 4; return p.x;",     5);
+
+    /* -------------------------------------------------
+     * 29b. Compound assignment on index lvalues: arr[i] += 1
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "index_pluseq",
+          "a = [10, 20, 30]; a[1] += 5; return a[1];",                    25);
+    T_INT(lang, ev, "index_minuseq",
+          "a = [10, 20, 30]; a[2] -= 5; return a[2];",                    25);
+    T_INT(lang, ev, "index_muleq",
+          "a = [2, 3, 4]; a[0] *= 3; return a[0];",                        6);
+    T_INT(lang, ev, "index_lshifteq",
+          "a = [1, 2, 3]; a[0] <<= 3; return a[0];",                       8);
+
+    /* -------------------------------------------------
+     * 29c. Postfix ++/-- on global and property/index lvalues
+     * ------------------------------------------------- */
+    /* global g++ / g-- */
+    T_INT(lang, ev, "global_suffix_inc_result",
+          "g = 5; r = g++; return r;",                                      5);
+    T_INT(lang, ev, "global_suffix_inc_after",
+          "g = 5; g++; return g;",                                          6);
+    T_INT(lang, ev, "global_suffix_dec_result",
+          "g = 5; r = g--; return r;",                                      5);
+    T_INT(lang, ev, "global_suffix_dec_after",
+          "g = 5; g--; return g;",                                          4);
+    /* obj.x++ / obj.x-- */
+    T_INT(lang, ev, "prop_suffix_inc_result",
+          "C { v; } obj = $C; obj.v = 7; r = obj.v++; return r;",          7);
+    T_INT(lang, ev, "prop_suffix_inc_after",
+          "C { v; } obj = $C; obj.v = 7; obj.v++; return obj.v;",          8);
+    T_INT(lang, ev, "prop_suffix_dec_result",
+          "C { v; } obj = $C; obj.v = 7; r = obj.v--; return r;",          7);
+    T_INT(lang, ev, "prop_suffix_dec_after",
+          "C { v; } obj = $C; obj.v = 7; obj.v--; return obj.v;",          6);
+    /* arr[i]++ / arr[i]-- */
+    T_INT(lang, ev, "index_suffix_inc_result",
+          "a = [10, 20, 30]; r = a[1]++; return r;",                      20);
+    T_INT(lang, ev, "index_suffix_inc_after",
+          "a = [10, 20, 30]; a[1]++; return a[1];",                       21);
+    T_INT(lang, ev, "index_suffix_dec_result",
+          "a = [10, 20, 30]; r = a[0]--; return r;",                      10);
+    T_INT(lang, ev, "index_suffix_dec_after",
+          "a = [10, 20, 30]; a[0]--; return a[0];",                        9);
+
+    /* -------------------------------------------------
+     * 29d. Prefix ++/-- on global lvalues
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "global_prefix_inc",
+          "g = 5; r = ++g; return r;",                                      6);
+    T_INT(lang, ev, "global_prefix_inc_after",
+          "g = 5; ++g; return g;",                                          6);
+    T_INT(lang, ev, "global_prefix_dec",
+          "g = 5; r = --g; return r;",                                      4);
+    T_INT(lang, ev, "global_prefix_dec_after",
+          "g = 5; --g; return g;",                                          4);
 
     /* -------------------------------------------------
      * 30. Reactive programming: Watch / Unwatch
