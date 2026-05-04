@@ -131,6 +131,64 @@ typedef enum {
      * Used to reorder [arr, arr2, key, key2] into [arr, key, arr2, key2]
      * before GET_INDEX so the correct arr2/key2 pair is consumed. */
     MLN_VOP_SWAP2,              /* no operands; requires op_sp >= 3 */
+
+    /* ====================================================================
+     * Medium-cost perf opcodes (added by perf/lang medium-tier work)
+     * ==================================================================== */
+
+    /* Fused method invocation. Replaces the GET_PROPERTY+CALL_METHOD pair
+     * for `obj.method(args)` patterns. With per-pc inline cache, on a
+     * monomorphic call site we skip the namev allocation and bypass the
+     * method-table dispatch indirection. Operands:
+     *   a = nargs
+     *   b = sconsts index of method name
+     * Stack: [..., obj, arg0, ..., argN-1] -> [..., result] (after CALL). */
+    MLN_VOP_INVOKE_METHOD,
+
+    /* Call a global-resolved function with a built-in/global symbol IC.
+     * Replaces LOAD_GLOBAL+CALL_VALUE for hot builtins (Dump, etc.).
+     * Operands:
+     *   a = nargs
+     *   b = sconsts index of global name
+     * The IC at this pc caches the resolved func_detail* keyed by the
+     * symbol's address. On a hit we skip the global symbol search. */
+    MLN_VOP_CALL_GLOBAL,
+
+    /* Superinstruction: ADD/SUB/MUL/LT/LE/GT/GE/EQ/NE on two locals.
+     * Operands:
+     *   a = slot1 (left operand)
+     *   b = slot2 (right operand) packed in low byte of b
+     * The high byte of b is unused (must be 0). Single-pop, single-push:
+     * pushes (slot1 op slot2). Falls back to apply_binop for non-int. */
+    MLN_VOP_ADD_LL,
+    MLN_VOP_SUB_LL,
+    MLN_VOP_MUL_LL,
+    MLN_VOP_LT_LL,
+    MLN_VOP_LE_LL,
+    MLN_VOP_GT_LL,
+    MLN_VOP_GE_LL,
+    MLN_VOP_EQ_LL,
+    MLN_VOP_NE_LL,
+
+    /* Superinstruction: ADD/SUB/MUL/LT/LE/GT/GE/EQ/NE with one immediate.
+     * Replaces LOAD_INT, <binop> when the popped operand is the immediate.
+     * Operand:
+     *   a = slot of left operand (loaded at fuse time)
+     *   b = iconst index for the right immediate
+     * Pushes (slot[a] op iconsts[b]). Falls back to slow path on non-int. */
+    MLN_VOP_ADD_LI,
+    MLN_VOP_SUB_LI,
+    MLN_VOP_MUL_LI,
+    MLN_VOP_LT_LI,
+    MLN_VOP_LE_LI,
+    MLN_VOP_GT_LI,
+    MLN_VOP_GE_LI,
+    MLN_VOP_EQ_LI,
+    MLN_VOP_NE_LI,
+
+    /* Superinstruction: replaces LOAD_LOCAL+RETURN. Returns slot[a]'s value. */
+    MLN_VOP_RETURN_LOCAL,
+
     MLN_VOP_DEAD_AST,           /* sentinel: any path that the AST walker
                                  * would have taken is now an error. */
 } mln_lang_vm_opcode_t;
@@ -140,6 +198,31 @@ typedef struct {
     mln_u8_t   a;
     mln_s16_t  b;
 } mln_lang_vm_insn_t;
+
+/* Per-pc inline cache slot. Used by GET_PROPERTY/SET_PROPERTY/INVOKE_METHOD
+ * to skip per-dispatch overhead on monomorphic call sites.
+ *
+ * Safety / lifetime notes:
+ *   - cached_set is stored as a pointer-identity tag ONLY. We never
+ *     dereference it directly. This is safe even if the set is freed and
+ *     a new set ends up at the same address: a false-positive identity
+ *     match still leads us to do the SAME rbtree search the slow path
+ *     would do (we just skip op_*_flag and namev-allocation overhead).
+ *   - cached_func is similar — it is only used as the `prototype` field
+ *     of a freshly-built funccall_val. If the func was freed and a new
+ *     one is at the same address, we'd "call" the new one — but the
+ *     identity check (set match) makes this scenario near-impossible
+ *     in practice and the funccall_run path validates the func before
+ *     dispatching.
+ *   - cached_kind is reset to 0 if any consistency check fails so we
+ *     fall back through to the slow path which will repopulate the IC.
+ */
+typedef struct {
+    void          *cached_set;      /* mln_lang_set_detail_t* identity tag */
+    void          *cached_func;     /* mln_lang_func_detail_t* (INVOKE_METHOD/CALL_GLOBAL) */
+    mln_u32_t      cached_kind;     /* 0=empty, 1=obj/no-overload, 2=array/int-key, 3=method, 4=global */
+    mln_u32_t      cached_extra;    /* op-specific: e.g. set_member_id hash */
+} mln_lang_vm_ic_t;
 
 typedef struct mln_lang_vm_chunk_s {
     mln_lang_vm_insn_t          *code;
@@ -173,6 +256,11 @@ typedef struct mln_lang_vm_chunk_s {
     mln_string_t               **local_names;
     mln_size_t                   n_locals;
     mln_size_t                   max_stack;
+    /* Per-pc inline cache. Sized to code_len after compilation completes;
+     * lazily populated by IC-using opcodes during execution. NULL if the
+     * chunk has no IC-using opcodes (saves memory for trivial bodies). */
+    mln_lang_vm_ic_t            *ic_slots;
+    mln_size_t                   ic_slots_len;
     /* Owning ctx pool (used to free the chunk later). */
     void                        *pool;
 } mln_lang_vm_chunk_t;

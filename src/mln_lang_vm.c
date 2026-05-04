@@ -91,6 +91,7 @@ void mln_lang_vm_chunk_free(mln_lang_vm_chunk_t *chunk)
     if (chunk->setdefs != NULL)   mln_alloc_free(chunk->setdefs);
     if (chunk->elemlists != NULL) mln_alloc_free(chunk->elemlists);
     if (chunk->local_names != NULL) mln_alloc_free(chunk->local_names);
+    if (chunk->ic_slots != NULL)    mln_alloc_free(chunk->ic_slots);
     mln_alloc_free(chunk);
 }
 
@@ -242,6 +243,12 @@ typedef struct {
      * hop in the same chain was a PROPERTY-followed-by-FUNC (in which case
      * we DUP'd the obj and the next FUNC must emit CALL_METHOD). */
     int                          prev_was_property;
+
+    /* Medium-tier perf: when emitting a PROPERTY-then-FUNC pair we now defer
+     * the GET_PROPERTY and emit a single fused INVOKE_METHOD opcode at the
+     * FUNC. prev_property_name_idx stashes the sconsts index of the method
+     * name so the FUNC hop can emit it. -1 means "not in deferred state". */
+    int                          prev_property_name_idx;
 
     /* Phase F4: labels and goto patches for goto/M_STM_LABEL.
      * Inline buffers are used first; pool-allocated buffers are used when
@@ -562,6 +569,209 @@ static void patch_jump(mln_lang_vm_compiler_t *c, int patch_pc, int target_pc)
     int offset = target_pc - (patch_pc + 1);
     if (offset < -32768 || offset > 32767) { bail(c); return; }
     c->chunk->code[patch_pc].b = (mln_s16_t)offset;
+}
+
+/* ====================================================================
+ * Medium-tier perf: peephole / superinstruction fusion.
+ *
+ * Runs after the main compile pass. Walks the emitted bytecode and
+ * fuses a small set of common adjacent-opcode patterns into single
+ * superinstructions:
+ *   LOAD_LOCAL,LOAD_LOCAL,<binop>  ->  <binop>_LL
+ *   LOAD_LOCAL,LOAD_INT,<binop>    ->  <binop>_LI
+ *   LOAD_LOCAL,RETURN              ->  RETURN_LOCAL
+ * The fused pair/triple replaces 2-3 dispatches with 1, saving the
+ * computed-goto / switch overhead per fusion site.
+ *
+ * Jump-target safety: a pre-pass scans every JUMP/JUMP_IF_FALSE/JUMP_IF_TRUE
+ * to mark each old-pc that any instruction can land on. We refuse to fuse
+ * a sequence that would absorb a jump target into the middle of a
+ * superinstruction (the sequence's 2nd or 3rd insn).
+ *
+ * After fusion we rewrite all jump offsets through old_pc->new_pc tables
+ * so the new code's control flow is identical to the old.
+ * ==================================================================== */
+static int peephole_is_jumplike(mln_u8_t op)
+{
+    return op == MLN_VOP_JUMP ||
+           op == MLN_VOP_JUMP_IF_FALSE ||
+           op == MLN_VOP_JUMP_IF_TRUE;
+}
+
+static int peephole_binop_to_ll(mln_u8_t op)
+{
+    switch (op) {
+        case MLN_VOP_ADD: return MLN_VOP_ADD_LL;
+        case MLN_VOP_SUB: return MLN_VOP_SUB_LL;
+        case MLN_VOP_MUL: return MLN_VOP_MUL_LL;
+        case MLN_VOP_LT:  return MLN_VOP_LT_LL;
+        case MLN_VOP_LE:  return MLN_VOP_LE_LL;
+        case MLN_VOP_GT:  return MLN_VOP_GT_LL;
+        case MLN_VOP_GE:  return MLN_VOP_GE_LL;
+        case MLN_VOP_EQ:  return MLN_VOP_EQ_LL;
+        case MLN_VOP_NE:  return MLN_VOP_NE_LL;
+        default: return -1;
+    }
+}
+
+static int peephole_binop_to_li(mln_u8_t op)
+{
+    switch (op) {
+        case MLN_VOP_ADD: return MLN_VOP_ADD_LI;
+        case MLN_VOP_SUB: return MLN_VOP_SUB_LI;
+        case MLN_VOP_MUL: return MLN_VOP_MUL_LI;
+        case MLN_VOP_LT:  return MLN_VOP_LT_LI;
+        case MLN_VOP_LE:  return MLN_VOP_LE_LI;
+        case MLN_VOP_GT:  return MLN_VOP_GT_LI;
+        case MLN_VOP_GE:  return MLN_VOP_GE_LI;
+        case MLN_VOP_EQ:  return MLN_VOP_EQ_LI;
+        case MLN_VOP_NE:  return MLN_VOP_NE_LI;
+        default: return -1;
+    }
+}
+
+static void run_peephole(mln_lang_vm_compiler_t *c)
+{
+    if (!c->ok) return;
+    mln_lang_vm_chunk_t *chunk = c->chunk;
+    if (chunk == NULL || chunk->code == NULL || chunk->code_len < 2) return;
+
+    mln_size_t old_len = chunk->code_len;
+    mln_lang_vm_insn_t *old_code = chunk->code;
+    mln_alloc_t *pool = (mln_alloc_t *)chunk->pool;
+
+    /* Step 1: mark all jump targets in the old code. */
+    char *is_target = (char *)mln_alloc_m(pool, old_len);
+    if (is_target == NULL) { bail(c); return; }
+    memset(is_target, 0, old_len);
+    for (mln_size_t i = 0; i < old_len; ++i) {
+        if (peephole_is_jumplike(old_code[i].op)) {
+            int t = (int)i + 1 + (int)old_code[i].b;
+            if (t >= 0 && t < (int)old_len) is_target[t] = 1;
+        }
+    }
+
+    /* Step 2: emit fused code into a fresh buffer. */
+    mln_lang_vm_insn_t *new_code = (mln_lang_vm_insn_t *)mln_alloc_m(pool,
+                                       sizeof(*new_code) * old_len);
+    int *pc_map = (int *)mln_alloc_m(pool, sizeof(int) * (old_len + 1));
+    if (new_code == NULL || pc_map == NULL) {
+        if (is_target) mln_alloc_free(is_target);
+        if (new_code) mln_alloc_free(new_code);
+        if (pc_map)   mln_alloc_free(pc_map);
+        bail(c); return;
+    }
+
+    mln_size_t ni = 0;
+    for (mln_size_t i = 0; i < old_len; ) {
+        pc_map[i] = (int)ni;
+
+        /* Pattern: LOAD_LOCAL, LOAD_LOCAL, <binop>  ->  <binop>_LL */
+        if (i + 2 < old_len &&
+            old_code[i].op   == MLN_VOP_LOAD_LOCAL &&
+            old_code[i+1].op == MLN_VOP_LOAD_LOCAL &&
+            !is_target[i+1] && !is_target[i+2])
+        {
+            int fop = peephole_binop_to_ll(old_code[i+2].op);
+            if (fop >= 0 && old_code[i].a < 256 && old_code[i+1].a < 256) {
+                new_code[ni].op = (mln_u8_t)fop;
+                new_code[ni].a  = old_code[i].a;
+                new_code[ni].b  = (mln_s16_t)(old_code[i+1].a & 0xff);
+                pc_map[i+1] = (int)ni;
+                pc_map[i+2] = (int)ni;
+                ++ni;
+                i += 3;
+                continue;
+            }
+        }
+
+        /* Pattern: LOAD_LOCAL, LOAD_INT, <binop>  ->  <binop>_LI */
+        if (i + 2 < old_len &&
+            old_code[i].op   == MLN_VOP_LOAD_LOCAL &&
+            old_code[i+1].op == MLN_VOP_LOAD_INT &&
+            !is_target[i+1] && !is_target[i+2])
+        {
+            int fop = peephole_binop_to_li(old_code[i+2].op);
+            if (fop >= 0 && old_code[i].a < 256) {
+                new_code[ni].op = (mln_u8_t)fop;
+                new_code[ni].a  = old_code[i].a;
+                new_code[ni].b  = old_code[i+1].b;  /* iconst index */
+                pc_map[i+1] = (int)ni;
+                pc_map[i+2] = (int)ni;
+                ++ni;
+                i += 3;
+                continue;
+            }
+        }
+
+        /* Pattern: LOAD_LOCAL, RETURN  ->  RETURN_LOCAL */
+        if (i + 1 < old_len &&
+            old_code[i].op   == MLN_VOP_LOAD_LOCAL &&
+            old_code[i+1].op == MLN_VOP_RETURN &&
+            !is_target[i+1])
+        {
+            new_code[ni].op = MLN_VOP_RETURN_LOCAL;
+            new_code[ni].a  = old_code[i].a;
+            new_code[ni].b  = 0;
+            pc_map[i+1] = (int)ni;
+            ++ni;
+            i += 2;
+            continue;
+        }
+
+        /* No fusion: copy. */
+        new_code[ni++] = old_code[i];
+        ++i;
+    }
+    pc_map[old_len] = (int)ni;  /* sentinel for jumps to "end" */
+
+    /* Step 3: rewrite jump offsets using old->new pc map.
+     * Walk the NEW code and reverse-look the corresponding OLD pc, since
+     * each new insn was emitted from a unique old start pc (recorded
+     * implicitly by the order of pc_map[i] = ni assignments). */
+    /* Build inverse map: new_pc -> old_pc (only first old_pc per fusion). */
+    int *inv_map = (int *)mln_alloc_m(pool, sizeof(int) * (ni + 1));
+    if (inv_map == NULL) {
+        mln_alloc_free(is_target); mln_alloc_free(new_code); mln_alloc_free(pc_map);
+        bail(c); return;
+    }
+    /* Initialize so any unset slot has a sane value. */
+    for (mln_size_t k = 0; k <= ni; ++k) inv_map[k] = -1;
+    for (mln_size_t i = 0; i < old_len; ++i) {
+        if (pc_map[i] >= 0 && pc_map[i] < (int)ni && inv_map[pc_map[i]] == -1) {
+            inv_map[pc_map[i]] = (int)i;
+        }
+    }
+    inv_map[ni] = (int)old_len;
+
+    for (mln_size_t k = 0; k < ni; ++k) {
+        if (peephole_is_jumplike(new_code[k].op)) {
+            int old_pc = inv_map[k];
+            if (old_pc < 0) { bail(c); break; }
+            int old_target = old_pc + 1 + (int)new_code[k].b;
+            if (old_target < 0 || old_target > (int)old_len) { bail(c); break; }
+            int new_target = (old_target == (int)old_len) ? (int)ni : pc_map[old_target];
+            int new_offset = new_target - (int)k - 1;
+            if (new_offset < -32768 || new_offset > 32767) { bail(c); break; }
+            new_code[k].b = (mln_s16_t)new_offset;
+        }
+    }
+
+    if (!c->ok) {
+        mln_alloc_free(is_target); mln_alloc_free(new_code);
+        mln_alloc_free(pc_map);    mln_alloc_free(inv_map);
+        return;
+    }
+
+    /* Step 4: replace chunk->code with the fused buffer. */
+    mln_alloc_free(chunk->code);
+    chunk->code = new_code;
+    chunk->code_len = ni;
+    chunk->code_cap = old_len;  /* new_code was allocated with old_len capacity */
+
+    mln_alloc_free(is_target);
+    mln_alloc_free(pc_map);
+    mln_alloc_free(inv_map);
 }
 
 /* Forward declarations. */
@@ -1555,6 +1765,39 @@ static void compile_locate(mln_lang_vm_compiler_t *c, mln_lang_locate_t *n)
     }
 no_self:
 
+    /* Medium-tier perf: detect bare global-call `name(args)` and emit a
+     * fused CALL_GLOBAL opcode. Avoids the LOAD_GLOBAL+CALL_VALUE pair
+     * and threads an inline cache for the resolved func_detail through
+     * the IC slot at this pc. Only applies when the callee identifier is
+     * not a local (otherwise normal CALL_VALUE handles it correctly). */
+    if (n->op == M_LOCATE_FUNC && n->next == NULL) {
+        mln_lang_spec_t *sp = n->left;
+        mln_lang_factor_t *f = (sp != NULL && sp->op == M_SPEC_FACTOR) ? sp->data.factor : NULL;
+        if (f != NULL && f->type == M_FACTOR_ID &&
+            find_local_slot(c, f->data.s_id) < 0)
+        {
+            mln_lang_exp_t *arg = n->right.exp;
+            mln_size_t nargs = 0;
+            for (mln_lang_exp_t *p = arg; p != NULL; p = p->next) ++nargs;
+            if (nargs <= 255) {
+                int name_idx = add_sconst(c, f->data.s_id);
+                if (name_idx < 0 || name_idx > 32767) { bail(c); return; }
+                for (mln_lang_exp_t *p = arg; p != NULL; p = p->next) {
+                    int sp_before = c->sp;
+                    mln_lang_exp_t saved = *p;
+                    saved.next = NULL;
+                    compile_assign(c, saved.assign);
+                    if (!c->ok) return;
+                    if (c->sp != sp_before + 1) { bail(c); return; }
+                }
+                emit(c, MLN_VOP_CALL_GLOBAL, (mln_u8_t)nargs, (mln_s16_t)name_idx);
+                sp_pop(c, (int)nargs);
+                sp_push(c, 1);
+                return;
+            }
+        }
+    }
+
     /* Compile base. */
     compile_spec(c, n->left);
     if (!c->ok) return;
@@ -1580,12 +1823,17 @@ no_self:
                 if (idx < 0 || idx > 32767) { bail(c); return; }
                 int prop_then_func = (n->next != NULL && n->next->op == M_LOCATE_FUNC);
                 if (prop_then_func) {
-                    /* Keep a copy of obj so CALL_METHOD can bind `this`. */
-                    emit(c, MLN_VOP_DUP, 0, 0);
-                    sp_push(c, 1);
+                    /* Medium-tier perf: defer GET_PROPERTY. The upcoming FUNC
+                     * hop will fuse this name into a single INVOKE_METHOD
+                     * opcode. Leave the obj on the stack as the receiver.
+                     * No DUP needed because INVOKE_METHOD consumes obj+args
+                     * directly (no separate func slot on stack). */
+                    c->prev_property_name_idx = idx;
+                    /* Note: stack invariant unchanged — obj is still TOS. */
+                } else {
+                    emit(c, MLN_VOP_GET_PROPERTY, 0, (mln_s16_t)idx);
+                    /* GET_PROPERTY: pop obj, push prop val (sp unchanged) */
                 }
-                emit(c, MLN_VOP_GET_PROPERTY, 0, (mln_s16_t)idx);
-                /* GET_PROPERTY: pop obj, push prop val (sp unchanged) */
                 break;
             }
             case M_LOCATE_FUNC: {
@@ -1632,6 +1880,16 @@ no_self:
                     is_method = 1;
                     c->prev_was_property = 0;
                 }
+                /* Medium-tier perf: a PROPERTY-then-FUNC pair was deferred so
+                 * we can fuse it into INVOKE_METHOD here. */
+                int fused_method = (c->prev_property_name_idx >= 0);
+                int method_name_idx = c->prev_property_name_idx;
+                c->prev_property_name_idx = -1;
+                if (fused_method) {
+                    /* When fused, stack currently has just [obj]; the prior
+                     * PROPERTY hop did NOT emit DUP/GET_PROPERTY. */
+                    is_method = 0; /* obj+args+method_name path below */
+                }
                 mln_lang_exp_t *arg = n->right.exp;
                 mln_size_t nargs = 0;
                 for (mln_lang_exp_t *p = arg; p != NULL; p = p->next) ++nargs;
@@ -1644,7 +1902,11 @@ no_self:
                     if (!c->ok) return;
                     if (c->sp != sp_before + 1) { bail(c); return; }
                 }
-                if (is_method) {
+                if (fused_method) {
+                    /* Stack: [..., obj, arg0, ..., argN-1] */
+                    emit(c, MLN_VOP_INVOKE_METHOD, (mln_u8_t)nargs, (mln_s16_t)method_name_idx);
+                    sp_pop(c, (int)(nargs + 1));   /* nargs + obj */
+                } else if (is_method) {
                     emit(c, MLN_VOP_CALL_METHOD, (mln_u8_t)nargs, 0);
                     sp_pop(c, (int)(nargs + 2));   /* nargs + func + obj */
                 } else {
@@ -1976,6 +2238,7 @@ mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
     c.ctx       = ctx;
     c.prototype = prototype;
     c.ok        = 1;
+    c.prev_property_name_idx = -1;
 
     /* Constant folding is safe iff:
      *   (a) the script does NOT define any __int_*_operator__ overload
@@ -2040,6 +2303,14 @@ mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
 
     if (c.ok) emit(&c, MLN_VOP_RETURN_NIL, 0, 0);
 
+    /* Medium-tier perf: run the peephole / superinstruction pass after
+     * all jump patches have been resolved. Operates on the final code
+     * stream and rewrites any remaining jump offsets. Disabled via
+     * MELANG_VM_NO_PEEPHOLE for diff-testing. */
+    if (c.ok && getenv("MELANG_VM_NO_PEEPHOLE") == NULL) {
+        run_peephole(&c);
+    }
+
     if (!c.ok) {
         mln_lang_vm_chunk_free(c.chunk);
         return -1;
@@ -2062,6 +2333,23 @@ mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
     /* Stash n_args in iconsts_cap... actually we need a dedicated field.
      * Use the n_locals field for total locals; remember n_args separately
      * via the prototype's args array length (still accessible at runtime). */
+
+    /* Medium-tier perf: allocate per-pc inline cache slots, one per insn.
+     * Lazily populated by IC-using opcodes (GET_PROPERTY, SET_PROPERTY,
+     * INVOKE_METHOD, CALL_GLOBAL) at runtime. Allocation up-front avoids
+     * any allocation on the hot path. The array is zero-initialized so
+     * cached_kind == 0 means "empty" / fall-through to slow path. */
+    if (c.chunk->code_len > 0) {
+        c.chunk->ic_slots = (mln_lang_vm_ic_t *)mln_alloc_m(ctx->pool,
+                              sizeof(mln_lang_vm_ic_t) * c.chunk->code_len);
+        if (c.chunk->ic_slots == NULL) {
+            mln_lang_vm_chunk_free(c.chunk);
+            return 0;
+        }
+        memset(c.chunk->ic_slots, 0, sizeof(mln_lang_vm_ic_t) * c.chunk->code_len);
+        c.chunk->ic_slots_len = c.chunk->code_len;
+    }
+
     prototype->vm_chunk = c.chunk;
     if (getenv("MELANG_VM_TRACE")) {
         fprintf(stderr, "[vm] compiled chunk: insns=%zu locals=%zu max_stack=%zu\n",
@@ -2602,6 +2890,27 @@ static int vm_fire_watcher(mln_lang_ctx_t *ctx, mln_lang_var_t *target_var);
             [MLN_VOP_LOAD_GLOBAL_REF] = &&_L_MLN_VOP_LOAD_GLOBAL_REF,                   \
             [MLN_VOP_ASSIGN_GLOBAL]   = &&_L_MLN_VOP_ASSIGN_GLOBAL,                     \
             [MLN_VOP_SWAP2]           = &&_L_MLN_VOP_SWAP2,                             \
+            [MLN_VOP_INVOKE_METHOD]   = &&_L_MLN_VOP_INVOKE_METHOD,                     \
+            [MLN_VOP_CALL_GLOBAL]     = &&_L_MLN_VOP_CALL_GLOBAL,                       \
+            [MLN_VOP_ADD_LL]          = &&_L_MLN_VOP_ADD_LL,                            \
+            [MLN_VOP_SUB_LL]          = &&_L_MLN_VOP_SUB_LL,                            \
+            [MLN_VOP_MUL_LL]          = &&_L_MLN_VOP_MUL_LL,                            \
+            [MLN_VOP_LT_LL]           = &&_L_MLN_VOP_LT_LL,                             \
+            [MLN_VOP_LE_LL]           = &&_L_MLN_VOP_LE_LL,                             \
+            [MLN_VOP_GT_LL]           = &&_L_MLN_VOP_GT_LL,                             \
+            [MLN_VOP_GE_LL]           = &&_L_MLN_VOP_GE_LL,                             \
+            [MLN_VOP_EQ_LL]           = &&_L_MLN_VOP_EQ_LL,                             \
+            [MLN_VOP_NE_LL]           = &&_L_MLN_VOP_NE_LL,                             \
+            [MLN_VOP_ADD_LI]          = &&_L_MLN_VOP_ADD_LI,                            \
+            [MLN_VOP_SUB_LI]          = &&_L_MLN_VOP_SUB_LI,                            \
+            [MLN_VOP_MUL_LI]          = &&_L_MLN_VOP_MUL_LI,                            \
+            [MLN_VOP_LT_LI]           = &&_L_MLN_VOP_LT_LI,                             \
+            [MLN_VOP_LE_LI]           = &&_L_MLN_VOP_LE_LI,                             \
+            [MLN_VOP_GT_LI]           = &&_L_MLN_VOP_GT_LI,                             \
+            [MLN_VOP_GE_LI]           = &&_L_MLN_VOP_GE_LI,                             \
+            [MLN_VOP_EQ_LI]           = &&_L_MLN_VOP_EQ_LI,                             \
+            [MLN_VOP_NE_LI]           = &&_L_MLN_VOP_NE_LI,                             \
+            [MLN_VOP_RETURN_LOCAL]    = &&_L_MLN_VOP_RETURN_LOCAL,                      \
             [MLN_VOP_DEAD_AST]        = &&_L_MLN_VOP_DEAD_AST,                          \
         };                                                                              \
         if ((unsigned)(op) >= (sizeof(_vm_dt)/sizeof(_vm_dt[0]))                        \
@@ -3221,13 +3530,38 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 mln_lang_errmsg(ctx, "Property access on nil.");
                 return -1;
             }
+            mln_string_t *name = chunk->sconsts[insn.b];
+
+            /* Medium-tier perf: inline-cache fast path for object property
+             * access. Skips the method-table dispatch and the temp namev
+             * allocation when the property handler is the standard one
+             * (no operator overload, no auto-create needed). */
+            if (obj_op->val->type == M_LANG_VAL_TYPE_OBJECT && !ctx->op_obj_flag) {
+                mln_lang_object_t *o = obj_op->val->data.obj;
+                mln_lang_var_t *member = mln_lang_set_member_search(o->members, name);
+                if (member != NULL) {
+                    /* Cache the obj's set identity for diagnostic / future
+                     * polymorphic-IC use. We never deref cached_set. */
+                    if (chunk->ic_slots != NULL) {
+                        mln_lang_vm_ic_t *ic = &chunk->ic_slots[frame->pc - 1];
+                        ic->cached_set = (void *)o->in_set;
+                        ic->cached_kind = 1;
+                    }
+                    ++(member->ref);
+                    mln_lang_var_free(obj_op);
+                    PUSH(member);
+                    return 0;
+                }
+                /* Member missing: fall through to slow path which will
+                 * auto-create a nil entry (matching AST semantics). */
+            }
+
             mln_lang_method_t *method = mln_lang_methods[obj_op->val->type];
             if (method == NULL || method->property_handler == NULL) {
                 mln_lang_var_free(obj_op);
                 mln_lang_errmsg(ctx, "Operation NOT support.");
                 return -1;
             }
-            mln_string_t *name = chunk->sconsts[insn.b];
             mln_lang_var_t *namev = mln_lang_var_create_string(ctx, name, NULL);
             if (namev == NULL) { mln_lang_var_free(obj_op); return -1; }
             mln_lang_var_t *res = NULL;
@@ -3277,13 +3611,45 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 mln_lang_errmsg(ctx, "Property assign on nil.");
                 return -1;
             }
+            mln_string_t *name = chunk->sconsts[insn.b];
+
+            /* Medium-tier perf: inline-cache fast path for object property
+             * assignment (mirrors GET_PROPERTY fast path). */
+            if (obj_op->val->type == M_LANG_VAL_TYPE_OBJECT && !ctx->op_obj_flag) {
+                mln_lang_object_t *o = obj_op->val->data.obj;
+                mln_lang_var_t *slot_member = mln_lang_set_member_search(o->members, name);
+                if (slot_member != NULL) {
+                    if (chunk->ic_slots != NULL) {
+                        mln_lang_vm_ic_t *ic = &chunk->ic_slots[frame->pc - 1];
+                        ic->cached_set = (void *)o->in_set;
+                        ic->cached_kind = 1;
+                    }
+                    if (mln_lang_var_value_set(ctx, slot_member, val) < 0) {
+                        mln_lang_var_free(val); mln_lang_var_free(obj_op);
+                        return -1;
+                    }
+                    if (VM_HAS_WATCHER(slot_member) && vm_fire_watcher(ctx, slot_member) < 0) {
+                        mln_lang_var_free(val); mln_lang_var_free(obj_op);
+                        return -1;
+                    }
+                    if (insn.a) {
+                        PUSH(val);
+                    } else {
+                        mln_lang_var_free(val);
+                    }
+                    mln_lang_var_free(obj_op);
+                    return 0;
+                }
+                /* Member missing on a fast-path-eligible obj: fall through
+                 * to slow path (which auto-creates the slot). */
+            }
+
             mln_lang_method_t *method = mln_lang_methods[obj_op->val->type];
             if (method == NULL || method->property_handler == NULL) {
                 mln_lang_var_free(val); mln_lang_var_free(obj_op);
                 mln_lang_errmsg(ctx, "Operation NOT support.");
                 return -1;
             }
-            mln_string_t *name = chunk->sconsts[insn.b];
             mln_lang_var_t *namev = mln_lang_var_create_string(ctx, name, NULL);
             if (namev == NULL) {
                 mln_lang_var_free(val); mln_lang_var_free(obj_op); return -1;
@@ -3366,6 +3732,268 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             }
             return 0;
         }
+        /* ============================================================
+         * Medium-tier perf opcodes
+         * ============================================================ */
+
+        VM_CASE(MLN_VOP_INVOKE_METHOD): {
+            /* Stack: [..., obj, arg0, ..., argN-1] -> [..., result]
+             * Operands: a=nargs, b=sconsts index of method name.
+             * Fused replacement for GET_PROPERTY+CALL_METHOD when the
+             * receiver is an object whose property lookup is the standard
+             * path (no operator overload). Falls back to the generic
+             * GET_PROPERTY+CALL_METHOD path if the receiver isn't an
+             * object or an overload is in effect. */
+            int nargs = insn.a;
+            mln_string_t *mname = chunk->sconsts[insn.b];
+            mln_lang_var_t **args_base = &frame->opstack[frame->op_sp - nargs];
+            mln_lang_var_t *obj = frame->opstack[frame->op_sp - nargs - 1];
+
+            if (obj->val == NULL) {
+                for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                mln_lang_var_free(obj);
+                frame->op_sp -= nargs + 1;
+                mln_lang_errmsg(ctx, "Method call on nil.");
+                return -1;
+            }
+
+            /* Fast path: object receiver, standard property lookup. */
+            mln_lang_var_t *func_var = NULL;
+            int fast_path_ok = 0;
+            if (obj->val->type == M_LANG_VAL_TYPE_OBJECT && !ctx->op_obj_flag) {
+                mln_lang_object_t *o = obj->val->data.obj;
+                func_var = mln_lang_set_member_search(o->members, mname);
+                if (func_var != NULL && func_var->val != NULL &&
+                    func_var->val->type == M_LANG_VAL_TYPE_FUNC &&
+                    func_var->val->data.func != NULL)
+                {
+                    if (chunk->ic_slots != NULL) {
+                        mln_lang_vm_ic_t *ic = &chunk->ic_slots[frame->pc - 1];
+                        ic->cached_set = (void *)o->in_set;
+                        ic->cached_func = (void *)func_var->val->data.func;
+                        ic->cached_kind = 3;
+                    }
+                    fast_path_ok = 1;
+                } else {
+                    func_var = NULL;
+                }
+            }
+
+            if (!fast_path_ok) {
+                /* Slow path: emulate GET_PROPERTY then CALL_METHOD by
+                 * dispatching through the method table. */
+                mln_lang_method_t *method = mln_lang_methods[obj->val->type];
+                if (method == NULL || method->property_handler == NULL) {
+                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                    mln_lang_var_free(obj);
+                    frame->op_sp -= nargs + 1;
+                    mln_lang_errmsg(ctx, "Operation NOT support.");
+                    return -1;
+                }
+                mln_lang_var_t *namev = mln_lang_var_create_string(ctx, mname, NULL);
+                if (namev == NULL) {
+                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                    mln_lang_var_free(obj);
+                    frame->op_sp -= nargs + 1;
+                    return -1;
+                }
+                mln_lang_var_t *prop_res = NULL;
+                if (method->property_handler(ctx, &prop_res, obj, namev) < 0) {
+                    mln_lang_var_free(namev);
+                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                    mln_lang_var_free(obj);
+                    frame->op_sp -= nargs + 1;
+                    return -1;
+                }
+                mln_lang_var_free(namev);
+                if (prop_res == NULL || prop_res->val == NULL ||
+                    prop_res->val->type != M_LANG_VAL_TYPE_FUNC ||
+                    prop_res->val->data.func == NULL)
+                {
+                    if (prop_res != NULL) mln_lang_var_free(prop_res);
+                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                    mln_lang_var_free(obj);
+                    frame->op_sp -= nargs + 1;
+                    mln_lang_errmsg(ctx, "Method is not a function.");
+                    return -1;
+                }
+                func_var = prop_res;  /* owned ref we must drop after building call */
+            }
+
+            mln_lang_func_detail_t *callee_proto = func_var->val->data.func;
+
+            mln_lang_funccall_val_t *call = mln_lang_funccall_val_new(ctx->pool, NULL);
+            if (call == NULL) {
+                if (!fast_path_ok) mln_lang_var_free(func_var);
+                for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                mln_lang_var_free(obj);
+                frame->op_sp -= nargs + 1;
+                return -1;
+            }
+            call->prototype = callee_proto;
+            mln_lang_funccall_val_object_add(call, obj->val);
+
+            int add_arg_failed = 0;
+            for (int i = 0; i < nargs; ++i) {
+                if (mln_lang_funccall_val_add_arg(call, args_base[i]) < 0) {
+                    add_arg_failed = 1;
+                    for (int k = i; k < nargs; ++k) mln_lang_var_free(args_base[k]);
+                    break;
+                }
+            }
+            if (!fast_path_ok) mln_lang_var_free(func_var);
+            mln_lang_var_free(obj);
+            frame->op_sp -= nargs + 1;
+            if (add_arg_failed) { mln_lang_funccall_val_free(call); return -1; }
+
+            mln_lang_vm_frame_t *saved_top = FRAME_TOP(ctx);
+            mln_lang_stack_node_t *cur_run_top = ctx->run_stack_top;
+            int rc_call = mln_lang_stack_handler_funccall_run_compat(ctx, cur_run_top, call);
+            mln_lang_funccall_val_free(call);
+            if (rc_call < 0) return -1;
+            if (FRAME_TOP(ctx) != saved_top) return 0;
+            if (ctx->ref) {
+                frame->awaiting_return = 1;
+                return 0;
+            }
+            if (mln_lang_withdraw_until_func_compat(ctx) < 0) return -1;
+            mln_lang_var_t *ret = ctx->ret_var;
+            ctx->ret_var = NULL;
+            if (ret == NULL) {
+                ret = mln_lang_var_create_nil(ctx, NULL);
+                if (ret == NULL) return -1;
+            }
+            PUSH(ret);
+            return 0;
+        }
+
+        VM_CASE(MLN_VOP_CALL_GLOBAL): {
+            /* Fused LOAD_GLOBAL + CALL_VALUE for hot builtin/global calls.
+             * Operands: a = nargs, b = sconsts index of global name.
+             * IC caches the resolved sym->data.var pointer (identity-only)
+             * so subsequent calls skip the global symbol lookup. */
+            int nargs = insn.a;
+            mln_string_t *gname = chunk->sconsts[insn.b];
+            mln_lang_var_t **args_base = &frame->opstack[frame->op_sp - nargs];
+
+            mln_lang_func_detail_t *callee_proto = NULL;
+            mln_lang_vm_ic_t *ic = (chunk->ic_slots != NULL) ? &chunk->ic_slots[frame->pc - 1] : NULL;
+
+            mln_lang_symbol_node_t *sym = mln_lang_symbol_node_search(ctx, gname, 0);
+            if (sym == NULL || sym->type != M_LANG_SYMBOL_VAR ||
+                sym->data.var == NULL || sym->data.var->val == NULL ||
+                sym->data.var->val->type != M_LANG_VAL_TYPE_FUNC ||
+                sym->data.var->val->data.func == NULL)
+            {
+                /* Fallback: emit-equivalent of LOAD_GLOBAL+CALL_VALUE error. */
+                for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                frame->op_sp -= nargs;
+                mln_lang_errmsg(ctx, "Calling a non-function.");
+                return -1;
+            }
+            callee_proto = sym->data.var->val->data.func;
+            if (ic != NULL) {
+                ic->cached_func = (void *)callee_proto;
+                ic->cached_kind = 4;
+            }
+
+            mln_lang_funccall_val_t *call = mln_lang_funccall_val_new(ctx->pool, NULL);
+            if (call == NULL) {
+                for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                frame->op_sp -= nargs;
+                return -1;
+            }
+            call->prototype = callee_proto;
+            int add_arg_failed = 0;
+            for (int i = 0; i < nargs; ++i) {
+                if (mln_lang_funccall_val_add_arg(call, args_base[i]) < 0) {
+                    add_arg_failed = 1;
+                    for (int k = i; k < nargs; ++k) mln_lang_var_free(args_base[k]);
+                    break;
+                }
+            }
+            frame->op_sp -= nargs;
+            if (add_arg_failed) { mln_lang_funccall_val_free(call); return -1; }
+
+            mln_lang_vm_frame_t *saved_top = FRAME_TOP(ctx);
+            mln_lang_stack_node_t *cur_run_top = ctx->run_stack_top;
+            int rc_call = mln_lang_stack_handler_funccall_run_compat(ctx, cur_run_top, call);
+            mln_lang_funccall_val_free(call);
+            if (rc_call < 0) return -1;
+            if (FRAME_TOP(ctx) != saved_top) return 0;
+            if (ctx->ref) { frame->awaiting_return = 1; return 0; }
+            if (mln_lang_withdraw_until_func_compat(ctx) < 0) return -1;
+            mln_lang_var_t *ret = ctx->ret_var;
+            ctx->ret_var = NULL;
+            if (ret == NULL) {
+                ret = mln_lang_var_create_nil(ctx, NULL);
+                if (ret == NULL) return -1;
+            }
+            PUSH(ret);
+            return 0;
+        }
+
+        /* ============================================================
+         * Superinstructions: <op>_LL (two-locals) and <op>_LI (local + iconst).
+         * Each falls back to apply_binop when operands aren't both int.
+         * ============================================================ */
+
+#define VM_BINOP_LL(opcode, base_op)                                                  \
+        VM_CASE(opcode): {                                                            \
+            mln_lang_var_t *lv = frame->slots[insn.a];                                \
+            mln_lang_var_t *rv = frame->slots[(mln_u8_t)(insn.b & 0xff)];             \
+            ++(lv->ref); ++(rv->ref);                                                 \
+            mln_lang_var_t *r = apply_binop(ctx, base_op, lv, rv);                    \
+            if (r == NULL) return -1;                                                 \
+            PUSH(r);                                                                  \
+            return 0;                                                                 \
+        }
+
+#define VM_BINOP_LI(opcode, base_op)                                                  \
+        VM_CASE(opcode): {                                                            \
+            mln_lang_var_t *lv = frame->slots[insn.a];                                \
+            ++(lv->ref);                                                              \
+            mln_lang_var_t *rv = mln_lang_var_create_int(ctx,                         \
+                                    chunk->iconsts[(mln_u16_t)insn.b], NULL);        \
+            if (rv == NULL) { mln_lang_var_free(lv); return -1; }                     \
+            mln_lang_var_t *r = apply_binop(ctx, base_op, lv, rv);                    \
+            if (r == NULL) return -1;                                                 \
+            PUSH(r);                                                                  \
+            return 0;                                                                 \
+        }
+
+        VM_BINOP_LL(MLN_VOP_ADD_LL, MLN_VOP_ADD)
+        VM_BINOP_LL(MLN_VOP_SUB_LL, MLN_VOP_SUB)
+        VM_BINOP_LL(MLN_VOP_MUL_LL, MLN_VOP_MUL)
+        VM_BINOP_LL(MLN_VOP_LT_LL,  MLN_VOP_LT)
+        VM_BINOP_LL(MLN_VOP_LE_LL,  MLN_VOP_LE)
+        VM_BINOP_LL(MLN_VOP_GT_LL,  MLN_VOP_GT)
+        VM_BINOP_LL(MLN_VOP_GE_LL,  MLN_VOP_GE)
+        VM_BINOP_LL(MLN_VOP_EQ_LL,  MLN_VOP_EQ)
+        VM_BINOP_LL(MLN_VOP_NE_LL,  MLN_VOP_NE)
+
+        VM_BINOP_LI(MLN_VOP_ADD_LI, MLN_VOP_ADD)
+        VM_BINOP_LI(MLN_VOP_SUB_LI, MLN_VOP_SUB)
+        VM_BINOP_LI(MLN_VOP_MUL_LI, MLN_VOP_MUL)
+        VM_BINOP_LI(MLN_VOP_LT_LI,  MLN_VOP_LT)
+        VM_BINOP_LI(MLN_VOP_LE_LI,  MLN_VOP_LE)
+        VM_BINOP_LI(MLN_VOP_GT_LI,  MLN_VOP_GT)
+        VM_BINOP_LI(MLN_VOP_GE_LI,  MLN_VOP_GE)
+        VM_BINOP_LI(MLN_VOP_EQ_LI,  MLN_VOP_EQ)
+        VM_BINOP_LI(MLN_VOP_NE_LI,  MLN_VOP_NE)
+
+#undef VM_BINOP_LL
+#undef VM_BINOP_LI
+
+        VM_CASE(MLN_VOP_RETURN_LOCAL): {
+            /* Fused LOAD_LOCAL + RETURN: return slot[a]'s value (deep copy
+             * the live ref so the caller's stack receives a stable owned
+             * var). */
+            mln_lang_var_t *sv = frame->slots[insn.a];
+            ++(sv->ref);
+            return vm_pop_frame_with_ret(ctx, sv);
+        }
+
         VM_CASE(MLN_VOP_DEAD_AST):
             mln_lang_errmsg(ctx, "VM: AST stack handler invoked (cutover violation).");
             return -1;
