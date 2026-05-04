@@ -258,11 +258,15 @@ struct mln_lang_ctx_s {
     mln_u32_t                        op_str_flag:1;
     mln_u32_t                        quit:1;
     /* Phase F: top-level cutover. vm_top_attempted is set the first time
-     * mln_lang_run_handler sees this ctx — the handler tries to compile
-     * the top-level stm chain to bytecode and run it on the VM, falling
-     * back to the AST stack walker if compilation fails. */
+     * mln_lang_run_handler sees this ctx — the handler compiles the
+     * top-level stm chain to bytecode and runs it on the VM. */
     mln_u32_t                        vm_top_attempted:1;
-    mln_u32_t                        padding:5;
+    /* Set when a function body could not be compiled by the VM (e.g. too
+     * many locals or loops).  While set, all EXTERNAL function calls use
+     * the AST stack-walker as a fallback so that the outer VM can resume
+     * via the awaiting_return path once the AST run-stack drains. */
+    mln_u32_t                        in_ast_fallback:1;
+    mln_u32_t                        padding:4;
     /* Phase F3: heap-allocated stack of mln_lang_vm_frame_t. The VM is
      * iterative — every opcode runs against ctx->vm_frame_top, function
      * calls push frames, returns pop them. mln_lang_vm_step yields back

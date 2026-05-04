@@ -3524,6 +3524,16 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 if (FRAME_TOP(ctx) != saved_top) {
                     return 0;
                 }
+                if (ctx->run_stack_top != cur_run_top) {
+                    /* AST fallback: funccall_run pushed an AST stm node
+                     * because the function body could not be compiled.
+                     * Bump ctx->ref so vm_step stops after this dispatch_one
+                     * returns (preventing immediate awaiting_return processing
+                     * before the event loop has drained the run-stack). */
+                    ctx->ref++;
+                    frame->awaiting_return = 1;
+                    return 0;
+                }
                 if (ctx->ref) {
                     frame->awaiting_return = 1;
                     return 0;
@@ -3656,6 +3666,15 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             if (FRAME_TOP(ctx) != saved_top) {
                 /* New VM frame pushed. Its RETURN will push ret to our
                  * opstack. Nothing more to do this iteration. */
+                return 0;
+            }
+            if (ctx->run_stack_top != cur_run_top) {
+                /* AST fallback: the function body could not be compiled;
+                 * funccall_run pushed an AST stm onto the run-stack.
+                 * Bump ctx->ref to suspend vm_step so the event loop can
+                 * drain the run-stack before we process awaiting_return. */
+                ctx->ref++;
+                frame->awaiting_return = 1;
                 return 0;
             }
             /* If the INTERNAL function suspended via mln_lang_ctx_suspend,
@@ -4208,6 +4227,11 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_funccall_val_free(call);
             if (rc_call < 0) return -1;
             if (FRAME_TOP(ctx) != saved_top) return 0;
+            if (ctx->run_stack_top != cur_run_top) {
+                ctx->ref++;
+                frame->awaiting_return = 1;
+                return 0;
+            }
             if (ctx->ref) {
                 frame->awaiting_return = 1;
                 return 0;
@@ -4284,6 +4308,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_funccall_val_free(call);
             if (rc_call < 0) return -1;
             if (FRAME_TOP(ctx) != saved_top) return 0;
+            if (ctx->run_stack_top != cur_run_top) { ctx->ref++; frame->awaiting_return = 1; return 0; }
             if (ctx->ref) { frame->awaiting_return = 1; return 0; }
             if (mln_lang_withdraw_until_func_compat(ctx) < 0) return -1;
             mln_lang_var_t *ret = ctx->ret_var;

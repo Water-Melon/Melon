@@ -93,7 +93,11 @@ static void test_return_handler(mln_lang_ctx_t *ctx)
 
     switch (tc->etype) {
         case EXPECT_NONE:
-            ok = 1;
+            /* Script should complete without error: ctx->ret_var is set
+             * to nil (at minimum) for any clean exit, and NULL only when
+             * the context was terminated by an error before it could
+             * return. */
+            ok = (rv != NULL);
             break;
         case EXPECT_INT:
             ok = (rv != NULL && rv->val != NULL &&
@@ -1333,7 +1337,7 @@ int main(void)
     /* i) Reference parameters (&x) — LOAD_LOCAL_REF must still construct
      *    a VAR_REFER, even though plain LOAD_LOCAL pushes a borrow. */
     T_INT(lang, ev, "tv_ref_param",
-          "@bump(&v) { v = v + 1; } @F() { x=5; bump(x); return x; } return F();",
+          "@bump(&v) { v = v + 1; } @F() { x=5; bump(&x); return x; } return F();",
           6);
 
     /* j) Mixed-type arithmetic (slow path) — int+real should fall
@@ -1504,6 +1508,25 @@ int main(void)
           "@C(n) { return B(n) * 2; } "
           "@F() { return C(3); } return F();",
           28);  /* C(3) = B(3)*2 = (A(3)+10)*2 = (4+10)*2 = 28 */
+
+    /* dd) AST fallback — a function body that exceeds the VM compiler's
+     *     loop-nesting limit (MLN_VM_MAX_LOOPS=16) must fall back to the
+     *     AST stack-walker transparently and still return the correct value.
+     *     17 nested while(1){...break} loops trigger vm_state==-1. */
+    T_INT(lang, ev, "tv_ast_fallback_deep_loops",
+          "@F() {"
+          "  while(1){while(1){while(1){while(1){while(1){"
+          "  while(1){while(1){while(1){while(1){while(1){"
+          "  while(1){while(1){while(1){while(1){while(1){"
+          "  while(1){while(1){return 99;}"
+          "  break;}break;}break;}break;}break;}"
+          "  break;}break;}break;}break;}break;}"
+          "  break;}break;}break;}break;}break;}"
+          "  break;}"
+          "  return 0;"
+          "}"
+          "return F();",
+          99);
 
     /* -------------------------------------------------
      * Report

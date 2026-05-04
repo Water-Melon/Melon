@@ -891,6 +891,32 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                     mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
                 }
             }
+            /* When a CALL opcode triggered an AST fallback (a function
+             * body that the VM compiler could not compile), the run-stack
+             * now contains the fallback body's AST nodes and the calling
+             * VM frame is sitting with awaiting_return=1.  ctx->ref was
+             * incremented by the CALL handler so that vm_step stopped
+             * after the CALL returned (preventing the immediate
+             * awaiting_return processing before the AST has run).
+             * Drain the run-stack here, then decrement ctx->ref so that
+             * vm_step can process awaiting_return on the next dispatch. */
+            if (ctx->in_ast_fallback) {
+                for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
+                    if ((node = mln_lang_stack_top(ctx)) == NULL) {
+                        /* Run-stack empty: AST fallback body finished.
+                         * Release the suspension hold and clear the flag
+                         * so the next vm_step sees awaiting_return=1 and
+                         * picks up ctx->ret_var. */
+                        ctx->in_ast_fallback = 0;
+                        ctx->ref--;
+                        break;
+                    }
+                    mln_lang_stack_map[node->type](ctx);
+                    if (ctx->ref > 1) goto out_after_vm_slice; /* inner suspend */
+                    if (ctx->quit) goto quit;
+                }
+                goto out_after_vm_slice; /* yield (ref==0) or still running (ref==1) */
+            }
             int step_rc = mln_lang_vm_step(ctx, M_LANG_DEFAULT_STEP);
             if (step_rc < 0) {
                 ctx->quit = 1;
@@ -1135,6 +1161,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     /* Phase F VM fields — must be explicit-zero because ctx is pool-allocated
      * (mln_alloc_m, not calloc) and pool memory is not zero-initialised. */
     ctx->vm_top_attempted = 0;
+    ctx->in_ast_fallback = 0;
     ctx->vm_frame_top = NULL;
 
     gcattr.pool = ctx->pool;
@@ -6155,8 +6182,13 @@ mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *
              * onto ctx->vm_frame_top and return; the caller (a CALL
              * opcode in vm_step or vm_run) detects the new top and
              * defers post-processing until the frame's RETURN runs. */
-            if (getenv("MELANG_VM_OFF") != NULL) {
-                /* Diagnostic AST fallback. */
+            /* When MELANG_VM_OFF is set (diagnostics), or when a prior
+             * compilation failure activated the AST fallback for this
+             * context (in_ast_fallback), all EXTERNAL functions use the
+             * AST stack-walker so that sub-calls from an AST-fallback
+             * body are also executed on the AST path (maintaining
+             * correct run-stack ordering). */
+            if (getenv("MELANG_VM_OFF") != NULL || ctx->in_ast_fallback) {
                 scope->entry = prototype->data.stm;
                 if ((node = mln_lang_stack_push(ctx, M_LSNT_STM, prototype->data.stm)) == NULL) {
                     __mln_lang_errmsg(ctx, "Stack is full.");
@@ -6177,8 +6209,18 @@ mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *
                 }
                 return 0;
             }
-            __mln_lang_errmsg(ctx, "VM: function body cannot be compiled (internal error).");
-            return -1;
+            /* vm_state == -1: compilation failed (e.g. function body
+             * exceeds compiler limits such as loop nesting depth or
+             * total instruction count).  Fall back to the AST
+             * stack-walker for this function and all functions it calls,
+             * then resume the VM once the AST run-stack drains. */
+            ctx->in_ast_fallback = 1;
+            scope->entry = prototype->data.stm;
+            if ((node = mln_lang_stack_push(ctx, M_LSNT_STM, prototype->data.stm)) == NULL) {
+                __mln_lang_errmsg(ctx, "Stack is full.");
+                return -1;
+            }
+            return 0;
         }
     }
     return 0;
