@@ -673,7 +673,9 @@ static void run_peephole(mln_lang_vm_compiler_t *c)
             !is_target[i+1] && !is_target[i+2])
         {
             int fop = peephole_binop_to_ll(old_code[i+2].op);
-            if (fop >= 0 && old_code[i].a < 256 && old_code[i+1].a < 256) {
+            /* Slot indices are mln_u8_t so they always fit in a u8 field
+             * — no need to range-check (clang flags it as tautological). */
+            if (fop >= 0) {
                 new_code[ni].op = (mln_u8_t)fop;
                 new_code[ni].a  = old_code[i].a;
                 new_code[ni].b  = (mln_s16_t)(old_code[i+1].a & 0xff);
@@ -692,7 +694,7 @@ static void run_peephole(mln_lang_vm_compiler_t *c)
             !is_target[i+1] && !is_target[i+2])
         {
             int fop = peephole_binop_to_li(old_code[i+2].op);
-            if (fop >= 0 && old_code[i].a < 256) {
+            if (fop >= 0) {
                 new_code[ni].op = (mln_u8_t)fop;
                 new_code[ni].a  = old_code[i].a;
                 new_code[ni].b  = old_code[i+1].b;  /* iconst index */
