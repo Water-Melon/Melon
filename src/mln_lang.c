@@ -912,7 +912,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                         break;
                     }
                     mln_lang_stack_map[node->type](ctx);
-                    if (ctx->ref > 1) goto out_after_vm_slice; /* inner suspend */
+                    if (ctx->ref > 1) goto out_after_vm_slice; /* an INTERNAL async call suspended ctx inside the AST body */
                     if (ctx->quit) goto quit;
                 }
                 goto out_after_vm_slice; /* yield (ref==0) or still running (ref==1) */

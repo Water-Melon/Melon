@@ -4308,7 +4308,11 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_funccall_val_free(call);
             if (rc_call < 0) return -1;
             if (FRAME_TOP(ctx) != saved_top) return 0;
-            if (ctx->run_stack_top != cur_run_top) { ctx->ref++; frame->awaiting_return = 1; return 0; }
+            if (ctx->run_stack_top != cur_run_top) {
+                ctx->ref++;
+                frame->awaiting_return = 1;
+                return 0;
+            }
             if (ctx->ref) { frame->awaiting_return = 1; return 0; }
             if (mln_lang_withdraw_until_func_compat(ctx) < 0) return -1;
             mln_lang_var_t *ret = ctx->ret_var;
