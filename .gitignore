@@ -8,3 +8,32 @@ conf/melon.conf
 bazel-*
 MODULE.bazel*
 *.o
+
+# macOS finder metadata
+.DS_Store
+**/.DS_Store
+
+# Local feature-test stubs emitted by configure (deleted on most boxes,
+# but they survive on some bind-mounted filesystems where unlink is
+# disabled — gitignore so they never pollute git status).
+constructor_test
+constructor_test.c
+.path_generator.c
+path_generator
+ev_test
+ev_test.c
+mmap_test
+mmap_test.c
+sendfile_test
+sendfile_test.c
+unix98_test
+unix98_test.c
+writev_test
+writev_test.c
+.xcode
+.xcode.c
+
+# Standalone benchmark / experiment artefacts (not source-controlled).
+a
+test_event
+bench_kqueue.sh
