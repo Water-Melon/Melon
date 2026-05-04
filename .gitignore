@@ -37,3 +37,9 @@ writev_test.c
 a
 test_event
 bench_kqueue.sh
+
+# Stale per-platform build dirs left behind when switching between
+# host OSs (e.g. lib.macos-stale, objs.macos-stale).  Kept locally as
+# rollback reference; never source-controlled.
+*.macos-stale/
+*.macos-stale

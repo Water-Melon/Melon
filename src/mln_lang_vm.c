@@ -2364,6 +2364,213 @@ mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
  * VM runtime.
  * ==================================================================== */
 
+/* ====================================================================
+ * Tagged-value operand stack (high-cost-tier perf optimization).
+ *
+ * Background. Until this change the operand stack stored
+ * mln_lang_var_t* pointers and every value pushed onto it had to be a
+ * heap-allocated var (with a heap-allocated val inside it). For an
+ * arithmetic-heavy script like fib that meant every LOAD_INT, every
+ * arithmetic result, and every comparison result allocated a fresh
+ * var+val from the freelist, the next opcode consumed it, dec-ref'd
+ * it, and shipped it back to the freelist. Even with the freelist
+ * the round-trip is measurable in profiles.
+ *
+ * Design. The opstack is now a flat array of mln_lang_value_t (16
+ * bytes each on a 64-bit host). Each slot is one of:
+ *
+ *   - MLN_VAL_NIL / MLN_VAL_BOOL / MLN_VAL_INT / MLN_VAL_REAL : the
+ *     scalar lives directly in the slot, no heap allocation.
+ *   - MLN_VAL_VAR : the slot holds a mln_lang_var_t* and one of two
+ *     ownership states:
+ *       * borrow == 0 — the slot owns one ref on the var (dec-ref on
+ *         release).
+ *       * borrow == 1 — the slot does NOT own a ref; some other
+ *         long-lived owner (e.g. frame->slots[k] which is itself
+ *         held by the symbol table) keeps the var alive while this
+ *         slot is on the stack. Releasing a borrow slot is a no-op.
+ *
+ * The borrow state collapses two previously separate optimizations
+ * into one mechanism:
+ *
+ *   1. LOAD_LOCAL no longer needs to ++ref the slot var; it just
+ *      pushes a borrow.
+ *   2. DUP no longer needs to ++ref the var on top; it just copies
+ *      the slot and stamps borrow=1 onto the copy.
+ *
+ * Consumers that need to take ownership (e.g. apply_binop wants to
+ * call mln_lang_var_free on its inputs; funccall_val_add_arg expects
+ * an owned var) call value_take_var(), which boxes scalars on demand
+ * and bumps ref-count on borrow slots.
+ *
+ * Cross-platform notes. The struct deliberately uses plain enum +
+ * separate uint8_t fields rather than NaN-boxing. NaN-boxing into 8
+ * bytes saves cache space but requires assumptions about pointer
+ * canonicalization that don't hold uniformly on aarch64 with 52-bit
+ * VA support, on Windows with MTE-style tagging, or on toolchains
+ * that fold/normalize signaling NaN payloads (some MSVC /fp:fast
+ * configurations). The plain tag+pad form is portable C99.
+ *
+ * Pool / lifetime. value_take_var allocates via the existing
+ * var/val freelists (mln_lang_var_create_int / _bool / _real / _nil),
+ * so the freelist still amortizes the boxing cost in mixed-type code.
+ * value_release dec-refs an owned var via mln_lang_var_free, which
+ * also recycles into the freelist.
+ *
+ * apply_binop is unchanged — it still takes/consumes mln_lang_var_t*.
+ * Hot int+int arithmetic now bypasses apply_binop entirely from
+ * dispatch_one; the slow path materializes both operands and calls
+ * apply_binop the way it always did. */
+
+typedef enum {
+    MLN_VAL_NIL  = 0,
+    MLN_VAL_BOOL = 1,
+    MLN_VAL_INT  = 2,
+    MLN_VAL_REAL = 3,
+    MLN_VAL_VAR  = 4
+} mln_lang_value_kind_t;
+
+typedef struct {
+    union {
+        mln_s64_t       i;     /* MLN_VAL_INT, MLN_VAL_BOOL (0/1) */
+        double          f;     /* MLN_VAL_REAL */
+        mln_lang_var_t *var;   /* MLN_VAL_VAR */
+    } u;
+    mln_u8_t kind;            /* mln_lang_value_kind_t */
+    mln_u8_t borrow;          /* 1 if MLN_VAL_VAR slot does NOT own a ref */
+    mln_u8_t pad[6];
+} mln_lang_value_t;
+
+/* ---- value constructors ---- */
+
+static inline mln_lang_value_t value_nil(void)
+{
+    mln_lang_value_t v;
+    v.u.i = 0; v.kind = MLN_VAL_NIL; v.borrow = 0;
+    v.pad[0] = v.pad[1] = v.pad[2] = v.pad[3] = v.pad[4] = v.pad[5] = 0;
+    return v;
+}
+static inline mln_lang_value_t value_int(mln_s64_t x)
+{
+    mln_lang_value_t v;
+    v.u.i = x; v.kind = MLN_VAL_INT; v.borrow = 0;
+    v.pad[0] = v.pad[1] = v.pad[2] = v.pad[3] = v.pad[4] = v.pad[5] = 0;
+    return v;
+}
+static inline mln_lang_value_t value_bool(int b)
+{
+    mln_lang_value_t v;
+    v.u.i = b ? 1 : 0; v.kind = MLN_VAL_BOOL; v.borrow = 0;
+    v.pad[0] = v.pad[1] = v.pad[2] = v.pad[3] = v.pad[4] = v.pad[5] = 0;
+    return v;
+}
+static inline mln_lang_value_t value_real(double x)
+{
+    mln_lang_value_t v;
+    v.u.f = x; v.kind = MLN_VAL_REAL; v.borrow = 0;
+    v.pad[0] = v.pad[1] = v.pad[2] = v.pad[3] = v.pad[4] = v.pad[5] = 0;
+    return v;
+}
+static inline mln_lang_value_t value_var_owned(mln_lang_var_t *p)
+{
+    mln_lang_value_t v;
+    v.u.var = p; v.kind = MLN_VAL_VAR; v.borrow = 0;
+    v.pad[0] = v.pad[1] = v.pad[2] = v.pad[3] = v.pad[4] = v.pad[5] = 0;
+    return v;
+}
+static inline mln_lang_value_t value_var_borrow(mln_lang_var_t *p)
+{
+    mln_lang_value_t v;
+    v.u.var = p; v.kind = MLN_VAL_VAR; v.borrow = 1;
+    v.pad[0] = v.pad[1] = v.pad[2] = v.pad[3] = v.pad[4] = v.pad[5] = 0;
+    return v;
+}
+
+/* Drop a slot value as if it were popped and discarded. */
+static inline void value_release(mln_lang_value_t *v)
+{
+    if (v->kind == MLN_VAL_VAR && !v->borrow && v->u.var != NULL) {
+        mln_lang_var_free(v->u.var);
+    }
+    v->kind   = MLN_VAL_NIL;
+    v->borrow = 0;
+    v->u.var  = NULL;
+}
+
+/* Forward decl: var-creation helpers used by value_take_var. */
+extern mln_lang_var_t *mln_lang_var_create_nil(mln_lang_ctx_t *ctx, mln_string_t *name);
+extern mln_lang_var_t *mln_lang_var_create_int(mln_lang_ctx_t *ctx, mln_s64_t i, mln_string_t *name);
+extern mln_lang_var_t *mln_lang_var_create_bool(mln_lang_ctx_t *ctx, mln_u8_t b, mln_string_t *name);
+extern mln_lang_var_t *mln_lang_var_create_real(mln_lang_ctx_t *ctx, double r, mln_string_t *name);
+
+/* Convert a value into a freshly-owned mln_lang_var_t*. After this
+ * the input slot is left in a released state (kind=NIL, borrow=0).
+ * Returns NULL on OOM. */
+static inline mln_lang_var_t *value_take_var(mln_lang_ctx_t *ctx, mln_lang_value_t *v)
+{
+    mln_lang_var_t *r;
+    switch (v->kind) {
+        case MLN_VAL_VAR:
+            r = v->u.var;
+            if (v->borrow) {
+                /* Caller wants ownership; promote borrow → owned. */
+                if (r != NULL) ++(r->ref);
+            }
+            v->kind = MLN_VAL_NIL; v->borrow = 0; v->u.var = NULL;
+            return r;
+        case MLN_VAL_NIL:
+            r = mln_lang_var_create_nil(ctx, NULL);
+            break;
+        case MLN_VAL_BOOL:
+            r = mln_lang_var_create_bool(ctx, (mln_u8_t)(v->u.i ? 1 : 0), NULL);
+            break;
+        case MLN_VAL_INT:
+            r = mln_lang_var_create_int(ctx, v->u.i, NULL);
+            break;
+        case MLN_VAL_REAL:
+            r = mln_lang_var_create_real(ctx, v->u.f, NULL);
+            break;
+        default:
+            r = NULL;
+            break;
+    }
+    v->kind = MLN_VAL_NIL; v->borrow = 0; v->u.var = NULL;
+    return r;
+}
+
+/* Read a value's truthiness without materializing it. Mirrors
+ * mln_lang_condition_is_true for boxed variants. */
+static inline int value_is_truthy(const mln_lang_value_t *v)
+{
+    switch (v->kind) {
+        case MLN_VAL_NIL:  return 0;
+        case MLN_VAL_BOOL: return v->u.i ? 1 : 0;
+        case MLN_VAL_INT:  return v->u.i != 0;
+        case MLN_VAL_REAL: return v->u.f != 0.0;
+        case MLN_VAL_VAR:
+            return mln_lang_condition_is_true(v->u.var);
+        default:
+            return 0;
+    }
+    /* unreachable */
+}
+
+/* For opcodes that need a peek-only view of an existing VAR slot
+ * (e.g. ARRAY_PUT peeking at the array on top of the stack). Returns
+ * NULL if the slot is not a VAR (in which case the opcode should
+ * raise a type error). */
+static inline mln_lang_var_t *value_peek_var(const mln_lang_value_t *v)
+{
+    return (v->kind == MLN_VAL_VAR) ? v->u.var : NULL;
+}
+
+/* Stamp an existing slot as a borrow without touching ref-count.
+ * Used by DUP and similar opcodes. */
+static inline void value_make_borrow(mln_lang_value_t *v)
+{
+    if (v->kind == MLN_VAL_VAR) v->borrow = 1;
+}
+
 /* apply_binop runs from one call site (the binop block in dispatch_one)
  * but its body is large enough that the compiler may not auto-inline.
  * The hot attribute biases the compiler toward keeping it warm in
@@ -2497,7 +2704,7 @@ static int slot_assign(mln_lang_ctx_t *ctx, mln_lang_var_t *slot_var,
 typedef struct mln_lang_vm_frame_s {
     mln_lang_vm_chunk_t        *chunk;
     mln_size_t                  pc;
-    mln_lang_var_t            **opstack;
+    mln_lang_value_t           *opstack;     /* tagged-value operand stack */
     int                         op_sp;
     int                         op_cap;
     mln_lang_var_t            **slots;
@@ -2526,10 +2733,10 @@ static int vm_frame_grow_opstack(mln_lang_ctx_t *ctx, mln_lang_vm_frame_t *f, in
     if (f->op_sp + need <= f->op_cap) return 0;
     int new_cap = f->op_cap == 0 ? 8 : f->op_cap * 2;
     while (new_cap < f->op_sp + need) new_cap *= 2;
-    mln_lang_var_t **nbuf = (mln_lang_var_t **)mln_alloc_m(ctx->pool, sizeof(mln_lang_var_t *) * new_cap);
+    mln_lang_value_t *nbuf = (mln_lang_value_t *)mln_alloc_m(ctx->pool, sizeof(mln_lang_value_t) * new_cap);
     if (nbuf == NULL) return -1;
     if (f->op_sp > 0 && f->opstack != NULL) {
-        memcpy(nbuf, f->opstack, sizeof(mln_lang_var_t *) * f->op_sp);
+        memcpy(nbuf, f->opstack, sizeof(mln_lang_value_t) * f->op_sp);
     }
     if (f->opstack != NULL) mln_alloc_free(f->opstack);
     f->opstack = nbuf;
@@ -2565,10 +2772,10 @@ static int vm_push_frame(mln_lang_ctx_t *ctx,
         ctx->vm_frame_freelist = f->prev;   /* prev is the freelist link */
         --(ctx->vm_frame_freelist_count);
         /* Save buffer pointers / capacities before zeroing control fields. */
-        mln_lang_var_t **saved_opstack   = f->opstack;
-        int              saved_op_cap    = f->op_cap;
-        mln_lang_var_t **saved_slots     = f->slots;
-        int              saved_slots_cap = f->slots_cap;
+        mln_lang_value_t  *saved_opstack   = f->opstack;
+        int                saved_op_cap    = f->op_cap;
+        mln_lang_var_t   **saved_slots     = f->slots;
+        int                saved_slots_cap = f->slots_cap;
         memset(f, 0, sizeof(*f));
         f->opstack    = saved_opstack;
         f->op_cap     = saved_op_cap;
@@ -2577,8 +2784,8 @@ static int vm_push_frame(mln_lang_ctx_t *ctx,
         /* Grow opstack if the new call needs more stack depth. */
         if (f->op_cap < new_op_cap) {
             if (f->opstack) mln_alloc_free(f->opstack);
-            f->opstack = (mln_lang_var_t **)mln_alloc_m(ctx->pool,
-                             sizeof(mln_lang_var_t *) * new_op_cap);
+            f->opstack = (mln_lang_value_t *)mln_alloc_m(ctx->pool,
+                             sizeof(mln_lang_value_t) * new_op_cap);
             if (f->opstack == NULL) {
                 /* Slots buffer is still valid; free it before the frame. */
                 if (f->slots) mln_alloc_free(f->slots);
@@ -2604,8 +2811,8 @@ static int vm_push_frame(mln_lang_ctx_t *ctx,
         if (f == NULL) return -1;
         memset(f, 0, sizeof(*f));
         if (new_op_cap > 0) {
-            f->opstack = (mln_lang_var_t **)mln_alloc_m(ctx->pool,
-                             sizeof(mln_lang_var_t *) * new_op_cap);
+            f->opstack = (mln_lang_value_t *)mln_alloc_m(ctx->pool,
+                             sizeof(mln_lang_value_t) * new_op_cap);
             if (f->opstack == NULL) goto fail;
             f->op_cap = new_op_cap;
         }
@@ -2690,7 +2897,8 @@ static int vm_pop_frame_with_ret(mln_lang_ctx_t *ctx, mln_lang_var_t *ret)
 
     /* Drain residual opstack values. */
     while (f->op_sp > 0) {
-        mln_lang_var_free(f->opstack[--f->op_sp]);
+        mln_lang_value_t *vs = &f->opstack[--f->op_sp];
+        value_release(vs);
     }
     /* Free body-locals (slots beyond n_bound). The first n_bound slots
      * are owned by the symbol table that was just popped (or persists
@@ -2733,7 +2941,7 @@ static int vm_pop_frame_with_ret(mln_lang_ctx_t *ctx, mln_lang_var_t *ret)
             mln_lang_var_free(ret);
             return -1;
         }
-        prev->opstack[prev->op_sp++] = ret;
+        prev->opstack[prev->op_sp++] = value_var_owned(ret);
     } else {
         mln_lang_ctx_set_ret_var(ctx, ret);
     }
@@ -2775,12 +2983,35 @@ static int vm_fire_watcher(mln_lang_ctx_t *ctx, mln_lang_var_t *target_var);
 #define VM_HAS_WATCHER(v) \
     MLN_VM_UNLIKELY((v) != NULL && (v)->val != NULL && (v)->val->func != NULL)
 
-#define PUSH(v) do { \
+/* Operand-stack macros over the tagged-value array.
+ *
+ *   VPUSH(val)        — push a fully-built mln_lang_value_t.
+ *   VPUSH_VAR(p)      — push an owned mln_lang_var_t* (slot owns ref).
+ *   VPUSH_BORROW(p)   — push a borrow of a mln_lang_var_t* (slot does
+ *                       NOT own a ref; some other long-lived owner does).
+ *   VPUSH_INT(i)      — push an unboxed int.
+ *   VPUSH_BOOL(b)     — push an unboxed bool.
+ *   VPUSH_NIL()       — push an unboxed nil.
+ *   VPUSH_REAL(f)     — push an unboxed real.
+ *   VPOP()            — pop the top value (caller must release/take).
+ *   VTOP_PTR()        — &-pointer to top value (in-place mutation).
+ *
+ * Naming: V-prefix to make every push/pop site at the source level
+ * obviously a tagged-value access; the old PUSH/POP names are
+ * deliberately removed so any missed conversion is a compile error.
+ */
+#define VPUSH(val) do { \
     if (vm_frame_grow_opstack(ctx, frame, 1) < 0) return -1; \
-    frame->opstack[frame->op_sp++] = (v); \
+    frame->opstack[frame->op_sp++] = (val); \
 } while (0)
-#define POP()   (frame->opstack[--frame->op_sp])
-#define TOP()   (frame->opstack[frame->op_sp - 1])
+#define VPUSH_VAR(p)     VPUSH(value_var_owned(p))
+#define VPUSH_BORROW(p)  VPUSH(value_var_borrow(p))
+#define VPUSH_INT(x)     VPUSH(value_int(x))
+#define VPUSH_BOOL(x)    VPUSH(value_bool(x))
+#define VPUSH_NIL()      VPUSH(value_nil())
+#define VPUSH_REAL(x)    VPUSH(value_real(x))
+#define VPOP()           (frame->opstack[--frame->op_sp])
+#define VTOP_PTR()       (&frame->opstack[frame->op_sp - 1])
 
 /* dispatch_one: execute one bytecode instruction on FRAME_TOP(ctx).
  * Returns 0 on success (frame may have changed via push/pop), -1 on
@@ -2959,7 +3190,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_var_free(resume_ret);
             return -1;
         }
-        frame->opstack[frame->op_sp++] = resume_ret;
+        frame->opstack[frame->op_sp++] = value_var_owned(resume_ret);
         return 0;
     }
 
@@ -2969,55 +3200,52 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
     VM_DISPATCH_BEGIN(insn.op);
         VM_CASE(MLN_VOP_NOP):
             return 0;
-        VM_CASE(MLN_VOP_POP):
-            mln_lang_var_free(POP());
+        VM_CASE(MLN_VOP_POP): {
+            mln_lang_value_t v = VPOP();
+            value_release(&v);
             return 0;
+        }
         VM_CASE(MLN_VOP_DUP): {
-            mln_lang_var_t *t = TOP();
-            ++(t->ref);
-            PUSH(t);
+            /* DUP borrow-bit optimization: instead of bumping the var's
+             * ref count, we copy the slot and stamp the copy as a borrow.
+             * The original slot keeps its ownership; the duplicated slot
+             * becomes a non-owning view that will release as a no-op.
+             * For unboxed scalars (int/bool/nil/real) the copy is a pure
+             * struct copy — DUP becomes free. */
+            mln_lang_value_t t = *VTOP_PTR();
+            value_make_borrow(&t);
+            VPUSH(t);
             return 0;
         }
-        VM_CASE(MLN_VOP_LOAD_NIL): {
-            mln_lang_var_t *v = mln_lang_var_create_nil(ctx, NULL);
-            if (v == NULL) return -1;
-            PUSH(v);
+        VM_CASE(MLN_VOP_LOAD_NIL):
+            VPUSH_NIL();
             return 0;
-        }
-        VM_CASE(MLN_VOP_LOAD_TRUE): {
-            mln_lang_var_t *v = mln_lang_var_create_bool(ctx, 1, NULL);
-            if (v == NULL) return -1;
-            PUSH(v);
+        VM_CASE(MLN_VOP_LOAD_TRUE):
+            VPUSH_BOOL(1);
             return 0;
-        }
-        VM_CASE(MLN_VOP_LOAD_FALSE): {
-            mln_lang_var_t *v = mln_lang_var_create_bool(ctx, 0, NULL);
-            if (v == NULL) return -1;
-            PUSH(v);
+        VM_CASE(MLN_VOP_LOAD_FALSE):
+            VPUSH_BOOL(0);
             return 0;
-        }
-        VM_CASE(MLN_VOP_LOAD_INT): {
-            mln_lang_var_t *v = mln_lang_var_create_int(ctx, chunk->iconsts[insn.b], NULL);
-            if (v == NULL) return -1;
-            PUSH(v);
+        VM_CASE(MLN_VOP_LOAD_INT):
+            VPUSH_INT(chunk->iconsts[insn.b]);
             return 0;
-        }
-        VM_CASE(MLN_VOP_LOAD_REAL): {
-            mln_lang_var_t *v = mln_lang_var_create_real(ctx, chunk->rconsts[insn.b], NULL);
-            if (v == NULL) return -1;
-            PUSH(v);
+        VM_CASE(MLN_VOP_LOAD_REAL):
+            VPUSH_REAL(chunk->rconsts[insn.b]);
             return 0;
-        }
         VM_CASE(MLN_VOP_LOAD_STRING): {
+            /* Strings still need to be boxed: the operand stack only
+             * unboxes scalars (int/bool/nil/real); string literals
+             * become a fresh var sharing the chunk's pooled mln_string_t. */
             mln_lang_var_t *v = mln_lang_var_create_string(ctx, chunk->sconsts[insn.b], NULL);
             if (v == NULL) return -1;
-            PUSH(v);
+            VPUSH_VAR(v);
             return 0;
         }
         VM_CASE(MLN_VOP_LOAD_LOCAL): {
-            mln_lang_var_t *v = frame->slots[insn.a];
-            ++(v->ref);
-            PUSH(v);
+            /* Push a borrow of the slot var. The slot retains its single
+             * ref via the symbol table; the opstack just observes it.
+             * No ++ref. */
+            VPUSH_BORROW(frame->slots[insn.a]);
             return 0;
         }
         VM_CASE(MLN_VOP_LOAD_GLOBAL): {
@@ -3029,32 +3257,33 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                  * (src/mln_lang.c:6517-6536). */
                 mln_lang_var_t *nv = vm_create_scope_var(ctx, name);
                 if (nv == NULL) return -1;
-                ++(nv->ref);
-                PUSH(nv);
+                /* nv is owned by the symbol table now; push a borrow. */
+                VPUSH_BORROW(nv);
                 return 0;
             }
             if (sym->type != M_LANG_SYMBOL_VAR) {
                 mln_lang_errmsg(ctx, "Invalid token. Token is a SET name, not a value or function.");
                 return -1;
             }
-            mln_lang_var_t *v = sym->data.var;
-            ++(v->ref);
-            PUSH(v);
+            /* sym->data.var is owned by the symbol table; push a borrow. */
+            VPUSH_BORROW(sym->data.var);
             return 0;
         }
         VM_CASE(MLN_VOP_STORE_LOCAL):
         VM_CASE(MLN_VOP_ASSIGN_LOCAL): {
-            mln_lang_var_t *v = POP();
-            if (slot_assign(ctx, frame->slots[insn.a], v) < 0) return -1;
+            mln_lang_value_t v = VPOP();
+            mln_lang_var_t *src = value_take_var(ctx, &v);
+            if (src == NULL) return -1;
+            if (slot_assign(ctx, frame->slots[insn.a], src) < 0) return -1;
             if (VM_HAS_WATCHER(frame->slots[insn.a]) && vm_fire_watcher(ctx, frame->slots[insn.a]) < 0) return -1;
             if (insn.op == MLN_VOP_ASSIGN_LOCAL) {
-                mln_lang_var_t *back = frame->slots[insn.a];
-                ++(back->ref);
-                /* Note: vm_fire_watcher may have pushed a new frame; we
-                 * still push to OUR frame's opstack since the watcher
-                 * frame's ret will be discarded. */
+                /* Push the slot back as a borrow — the symbol table keeps
+                 * the ref alive through the rest of this expression. The
+                 * watcher (if any) may have been a CALL that pushed a
+                 * frame; that frame's ret will be discarded so our push
+                 * here is correct regardless. */
                 if (vm_frame_grow_opstack(ctx, frame, 1) < 0) return -1;
-                frame->opstack[frame->op_sp++] = back;
+                frame->opstack[frame->op_sp++] = value_var_borrow(frame->slots[insn.a]);
             }
             return 0;
         }
@@ -3066,15 +3295,11 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 return -1;
             }
             mln_s64_t old_i = sv->val->data.i;
-            mln_lang_var_t *old_var = mln_lang_var_create_int(ctx, old_i, NULL);
-            if (old_var == NULL) return -1;
             if (insn.op == MLN_VOP_LOAD_LOCAL_INC) sv->val->data.i = old_i + 1;
             else                                   sv->val->data.i = old_i - 1;
-            if (VM_HAS_WATCHER(sv) && vm_fire_watcher(ctx, sv) < 0) {
-                mln_lang_var_free(old_var);
-                return -1;
-            }
-            PUSH(old_var);
+            if (VM_HAS_WATCHER(sv) && vm_fire_watcher(ctx, sv) < 0) return -1;
+            /* Push the OLD value as an unboxed int — no allocation. */
+            VPUSH_INT(old_i);
             return 0;
         }
         VM_CASE(MLN_VOP_INC_LOCAL_LOAD):
@@ -3085,64 +3310,77 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 return -1;
             }
             mln_s64_t old_i = sv->val->data.i;
-            if (insn.op == MLN_VOP_INC_LOCAL_LOAD) sv->val->data.i = old_i + 1;
-            else                                   sv->val->data.i = old_i - 1;
+            mln_s64_t new_i = (insn.op == MLN_VOP_INC_LOCAL_LOAD) ? old_i + 1 : old_i - 1;
+            sv->val->data.i = new_i;
             if (VM_HAS_WATCHER(sv) && vm_fire_watcher(ctx, sv) < 0) return -1;
-            mln_lang_var_t *new_var = mln_lang_var_create_int(ctx, sv->val->data.i, NULL);
-            if (new_var == NULL) return -1;
-            PUSH(new_var);
+            /* Push the NEW value as an unboxed int — no allocation. */
+            VPUSH_INT(new_i);
             return 0;
         }
         VM_CASE(MLN_VOP_NOT): {
-            mln_lang_var_t *t = POP();
-            int truthy = mln_lang_condition_is_true(t);
-            mln_lang_var_free(t);
-            mln_lang_var_t *r = mln_lang_var_create_bool(ctx, (mln_u8_t)!truthy, NULL);
-            if (r == NULL) return -1;
-            PUSH(r);
+            mln_lang_value_t v = VPOP();
+            int truthy = value_is_truthy(&v);
+            value_release(&v);
+            VPUSH_BOOL(!truthy);
             return 0;
         }
         VM_CASE(MLN_VOP_NEG): {
-            mln_lang_var_t *t = POP();
-            if (t->val != NULL && t->val->type == M_LANG_VAL_TYPE_INT) {
-                mln_lang_var_t *r = mln_lang_var_create_int(ctx, -t->val->data.i, NULL);
-                mln_lang_var_free(t);
-                if (r == NULL) return -1;
-                PUSH(r);
-            } else {
-                mln_lang_method_t *method = (t->val != NULL) ? mln_lang_methods[t->val->type] : NULL;
-                mln_lang_op h = method ? method->negative_handler : NULL;
-                mln_lang_var_t *r = NULL;
-                if (h == NULL || h(ctx, &r, t, NULL) < 0) {
-                    mln_lang_var_free(t);
-                    mln_lang_errmsg(ctx, "Operation NOT support.");
-                    return -1;
-                }
-                mln_lang_var_free(t);
-                PUSH(r);
+            /* Unboxed int / real fast paths bypass allocation. */
+            mln_lang_value_t v = VPOP();
+            if (v.kind == MLN_VAL_INT) {
+                VPUSH_INT(-v.u.i);
+                return 0;
             }
+            if (v.kind == MLN_VAL_REAL) {
+                VPUSH_REAL(-v.u.f);
+                return 0;
+            }
+            /* Slow path: materialize and dispatch through method table. */
+            mln_lang_var_t *t = value_take_var(ctx, &v);
+            if (t == NULL) return -1;
+            if (t->val != NULL && t->val->type == M_LANG_VAL_TYPE_INT) {
+                mln_s64_t r = -t->val->data.i;
+                mln_lang_var_free(t);
+                VPUSH_INT(r);
+                return 0;
+            }
+            mln_lang_method_t *method = (t->val != NULL) ? mln_lang_methods[t->val->type] : NULL;
+            mln_lang_op h = method ? method->negative_handler : NULL;
+            mln_lang_var_t *r = NULL;
+            if (h == NULL || h(ctx, &r, t, NULL) < 0) {
+                mln_lang_var_free(t);
+                mln_lang_errmsg(ctx, "Operation NOT support.");
+                return -1;
+            }
+            mln_lang_var_free(t);
+            VPUSH_VAR(r);
             return 0;
         }
         VM_CASE(MLN_VOP_BITNOT): {
             /* Unary bitwise NOT (~x).  Int fast-path; non-int uses reverse_handler. */
-            mln_lang_var_t *t = POP();
-            if (t->val != NULL && t->val->type == M_LANG_VAL_TYPE_INT) {
-                mln_lang_var_t *r = mln_lang_var_create_int(ctx, ~t->val->data.i, NULL);
-                mln_lang_var_free(t);
-                if (r == NULL) return -1;
-                PUSH(r);
-            } else {
-                mln_lang_method_t *method = (t->val != NULL) ? mln_lang_methods[t->val->type] : NULL;
-                mln_lang_op h = method ? method->reverse_handler : NULL;
-                mln_lang_var_t *r = NULL;
-                if (h == NULL || h(ctx, &r, t, NULL) < 0) {
-                    mln_lang_var_free(t);
-                    mln_lang_errmsg(ctx, "Operation not supported.");
-                    return -1;
-                }
-                mln_lang_var_free(t);
-                PUSH(r);
+            mln_lang_value_t v = VPOP();
+            if (v.kind == MLN_VAL_INT) {
+                VPUSH_INT(~v.u.i);
+                return 0;
             }
+            mln_lang_var_t *t = value_take_var(ctx, &v);
+            if (t == NULL) return -1;
+            if (t->val != NULL && t->val->type == M_LANG_VAL_TYPE_INT) {
+                mln_s64_t r = ~t->val->data.i;
+                mln_lang_var_free(t);
+                VPUSH_INT(r);
+                return 0;
+            }
+            mln_lang_method_t *method = (t->val != NULL) ? mln_lang_methods[t->val->type] : NULL;
+            mln_lang_op h = method ? method->reverse_handler : NULL;
+            mln_lang_var_t *r = NULL;
+            if (h == NULL || h(ctx, &r, t, NULL) < 0) {
+                mln_lang_var_free(t);
+                mln_lang_errmsg(ctx, "Operation not supported.");
+                return -1;
+            }
+            mln_lang_var_free(t);
+            VPUSH_VAR(r);
             return 0;
         }
         VM_CASE(MLN_VOP_LOAD_LOCAL_REF): {
@@ -3152,7 +3390,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_var_t *sv = frame->slots[insn.a];
             mln_lang_var_t *rv = mln_lang_var_new(ctx, NULL, M_LANG_VAR_REFER, sv->val, NULL);
             if (rv == NULL) return -1;
-            PUSH(rv);
+            VPUSH_VAR(rv);
             return 0;
         }
         VM_CASE(MLN_VOP_LOAD_GLOBAL_REF): {
@@ -3165,7 +3403,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_var_t *rv = mln_lang_var_new(ctx, NULL, M_LANG_VAR_REFER,
                                                   sym->data.var->val, NULL);
             if (rv == NULL) return -1;
-            PUSH(rv);
+            VPUSH_VAR(rv);
             return 0;
         }
         VM_CASE(MLN_VOP_ASSIGN_GLOBAL): {
@@ -3179,26 +3417,27 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             if (sym == NULL) {
                 target = vm_create_scope_var(ctx, name);
                 if (target == NULL) {
-                    mln_lang_var_free(POP());
+                    mln_lang_value_t v = VPOP();
+                    value_release(&v);
                     return -1;
                 }
             } else if (sym->type != M_LANG_SYMBOL_VAR) {
+                mln_lang_value_t v = VPOP();
+                value_release(&v);
                 mln_lang_errmsg(ctx, "Identifier is a SET name, not a variable.");
-                mln_lang_var_free(POP());
                 return -1;
             } else {
                 target = sym->data.var;
             }
-            mln_lang_var_t *v = POP();
-            if (slot_assign(ctx, target, v) < 0) return -1;
+            mln_lang_value_t v = VPOP();
+            mln_lang_var_t *src = value_take_var(ctx, &v);
+            if (src == NULL) return -1;
+            if (slot_assign(ctx, target, src) < 0) return -1;
             if (VM_HAS_WATCHER(target) && vm_fire_watcher(ctx, target) < 0) return -1;
-            /* Push back so the assignment is usable as an expression. */
-            ++(target->ref);
-            if (vm_frame_grow_opstack(ctx, frame, 1) < 0) {
-                --(target->ref);
-                return -1;
-            }
-            frame->opstack[frame->op_sp++] = target;
+            /* Push back so the assignment is usable as an expression.
+             * The symbol table keeps the ref alive; push a borrow. */
+            if (vm_frame_grow_opstack(ctx, frame, 1) < 0) return -1;
+            frame->opstack[frame->op_sp++] = value_var_borrow(target);
             return 0;
         }
         VM_CASE(MLN_VOP_SWAP2): {
@@ -3211,7 +3450,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 mln_lang_errmsg(ctx, "Stack underflow SWAP2.");
                 return -1;
             }
-            mln_lang_var_t *tmp = frame->opstack[frame->op_sp - 2];
+            mln_lang_value_t tmp = frame->opstack[frame->op_sp - 2];
             frame->opstack[frame->op_sp - 2] = frame->opstack[frame->op_sp - 3];
             frame->opstack[frame->op_sp - 3] = tmp;
             return 0;
@@ -3222,8 +3461,50 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
         VM_CASE(MLN_VOP_GE): VM_CASE(MLN_VOP_EQ): VM_CASE(MLN_VOP_NE):
         VM_CASE(MLN_VOP_BOR): VM_CASE(MLN_VOP_BAND): VM_CASE(MLN_VOP_BXOR):
         VM_CASE(MLN_VOP_LSHIFT): VM_CASE(MLN_VOP_RSHIFT): {
-            mln_lang_var_t *b = POP();
-            mln_lang_var_t *a = POP();
+            mln_lang_value_t bv = VPOP();
+            mln_lang_value_t av = VPOP();
+            /* Hottest path: both operands are unboxed ints AND no
+             * user-defined int operator overload is in effect. Go
+             * directly to the inlined arithmetic and push an unboxed
+             * result. No allocations, no refcount traffic, no
+             * methods-table indirection. */
+            if (av.kind == MLN_VAL_INT && bv.kind == MLN_VAL_INT && !ctx->op_int_flag) {
+                mln_s64_t ai = av.u.i;
+                mln_s64_t bi = bv.u.i;
+                switch (insn.op) {
+                    case MLN_VOP_ADD: VPUSH_INT(ai + bi); return 0;
+                    case MLN_VOP_SUB: VPUSH_INT(ai - bi); return 0;
+                    case MLN_VOP_MUL: VPUSH_INT(ai * bi); return 0;
+                    case MLN_VOP_DIV:
+                        if (bi == 0) { mln_lang_errmsg(ctx, "Division by zero."); return -1; }
+                        VPUSH_INT(ai / bi); return 0;
+                    case MLN_VOP_MOD:
+                        if (bi == 0) { mln_lang_errmsg(ctx, "Modulo by zero."); return -1; }
+                        VPUSH_INT(ai % bi); return 0;
+                    case MLN_VOP_LT:  VPUSH_BOOL(ai <  bi); return 0;
+                    case MLN_VOP_LE:  VPUSH_BOOL(ai <= bi); return 0;
+                    case MLN_VOP_GT:  VPUSH_BOOL(ai >  bi); return 0;
+                    case MLN_VOP_GE:  VPUSH_BOOL(ai >= bi); return 0;
+                    case MLN_VOP_EQ:  VPUSH_BOOL(ai == bi); return 0;
+                    case MLN_VOP_NE:  VPUSH_BOOL(ai != bi); return 0;
+                    case MLN_VOP_BOR:    VPUSH_INT(ai | bi); return 0;
+                    case MLN_VOP_BAND:   VPUSH_INT(ai & bi); return 0;
+                    case MLN_VOP_BXOR:   VPUSH_INT(ai ^ bi); return 0;
+                    case MLN_VOP_LSHIFT: VPUSH_INT(ai << bi); return 0;
+                    case MLN_VOP_RSHIFT: VPUSH_INT(ai >> bi); return 0;
+                    default: break;
+                }
+            }
+            /* Slow path: at least one operand isn't an unboxed int (or
+             * an overload is active). Materialize both into vars, then
+             * route through apply_binop just like the pre-tagged code did. */
+            mln_lang_var_t *a = value_take_var(ctx, &av);
+            mln_lang_var_t *b = value_take_var(ctx, &bv);
+            if (a == NULL || b == NULL) {
+                if (a) mln_lang_var_free(a);
+                if (b) mln_lang_var_free(b);
+                return -1;
+            }
             mln_lang_var_t *r = apply_binop(ctx, insn.op, a, b);
             if (r == NULL) return -1;
             /* Operator overload: method handler returned a CALL val (e.g. the
@@ -3254,26 +3535,26 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                     ret = mln_lang_var_create_nil(ctx, NULL);
                     if (ret == NULL) return -1;
                 }
-                PUSH(ret);
+                VPUSH_VAR(ret);
                 return 0;
             }
-            PUSH(r);
+            VPUSH_VAR(r);
             return 0;
         }
         VM_CASE(MLN_VOP_JUMP):
             frame->pc = (mln_size_t)((mln_s64_t)frame->pc + insn.b);
             return 0;
         VM_CASE(MLN_VOP_JUMP_IF_FALSE): {
-            mln_lang_var_t *cond = POP();
-            int truthy = mln_lang_condition_is_true(cond);
-            mln_lang_var_free(cond);
+            mln_lang_value_t cond = VPOP();
+            int truthy = value_is_truthy(&cond);
+            value_release(&cond);
             if (!truthy) frame->pc = (mln_size_t)((mln_s64_t)frame->pc + insn.b);
             return 0;
         }
         VM_CASE(MLN_VOP_JUMP_IF_TRUE): {
-            mln_lang_var_t *cond = POP();
-            int truthy = mln_lang_condition_is_true(cond);
-            mln_lang_var_free(cond);
+            mln_lang_value_t cond = VPOP();
+            int truthy = value_is_truthy(&cond);
+            value_release(&cond);
             if (truthy) frame->pc = (mln_size_t)((mln_s64_t)frame->pc + insn.b);
             return 0;
         }
@@ -3284,57 +3565,78 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             int is_method = (insn.op == MLN_VOP_CALL_METHOD);
             int is_self   = (insn.op == MLN_VOP_CALL_SELF);
 
-            mln_lang_var_t **args_base = &frame->opstack[frame->op_sp - nargs];
-            mln_lang_var_t *func = NULL;
-            mln_lang_var_t *obj  = NULL;
+            /* Slot layout below TOS:
+             *   CALL_SELF:    [..., arg0, ..., argN-1]
+             *   CALL_VALUE:   [..., func, arg0, ..., argN-1]
+             *   CALL_METHOD:  [..., obj, func, arg0, ..., argN-1]
+             */
+            mln_lang_value_t *args_base = &frame->opstack[frame->op_sp - nargs];
+            mln_lang_value_t *func_slot = NULL;
+            mln_lang_value_t *obj_slot  = NULL;
             mln_lang_func_detail_t *callee_proto = NULL;
 
             if (is_self) {
                 callee_proto = frame->prototype;
                 if (callee_proto == NULL) {
                     mln_lang_errmsg(ctx, "CALL_SELF: no current prototype.");
-                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                    for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
                     frame->op_sp -= nargs;
                     return -1;
                 }
             } else {
-                func = frame->opstack[frame->op_sp - nargs - 1];
-                if (is_method) obj = frame->opstack[frame->op_sp - nargs - 2];
-                if (func->val == NULL || func->val->type != M_LANG_VAL_TYPE_FUNC ||
-                    func->val->data.func == NULL)
+                func_slot = &frame->opstack[frame->op_sp - nargs - 1];
+                if (is_method) obj_slot = &frame->opstack[frame->op_sp - nargs - 2];
+                /* The callee must be a boxed VAR with a FUNC val. */
+                mln_lang_var_t *func_var = value_peek_var(func_slot);
+                if (func_var == NULL || func_var->val == NULL ||
+                    func_var->val->type != M_LANG_VAL_TYPE_FUNC ||
+                    func_var->val->data.func == NULL)
                 {
                     mln_lang_errmsg(ctx, "Calling a non-function.");
-                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
-                    mln_lang_var_free(func);
-                    if (obj) mln_lang_var_free(obj);
+                    for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
+                    value_release(func_slot);
+                    if (obj_slot) value_release(obj_slot);
                     frame->op_sp -= nargs + 1 + (is_method ? 1 : 0);
                     return -1;
                 }
-                callee_proto = func->val->data.func;
+                callee_proto = func_var->val->data.func;
             }
 
             mln_lang_funccall_val_t *call = mln_lang_funccall_val_new(ctx->pool, NULL);
             if (call == NULL) {
-                for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
-                if (func) mln_lang_var_free(func);
-                if (obj)  mln_lang_var_free(obj);
+                for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
+                if (func_slot) value_release(func_slot);
+                if (obj_slot)  value_release(obj_slot);
                 frame->op_sp -= nargs + (is_self ? 0 : 1) + (is_method ? 1 : 0);
                 return -1;
             }
             call->prototype = callee_proto;
-            if (is_method && obj != NULL) {
-                mln_lang_funccall_val_object_add(call, obj->val);
+            if (is_method && obj_slot != NULL) {
+                mln_lang_var_t *obj_var = value_peek_var(obj_slot);
+                if (obj_var != NULL) {
+                    mln_lang_funccall_val_object_add(call, obj_var->val);
+                }
             }
             int add_arg_failed = 0;
             for (int i = 0; i < nargs; ++i) {
-                if (mln_lang_funccall_val_add_arg(call, args_base[i]) < 0) {
+                /* Materialize each arg into an owned var, then transfer
+                 * ownership to the funccall. funccall_val_add_arg takes
+                 * ownership on success. */
+                mln_lang_var_t *argv = value_take_var(ctx, &args_base[i]);
+                if (argv == NULL) {
                     add_arg_failed = 1;
-                    for (int k = i; k < nargs; ++k) mln_lang_var_free(args_base[k]);
+                    for (int k = i + 1; k < nargs; ++k) value_release(&args_base[k]);
+                    break;
+                }
+                if (mln_lang_funccall_val_add_arg(call, argv) < 0) {
+                    add_arg_failed = 1;
+                    mln_lang_var_free(argv);
+                    for (int k = i + 1; k < nargs; ++k) value_release(&args_base[k]);
                     break;
                 }
             }
-            if (func) mln_lang_var_free(func);
-            if (obj)  mln_lang_var_free(obj);
+            if (func_slot) value_release(func_slot);
+            if (obj_slot)  value_release(obj_slot);
             frame->op_sp -= nargs + (is_self ? 0 : 1) + (is_method ? 1 : 0);
 
             if (add_arg_failed) {
@@ -3374,11 +3676,13 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 ret = mln_lang_var_create_nil(ctx, NULL);
                 if (ret == NULL) return -1;
             }
-            PUSH(ret);
+            VPUSH_VAR(ret);
             return 0;
         }
         VM_CASE(MLN_VOP_RETURN): {
-            mln_lang_var_t *r = POP();
+            mln_lang_value_t v = VPOP();
+            mln_lang_var_t *r = value_take_var(ctx, &v);
+            if (r == NULL) return -1;
             return vm_pop_frame_with_ret(ctx, r);
         }
         VM_CASE(MLN_VOP_RETURN_NIL): {
@@ -3478,9 +3782,9 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 if (name == NULL) { sym = NULL; break; }
             }
             if (sym == NULL || sym->type != M_LANG_SYMBOL_SET) {
-                mln_lang_var_t *nv = mln_lang_var_create_nil(ctx, NULL);
-                if (nv == NULL) return -1;
-                PUSH(nv); return 0;
+                /* Set not found — push unboxed nil. */
+                VPUSH_NIL();
+                return 0;
             }
             mln_lang_object_t *obj_inst = mln_lang_object_new_compat(ctx, sym->data.set);
             if (obj_inst == NULL) return -1;
@@ -3488,7 +3792,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             if (ov == NULL) { mln_lang_object_free_compat(obj_inst); return -1; }
             mln_lang_var_t *ovar = mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, ov, NULL);
             if (ovar == NULL) { mln_lang_val_free(ov); return -1; }
-            PUSH(ovar);
+            VPUSH_VAR(ovar);
             return 0;
         }
         VM_CASE(MLN_VOP_NEW_ARRAY): {
@@ -3498,16 +3802,29 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             if (av == NULL) { mln_lang_array_free(arr); return -1; }
             mln_lang_var_t *avar = mln_lang_var_new(ctx, NULL, M_LANG_VAR_NORMAL, av, NULL);
             if (avar == NULL) { mln_lang_val_free(av); return -1; }
-            PUSH(avar);
+            VPUSH_VAR(avar);
             return 0;
         }
         VM_CASE(MLN_VOP_ARRAY_PUT): {
-            mln_lang_var_t *valv = POP();
-            mln_lang_var_t *keyv = POP();
-            mln_lang_var_t *arrv = TOP();
-            if (arrv->val == NULL || arrv->val->type != M_LANG_VAL_TYPE_ARRAY) {
-                mln_lang_var_free(keyv); mln_lang_var_free(valv);
+            mln_lang_value_t valv_v = VPOP();
+            mln_lang_value_t keyv_v = VPOP();
+            mln_lang_value_t *top    = VTOP_PTR();
+            /* The array on top must be a boxed VAR holding ARRAY. We
+             * do NOT pop it — the literal compiler keeps chaining onto
+             * it. value_peek_var returns NULL for unboxed scalars. */
+            mln_lang_var_t *arrv = value_peek_var(top);
+            if (arrv == NULL || arrv->val == NULL ||
+                arrv->val->type != M_LANG_VAL_TYPE_ARRAY)
+            {
+                value_release(&keyv_v); value_release(&valv_v);
                 mln_lang_errmsg(ctx, "ARRAY_PUT: top is not an array.");
+                return -1;
+            }
+            mln_lang_var_t *valv = value_take_var(ctx, &valv_v);
+            mln_lang_var_t *keyv = value_take_var(ctx, &keyv_v);
+            if (valv == NULL || keyv == NULL) {
+                if (valv) mln_lang_var_free(valv);
+                if (keyv) mln_lang_var_free(keyv);
                 return -1;
             }
             int key_is_nil = (keyv->val != NULL && keyv->val->type == M_LANG_VAL_TYPE_NIL);
@@ -3526,7 +3843,9 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             return 0;
         }
         VM_CASE(MLN_VOP_GET_PROPERTY): {
-            mln_lang_var_t *obj_op = POP();
+            mln_lang_value_t obj_v = VPOP();
+            mln_lang_var_t *obj_op = value_take_var(ctx, &obj_v);
+            if (obj_op == NULL) return -1;
             if (obj_op->val == NULL) {
                 mln_lang_var_free(obj_op);
                 mln_lang_errmsg(ctx, "Property access on nil.");
@@ -3549,9 +3868,12 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                         ic->cached_set = (void *)o->in_set;
                         ic->cached_kind = 1;
                     }
-                    ++(member->ref);
+                    /* Push the member as a borrow — it lives in the obj's
+                     * member tree, which the obj keeps alive until the
+                     * obj itself is freed. The next consumer (e.g.
+                     * STORE_LOCAL, RETURN, CALL) will materialize. */
                     mln_lang_var_free(obj_op);
-                    PUSH(member);
+                    VPUSH_BORROW(member);
                     return 0;
                 }
                 /* Member missing: fall through to slow path which will
@@ -3577,12 +3899,19 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 mln_lang_errmsg(ctx, "Property handler returned NULL.");
                 return -1;
             }
-            PUSH(res);
+            VPUSH_VAR(res);
             return 0;
         }
         VM_CASE(MLN_VOP_GET_INDEX): {
-            mln_lang_var_t *key = POP();
-            mln_lang_var_t *arr = POP();
+            mln_lang_value_t key_v = VPOP();
+            mln_lang_value_t arr_v = VPOP();
+            mln_lang_var_t *key = value_take_var(ctx, &key_v);
+            mln_lang_var_t *arr = value_take_var(ctx, &arr_v);
+            if (key == NULL || arr == NULL) {
+                if (key) mln_lang_var_free(key);
+                if (arr) mln_lang_var_free(arr);
+                return -1;
+            }
             if (arr->val == NULL) {
                 mln_lang_var_free(key); mln_lang_var_free(arr);
                 mln_lang_errmsg(ctx, "Index on nil.");
@@ -3602,12 +3931,19 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_var_free(key);
             mln_lang_var_free(arr);
             if (res == NULL) return -1;
-            PUSH(res);
+            VPUSH_VAR(res);
             return 0;
         }
         VM_CASE(MLN_VOP_SET_PROPERTY): {
-            mln_lang_var_t *val = POP();
-            mln_lang_var_t *obj_op = POP();
+            mln_lang_value_t val_v = VPOP();
+            mln_lang_value_t obj_v = VPOP();
+            mln_lang_var_t *val = value_take_var(ctx, &val_v);
+            mln_lang_var_t *obj_op = value_take_var(ctx, &obj_v);
+            if (val == NULL || obj_op == NULL) {
+                if (val) mln_lang_var_free(val);
+                if (obj_op) mln_lang_var_free(obj_op);
+                return -1;
+            }
             if (obj_op->val == NULL) {
                 mln_lang_var_free(val); mln_lang_var_free(obj_op);
                 mln_lang_errmsg(ctx, "Property assign on nil.");
@@ -3635,7 +3971,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                         return -1;
                     }
                     if (insn.a) {
-                        PUSH(val);
+                        VPUSH_VAR(val);
                     } else {
                         mln_lang_var_free(val);
                     }
@@ -3680,7 +4016,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 /* Push val back as expression result (assignment-as-expression
                  * context: `return (obj.x = v)`, `(obj.x = v, ...)`, etc.).
                  * compile_assign emits SET_PROPERTY with a=1 for this purpose. */
-                PUSH(val);
+                VPUSH_VAR(val);
             } else {
                 mln_lang_var_free(val);
             }
@@ -3688,9 +4024,18 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             return 0;
         }
         VM_CASE(MLN_VOP_SET_INDEX): {
-            mln_lang_var_t *val = POP();
-            mln_lang_var_t *key = POP();
-            mln_lang_var_t *arr = POP();
+            mln_lang_value_t val_v = VPOP();
+            mln_lang_value_t key_v = VPOP();
+            mln_lang_value_t arr_v = VPOP();
+            mln_lang_var_t *val = value_take_var(ctx, &val_v);
+            mln_lang_var_t *key = value_take_var(ctx, &key_v);
+            mln_lang_var_t *arr = value_take_var(ctx, &arr_v);
+            if (val == NULL || key == NULL || arr == NULL) {
+                if (val) mln_lang_var_free(val);
+                if (key) mln_lang_var_free(key);
+                if (arr) mln_lang_var_free(arr);
+                return -1;
+            }
             if (arr->val == NULL) {
                 mln_lang_var_free(val); mln_lang_var_free(key); mln_lang_var_free(arr);
                 mln_lang_errmsg(ctx, "Index assign on nil.");
@@ -3728,7 +4073,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             if (insn.a) {
                 /* Push val back as expression result (assignment-as-expression
                  * context).  compile_assign emits SET_INDEX with a=1. */
-                PUSH(val);
+                VPUSH_VAR(val);
             } else {
                 mln_lang_var_free(val);
             }
@@ -3748,12 +4093,14 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
              * object or an overload is in effect. */
             int nargs = insn.a;
             mln_string_t *mname = chunk->sconsts[insn.b];
-            mln_lang_var_t **args_base = &frame->opstack[frame->op_sp - nargs];
-            mln_lang_var_t *obj = frame->opstack[frame->op_sp - nargs - 1];
+            mln_lang_value_t *args_base = &frame->opstack[frame->op_sp - nargs];
+            mln_lang_value_t *obj_slot  = &frame->opstack[frame->op_sp - nargs - 1];
+            /* The receiver must be a boxed VAR — primitives have no methods. */
+            mln_lang_var_t *obj = value_peek_var(obj_slot);
 
-            if (obj->val == NULL) {
-                for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
-                mln_lang_var_free(obj);
+            if (obj == NULL || obj->val == NULL) {
+                for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
+                value_release(obj_slot);
                 frame->op_sp -= nargs + 1;
                 mln_lang_errmsg(ctx, "Method call on nil.");
                 return -1;
@@ -3786,24 +4133,24 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                  * dispatching through the method table. */
                 mln_lang_method_t *method = mln_lang_methods[obj->val->type];
                 if (method == NULL || method->property_handler == NULL) {
-                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
-                    mln_lang_var_free(obj);
+                    for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
+                    value_release(obj_slot);
                     frame->op_sp -= nargs + 1;
                     mln_lang_errmsg(ctx, "Operation NOT support.");
                     return -1;
                 }
                 mln_lang_var_t *namev = mln_lang_var_create_string(ctx, mname, NULL);
                 if (namev == NULL) {
-                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
-                    mln_lang_var_free(obj);
+                    for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
+                    value_release(obj_slot);
                     frame->op_sp -= nargs + 1;
                     return -1;
                 }
                 mln_lang_var_t *prop_res = NULL;
                 if (method->property_handler(ctx, &prop_res, obj, namev) < 0) {
                     mln_lang_var_free(namev);
-                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
-                    mln_lang_var_free(obj);
+                    for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
+                    value_release(obj_slot);
                     frame->op_sp -= nargs + 1;
                     return -1;
                 }
@@ -3813,8 +4160,8 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                     prop_res->val->data.func == NULL)
                 {
                     if (prop_res != NULL) mln_lang_var_free(prop_res);
-                    for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
-                    mln_lang_var_free(obj);
+                    for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
+                    value_release(obj_slot);
                     frame->op_sp -= nargs + 1;
                     mln_lang_errmsg(ctx, "Method is not a function.");
                     return -1;
@@ -3827,8 +4174,8 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
             mln_lang_funccall_val_t *call = mln_lang_funccall_val_new(ctx->pool, NULL);
             if (call == NULL) {
                 if (!fast_path_ok) mln_lang_var_free(func_var);
-                for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
-                mln_lang_var_free(obj);
+                for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
+                value_release(obj_slot);
                 frame->op_sp -= nargs + 1;
                 return -1;
             }
@@ -3837,14 +4184,21 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
 
             int add_arg_failed = 0;
             for (int i = 0; i < nargs; ++i) {
-                if (mln_lang_funccall_val_add_arg(call, args_base[i]) < 0) {
+                mln_lang_var_t *argv = value_take_var(ctx, &args_base[i]);
+                if (argv == NULL) {
                     add_arg_failed = 1;
-                    for (int k = i; k < nargs; ++k) mln_lang_var_free(args_base[k]);
+                    for (int k = i + 1; k < nargs; ++k) value_release(&args_base[k]);
+                    break;
+                }
+                if (mln_lang_funccall_val_add_arg(call, argv) < 0) {
+                    add_arg_failed = 1;
+                    mln_lang_var_free(argv);
+                    for (int k = i + 1; k < nargs; ++k) value_release(&args_base[k]);
                     break;
                 }
             }
             if (!fast_path_ok) mln_lang_var_free(func_var);
-            mln_lang_var_free(obj);
+            value_release(obj_slot);
             frame->op_sp -= nargs + 1;
             if (add_arg_failed) { mln_lang_funccall_val_free(call); return -1; }
 
@@ -3865,7 +4219,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 ret = mln_lang_var_create_nil(ctx, NULL);
                 if (ret == NULL) return -1;
             }
-            PUSH(ret);
+            VPUSH_VAR(ret);
             return 0;
         }
 
@@ -3876,7 +4230,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
              * so subsequent calls skip the global symbol lookup. */
             int nargs = insn.a;
             mln_string_t *gname = chunk->sconsts[insn.b];
-            mln_lang_var_t **args_base = &frame->opstack[frame->op_sp - nargs];
+            mln_lang_value_t *args_base = &frame->opstack[frame->op_sp - nargs];
 
             mln_lang_func_detail_t *callee_proto = NULL;
             mln_lang_vm_ic_t *ic = (chunk->ic_slots != NULL) ? &chunk->ic_slots[frame->pc - 1] : NULL;
@@ -3888,7 +4242,7 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 sym->data.var->val->data.func == NULL)
             {
                 /* Fallback: emit-equivalent of LOAD_GLOBAL+CALL_VALUE error. */
-                for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
                 frame->op_sp -= nargs;
                 mln_lang_errmsg(ctx, "Calling a non-function.");
                 return -1;
@@ -3901,16 +4255,23 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
 
             mln_lang_funccall_val_t *call = mln_lang_funccall_val_new(ctx->pool, NULL);
             if (call == NULL) {
-                for (int i = 0; i < nargs; ++i) mln_lang_var_free(args_base[i]);
+                for (int i = 0; i < nargs; ++i) value_release(&args_base[i]);
                 frame->op_sp -= nargs;
                 return -1;
             }
             call->prototype = callee_proto;
             int add_arg_failed = 0;
             for (int i = 0; i < nargs; ++i) {
-                if (mln_lang_funccall_val_add_arg(call, args_base[i]) < 0) {
+                mln_lang_var_t *argv = value_take_var(ctx, &args_base[i]);
+                if (argv == NULL) {
                     add_arg_failed = 1;
-                    for (int k = i; k < nargs; ++k) mln_lang_var_free(args_base[k]);
+                    for (int k = i + 1; k < nargs; ++k) value_release(&args_base[k]);
+                    break;
+                }
+                if (mln_lang_funccall_val_add_arg(call, argv) < 0) {
+                    add_arg_failed = 1;
+                    mln_lang_var_free(argv);
+                    for (int k = i + 1; k < nargs; ++k) value_release(&args_base[k]);
                     break;
                 }
             }
@@ -3931,36 +4292,67 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                 ret = mln_lang_var_create_nil(ctx, NULL);
                 if (ret == NULL) return -1;
             }
-            PUSH(ret);
+            VPUSH_VAR(ret);
             return 0;
         }
 
         /* ============================================================
          * Superinstructions: <op>_LL (two-locals) and <op>_LI (local + iconst).
          * Each falls back to apply_binop when operands aren't both int.
+         * Tagged-value rework: when both operands are unboxed-int-clean
+         * (slot val is INT, no overload), we now compute the result in a
+         * single 8-byte arithmetic op and push an unboxed value — no
+         * allocation, no apply_binop call, no methods-table lookup.
          * ============================================================ */
+
+#define VM_INT_BINOP_BODY(base_op, ai, bi)                                            \
+            switch (base_op) {                                                        \
+                case MLN_VOP_ADD: VPUSH_INT((ai) + (bi)); return 0;                   \
+                case MLN_VOP_SUB: VPUSH_INT((ai) - (bi)); return 0;                   \
+                case MLN_VOP_MUL: VPUSH_INT((ai) * (bi)); return 0;                   \
+                case MLN_VOP_LT:  VPUSH_BOOL((ai) <  (bi)); return 0;                 \
+                case MLN_VOP_LE:  VPUSH_BOOL((ai) <= (bi)); return 0;                 \
+                case MLN_VOP_GT:  VPUSH_BOOL((ai) >  (bi)); return 0;                 \
+                case MLN_VOP_GE:  VPUSH_BOOL((ai) >= (bi)); return 0;                 \
+                case MLN_VOP_EQ:  VPUSH_BOOL((ai) == (bi)); return 0;                 \
+                case MLN_VOP_NE:  VPUSH_BOOL((ai) != (bi)); return 0;                 \
+                default: break;                                                       \
+            }
 
 #define VM_BINOP_LL(opcode, base_op)                                                  \
         VM_CASE(opcode): {                                                            \
             mln_lang_var_t *lv = frame->slots[insn.a];                                \
             mln_lang_var_t *rv = frame->slots[(mln_u8_t)(insn.b & 0xff)];             \
+            if (lv->val != NULL && rv->val != NULL &&                                 \
+                lv->val->type == M_LANG_VAL_TYPE_INT &&                               \
+                rv->val->type == M_LANG_VAL_TYPE_INT &&                               \
+                !ctx->op_int_flag) {                                                  \
+                mln_s64_t ai = lv->val->data.i;                                       \
+                mln_s64_t bi = rv->val->data.i;                                       \
+                VM_INT_BINOP_BODY(base_op, ai, bi)                                    \
+            }                                                                         \
             ++(lv->ref); ++(rv->ref);                                                 \
             mln_lang_var_t *r = apply_binop(ctx, base_op, lv, rv);                    \
             if (r == NULL) return -1;                                                 \
-            PUSH(r);                                                                  \
+            VPUSH_VAR(r);                                                             \
             return 0;                                                                 \
         }
 
 #define VM_BINOP_LI(opcode, base_op)                                                  \
         VM_CASE(opcode): {                                                            \
             mln_lang_var_t *lv = frame->slots[insn.a];                                \
+            mln_s64_t imm     = chunk->iconsts[(mln_u16_t)insn.b];                    \
+            if (lv->val != NULL && lv->val->type == M_LANG_VAL_TYPE_INT &&            \
+                !ctx->op_int_flag) {                                                  \
+                mln_s64_t ai = lv->val->data.i;                                       \
+                VM_INT_BINOP_BODY(base_op, ai, imm)                                   \
+            }                                                                         \
             ++(lv->ref);                                                              \
-            mln_lang_var_t *rv = mln_lang_var_create_int(ctx,                         \
-                                    chunk->iconsts[(mln_u16_t)insn.b], NULL);        \
+            mln_lang_var_t *rv = mln_lang_var_create_int(ctx, imm, NULL);             \
             if (rv == NULL) { mln_lang_var_free(lv); return -1; }                     \
             mln_lang_var_t *r = apply_binop(ctx, base_op, lv, rv);                    \
             if (r == NULL) return -1;                                                 \
-            PUSH(r);                                                                  \
+            VPUSH_VAR(r);                                                             \
             return 0;                                                                 \
         }
 
@@ -3986,11 +4378,13 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
 
 #undef VM_BINOP_LL
 #undef VM_BINOP_LI
+#undef VM_INT_BINOP_BODY
 
         VM_CASE(MLN_VOP_RETURN_LOCAL): {
-            /* Fused LOAD_LOCAL + RETURN: return slot[a]'s value (deep copy
-             * the live ref so the caller's stack receives a stable owned
-             * var). */
+            /* Fused LOAD_LOCAL + RETURN: return slot[a]'s value. The
+             * caller's opstack receives a stable owned var (we bump ref
+             * so the var survives the slot-table teardown that
+             * vm_pop_frame_with_ret triggers). */
             mln_lang_var_t *sv = frame->slots[insn.a];
             ++(sv->ref);
             return vm_pop_frame_with_ret(ctx, sv);
@@ -4005,9 +4399,15 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
     VM_DISPATCH_END;
 }
 
-#undef PUSH
-#undef POP
-#undef TOP
+#undef VPUSH
+#undef VPUSH_VAR
+#undef VPUSH_BORROW
+#undef VPUSH_INT
+#undef VPUSH_BOOL
+#undef VPUSH_NIL
+#undef VPUSH_REAL
+#undef VPOP
+#undef VTOP_PTR
 
 /* Watcher trigger: builds funccall, dispatches; for compiled EXTERNAL,
  * funccall_run_compat (via the run_handler hook in mln_lang.c) pushes

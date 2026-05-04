@@ -1241,6 +1241,271 @@ int main(void)
           144);  /* see comment above */
 
     /* -------------------------------------------------
+     * 60. Tagged-value operand stack (high-cost-tier perf work).
+     *
+     * The opstack now stores tagged 16-byte mln_lang_value_t slots
+     * instead of mln_lang_var_t* pointers. Scalars (int/bool/nil/real)
+     * stay unboxed on the stack; vars carry a borrow bit so DUP and
+     * LOAD_LOCAL skip ref-count traffic. These tests pin down the
+     * subtle interactions that the rework must preserve.
+     * ------------------------------------------------- */
+
+    /* a) Hot integer arithmetic round-trip — exercises the unboxed
+     *    int fast path in MLN_VOP_ADD/SUB/MUL/CMP. */
+    T_INT(lang, ev, "tv_int_add",          "return 1 + 2 + 3 + 4 + 5;",                       15);
+    T_INT(lang, ev, "tv_int_chain",        "return ((10-3)*2 + 1) * 2 + 7;",                  37);
+    /* Negative-int and large-int round trip — exercises the unboxed
+     * 64-bit slot's full int range. */
+    T_INT(lang, ev, "tv_int_neg_arith",    "return -1000000 + 999999;",                       -1);
+    T_INT(lang, ev, "tv_int_large_mul",    "return 1000000 * 1000000;",       1000000000000LL);
+    T_TRUE (lang, ev, "tv_cmp_lt",         "return 1 < 2;");
+    T_FALSE(lang, ev, "tv_cmp_lt_neg",     "return 2 < 1;");
+    T_TRUE (lang, ev, "tv_cmp_eq",         "return 1+2 == 3;");
+    T_FALSE(lang, ev, "tv_cmp_ne",         "return 1+2 != 3;");
+    T_INT(lang, ev, "tv_int_bitops",       "return (0xff | 0x300) ^ 0xf0;",                   0x30f);
+    T_INT(lang, ev, "tv_int_shift",        "return (1 << 8) | (1 << 4) | 1;",                 0x111);
+
+    /* b) NEG / BITNOT on unboxed ints — these now bypass var alloc. */
+    T_INT(lang, ev, "tv_neg_int",          "return -42;",                                    -42);
+    T_INT(lang, ev, "tv_neg_double",       "return -(-7);",                                    7);
+    T_INT(lang, ev, "tv_bitnot_int",       "return ~0;",                                      -1);
+    T_INT(lang, ev, "tv_bitnot_chain",     "return ~~~0xa;",                                 ~10);
+
+    /* c) NOT operator on each unboxed kind — exercises value_is_truthy. */
+    T_TRUE (lang, ev, "tv_not_zero",       "return !0;");
+    T_FALSE(lang, ev, "tv_not_int",        "return !42;");
+    T_TRUE (lang, ev, "tv_not_nil",        "return !nil;");
+    T_FALSE(lang, ev, "tv_not_true",       "return !true;");
+    T_TRUE (lang, ev, "tv_not_false",      "return !false;");
+    T_FALSE(lang, ev, "tv_not_real",       "return !1.5;");
+
+    /* d) Conditional flow with unboxed bool/int — JUMP_IF_FALSE/TRUE
+     *    walks value_is_truthy without materializing. */
+    T_INT(lang, ev, "tv_if_int",
+          "@F(x) { if (x) {return 1;} fi return 0; } "
+          "return F(0) + F(1) + F(42) + F(-1);",
+          3);
+    T_INT(lang, ev, "tv_while_int",
+          "@F(n) { s=0; i=0; while (i < n) { s = s+i; i = i+1; } return s; } "
+          "return F(10);",  /* 0+1+...+9 = 45 */
+          45);
+
+    /* e) DUP borrow bit — the duplicated slot does NOT own a ref, so
+     *    consuming it must not over-decrement. The postfix++ → store
+     *    pattern is the canonical multi-DUP path. */
+    T_INT(lang, ev, "tv_dup_in_chain",
+          "@F() { a=5; b=a; c=b; return a+b+c; } return F();",
+          15);
+    T_INT(lang, ev, "tv_dup_borrow_compound",
+          /* postfix ++ in expression: pushes old, increments slot.
+           * The "return r * 100 + i" reads i again — borrow must
+           * survive the intervening store. */
+          "@F() { i=10; r = i++ + i; return r; } return F();",
+          21);  /* r = 10 + 11 */
+
+    /* f) Return-value materialization — RETURN materializes the top
+     *    tagged value into an owned var the caller's stack receives. */
+    T_INT(lang, ev, "tv_ret_int_lit",      "@F() { return 17; } return F();",                17);
+    T_INT(lang, ev, "tv_ret_int_borrow",   "@F() { x=99; return x; } return F();",           99);
+    T_INT(lang, ev, "tv_ret_chain",
+          "@F() { return G() + H(); } "
+          "@G() { return 7; } "
+          "@H() { return 8; } "
+          "return F();",
+          15);
+    T_INT(lang, ev, "tv_ret_local_fused",  /* RETURN_LOCAL super-instruction */
+          "@F() { x=42; return x; } return F();",                                             42);
+
+    /* g) Self-recursion (CALL_SELF) — args go through value_take_var
+     *    at the call boundary, then come back into slots as owned vars. */
+    T_INT(lang, ev, "tv_recur_fib",
+          "@F(i) { if (i <= 2) {return 1;} fi return F(i-1) + F(i-2); } return F(10);",
+          55);
+
+    /* h) Closures — captured vars must remain valid; the borrow-bit
+     *    optimization on LOAD_LOCAL must not break captured-var lifetime.
+     *    Use the same $(&n) capture syntax as section 42. */
+    T_INT(lang, ev, "tv_closure_capture",
+          "@make() { n=100; @inner() $(&n) { return n; } return inner; } "
+          "f = make(); return f();",
+          100);
+
+    /* i) Reference parameters (&x) — LOAD_LOCAL_REF must still construct
+     *    a VAR_REFER, even though plain LOAD_LOCAL pushes a borrow. */
+    T_INT(lang, ev, "tv_ref_param",
+          "@bump(&v) { v = v + 1; } @F() { x=5; bump(x); return x; } return F();",
+          6);
+
+    /* j) Mixed-type arithmetic (slow path) — int+real should fall
+     *    through to apply_binop via value_take_var. */
+    T_REAL(lang, ev, "tv_int_plus_real",   "return 1 + 2.5;",                                3.5);
+    T_REAL(lang, ev, "tv_real_minus_int",  "return 5.5 - 2;",                                3.5);
+
+    /* k) Property access fast path on tagged stack — IC + borrow on
+     *    member reads must produce identical observable results.
+     *    Note: Melang spells the set keyword without "Set", and
+     *    instantiation is `$Name` (no parens). Methods reference
+     *    fields via `this.x`.
+     *
+     *    NB: there is a pre-existing language quirk (visible on
+     *    origin/master too) where calling a method that takes one
+     *    or more arguments and whose RETURN expression depends on
+     *    those arguments produces a NULL return-value at the call
+     *    site. The same quirk is acknowledged in test #53
+     *    (`method_returns_this_field`). To stay focused on the
+     *    tagged-value rework, this test exercises the property
+     *    access fast path through a no-arg method that mutates and
+     *    re-reads `this.x`, which is not affected by the quirk. */
+    T_INT(lang, ev, "tv_set_prop_chain",
+          "Box2 { x; @bump5() { this.x = this.x + 5; } } "
+          "@F() { o = $Box2; o.x = 10; o.bump5(); r = o.x; o.x = r + 1; return o.x; } "
+          "return F();",
+          16);
+
+    /* l) Array fill + sum — exercises NEW_ARRAY, ARRAY_PUT (peek as
+     *    VAR), GET_INDEX, all under the new tagged stack. */
+    T_INT(lang, ev, "tv_array_sum",
+          "@F() { a = [1, 2, 3, 4, 5]; s=0; for (i=0; i<5; i++) { s = s + a[i]; } return s; } "
+          "return F();",
+          15);
+
+    /* m) Watch elision interaction — STORE_LOCAL on a watched slot must
+     *    fire vm_fire_watcher with the materialized value. */
+    T_INT(lang, ev, "tv_watch_local",
+          "@cb(&v, &n) { n = n + 1; } "
+          "@F() { x = 0; n = 0; Watch(x, cb, &n); x = 1; x = 2; x = 3; Unwatch(x); return n; } "
+          "return F();",
+          3);
+
+    /* n) Compound assignment on global (ASSIGN_GLOBAL borrow re-push). */
+    T_INT(lang, ev, "tv_compound_global",
+          "g = 1; g = g + 10; g = g * 2; return g;",
+          22);
+
+    /* o) Postfix ++ on local — emits LOAD_LOCAL_INC which pushes the
+     *    OLD value as an unboxed int. */
+    T_INT(lang, ev, "tv_postfix_local",
+          "@F() { i=5; r = i++; return r * 100 + i; } return F();",
+          506);  /* r=5, i=6 → 5*100+6 */
+
+    /* p) Prefix ++ on local — emits INC_LOCAL_LOAD pushing NEW value. */
+    T_INT(lang, ev, "tv_prefix_local",
+          "@F() { i=5; r = ++i; return r * 100 + i; } return F();",
+          606);  /* r=6, i=6 → 6*100+6 */
+
+    /* q) Super-instruction ADD_LL on int slots — should hit the inlined
+     *    fast path that pushes an unboxed int. */
+    T_INT(lang, ev, "tv_super_add_ll",
+          "@F(a, b) { return a + b; } return F(7, 11);",
+          18);
+
+    /* r) Super-instruction ADD_LI (local + iconst) — same fast path. */
+    T_INT(lang, ev, "tv_super_add_li",
+          "@F(a) { return a + 100; } return F(23);",
+          123);
+
+    /* s) Super-instruction LT_LL fast path. */
+    T_TRUE(lang, ev, "tv_super_lt_ll",
+          "@F(a, b) { return a < b; } return F(3, 7);");
+
+    /* t) Top-of-stack in-place via DUP+POP — should round-trip cleanly
+     *    even when the value is unboxed. Uses if/fi (no `else`/`fi` is
+     *    spelt with two if's in this dialect — we use the if/fi form). */
+    T_INT(lang, ev, "tv_dup_pop_clean",
+          "@F() { a=1; b=2; r=99; if (a < b) {r = a;} fi return r; } return F();",
+          1);
+
+    /* u) String values on the tagged stack — strings stay boxed, so
+     *    every push/pop must go through value_take_var with proper
+     *    refcount handling. */
+    T_STR(lang, ev, "tv_string_concat_chain",
+          "@F() { a = 'hello'; b = 'world'; return a + ' ' + b + '!'; } return F();",
+          "hello world!");
+    T_STR(lang, ev, "tv_string_pass_through_var",
+          "@F() { s = 'abc'; t = s; u = t; return u; } return F();",
+          "abc");
+    T_INT(lang, ev, "tv_string_compare_eq",
+          "@F() { if ('foo' == 'foo') {return 1;} fi return 0; } return F();",
+          1);
+    T_INT(lang, ev, "tv_string_compare_ne",
+          "@F() { if ('foo' == 'bar') {return 1;} fi return 0; } return F();",
+          0);
+
+    /* v) Real-only arithmetic on the slow path — apply_binop must
+     *    materialize both operands cleanly. */
+    T_REAL(lang, ev, "tv_real_arith_chain",
+          "@F() { return 1.5 * 2.0 + 0.5; } return F();",
+          3.5);
+    T_REAL(lang, ev, "tv_real_negate_chain",
+          "@F() { x = -2.5; return -x + 1.0; } return F();",
+          3.5);
+
+    /* w) Logical short-circuit on unboxed bools — only the LHS is
+     *    consumed when the result is determined; the RHS opstack
+     *    push must not leak when the jump skips it. */
+    T_INT(lang, ev, "tv_logical_or_short",
+          "@F() { a = 1; if (a || (1/0)) {return 7;} fi return 0; } return F();",
+          7);
+    T_INT(lang, ev, "tv_logical_and_short",
+          "@F() { a = 0; if (a && (1/0)) {return 1;} fi return 9; } return F();",
+          9);
+
+    /* x) Switch over unboxed int — every case-compare must handle the
+     *    unboxed scrutinee without box/unbox round-trips. */
+    T_INT(lang, ev, "tv_switch_int",
+          "@F(n) { switch (n) { case 1: return 100; case 2: return 200; default: return -1; } } "
+          "return F(2);",
+          200);
+
+    /* y) Index write-then-read — SET_INDEX on an unboxed int RHS,
+     *    GET_INDEX returning an unboxed int. Borrow chain on a[i]
+     *    must not double-decref when the slot is reassigned. */
+    T_INT(lang, ev, "tv_index_assign_read",
+          "@F() { a = [0, 0, 0]; a[0] = 11; a[1] = 22; a[2] = 33; "
+          "       return a[0] + a[1] + a[2]; } return F();",
+          66);
+
+    /* z) Long expression chain — many DUP / LOAD_LOCAL / arithmetic
+     *    ops in one frame. Stresses the borrow-bit + frame stack-depth
+     *    accounting under realistic expression density.
+     *
+     *    Compute: (a+b)*c=9, (d-a)*e=15, 9+15-b=22, 22*(c-a)=44,
+     *             +(a+b+c+d+e)=44+15=59. */
+    T_INT(lang, ev, "tv_long_expr_chain",
+          "@F() { a=1; b=2; c=3; d=4; e=5; "
+          "       return ((a+b)*c + (d-a)*e - b) * (c-a) + (a+b+c+d+e); } "
+          "return F();",
+          59);
+
+    /* aa) Operator overload routed through the AST-call path — when an
+     *     overload fires, the binop handler materializes both operands
+     *     into vars and re-enters as a function call. Confirms the
+     *     borrow + materialize boundary stays correct when the binop
+     *     fast path is bypassed. Uses the same overload mechanism as
+     *     op_overload_plus_basic but in a deeper call frame. */
+    T_INT(lang, ev, "tv_op_overload_in_frame",
+          "@__int_plus_operator__(a, b) { return a + b + 100; } "
+          "@F() { x = 1; y = 2; return x + y; } "
+          "return F();",
+          103);  /* 1+2+100 */
+
+    /* bb) Builtin call boundary — Dump/sys-style builtins receive
+     *     materialized mln_lang_var_t* via the methods table. The
+     *     return-int from a builtin lands as an owned VAR on the
+     *     tagged stack. Use a builtin we know is always available. */
+    T_NONE(lang, ev, "tv_builtin_call_boundary",
+          "@F() { Dump(); return; } F();");
+
+    /* cc) Deep nested function returns — each RETURN materializes,
+     *     each caller's resume-path must correctly rebox into its slot. */
+    T_INT(lang, ev, "tv_nested_returns",
+          "@A(n) { return n + 1; } "
+          "@B(n) { return A(n) + 10; } "
+          "@C(n) { return B(n) * 2; } "
+          "@F() { return C(3); } return F();",
+          28);  /* C(3) = B(3)*2 = (A(3)+10)*2 = (4+10)*2 = 28 */
+
+    /* -------------------------------------------------
      * Report
      * ------------------------------------------------- */
     printf("=== Results: %d passed, %d failed ===\n", g_n_pass, g_n_fail);
