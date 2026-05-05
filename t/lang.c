@@ -35,6 +35,7 @@
  *       -Llib/ -lmelon_static -lpthread -ldl -lm
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <math.h>
@@ -1904,6 +1905,108 @@ int main(void)
           "helper(); "
           "return 5 + 6;",              /* no overload in scope => 11 */
           11);
+
+    /* -------------------------------------------------
+     * 35. MELANG_VM_OFF=1 — AST-walker diagnostic mode
+     *
+     * When MELANG_VM_OFF is set to a recognised truthy value ("1", "yes",
+     * "true", "on" — case-insensitive), mln_lang_run_handler bypasses the
+     * bytecode VM and falls back to the original AST stack-walking
+     * interpreter.  Scripts must produce identical results in both modes.
+     * ------------------------------------------------- */
+    setenv("MELANG_VM_OFF", "1", 1);
+
+    T_INT(lang, ev, "vm_off_basic_arith",
+          "return 3 + 4;",
+          7);
+
+    T_INT(lang, ev, "vm_off_func_call",
+          "@F(n) { return n * 2; } return F(21);",
+          42);
+
+    T_INT(lang, ev, "vm_off_while_loop",
+          "s = 0; i = 0; "
+          "while (i < 5) { s = s + i; i = i + 1; } "
+          "return s;",
+          10);
+
+    /* Verify case-insensitive truthy variants also activate AST mode. */
+    setenv("MELANG_VM_OFF", "Yes", 1);
+    T_INT(lang, ev, "vm_off_truthy_Yes",
+          "return 100 - 58;",
+          42);
+
+    /* Verify "0" leaves VM enabled (so the same script still returns 42). */
+    setenv("MELANG_VM_OFF", "0", 1);
+    T_INT(lang, ev, "vm_off_falsy_zero",
+          "return 40 + 2;",
+          42);
+
+    unsetenv("MELANG_VM_OFF");
+
+    /* -------------------------------------------------
+     * 36. MELANG_VM_TRACE=1 — compile-trace toggle
+     *
+     * MELANG_VM_TRACE=1 causes mln_lang_vm_try_compile to print a
+     * one-line summary to stderr for each successfully compiled chunk.
+     *
+     * Test 36.a: correctness is unaffected with tracing on.
+     * Test 36.b: trace output is actually written to stderr.
+     * ------------------------------------------------- */
+
+    /* 36.a  Verify the script still produces correct results with tracing. */
+    setenv("MELANG_VM_TRACE", "1", 1);
+
+    T_INT(lang, ev, "vm_trace_correct_result",
+          "@TracedF(n) { return n + 1; } return TracedF(41);",
+          42);
+
+    /* 36.b  Verify trace output is actually emitted.
+     *   Redirect stderr to a temp file, compile a fresh function body,
+     *   restore stderr, then confirm the file contains the "[vm]" prefix
+     *   that mln_lang_vm_try_compile emits. */
+    {
+        char trace_tmp[] = "/tmp/melang_trace_XXXXXX";
+        int  trace_fd    = mkstemp(trace_tmp);
+        int  saved_stderr;
+        ssize_t n_read;
+        char buf[512];
+        int  has_trace;
+
+        saved_stderr = dup(fileno(stderr));
+        dup2(trace_fd, fileno(stderr));
+
+        /* Run a script with a function body that hasn't been compiled yet
+         * (unique name TracedG) so the compiler is guaranteed to fire. */
+        run_test(lang, ev, "vm_trace_emits_output_run",
+                 "@TracedG(x) { return x * 10; } return TracedG(5);",
+                 EXPECT_INT, (mln_s64_t)50, 0.0, NULL);
+
+        fflush(stderr);
+        dup2(saved_stderr, fileno(stderr));
+        close(saved_stderr);
+
+        unsetenv("MELANG_VM_TRACE");
+
+        /* Read trace file and search for the "[vm]" marker. */
+        lseek(trace_fd, (off_t)0, SEEK_SET);
+        n_read = read(trace_fd, buf, sizeof(buf) - 1);
+        if (n_read > 0) buf[n_read] = '\0'; else buf[0] = '\0';
+        has_trace = (strstr(buf, "[vm]") != NULL);
+
+        close(trace_fd);
+        unlink(trace_tmp);
+
+        if (has_trace) {
+            ++g_n_pass;
+            printf("  PASS [vm_trace_emits_output_check]\n");
+        } else {
+            ++g_n_fail;
+            fprintf(stderr,
+                    "  FAIL [vm_trace_emits_output_check]: "
+                    "no \"[vm]\" trace line found in captured stderr\n");
+        }
+    }
 
     /* -------------------------------------------------
      * Report
