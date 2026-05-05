@@ -98,6 +98,9 @@ static void test_return_handler(mln_lang_ctx_t *ctx)
              * the context was terminated by an error before it could
              * return. */
             ok = (rv != NULL);
+            if (!ok)
+                fprintf(stderr, "  FAIL [%s]: ret_var is NULL (script aborted?)\n",
+                        tc->name);
             break;
         case EXPECT_INT:
             ok = (rv != NULL && rv->val != NULL &&

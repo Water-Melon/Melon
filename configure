@@ -579,11 +579,29 @@ after_get_params() {
     # Select a plugin-aware archiver when LTO is enabled.  Done here (after
     # all args are parsed) so that --cc= and --enable-lto can appear in any
     # order on the command line.
+    #
+    # Detection strategy (most-specific first):
+    #  1. On MSYS2 CLANG64/CLANGARM64 the toolchain is Clang even if $cc
+    #     is just "gcc" or "cc"; trust MSYSTEM to pick llvm-ar.
+    #  2. Otherwise ask the compiler itself: if "$cc --version" mentions
+    #     "clang" (case-insensitive) use llvm-ar, else fall back to gcc-ar.
+    #  3. MSVC (cl.exe) uses its own /GL+/LTCG mechanism and does not use
+    #     an 'ar'-style archiver; --enable-lto has no effect on that path.
     if [ -n "$lto_flag" ]; then
-        case "$cc" in
-            *clang*) ar_cmd='llvm-ar' ;;
-            *)       ar_cmd='gcc-ar'  ;;
-        esac
+        _ar_chosen=0
+        # MSYS2 Clang environments
+        if ! case ${MSYSTEM:-} in CLANG64|CLANGARM64) false;; esac; then
+            ar_cmd='llvm-ar'
+            _ar_chosen=1
+        fi
+        # Query the compiler binary if not already determined
+        if [ $_ar_chosen -eq 0 ]; then
+            if $cc --version 2>/dev/null | grep -qi 'clang'; then
+                ar_cmd='llvm-ar'
+            else
+                ar_cmd='gcc-ar'
+            fi
+        fi
     fi
     get_source_files $select_files
     generate_Makefile

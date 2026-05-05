@@ -844,8 +844,19 @@ void mln_lang_free(mln_lang_t *lang)
     mln_alloc_destroy(pool);
 }
 
+/* Returns non-zero when MELANG_VM_OFF is set to a non-empty, non-zero string
+ * (e.g. "1").  An unset variable, empty string, or "0" all leave the VM
+ * active — matching the documented MELANG_VM_OFF=1 toggle. */
+static int mln_lang_vm_off_active(void)
+{
+    const char *v = getenv("MELANG_VM_OFF");
+    return v != NULL && v[0] != '\0' && v[0] != '0';
+}
+
 static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
 {
+    /* Helper macro for readability; calls the function defined above. */
+#define MLN_VM_OFF_ACTIVE() mln_lang_vm_off_active()
     int n;
     mln_lang_t *lang = (mln_lang_t *)data;
     mln_lang_ctx_t *ctx;
@@ -871,8 +882,9 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
          * ctx we compile the top-level stm chain and push the initial frame.
          * Subsequent dispatches drive vm_step with a per-slice budget so
          * multiple ctxs can time-share the event loop (Melang's coroutine
-         * model). MELANG_VM_OFF disables the VM path for diagnostics. */
-        if (getenv("MELANG_VM_OFF") == NULL) {
+         * model). MELANG_VM_OFF=1 disables the VM path for diagnostics;
+         * MELANG_VM_OFF=0 (or unset) keeps the VM enabled. */
+        if (!MLN_VM_OFF_ACTIVE()) {
             if (!ctx->vm_top_attempted) {
                 ctx->vm_top_attempted = 1;
                 int init_rc = mln_lang_vm_run_toplevel(ctx);
@@ -6196,7 +6208,7 @@ mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *
              * AST stack-walker so that sub-calls from an AST-fallback
              * body are also executed on the AST path (maintaining
              * correct run-stack ordering). */
-            if (getenv("MELANG_VM_OFF") != NULL || ctx->in_ast_fallback) {
+            if (MLN_VM_OFF_ACTIVE() || ctx->in_ast_fallback) {
                 scope->entry = prototype->data.stm;
                 if ((node = mln_lang_stack_push(ctx, M_LSNT_STM, prototype->data.stm)) == NULL) {
                     __mln_lang_errmsg(ctx, "Stack is full.");
