@@ -2224,6 +2224,246 @@ static int scan_stm_for_int_overload(mln_lang_stm_t *stm)
     return 0;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * AST scanner: detect any Eval() call anywhere in the statement/expression
+ * tree.  If found, constant folding must be disabled for the enclosing
+ * compilation unit because Eval() can inject __int_*_operator__ overloads
+ * at runtime, and those would silently be bypassed by pre-folded literals.
+ *
+ * The scan is conservative: any function call whose BASE identifier is
+ * exactly "Eval" (the Melang built-in) triggers the disable.  False
+ * positives (user functions named Eval) only cost a small performance
+ * regression (no integer literal folding), not a correctness failure.
+ * ─────────────────────────────────────────────────────────────────────── */
+static int scan_exp_for_eval(mln_lang_exp_t *exp);
+static int scan_assign_for_eval(mln_lang_assign_t *a);
+static int scan_logiclow_for_eval(mln_lang_logiclow_t *ll);
+static int scan_logichigh_for_eval(mln_lang_logichigh_t *lh);
+static int scan_relativelow_for_eval(mln_lang_relativelow_t *rl);
+static int scan_relativehigh_for_eval(mln_lang_relativehigh_t *rh);
+static int scan_move_for_eval(mln_lang_move_t *mv);
+static int scan_addsub_for_eval(mln_lang_addsub_t *as);
+static int scan_muldiv_for_eval(mln_lang_muldiv_t *md);
+static int scan_not_for_eval(mln_lang_not_t *nt);
+static int scan_suffix_for_eval(mln_lang_suffix_t *sf);
+static int scan_locate_for_eval(mln_lang_locate_t *loc);
+static int scan_spec_for_eval(mln_lang_spec_t *sp);
+static int scan_block_for_eval(mln_lang_block_t *blk);
+static int scan_stm_for_eval_call(mln_lang_stm_t *stm);
+
+static int name_is_eval(mln_string_t *name)
+{
+    if (name == NULL || name->len != 4) return 0;
+    const mln_u8ptr_t d = name->data;
+    return (d[0]=='E' && d[1]=='v' && d[2]=='a' && d[3]=='l');
+}
+
+static int scan_spec_for_eval(mln_lang_spec_t *sp)
+{
+    if (!sp) return 0;
+    switch (sp->op) {
+        case M_SPEC_PARENTH:  return scan_exp_for_eval(sp->data.exp);
+        case M_SPEC_NEGATIVE:
+        case M_SPEC_REVERSE:
+        case M_SPEC_INC:
+        case M_SPEC_DEC:
+        case M_SPEC_REFER:    return scan_spec_for_eval(sp->data.spec);
+        default:              return 0; /* M_SPEC_FACTOR, M_SPEC_NEW */
+    }
+}
+
+static int scan_locate_for_eval(mln_lang_locate_t *loc)
+{
+    while (loc != NULL) {
+        if (loc->op == M_LOCATE_NONE) return scan_spec_for_eval(loc->left);
+        /* Direct call to Eval()? Base must be identifier "Eval". */
+        if (loc->op == M_LOCATE_FUNC) {
+            mln_lang_spec_t *sp = loc->left;
+            if (sp && sp->op == M_SPEC_FACTOR) {
+                mln_lang_factor_t *f = sp->data.factor;
+                if (f && f->type == M_FACTOR_ID && name_is_eval(f->data.s_id))
+                    return 1;
+            }
+            /* Scan argument expressions. */
+            if (loc->right.exp && scan_exp_for_eval(loc->right.exp)) return 1;
+        } else if (loc->op == M_LOCATE_INDEX) {
+            if (loc->right.exp && scan_exp_for_eval(loc->right.exp)) return 1;
+        }
+        if (scan_spec_for_eval(loc->left)) return 1;
+        loc = loc->next;
+    }
+    return 0;
+}
+
+static int scan_suffix_for_eval(mln_lang_suffix_t *sf)
+{
+    return sf ? scan_locate_for_eval(sf->left) : 0;
+}
+
+static int scan_not_for_eval(mln_lang_not_t *nt)
+{
+    if (!nt) return 0;
+    return (nt->op == M_NOT_NOT) ? scan_not_for_eval(nt->right.not)
+                                 : scan_suffix_for_eval(nt->right.suffix);
+}
+
+static int scan_muldiv_for_eval(mln_lang_muldiv_t *md)
+{
+    while (md) {
+        if (scan_not_for_eval(md->left)) return 1;
+        md = md->right;
+    }
+    return 0;
+}
+
+static int scan_addsub_for_eval(mln_lang_addsub_t *as)
+{
+    while (as) {
+        if (scan_muldiv_for_eval(as->left)) return 1;
+        as = as->right;
+    }
+    return 0;
+}
+
+static int scan_move_for_eval(mln_lang_move_t *mv)
+{
+    while (mv) {
+        if (scan_addsub_for_eval(mv->left)) return 1;
+        mv = mv->right;
+    }
+    return 0;
+}
+
+static int scan_relativehigh_for_eval(mln_lang_relativehigh_t *rh)
+{
+    while (rh) {
+        if (scan_move_for_eval(rh->left)) return 1;
+        rh = rh->right;
+    }
+    return 0;
+}
+
+static int scan_relativelow_for_eval(mln_lang_relativelow_t *rl)
+{
+    while (rl) {
+        if (scan_relativehigh_for_eval(rl->left)) return 1;
+        rl = rl->right;
+    }
+    return 0;
+}
+
+static int scan_logichigh_for_eval(mln_lang_logichigh_t *lh)
+{
+    while (lh) {
+        if (scan_relativelow_for_eval(lh->left)) return 1;
+        lh = lh->right;
+    }
+    return 0;
+}
+
+static int scan_logiclow_for_eval(mln_lang_logiclow_t *ll)
+{
+    while (ll) {
+        if (scan_logichigh_for_eval(ll->left)) return 1;
+        ll = ll->right;
+    }
+    return 0;
+}
+
+static int scan_assign_for_eval(mln_lang_assign_t *a)
+{
+    while (a) {
+        if (scan_logiclow_for_eval(a->left)) return 1;
+        a = a->right;
+    }
+    return 0;
+}
+
+static int scan_exp_for_eval(mln_lang_exp_t *exp)
+{
+    while (exp) {
+        if (scan_assign_for_eval(exp->assign)) return 1;
+        exp = exp->next;
+    }
+    return 0;
+}
+
+static int scan_block_for_eval(mln_lang_block_t *blk)
+{
+    if (!blk) return 0;
+    switch (blk->type) {
+        case M_BLOCK_EXP:
+            return scan_exp_for_eval(blk->data.exp);
+        case M_BLOCK_STM:
+            return scan_stm_for_eval_call(blk->data.stm);
+        case M_BLOCK_RETURN:
+            return scan_exp_for_eval(blk->data.exp);
+        case M_BLOCK_IF:
+            if (!blk->data.i) return 0;
+            if (scan_exp_for_eval(blk->data.i->condition)) return 1;
+            if (scan_block_for_eval(blk->data.i->blockstm)) return 1;
+            return scan_block_for_eval(blk->data.i->elsestm);
+        default:
+            return 0;
+    }
+}
+
+static int scan_stm_for_eval_call(mln_lang_stm_t *stm)
+{
+    while (stm != NULL) {
+        switch (stm->type) {
+            case M_STM_BLOCK:
+                if (scan_block_for_eval(stm->data.block)) return 1;
+                break;
+            case M_STM_FUNC:
+                /* Scan nested function bodies (calling Eval inside a helper
+                 * function that is invoked before the arithmetic code also
+                 * changes the effective op_int_flag at top-level). */
+                if (stm->data.func && scan_stm_for_eval_call(stm->data.func->stm))
+                    return 1;
+                break;
+            case M_STM_SET:
+                if (stm->data.setdef != NULL) {
+                    mln_lang_setstm_t *ss = stm->data.setdef->stm;
+                    while (ss != NULL) {
+                        if (ss->type == M_SETSTM_FUNC && ss->data.func != NULL)
+                            if (scan_stm_for_eval_call(ss->data.func->stm)) return 1;
+                        ss = ss->next;
+                    }
+                }
+                break;
+            case M_STM_WHILE:
+                if (stm->data.w != NULL) {
+                    if (scan_exp_for_eval(stm->data.w->condition)) return 1;
+                    if (scan_block_for_eval(stm->data.w->blockstm)) return 1;
+                }
+                break;
+            case M_STM_FOR:
+                if (stm->data.f != NULL) {
+                    if (scan_exp_for_eval(stm->data.f->init_exp)) return 1;
+                    if (scan_exp_for_eval(stm->data.f->condition)) return 1;
+                    if (scan_exp_for_eval(stm->data.f->mod_exp)) return 1;
+                    if (scan_block_for_eval(stm->data.f->blockstm)) return 1;
+                }
+                break;
+            case M_STM_SWITCH:
+                if (stm->data.sw != NULL) {
+                    if (scan_exp_for_eval(stm->data.sw->condition)) return 1;
+                    mln_lang_switchstm_t *sw = stm->data.sw->switchstm;
+                    while (sw != NULL) {
+                        if (scan_stm_for_eval_call(sw->stm)) return 1;
+                        sw = sw->next;
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        stm = stm->next;
+    }
+    return 0;
+}
+
 int
 mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
 {
@@ -2249,12 +2489,16 @@ mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
      *   (a) the script does NOT define any __int_*_operator__ overload
      *       in its AST (static check), AND
      *   (b) ctx->op_int_flag is currently 0 (no overload was injected
-     *       previously via Eval into the same ctx).
-     * Either condition being violated means this prototype's int binops
+     *       previously via Eval into the same ctx), AND
+     *   (c) the function body does NOT call Eval() anywhere (conservative:
+     *       Eval could define an overload at runtime after this chunk is
+     *       compiled, making any folded constants incorrect).
+     * Any condition being violated means this prototype's int binops
      * may legitimately need to dispatch through the methods table at
      * runtime; folding would silently bypass that path. */
     c.safe_to_fold = !ctx->op_int_flag &&
-                     !scan_stm_for_int_overload(prototype->data.stm);
+                     !scan_stm_for_int_overload(prototype->data.stm) &&
+                     !scan_stm_for_eval_call(prototype->data.stm);
 
     c.chunk = mln_lang_vm_chunk_new(ctx->pool);
     if (c.chunk == NULL) return 0;
@@ -2356,6 +2600,10 @@ mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
     }
 
     prototype->vm_chunk = c.chunk;
+    /* Record the op_int_flag value at compile time.  If it changes later
+     * (e.g. Eval injects an overload), the cached chunk will be invalidated
+     * and recompiled with safe_to_fold=0 on the next call. */
+    prototype->vm_op_int_flag = ctx->op_int_flag;
     if (mln_lang_vm_env_is_active("MELANG_VM_TRACE")) {
         fprintf(stderr, "[vm] compiled chunk: insns=%zu locals=%zu max_stack=%zu\n",
                 (size_t)c.chunk->code_len, (size_t)c.n_locals,
@@ -4571,8 +4819,15 @@ int mln_lang_vm_run_toplevel(mln_lang_ctx_t *ctx)
      * would have safe_to_fold = 1 and emit folded LOAD_INT instead of
      * the runtime-dispatched ADD opcode that would later route through
      * the overload. The flag is sticky and idempotent: the existing
-     * dynamic setter at definition time is a no-op once set. */
-    if (scan_stm_for_int_overload(ctx->stm)) {
+     * dynamic setter at definition time is a no-op once set.
+     *
+     * Also pre-set if the script contains any Eval() call anywhere in its
+     * AST (including nested function bodies). Eval can inject overloads at
+     * runtime after the top-level chunk has already been compiled, so any
+     * integer literals in the top-level must not be folded — they must emit
+     * real ADD/SUB/... opcodes that route through the methods table when an
+     * overload is later registered. */
+    if (scan_stm_for_int_overload(ctx->stm) || scan_stm_for_eval_call(ctx->stm)) {
         ctx->op_int_flag = 1;
     }
 

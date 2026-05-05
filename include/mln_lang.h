@@ -341,9 +341,13 @@ struct mln_lang_func_detail_s {
     /* Bytecode VM extension. Tries to compile the EXTERNAL function body to
      * bytecode on first call. vm_state: 0=untried, 1=compiled, -1=uncompilable.
      * vm_chunk is opaque mln_lang_vm_chunk_t* (see mln_lang_vm.h). int
-     * (not mln_s8_t) so -1 is reliably negative across char-signedness. */
+     * (not mln_s8_t) so -1 is reliably negative across char-signedness.
+     * vm_op_int_flag records ctx->op_int_flag at compile time; if the flag
+     * changes after Eval-injected overloads, the cached chunk is stale and
+     * must be recompiled. */
     void                            *vm_chunk;
     int                              vm_state;
+    int                              vm_op_int_flag;
 };
 
 typedef enum {

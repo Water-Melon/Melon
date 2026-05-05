@@ -32,7 +32,7 @@
  *
  * Compile:
  *   cc -O2 -Wall -Iinclude -o /tmp/test_lang t/lang.c \
- *       -Llib/ -lmelon_static -lpthread -ldl
+ *       -Llib/ -lmelon_static -lpthread -ldl -lm
  */
 #include <stdio.h>
 #include <string.h>
@@ -1846,6 +1846,55 @@ int main(void)
           "} "
           "return F(2);",
           22);
+
+    /* -------------------------------------------------
+     * 34. Eval-injected operator overloads.
+     *
+     * These tests verify that Eval() can inject an __int_*_operator__
+     * overload at runtime and that:
+     *   (a) A function compiled BEFORE the Eval call correctly routes
+     *       through the overload on the NEXT call (cache invalidation).
+     *   (b) Top-level integer arithmetic AFTER the Eval call is not
+     *       bypassed by compile-time constant folding.
+     *   (c) An Eval call nested inside a user-defined function also
+     *       triggers the correct behaviour for top-level arithmetic
+     *       following that function call.
+     *
+     * The overload used is: @__int_plus_operator__(a, b) { return a+b+1; }
+     * Inside the overload the recursion guard suppresses itself, so
+     * (a+b) uses default integer addition and the result is a+b+1.
+     * ------------------------------------------------- */
+
+    /* 34.a  Function called before and after Eval injection.
+     * r1: F() called BEFORE Eval => no overload yet => 3+4 = 7.
+     * Eval injects __int_plus_operator__.
+     * r2: F() called AFTER Eval => overload active => 3+4+1 = 8.
+     * r2 - r1 = 1. */
+    T_INT(lang, ev, "eval_inject_overload_func_cache",
+          "@F() { return 3 + 4; } "
+          "r1 = F(); "
+          "Eval('@__int_plus_operator__(a, b) { return a + b + 1; }'); "
+          "r2 = F(); "
+          "return r2 - r1;",
+          1);
+
+    /* 34.b  Top-level arithmetic following a direct Eval call.
+     * The compiler must not fold 5+6 to 11 because the Eval in the same
+     * script may inject an overload at runtime.  After Eval runs,
+     * 5 + 6 should dispatch through __int_plus_operator__ => 5+6+1 = 12. */
+    T_INT(lang, ev, "eval_inject_overload_toplevel_arith",
+          "Eval('@__int_plus_operator__(a, b) { return a + b + 1; }'); "
+          "return 5 + 6;",
+          12);
+
+    /* 34.c  Eval nested inside a user-defined helper function.
+     * inject() calls Eval internally; its effect must still prevent
+     * constant folding of top-level arithmetic that follows. */
+    T_INT(lang, ev, "eval_inject_via_nested_func",
+          "@inject() { Eval('@__int_plus_operator__(a, b) { return a + b + 1; }'); } "
+          "inject(); "
+          "return 5 + 6;",
+          12);
 
     /* -------------------------------------------------
      * Report

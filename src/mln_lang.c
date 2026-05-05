@@ -6243,6 +6243,15 @@ mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *
             }
             if (prototype->vm_state == 0) {
                 prototype->vm_state = mln_lang_vm_try_compile(ctx, prototype);
+            } else if (prototype->vm_state == 1 &&
+                       prototype->vm_op_int_flag != ctx->op_int_flag) {
+                /* op_int_flag changed since last compile (e.g. Eval injected
+                 * an __int_*_operator__ overload). The cached chunk may have
+                 * constant-folded integer expressions that now need to route
+                 * through the methods table. Invalidate and recompile. */
+                mln_lang_vm_chunk_free((mln_lang_vm_chunk_t *)prototype->vm_chunk);
+                prototype->vm_chunk = NULL;
+                prototype->vm_state = mln_lang_vm_try_compile(ctx, prototype);
             }
             if (prototype->vm_state == 1) {
                 /* Push a VM frame; the caller (a CALL opcode in the
