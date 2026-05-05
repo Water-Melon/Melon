@@ -844,13 +844,13 @@ void mln_lang_free(mln_lang_t *lang)
     mln_alloc_destroy(pool);
 }
 
-/* Case-insensitive ASCII string equality helper (no POSIX/MSVC dependency). */
+/* Case-insensitive ASCII string equality helper (no POSIX/MSVC dependency).
+ * Both strings must be pure ASCII; 'b' must be all-lowercase. */
 static int vm_str_eq_ci(const char *a, const char *b)
 {
     for (; *a && *b; a++, b++) {
         int ca = (*a >= 'A' && *a <= 'Z') ? (*a | 0x20) : *a;
-        int cb = (*b >= 'A' && *b <= 'Z') ? (*b | 0x20) : *b;
-        if (ca != cb) return 0;
+        if (ca != *b) return 0;
     }
     return *a == *b;
 }
@@ -858,7 +858,8 @@ static int vm_str_eq_ci(const char *a, const char *b)
 /* Returns non-zero when MELANG_VM_OFF is set to a recognised "true" value.
  * Accepted truthy values: "1", "yes", "true", "on" (case-insensitive).
  * An unset variable, empty string, "0", "no", "false", or "off" all leave
- * the VM active — matching the documented MELANG_VM_OFF=1 toggle. */
+ * the VM active — matching the documented MELANG_VM_OFF=1 toggle.
+ * Keep this list in sync with vm_env_is_active() in mln_lang_vm.c. */
 static int mln_lang_vm_off_active(void)
 {
     const char *v = getenv("MELANG_VM_OFF");

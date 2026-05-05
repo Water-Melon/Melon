@@ -69,11 +69,14 @@ extern void mln_lang_set_detail_free(mln_lang_set_detail_t *c);
 
 /* Returns non-zero when the given env var is set to a recognised "true"
  * value ("1", "yes", "true", "on" — all case-insensitive).  Any other
- * value, including "0", leaves the feature off. */
+ * value, including "0", leaves the feature off.
+ * NOTE: truthy[] must contain only lowercase strings; the comparison
+ * lowercases only the env var value (ASCII A-Z -> a-z). */
 static int vm_env_is_active(const char *var_name)
 {
     const char *v = getenv(var_name);
     const char *p, *q;
+    /* Keep this list in sync with mln_lang_vm_off_active() in mln_lang.c. */
     static const char * const truthy[] = {"1", "yes", "true", "on", NULL};
     int i;
     if (v == NULL || v[0] == '\0') return 0;
