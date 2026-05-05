@@ -172,12 +172,6 @@ get_params() {
         elif [ $param_prefix == "--enable-lto" ]; then
             lto_flag='-flto'
             lto_link_flag='-flto'
-            # LTO archives require a plugin-aware archiver so that the
-            # bitcode objects are usable by downstream linkers.
-            case "$cc" in
-                *clang*) ar_cmd='llvm-ar' ;;
-                *)       ar_cmd='gcc-ar'  ;;
-            esac
         elif [ $param_prefix == "--select" ]; then
             select_files=$param_suffix
         elif [ $param_prefix == "--disable-macro" ]; then
@@ -582,6 +576,15 @@ after_get_params() {
     update_debug_flag
     detect_operating_system_support
     update_paths
+    # Select a plugin-aware archiver when LTO is enabled.  Done here (after
+    # all args are parsed) so that --cc= and --enable-lto can appear in any
+    # order on the command line.
+    if [ -n "$lto_flag" ]; then
+        case "$cc" in
+            *clang*) ar_cmd='llvm-ar' ;;
+            *)       ar_cmd='gcc-ar'  ;;
+        esac
+    fi
     get_source_files $select_files
     generate_Makefile
     generate_conf_file
