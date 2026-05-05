@@ -1848,53 +1848,62 @@ int main(void)
           22);
 
     /* -------------------------------------------------
-     * 34. Eval-injected operator overloads.
+     * 34. Eval co-existence with operator overloads.
      *
-     * These tests verify that Eval() can inject an __int_*_operator__
-     * overload at runtime and that:
-     *   (a) A function compiled BEFORE the Eval call correctly routes
-     *       through the overload on the NEXT call (cache invalidation).
-     *   (b) Top-level integer arithmetic AFTER the Eval call is not
-     *       bypassed by compile-time constant folding.
-     *   (c) An Eval call nested inside a user-defined function also
-     *       triggers the correct behaviour for top-level arithmetic
-     *       following that function call.
+     * Melang's Eval() always creates a NEW, isolated context.  It cannot
+     * inject definitions into the calling context's scope.  However, if
+     * the top-level AST contains ANY Eval() call the VM compiler
+     * conservatively pre-sets ctx->op_int_flag = 1 before compiling the
+     * top-level chunk.  This prevents compile-time constant folding of
+     * integer literals so that any __int_*_operator__ defined DIRECTLY in
+     * the same script is still honoured by the emitted opcodes at runtime.
      *
-     * The overload used is: @__int_plus_operator__(a, b) { return a+b+1; }
-     * Inside the overload the recursion guard suppresses itself, so
-     * (a+b) uses default integer addition and the result is a+b+1.
+     * These tests verify:
+     *   (a) Pre-scan + direct overload: a function compiled before the
+     *       overload definition still picks up the overload on its next
+     *       call when Eval() is also present in the script.
+     *   (b) Pre-scan without overload: arithmetic in a script that
+     *       contains Eval() but no overload returns the correct default
+     *       result (no constant fold, no spurious dispatch).
+     *   (c) Eval nested inside a helper body: the pre-scan's recursive
+     *       descent into function bodies detects the Eval(), so the same
+     *       conservative no-fold guarantee applies at the top level.
      * ------------------------------------------------- */
 
-    /* 34.a  Function called before and after Eval injection.
-     * r1: F() called BEFORE Eval => no overload yet => 3+4 = 7.
-     * Eval injects __int_plus_operator__.
-     * r2: F() called AFTER Eval => overload active => 3+4+1 = 8.
-     * r2 - r1 = 1. */
-    T_INT(lang, ev, "eval_inject_overload_func_cache",
+    /* 34.a  Eval present AND a direct overload defined later in the script.
+     * The pre-scan finds Eval → sets ctx->op_int_flag = 1 → disables
+     * constant folding.  F() is first compiled with safe_to_fold = 0.
+     * After @__int_plus_operator__ is defined, the SECOND call to F()
+     * routes through the overload: 3+4+1 = 8.  Difference = 1. */
+    T_INT(lang, ev, "eval_present_overload_func_cache",
           "@F() { return 3 + 4; } "
-          "r1 = F(); "
-          "Eval('@__int_plus_operator__(a, b) { return a + b + 1; }'); "
-          "r2 = F(); "
-          "return r2 - r1;",
+          "r1 = F(); "                  /* no overload yet => 7 */
+          "Eval('return 0;'); "         /* Eval in AST: conservative pre-scan */
+          "@__int_plus_operator__(a, b) { return a + b + 1; } "
+          "r2 = F(); "                  /* overload active => 3+4+1 = 8 */
+          "return r2 - r1;",            /* 8 - 7 = 1 */
           1);
 
-    /* 34.b  Top-level arithmetic following a direct Eval call.
-     * The compiler must not fold 5+6 to 11 because the Eval in the same
-     * script may inject an overload at runtime.  After Eval runs,
-     * 5 + 6 should dispatch through __int_plus_operator__ => 5+6+1 = 12. */
-    T_INT(lang, ev, "eval_inject_overload_toplevel_arith",
-          "Eval('@__int_plus_operator__(a, b) { return a + b + 1; }'); "
-          "return 5 + 6;",
-          12);
+    /* 34.b  Eval present, no overload defined in this script.
+     * Pre-scan sets op_int_flag = 1, so 5+6 emits LOAD_INT + LOAD_INT +
+     * ADD (not a folded LOAD_INT 11).  At runtime Eval runs a separate
+     * context and defines nothing in the current scope.  apply_binop
+     * finds no __int_plus_operator__ → falls through to default
+     * arithmetic → 5+6 = 11 (the correct unoverridden result). */
+    T_INT(lang, ev, "eval_present_no_overload",
+          "Eval('return 0;'); "         /* Eval in AST: op_int_flag pre-set */
+          "return 5 + 6;",              /* no overload in scope => 11 */
+          11);
 
-    /* 34.c  Eval nested inside a user-defined helper function.
-     * inject() calls Eval internally; its effect must still prevent
-     * constant folding of top-level arithmetic that follows. */
-    T_INT(lang, ev, "eval_inject_via_nested_func",
-          "@inject() { Eval('@__int_plus_operator__(a, b) { return a + b + 1; }'); } "
-          "inject(); "
-          "return 5 + 6;",
-          12);
+    /* 34.c  Eval nested inside a helper function body.
+     * scan_stm_for_eval_call recurses into function bodies, so the Eval
+     * inside helper() is still detected and op_int_flag is pre-set.
+     * Arithmetic follows the same no-fold, no-overload path as 34.b. */
+    T_INT(lang, ev, "eval_in_nested_func_no_overload",
+          "@helper() { Eval('return 0;'); } "
+          "helper(); "
+          "return 5 + 6;",              /* no overload in scope => 11 */
+          11);
 
     /* -------------------------------------------------
      * Report

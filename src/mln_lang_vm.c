@@ -2226,9 +2226,14 @@ static int scan_stm_for_int_overload(mln_lang_stm_t *stm)
 
 /* ─────────────────────────────────────────────────────────────────────────
  * AST scanner: detect any Eval() call anywhere in the statement/expression
- * tree.  If found, constant folding must be disabled for the enclosing
- * compilation unit because Eval() can inject __int_*_operator__ overloads
- * at runtime, and those would silently be bypassed by pre-folded literals.
+ * tree.  If found, constant folding is disabled for the enclosing
+ * compilation unit as a conservative safety guard.
+ *
+ * Note: Melang's Eval() always runs code in a NEW, isolated context and
+ * cannot inject definitions (including operator overloads) into the calling
+ * context's scope.  The disable-folding guard is therefore conservative —
+ * it never causes incorrect results, only a minor performance loss
+ * (integer literal pairs are not pre-folded at compile time).
  *
  * The scan is conservative: any function call whose BASE identifier is
  * exactly "Eval" (the Melang built-in) triggers the disable.  False
@@ -4821,12 +4826,14 @@ int mln_lang_vm_run_toplevel(mln_lang_ctx_t *ctx)
      * the overload. The flag is sticky and idempotent: the existing
      * dynamic setter at definition time is a no-op once set.
      *
-     * Also pre-set if the script contains any Eval() call anywhere in its
-     * AST (including nested function bodies). Eval can inject overloads at
-     * runtime after the top-level chunk has already been compiled, so any
-     * integer literals in the top-level must not be folded — they must emit
-     * real ADD/SUB/... opcodes that route through the methods table when an
-     * overload is later registered. */
+     * Also pre-set conservatively if the script contains any Eval() call
+     * anywhere in its AST (including nested function bodies).  Melang's
+     * Eval() always runs code in a NEW, isolated context, so it cannot
+     * inject operator overloads into the calling context.  However, pre-
+     * setting the flag is a harmless conservative guard: it only disables
+     * compile-time constant folding for integer literals, and the emitted
+     * ADD/SUB/... opcodes still return the correct result whether or not
+     * an overload is active. */
     if (scan_stm_for_int_overload(ctx->stm) || scan_stm_for_eval_call(ctx->stm)) {
         ctx->op_int_flag = 1;
     }
