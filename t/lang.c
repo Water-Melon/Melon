@@ -1528,6 +1528,318 @@ int main(void)
           "return F();",
           99);
 
+    /* =========================================================
+     * Section 33: Complex bug-hunting tests
+     *
+     * These are designed to stress specific code paths in mln_lang_vm.c
+     * with the goal of finding latent bugs:
+     *  - frame freelist + opstack growth under deep recursion
+     *  - DUP borrow-bit correctness when an opstack value's underlying
+     *    var is re-stored into a slot mid-expression
+     *  - operator-overload re-entrancy during a VM-compiled function
+     *  - reference parameters that point at slot vars (slot val mutation
+     *    must propagate back to the caller, but the wrapper var must not
+     *    be kept after the call returns)
+     *  - mixed-ref/by-value parameter declarations (regression test for
+     *    the funcdef_args_get bug where a leading &-prefixed parameter
+     *    caused all subsequent parameters to be silently created as
+     *    REFER and aliased to the caller's variable)
+     *  - postfix/prefix ++ on slots and globals
+     *  - mixed int/real arithmetic chain that bounces between fast paths
+     *    and the methods-table dispatch
+     *  - deep cross-function call chain that forces opstack growth
+     *  - val/var freelist correctness when the same val is recycled
+     *    multiple times in a single ctx
+     *  - early return inside a switch/for/goto interaction
+     *  - global lookup via LOAD_GLOBAL that creates a new slot
+     *    (LOAD then STORE then re-LOAD)
+     * ========================================================= */
+
+    /* 33.a Deep recursion (>= 64 frames). Forces vm_frame_freelist to fill
+     * to its M_LANG_FRAME_FREELIST_MAX cap and exercise the
+     * "freelist full -> mln_alloc_free" path during pop. */
+    T_INT(lang, ev, "complex_deep_recursion",
+          "@C(n) { if (n <= 0) { return 0; } fi return 1 + C(n - 1); } "
+          "return C(200);", 200);
+
+    /* 33.b Heavy non-tail recursive chain that grows the operand stack:
+     * each level holds (n+1) live values before tail-summing. Forces
+     * vm_frame_grow_opstack to exercise the realloc path. */
+    T_INT(lang, ev, "complex_opstack_growth",
+          "@G(n) { "
+          "  if (n <= 0) { return 0; } fi "
+          "  return n + (n-1) + (n-2) + (n-3) + (n-4) + (n-5) + (n-6) + (n-7) + G(n-8); "
+          "} "
+          "return G(40);",
+          /* G(n) = n+(n-1)+...+(n-7) + G(n-8). Closed form: total = sum
+           * 0..40 = 820. */
+          820);
+
+    /* 33.c DUP-borrow stress: the same slot var is read 5 times in one
+     * expression. With the borrow-bit optimization, only one DUP should
+     * own; the others are non-owning views. If a release path mistakenly
+     * frees the underlying var, we'd crash. Verifies repeated borrow. */
+    T_INT(lang, ev, "complex_dup_borrow_5x",
+          "@F() { x = 7; return x + x + x + x + x; } return F();",
+          35);
+
+    /* 33.d Aliased val mutation: in Melang, `y = x` copies the value
+     * (not the val pointer), so y++ must NOT alter x. */
+    T_INT(lang, ev, "complex_assign_no_alias",
+          "@F() { x = 5; y = x; y++; return x; } return F();",
+          5);
+
+    /* 33.e Reference parameter (&) at call site mutates caller; non-&
+     * argument must remain untouched.  Direct VM-only check (the AST
+     * walker rejects `&` in calls). */
+    T_INT(lang, ev, "complex_ref_param_mutates",
+          "@inc(x, y) { x = x + 100; y = y + 100; return; } "
+          "@F() { a = 1; b = 2; inc(&a, b); return a * 1000 + b; } "
+          "return F();",
+          /* a became 101 (by ref); b stayed 2. */
+          101 * 1000 + 2);
+
+    /* 33.e2 REGRESSION TEST for the funcdef_args_get bug.  When the
+     * function declaration has `&x` for the first parameter and `y`
+     * (no &) for the second, calling inc(a, b) used to alias b into
+     * the caller because `type` was not reset between iterations of
+     * funcdef_args_get -- so y's protocol var was stamped REFER and
+     * mln_lang_var_transform's REFER branch aliased the caller's val
+     * into the callee slot.  After the fix, b stays 2. */
+    T_INT(lang, ev, "complex_decl_mixed_ref",
+          "@inc(&x, y) { x = x + 100; y = y + 100; return; } "
+          "@F() { a = 1; b = 2; inc(&a, b); return a * 1000 + b; } "
+          "return F();",
+          /* a=101 (decl &x AND call &a), b=2 (decl y, no & at call). */
+          101 * 1000 + 2);
+
+    /* 33.e3 REGRESSION TEST: 3-arg variant where only the first param
+     * is `&`-declared.  Confirms the bug fix flushes `type` per-arg
+     * even when more than one trailing arg is by-value. */
+    T_INT(lang, ev, "complex_decl_mixed_ref_3args",
+          "@modify(&x, y, z) { x = x + 100; y = y + 100; z = z + 100; return; } "
+          "@F() { a = 1; b = 2; c = 3; modify(&a, b, c); "
+          "       return a*1000000 + b*1000 + c; } "
+          "return F();",
+          /* a=101 (ref), b=2 (by-value), c=3 (by-value). */
+          101 * 1000000 + 2 * 1000 + 3);
+
+    /* 33.f Operator overload defined AFTER a function compiled.  Once
+     * `__int_plus_operator__` is in scope, the second F() call dispatches
+     * the overload.  Inside the overload body, `+ 1` triggers the overload
+     * recursively (Melang scopes op_int_flag per binop, not per call), so
+     * the body computes ((a+b)+1)+1 = a+b+2.  Both AST and VM must agree
+     * on this 5/7 sequence. */
+    T_INT(lang, ev, "complex_overload_post_compile",
+          "@F() { return 2 + 3; } "
+          "first = F(); "
+          "@__int_plus_operator__(a, b) { return a + b + 1; } "
+          "second = F(); "
+          "return first * 1000 + second;",
+          5 * 1000 + 7);
+
+    /* 33.g Closure capturing a mutable counter via $(&). */
+    T_INT(lang, ev, "complex_closure_counter",
+          "@make_counter() { "
+          "  count = 0; "
+          "  @inc()$(&count) { count = count + 1; return count; } "
+          "  return inc; "
+          "} "
+          "f = make_counter(); "
+          "a = f(); b = f(); c = f(); d = f(); e = f(); "
+          "return a*10000 + b*1000 + c*100 + d*10 + e;",
+          12345);
+
+    /* 33.h Two independent counters made by the same factory must
+     * not share state.  After f() called 3 times and g() called 1,
+     * next f() returns 4 and next g() returns 2. */
+    T_INT(lang, ev, "complex_closure_isolation",
+          "@make_counter() { "
+          "  count = 0; "
+          "  @inc()$(&count) { count = count + 1; return count; } "
+          "  return inc; "
+          "} "
+          "f = make_counter(); g = make_counter(); "
+          "f(); f(); f(); /* f counter is 3 */ "
+          "g(); /* g counter is 1 */ "
+          "return f() * 100 + g();",
+          /* next f() = 4; next g() = 2 */
+          4 * 100 + 2);
+
+    /* 33.i Switch with default fall-through.  The match misses every
+     * explicit case so default's body must run. */
+    T_INT(lang, ev, "complex_switch_default",
+          "@F(n) { "
+          "  r = 0; "
+          "  switch (n) { "
+          "    case 1: { r = 11; } "
+          "    case 2: { r = 22; } "
+          "    default: { r = 99; } "
+          "  } "
+          "  return r; "
+          "} "
+          "return F(7);",
+          99);
+
+    /* 33.j Mixed int/real arithmetic chain. */
+    T_REAL(lang, ev, "complex_mixed_int_real",
+          "@F() { x = 1; y = 0.5; return x + y + x + y + x; } "
+          "return F();",
+          4.0);
+
+    /* 33.k Return-from-loop. */
+    T_INT(lang, ev, "complex_return_in_loop",
+          "@F() { "
+          "  i = 0; "
+          "  for (i = 0; i < 100; i++) { "
+          "    if (i == 7) { return i * i; } fi "
+          "  } "
+          "  return -1; "
+          "} "
+          "return F();",
+          49);
+
+    /* 33.l Postfix ++ used as expression value. */
+    T_INT(lang, ev, "complex_postfix_in_expr",
+          "@F() { i = 5; r = (i++) * 10 + i; return r; } return F();",
+          /* (i++) yields 5, i becomes 6, then i is 6: 5*10 + 6 */
+          56);
+
+    /* 33.m Prefix ++ used as expression value. */
+    T_INT(lang, ev, "complex_prefix_in_expr",
+          "@F() { i = 5; r = (++i) * 10 + i; return r; } return F();",
+          /* (++i) yields 6, then i is 6: 6*10 + 6 */
+          66);
+
+    /* 33.n Bitwise NOT and shift chain.  ~7 = -8; (-8) << 2 = -32; (-32) >> 1 = -16. */
+    T_INT(lang, ev, "complex_bit_chain",
+          "@F() { x = ~7; y = x << 2; return y >> 1; } return F();",
+          -16);
+
+    /* 33.o Long expression chain that the VM compiler may constant-fold. */
+    T_INT(lang, ev, "complex_long_const_fold",
+          "@F() { return 1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16+17+18+19+20; } "
+          "return F();",
+          210);
+
+    /* 33.p Array growth + index assignment via VM. */
+    T_INT(lang, ev, "complex_array_grow",
+          "@F() { arr = []; "
+          "  i = 0; while (i < 10) { arr[i] = i * i; i++; } "
+          "  return arr[3] + arr[7]; "
+          "} "
+          "return F();",
+          9 + 49);
+
+    /* 33.q Property write-then-read on a freshly-instantiated set. */
+    T_INT(lang, ev, "complex_set_property",
+          "Box { x; y; } "
+          "@F() { b = $Box; b.x = 7; b.y = 11; return b.x * b.y; } "
+          "return F();",
+          77);
+
+    /* 33.r Re-entry via Eval. */
+    T_INT(lang, ev, "complex_eval_reentry",
+          "@F() { "
+          "  x = 100; "
+          "  Eval('y=42; return y;'); "
+          "  return x; "
+          "} return F();",
+          100);
+
+    /* 33.s Loop with break + continue interleaved. */
+    T_INT(lang, ev, "complex_loop_break_continue",
+          "@F() { "
+          "  s = 0; "
+          "  for (i = 0; i < 20; i++) { "
+          "    if (i % 3 == 0) { continue; } fi "
+          "    if (i > 10) { break; } fi "
+          "    s = s + i; "
+          "  } "
+          "  return s; "
+          "} return F();",
+          /* i=1,2,4,5,7,8,10 -> 1+2+4+5+7+8+10 = 37 */
+          37);
+
+    /* 33.t goto across a label that comes BEFORE the goto in source order. */
+    T_INT(lang, ev, "complex_goto_backward",
+          "@F() { "
+          "  i = 0; s = 0; "
+          "  loop: "
+          "  if (i >= 5) { return s; } fi "
+          "  s = s + i; "
+          "  i = i + 1; "
+          "  goto loop; "
+          "} return F();",
+          0+1+2+3+4); /* 10 */
+
+    /* 33.u Comma expression as condition. */
+    T_INT(lang, ev, "complex_comma_in_cond",
+          "@F() { "
+          "  init = 0; "
+          "  if ((init = 1, init > 0)) { return init * 10; } fi "
+          "  return -1; "
+          "} return F();",
+          10);
+
+    /* 33.v Empty function body returns nil. */
+    T_NIL(lang, ev, "complex_empty_function",
+          "@F() {} return F();");
+
+    /* 33.w Recursive function called via a global variable lookup. */
+    T_INT(lang, ev, "complex_indirect_call",
+          "@H(n) { if (n <= 0) { return 0; } fi return 1 + H(n - 1); } "
+          "f = H; "
+          "return f(50);",
+          50);
+
+    /* 33.x Set with a method that returns a constant. */
+    T_INT(lang, ev, "complex_set_method",
+          "P { @get() { return 42; } } "
+          "@F() { p = $P; return p.get(); } "
+          "return F();",
+          42);
+
+    /* 33.y Long string built via concatenation + comparison. */
+    T_TRUE(lang, ev, "complex_string_build",
+          "@F() { "
+          "  s = 'a'; "
+          "  i = 0; "
+          "  while (i < 5) { s = s + 'b'; i = i + 1; } "
+          "  return s == 'abbbbb'; "
+          "} return F();");
+
+    /* 33.z High-arity function (5 args) -- exercises the n_args binding
+     * loop in vm_push_frame and confirms the funcdef_args_get bug fix
+     * keeps every parameter in the by-value path. */
+    T_INT(lang, ev, "complex_arity_5",
+          "@A(a, b, c, d, e) { return a + b*2 + c*3 + d*4 + e*5; } "
+          "return A(1, 2, 3, 4, 5);",
+          1 + 4 + 9 + 16 + 25);
+
+    /* 33.aa Reference parameter with closure: a closure captures a
+     * slot whose val is shared via &.  After the closure runs, the
+     * outer caller's slot reflects the change. */
+    T_INT(lang, ev, "complex_ref_via_closure",
+          "@bump(&v) { @inner()$(&v) { v = v + 7; return; } inner(); return; } "
+          "@F() { x = 100; bump(&x); return x; } return F();",
+          107);
+
+    /* 33.bb Switch: exact match path with explicit return per case. */
+    T_INT(lang, ev, "complex_switch_match",
+          "@F(n) { "
+          "  switch (n) { "
+          "    case 0: { return 0; } "
+          "    case 1: { return 11; } "
+          "    case 2: { return 22; } "
+          "    case 3: { return 33; } "
+          "    default: { return -1; } "
+          "  } "
+          "  return -2; "
+          "} "
+          "return F(2);",
+          22);
+
     /* -------------------------------------------------
      * Report
      * ------------------------------------------------- */
