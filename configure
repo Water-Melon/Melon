@@ -601,6 +601,12 @@ after_get_params() {
                 ar_cmd='gcc-ar'
             fi
         fi
+        # Verify the chosen wrapper actually exists; fall back to plain ar
+        # with a warning rather than silently generating a broken Makefile.
+        if ! command -v "$ar_cmd" >/dev/null 2>&1; then
+            echo "Warning: $ar_cmd not found; falling back to ar (LTO may not work)"
+            ar_cmd='ar'
+        fi
     fi
     get_source_files $select_files
     generate_Makefile

@@ -844,6 +844,17 @@ void mln_lang_free(mln_lang_t *lang)
     mln_alloc_destroy(pool);
 }
 
+/* Case-insensitive ASCII string equality helper (no POSIX/MSVC dependency). */
+static int vm_str_eq_ci(const char *a, const char *b)
+{
+    for (; *a && *b; a++, b++) {
+        int ca = (*a >= 'A' && *a <= 'Z') ? (*a | 0x20) : *a;
+        int cb = (*b >= 'A' && *b <= 'Z') ? (*b | 0x20) : *b;
+        if (ca != cb) return 0;
+    }
+    return *a == *b;
+}
+
 /* Returns non-zero when MELANG_VM_OFF is set to a recognised "true" value.
  * Accepted truthy values: "1", "yes", "true", "on" (case-insensitive).
  * An unset variable, empty string, "0", "no", "false", or "off" all leave
@@ -853,10 +864,10 @@ static int mln_lang_vm_off_active(void)
     const char *v = getenv("MELANG_VM_OFF");
     if (v == NULL || v[0] == '\0')
         return 0;
-    return (strcmp(v, "1")    == 0 ||
-            strcmp(v, "yes")  == 0 || strcmp(v, "YES")  == 0 ||
-            strcmp(v, "true") == 0 || strcmp(v, "TRUE") == 0 ||
-            strcmp(v, "on")   == 0 || strcmp(v, "ON")   == 0);
+    return (vm_str_eq_ci(v, "1")    ||
+            vm_str_eq_ci(v, "yes")  ||
+            vm_str_eq_ci(v, "true") ||
+            vm_str_eq_ci(v, "on"));
 }
 
 /* Convenience macro — calls mln_lang_vm_off_active() throughout this file. */

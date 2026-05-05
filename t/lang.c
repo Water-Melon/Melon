@@ -1156,7 +1156,7 @@ int main(void)
      *
      * Simple direct tests of ~x on various int values.
      * ------------------------------------------------- */
-    T_INT(lang, ev, "bitnot_zero",
+    T_INT(lang, ev, "bitnot_zero2",
           "return ~0;",                                                  -1);
     T_INT(lang, ev, "bitnot_one",
           "return ~1;",                                                  -2);
