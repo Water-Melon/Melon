@@ -35,6 +35,10 @@ olevel='-O3'
 lto_flag=''
 lto_link_flag=''
 
+# Archiver command.  Set to gcc-ar/llvm-ar when LTO is enabled so that
+# the static archive carries the LTO plugin metadata required by linkers.
+ar_cmd='ar'
+
 # selected source files
 select_files='all'
 
@@ -168,6 +172,12 @@ get_params() {
         elif [ $param_prefix == "--enable-lto" ]; then
             lto_flag='-flto'
             lto_link_flag='-flto'
+            # LTO archives require a plugin-aware archiver so that the
+            # bitcode objects are usable by downstream linkers.
+            case "$cc" in
+                *clang*) ar_cmd='llvm-ar' ;;
+                *)       ar_cmd='gcc-ar'  ;;
+            esac
         elif [ $param_prefix == "--select" ]; then
             select_files=$param_suffix
         elif [ $param_prefix == "--disable-macro" ]; then
@@ -464,7 +474,7 @@ generate_Makefile() {
     if [ $wasm -eq 1 ]; then
         echo -e "\temar rcs lib/\$(MELONA) \$(OBJS)" >> Makefile
     else
-        echo -e "\tar -r lib/\$(MELONA) \$(OBJS)" >> Makefile
+        echo -e "\t$ar_cmd -r lib/\$(MELONA) \$(OBJS)" >> Makefile
     fi
 
     if [ $wasm -eq 0 ]; then

@@ -141,10 +141,14 @@ static void test_return_handler(mln_lang_ctx_t *ctx)
                 fprintf(stderr, "  FAIL [%s]: expected false\n", tc->name);
             break;
         case EXPECT_NIL:
-            ok = (rv == NULL ||
-                  (rv->val != NULL && rv->val->type == M_LANG_VAL_TYPE_NIL));
-            if (!ok)
-                fprintf(stderr, "  FAIL [%s]: expected nil\n", tc->name);
+            ok = (rv != NULL && rv->val != NULL &&
+                  rv->val->type == M_LANG_VAL_TYPE_NIL);
+            if (!ok) {
+                if (rv == NULL)
+                    fprintf(stderr, "  FAIL [%s]: ret_var is NULL (script aborted?)\n", tc->name);
+                else
+                    fprintf(stderr, "  FAIL [%s]: expected nil\n", tc->name);
+            }
             break;
         case EXPECT_STRING:
             ok = (rv != NULL && rv->val != NULL &&
