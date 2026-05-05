@@ -844,19 +844,20 @@ void mln_lang_free(mln_lang_t *lang)
     mln_alloc_destroy(pool);
 }
 
-/* Returns non-zero when MELANG_VM_OFF is set to a non-empty, non-zero string
- * (e.g. "1").  An unset variable, empty string, or "0" all leave the VM
- * active — matching the documented MELANG_VM_OFF=1 toggle. */
+/* Returns non-zero when MELANG_VM_OFF is set to a numeric non-zero value
+ * (e.g. "1").  An unset variable, empty string, or "0" (including "00" etc.)
+ * all leave the VM active — matching the documented MELANG_VM_OFF=1 toggle. */
 static int mln_lang_vm_off_active(void)
 {
     const char *v = getenv("MELANG_VM_OFF");
-    return v != NULL && v[0] != '\0' && v[0] != '0';
+    return v != NULL && atoi(v) != 0;
 }
+
+/* Convenience macro — calls mln_lang_vm_off_active() throughout this file. */
+#define MLN_VM_OFF_ACTIVE() mln_lang_vm_off_active()
 
 static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
 {
-    /* Helper macro for readability; calls the function defined above. */
-#define MLN_VM_OFF_ACTIVE() mln_lang_vm_off_active()
     int n;
     mln_lang_t *lang = (mln_lang_t *)data;
     mln_lang_ctx_t *ctx;

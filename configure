@@ -589,11 +589,10 @@ after_get_params() {
     #     an 'ar'-style archiver; --enable-lto has no effect on that path.
     if [ -n "$lto_flag" ]; then
         _ar_chosen=0
-        # MSYS2 Clang environments
-        if ! case ${MSYSTEM:-} in CLANG64|CLANGARM64) false;; esac; then
-            ar_cmd='llvm-ar'
-            _ar_chosen=1
-        fi
+        # MSYS2 Clang environments: trust the MSYSTEM variable directly
+        case ${MSYSTEM:-} in
+            CLANG64|CLANGARM64) ar_cmd='llvm-ar'; _ar_chosen=1 ;;
+        esac
         # Query the compiler binary if not already determined
         if [ $_ar_chosen -eq 0 ]; then
             if $cc --version 2>/dev/null | grep -qi 'clang'; then
