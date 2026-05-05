@@ -67,28 +67,8 @@ extern void mln_lang_set_detail_free(mln_lang_set_detail_t *c);
  * Chunk allocation / free.
  * ==================================================================== */
 
-/* Returns non-zero when the given env var is set to a recognised "true"
- * value ("1", "yes", "true", "on" — all case-insensitive).  Any other
- * value, including "0", leaves the feature off.
- * NOTE: truthy[] must contain only lowercase strings; the comparison
- * lowercases only the env var value (ASCII A-Z -> a-z). */
-static int vm_env_is_active(const char *var_name)
-{
-    const char *v = getenv(var_name);
-    const char *p, *q;
-    /* Keep this list in sync with mln_lang_vm_off_active() in mln_lang.c. */
-    static const char * const truthy[] = {"1", "yes", "true", "on", NULL};
-    int i;
-    if (v == NULL || v[0] == '\0') return 0;
-    for (i = 0; truthy[i] != NULL; i++) {
-        for (p = v, q = truthy[i]; *p && *q; p++, q++) {
-            int cp = (*p >= 'A' && *p <= 'Z') ? (*p | 0x20) : *p;
-            if (cp != *q) break;
-        }
-        if (*p == '\0' && *q == '\0') return 1;
-    }
-    return 0;
-}
+/* Truthy env-var check shared with mln_lang.c (single definition there). */
+extern int mln_lang_vm_env_is_active(const char *var_name);
 
 static mln_lang_vm_chunk_t *
 mln_lang_vm_chunk_new(mln_alloc_t *pool)
@@ -2376,7 +2356,7 @@ mln_lang_vm_try_compile(mln_lang_ctx_t *ctx, mln_lang_func_detail_t *prototype)
     }
 
     prototype->vm_chunk = c.chunk;
-    if (vm_env_is_active("MELANG_VM_TRACE")) {
+    if (mln_lang_vm_env_is_active("MELANG_VM_TRACE")) {
         fprintf(stderr, "[vm] compiled chunk: insns=%zu locals=%zu max_stack=%zu\n",
                 (size_t)c.chunk->code_len, (size_t)c.n_locals,
                 (size_t)c.chunk->max_stack);

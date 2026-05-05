@@ -844,31 +844,34 @@ void mln_lang_free(mln_lang_t *lang)
     mln_alloc_destroy(pool);
 }
 
-/* Case-insensitive ASCII string equality helper (no POSIX/MSVC dependency).
- * Both strings must be pure ASCII; 'b' must be all-lowercase. */
-static int vm_str_eq_ci(const char *a, const char *b)
+/* Shared env-var truthy-check: returns non-zero when 'var_name' is set to
+ * "1", "yes", "true" or "on" (all case-insensitive).  All other values —
+ * including "0", empty string, and unset — return 0.
+ * Non-static: also called from mln_lang_vm.c via extern. */
+int mln_lang_vm_env_is_active(const char *var_name)
 {
-    for (; *a && *b; a++, b++) {
-        int ca = (*a >= 'A' && *a <= 'Z') ? (*a | 0x20) : *a;
-        if (ca != *b) return 0;
+    const char *v = getenv(var_name);
+    const char *p, *q;
+    /* truthy[] must be all-lowercase; only the env var value is folded. */
+    static const char * const truthy[] = {"1", "yes", "true", "on", NULL};
+    int i;
+    if (v == NULL || v[0] == '\0') return 0;
+    for (i = 0; truthy[i] != NULL; i++) {
+        for (p = v, q = truthy[i]; *p && *q; p++, q++) {
+            int cp = (*p >= 'A' && *p <= 'Z') ? (*p | 0x20) : *p;
+            if (cp != *q) break;
+        }
+        if (*p == '\0' && *q == '\0') return 1;
     }
-    return *a == *b;
+    return 0;
 }
 
 /* Returns non-zero when MELANG_VM_OFF is set to a recognised "true" value.
- * Accepted truthy values: "1", "yes", "true", "on" (case-insensitive).
  * An unset variable, empty string, "0", "no", "false", or "off" all leave
- * the VM active — matching the documented MELANG_VM_OFF=1 toggle.
- * Keep this list in sync with vm_env_is_active() in mln_lang_vm.c. */
+ * the VM active — matching the documented MELANG_VM_OFF=1 toggle. */
 static int mln_lang_vm_off_active(void)
 {
-    const char *v = getenv("MELANG_VM_OFF");
-    if (v == NULL || v[0] == '\0')
-        return 0;
-    return (vm_str_eq_ci(v, "1")    ||
-            vm_str_eq_ci(v, "yes")  ||
-            vm_str_eq_ci(v, "true") ||
-            vm_str_eq_ci(v, "on"));
+    return mln_lang_vm_env_is_active("MELANG_VM_OFF");
 }
 
 /* Convenience macro — calls mln_lang_vm_off_active() throughout this file. */
