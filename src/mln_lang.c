@@ -844,13 +844,19 @@ void mln_lang_free(mln_lang_t *lang)
     mln_alloc_destroy(pool);
 }
 
-/* Returns non-zero when MELANG_VM_OFF is set to a numeric non-zero value
- * (e.g. "1").  An unset variable, empty string, or "0" (including "00" etc.)
- * all leave the VM active — matching the documented MELANG_VM_OFF=1 toggle. */
+/* Returns non-zero when MELANG_VM_OFF is set to a recognised "true" value.
+ * Accepted truthy values: "1", "yes", "true", "on" (case-insensitive).
+ * An unset variable, empty string, "0", "no", "false", or "off" all leave
+ * the VM active — matching the documented MELANG_VM_OFF=1 toggle. */
 static int mln_lang_vm_off_active(void)
 {
     const char *v = getenv("MELANG_VM_OFF");
-    return v != NULL && atoi(v) != 0;
+    if (v == NULL || v[0] == '\0')
+        return 0;
+    return (strcmp(v, "1")    == 0 ||
+            strcmp(v, "yes")  == 0 || strcmp(v, "YES")  == 0 ||
+            strcmp(v, "true") == 0 || strcmp(v, "TRUE") == 0 ||
+            strcmp(v, "on")   == 0 || strcmp(v, "ON")   == 0);
 }
 
 /* Convenience macro — calls mln_lang_vm_off_active() throughout this file. */

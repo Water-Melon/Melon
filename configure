@@ -595,7 +595,7 @@ after_get_params() {
         esac
         # Query the compiler binary if not already determined
         if [ $_ar_chosen -eq 0 ]; then
-            if $cc --version 2>/dev/null | grep -qi 'clang'; then
+            if $cc --version 2>/dev/null | grep -qi 'clang version'; then
                 ar_cmd='llvm-ar'
             else
                 ar_cmd='gcc-ar'
