@@ -1966,14 +1966,38 @@ int main(void)
      *   restore stderr, then confirm the file contains the "[vm]" prefix
      *   that mln_lang_vm_try_compile emits. */
     {
-        char trace_tmp[] = "/tmp/melang_trace_XXXXXX";
-        int  trace_fd    = mkstemp(trace_tmp);
+        const char *tmpdir = getenv("TMPDIR");
+        char trace_tmp[512];
+        int  trace_fd;
         int  saved_stderr;
         ssize_t n_read;
         char buf[512];
         int  has_trace;
 
+        if (tmpdir == NULL || tmpdir[0] == '\0') tmpdir = "/tmp";
+        snprintf(trace_tmp, sizeof(trace_tmp), "%s/melang_trace_XXXXXX", tmpdir);
+
+        trace_fd = mkstemp(trace_tmp);
+        if (trace_fd < 0) {
+            ++g_n_fail;
+            fprintf(stderr,
+                    "  FAIL [vm_trace_emits_output_check]: "
+                    "mkstemp failed: %s\n", trace_tmp);
+            unsetenv("MELANG_VM_TRACE");
+            goto vm_trace_done;
+        }
+
         saved_stderr = dup(fileno(stderr));
+        if (saved_stderr < 0) {
+            ++g_n_fail;
+            fprintf(stderr,
+                    "  FAIL [vm_trace_emits_output_check]: "
+                    "dup(stderr) failed\n");
+            close(trace_fd);
+            unlink(trace_tmp);
+            unsetenv("MELANG_VM_TRACE");
+            goto vm_trace_done;
+        }
         dup2(trace_fd, fileno(stderr));
 
         /* Run a script with a function body that hasn't been compiled yet
@@ -2007,6 +2031,7 @@ int main(void)
                     "no \"[vm]\" trace line found in captured stderr\n");
         }
     }
+vm_trace_done:;
 
     /* -------------------------------------------------
      * Report
