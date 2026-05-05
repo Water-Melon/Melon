@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <assert.h>
 #include <math.h>
 #include <sys/types.h>
@@ -1982,7 +1983,7 @@ int main(void)
             ++g_n_fail;
             fprintf(stderr,
                     "  FAIL [vm_trace_emits_output_check]: "
-                    "mkstemp failed: %s\n", trace_tmp);
+                    "mkstemp failed: %s\n", strerror(errno));
             unsetenv("MELANG_VM_TRACE");
             goto vm_trace_done;
         }
@@ -2015,7 +2016,14 @@ int main(void)
         /* Read trace file and search for the "[vm]" marker. */
         lseek(trace_fd, (off_t)0, SEEK_SET);
         n_read = read(trace_fd, buf, sizeof(buf) - 1);
-        if (n_read > 0) buf[n_read] = '\0'; else buf[0] = '\0';
+        if (n_read > 0) {
+            buf[n_read] = '\0';
+        } else if (n_read == 0) {
+            buf[0] = '\0';
+        } else {
+            /* read() error — treat as empty */
+            buf[0] = '\0';
+        }
         has_trace = (strstr(buf, "[vm]") != NULL);
 
         close(trace_fd);
