@@ -2042,6 +2042,89 @@ int main(void)
 vm_trace_done:;
 
     /* -------------------------------------------------
+     * 37. Top-level VM-compile fallback to AST walker.
+     *
+     * When the top-level statement chain exceeds a VM-compiler limit
+     * (e.g. MLN_VM_MAX_LOOPS=16) or contains a construct the VM
+     * compiler does not yet support, mln_lang_vm_run_toplevel returns 0.
+     * Before this fix, mln_lang_run_handler aborted the script with
+     * "VM: top-level cannot be compiled (internal error)".  After the
+     * fix, it flips ctx->vm_use_ast=1 and lets the AST stack-walker —
+     * which already has ctx->stm pushed onto its run-stack from
+     * mln_lang_ctx_new — drive the script transparently.  This mirrors
+     * the per-call AST fallback already exercised in section 32 (dd).
+     *
+     * The tests below exercise top-level constructs that the VM
+     * compiler bails on but the AST walker still handles:
+     *
+     *   37.a  17 nested while(1){break;} loops (>= MLN_VM_MAX_LOOPS+1).
+     *         Triggers `bail(c)` in compile_whilestm.  The trailing
+     *         `return 42;` runs only when the AST walker takes over.
+     *   37.b  Same construct followed by a function call from the
+     *         top-level fallback context.  Confirms that nested calls
+     *         from an AST-fallback top-level still resolve correctly
+     *         (no run-stack ordering corruption).
+     *   37.c  Assertion that the script's value is computed by the
+     *         AST walker — checked by combining a VM-incompatible
+     *         top-level shape with arithmetic that would otherwise
+     *         constant-fold under the VM.
+     *
+     * Cross-platform: these tests do not depend on environment
+     * variables, /tmp paths, or POSIX-only APIs.  They use only the
+     * existing run_test/T_INT helper and the static C string buffer
+     * built up via snprintf, so they compile cleanly on Linux, macOS,
+     * MSYS2, and MSVC builds.
+     * ------------------------------------------------- */
+    {
+        /* Build "while(1){" * 17 + "break;}" * 17 + "return 42;". */
+        char buf[2048];
+        char *p = buf;
+        int i;
+        size_t cap;
+        for (i = 0; i < 17; ++i) {
+            cap = sizeof(buf) - (size_t)(p - buf);
+            p += snprintf(p, cap, "while(1){");
+        }
+        for (i = 0; i < 17; ++i) {
+            cap = sizeof(buf) - (size_t)(p - buf);
+            p += snprintf(p, cap, "break;}");
+        }
+        cap = sizeof(buf) - (size_t)(p - buf);
+        snprintf(p, cap, "return 42;");
+        T_INT(lang, ev, "tv_toplevel_ast_fallback_deep_loops", buf, 42);
+
+        /* 37.b — fallback at top level invokes a function (which will
+         * itself be VM-compiled or AST-walked depending on its body). */
+        p = buf;
+        for (i = 0; i < 17; ++i) {
+            cap = sizeof(buf) - (size_t)(p - buf);
+            p += snprintf(p, cap, "while(1){");
+        }
+        for (i = 0; i < 17; ++i) {
+            cap = sizeof(buf) - (size_t)(p - buf);
+            p += snprintf(p, cap, "break;}");
+        }
+        cap = sizeof(buf) - (size_t)(p - buf);
+        snprintf(p, cap, "@G(n){return n*3;} return G(14);");
+        T_INT(lang, ev, "tv_toplevel_ast_fallback_then_call", buf, 42);
+
+        /* 37.c — fallback at top level still computes the arithmetic
+         * value correctly via the AST walker. */
+        p = buf;
+        for (i = 0; i < 17; ++i) {
+            cap = sizeof(buf) - (size_t)(p - buf);
+            p += snprintf(p, cap, "while(1){");
+        }
+        for (i = 0; i < 17; ++i) {
+            cap = sizeof(buf) - (size_t)(p - buf);
+            p += snprintf(p, cap, "break;}");
+        }
+        cap = sizeof(buf) - (size_t)(p - buf);
+        snprintf(p, cap, "a=10; b=4; c=a*b+2; return c;");
+        T_INT(lang, ev, "tv_toplevel_ast_fallback_arith", buf, 42);
+    }
+
+    /* -------------------------------------------------
      * Report
      * ------------------------------------------------- */
     printf("=== Results: %d passed, %d failed ===\n", g_n_pass, g_n_fail);

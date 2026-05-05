@@ -915,59 +915,84 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
             if (!ctx->vm_top_attempted) {
                 ctx->vm_top_attempted = 1;
                 init_rc = mln_lang_vm_run_toplevel(ctx);
-                if (init_rc == 0) {
-                    __mln_lang_errmsg(ctx, "VM: top-level cannot be compiled (internal error).");
-                    ctx->quit = 1;
-                    goto quit;
-                }
                 if (init_rc < 0) {
                     __mln_lang_errmsg(ctx, "VM: top-level init error.");
                     ctx->quit = 1;
                     goto quit;
                 }
-                /* Pop the AST stm node ctx_new pushed; we drive via VM. */
-                while (mln_lang_stack_top(ctx) != NULL) {
-                    mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
-                }
-            }
-            /* When a CALL opcode triggered an AST fallback (a function
-             * body that the VM compiler could not compile), the run-stack
-             * now contains the fallback body's AST nodes and the calling
-             * VM frame is sitting with awaiting_return=1.  ctx->ref was
-             * incremented by the CALL handler so that vm_step stopped
-             * after the CALL returned (preventing the immediate
-             * awaiting_return processing before the AST has run).
-             * Drain the run-stack here, then decrement ctx->ref so that
-             * vm_step can process awaiting_return on the next dispatch. */
-            if (ctx->in_ast_fallback) {
-                for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
-                    if ((node = mln_lang_stack_top(ctx)) == NULL) {
-                        /* Run-stack empty: AST fallback body finished.
-                         * Release the suspension hold and clear the flag
-                         * so the next vm_step sees awaiting_return=1 and
-                         * picks up ctx->ret_var. */
-                        ctx->in_ast_fallback = 0;
-                        ctx->ref--;
-                        break;
+                if (init_rc == 0) {
+                    /* Top-level body could not be compiled by the VM
+                     * (e.g. exceeds compile-time limits such as the
+                     * MLN_VM_MAX_LOOPS=16 nested-loop bound, or contains
+                     * a construct the VM compiler does not yet support).
+                     * Fall back to the AST stack-walker for this entire
+                     * context.  The AST stm node mln_lang_ctx_new pushed
+                     * onto the run-stack is still in place and will drive
+                     * execution from this dispatch onward.  vm_use_ast is
+                     * sticky for the lifetime of ctx, so subsequent
+                     * dispatch slices skip the VM init/step paths
+                     * entirely.  This mirrors the per-call AST fallback
+                     * already handled at function-call sites by
+                     * `ctx->in_ast_fallback`, but at the top-level scope.
+                     *
+                     * Cross-platform note: this path uses only the AST
+                     * run-stack interface and has no platform-specific
+                     * dependencies; it works identically on Linux, macOS,
+                     * MSYS2, and MSVC builds. */
+                    ctx->vm_use_ast = 1;
+                    if (mln_lang_vm_env_is_active("MELANG_VM_TRACE")) {
+                        fprintf(stderr, "[vm] top-level compile bailed; falling back to AST walker for this context\n");
                     }
-                    mln_lang_stack_map[node->type](ctx);
-                    if (ctx->ref > 1) goto out_after_vm_slice; /* an INTERNAL async call suspended ctx inside the AST body */
-                    if (ctx->quit) goto quit;
+                } else {
+                    /* Pop the AST stm node ctx_new pushed; we drive via VM. */
+                    while (mln_lang_stack_top(ctx) != NULL) {
+                        mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
+                    }
                 }
-                goto out_after_vm_slice; /* yield (ref==0) or still running (ref==1) */
             }
-            step_rc = mln_lang_vm_step(ctx, M_LANG_DEFAULT_STEP);
-            if (step_rc < 0) {
-                ctx->quit = 1;
-                goto quit;
+            if (!ctx->vm_use_ast) {
+                /* When a CALL opcode triggered an AST fallback (a function
+                 * body that the VM compiler could not compile), the run-stack
+                 * now contains the fallback body's AST nodes and the calling
+                 * VM frame is sitting with awaiting_return=1.  ctx->ref was
+                 * incremented by the CALL handler so that vm_step stopped
+                 * after the CALL returned (preventing the immediate
+                 * awaiting_return processing before the AST has run).
+                 * Drain the run-stack here, then decrement ctx->ref so that
+                 * vm_step can process awaiting_return on the next dispatch. */
+                if (ctx->in_ast_fallback) {
+                    for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
+                        if ((node = mln_lang_stack_top(ctx)) == NULL) {
+                            /* Run-stack empty: AST fallback body finished.
+                             * Release the suspension hold and clear the flag
+                             * so the next vm_step sees awaiting_return=1 and
+                             * picks up ctx->ret_var. */
+                            ctx->in_ast_fallback = 0;
+                            ctx->ref--;
+                            break;
+                        }
+                        mln_lang_stack_map[node->type](ctx);
+                        if (ctx->ref > 1) goto out_after_vm_slice; /* an INTERNAL async call suspended ctx inside the AST body */
+                        if (ctx->quit) goto quit;
+                    }
+                    goto out_after_vm_slice; /* yield (ref==0) or still running (ref==1) */
+                }
+                step_rc = mln_lang_vm_step(ctx, M_LANG_DEFAULT_STEP);
+                if (step_rc < 0) {
+                    ctx->quit = 1;
+                    goto quit;
+                }
+                if (step_rc == 1) {
+                    /* Frame stack empty — script done. */
+                    ctx->quit = 1;
+                    goto quit;
+                }
+                /* step_rc == 0 — yielded; will resume on next dispatch. */
+                goto out_after_vm_slice;
             }
-            if (step_rc == 1) {
-                /* Frame stack empty — script done. */
-                ctx->quit = 1;
-                goto quit;
-            }
-            /* step_rc == 0 — yielded; will resume on next dispatch. */
-            goto out_after_vm_slice;
+            /* Else: VM compile bailed at top-level on this dispatch and we
+             * just flipped vm_use_ast to 1.  Fall through to the AST loop
+             * below to drive execution from the run-stack stm node. */
         }
         for (n = 0; n < M_LANG_DEFAULT_STEP; ++n) {
             if ((node = mln_lang_stack_top(ctx)) == NULL)
