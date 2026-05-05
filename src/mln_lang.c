@@ -2394,8 +2394,16 @@ MLN_FUNC(static inline, int, mln_lang_funcdef_args_get, \
     mln_lang_factor_t *factor;
     mln_lang_spec_t *spec;
     mln_lang_symbol_node_t *sym;
-    mln_lang_var_type_t type = M_LANG_VAR_NORMAL;
+    mln_lang_var_type_t type;
     for (scan = exp; scan != NULL; scan = scan->next) {
+        /* Reset per-arg.  Bug: `type` was previously declared once outside
+         * the loop and only set to REFER inside the M_SPEC_REFER branch —
+         * never reset back to NORMAL — so the first &-prefixed parameter
+         * caused every subsequent parameter to be created with type REFER
+         * as well, which made later by-value arguments alias the caller's
+         * variable through mln_lang_var_transform's REFER path.  See
+         * tv_funcdef_mixed_ref / complex_decl_mixed_ref tests. */
+        type = M_LANG_VAR_NORMAL;
         if (scan->jump == NULL) {
             mln_lang_generate_jump_ptr(scan, M_LSNT_EXP);
         }
