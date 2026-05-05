@@ -857,16 +857,19 @@ int mln_lang_vm_env_is_active(const char *var_name)
     int i;
     if (v == NULL || v[0] == '\0') return 0;
     for (i = 0; truthy[i] != NULL; i++) {
+        /* Advance while both chars match; exit on first mismatch or end. */
         for (p = v, q = truthy[i]; *p && *q; p++, q++) {
             int cp = (*p >= 'A' && *p <= 'Z') ? (*p | 0x20) : *p;
             if (cp != *q) break;
         }
-        if (*p == '\0' && *q == '\0') return 1;
+        /* Both reached '\0' simultaneously => equal strings. */
+        if (!*p && !*q) return 1;
     }
     return 0;
 }
 
-/* Returns non-zero when MELANG_VM_OFF is set to a recognised "true" value.
+/* Returns non-zero when MELANG_VM_OFF is set to a recognised "true" value
+ * ("1", "yes", "true", "on" — case-insensitive; see mln_lang_vm_env_is_active).
  * An unset variable, empty string, "0", "no", "false", or "off" all leave
  * the VM active — matching the documented MELANG_VM_OFF=1 toggle. */
 static int mln_lang_vm_off_active(void)
