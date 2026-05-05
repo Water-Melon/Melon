@@ -266,7 +266,15 @@ struct mln_lang_ctx_s {
      * the AST stack-walker as a fallback so that the outer VM can resume
      * via the awaiting_return path once the AST run-stack drains. */
     mln_u32_t                        in_ast_fallback:1;
-    mln_u32_t                        padding:4;
+    /* Cached at context-creation time from MELANG_VM_OFF: 1 = use AST walker,
+     * 0 = use VM.  Reading the environment only once per context (rather than
+     * on every event-loop slice or function call) prevents mid-run mode flips
+     * that could leave the run-stack or VM frame-stack in an inconsistent
+     * state.  Flexible switching is still supported: set MELANG_VM_OFF before
+     * calling mln_lang_run() and each new context will respect the current
+     * value. */
+    mln_u32_t                        vm_use_ast:1;
+    mln_u32_t                        padding:3;
     /* Phase F3: heap-allocated stack of mln_lang_vm_frame_t. The VM is
      * iterative — every opcode runs against ctx->vm_frame_top, function
      * calls push frames, returns pop them. mln_lang_vm_step yields back

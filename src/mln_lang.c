@@ -907,9 +907,9 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
          * ctx we compile the top-level stm chain and push the initial frame.
          * Subsequent dispatches drive vm_step with a per-slice budget so
          * multiple ctxs can time-share the event loop (Melang's coroutine
-         * model). MELANG_VM_OFF=1 disables the VM path for diagnostics;
-         * MELANG_VM_OFF=0 (or unset) keeps the VM enabled. */
-        if (!MLN_VM_OFF_ACTIVE()) {
+         * model). ctx->vm_use_ast is fixed at context-creation time from
+         * MELANG_VM_OFF so the mode cannot flip between event-loop slices. */
+        if (!ctx->vm_use_ast) {
             int init_rc;
             int step_rc;
             if (!ctx->vm_top_attempted) {
@@ -1202,6 +1202,11 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->vm_top_attempted = 0;
     ctx->in_ast_fallback = 0;
     ctx->vm_frame_top = NULL;
+    /* Cache the VM/AST mode once at context creation so that mid-run env
+     * changes do not flip the execution path and corrupt run-stack or VM
+     * frame-stack state.  Flexible switching is still supported: change
+     * MELANG_VM_OFF before calling mln_lang_run() for the next context. */
+    ctx->vm_use_ast = mln_lang_vm_off_active();
 
     gcattr.pool = ctx->pool;
     gcattr.item_getter = (gc_item_getter)mln_lang_gc_item_getter;
@@ -6229,13 +6234,17 @@ mln_lang_stack_handler_funccall_run(mln_lang_ctx_t *ctx, mln_lang_stack_node_t *
              * onto ctx->vm_frame_top and return; the caller (a CALL
              * opcode in vm_step or vm_run) detects the new top and
              * defers post-processing until the frame's RETURN runs. */
-            /* When MELANG_VM_OFF is set (diagnostics), or when a prior
-             * compilation failure activated the AST fallback for this
-             * context (in_ast_fallback), all EXTERNAL functions use the
-             * AST stack-walker so that sub-calls from an AST-fallback
-             * body are also executed on the AST path (maintaining
-             * correct run-stack ordering). */
-            if (MLN_VM_OFF_ACTIVE() || ctx->in_ast_fallback) {
+            /* When MELANG_VM_OFF was active when this context started
+             * (ctx->vm_use_ast == 1), or when a prior compilation failure
+             * activated the AST fallback for this context (in_ast_fallback),
+             * all EXTERNAL functions use the AST stack-walker so that
+             * sub-calls from an AST-fallback body are also executed on the
+             * AST path (maintaining correct run-stack ordering).
+             * Using ctx->vm_use_ast (fixed at context creation) instead of
+             * re-reading the environment prevents a mid-run mode flip from
+             * routing one callee through AST while the caller is in VM mode,
+             * which would corrupt awaiting_return / ctx->ref bookkeeping. */
+            if (ctx->vm_use_ast || ctx->in_ast_fallback) {
                 scope->entry = prototype->data.stm;
                 if ((node = mln_lang_stack_push(ctx, M_LSNT_STM, prototype->data.stm)) == NULL) {
                     __mln_lang_errmsg(ctx, "Stack is full.");
