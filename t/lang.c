@@ -261,7 +261,7 @@ static void multi_return_handler(mln_lang_ctx_t *ctx) {
 
 /* Error isolation: one script terminates on runtime error; the other
  * should still complete normally.  Job 1 intentionally triggers a
- * runtime error by calling a non-function value; job 2 returns 42. */
+ * runtime error via integer division by zero; job 2 returns 42. */
 static volatile int iso_done = 0;
 static volatile int iso_result_good = -1;  /* job 2 (valid) */
 static volatile int iso_job1_fired  = 0;   /* job 1 return_handler was called */

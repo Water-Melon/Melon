@@ -910,9 +910,11 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
          * model). MELANG_VM_OFF=1 disables the VM path for diagnostics;
          * MELANG_VM_OFF=0 (or unset) keeps the VM enabled. */
         if (!MLN_VM_OFF_ACTIVE()) {
+            int init_rc;
+            int step_rc;
             if (!ctx->vm_top_attempted) {
                 ctx->vm_top_attempted = 1;
-                int init_rc = mln_lang_vm_run_toplevel(ctx);
+                init_rc = mln_lang_vm_run_toplevel(ctx);
                 if (init_rc == 0) {
                     __mln_lang_errmsg(ctx, "VM: top-level cannot be compiled (internal error).");
                     ctx->quit = 1;
@@ -954,7 +956,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                 }
                 goto out_after_vm_slice; /* yield (ref==0) or still running (ref==1) */
             }
-            int step_rc = mln_lang_vm_step(ctx, M_LANG_DEFAULT_STEP);
+            step_rc = mln_lang_vm_step(ctx, M_LANG_DEFAULT_STEP);
             if (step_rc < 0) {
                 ctx->quit = 1;
                 goto quit;

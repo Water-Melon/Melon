@@ -598,7 +598,23 @@ after_get_params() {
             if $cc --version 2>/dev/null | grep -qi 'clang version'; then
                 ar_cmd='llvm-ar'
             else
-                ar_cmd='gcc-ar'
+                # For cross-GCC toolchains derive the prefixed gcc-ar.
+                # e.g. aarch64-linux-gnu-gcc-12 -> aarch64-linux-gnu-gcc-ar
+                # e.g. gcc-12 / gcc              -> gcc-ar
+                _cc_name=$(basename "$cc")
+                _cc_nosuf=$(printf '%s' "$_cc_name" | sed 's/-[0-9][0-9]*$//')
+                _ar_derived=$(printf '%s' "$_cc_nosuf" | sed 's/-\(gcc\|g++\)$/-gcc-ar/')
+                if [ "$_ar_derived" != "$_cc_nosuf" ]; then
+                    # Preserve directory prefix when $cc is an absolute/relative path
+                    _cc_dir=$(dirname "$cc")
+                    if [ "$_cc_dir" != "." ]; then
+                        ar_cmd="$_cc_dir/$_ar_derived"
+                    else
+                        ar_cmd="$_ar_derived"
+                    fi
+                else
+                    ar_cmd='gcc-ar'
+                fi
             fi
         fi
         # Verify the chosen wrapper actually exists; fall back to plain ar
