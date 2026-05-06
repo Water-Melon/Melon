@@ -347,7 +347,14 @@ struct mln_lang_func_detail_s {
         mln_lang_stm_t          *stm;
     } data;
     /* Bytecode VM extension. Tries to compile the EXTERNAL function body to
-     * bytecode on first call. vm_state: 0=untried, 1=compiled, -1=uncompilable.
+     * bytecode on first call. vm_state values:
+     *   0  = untried (or allocation failed on last attempt — will retry)
+     *   1  = compiled successfully; vm_chunk holds the ready chunk
+     *  -1  = permanently uncompilable (unsupported construct); falls back
+     *         to the AST walker transparently
+     * Note: mln_lang_vm_try_compile() returns 0 on allocation failure and
+     * -1 for structural reasons; both non-1 outcomes leave the caller
+     * falling back to the AST walker, but only -1 skips future attempts.
      * vm_chunk is opaque mln_lang_vm_chunk_t* (see mln_lang_vm.h). int
      * (not mln_s8_t) so -1 is reliably negative across char-signedness.
      * vm_op_int_flag records ctx->op_int_flag at compile time; if the flag

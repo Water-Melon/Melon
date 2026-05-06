@@ -9,13 +9,17 @@
  *    reference parameters (&x), control flow, closures, sets, eval/watch/
  *    unwatch, operator overload guards, event-driven coroutine scheduling)
  *    are compiled to bytecode and executed on this VM.
- *  - The AST stack-walker in mln_lang.c is used in two situations:
+ *  - The AST stack-walker in mln_lang.c is used in three situations:
  *    (1) when MELANG_VM_OFF=1 is set in the environment (diagnostic mode);
  *    (2) as a transparent fallback for EXTERNAL function bodies that the
  *        VM compiler cannot handle (mln_lang_vm_try_compile returns -1,
  *        i.e. vm_state == -1).  In that case the VM suspends the current
  *        context (ctx->ref++), the AST run-stack executes the body, and
  *        control returns to the VM when the run-stack drains.
+ *    (3) as a transparent fallback for a top-level script whose bytecode
+ *        compilation fails (mln_lang_vm_run_toplevel returns 0).  The
+ *        context then runs purely through the AST run-stack for that
+ *        invocation.
  *  - Time-slicing (mln_lang_vm_step / M_LANG_DEFAULT_STEP) preserves
  *    Melang's cooperative multi-ctx scheduling model.
  *  - Watch reactivity: every slot/property/index assignment opcode fires
