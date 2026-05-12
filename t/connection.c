@@ -859,8 +859,6 @@ static void tls_test_fixture_init(void)
 {
     if (g_server_ctx != NULL) return;
 
-    mln_tcp_tls_global_init();
-
     /* Generate an RSA 2048 key (version-portable via tls_test_genkey). */
     EVP_PKEY *pkey = tls_test_genkey(2048);
     assert(pkey != NULL);
@@ -1784,7 +1782,6 @@ out:
 static void test_https_e2e_nonblocking(void)
 {
     printf("Testing real HTTPS client/server (10 rounds, non-blocking)...\n");
-    mln_tcp_tls_global_init();
 
     char cert_path[64], key_path[64];
     assert(https_make_cert_files(cert_path, key_path) == 0);

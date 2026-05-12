@@ -963,78 +963,10 @@ static inline int mln_tcp_conn_recv_chain_mem(int sockfd, mln_alloc_t *pool, mln
 
 #define M_TLS_CHUNK 16384
 
-/* One-shot global OpenSSL init, made thread-safe so concurrent first
- * callers cannot race the legacy (<1.1.0) init path.  On 1.1.0+ the
- * library initialises itself on first use, so the work inside the
- * once-block is empty there; the guard is kept for the rare 1.0.x
- * builds and as a contract anchor.  Same dual pattern as mln_rs.c.
- *
- * The published "inited" flag is declared `volatile long` so the
- * Windows loser-loop sees a fresh value on every iteration, and on
- * the same architecture InterlockedExchange gives us a full memory
- * barrier when the winner publishes.  The POSIX path piggy-backs on
- * pthread_once's happens-before guarantees and ignores the flag's
- * type. */
-#if !defined(MSVC)
-static pthread_once_t mln_tcp_tls_init_once = PTHREAD_ONCE_INIT;
-#else
-static volatile long mln_tcp_tls_init_once_flag = 0;
-#endif
-static volatile long mln_tcp_tls_global_inited = 0;
-
-static void mln_tcp_tls_global_init_inner(void)
-{
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-    SSL_library_init();
-    SSL_load_error_strings();
-    OpenSSL_add_all_algorithms();
-#endif
-#if !defined(MSVC)
-    mln_tcp_tls_global_inited = 1;
-#else
-    /* Publish with a full barrier so the loser loop's volatile load
-     * cannot observe init work reordered after the flag write. */
-    InterlockedExchange(&mln_tcp_tls_global_inited, 1);
-#endif
-}
-
-MLN_FUNC(, int, mln_tcp_tls_global_init, (void), (), {
-#if !defined(MSVC)
-    pthread_once(&mln_tcp_tls_init_once, mln_tcp_tls_global_init_inner);
-#else
-    /* InterlockedCompareExchange winners run the init exactly once;
-     * losers spin until the winner publishes mln_tcp_tls_global_inited.
-     */
-    if (InterlockedCompareExchange(&mln_tcp_tls_init_once_flag, 1, 0) == 0) {
-        mln_tcp_tls_global_init_inner();
-    } else {
-        /* Lose-and-wait path.  Sleep(0) yields the rest of the time
-         * slice to any other ready thread (including the winner), so
-         * we do not peg a core spinning while the init runs. */
-        while (!mln_tcp_tls_global_inited) Sleep(0);
-    }
-#endif
-    return mln_tcp_tls_global_inited ? 0 : -1;
-})
-
-MLN_FUNC_VOID(, void, mln_tcp_tls_global_destroy, (void), (), {
-    /* OpenSSL 1.1+ handles teardown automatically via atexit; pthread_once
-     * cannot be reset, so a deliberate teardown here is intentionally a
-     * no-op.  Kept as a public symbol for API stability across OpenSSL
-     * versions.
-     */
-})
 
 static void mln_tcp_tls_apply_versions(SSL_CTX *ctx, mln_u32_t versions)
 {
     if (versions == 0) versions = M_TLS_VDEFAULT;
-    /* SSL_CTX_set_{min,max}_proto_version were introduced in OpenSSL
-     * 1.1.0.  TLS1_2_VERSION alone is not a sufficient feature test --
-     * it is defined as far back as 1.0.2 where these setters do not
-     * exist.  On older OpenSSL the version mask is silently ignored;
-     * the SSL_CTX still negotiates whatever the library defaults to.
-     */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
     int min_v = 0, max_v = 0;
     if (versions & M_TLS_V1_2) min_v = TLS1_2_VERSION;
     if (versions & M_TLS_V1_3) {
@@ -1053,9 +985,6 @@ static void mln_tcp_tls_apply_versions(SSL_CTX *ctx, mln_u32_t versions)
     }
     if (min_v) SSL_CTX_set_min_proto_version(ctx, min_v);
     if (max_v) SSL_CTX_set_max_proto_version(ctx, max_v);
-#else
-    (void)ctx; (void)versions;
-#endif
 }
 
 MLN_FUNC(, mln_tcp_tls_conf_t *, mln_tcp_tls_conf_new, \
@@ -1066,8 +995,6 @@ MLN_FUNC(, mln_tcp_tls_conf_t *, mln_tcp_tls_conf_new, \
 {
     mln_tcp_tls_conf_t *c;
     const SSL_METHOD   *method;
-
-    if (!mln_tcp_tls_global_inited) (void)mln_tcp_tls_global_init();
 
     /* Reject anything outside the documented role enum up front -- otherwise
      * we'd pick the client method for an unknown value but later set the

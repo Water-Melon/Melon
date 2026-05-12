@@ -490,32 +490,6 @@ arguments immediately after construction.
 
 
 
-#### mln_tcp_tls_global_init
-
-```c
-int mln_tcp_tls_global_init(void);
-```
-
-Description: One-time OpenSSL global initialization. Requires OpenSSL
-**1.1.0 or later** (the minimum supported version). On OpenSSL 1.1.0
-and later this call is effectively a no-op because that release
-introduced automatic initialisation; it exists so callers can invoke it
-unconditionally. Safe to call repeatedly.
-
-Return value: `0` on success.
-
-
-
-#### mln_tcp_tls_global_destroy
-
-```c
-void mln_tcp_tls_global_destroy(void);
-```
-
-Description: Companion teardown for `mln_tcp_tls_global_init`.
-
-
-
 #### mln_tcp_tls_conf_new
 
 ```c

@@ -136,13 +136,6 @@ extern int mln_tcp_conn_send_chain(mln_tcp_conn_t *tc, mln_chain_t *chain) __NON
  *   M_C_FINISH / M_C_NOTYET / M_C_ERROR / M_C_CLOSED.
  */
 
-/*
- * Process-wide one-time init.  Safe to call multiple times.  On OpenSSL
- * 1.1.0 and later this is a no-op; the call exists so consumers can be
- * written portably across versions.
- */
-extern int  mln_tcp_tls_global_init(void);
-extern void mln_tcp_tls_global_destroy(void);
 
 /*
  * Build a config.  Returns NULL on failure (bad files, OpenSSL error...).
