@@ -922,6 +922,9 @@ static int tls_test_attach(mln_tcp_conn_t *tc, int fd, SSL_CTX *ctx, int is_serv
     BIO_set_mem_eof_return(rbio, -1);
     BIO_set_mem_eof_return(wbio, -1);
     SSL_set_bio(tc->ssl, rbio, wbio);
+    /* Ownership transferred to SSL; null our locals so the err path of
+     * any future failure point added below cannot double-free them. */
+    rbio = wbio = NULL;
     if (is_server) SSL_set_accept_state(tc->ssl);
     else           SSL_set_connect_state(tc->ssl);
     return 0;
@@ -933,30 +936,26 @@ err:
     return -1;
 }
 
-/* Drive both ends of the handshake until both report done, or until
- * both incomplete sides return M_C_NOTYET in the same iteration
- * (meaning neither can make progress without the other first writing
- * data — a deadlock on this socketpair).  Returns 0 on success, -1
- * on error or deadlock.
+/* Drive both ends of the handshake until both report done.  The 256
+ * iteration cap protects against a regression that would otherwise
+ * stall forever; we do NOT treat "both sides returned NOTYET in the
+ * same iteration" as deadlock -- that is the normal TLS handshake
+ * flow (client emits ClientHello and waits, server emits ServerHello
+ * and waits, next iteration each side drains the other's record and
+ * makes progress).  Real deadlocks just exhaust the iteration cap.
  */
 static int tls_drive_handshake_pair(mln_tcp_conn_t *s, mln_tcp_conn_t *c)
 {
     for (int i = 0; i < 256; i++) {
         if (mln_tcp_conn_tls_done(s) && mln_tcp_conn_tls_done(c)) return 0;
-        int s_notyet = 0, c_notyet = 0;
         if (!mln_tcp_conn_tls_done(c)) {
             int r = mln_tcp_conn_tls_handshake(c);
             if (r == M_C_ERROR || r == M_C_CLOSED) return -1;
-            if (r == M_C_NOTYET) c_notyet = 1;
         }
         if (!mln_tcp_conn_tls_done(s)) {
             int r = mln_tcp_conn_tls_handshake(s);
             if (r == M_C_ERROR || r == M_C_CLOSED) return -1;
-            if (r == M_C_NOTYET) s_notyet = 1;
         }
-        /* Both pending sides returned NOTYET: neither can make progress
-         * without the other going first — detect and abort. */
-        if (s_notyet && c_notyet) return -1;
     }
     return -1;
 }
@@ -1794,6 +1793,140 @@ out:
     return NULL;
 }
 
+/* Regression test for the non-blocking handshake spin window: when the
+ * remote BIO holds a stale partial record and the socket has no new
+ * bytes, mln_tcp_conn_tls_handshake must return M_C_NOTYET quickly,
+ * not loop while BIO_pending reports the unchanged stale fill.  We
+ * synthesise this state by directly BIO_writing a few bytes of fake
+ * record header into the server SSL's read BIO and draining the
+ * socket so drain_socket adds nothing.  Bounded by a 500 ms wall-
+ * clock check that would trip on a spin. */
+static void test_tls_handshake_partial_record_no_spin(void)
+{
+    printf("Testing TLS handshake (partial record, no-spin)...\n");
+    tls_test_fixture_init();
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]); set_nonblock(fds[1]);
+    mln_tcp_conn_t srv, cli;
+    assert(tls_test_attach(&srv, fds[0], g_server_ctx, 1) == 0);
+    assert(tls_test_attach(&cli, fds[1], g_client_ctx, 0) == 0);
+    mln_tcp_conn_set_nonblock(&srv, 1);
+    mln_tcp_conn_set_nonblock(&cli, 1);
+
+    /* Drain socket fds[0] completely first (in case anything has
+     * already been queued -- shouldn't be, but be defensive). */
+    char tmp[8192];
+    while (read(fds[0], tmp, sizeof tmp) > 0) { /* discard */ }
+
+    /* Inject 4 bytes of a would-be TLS record header into srv->rbio.
+     * A full TLS record header is 5 bytes, so this is intentionally
+     * short: SSL_do_handshake can either consume it greedily into
+     * internal state (in which case rbio is empty after the call) or
+     * leave it in rbio waiting for more.  Either way our handshake
+     * driver MUST return NOTYET promptly because no new bytes will
+     * ever arrive on the socket. */
+    char partial[4] = { 0x16, 0x03, 0x03, 0x00 };
+    assert(BIO_write(SSL_get_rbio(srv.ssl), partial, sizeof partial) == sizeof partial);
+
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    int r = mln_tcp_conn_tls_handshake(&srv);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    long us = elapsed_us(&t0, &t1);
+
+    assert(r == M_C_NOTYET);
+    /* 500ms is an enormous budget for a single non-blocking handshake
+     * call -- if we exceed it the function is spinning. */
+    if (us >= 500000L) {
+        fprintf(stderr, "handshake spun for %ld us on partial-record rbio\n", us);
+        abort();
+    }
+    /* The function returned NOTYET, so the want_* flags should be set
+     * to direct the caller to wait for readable data. */
+    assert(mln_tcp_conn_tls_want_read(&srv) ||
+           mln_tcp_conn_tls_want_write(&srv));
+
+    mln_tcp_conn_destroy(&srv);
+    mln_tcp_conn_destroy(&cli);
+    close(fds[0]); close(fds[1]);
+    printf("  PASS: tls handshake bounded on partial rbio (%ld us)\n", us);
+}
+
+/* Negative-path coverage for mln_tcp_tls_conf_new / mln_tcp_conn_tls_init
+ * / set_sni / set_verify_host.  Validates the input checks added by
+ * earlier review rounds. */
+static void test_tls_conf_validation(void)
+{
+    printf("Testing TLS API input validation...\n");
+    tls_test_fixture_init();
+
+    /* (1) Invalid role */
+    errno = 0;
+    mln_tcp_tls_conf_t *bad = mln_tcp_tls_conf_new(
+        99, NULL, NULL, NULL, NULL, 0, 0);
+    assert(bad == NULL);
+    assert(errno == EINVAL);
+
+    /* (2) Server without cert/key */
+    errno = 0;
+    bad = mln_tcp_tls_conf_new(
+        M_TLS_SERVER, NULL, NULL, NULL, NULL, 0, 0);
+    assert(bad == NULL);
+    assert(errno == EINVAL);
+
+    /* (3) Unknown bits in version mask */
+    errno = 0;
+    bad = mln_tcp_tls_conf_new(
+        M_TLS_CLIENT, NULL, NULL, NULL, NULL, 0x100, 0);
+    assert(bad == NULL);
+    assert(errno == EINVAL);
+
+    /* (4) tls_init with NULL conf */
+    mln_tcp_conn_t dummy;
+    errno = 0;
+    assert(mln_tcp_conn_tls_init(&dummy, -1, NULL) < 0);
+    assert(errno == EINVAL);
+
+    /* (5) set_sni / set_verify_host on a real but oversize hostname */
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    mln_tcp_conn_t cli;
+    assert(tls_test_attach(&cli, fds[0], g_client_ctx, 0) == 0);
+
+    char big[300];
+    memset(big, 'a', sizeof big);
+    mln_string_t huge;
+    mln_string_nset(&huge, big, sizeof big);
+    errno = 0;
+    assert(mln_tcp_conn_tls_set_sni(&cli, &huge) == -1);
+    assert(errno == EINVAL);
+    errno = 0;
+    assert(mln_tcp_conn_tls_set_verify_host(&cli, &huge) == -1);
+    assert(errno == EINVAL);
+
+    /* (6) Embedded NUL */
+    char with_nul[] = { 'a', 'b', '\0', 'c', 'd' };
+    mln_string_t nul_host;
+    mln_string_nset(&nul_host, with_nul, sizeof with_nul);
+    errno = 0;
+    assert(mln_tcp_conn_tls_set_sni(&cli, &nul_host) == -1);
+    assert(errno == EINVAL);
+    errno = 0;
+    assert(mln_tcp_conn_tls_set_verify_host(&cli, &nul_host) == -1);
+    assert(errno == EINVAL);
+
+    /* (7) Reasonable inputs succeed */
+    mln_string_t ok_host = mln_string("example.test");
+    assert(mln_tcp_conn_tls_set_sni(&cli, &ok_host) == 0);
+    assert(mln_tcp_conn_tls_set_verify_host(&cli, &ok_host) == 0);
+
+    mln_tcp_conn_destroy(&cli);
+    close(fds[0]); close(fds[1]);
+    printf("  PASS: tls API input validation\n");
+}
+
 static void test_https_e2e_nonblocking(void)
 {
     printf("Testing real HTTPS client/server (10 rounds, non-blocking)...\n");
@@ -1870,6 +2003,8 @@ int main(void)
     printf("\n--- TLS tests ---\n");
     test_tls_handshake_blocking();
     test_tls_handshake_nonblock();
+    test_tls_handshake_partial_record_no_spin();
+    test_tls_conf_validation();
     test_tls_send_recv_short();
     test_tls_send_recv_large();
     test_tls_send_in_file();

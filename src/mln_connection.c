@@ -1370,19 +1370,26 @@ MLN_FUNC(, int, mln_tcp_conn_tls_handshake, (mln_tcp_conn_t *tc), (tc), {
         }
         err = SSL_get_error(tc->ssl, r);
         if (err == SSL_ERROR_WANT_READ) {
+            /* Capture rbio fill before and after the socket drain so we
+             * can tell whether drain_socket actually made progress.
+             * Checking only `BIO_pending == 0` was fragile -- if rbio
+             * already held a stale partial record from a previous
+             * iteration and the socket has no new bytes, we would
+             * BIO_pending > 0 and loop forever in nonblock mode.
+             * `post <= pre` is the correct "no progress" test. */
+            size_t pre = (size_t)BIO_pending(SSL_get_rbio(tc->ssl));
             int dr = mln_tcp_conn_tls_drain_socket(tc);
             if (dr == M_C_ERROR || dr == M_C_CLOSED) return dr;
+            size_t post = (size_t)BIO_pending(SSL_get_rbio(tc->ssl));
             if (tc->nonblock) {
-                /* Did the drain bring anything new? */
-                if (BIO_pending(SSL_get_rbio(tc->ssl)) == 0) {
+                if (post <= pre) {
                     tc->tls_want_r = 1;
                     return M_C_NOTYET;
                 }
                 continue;
             }
             /* Blocking socket: recv() already blocked once; try the
-             * handshake again now that we have bytes.
-             */
+             * handshake again now that we have bytes. */
             continue;
         }
         if (err == SSL_ERROR_WANT_WRITE) {
@@ -1583,10 +1590,17 @@ static int mln_tcp_conn_recv_tls(mln_tcp_conn_t *tc)
             return M_C_NOTYET;
         }
         if (err == SSL_ERROR_WANT_WRITE) {
-            /* Renegotiation: produce ciphertext and write it out. */
-            tc->tls_want_w = 1;
+            /* Renegotiation: SSL_read wants to push ciphertext.  Flush
+             * it.  If the flush stalled (returns NOTYET) flush_wbio
+             * already set tls_want_w; if it fully drained we're now
+             * waiting for the peer's response, so re-arm for read. */
             int fr = mln_tcp_conn_tls_flush_wbio(tc);
             if (fr == M_C_ERROR) return M_C_ERROR;
+            if (fr == M_C_NOTYET) {
+                /* tls_want_w already set by flush_wbio */
+            } else {
+                tc->tls_want_r = 1;
+            }
             return M_C_NOTYET;
         }
         if (err == SSL_ERROR_ZERO_RETURN) return M_C_CLOSED;
@@ -1636,10 +1650,16 @@ MLN_FUNC(, int, mln_tcp_conn_tls_shutdown, (mln_tcp_conn_t *tc), (tc), {
         }
         err = SSL_get_error(tc->ssl, r);
         if (err == SSL_ERROR_WANT_READ) {
+            /* See the handshake path: use pre/post BIO_pending to decide
+             * whether drain_socket actually made progress, instead of
+             * trusting "rbio is empty" which leaves the spin window
+             * open when a stale partial record sits in rbio. */
+            size_t pre = (size_t)BIO_pending(SSL_get_rbio(tc->ssl));
             int dr = mln_tcp_conn_tls_drain_socket(tc);
             if (dr == M_C_ERROR) return M_C_ERROR;
             if (dr == M_C_CLOSED) { tc->tls_shut = 1; return M_C_FINISH; }
-            if (tc->nonblock && BIO_pending(SSL_get_rbio(tc->ssl)) == 0) {
+            size_t post = (size_t)BIO_pending(SSL_get_rbio(tc->ssl));
+            if (tc->nonblock && post <= pre) {
                 tc->tls_want_r = 1;
                 return M_C_NOTYET;
             }
