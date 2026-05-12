@@ -800,7 +800,10 @@ MLN_FUNC(, int, mln_tcp_conn_recv, (mln_tcp_conn_t *tc, mln_u32_t flag), (tc, fl
         /* TLS records always require an intermediate memory buffer for
          * decryption; the file-receive path is intentionally unavailable.
          */
-        ASSERT(flag == M_C_TYPE_MEMORY);
+        if (flag != M_C_TYPE_MEMORY) {
+            errno = EINVAL;
+            return M_C_ERROR;
+        }
         return mln_tcp_conn_recv_tls(tc);
     }
 #endif
