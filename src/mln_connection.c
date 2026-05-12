@@ -1560,10 +1560,10 @@ static int mln_tcp_conn_send_tls(mln_tcp_conn_t *tc)
             r = mln_tcp_conn_tls_write_one_chunk(tc, stackbuf, (size_t)rn, &written);
             if (written > 0) b->file_left_pos += written;
         } else {
-            /* Unknown buffer flavour; nothing to send. */
-            c = mln_tcp_conn_pop_inline(tc, M_C_SEND);
-            mln_tcp_conn_append(tc, c, M_C_SENT);
-            continue;
+            /* Unknown buffer flavour — treat as a caller error so
+             * the chain is never silently discarded. */
+            errno = EINVAL;
+            return M_C_ERROR;
         }
 
         /* Flush whatever SSL_write produced before deciding the fate
