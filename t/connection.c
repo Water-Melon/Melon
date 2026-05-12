@@ -933,23 +933,30 @@ err:
     return -1;
 }
 
-/* Drive both ends of the handshake until both report done or both
- * report NOTYET (which means we'd deadlock if we kept polling on this
- * socketpair).  Each iteration calls handshake on whichever side wants
- * progress.  Returns 0 on success.
+/* Drive both ends of the handshake until both report done, or until
+ * both incomplete sides return M_C_NOTYET in the same iteration
+ * (meaning neither can make progress without the other first writing
+ * data — a deadlock on this socketpair).  Returns 0 on success, -1
+ * on error or deadlock.
  */
 static int tls_drive_handshake_pair(mln_tcp_conn_t *s, mln_tcp_conn_t *c)
 {
     for (int i = 0; i < 256; i++) {
         if (mln_tcp_conn_tls_done(s) && mln_tcp_conn_tls_done(c)) return 0;
+        int s_notyet = 0, c_notyet = 0;
         if (!mln_tcp_conn_tls_done(c)) {
             int r = mln_tcp_conn_tls_handshake(c);
             if (r == M_C_ERROR || r == M_C_CLOSED) return -1;
+            if (r == M_C_NOTYET) c_notyet = 1;
         }
         if (!mln_tcp_conn_tls_done(s)) {
             int r = mln_tcp_conn_tls_handshake(s);
             if (r == M_C_ERROR || r == M_C_CLOSED) return -1;
+            if (r == M_C_NOTYET) s_notyet = 1;
         }
+        /* Both pending sides returned NOTYET: neither can make progress
+         * without the other going first — detect and abort. */
+        if (s_notyet && c_notyet) return -1;
     }
     return -1;
 }
