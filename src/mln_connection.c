@@ -1012,7 +1012,8 @@ MLN_FUNC(, mln_tcp_tls_conf_t *, mln_tcp_tls_conf_new, \
     }
 
     if (role == M_TLS_SERVER) {
-        if (cert_file == NULL || key_file == NULL) {
+        if (cert_file == NULL || cert_file->len == 0 ||
+            key_file  == NULL || key_file->len  == 0) {
             errno = EINVAL;
             return NULL;
         }
@@ -1073,9 +1074,15 @@ MLN_FUNC(, mln_tcp_tls_conf_t *, mln_tcp_tls_conf_new, \
         if (!ok) goto err;
     }
 
-    SSL_CTX_set_verify(c->ctx,
-                       verify ? SSL_VERIFY_PEER : SSL_VERIFY_NONE,
-                       NULL);
+    {
+        int vmode = SSL_VERIFY_NONE;
+        if (verify) {
+            vmode = SSL_VERIFY_PEER;
+            if (role == M_TLS_SERVER)
+                vmode |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+        }
+        SSL_CTX_set_verify(c->ctx, vmode, NULL);
+    }
 
     /* Deep-copy so the conf is self-contained: callers don't have to
      * keep their mln_string_t storage alive for the conf's lifetime.
