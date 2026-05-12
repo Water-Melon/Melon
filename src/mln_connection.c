@@ -1038,6 +1038,12 @@ static void mln_tcp_tls_apply_versions(SSL_CTX *ctx, mln_u32_t versions)
 #ifdef TLS1_3_VERSION
         if (min_v == 0) min_v = TLS1_3_VERSION;
         max_v = TLS1_3_VERSION;
+#else
+        /* TLS 1.3 requested but this OpenSSL build doesn't support it.
+         * Fall back to TLS 1.2 so we don't silently negotiate older
+         * versions: treat M_TLS_V1_3-only as "at least TLS 1.2". */
+        if (min_v == 0) min_v = TLS1_2_VERSION;
+        max_v = TLS1_2_VERSION;
 #endif
     } else {
         max_v = TLS1_2_VERSION;

@@ -866,6 +866,7 @@ static void tls_test_fixture_init(void)
     assert(pkey != NULL);
 
     X509 *x = X509_new();
+    assert(x != NULL);
     ASN1_INTEGER_set(X509_get_serialNumber(x), 1);
     X509_gmtime_adj(X509_get_notBefore(x), 0);
     X509_gmtime_adj(X509_get_notAfter(x), 60L * 60L * 24L * 365L);
@@ -1298,13 +1299,20 @@ static void test_tls_plain_unchanged(void)
  * specific number — CI hardware variance is too large to make it
  * meaningful — only prints a [WARN] if the rate falls below a very low
  * floor that would indicate a real regression.
+ *
+ * The total transfer defaults to 1 MiB to keep Valgrind/CI runs fast.
+ * Set the MLN_BENCH_TOTAL_MB environment variable to a larger value
+ * (e.g. 16) for a more representative measurement on fast hardware.
  */
 static void test_tls_perf_throughput(void)
 {
     printf("Benchmarking TLS throughput...\n");
     tls_test_fixture_init();
 
-    const size_t TOTAL = 16u * 1024u * 1024u;   /* 16 MiB */
+    size_t total_mb = 1;
+    const char *env_mb = getenv("MLN_BENCH_TOTAL_MB");
+    if (env_mb) { int v = atoi(env_mb); if (v > 0) total_mb = (size_t)v; }
+    const size_t TOTAL = total_mb * 1024u * 1024u;
     const size_t CHUNK = 64u * 1024u;
     unsigned char *block = malloc(CHUNK);
     assert(block != NULL);
@@ -1362,11 +1370,15 @@ static void test_tls_perf_throughput(void)
 
 /* Plain-path throughput for comparison (only built when TLS is on so
  * we can print the ratio in one run; the plain test suite already
- * exercises this code path independently). */
+ * exercises this code path independently).
+ * Honours the same MLN_BENCH_TOTAL_MB env var as the TLS benchmark. */
 static void test_plain_perf_throughput(void)
 {
     printf("Benchmarking plain TCP throughput (for TLS comparison)...\n");
-    const size_t TOTAL = 16u * 1024u * 1024u;
+    size_t total_mb = 1;
+    const char *env_mb = getenv("MLN_BENCH_TOTAL_MB");
+    if (env_mb) { int v = atoi(env_mb); if (v > 0) total_mb = (size_t)v; }
+    const size_t TOTAL = total_mb * 1024u * 1024u;
     const size_t CHUNK = 64u * 1024u;
     unsigned char *block = malloc(CHUNK);
     assert(block != NULL);
@@ -1686,9 +1698,11 @@ static void *https_client_thread(void *vp)
     if (cr < 0 && errno != EINPROGRESS) { close(fd); return NULL; }
     /* Wait for connect to complete. */
     struct pollfd pfd = { .fd = fd, .events = POLLOUT };
-    poll(&pfd, 1, 5000);
+    int pret;
+    do { pret = poll(&pfd, 1, 5000); } while (pret < 0 && errno == EINTR);
+    if (pret <= 0) { close(fd); return NULL; }  /* timeout or error */
     int err = 0; socklen_t errlen = sizeof err;
-    getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen) < 0) { close(fd); return NULL; }
     if (err != 0) { close(fd); return NULL; }
 
     mln_tcp_conn_t conn;

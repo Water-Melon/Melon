@@ -463,9 +463,9 @@ typedef struct mln_tcp_tls_conf_s {
     mln_string_t   *key_file;
     mln_string_t   *ca_file;
     mln_string_t   *ciphers;
+    mln_u32_t       versions;    /* M_TLS_V* 标志位掩码 */
     mln_u32_t       role:1;      /* M_TLS_SERVER / M_TLS_CLIENT */
     mln_u32_t       verify:1;
-    mln_u32_t       versions:6;
 } mln_tcp_tls_conf_t;
 ```
 
