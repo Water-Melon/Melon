@@ -423,6 +423,286 @@ Return value: `mln_alloc_t` structure pointer
 
 
 
+### TLS support
+
+`mln_connection` has built-in TLS (HTTPS) support, backed by OpenSSL.
+All TLS logic is folded into `mln_tcp_conn_t`, so **no upper-layer code
+needs to change** — `mln_http` and any other consumer keeps using
+`mln_tcp_conn_send` / `mln_tcp_conn_recv`. A connection initialized with
+`mln_tcp_conn_tls_init` is automatically a TLS connection; subsequent
+sends and receives transparently encrypt and decrypt.
+
+Connections initialized through the plain `mln_tcp_conn_init` path are
+byte-for-byte unchanged on the hot path. When the `MLN_TLS` macro is
+enabled, the plain path only pays the cost of one extra load and one
+conditional branch at the very top of `mln_tcp_conn_send/recv`.
+
+#### Enable at build time
+
+```bash
+./configure --enable-tls
+```
+
+`configure` probes common OpenSSL install locations (including macOS
+Homebrew layouts such as `/opt/homebrew/opt/openssl@3`), and accepts
+`OPENSSL_INCLUDE` and `OPENSSL_LIB` env vars for overrides. If OpenSSL
+cannot be found the flag is reported as ignored and the rest of the
+build proceeds normally.
+
+When `--enable-tls` is **not** passed, none of the APIs and fields
+below exist, and the resulting binary is identical to historical
+builds.
+
+#### Constants
+
+```c
+/* Role */
+#define M_TLS_SERVER   0
+#define M_TLS_CLIENT   1
+
+/* Protocol version bitmask */
+#define M_TLS_V1_2     0x4
+#define M_TLS_V1_3     0x8
+#define M_TLS_VDEFAULT (M_TLS_V1_2 | M_TLS_V1_3)
+```
+
+#### Structures
+
+```c
+typedef struct mln_tcp_tls_conf_s {
+    SSL_CTX        *ctx;
+    mln_string_t   *cert_file;
+    mln_string_t   *key_file;
+    mln_string_t   *ca_file;
+    mln_string_t   *ciphers;
+    mln_u32_t       role:1;      /* M_TLS_SERVER / M_TLS_CLIENT */
+    mln_u32_t       verify:1;
+    mln_u32_t       versions:6;
+} mln_tcp_tls_conf_t;
+```
+
+A configuration object is intended to be shared across many
+connections; the caller owns its lifetime.  The `cert_file`,
+`key_file`, `ca_file` and `ciphers` fields are deep-copied by
+`mln_tcp_tls_conf_new`, so the caller may free the `mln_string_t`
+arguments immediately after construction.
+
+
+
+#### mln_tcp_tls_global_init
+
+```c
+int mln_tcp_tls_global_init(void);
+```
+
+Description: One-time OpenSSL global initialization. On OpenSSL 1.1.0
+and later this is a no-op; the function exists so that callers can
+write portable code targeting both old and new OpenSSL versions. Safe
+to call repeatedly.
+
+Return value: `0` on success.
+
+
+
+#### mln_tcp_tls_global_destroy
+
+```c
+void mln_tcp_tls_global_destroy(void);
+```
+
+Description: Companion teardown for `mln_tcp_tls_global_init`.
+
+
+
+#### mln_tcp_tls_conf_new
+
+```c
+mln_tcp_tls_conf_t *
+mln_tcp_tls_conf_new(mln_u32_t role,
+                     mln_string_t *cert_file,
+                     mln_string_t *key_file,
+                     mln_string_t *ca_file,
+                     mln_string_t *ciphers,
+                     mln_u32_t versions,
+                     mln_u32_t verify);
+```
+
+Description: Build a TLS configuration that wraps an `SSL_CTX` and
+certificate material. Parameters:
+
+- `role`: `M_TLS_SERVER` requires both `cert_file` and `key_file`;
+  `M_TLS_CLIENT` may pass `NULL` for both.
+- `ca_file`: PEM bundle of trusted CAs; enables peer verification when
+  `verify` is non-zero.
+- `ciphers`: TLSv1.2 cipher list; `NULL` for OpenSSL's default.
+- `versions`: bitmask of `M_TLS_V1_2 | M_TLS_V1_3`; `0` is treated as
+  `M_TLS_VDEFAULT`.
+- `verify`: non-zero requires peer certificate verification.
+
+Return value: structure pointer on success, `NULL` on failure.
+
+
+
+#### mln_tcp_tls_conf_free
+
+```c
+void mln_tcp_tls_conf_free(mln_tcp_tls_conf_t *conf);
+```
+
+Description: Free the configuration along with its `SSL_CTX`.
+
+
+
+#### mln_tcp_conn_tls_init
+
+```c
+int mln_tcp_conn_tls_init(mln_tcp_conn_t *tc, int sockfd, mln_tcp_tls_conf_t *conf);
+```
+
+Description: The TLS counterpart of `mln_tcp_conn_init`. After this
+returns successfully `tc` represents a TLS connection; subsequent
+`mln_tcp_conn_send` / `mln_tcp_conn_recv` calls handle encryption and
+decryption automatically. `conf` must outlive `tc`; it is not
+consumed.
+
+Return value: `0` on success, `-1` on failure.
+
+
+
+#### mln_tcp_conn_tls_handshake
+
+```c
+int mln_tcp_conn_tls_handshake(mln_tcp_conn_t *tc);
+```
+
+Description: Drive the TLS handshake explicitly. **Optional** — the
+first call to `mln_tcp_conn_send` or `mln_tcp_conn_recv` will do it
+automatically. The standalone entry point is convenient when an event
+loop wants to handle "handshake done" and "ready for I/O" as two
+separate callbacks.
+
+Return value:
+
+- `M_C_FINISH` handshake finished
+- `M_C_NOTYET` more I/O needed; the caller should consult
+  `mln_tcp_conn_tls_want_read` / `mln_tcp_conn_tls_want_write` and
+  re-register the appropriate event
+- `M_C_ERROR` handshake failed
+- `M_C_CLOSED` peer hung up mid-handshake
+
+
+
+#### mln_tcp_conn_tls_shutdown
+
+```c
+int mln_tcp_conn_tls_shutdown(mln_tcp_conn_t *tc);
+```
+
+Description: Send TLS `close_notify` for a graceful shutdown.
+Non-blocking callers may receive `M_C_NOTYET` and need to retry once
+the socket is writable.
+
+Return value: `M_C_FINISH` / `M_C_NOTYET` / `M_C_ERROR`.
+
+
+
+#### mln_tcp_conn_tls_set_sni
+
+```c
+int mln_tcp_conn_tls_set_sni(mln_tcp_conn_t *tc, mln_string_t *hostname);
+```
+
+Description: Client side. Set the SNI hostname sent during the
+handshake. Must be called before the handshake starts.
+
+Return value: `0` on success, `-1` on failure.
+
+
+
+#### mln_tcp_conn_tls_set_verify_host
+
+```c
+int mln_tcp_conn_tls_set_verify_host(mln_tcp_conn_t *tc, mln_string_t *hostname);
+```
+
+Description: Client side. Enable RFC 6125 hostname verification of the
+server certificate. Use together with `verify=1` in
+`mln_tcp_tls_conf_new`.
+
+Return value: `0` on success, `-1` on failure.
+
+
+
+#### Status macros
+
+```c
+mln_tcp_conn_tls_enabled(tc)    /* is this a TLS connection? */
+mln_tcp_conn_tls_done(tc)       /* has the handshake completed? */
+mln_tcp_conn_tls_want_read(tc)  /* did the last I/O ask for a readable event? */
+mln_tcp_conn_tls_want_write(tc) /* did the last I/O ask for a writable event? */
+```
+
+In non-blocking mode, when `mln_tcp_conn_send`, `mln_tcp_conn_recv` or
+`mln_tcp_conn_tls_handshake` returns `M_C_NOTYET`, the caller must
+re-register fd interest using `want_read` / `want_write`. TLS has a
+legitimate "want read while doing a write" condition (renegotiation),
+and the event loop has to honour that faithfully.
+
+
+
+#### Behaviour notes
+
+- Queues hold plaintext only: `snd_*`, `rcv_*` and `sent_*` always
+  contain plaintext `mln_chain_t`. Ciphertext only ever lives on the
+  stack and inside OpenSSL's memory BIOs, so the receive queue can
+  never become a mixture of decrypted and yet-to-be-decrypted bytes.
+- Strict `sent_*` semantics: a chain only moves to `sent_*` after its
+  matching ciphertext has actually been written to the socket. If the
+  socket fills up, the chain stays at the head of `snd_*` and the next
+  call resumes from where it left off.
+- `in_file` bufs: read into a 16 KiB stack buffer in 16 KiB chunks
+  before being fed to `SSL_write`. Zero-copy `sendfile` is not
+  available on the TLS path.
+- `mln_tcp_conn_recv` on a TLS connection accepts only
+  `M_C_TYPE_MEMORY`; `M_C_TYPE_FILE` is not supported in this release.
+- `mln_tcp_conn_destroy` calls `SSL_free` for you; it does not free
+  the shared `mln_tcp_tls_conf_t`.
+
+
+
+#### Quick examples
+
+Server:
+
+```c
+mln_string_t cert = mln_string("/etc/melon/server.pem");
+mln_string_t key  = mln_string("/etc/melon/server.key");
+mln_tcp_tls_conf_t *conf = mln_tcp_tls_conf_new(
+    M_TLS_SERVER, &cert, &key, NULL, NULL, M_TLS_VDEFAULT, 0);
+
+int fd = accept(listen_fd, NULL, NULL);
+mln_tcp_conn_t conn;
+mln_tcp_conn_tls_init(&conn, fd, conf);
+/* Now mln_tcp_conn_send / mln_tcp_conn_recv transparently use TLS. */
+```
+
+Client:
+
+```c
+mln_tcp_tls_conf_t *conf = mln_tcp_tls_conf_new(
+    M_TLS_CLIENT, NULL, NULL, &ca_bundle, NULL, M_TLS_VDEFAULT, 1);
+
+int fd = ...; /* after connect() */
+mln_tcp_conn_t conn;
+mln_tcp_conn_tls_init(&conn, fd, conf);
+
+mln_string_t host = mln_string("example.com");
+mln_tcp_conn_tls_set_sni(&conn, &host);
+mln_tcp_conn_tls_set_verify_host(&conn, &host);
+```
+
+
+
 ### Example
 
 Due to the space of this example, only some fragments are given to show how to use it.

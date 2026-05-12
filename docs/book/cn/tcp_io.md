@@ -425,6 +425,232 @@ mln_tcp_conn_pool_get(pconn)
 
 
 
+### TLS支持
+
+`mln_connection`内建对TLS（HTTPS）的支持，由OpenSSL作为后端实现。整套TLS逻辑被集成在`mln_tcp_conn_t`内部，**任何上层代码（包括`mln_http`）都无需感知或修改**——只要将连接通过`mln_tcp_conn_tls_init`初始化，后续的`mln_tcp_conn_send`、`mln_tcp_conn_recv`即会自动完成加密与解密。
+
+未启用TLS的连接（通过`mln_tcp_conn_init`初始化）走原有路径，性能与历史版本一致：开启`MLN_TLS`编译宏后，明文路径仅在入口处多出一次空指针判断与条件跳转。
+
+#### 启用编译
+
+```bash
+./configure --enable-tls
+```
+
+`configure`会自动探测常见OpenSSL安装位置（含macOS Homebrew的`/opt/homebrew/opt/openssl@3`等），也可通过`OPENSSL_INCLUDE`和`OPENSSL_LIB`环境变量手动指定。未找到时会跳过TLS并给出提示，不会让整个构建失败。
+
+未启用`--enable-tls`时，下述接口与字段全部不存在，二进制与历史版本字节一致。
+
+#### 相关常量
+
+```c
+/* 角色 */
+#define M_TLS_SERVER   0
+#define M_TLS_CLIENT   1
+
+/* 协议版本掩码 */
+#define M_TLS_V1_2     0x4
+#define M_TLS_V1_3     0x8
+#define M_TLS_VDEFAULT (M_TLS_V1_2 | M_TLS_V1_3)
+```
+
+#### 相关结构
+
+```c
+typedef struct mln_tcp_tls_conf_s {
+    SSL_CTX        *ctx;
+    mln_string_t   *cert_file;
+    mln_string_t   *key_file;
+    mln_string_t   *ca_file;
+    mln_string_t   *ciphers;
+    mln_u32_t       role:1;      /* M_TLS_SERVER / M_TLS_CLIENT */
+    mln_u32_t       verify:1;
+    mln_u32_t       versions:6;
+} mln_tcp_tls_conf_t;
+```
+
+配置结构可在多个连接之间共享，由调用方负责管理其生命周期。`cert_file`/`key_file`/`ca_file`/`ciphers` 字段由 `mln_tcp_tls_conf_new` 深拷贝持有，调用方传入的 `mln_string_t` 在 `conf_new` 返回后即可释放。
+
+
+
+#### mln_tcp_tls_global_init
+
+```c
+int mln_tcp_tls_global_init(void);
+```
+
+描述：OpenSSL全局初始化。对OpenSSL 1.1及以上版本是一个空操作；保留接口是为了让调用方在更老的版本上也能写出可移植的代码。可重复调用。
+
+返回值：成功返回`0`
+
+
+
+#### mln_tcp_tls_global_destroy
+
+```c
+void mln_tcp_tls_global_destroy(void);
+```
+
+描述：与`mln_tcp_tls_global_init`对应的清理函数。
+
+
+
+#### mln_tcp_tls_conf_new
+
+```c
+mln_tcp_tls_conf_t *
+mln_tcp_tls_conf_new(mln_u32_t role,
+                     mln_string_t *cert_file,
+                     mln_string_t *key_file,
+                     mln_string_t *ca_file,
+                     mln_string_t *ciphers,
+                     mln_u32_t versions,
+                     mln_u32_t verify);
+```
+
+描述：构造一份TLS配置，封装一个`SSL_CTX`和证书等信息。各参数：
+
+- `role`：`M_TLS_SERVER`时必须提供`cert_file`和`key_file`；`M_TLS_CLIENT`时两者可为`NULL`。
+- `ca_file`：PEM格式的受信CA证书集合。开启客户端证书校验时使用。
+- `ciphers`：TLSv1.2 cipher list；`NULL`使用OpenSSL默认。
+- `versions`：`M_TLS_V1_2 | M_TLS_V1_3`的位掩码，`0`等同于`M_TLS_VDEFAULT`。
+- `verify`：非零表示要求验证对端证书。
+
+返回值：成功返回结构指针，失败返回`NULL`
+
+
+
+#### mln_tcp_tls_conf_free
+
+```c
+void mln_tcp_tls_conf_free(mln_tcp_tls_conf_t *conf);
+```
+
+描述：释放配置及其内部`SSL_CTX`。
+
+
+
+#### mln_tcp_conn_tls_init
+
+```c
+int mln_tcp_conn_tls_init(mln_tcp_conn_t *tc, int sockfd, mln_tcp_tls_conf_t *conf);
+```
+
+描述：与`mln_tcp_conn_init`平行的TLS初始化函数。`tc`完成初始化后就是一条TLS连接，后续`mln_tcp_conn_send/recv`自动完成加解密。`conf`必须在`tc`销毁前持续有效（不会被`tc`接管或释放）。
+
+返回值：成功返回`0`，失败返回`-1`
+
+
+
+#### mln_tcp_conn_tls_handshake
+
+```c
+int mln_tcp_conn_tls_handshake(mln_tcp_conn_t *tc);
+```
+
+描述：显式驱动TLS握手。**非必须**——首次调用`mln_tcp_conn_send`或`mln_tcp_conn_recv`时会自动触发。提供该函数主要是为了在事件循环里把"握手完成"和"开始读写"分作两个独立的回调处理。
+
+返回值：
+
+- `M_C_FINISH`握手完成
+- `M_C_NOTYET`仍需更多I/O，调用方可参考`mln_tcp_conn_tls_want_read`/`mln_tcp_conn_tls_want_write`重新注册事件
+- `M_C_ERROR`握手失败
+- `M_C_CLOSED`对端在握手过程中关闭
+
+
+
+#### mln_tcp_conn_tls_shutdown
+
+```c
+int mln_tcp_conn_tls_shutdown(mln_tcp_conn_t *tc);
+```
+
+描述：发送TLS `close_notify`，进行优雅关闭。非阻塞模式下可能返回`M_C_NOTYET`，需待socket可写后重试。
+
+返回值：`M_C_FINISH`/`M_C_NOTYET`/`M_C_ERROR`
+
+
+
+#### mln_tcp_conn_tls_set_sni
+
+```c
+int mln_tcp_conn_tls_set_sni(mln_tcp_conn_t *tc, mln_string_t *hostname);
+```
+
+描述：客户端使用，设置握手时发送的SNI主机名。必须在握手开始之前调用。
+
+返回值：成功返回`0`，失败返回`-1`
+
+
+
+#### mln_tcp_conn_tls_set_verify_host
+
+```c
+int mln_tcp_conn_tls_set_verify_host(mln_tcp_conn_t *tc, mln_string_t *hostname);
+```
+
+描述：客户端使用，对服务端证书启用RFC 6125主机名校验。需配合`mln_tcp_tls_conf_new`时`verify=1`使用。
+
+返回值：成功返回`0`，失败返回`-1`
+
+
+
+#### 状态查询宏
+
+```c
+mln_tcp_conn_tls_enabled(tc)    /* 当前连接是否为TLS */
+mln_tcp_conn_tls_done(tc)       /* 握手是否完成 */
+mln_tcp_conn_tls_want_read(tc)  /* 上一次I/O是否在等可读事件 */
+mln_tcp_conn_tls_want_write(tc) /* 上一次I/O是否在等可写事件 */
+```
+
+非阻塞模式下，`mln_tcp_conn_send/recv/tls_handshake`返回`M_C_NOTYET`时，调用方应根据`want_read`/`want_write`重新设置`mln_event_fd_set`关注的事件——TLS存在"想读其实是想写"（重协商）的场景，必须如实反映到事件层。
+
+
+
+#### 行为说明
+
+- 队列内容仅为明文：`snd_*`、`rcv_*`、`sent_*`三条队列中始终只存放明文`mln_chain_t`；密文只在内部栈缓冲与OpenSSL的内存BIO中流动，不会与明文混在同一队列里。
+- `sent_*`语义严格：一条chain只有在其对应的密文已经被`writev/send`真正写到socket之后，才会被移入`sent_*`；网络写阻塞时该chain仍然停留在`snd_*`头部，下次调用继续从断点处续传。
+- `in_file`类型的buf：会被`mln_tcp_conn_send`内部按16 KiB为单位先`read`到栈缓冲再交给`SSL_write`。注意TLS路径下零拷贝`sendfile`是不可用的。
+- `mln_tcp_conn_recv`在TLS连接上的`flag`必须是`M_C_TYPE_MEMORY`；`M_C_TYPE_FILE`本期不支持。
+- `mln_tcp_conn_destroy`会自动`SSL_free`，无需调用方额外处理；但不会释放共享的`mln_tcp_tls_conf_t`。
+
+
+
+#### 简单示例
+
+服务端：
+
+```c
+mln_string_t cert = mln_string("/etc/melon/server.pem");
+mln_string_t key  = mln_string("/etc/melon/server.key");
+mln_tcp_tls_conf_t *conf = mln_tcp_tls_conf_new(
+    M_TLS_SERVER, &cert, &key, NULL, NULL, M_TLS_VDEFAULT, 0);
+
+int fd = accept(listen_fd, NULL, NULL);
+mln_tcp_conn_t conn;
+mln_tcp_conn_tls_init(&conn, fd, conf);
+/* 之后 mln_tcp_conn_send / mln_tcp_conn_recv 即自动走TLS */
+```
+
+客户端：
+
+```c
+mln_tcp_tls_conf_t *conf = mln_tcp_tls_conf_new(
+    M_TLS_CLIENT, NULL, NULL, &ca_bundle, NULL, M_TLS_VDEFAULT, 1);
+
+int fd = ...; /* connect 之后 */
+mln_tcp_conn_t conn;
+mln_tcp_conn_tls_init(&conn, fd, conf);
+
+mln_string_t host = mln_string("example.com");
+mln_tcp_conn_tls_set_sni(&conn, &host);
+mln_tcp_conn_tls_set_verify_host(&conn, &host);
+```
+
+
+
 ### 示例
 
 本篇示例碍于篇幅，仅给出部分片段展示如何使用。

@@ -12,10 +12,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Install Valgrind
-      run: sudo apt-get update && sudo apt-get install valgrind -y
+    - name: Install Valgrind and OpenSSL dev
+      run: sudo apt-get update && sudo apt-get install valgrind libssl-dev -y
 
     - uses: actions/checkout@v3
     - name: Build and Test
       run: |
-        sudo chmod -R 777 /usr/local && export MLN_TEST_RUNNER=valgrind && ./configure && make && make install && make test && export LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH && make run
+        sudo chmod -R 777 /usr/local && export MLN_TEST_RUNNER=valgrind && ./configure --enable-tls && make && make install && make test && export LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH && make run

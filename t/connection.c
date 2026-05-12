@@ -9,6 +9,21 @@
 #include <fcntl.h>
 #include <errno.h>
 #include "mln_connection.h"
+#include "mln_file.h"
+
+#if defined(MLN_TLS)
+#include <pthread.h>
+#include <poll.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include "mln_http.h"
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+#endif
 
 /* Helper function to calculate elapsed time in microseconds */
 static long elapsed_us(struct timespec *start, struct timespec *end)
@@ -805,6 +820,983 @@ static void test_recv_after_nonblock_send(void)
     printf("  PASS: recv after nonblock send\n");
 }
 
+#if defined(MLN_TLS)
+/* ====================================================================
+ *                          TLS test fixtures
+ * ====================================================================
+ * All TLS tests run entirely in-process over an AF_UNIX socketpair, with
+ * a self-signed RSA certificate generated on the fly so the tests need
+ * no external PEM files and no network access.
+ * ==================================================================== */
+
+static SSL_CTX *g_server_ctx = NULL;
+static SSL_CTX *g_client_ctx = NULL;
+
+/* RSA key generation compat shim.  EVP_RSA_gen() is an OpenSSL 3.0
+ * convenience; on 1.1.x we fall back to the EVP_PKEY_keygen path. */
+static EVP_PKEY *tls_test_genkey(int bits)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    return EVP_RSA_gen(bits);
+#else
+    EVP_PKEY     *pkey = NULL;
+    EVP_PKEY_CTX *kctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+    if (kctx == NULL) return NULL;
+    if (EVP_PKEY_keygen_init(kctx) <= 0) goto out;
+    if (EVP_PKEY_CTX_set_rsa_keygen_bits(kctx, bits) <= 0) goto out;
+    if (EVP_PKEY_keygen(kctx, &pkey) <= 0) pkey = NULL;
+out:
+    EVP_PKEY_CTX_free(kctx);
+    return pkey;
+#endif
+}
+
+/* Generate a self-signed test certificate and bake it into the two
+ * shared SSL_CTXs.  Trust is wired up so the client can verify the
+ * server with X509_V_OK.
+ */
+static void tls_test_fixture_init(void)
+{
+    if (g_server_ctx != NULL) return;
+
+    mln_tcp_tls_global_init();
+
+    /* Generate an RSA 2048 key (version-portable via tls_test_genkey). */
+    EVP_PKEY *pkey = tls_test_genkey(2048);
+    assert(pkey != NULL);
+
+    X509 *x = X509_new();
+    ASN1_INTEGER_set(X509_get_serialNumber(x), 1);
+    X509_gmtime_adj(X509_get_notBefore(x), 0);
+    X509_gmtime_adj(X509_get_notAfter(x), 60L * 60L * 24L * 365L);
+    X509_set_pubkey(x, pkey);
+    X509_NAME *name = X509_get_subject_name(x);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
+                               (const unsigned char *)"melon-tls-test", -1, -1, 0);
+    X509_set_issuer_name(x, name);
+    assert(X509_sign(x, pkey, EVP_sha256()) > 0);
+
+    g_server_ctx = SSL_CTX_new(TLS_server_method());
+    assert(g_server_ctx != NULL);
+    SSL_CTX_set_mode(g_server_ctx,
+                     SSL_MODE_ENABLE_PARTIAL_WRITE |
+                     SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+    assert(SSL_CTX_use_certificate(g_server_ctx, x) == 1);
+    assert(SSL_CTX_use_PrivateKey(g_server_ctx, pkey) == 1);
+    assert(SSL_CTX_check_private_key(g_server_ctx) == 1);
+
+    g_client_ctx = SSL_CTX_new(TLS_client_method());
+    assert(g_client_ctx != NULL);
+    SSL_CTX_set_mode(g_client_ctx,
+                     SSL_MODE_ENABLE_PARTIAL_WRITE |
+                     SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+    /* Trust our self-signed cert. */
+    X509_STORE *store = SSL_CTX_get_cert_store(g_client_ctx);
+    assert(X509_STORE_add_cert(store, x) == 1);
+    SSL_CTX_set_verify(g_client_ctx, SSL_VERIFY_PEER, NULL);
+
+    X509_free(x);
+    EVP_PKEY_free(pkey);
+}
+
+static void tls_test_fixture_destroy(void)
+{
+    if (g_server_ctx) { SSL_CTX_free(g_server_ctx); g_server_ctx = NULL; }
+    if (g_client_ctx) { SSL_CTX_free(g_client_ctx); g_client_ctx = NULL; }
+}
+
+/* Attach a connection to a raw SSL_CTX by injecting the SSL handle
+ * directly.  mln_tcp_conn_tls_init() is the public entry point but it
+ * needs an mln_tcp_tls_conf_t; for tests we build the SSL_CTX in memory
+ * to avoid touching the filesystem, so this helper duplicates the
+ * minimal init steps using our own SSL_CTX.
+ */
+static int tls_test_attach(mln_tcp_conn_t *tc, int fd, SSL_CTX *ctx, int is_server)
+{
+    BIO *rbio = NULL, *wbio = NULL;
+    if (mln_tcp_conn_init(tc, fd) < 0) return -1;
+    tc->ssl = SSL_new(ctx);
+    if (tc->ssl == NULL) goto err;
+    rbio = BIO_new(BIO_s_mem());
+    wbio = BIO_new(BIO_s_mem());
+    if (rbio == NULL || wbio == NULL) goto err;
+    BIO_set_mem_eof_return(rbio, -1);
+    BIO_set_mem_eof_return(wbio, -1);
+    SSL_set_bio(tc->ssl, rbio, wbio);
+    if (is_server) SSL_set_accept_state(tc->ssl);
+    else           SSL_set_connect_state(tc->ssl);
+    return 0;
+err:
+    if (rbio) BIO_free(rbio);
+    if (wbio) BIO_free(wbio);
+    if (tc->ssl) { SSL_free(tc->ssl); tc->ssl = NULL; }
+    mln_tcp_conn_destroy(tc);
+    return -1;
+}
+
+/* Drive both ends of the handshake until both report done or both
+ * report NOTYET (which means we'd deadlock if we kept polling on this
+ * socketpair).  Each iteration calls handshake on whichever side wants
+ * progress.  Returns 0 on success.
+ */
+static int tls_drive_handshake_pair(mln_tcp_conn_t *s, mln_tcp_conn_t *c)
+{
+    for (int i = 0; i < 256; i++) {
+        if (mln_tcp_conn_tls_done(s) && mln_tcp_conn_tls_done(c)) return 0;
+        if (!mln_tcp_conn_tls_done(c)) {
+            int r = mln_tcp_conn_tls_handshake(c);
+            if (r == M_C_ERROR || r == M_C_CLOSED) return -1;
+        }
+        if (!mln_tcp_conn_tls_done(s)) {
+            int r = mln_tcp_conn_tls_handshake(s);
+            if (r == M_C_ERROR || r == M_C_CLOSED) return -1;
+        }
+    }
+    return -1;
+}
+
+/* Append a memory buf to a connection's send queue. */
+static void tls_test_append_mem(mln_tcp_conn_t *tc, const void *data, size_t n)
+{
+    mln_alloc_t *pool = mln_tcp_conn_pool_get(tc);
+    mln_chain_t *ch = mln_chain_new(pool);
+    mln_buf_t   *b  = mln_buf_new(pool);
+    mln_u8ptr_t  bf = (mln_u8ptr_t)mln_alloc_m(pool, n);
+    assert(ch != NULL);
+    assert(b  != NULL);
+    assert(bf != NULL);
+    memcpy(bf, data, n);
+    ch->buf = b;
+    b->start = b->left_pos = b->pos = bf;
+    b->last  = b->end = bf + n;
+    b->in_memory = 1;
+    b->last_buf = 1;
+    b->last_in_chain = 1;
+    mln_tcp_conn_append(tc, ch, M_C_SEND);
+}
+
+/* Drain rcv_* into a flat buffer and return total bytes copied. */
+static size_t tls_test_drain_rcv(mln_tcp_conn_t *tc, unsigned char *dst, size_t cap)
+{
+    mln_chain_t *c = mln_tcp_conn_remove(tc, M_C_RECV);
+    size_t off = 0;
+    while (c != NULL) {
+        if (c->buf != NULL) {
+            size_t left = mln_buf_left_size(c->buf);
+            size_t cp = left > cap - off ? cap - off : left;
+            if (cp > 0) {
+                memcpy(dst + off, c->buf->left_pos, cp);
+                off += cp;
+            }
+        }
+        mln_chain_t *next = c->next;
+        c->next = NULL;
+        mln_chain_pool_release(c);
+        c = next;
+    }
+    return off;
+}
+
+/* Threaded helper: drives one side of a blocking-mode handshake. */
+struct tls_blocking_thread_arg {
+    mln_tcp_conn_t *conn;
+    int             ok;
+};
+static void *tls_blocking_handshake_thread(void *vp)
+{
+    struct tls_blocking_thread_arg *a = vp;
+    int r = mln_tcp_conn_tls_handshake(a->conn);
+    a->ok = (r == M_C_FINISH);
+    return NULL;
+}
+
+/* Test 1: blocking handshake driven by two threads (one per side).  This
+ * is what the blocking API contract actually promises: a single call
+ * returns M_C_FINISH once the peer makes equivalent progress.
+ */
+static void test_tls_handshake_blocking(void)
+{
+    printf("Testing TLS handshake (blocking, 2 threads)...\n");
+    tls_test_fixture_init();
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+
+    mln_tcp_conn_t srv, cli;
+    assert(tls_test_attach(&srv, fds[0], g_server_ctx, 1) == 0);
+    assert(tls_test_attach(&cli, fds[1], g_client_ctx, 0) == 0);
+
+    struct tls_blocking_thread_arg sa = { .conn = &srv, .ok = 0 };
+    struct tls_blocking_thread_arg ca = { .conn = &cli, .ok = 0 };
+    pthread_t st, ct;
+    assert(pthread_create(&st, NULL, tls_blocking_handshake_thread, &sa) == 0);
+    assert(pthread_create(&ct, NULL, tls_blocking_handshake_thread, &ca) == 0);
+    pthread_join(st, NULL);
+    pthread_join(ct, NULL);
+    assert(sa.ok && ca.ok);
+    assert(mln_tcp_conn_tls_done(&srv));
+    assert(mln_tcp_conn_tls_done(&cli));
+
+    mln_tcp_conn_destroy(&srv);
+    mln_tcp_conn_destroy(&cli);
+    close(fds[0]); close(fds[1]);
+    printf("  PASS: tls handshake blocking\n");
+}
+
+/* Test 2: non-blocking handshake. */
+static void test_tls_handshake_nonblock(void)
+{
+    printf("Testing TLS handshake (non-blocking)...\n");
+    tls_test_fixture_init();
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]); set_nonblock(fds[1]);
+
+    mln_tcp_conn_t srv, cli;
+    assert(tls_test_attach(&srv, fds[0], g_server_ctx, 1) == 0);
+    assert(tls_test_attach(&cli, fds[1], g_client_ctx, 0) == 0);
+    assert(mln_tcp_conn_set_nonblock(&srv, 1) == 0);
+    assert(mln_tcp_conn_set_nonblock(&cli, 1) == 0);
+
+    int notyet_seen = 0;
+    for (int i = 0; i < 128; i++) {
+        if (mln_tcp_conn_tls_done(&srv) && mln_tcp_conn_tls_done(&cli)) break;
+        int rs = mln_tcp_conn_tls_handshake(&srv);
+        int rc = mln_tcp_conn_tls_handshake(&cli);
+        if (rs == M_C_NOTYET || rc == M_C_NOTYET) notyet_seen++;
+        if (rs == M_C_ERROR || rc == M_C_ERROR) {
+            fprintf(stderr, "handshake error (i=%d rs=%d rc=%d errno=%d)\n",
+                    i, rs, rc, errno);
+            abort();
+        }
+    }
+    assert(mln_tcp_conn_tls_done(&srv) && mln_tcp_conn_tls_done(&cli));
+    assert(notyet_seen > 0); /* we must have transited through NOTYET */
+
+    mln_tcp_conn_destroy(&srv);
+    mln_tcp_conn_destroy(&cli);
+    close(fds[0]); close(fds[1]);
+    printf("  PASS: tls handshake non-blocking (NOTYET transitions: %d)\n", notyet_seen);
+}
+
+/* Test 3: short send/recv round-trip after handshake.  Uses non-blocking
+ * sockets so a single thread can drive both sides; the underlying
+ * mln_tcp_conn_send / mln_tcp_conn_recv code paths are identical.
+ */
+static void test_tls_send_recv_short(void)
+{
+    printf("Testing TLS send/recv (short)...\n");
+    tls_test_fixture_init();
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]); set_nonblock(fds[1]);
+    mln_tcp_conn_t srv, cli;
+    assert(tls_test_attach(&srv, fds[0], g_server_ctx, 1) == 0);
+    assert(tls_test_attach(&cli, fds[1], g_client_ctx, 0) == 0);
+    mln_tcp_conn_set_nonblock(&srv, 1);
+    mln_tcp_conn_set_nonblock(&cli, 1);
+    assert(tls_drive_handshake_pair(&srv, &cli) == 0);
+
+    const char *msg = "hello melon tls";
+    size_t mlen = strlen(msg);
+    tls_test_append_mem(&cli, msg, mlen);
+    int sr = mln_tcp_conn_send(&cli);
+    assert(sr == M_C_FINISH || sr == M_C_NOTYET);
+    int rr = mln_tcp_conn_recv(&srv, M_C_TYPE_MEMORY);
+    assert(rr == M_C_NOTYET || rr == M_C_FINISH);
+
+    unsigned char got[64];
+    size_t n = tls_test_drain_rcv(&srv, got, sizeof got);
+    assert(n == mlen);
+    assert(memcmp(got, msg, mlen) == 0);
+
+    mln_tcp_conn_destroy(&srv);
+    mln_tcp_conn_destroy(&cli);
+    close(fds[0]); close(fds[1]);
+    printf("  PASS: tls send/recv short\n");
+}
+
+/* Test 4: large payload round-trip over non-blocking sockets. */
+static void test_tls_send_recv_large(void)
+{
+    printf("Testing TLS send/recv (large, non-blocking)...\n");
+    tls_test_fixture_init();
+
+    const size_t N = 4u * 1024u * 1024u;
+    unsigned char *payload = malloc(N);
+    unsigned char *recvbuf = malloc(N + 16);
+    assert(payload && recvbuf);
+    for (size_t i = 0; i < N; i++) payload[i] = (unsigned char)(i * 1103515245u + 12345u);
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]); set_nonblock(fds[1]);
+    mln_tcp_conn_t srv, cli;
+    assert(tls_test_attach(&srv, fds[0], g_server_ctx, 1) == 0);
+    assert(tls_test_attach(&cli, fds[1], g_client_ctx, 0) == 0);
+    mln_tcp_conn_set_nonblock(&srv, 1);
+    mln_tcp_conn_set_nonblock(&cli, 1);
+
+    /* finish handshake first */
+    for (int i = 0; i < 512; i++) {
+        if (mln_tcp_conn_tls_done(&srv) && mln_tcp_conn_tls_done(&cli)) break;
+        mln_tcp_conn_tls_handshake(&cli);
+        mln_tcp_conn_tls_handshake(&srv);
+    }
+    assert(mln_tcp_conn_tls_done(&srv));
+
+    tls_test_append_mem(&cli, payload, N);
+
+    size_t got = 0;
+    for (int spin = 0; spin < 65536 && got < N; spin++) {
+        int sr = mln_tcp_conn_send(&cli);
+        assert(sr == M_C_FINISH || sr == M_C_NOTYET);
+        int rr = mln_tcp_conn_recv(&srv, M_C_TYPE_MEMORY);
+        assert(rr == M_C_NOTYET || rr == M_C_FINISH);
+        size_t n = tls_test_drain_rcv(&srv, recvbuf + got, N + 16 - got);
+        got += n;
+    }
+    assert(got == N);
+    assert(memcmp(recvbuf, payload, N) == 0);
+
+    mln_tcp_conn_destroy(&srv);
+    mln_tcp_conn_destroy(&cli);
+    close(fds[0]); close(fds[1]);
+    free(payload); free(recvbuf);
+    printf("  PASS: tls send/recv large (%zu bytes)\n", N);
+}
+
+/* Test 5: file-backed buf goes through SSL_write. */
+static void test_tls_send_in_file(void)
+{
+    printf("Testing TLS send with in-file buf...\n");
+    tls_test_fixture_init();
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]); set_nonblock(fds[1]);
+    mln_tcp_conn_t srv, cli;
+    assert(tls_test_attach(&srv, fds[0], g_server_ctx, 1) == 0);
+    assert(tls_test_attach(&cli, fds[1], g_client_ctx, 0) == 0);
+    mln_tcp_conn_set_nonblock(&srv, 1);
+    mln_tcp_conn_set_nonblock(&cli, 1);
+    assert(tls_drive_handshake_pair(&srv, &cli) == 0);
+
+    /* Build a small temp file containing the payload. */
+    char tmpl[] = "/tmp/mln_tls_test_XXXXXX";
+    int fd = mkstemp(tmpl);
+    assert(fd >= 0);
+    const char *payload = "file-backed-tls-payload-1234567890";
+    size_t plen = strlen(payload);
+    assert(write(fd, payload, plen) == (ssize_t)plen);
+    close(fd);
+
+    mln_alloc_t *pool = mln_tcp_conn_pool_get(&cli);
+    mln_fileset_t *fset = mln_fileset_init(8);
+    assert(fset != NULL);
+    mln_file_t *file = mln_file_open(fset, tmpl);
+    assert(file != NULL);
+    mln_chain_t *ch = mln_chain_new(pool);
+    mln_buf_t   *b  = mln_buf_new(pool);
+    ch->buf = b;
+    b->file = file;
+    b->file_pos = b->file_left_pos = 0;
+    b->file_last = plen;
+    b->in_file = 1;
+    b->last_buf = 1;
+    b->last_in_chain = 1;
+    mln_tcp_conn_append(&cli, ch, M_C_SEND);
+
+    int sr = mln_tcp_conn_send(&cli);
+    assert(sr == M_C_FINISH || sr == M_C_NOTYET);
+    int rr = mln_tcp_conn_recv(&srv, M_C_TYPE_MEMORY);
+    assert(rr == M_C_NOTYET || rr == M_C_FINISH);
+
+    unsigned char got[128];
+    size_t n = tls_test_drain_rcv(&srv, got, sizeof got);
+    assert(n == plen);
+    assert(memcmp(got, payload, plen) == 0);
+
+    unlink(tmpl);
+    mln_tcp_conn_destroy(&srv);
+    mln_tcp_conn_destroy(&cli);
+    mln_fileset_destroy(fset);
+    (void)pool;
+    close(fds[0]); close(fds[1]);
+    printf("  PASS: tls send with in-file buf\n");
+}
+
+/* Test 6: shutdown round-trip. */
+static void test_tls_shutdown(void)
+{
+    printf("Testing TLS shutdown...\n");
+    tls_test_fixture_init();
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]); set_nonblock(fds[1]);
+    mln_tcp_conn_t srv, cli;
+    assert(tls_test_attach(&srv, fds[0], g_server_ctx, 1) == 0);
+    assert(tls_test_attach(&cli, fds[1], g_client_ctx, 0) == 0);
+    mln_tcp_conn_set_nonblock(&srv, 1);
+    mln_tcp_conn_set_nonblock(&cli, 1);
+    assert(tls_drive_handshake_pair(&srv, &cli) == 0);
+
+    int r = mln_tcp_conn_tls_shutdown(&cli);
+    assert(r == M_C_FINISH || r == M_C_NOTYET);
+    /* Drain whatever the client left on the wire so the server can see
+     * close_notify and acknowledge. */
+    int rr = mln_tcp_conn_recv(&srv, M_C_TYPE_MEMORY);
+    /* recv may legitimately return CLOSED here. */
+    (void)rr;
+    int r2 = mln_tcp_conn_tls_shutdown(&srv);
+    (void)r2;
+
+    mln_tcp_conn_destroy(&srv);
+    mln_tcp_conn_destroy(&cli);
+    close(fds[0]); close(fds[1]);
+    printf("  PASS: tls shutdown\n");
+}
+
+/* Test 7: plain (non-TLS) path is still byte-identical: a connection
+ * created via mln_tcp_conn_init() must never enter the TLS branch.
+ */
+static void test_tls_plain_unchanged(void)
+{
+    printf("Testing TLS-enabled build keeps plain path unchanged...\n");
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+
+    mln_tcp_conn_t a, b;
+    assert(mln_tcp_conn_init(&a, fds[0]) == 0);
+    assert(mln_tcp_conn_init(&b, fds[1]) == 0);
+    /* The TLS-enabled fields must be zero-initialized. */
+    assert(!mln_tcp_conn_tls_enabled(&a));
+    assert(!mln_tcp_conn_tls_enabled(&b));
+
+    const char *msg = "plain-path-still-works";
+    size_t mlen = strlen(msg);
+    tls_test_append_mem(&a, msg, mlen);
+    int sr = mln_tcp_conn_send(&a);
+    assert(sr == M_C_FINISH);
+    int rr = mln_tcp_conn_recv(&b, M_C_TYPE_MEMORY);
+    assert(rr == M_C_NOTYET || rr == M_C_FINISH);
+    unsigned char got[64];
+    size_t n = tls_test_drain_rcv(&b, got, sizeof got);
+    assert(n == mlen);
+    assert(memcmp(got, msg, mlen) == 0);
+
+    mln_tcp_conn_destroy(&a);
+    mln_tcp_conn_destroy(&b);
+    close(fds[0]); close(fds[1]);
+    printf("  PASS: plain path unchanged when TLS compiled in\n");
+}
+
+/* Test 8: throughput benchmark.  Reports MB/s but does not assert on a
+ * specific number — CI hardware variance is too large to make it
+ * meaningful — only prints a [WARN] if the rate falls below a very low
+ * floor that would indicate a real regression.
+ */
+static void test_tls_perf_throughput(void)
+{
+    printf("Benchmarking TLS throughput...\n");
+    tls_test_fixture_init();
+
+    const size_t TOTAL = 16u * 1024u * 1024u;   /* 16 MiB */
+    const size_t CHUNK = 64u * 1024u;
+    unsigned char *block = malloc(CHUNK);
+    assert(block != NULL);
+    for (size_t i = 0; i < CHUNK; i++) block[i] = (unsigned char)i;
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]); set_nonblock(fds[1]);
+    mln_tcp_conn_t srv, cli;
+    assert(tls_test_attach(&srv, fds[0], g_server_ctx, 1) == 0);
+    assert(tls_test_attach(&cli, fds[1], g_client_ctx, 0) == 0);
+    mln_tcp_conn_set_nonblock(&srv, 1);
+    mln_tcp_conn_set_nonblock(&cli, 1);
+    for (int i = 0; i < 512; i++) {
+        if (mln_tcp_conn_tls_done(&srv) && mln_tcp_conn_tls_done(&cli)) break;
+        mln_tcp_conn_tls_handshake(&cli);
+        mln_tcp_conn_tls_handshake(&srv);
+    }
+    assert(mln_tcp_conn_tls_done(&srv));
+
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
+    size_t sent = 0, recvd = 0;
+    unsigned char sink[64 * 1024];
+    while (recvd < TOTAL) {
+        if (sent < TOTAL && mln_tcp_conn_send_empty(&cli)) {
+            size_t left = TOTAL - sent;
+            size_t n = left > CHUNK ? CHUNK : left;
+            tls_test_append_mem(&cli, block, n);
+            sent += n;
+        }
+        int sr = mln_tcp_conn_send(&cli);
+        (void)sr;
+        int rr = mln_tcp_conn_recv(&srv, M_C_TYPE_MEMORY);
+        (void)rr;
+        recvd += tls_test_drain_rcv(&srv, sink, sizeof sink);
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    long us = elapsed_us(&t0, &t1);
+    double mbs = us > 0 ? ((double)TOTAL / (double)us) : 0.0;  /* MB/s == bytes/us */
+    printf("  INFO: tls throughput = %.1f MB/s (%zu bytes in %ld us)\n",
+           mbs, TOTAL, us);
+    if (mbs < 20.0) {
+        printf("  [WARN] throughput below 20 MB/s; possible regression\n");
+    }
+
+    mln_tcp_conn_destroy(&srv);
+    mln_tcp_conn_destroy(&cli);
+    close(fds[0]); close(fds[1]);
+    free(block);
+    printf("  PASS: tls throughput benchmark\n");
+}
+
+/* Plain-path throughput for comparison (only built when TLS is on so
+ * we can print the ratio in one run; the plain test suite already
+ * exercises this code path independently). */
+static void test_plain_perf_throughput(void)
+{
+    printf("Benchmarking plain TCP throughput (for TLS comparison)...\n");
+    const size_t TOTAL = 16u * 1024u * 1024u;
+    const size_t CHUNK = 64u * 1024u;
+    unsigned char *block = malloc(CHUNK);
+    assert(block != NULL);
+    for (size_t i = 0; i < CHUNK; i++) block[i] = (unsigned char)i;
+
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    set_nonblock(fds[0]); set_nonblock(fds[1]);
+    mln_tcp_conn_t srv, cli;
+    assert(mln_tcp_conn_init(&srv, fds[0]) == 0);
+    assert(mln_tcp_conn_init(&cli, fds[1]) == 0);
+
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
+    size_t sent = 0, recvd = 0;
+    unsigned char sink[64 * 1024];
+    while (recvd < TOTAL) {
+        if (sent < TOTAL && mln_tcp_conn_send_empty(&cli)) {
+            size_t left = TOTAL - sent;
+            size_t n = left > CHUNK ? CHUNK : left;
+            tls_test_append_mem(&cli, block, n);
+            sent += n;
+        }
+        int sr = mln_tcp_conn_send(&cli);
+        (void)sr;
+        int rr = mln_tcp_conn_recv(&srv, M_C_TYPE_MEMORY);
+        (void)rr;
+        recvd += tls_test_drain_rcv(&srv, sink, sizeof sink);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    long us = elapsed_us(&t0, &t1);
+    double mbs = us > 0 ? ((double)TOTAL / (double)us) : 0.0;
+    printf("  INFO: plain throughput = %.1f MB/s (%zu bytes in %ld us)\n",
+           mbs, TOTAL, us);
+
+    mln_tcp_conn_destroy(&srv);
+    mln_tcp_conn_destroy(&cli);
+    close(fds[0]); close(fds[1]);
+    free(block);
+    printf("  PASS: plain throughput benchmark\n");
+}
+
+/* ====================================================================
+ *                HTTPS end-to-end test (10 request rounds)
+ * ====================================================================
+ * Real loopback TCP between two threads, both sides non-blocking, both
+ * driven via mln_tcp_conn_tls_init + mln_http_init -- i.e. the real
+ * public APIs.  Exercises:
+ *   - server: cert + private key loaded from PEM via mln_tcp_tls_conf_new
+ *   - client: SNI, CA verification, hostname (X509v3 SAN) verification
+ *   - 10 HTTP request / response round-trips on one TLS connection
+ *   - graceful close_notify shutdown on both sides
+ * ==================================================================== */
+
+#define HTTPS_TEST_ROUNDS 10
+#define HTTPS_TEST_CN     "localhost"
+
+/* Write a self-signed RSA-2048 cert (CN=localhost, SAN=DNS:localhost,
+ * IP:127.0.0.1) and matching private key to two temp PEM files.
+ * Returns 0 on success; *cert_path and *key_path are filled in. */
+static int https_make_cert_files(char *cert_path, char *key_path)
+{
+    EVP_PKEY       *pkey = NULL;
+    X509           *x    = NULL;
+    X509_EXTENSION *ext  = NULL;
+    int             cfd  = -1, kfd = -1;
+    FILE           *cf   = NULL, *kf = NULL;
+    int             rc   = -1;
+
+    cert_path[0] = '\0';
+    key_path[0]  = '\0';
+
+    pkey = tls_test_genkey(2048);
+    if (pkey == NULL) goto out;
+
+    x = X509_new();
+    if (x == NULL) goto out;
+    if (ASN1_INTEGER_set(X509_get_serialNumber(x), 1) != 1)                 goto out;
+    if (X509_gmtime_adj(X509_get_notBefore(x), 0) == NULL)                  goto out;
+    if (X509_gmtime_adj(X509_get_notAfter(x), 60L*60L*24L*365L) == NULL)    goto out;
+    if (X509_set_pubkey(x, pkey) != 1)                                      goto out;
+
+    X509_NAME *name = X509_get_subject_name(x);
+    if (X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
+                                   (const unsigned char *)HTTPS_TEST_CN,
+                                   -1, -1, 0) != 1)                         goto out;
+    if (X509_set_issuer_name(x, name) != 1)                                 goto out;
+
+    ext = X509V3_EXT_conf_nid(NULL, NULL, NID_subject_alt_name,
+                              "DNS:" HTTPS_TEST_CN ",IP:127.0.0.1");
+    if (ext == NULL)                                                        goto out;
+    if (X509_add_ext(x, ext, -1) != 1)                                      goto out;
+
+    if (X509_sign(x, pkey, EVP_sha256()) <= 0)                              goto out;
+
+    strcpy(cert_path, "/tmp/mln_https_cert_XXXXXX");
+    cfd = mkstemp(cert_path);
+    if (cfd < 0) { cert_path[0] = '\0'; goto out; }
+    strcpy(key_path,  "/tmp/mln_https_key_XXXXXX");
+    kfd = mkstemp(key_path);
+    if (kfd < 0) { key_path[0] = '\0'; goto out; }
+
+    cf = fdopen(cfd, "w");
+    if (cf == NULL) goto out;
+    cfd = -1;        /* ownership transferred to FILE* */
+    kf = fdopen(kfd, "w");
+    if (kf == NULL) goto out;
+    kfd = -1;
+
+    if (PEM_write_X509(cf, x) != 1)                                         goto out;
+    if (PEM_write_PrivateKey(kf, pkey, NULL, NULL, 0, NULL, NULL) != 1)     goto out;
+    if (fclose(cf) != 0) { cf = NULL; goto out; }  cf = NULL;
+    if (fclose(kf) != 0) { kf = NULL; goto out; }  kf = NULL;
+
+    rc = 0;
+
+out:
+    if (cf)        fclose(cf);
+    if (kf)        fclose(kf);
+    if (cfd >= 0)  close(cfd);
+    if (kfd >= 0)  close(kfd);
+    if (ext)       X509_EXTENSION_free(ext);
+    if (x)         X509_free(x);
+    if (pkey)      EVP_PKEY_free(pkey);
+    if (rc != 0) {
+        if (cert_path[0]) unlink(cert_path);
+        if (key_path[0])  unlink(key_path);
+    }
+    return rc;
+}
+
+/* A 15-second wall-clock deadline per high-level operation -- long
+ * enough that even Valgrind-slow CI completes, short enough that a
+ * regression cannot hang the test suite indefinitely. */
+#define HTTPS_DEADLINE_US (15LL * 1000LL * 1000LL)
+
+/* Wait up to `timeout_ms` for the desired events on `fd`.  Returns 0
+ * on a successful (or signal-interrupted) wait, -1 on poll() error
+ * or timeout so callers can fail the test deterministically. */
+static int https_wait(int fd, mln_tcp_conn_t *c, int timeout_ms)
+{
+    struct pollfd pfd = { .fd = fd, .events = 0 };
+    if (mln_tcp_conn_tls_want_read(c))  pfd.events |= POLLIN;
+    if (mln_tcp_conn_tls_want_write(c)) pfd.events |= POLLOUT;
+    if (pfd.events == 0) pfd.events = POLLIN | POLLOUT;
+    int n = poll(&pfd, 1, timeout_ms);
+    if (n < 0) return (errno == EINTR) ? 0 : -1;
+    if (n == 0) return -1;   /* poll timeout */
+    return 0;
+}
+
+static int https_deadline_expired(struct timespec *t0)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return elapsed_us(t0, &now) > HTTPS_DEADLINE_US;
+}
+
+/* Drive the TLS handshake to completion or hard-fail on deadline. */
+static int https_handshake(int fd, mln_tcp_conn_t *c)
+{
+    struct timespec t0; clock_gettime(CLOCK_MONOTONIC, &t0);
+    for (;;) {
+        int r = mln_tcp_conn_tls_handshake(c);
+        if (r == M_C_FINISH) return 0;
+        if (r != M_C_NOTYET) return -1;
+        if (https_wait(fd, c, 5000) < 0) return -1;
+        if (https_deadline_expired(&t0)) return -1;
+    }
+}
+
+/* Receive bytes and feed mln_http_parse until one message is complete. */
+static int https_recv_message(int fd, mln_tcp_conn_t *c, mln_http_t *http)
+{
+    struct timespec t0; clock_gettime(CLOCK_MONOTONIC, &t0);
+    for (;;) {
+        int r = mln_tcp_conn_recv(c, M_C_TYPE_MEMORY);
+        if (r == M_C_ERROR) return -1;
+        mln_chain_t *in = mln_tcp_conn_remove(c, M_C_RECV);
+        if (in != NULL) {
+            int pr = mln_http_parse(http, &in);
+            if (in != NULL) mln_chain_pool_release_all(in);
+            if (pr == M_HTTP_RET_DONE)  return 0;
+            if (pr == M_HTTP_RET_ERROR) return -1;
+            /* M_HTTP_RET_OK: need more bytes */
+        }
+        if (r == M_C_CLOSED) return -1;
+        if (r == M_C_NOTYET) {
+            if (https_wait(fd, c, 5000) < 0) return -1;
+            if (https_deadline_expired(&t0)) return -1;
+        }
+    }
+}
+
+/* Send a generated chain until M_C_FINISH; releases sent buffers. */
+static int https_send_chain(int fd, mln_tcp_conn_t *c,
+                            mln_chain_t *head, mln_chain_t *tail)
+{
+    struct timespec t0; clock_gettime(CLOCK_MONOTONIC, &t0);
+    mln_tcp_conn_append_chain(c, head, tail, M_C_SEND);
+    for (;;) {
+        int r = mln_tcp_conn_send(c);
+        if (r == M_C_FINISH) {
+            mln_chain_pool_release_all(mln_tcp_conn_remove(c, M_C_SENT));
+            return 0;
+        }
+        if (r == M_C_ERROR) return -1;
+        if (https_wait(fd, c, 5000) < 0) return -1;
+        if (https_deadline_expired(&t0)) return -1;
+    }
+}
+
+/* Best-effort graceful close.  Capped at 32 iterations; poll() errors
+ * or timeouts inside https_wait abort early so a vanished peer cannot
+ * hang the test. */
+static void https_drive_shutdown(int fd, mln_tcp_conn_t *c)
+{
+    for (int i = 0; i < 32; i++) {
+        int r = mln_tcp_conn_tls_shutdown(c);
+        if (r != M_C_NOTYET) return;
+        if (https_wait(fd, c, 200) < 0) return;
+    }
+}
+
+struct https_server_arg {
+    int                  listen_fd;
+    mln_tcp_tls_conf_t  *conf;
+    int                  ok;
+};
+
+static void *https_server_thread(void *vp)
+{
+    struct https_server_arg *sa = vp;
+    sa->ok = 0;
+
+    int cfd = accept(sa->listen_fd, NULL, NULL);
+    if (cfd < 0) return NULL;
+    set_nonblock(cfd);
+
+    mln_tcp_conn_t conn;
+    if (mln_tcp_conn_tls_init(&conn, cfd, sa->conf) < 0) { close(cfd); return NULL; }
+    mln_tcp_conn_set_nonblock(&conn, 1);
+
+    if (https_handshake(cfd, &conn) < 0) goto out;
+
+    mln_http_t *http = mln_http_init(&conn, NULL, NULL);
+    if (http == NULL) goto out;
+
+    int rounds_done = 0;
+    while (rounds_done < HTTPS_TEST_ROUNDS) {
+        if (https_recv_message(cfd, &conn, http) < 0) goto out_http;
+        if (mln_http_method_get(http) != M_HTTP_GET) goto out_http;
+
+        /* Echo the X-Iter header value back so the client can verify
+         * round identity end-to-end. */
+        mln_string_t key_iter = mln_string("X-Iter");
+        mln_string_t *iter_v  = mln_http_field_get(http, &key_iter);
+        if (iter_v == NULL) goto out_http;
+        char iter_buf[32];
+        size_t iter_len = iter_v->len < sizeof(iter_buf)-1 ? iter_v->len : sizeof(iter_buf)-1;
+        memcpy(iter_buf, iter_v->data, iter_len);
+        iter_buf[iter_len] = '\0';
+
+        mln_http_reset(http);
+        mln_http_type_set(http, M_HTTP_RESPONSE);
+        mln_http_status_set(http, M_HTTP_OK);
+        mln_http_version_set(http, M_HTTP_VERSION_1_1);
+
+        mln_string_t key_srv = mln_string("Server");
+        mln_string_t val_srv = mln_string("melon-tls-test");
+        mln_string_t key_cl  = mln_string("Content-Length");
+        mln_string_t val_cl  = mln_string("0");
+        mln_string_t val_iter;
+        mln_string_nset(&val_iter, iter_buf, iter_len);
+        if (mln_http_field_set(http, &key_srv,  &val_srv)  < 0) goto out_http;
+        if (mln_http_field_set(http, &key_iter, &val_iter) < 0) goto out_http;
+        if (mln_http_field_set(http, &key_cl,   &val_cl)   < 0) goto out_http;
+
+        mln_chain_t *head = NULL, *tail = NULL;
+        if (mln_http_generate(http, &head, &tail) != M_HTTP_RET_DONE) goto out_http;
+        if (https_send_chain(cfd, &conn, head, tail) < 0) goto out_http;
+        mln_http_reset(http);
+        rounds_done++;
+    }
+    sa->ok = 1;
+
+    https_drive_shutdown(cfd, &conn);
+out_http:
+    mln_http_destroy(http);
+out:
+    mln_tcp_conn_destroy(&conn);
+    close(cfd);
+    return NULL;
+}
+
+struct https_client_arg {
+    in_port_t            port;
+    mln_tcp_tls_conf_t  *conf;
+    int                  ok;
+};
+
+static void *https_client_thread(void *vp)
+{
+    struct https_client_arg *ca = vp;
+    ca->ok = 0;
+
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) return NULL;
+    set_nonblock(fd);
+
+    struct sockaddr_in sa = { 0 };
+    sa.sin_family = AF_INET;
+    sa.sin_port   = htons(ca->port);
+    inet_pton(AF_INET, "127.0.0.1", &sa.sin_addr);
+    int cr = connect(fd, (struct sockaddr *)&sa, sizeof sa);
+    if (cr < 0 && errno != EINPROGRESS) { close(fd); return NULL; }
+    /* Wait for connect to complete. */
+    struct pollfd pfd = { .fd = fd, .events = POLLOUT };
+    poll(&pfd, 1, 5000);
+    int err = 0; socklen_t errlen = sizeof err;
+    getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
+    if (err != 0) { close(fd); return NULL; }
+
+    mln_tcp_conn_t conn;
+    if (mln_tcp_conn_tls_init(&conn, fd, ca->conf) < 0) { close(fd); return NULL; }
+    mln_tcp_conn_set_nonblock(&conn, 1);
+
+    /* SNI + hostname verification before the handshake starts. */
+    mln_string_t host = mln_string(HTTPS_TEST_CN);
+    if (mln_tcp_conn_tls_set_sni(&conn, &host) < 0)         goto out;
+    if (mln_tcp_conn_tls_set_verify_host(&conn, &host) < 0) goto out;
+
+    if (https_handshake(fd, &conn) < 0) goto out;
+
+    mln_http_t *http = mln_http_init(&conn, NULL, NULL);
+    if (http == NULL) goto out;
+
+    for (int i = 0; i < HTTPS_TEST_ROUNDS; i++) {
+        char iter_buf[16];
+        int iter_len = snprintf(iter_buf, sizeof iter_buf, "%d", i);
+
+        mln_http_reset(http);
+        mln_http_type_set(http, M_HTTP_REQUEST);
+        mln_http_method_set(http, M_HTTP_GET);
+        mln_http_version_set(http, M_HTTP_VERSION_1_1);
+        mln_string_t key_host  = mln_string("Host");
+        mln_string_t key_iter  = mln_string("X-Iter");
+        mln_string_t val_iter;
+        mln_string_nset(&val_iter, iter_buf, (size_t)iter_len);
+        if (mln_http_field_set(http, &key_host, &host)     < 0) goto out_http;
+        if (mln_http_field_set(http, &key_iter, &val_iter) < 0) goto out_http;
+
+        mln_chain_t *head = NULL, *tail = NULL;
+        if (mln_http_generate(http, &head, &tail) != M_HTTP_RET_DONE) goto out_http;
+        if (https_send_chain(fd, &conn, head, tail) < 0) goto out_http;
+
+        mln_http_reset(http);
+        if (https_recv_message(fd, &conn, http) < 0) goto out_http;
+        if (mln_http_type_get(http)   != M_HTTP_RESPONSE) goto out_http;
+        if (mln_http_status_get(http) != M_HTTP_OK)       goto out_http;
+
+        mln_string_t *got = mln_http_field_get(http, &key_iter);
+        if (got == NULL) goto out_http;
+        if (got->len != (mln_size_t)iter_len) goto out_http;
+        if (memcmp(got->data, iter_buf, iter_len) != 0) goto out_http;
+    }
+    ca->ok = 1;
+
+    https_drive_shutdown(fd, &conn);
+out_http:
+    mln_http_destroy(http);
+out:
+    mln_tcp_conn_destroy(&conn);
+    close(fd);
+    return NULL;
+}
+
+static void test_https_e2e_nonblocking(void)
+{
+    printf("Testing real HTTPS client/server (10 rounds, non-blocking)...\n");
+    mln_tcp_tls_global_init();
+
+    char cert_path[64], key_path[64];
+    assert(https_make_cert_files(cert_path, key_path) == 0);
+
+    mln_string_t cert_s, key_s, ca_s;
+    mln_string_nset(&cert_s, cert_path, strlen(cert_path));
+    mln_string_nset(&key_s,  key_path,  strlen(key_path));
+    /* Self-signed: the cert file doubles as the CA bundle for the client. */
+    mln_string_nset(&ca_s,   cert_path, strlen(cert_path));
+
+    mln_tcp_tls_conf_t *srv_conf = mln_tcp_tls_conf_new(
+        M_TLS_SERVER, &cert_s, &key_s, NULL, NULL, M_TLS_VDEFAULT, 0);
+    mln_tcp_tls_conf_t *cli_conf = mln_tcp_tls_conf_new(
+        M_TLS_CLIENT, NULL, NULL, &ca_s, NULL, M_TLS_VDEFAULT, 1);
+    assert(srv_conf && cli_conf);
+
+    int lfd = socket(AF_INET, SOCK_STREAM, 0);
+    assert(lfd >= 0);
+    int one = 1;
+    setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
+    struct sockaddr_in la = { 0 };
+    la.sin_family = AF_INET;
+    la.sin_port   = 0; /* ephemeral */
+    inet_pton(AF_INET, "127.0.0.1", &la.sin_addr);
+    assert(bind(lfd, (struct sockaddr *)&la, sizeof la) == 0);
+    assert(listen(lfd, 1) == 0);
+    socklen_t lalen = sizeof la;
+    assert(getsockname(lfd, (struct sockaddr *)&la, &lalen) == 0);
+
+    struct https_server_arg sa = { .listen_fd = lfd, .conf = srv_conf, .ok = 0 };
+    struct https_client_arg ca = { .port = ntohs(la.sin_port), .conf = cli_conf, .ok = 0 };
+    pthread_t st, ct;
+    assert(pthread_create(&st, NULL, https_server_thread, &sa) == 0);
+    assert(pthread_create(&ct, NULL, https_client_thread, &ca) == 0);
+    pthread_join(st, NULL);
+    pthread_join(ct, NULL);
+    assert(sa.ok);
+    assert(ca.ok);
+
+    close(lfd);
+    mln_tcp_tls_conf_free(srv_conf);
+    mln_tcp_tls_conf_free(cli_conf);
+    unlink(cert_path);
+    unlink(key_path);
+    printf("  PASS: HTTPS 10-round round-trip with SNI + CA + hostname verify\n");
+}
+#endif /* MLN_TLS */
+
 int main(void)
 {
     printf("=== Connection Module Comprehensive Tests ===\n\n");
@@ -825,6 +1817,21 @@ int main(void)
     test_recv_error();
     test_send_finish();
     test_recv_after_nonblock_send();
+
+#if defined(MLN_TLS)
+    printf("\n--- TLS tests ---\n");
+    test_tls_handshake_blocking();
+    test_tls_handshake_nonblock();
+    test_tls_send_recv_short();
+    test_tls_send_recv_large();
+    test_tls_send_in_file();
+    test_tls_shutdown();
+    test_tls_plain_unchanged();
+    test_plain_perf_throughput();
+    test_tls_perf_throughput();
+    test_https_e2e_nonblocking();
+    tls_test_fixture_destroy();
+#endif
 
     printf("\n=== All connection tests passed! ===\n");
     return 0;

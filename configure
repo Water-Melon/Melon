@@ -45,6 +45,11 @@ select_files='all'
 # disabled macros
 disabled_macros=""
 
+# tls
+tls_enabled=0
+tls_flag=""
+tls_ldflag=""
+
 # llvm
 llvm_flag=""
 
@@ -149,6 +154,7 @@ get_params() {
             echo -e "\t--func"
             echo -e "\t--c99"
             echo -e "\t--enable-lto"
+            echo -e "\t--enable-tls"
             exit 0
         fi
         param_prefix=`echo $param|cut -d '=' -f 1`
@@ -172,6 +178,8 @@ get_params() {
         elif [ $param_prefix == "--enable-lto" ]; then
             lto_flag='-flto'
             lto_link_flag='-flto'
+        elif [ $param_prefix == "--enable-tls" ]; then
+            tls_enabled=1
         elif [ $param_prefix == "--select" ]; then
             select_files=$param_suffix
         elif [ $param_prefix == "--disable-macro" ]; then
@@ -320,6 +328,44 @@ detect_operating_system_mmap_support() {
     echo -e $output
 }
 
+detect_operating_system_tls_support() {
+    output="TLS\t\t\t[disabled]"
+    tls_flag=""
+    tls_ldflag=""
+    if [ "$tls_enabled" -eq 1 ]; then
+        tls_inc=""
+        tls_lib=""
+        # Common Homebrew / system layouts that ship a pkg-config-less openssl
+        for p in \
+            /opt/homebrew/opt/openssl@3 \
+            /usr/local/opt/openssl@3 \
+            /opt/homebrew/opt/openssl \
+            /usr/local/opt/openssl \
+            /opt/local
+        do
+            if [ -f "$p/include/openssl/ssl.h" ]; then
+                tls_inc="-I$p/include"
+                tls_lib="-L$p/lib"
+                break
+            fi
+        done
+        # Allow override via env so CI / non-standard layouts can plug in.
+        if [ -n "$OPENSSL_INCLUDE" ]; then tls_inc="-I$OPENSSL_INCLUDE"; fi
+        if [ -n "$OPENSSL_LIB" ];     then tls_lib="-L$OPENSSL_LIB";     fi
+        echo -e "#include <openssl/ssl.h>\nint main(void){SSL_CTX_new(TLS_method());return 0;}" > tls_test.c
+        $cc $tls_inc -o tls_test tls_test.c $tls_lib -lssl -lcrypto 2>/dev/null
+        if [ "$?" = "0" ]; then
+            tls_flag="-DMLN_TLS $tls_inc"
+            tls_ldflag="$tls_lib -lssl -lcrypto"
+            output="TLS\t\t\t[OpenSSL]"
+        else
+            echo "openssl headers/libs not found; --enable-tls ignored (set OPENSSL_INCLUDE and OPENSSL_LIB to override)"
+        fi
+        rm -f tls_test tls_test.c
+    fi
+    echo -e $output
+}
+
 detect_operating_system_constructor_support() {
     output="constructor\t\t[NOT support]"
     if [[ ! "${disabled_macros[@]}" =~ "constructor_flag" ]]; then
@@ -344,6 +390,7 @@ detect_operating_system_support() {
         detect_operating_system_unix98_support
         detect_operating_system_mmap_support
         detect_operating_system_constructor_support
+        detect_operating_system_tls_support
     fi
 }
 
@@ -427,7 +474,7 @@ generate_Makefile() {
     if [ $wasm -eq 1 ]; then
         echo -e "FLAGS\t\t= -Iinclude -c $debug $olevel $llvm_flag -s -mmutable-globals -mnontrapping-fptoint -msign-ext -Wemcc -DMLN_ROOT=\\\"$realpath\\\" -DMLN_NULL=\\\"$nullpath\\\" -DMLN_LANG_LIB=\\\"$melang_script_path\\\" -DMLN_LANG_DYLIB=\\\"$melang_dylib_path\\\" $CFLAGS" >> Makefile
     else
-        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $mingw_cflags $olevel $lto_flag -fPIC -DMLN_ROOT=\\\"$realpath\\\" -DMLN_NULL=\\\"$nullpath\\\" -DMLN_LANG_LIB=\\\"$melang_script_path\\\" -DMLN_LANG_DYLIB=\\\"$melang_dylib_path\\\" $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag $constructor_flag $msys2_flag $CFLAGS" >> Makefile
+        echo -e "FLAGS\t\t= -Iinclude -c -Wall $debug -Werror $mingw_cflags $olevel $lto_flag -fPIC -DMLN_ROOT=\\\"$realpath\\\" -DMLN_NULL=\\\"$nullpath\\\" -DMLN_LANG_LIB=\\\"$melang_script_path\\\" -DMLN_LANG_DYLIB=\\\"$melang_dylib_path\\\" $event_flag $sendfile_flag $writev_flag $unix98_flag $mmap_flag $func_flag $c99_flag $constructor_flag $msys2_flag $tls_flag $CFLAGS" >> Makefile
     fi
     if ! case $sysname in MINGW*) false;; esac; then
         if [ $wasm -eq 0 ]; then
@@ -474,11 +521,11 @@ generate_Makefile() {
     if [ $wasm -eq 0 ]; then
         echo "\$(MELONSO) : \$(OBJS)" >> Makefile
         if [ $sysname = 'Linux' ]; then
-            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug $lto_link_flag -Wall -lpthread -Llib/ -ldl -shared -fPIC $LDFLAGS" >> Makefile
+            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug $lto_link_flag -Wall -lpthread -Llib/ -ldl $tls_ldflag -shared -fPIC $LDFLAGS" >> Makefile
         elif ! case $sysname in MINGW*) false;; esac; then
-            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug $lto_link_flag -Wall -lpthread -lWs2_32 -Llib/ -shared -fPIC $LDFLAGS" >> Makefile
+            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug $lto_link_flag -Wall -lpthread -lWs2_32 -Llib/ $tls_ldflag -shared -fPIC $LDFLAGS" >> Makefile
         else
-            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug $lto_link_flag -Wall -lpthread -Llib/ -lc -shared -fPIC $LDFLAGS" >> Makefile
+            echo -e "\t\$(CC) -o lib/\$(MELONSO) \$(OBJS) $debug $lto_link_flag -Wall -lpthread -Llib/ -lc $tls_ldflag -shared -fPIC $LDFLAGS" >> Makefile
         fi
     fi
     echo "install:" >> Makefile
@@ -513,7 +560,7 @@ generate_Makefile() {
             done
             echo "" >> Makefile
 
-            echo -e "\t\$(CC) -o \$@ $fname $debug -Iinclude -Llib -lmelon" >> Makefile
+            echo -e "\t\$(CC) -o \$@ $fname $debug -Iinclude $tls_flag -Llib -lmelon $tls_ldflag" >> Makefile
         fi
     done
     echo -e "BINS = \\" >> Makefile
