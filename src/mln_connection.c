@@ -141,7 +141,7 @@ MLN_FUNC_VOID(, void, mln_tcp_conn_destroy, (mln_tcp_conn_t *tc), (tc), {
     mln_chain_pool_release_all(mln_tcp_conn_remove(tc, M_C_SEND));
     mln_chain_pool_release_all(mln_tcp_conn_remove(tc, M_C_RECV));
     mln_chain_pool_release_all(mln_tcp_conn_remove(tc, M_C_SENT));
-    mln_alloc_destroy(tc->pool);
+    if (tc->pool) mln_alloc_destroy(tc->pool);
 })
 
 MLN_FUNC_VOID(, void, mln_tcp_conn_append_chain, \
@@ -1239,6 +1239,9 @@ MLN_FUNC(, int, mln_tcp_conn_tls_set_sni, \
      * is either a bug or an attacker-controlled value, and silently
      * truncating would send an incorrect SNI value.  Reject up front. */
     if (hostname->len >= sizeof(buf)) { errno = EINVAL; return -1; }
+    /* An embedded NUL would silently shorten the C-string sent as SNI,
+     * making the verified name differ from what the caller intended. */
+    if (memchr(hostname->data, '\0', hostname->len) != NULL) { errno = EINVAL; return -1; }
     memcpy(buf, hostname->data, hostname->len);
     buf[hostname->len] = '\0';
     if (SSL_set_tlsext_host_name(tc->ssl, buf) != 1) return -1;
@@ -1255,6 +1258,9 @@ MLN_FUNC(, int, mln_tcp_conn_tls_set_verify_host, \
      * that would let an attacker pass verification against a different
      * name than the caller intended. */
     if (hostname->len >= sizeof(buf)) { errno = EINVAL; return -1; }
+    /* An embedded NUL would shorten the C-string and make the verified
+     * name differ from what the caller passed in. */
+    if (memchr(hostname->data, '\0', hostname->len) != NULL) { errno = EINVAL; return -1; }
     memcpy(buf, hostname->data, hostname->len);
     buf[hostname->len] = '\0';
     param = SSL_get0_param(tc->ssl);
