@@ -1295,7 +1295,7 @@ static void test_tls_plain_unchanged(void)
     printf("  PASS: plain path unchanged when TLS compiled in\n");
 }
 
-/* Test 8: throughput benchmark.  Reports MB/s but does not assert on a
+/* Test 8: throughput benchmark.  Reports MiB/s but does not assert on a
  * specific number — CI hardware variance is too large to make it
  * meaningful — only prints a [WARN] if the rate falls below a very low
  * floor that would indicate a real regression.
@@ -1354,11 +1354,12 @@ static void test_tls_perf_throughput(void)
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
     long us = elapsed_us(&t0, &t1);
-    double mbs = us > 0 ? ((double)TOTAL / (double)us) : 0.0;  /* MB/s == bytes/us */
-    printf("  INFO: tls throughput = %.1f MB/s (%zu bytes in %ld us)\n",
+    /* MiB/s: TOTAL bytes over us microseconds, scaled to mebibytes/second */
+    double mbs = us > 0 ? ((double)TOTAL * 1e6 / ((double)us * 1024.0 * 1024.0)) : 0.0;
+    printf("  INFO: tls throughput = %.1f MiB/s (%zu bytes in %ld us)\n",
            mbs, TOTAL, us);
     if (mbs < 20.0) {
-        printf("  [WARN] throughput below 20 MB/s; possible regression\n");
+        printf("  [WARN] throughput below 20 MiB/s; possible regression\n");
     }
 
     mln_tcp_conn_destroy(&srv);
@@ -1371,7 +1372,8 @@ static void test_tls_perf_throughput(void)
 /* Plain-path throughput for comparison (only built when TLS is on so
  * we can print the ratio in one run; the plain test suite already
  * exercises this code path independently).
- * Honours the same MLN_BENCH_TOTAL_MB env var as the TLS benchmark. */
+ * Honours the same MLN_BENCH_TOTAL_MB env var as the TLS benchmark.
+ * Reports MiB/s (TOTAL is computed as MiB × 1024 × 1024 bytes). */
 static void test_plain_perf_throughput(void)
 {
     printf("Benchmarking plain TCP throughput (for TLS comparison)...\n");
@@ -1411,8 +1413,9 @@ static void test_plain_perf_throughput(void)
     }
     clock_gettime(CLOCK_MONOTONIC, &t1);
     long us = elapsed_us(&t0, &t1);
-    double mbs = us > 0 ? ((double)TOTAL / (double)us) : 0.0;
-    printf("  INFO: plain throughput = %.1f MB/s (%zu bytes in %ld us)\n",
+    /* MiB/s: TOTAL bytes over us microseconds, scaled to mebibytes/second */
+    double mbs = us > 0 ? ((double)TOTAL * 1e6 / ((double)us * 1024.0 * 1024.0)) : 0.0;
+    printf("  INFO: plain throughput = %.1f MiB/s (%zu bytes in %ld us)\n",
            mbs, TOTAL, us);
 
     mln_tcp_conn_destroy(&srv);
