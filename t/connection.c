@@ -974,23 +974,31 @@ static void tls_test_append_mem(mln_tcp_conn_t *tc, const void *data, size_t n)
     mln_tcp_conn_append(tc, ch, M_C_SEND);
 }
 
-/* Drain rcv_* into a flat buffer and return total bytes copied. */
+/* Drain rcv_* into a flat buffer and return total bytes copied.
+ * Advances left_pos to mark consumed bytes; chain nodes that still
+ * have unread data are put back on M_C_RECV so callers may retry. */
 static size_t tls_test_drain_rcv(mln_tcp_conn_t *tc, unsigned char *dst, size_t cap)
 {
     mln_chain_t *c = mln_tcp_conn_remove(tc, M_C_RECV);
     size_t off = 0;
     while (c != NULL) {
+        mln_chain_t *next = c->next;
+        c->next = NULL;
         if (c->buf != NULL) {
             size_t left = mln_buf_left_size(c->buf);
             size_t cp = left > cap - off ? cap - off : left;
             if (cp > 0) {
                 memcpy(dst + off, c->buf->left_pos, cp);
+                c->buf->left_pos += cp;
                 off += cp;
             }
         }
-        mln_chain_t *next = c->next;
-        c->next = NULL;
-        mln_chain_pool_release(c);
+        if (c->buf == NULL || mln_buf_left_size(c->buf) == 0) {
+            mln_chain_pool_release(c);
+        } else {
+            /* Partially consumed — put the remainder back. */
+            mln_tcp_conn_append_chain(tc, c, NULL, M_C_RECV);
+        }
         c = next;
     }
     return off;
