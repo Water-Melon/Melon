@@ -1564,10 +1564,29 @@ static int https_recv_message(int fd, mln_tcp_conn_t *c, mln_http_t *http)
         mln_chain_t *in = mln_tcp_conn_remove(c, M_C_RECV);
         if (in != NULL) {
             int pr = mln_http_parse(http, &in);
-            if (in != NULL) mln_chain_pool_release_all(in);
-            if (pr == M_HTTP_RET_DONE)  return 0;
-            if (pr == M_HTTP_RET_ERROR) return -1;
-            /* M_HTTP_RET_OK: need more bytes */
+            if (pr == M_HTTP_RET_DONE) {
+                mln_chain_pool_release_all(in);
+                return 0;
+            }
+            if (pr == M_HTTP_RET_ERROR) {
+                mln_chain_pool_release_all(in);
+                return -1;
+            }
+            /* M_HTTP_RET_OK: need more bytes.
+             * Free only fully-consumed chain nodes (left_pos has reached
+             * last); put any partially or wholly unconsumed chains back
+             * on the recv queue so the next read appends new data after
+             * them without losing the already-received bytes.
+             */
+            mln_chain_t *rem = in;
+            while (rem != NULL && mln_buf_left_size(rem->buf) == 0) {
+                mln_chain_t *tmp = rem;
+                rem = rem->next;
+                tmp->next = NULL;
+                mln_chain_pool_release(tmp);
+            }
+            if (rem != NULL)
+                mln_tcp_conn_append_chain(c, rem, NULL, M_C_RECV);
         }
         if (r == M_C_CLOSED) return -1;
         if (r == M_C_NOTYET) {

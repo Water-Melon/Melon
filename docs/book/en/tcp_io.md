@@ -445,9 +445,10 @@ conditional branch at the very top of `mln_tcp_conn_send/recv`.
 
 `configure` probes common OpenSSL install locations (including macOS
 Homebrew layouts such as `/opt/homebrew/opt/openssl@3`), and accepts
-`OPENSSL_INCLUDE` and `OPENSSL_LIB` env vars for overrides. If OpenSSL
-cannot be found the flag is reported as ignored and the rest of the
-build proceeds normally.
+`OPENSSL_INCLUDE` and `OPENSSL_LIB` env vars for overrides. OpenSSL
+**1.1.0 or later is required**; OpenSSL 1.0.x is not supported. If
+a suitable OpenSSL cannot be found the flag is reported as ignored and
+the rest of the build proceeds normally.
 
 When `--enable-tls` is **not** passed, none of the APIs and fields
 below exist, and the resulting binary is identical to historical
@@ -495,10 +496,11 @@ arguments immediately after construction.
 int mln_tcp_tls_global_init(void);
 ```
 
-Description: One-time OpenSSL global initialization. On OpenSSL 1.1.0
-and later this is a no-op; the function exists so that callers can
-write portable code targeting both old and new OpenSSL versions. Safe
-to call repeatedly.
+Description: One-time OpenSSL global initialization. Requires OpenSSL
+**1.1.0 or later** (the minimum supported version). On OpenSSL 1.1.0
+and later this call is effectively a no-op because that release
+introduced automatic initialisation; it exists so callers can invoke it
+unconditionally. Safe to call repeatedly.
 
 Return value: `0` on success.
 

@@ -437,7 +437,7 @@ mln_tcp_conn_pool_get(pconn)
 ./configure --enable-tls
 ```
 
-`configure`会自动探测常见OpenSSL安装位置（含macOS Homebrew的`/opt/homebrew/opt/openssl@3`等），也可通过`OPENSSL_INCLUDE`和`OPENSSL_LIB`环境变量手动指定。未找到时会跳过TLS并给出提示，不会让整个构建失败。
+`configure`会自动探测常见OpenSSL安装位置（含macOS Homebrew的`/opt/homebrew/opt/openssl@3`等），也可通过`OPENSSL_INCLUDE`和`OPENSSL_LIB`环境变量手动指定。**要求OpenSSL 1.1.0或更高版本；不支持1.0.x**。未找到合适的OpenSSL时会跳过TLS并给出提示，不会让整个构建失败。
 
 未启用`--enable-tls`时，下述接口与字段全部不存在，二进制与历史版本字节一致。
 
@@ -479,7 +479,7 @@ typedef struct mln_tcp_tls_conf_s {
 int mln_tcp_tls_global_init(void);
 ```
 
-描述：OpenSSL全局初始化。对OpenSSL 1.1及以上版本是一个空操作；保留接口是为了让调用方在更老的版本上也能写出可移植的代码。可重复调用。
+描述：OpenSSL全局初始化。**要求OpenSSL 1.1.0或更高版本**（不支持1.0.x）。OpenSSL 1.1.0起该调用实际是空操作（该版本引入了自动初始化机制）；保留接口是为了让调用方可无条件调用。可重复调用。
 
 返回值：成功返回`0`
 

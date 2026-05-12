@@ -359,7 +359,7 @@ detect_operating_system_tls_support() {
             tls_ldflag="$tls_lib -lssl -lcrypto"
             output="TLS\t\t\t[OpenSSL]"
         else
-            echo "openssl headers/libs not found; --enable-tls ignored (set OPENSSL_INCLUDE and OPENSSL_LIB to override)"
+            echo "OpenSSL >= 1.1.0 required; --enable-tls ignored (TLS_method() not found -- set OPENSSL_INCLUDE and OPENSSL_LIB to override)"
         fi
         rm -f tls_test tls_test.c
     fi
