@@ -811,6 +811,7 @@ static void test_benchmark(void)
         size_t off = 0;
         int i;
         for (i = 0; i < repeat; i++) {
+            if (off + line_len > total_len) break;
             memcpy(big + off, line, line_len);
             off += line_len;
         }
