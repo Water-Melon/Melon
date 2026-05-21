@@ -8165,7 +8165,7 @@ MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_kill_process, (mln_lang_ctx_t *
             ctx->quit = 1;
 #if !defined(MSVC)
         } else if (killed_ctx->owner != 0) {
-            killed_ctx->quit = 1;
+            __atomic_store_n(&killed_ctx->quit, 1, __ATOMIC_RELEASE);
 #endif
         } else {
             __mln_lang_job_free(killed_ctx);

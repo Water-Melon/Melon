@@ -256,7 +256,6 @@ struct mln_lang_ctx_s {
     mln_u32_t                        op_obj_flag:1;
     mln_u32_t                        op_real_flag:1;
     mln_u32_t                        op_str_flag:1;
-    mln_u32_t                        quit:1;
     /* Phase F: top-level cutover. vm_top_attempted is set the first time
      * mln_lang_run_handler sees this ctx — the handler compiles the
      * top-level stm chain to bytecode and runs it on the VM. */
@@ -274,7 +273,11 @@ struct mln_lang_ctx_s {
      * calling mln_lang_run() and each new context will respect the current
      * value. */
     mln_u32_t                        vm_use_ast:1;
-    mln_u32_t                        padding:3;
+    mln_u32_t                        padding:4;
+    /* quit is written by Kill() from a foreign thread when owner!=0, and
+     * read lock-free by mln_lang_vm_step. Keep it as a plain, naturally-
+     * aligned word so __atomic_store_n/__atomic_load_n can target it. */
+    mln_u32_t                        quit;
     /* Phase F3: heap-allocated stack of mln_lang_vm_frame_t. The VM is
      * iterative — every opcode runs against ctx->vm_frame_top, function
      * calls push frames, returns pop them. mln_lang_vm_step yields back

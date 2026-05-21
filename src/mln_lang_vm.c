@@ -4781,7 +4781,7 @@ int mln_lang_vm_step(mln_lang_ctx_t *ctx, int budget)
     int i = 0;
     while (FRAME_TOP(ctx) != NULL) {
         if (dispatch_one(ctx) < 0) return -1;
-        if (ctx->quit) return 0;
+        if (__atomic_load_n(&ctx->quit, __ATOMIC_ACQUIRE)) return 0;
         if (ctx->ref) return 0;
         if ((++i & 15) == 0 && i >= budget) return 0;
     }
