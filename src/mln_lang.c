@@ -975,7 +975,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                         }
                         mln_lang_stack_map[node->type](ctx);
                         if (ctx->ref > 1) goto out_after_vm_slice; /* an INTERNAL async call suspended ctx inside the AST body */
-                        if (ctx->quit) {
+                        if (MLN_CTX_QUIT_LOAD(ctx)) {
                             /*
                              * The AST-fallback body triggered teardown (e.g. via
                              * the Exit() builtin or a fatal runtime error).  The
@@ -1008,7 +1008,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                  * branches — otherwise the coroutine could be re-scheduled
                  * and dispatched once more before being freed.
                  */
-                if (ctx->quit) goto quit;
+                if (MLN_CTX_QUIT_LOAD(ctx)) goto quit;
                 if (step_rc == 1) {
                     /* Frame stack empty — script done. */
                     ctx->quit = 1;

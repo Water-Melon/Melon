@@ -278,6 +278,15 @@ struct mln_lang_ctx_s {
      * read lock-free by mln_lang_vm_step. Keep it as a plain, naturally-
      * aligned word so __atomic_store_n/__atomic_load_n can target it. */
     mln_u32_t                        quit;
+/* Portable atomic-acquire load for ctx->quit.  On non-MSVC platforms the
+ * cross-thread Kill() path uses __atomic_store_n (RELEASE), so readers
+ * must pair with __atomic_load_n (ACQUIRE).  On MSVC the cross-thread Kill
+ * path is compiled out entirely, so a plain read is safe. */
+#if !defined(MSVC)
+#define MLN_CTX_QUIT_LOAD(ctx) __atomic_load_n(&(ctx)->quit, __ATOMIC_ACQUIRE)
+#else
+#define MLN_CTX_QUIT_LOAD(ctx) ((ctx)->quit)
+#endif
     /* Phase F3: heap-allocated stack of mln_lang_vm_frame_t. The VM is
      * iterative — every opcode runs against ctx->vm_frame_top, function
      * calls push frames, returns pop them. mln_lang_vm_step yields back
