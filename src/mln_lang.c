@@ -8108,24 +8108,65 @@ MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_kill_process, (mln_lang_ctx_t *
     rn = mln_rbtree_search(ctx->lang->alias_set, &tmp);
     if (!mln_rbtree_null(rn, ctx->lang->alias_set)) {
         killed_ctx = (mln_lang_ctx_t *)mln_rbtree_node_data_get(rn);
+        /*
+         * Routing decision — three cases, two of which must defer
+         * teardown via ctx->quit instead of calling
+         * __mln_lang_job_free directly:
+         *
+         *   1. Self-kill (killed_ctx == ctx).  __mln_lang_job_free
+         *      would destroy ctx->pool and ctx itself while
+         *      funccall_run is still mid-INTERNAL-call on this very
+         *      ctx; every line below this block (mln_lang_var_create_nil,
+         *      the funccall_run epilogue that writes ctx->ret_var, the
+         *      dispatcher that resumed the run-stack) would then
+         *      dereference freed memory.  Defer to the dispatcher,
+         *      identical to the Exit() builtin.
+         *
+         *   2. Cross-thread kill: killed_ctx is currently being
+         *      dispatched on another worker thread (killed_ctx->owner
+         *      is non-zero).  mln_lang_run_handler sets that field
+         *      under lang->lock right before releasing the lock and
+         *      starting the slice, and clears it under lang->lock at
+         *      the end of the slice — we hold lang->lock here so the
+         *      read is race-free.  But the OWNING thread is running
+         *      WITHOUT the lock right now, actively reading from and
+         *      writing to killed_ctx (run_stack, opstack, scope chain,
+         *      pool allocations, …).  Calling __mln_lang_job_free on
+         *      it would tear the pool out from under that thread mid-
+         *      slice — instant UAF.  Instead set killed_ctx->quit so
+         *      the owning thread's vm_step / AST loop sees the flag
+         *      at the next iteration boundary (vm_step now bails on
+         *      ctx->quit and the AST loop already does) and goes to
+         *      the quit branch itself, where it frees its own ctx
+         *      safely.  Visibility: the owning thread does not need
+         *      an explicit fence — every dispatch slice eventually
+         *      re-acquires lang->lock (at out_after_vm_slice) which
+         *      synchronises the flag write before any subsequent
+         *      slice; in practice the flag is observed within the
+         *      same slice on every cache-coherent CPU we target.
+         *
+         *      We deliberately do NOT busy-wait for the owning thread
+         *      to release the slice: we hold lang->lock and the
+         *      owning thread will try to re-acquire it at slice end,
+         *      which would deadlock.
+         *
+         *      MSVC builds have no threading model — ctx->owner is
+         *      conditionally compiled out — so this branch is gated
+         *      on !defined(MSVC) and the original immediate-free
+         *      path is preserved there.
+         *
+         *   3. The common case: killed_ctx is on run_head with owner
+         *      == 0 (idle waiting to be picked up) or on wait_head
+         *      (suspended, no thread currently dispatching it).  The
+         *      original behaviour — free immediately under lang->lock
+         *      — is safe; the existing handler does that.
+         */
         if (killed_ctx == ctx) {
-            /*
-             * Self-kill: Kill(<our own alias>) used to call
-             * __mln_lang_job_free(ctx) right here, which destroyed
-             * ctx->pool and the ctx itself while funccall_run was
-             * still mid-call on this very ctx.  Every line below
-             * (mln_lang_var_create_nil, the funccall_run epilogue
-             * that writes ctx->ret_var, the dispatcher that resumed
-             * the run-stack) would then dereference freed memory.
-             *
-             * Route self-termination through the same mechanism as
-             * the Exit() builtin: flag the ctx for teardown and let
-             * the dispatcher free it at the next boundary, AFTER
-             * funccall_run has finished unwinding and lang->lock
-             * has been released.  This keeps the locking discipline
-             * intact and avoids the UAF.
-             */
             ctx->quit = 1;
+#if !defined(MSVC)
+        } else if (killed_ctx->owner != 0) {
+            killed_ctx->quit = 1;
+#endif
         } else {
             __mln_lang_job_free(killed_ctx);
         }
