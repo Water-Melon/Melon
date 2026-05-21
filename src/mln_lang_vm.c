@@ -4765,6 +4765,14 @@ int mln_lang_vm_step(mln_lang_ctx_t *ctx, int budget)
      *      cooperative yield signal set by mln_lang_ctx_suspend during
      *      async INTERNAL calls. Delaying detection would let the VM
      *      execute stale instructions on a suspended frame.
+     *   3. ctx->quit is also checked every iteration — it's the
+     *      teardown signal set by the Exit() builtin (and by external
+     *      Kill() against this same ctx through the synchronous path).
+     *      Like ctx->ref, it must be honoured before dispatching the
+     *      next opcode, otherwise we'd execute instructions against a
+     *      frame whose owning coroutine has already asked to die. Both
+     *      flags live in the same hot cache line as ctx->ref so the
+     *      extra load is effectively free.
      * The budget granularity is 16 instructions; on a script that runs
      * exactly N instructions and yields, we may overshoot by up to 15
      * before returning. The driver loop in mln_lang.c calls vm_step
@@ -4773,6 +4781,7 @@ int mln_lang_vm_step(mln_lang_ctx_t *ctx, int budget)
     int i = 0;
     while (FRAME_TOP(ctx) != NULL) {
         if (dispatch_one(ctx) < 0) return -1;
+        if (ctx->quit) return 0;
         if (ctx->ref) return 0;
         if ((++i & 15) == 0 && i >= budget) return 0;
     }

@@ -258,9 +258,11 @@ static int mln_lang_func_watch(mln_lang_ctx_t *ctx);
 static int mln_lang_func_unwatch(mln_lang_ctx_t *ctx);
 static int mln_lang_func_eval(mln_lang_ctx_t *ctx);
 static int mln_lang_func_kill(mln_lang_ctx_t *ctx);
+static int mln_lang_func_exit(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_eval_process(mln_lang_ctx_t *ctx);
 static inline mln_lang_var_t *mln_lang_func_eval_process_list(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_kill_process(mln_lang_ctx_t *ctx);
+static mln_lang_var_t *mln_lang_func_exit_process(mln_lang_ctx_t *ctx);
 static int mln_lang_internal_func_installer(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_dump_process(mln_lang_ctx_t *ctx);
 static mln_lang_var_t *mln_lang_func_stack_process(mln_lang_ctx_t *ctx);
@@ -973,7 +975,23 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                         }
                         mln_lang_stack_map[node->type](ctx);
                         if (ctx->ref > 1) goto out_after_vm_slice; /* an INTERNAL async call suspended ctx inside the AST body */
-                        if (ctx->quit) goto quit;
+                        if (ctx->quit) {
+                            /*
+                             * The AST-fallback body triggered teardown (e.g. via
+                             * the Exit() builtin or a fatal runtime error).  The
+                             * fallback bookkeeping had bumped ctx->ref to 1 while
+                             * keeping ctx on lang->run_head; if we entered quit:
+                             * with that ref still set, __mln_lang_job_free would
+                             * pick the wait_head branch and corrupt the chain (in
+                             * the single-coroutine case lang->run_head would even
+                             * be left pointing at the freed ctx).  Normalize the
+                             * fallback state so the dispatcher and job_free agree
+                             * on which list ctx belongs to.
+                             */
+                            ctx->in_ast_fallback = 0;
+                            if (ctx->ref) --(ctx->ref);
+                            goto quit;
+                        }
                     }
                     goto out_after_vm_slice; /* yield (ref==0) or still running (ref==1) */
                 }
@@ -982,6 +1000,15 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                     ctx->quit = 1;
                     goto quit;
                 }
+                /*
+                 * The builtin Exit() sets ctx->quit from inside an INTERNAL
+                 * call. mln_lang_vm_step itself now bails out as soon as it
+                 * sees ctx->quit (returning 0, the yield path), so we need
+                 * to honour that flag here BEFORE the step_rc==1 / yield
+                 * branches — otherwise the coroutine could be re-scheduled
+                 * and dispatched once more before being freed.
+                 */
+                if (ctx->quit) goto quit;
                 if (step_rc == 1) {
                     /* Frame stack empty — script done. */
                     ctx->quit = 1;
@@ -7327,6 +7354,7 @@ MLN_FUNC(static, int, mln_lang_internal_func_installer, (mln_lang_ctx_t *ctx), (
     if (mln_lang_func_unwatch(ctx) < 0) return -1;
     if (mln_lang_func_eval(ctx) < 0) return -1;
     if (mln_lang_func_kill(ctx) < 0) return -1;
+    if (mln_lang_func_exit(ctx) < 0) return -1;
     if (mln_lang_func_pipe(ctx) < 0) return -1;
     return 0;
 })
@@ -8082,6 +8110,76 @@ MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_kill_process, (mln_lang_ctx_t *
         killed_ctx = (mln_lang_ctx_t *)mln_rbtree_node_data_get(rn);
         __mln_lang_job_free(killed_ctx);
     }
+    if ((ret_var = mln_lang_var_create_nil(ctx, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return NULL;
+    }
+    return ret_var;
+})
+
+/*
+ * Exit() — terminate the calling coroutine.
+ *
+ * Sets ctx->quit so the run-loop dispatcher (both the AST stack-walker in
+ * mln_lang_run_handler and the bytecode-VM driver via mln_lang_vm_step)
+ * frees this context on the next iteration boundary.  Returns a fresh nil
+ * variable so the funccall_run path that invoked us populates ret_var with
+ * a benign value and unwinds without raising an error: by the time the
+ * dispatcher checks ctx->quit, the run-stack/VM frame state is in a
+ * consistent shape for mln_lang_ctx_free to release.
+ *
+ * Scope of effect: ONLY the calling coroutine is removed.  No global
+ * resources are touched, no signals are emitted, and the dispatcher
+ * keeps scheduling every other ctx on lang->run_head.  The lang->lock is
+ * already held around INTERNAL builtin invocations, so setting ctx->quit
+ * here is safe with respect to other threads that might be servicing
+ * sibling contexts on the same mln_lang_t.
+ */
+MLN_FUNC(static, int, mln_lang_func_exit, (mln_lang_ctx_t *ctx), (ctx), {
+    mln_lang_val_t *val;
+    mln_lang_var_t *var;
+    mln_lang_func_detail_t *func;
+    mln_string_t funcname = mln_string("Exit");
+    if ((func = mln_lang_func_detail_new(ctx, M_FUNC_INTERNAL, (void *)mln_lang_func_exit_process, NULL, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        return -1;
+    }
+    if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_func_detail_free(func);
+        return -1;
+    }
+    if ((var = mln_lang_var_new(ctx, &funcname, M_LANG_VAR_NORMAL, val, NULL)) == NULL) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_val_free(val);
+        return -1;
+    }
+    if (mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
+        mln_lang_errmsg(ctx, "No memory.");
+        mln_lang_var_free(var);
+        return -1;
+    }
+    return 0;
+})
+
+MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_exit_process, (mln_lang_ctx_t *ctx), (ctx), {
+    mln_lang_var_t *ret_var;
+    /*
+     * Mark this coroutine for teardown.  ctx->quit is a 1-bit flag inside
+     * the same word as the other dispatcher flags; assigning 1 is
+     * idempotent, so calling Exit() multiple times (e.g., from cleanup
+     * helpers) is harmless.  Cleanup itself happens in the run-loop, AFTER
+     * this builtin returns and the lang->lock currently held around the
+     * INTERNAL call is released — that ordering keeps mln_lang_job_free's
+     * own locking discipline intact (it re-acquires lang->lock internally).
+     */
+    ctx->quit = 1;
+    /*
+     * Return a fresh nil rather than NULL.  Returning NULL would push the
+     * funccall_run / VM CALL paths into their error branches and emit a
+     * spurious diagnostic; nil lets the call site unwind cleanly while the
+     * dispatcher's next iteration observes ctx->quit and disposes of us.
+     */
     if ((ret_var = mln_lang_var_create_nil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
         return NULL;
