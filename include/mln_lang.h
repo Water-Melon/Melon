@@ -284,8 +284,10 @@ struct mln_lang_ctx_s {
  * path is compiled out entirely, so a plain read is safe. */
 #if !defined(MSVC)
 #define MLN_CTX_QUIT_LOAD(ctx) __atomic_load_n(&(ctx)->quit, __ATOMIC_ACQUIRE)
+#define MLN_CTX_QUIT_STORE(ctx, v) __atomic_store_n(&(ctx)->quit, (v), __ATOMIC_RELEASE)
 #else
 #define MLN_CTX_QUIT_LOAD(ctx) ((ctx)->quit)
+#define MLN_CTX_QUIT_STORE(ctx, v) ((ctx)->quit = (v))
 #endif
     /* Phase F3: heap-allocated stack of mln_lang_vm_frame_t. The VM is
      * iterative — every opcode runs against ctx->vm_frame_top, function
@@ -519,7 +521,7 @@ struct mln_lang_ctx_pipe_elem_s {
 extern mln_lang_method_t *mln_lang_methods[];
 
 
-#define mln_lang_ctx_is_quit(ctx)    ((ctx)->quit)
+#define mln_lang_ctx_is_quit(ctx)    MLN_CTX_QUIT_LOAD(ctx)
 #if !defined(MSVC)
 #define mln_lang_mutex_lock(lang)    pthread_mutex_lock(&(lang)->lock)
 #define mln_lang_mutex_unlock(lang)  pthread_mutex_unlock(&(lang)->lock)
