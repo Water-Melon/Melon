@@ -8226,8 +8226,12 @@ MLN_FUNC(static, int, mln_lang_func_exit, (mln_lang_ctx_t *ctx), (ctx), {
 MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_exit_process, (mln_lang_ctx_t *ctx), (ctx), {
     mln_lang_var_t *ret_var;
     /*
-     * Mark this coroutine for teardown.  ctx->quit is a 1-bit flag inside
-     * the same word as the other dispatcher flags; assigning 1 is
+     * Mark this coroutine for teardown.  ctx->quit is now a standalone
+     * mln_u32_t (not a bitfield) so that cross-thread Kill() can use
+     * __atomic_store_n on it safely.  Here, Exit() is always called from
+     * the owning thread (the INTERNAL builtin runs on the same thread as
+     * the ctx), so a plain store is safe — there is no concurrent writer
+     * and same-thread ordering is trivially satisfied.  Assigning 1 is
      * idempotent, so calling Exit() multiple times (e.g., from cleanup
      * helpers) is harmless.  Cleanup itself happens in the run-loop, AFTER
      * this builtin returns and the lang->lock currently held around the
