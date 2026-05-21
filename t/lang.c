@@ -75,7 +75,17 @@ typedef enum {
     EXPECT_BOOL_FALSE,
     EXPECT_NIL,
     EXPECT_STRING,
-    EXPECT_NONE   /* script has no return value; just checks it completes */
+    EXPECT_NONE,    /* script has no return value; just checks it completes */
+    EXPECT_EXITED   /* Script terminated via Exit() or a self-targeted
+                     * Kill(<own alias>).  By that point an intermediate AST
+                     * or VM step has typically already migrated ctx->ret_var
+                     * into its own node, so the return_handler sees a NULL
+                     * ret_var.  The critical property the test verifies is
+                     * that ret_var is NOT some user-supplied value produced
+                     * by code following the Exit/Kill — if quit-marking were
+                     * to leak (e.g. `Exit(); return 999;` actually executing
+                     * the return), ret_var would be a non-nil INT here and
+                     * the test would fail. */
 } expect_type_t;
 
 typedef struct {
@@ -173,6 +183,41 @@ static void test_return_handler(mln_lang_ctx_t *ctx)
                     fprintf(stderr, "  FAIL [%s]: string mismatch\n", tc->name);
             }
             break;
+        case EXPECT_EXITED:
+            /*
+             * "Exit terminated the coroutine and no unreachable user code
+             *  ran."  See comment on EXPECT_EXITED in expect_type_t.
+             *
+             * Pass:
+             *   - ret_var is NULL (the usual case — AST/VM step consumed it
+             *     before quit fired).
+             *   - ret_var holds a NIL value (the nil that Exit returned and
+             *     that no intermediate step happened to claim).
+             *
+             * Fail:
+             *   - Any other return type.  In particular `Exit(); return 999;`
+             *     would surface ret_var as INT(999) if quit-marking failed
+             *     to short-circuit the next statement.
+             */
+            ok = (rv == NULL ||
+                  (rv->val != NULL && rv->val->type == M_LANG_VAL_TYPE_NIL));
+            if (!ok) {
+                if (rv && rv->val && rv->val->type == M_LANG_VAL_TYPE_INT)
+                    fprintf(stderr,
+                            "  FAIL [%s]: script ran post-Exit code; "
+                            "ret_var=INT(%lld) (expected terminated)\n",
+                            tc->name, (long long)rv->val->data.i);
+                else if (rv && rv->val)
+                    fprintf(stderr,
+                            "  FAIL [%s]: script ran post-Exit code; "
+                            "ret_var type=%d (expected terminated)\n",
+                            tc->name, rv->val->type);
+                else
+                    fprintf(stderr,
+                            "  FAIL [%s]: unexpected ret_var state\n",
+                            tc->name);
+            }
+            break;
     }
 
     if (ok) {
@@ -189,10 +234,11 @@ static void test_return_handler(mln_lang_ctx_t *ctx)
  * Helper: run one test
  * ========================================================= */
 
-static void run_test(mln_lang_t *lang, mln_event_t *ev,
-                     const char *name, const char *code,
-                     expect_type_t etype, mln_s64_t eint,
-                     double ereal, const char *estr)
+static void run_test_aliased(mln_lang_t *lang, mln_event_t *ev,
+                             const char *name, const char *code,
+                             const char *alias_str,
+                             expect_type_t etype, mln_s64_t eint,
+                             double ereal, const char *estr)
 {
     test_ctx_t tc;
     tc.ev    = ev;
@@ -205,9 +251,16 @@ static void run_test(mln_lang_t *lang, mln_event_t *ev,
     mln_string_t src;
     mln_string_nset(&src, (mln_u8ptr_t)code, strlen(code));
 
+    mln_string_t alias_storage;
+    mln_string_t *alias_p = NULL;
+    if (alias_str != NULL) {
+        mln_string_nset(&alias_storage, (mln_u8ptr_t)alias_str, strlen(alias_str));
+        alias_p = &alias_storage;
+    }
+
     mln_event_break_reset(ev);
 
-    mln_lang_ctx_t *ctx = mln_lang_job_new(lang, NULL, M_INPUT_T_BUF,
+    mln_lang_ctx_t *ctx = mln_lang_job_new(lang, alias_p, M_INPUT_T_BUF,
                                            &src, &tc, test_return_handler);
     if (ctx == NULL) {
         fprintf(stderr, "  FAIL [%s]: mln_lang_job_new returned NULL\n", name);
@@ -216,6 +269,15 @@ static void run_test(mln_lang_t *lang, mln_event_t *ev,
     }
 
     mln_event_dispatch(ev);
+}
+
+static void run_test(mln_lang_t *lang, mln_event_t *ev,
+                     const char *name, const char *code,
+                     expect_type_t etype, mln_s64_t eint,
+                     double ereal, const char *estr)
+{
+    run_test_aliased(lang, ev, name, code, NULL,
+                     etype, eint, ereal, estr);
 }
 
 /* Convenience wrappers */
@@ -233,6 +295,10 @@ static void run_test(mln_lang_t *lang, mln_event_t *ev,
     run_test(lang, ev, name, code, EXPECT_STRING, 0, 0.0, expected)
 #define T_NONE(lang, ev, name, code) \
     run_test(lang, ev, name, code, EXPECT_NONE, 0, 0.0, NULL)
+#define T_EXIT(lang, ev, name, code) \
+    run_test(lang, ev, name, code, EXPECT_EXITED, 0, 0.0, NULL)
+#define T_EXIT_ALIAS(lang, ev, name, code, alias) \
+    run_test_aliased(lang, ev, name, code, alias, EXPECT_EXITED, 0, 0.0, NULL)
 
 /* =========================================================
  * Multi-job test helpers (sections 31-32)
@@ -2123,6 +2189,157 @@ vm_trace_done:;
         snprintf(p, cap, "a=10; b=4; c=a*b+2; return c;");
         T_INT(lang, ev, "tv_toplevel_ast_fallback_arith", buf, 42);
     }
+
+    /* -------------------------------------------------
+     * 38. Exit() built-in — self-terminating coroutine
+     *
+     * Exit() must set ctx->quit on the calling coroutine and cause the
+     * dispatcher to free it at the next iteration boundary, with NO
+     * subsequent script-level statements or expressions executing.
+     *
+     * Every script below has a `return 999;` (or analogous tail) after
+     * the Exit() call.  If quit-marking ever fails to short-circuit the
+     * next opcode/AST step, the tail would run and ret_var would surface
+     * as INT(999) — T_EXIT catches that.
+     * ------------------------------------------------- */
+
+    /* Bare Exit() at the top of the script. */
+    T_EXIT(lang, ev, "exit_basic",
+           "Exit();");
+
+    /* Statement after Exit() at top level — must not execute. */
+    T_EXIT(lang, ev, "exit_then_unreachable",
+           "Exit(); return 999;");
+
+    /* Exit() deep inside a user function body — unreachable return must
+     * not surface as ret_var=999. */
+    T_EXIT(lang, ev, "exit_in_func",
+           "@F() { Exit(); return 999; } return F();");
+
+    /* Recursive call chain that Exit()s from the deepest frame.  None of
+     * the intermediate `return` statements on the unwind path may run. */
+    T_EXIT(lang, ev, "exit_deep_recursion",
+           "@inner(d) {"
+           "  if (d <= 0) { Exit(); return 999; } fi"
+           "  return inner(d - 1);"
+           "}"
+           "return inner(5);");
+
+    /* Exit() in the left operand of an expression — the right operand
+     * (`+ 1`) must not be evaluated, and the assignment that wraps the
+     * expression must not run. */
+    T_EXIT(lang, ev, "exit_in_expr",
+           "@side() { Exit(); return 0; } "
+           "x = side() + 1; return x;");
+
+    /* Exit() in the middle of an array literal.  Subsequent element
+     * expressions must not be evaluated. */
+    T_EXIT(lang, ev, "exit_in_array_literal",
+           "@side() { Exit(); return 0; } "
+           "a = [1, side(), 3]; return 999;");
+
+    /* Exit() inside a loop body — the loop must not produce another
+     * iteration, and the post-loop return must not run. */
+    T_EXIT(lang, ev, "exit_in_for_loop",
+           "for (i = 0; i < 5; i++) {"
+           "  if (i == 2) { Exit(); } fi"
+           "} return 999;");
+
+    /* Exit() inside a while loop. */
+    T_EXIT(lang, ev, "exit_in_while_loop",
+           "i = 0; while (i < 100) {"
+           "  if (i == 3) { Exit(); } fi"
+           "  i = i + 1;"
+           "} return 999;");
+
+    /* Exit() inside a Set method body. */
+    T_EXIT(lang, ev, "exit_in_set_method",
+           "S { @m() { Exit(); return 0; } } "
+           "o = $S; o.m(); return 999;");
+
+    /* Multiple Exit() calls in sequence — only the first ever runs;
+     * remaining statements (including additional Exit()s) are
+     * unreachable.  Idempotent at the language level. */
+    T_EXIT(lang, ev, "exit_multi_call",
+           "Exit(); Exit(); Exit(); return 999;");
+
+    /* Exit() through an indirect function-value call.  The caller
+     * resolves a function via a variable and then invokes it; Exit
+     * inside the callee must still propagate cleanly. */
+    T_EXIT(lang, ev, "exit_via_func_value",
+           "@helper() { Exit(); return 0; } "
+           "f = helper; f(); return 999;");
+
+    /* -------------------------------------------------
+     * 39. Kill() built-in — self-kill via alias
+     *
+     * When the alias passed to Kill matches the calling ctx's own alias,
+     * the call must NOT free ctx synchronously (that would UAF the rest
+     * of funccall_run + the dispatcher).  It must instead route through
+     * ctx->quit, exactly like Exit().  These tests use the
+     * T_EXIT_ALIAS helper that creates the ctx with a named alias so
+     * Kill(<that name>) targets the running coroutine.
+     * ------------------------------------------------- */
+
+    /* Bare Kill(self) at top level. */
+    T_EXIT_ALIAS(lang, ev, "kill_self_basic",
+                 "Kill('self_basic');", "self_basic");
+
+    /* Kill(self) followed by an unreachable return. */
+    T_EXIT_ALIAS(lang, ev, "kill_self_then_unreachable",
+                 "Kill('self_unreach'); return 999;",
+                 "self_unreach");
+
+    /* Kill(self) deep inside a user function — same quit semantics. */
+    T_EXIT_ALIAS(lang, ev, "kill_self_in_func",
+                 "@F() { Kill('self_in_func'); return 999; } return F();",
+                 "self_in_func");
+
+    /* Kill(self) inside an expression. */
+    T_EXIT_ALIAS(lang, ev, "kill_self_in_expr",
+                 "@side() { Kill('self_in_expr'); return 0; } "
+                 "x = side() + 1; return x;",
+                 "self_in_expr");
+
+    /* Kill(self) inside a loop. */
+    T_EXIT_ALIAS(lang, ev, "kill_self_in_loop",
+                 "for (i = 0; i < 5; i++) {"
+                 "  if (i == 2) { Kill('self_in_loop'); } fi"
+                 "} return 999;",
+                 "self_in_loop");
+
+    /* Kill of a non-existent alias is a no-op: the script continues
+     * normally and returns 42.  This is the only Kill() case that does
+     * NOT terminate the coroutine — verify it explicitly so we know the
+     * self-kill path branches on alias resolution correctly. */
+    T_INT(lang, ev, "kill_nonexistent_is_noop",
+          "Kill('no_such_alias_anywhere'); return 42;",
+          42);
+
+    /* -------------------------------------------------
+     * 40. Kill() across coroutines — peer is freed, killer continues
+     *
+     * Parent script spawns a busy-loop child via Eval (named 'victim'),
+     * then Kill()s it and returns 42.  We verify:
+     *   - The parent's return_handler fires with ret_var = 42 (the
+     *     scheduler did not crash, the parent completed normally).
+     *   - The lang has no remaining queued ctx after the parent's
+     *     return_handler runs (the child was removed from run_head /
+     *     wait_head).
+     *
+     * The child's body is intentionally CPU-bound rather than calling
+     * sys.msleep — t/lang.c doesn't link against the sys dynamic
+     * library, so the child runs purely in the interpreter core.
+     * ------------------------------------------------- */
+    T_INT(lang, ev, "kill_other_keeps_parent_alive",
+          "Eval('"
+          "  s = 0;"
+          "  for (i = 0; i < 1000000; i = i + 1) { s = s + i; }"
+          "  return s;"
+          "', nil, true, 'victim');"
+          "Kill('victim');"
+          "return 42;",
+          42);
 
     /* -------------------------------------------------
      * Report
