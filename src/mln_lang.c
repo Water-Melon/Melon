@@ -8108,7 +8108,27 @@ MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_kill_process, (mln_lang_ctx_t *
     rn = mln_rbtree_search(ctx->lang->alias_set, &tmp);
     if (!mln_rbtree_null(rn, ctx->lang->alias_set)) {
         killed_ctx = (mln_lang_ctx_t *)mln_rbtree_node_data_get(rn);
-        __mln_lang_job_free(killed_ctx);
+        if (killed_ctx == ctx) {
+            /*
+             * Self-kill: Kill(<our own alias>) used to call
+             * __mln_lang_job_free(ctx) right here, which destroyed
+             * ctx->pool and the ctx itself while funccall_run was
+             * still mid-call on this very ctx.  Every line below
+             * (mln_lang_var_create_nil, the funccall_run epilogue
+             * that writes ctx->ret_var, the dispatcher that resumed
+             * the run-stack) would then dereference freed memory.
+             *
+             * Route self-termination through the same mechanism as
+             * the Exit() builtin: flag the ctx for teardown and let
+             * the dispatcher free it at the next boundary, AFTER
+             * funccall_run has finished unwinding and lang->lock
+             * has been released.  This keeps the locking discipline
+             * intact and avoids the UAF.
+             */
+            ctx->quit = 1;
+        } else {
+            __mln_lang_job_free(killed_ctx);
+        }
     }
     if ((ret_var = mln_lang_var_create_nil(ctx, NULL)) == NULL) {
         mln_lang_errmsg(ctx, "No memory.");
