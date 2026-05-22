@@ -997,7 +997,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                 }
                 step_rc = mln_lang_vm_step(ctx, M_LANG_DEFAULT_STEP);
                 if (step_rc < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     goto quit;
                 }
                 /*
@@ -1011,7 +1011,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                 if (MLN_CTX_QUIT_LOAD(ctx)) goto quit;
                 if (step_rc == 1) {
                     /* Frame stack empty — script done. */
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     goto quit;
                 }
                 /* step_rc == 0 — yielded; will resume on next dispatch. */
@@ -8162,7 +8162,7 @@ MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_kill_process, (mln_lang_ctx_t *
          *      — is safe; the existing handler does that.
          */
         if (killed_ctx == ctx) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
 #if !defined(MSVC)
         } else if (killed_ctx->owner != 0) {
             __atomic_store_n(&killed_ctx->quit, 1, __ATOMIC_RELEASE);
