@@ -1026,7 +1026,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                 goto quit;
             mln_lang_stack_map[node->type](ctx);
             if (ctx->ref) break;
-            if (ctx->quit) {
+            if (MLN_CTX_QUIT_LOAD(ctx)) {
 quit:
                 if (ctx->return_handler != NULL) {
                     ctx->return_handler(ctx);
