@@ -919,7 +919,7 @@ static void mln_lang_run_handler(mln_event_t *ev, int fd, void *data)
                 init_rc = mln_lang_vm_run_toplevel(ctx);
                 if (init_rc < 0) {
                     __mln_lang_errmsg(ctx, "VM: top-level init error.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     goto quit;
                 }
                 if (init_rc == 0) {
@@ -1248,7 +1248,7 @@ mln_lang_ctx_new(mln_lang_t *lang, void *data, mln_string_t *filename, mln_u32_t
     ctx->sym_count = 0;
     ctx->ret_flag = ctx->op_array_flag = ctx->op_bool_flag = ctx->op_func_flag = ctx->op_int_flag = \
     ctx->op_nil_flag = ctx->op_obj_flag = ctx->op_real_flag = ctx->op_str_flag = 0;
-    ctx->quit = 0;
+    MLN_CTX_QUIT_STORE(ctx, 0);
     /* Phase F VM fields — must be explicit-zero because ctx is pool-allocated
      * (mln_alloc_m, not calloc) and pool memory is not zero-initialised. */
     ctx->vm_top_attempted = 0;
@@ -3619,7 +3619,7 @@ again:
             mln_lang_generate_jump_ptr(stm, M_LSNT_STM);
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(stm->jump_type), stm->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -3651,13 +3651,13 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_funcdef, (mln_lang_ctx_t *ctx
                                          funcdef->closure)) == NULL)
     {
         __mln_lang_errmsg(ctx, "Parse function definition failed.");
-        ctx->quit = 1;
+        MLN_CTX_QUIT_STORE(ctx, 1);
         return;
     }
     if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_FUNC, func)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_func_detail_free(func);
-        ctx->quit = 1;
+        MLN_CTX_QUIT_STORE(ctx, 1);
         return;
     }
     if (funcdef->name->len > 18 && funcdef->name->data[0] == '_' && funcdef->name->data[1] == '_') {
@@ -3691,20 +3691,20 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_funcdef, (mln_lang_ctx_t *ctx
     if ((var = __mln_lang_var_new(ctx, funcdef->name, M_LANG_VAR_NORMAL, val, in_set)) == NULL) {
         __mln_lang_errmsg(ctx, "No memory.");
         __mln_lang_val_free(val);
-        ctx->quit = 1;
+        MLN_CTX_QUIT_STORE(ctx, 1);
         return;
     }
     if (in_set != NULL) {
         if (mln_lang_set_member_add(ctx->pool, in_set->members, var) < 0) {
             __mln_lang_errmsg(ctx, "Add member failed. No memory.");
             __mln_lang_var_free(var);
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
     } else {
         if (__mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
             __mln_lang_var_free(var);
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
     }
@@ -3719,25 +3719,25 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_set, (mln_lang_ctx_t *ctx), (
     if (node->step == 0) {
         if ((s_detail = mln_lang_set_detail_new(ctx->pool, set->name)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         ++(s_detail->ref);
         if (__mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_SET, s_detail) < 0) {
             mln_lang_set_detail_self_free(s_detail);
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (set->stm != NULL) {
             node->step = 1;
             if ((scope = mln_lang_scope_push(ctx, s_detail->name, M_LANG_SCOPE_TYPE_SET, NULL, NULL)) == NULL) {
                 __mln_lang_errmsg(ctx, "Scope stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             if ((node = mln_lang_stack_push(ctx, M_LSNT_SETSTM, set->stm)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -3765,27 +3765,27 @@ again:
             in_set = mln_lang_ctx_get_class(ctx);
             if ((val = __mln_lang_val_new(ctx, M_LANG_VAL_TYPE_NIL, NULL)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             if ((var = __mln_lang_var_new(ctx, ls->data.var, M_LANG_VAR_NORMAL, val, in_set)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 __mln_lang_val_free(val);
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             if (in_set == NULL) {
                 if (__mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     __mln_lang_var_free(var);
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
             } else {
                 if (mln_lang_set_member_add(ctx->pool, in_set->members, var) < 0) {
                     __mln_lang_errmsg(ctx, "No memory.");
                     __mln_lang_var_free(var);
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
             }
@@ -3793,7 +3793,7 @@ again:
         } else {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_FUNCDEF, ls->data.func)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -3820,44 +3820,44 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_block, (mln_lang_ctx_t *ctx),
             case M_BLOCK_EXP:
                 if (block->data.exp == NULL) goto nil;
                 if (mln_lang_stack_handler_block_exp(ctx, block) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 return;
             case M_BLOCK_STM:
                 if (block->data.stm == NULL) goto nil;
                 if (mln_lang_stack_handler_block_stm(ctx, block) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 return;
             case M_BLOCK_CONTINUE:
                 if (mln_lang_stack_handler_block_continue(ctx, block) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 break;
             case M_BLOCK_BREAK:
                 if (mln_lang_stack_handler_block_break(ctx, block) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 break;
             case M_BLOCK_RETURN:
                 if (mln_lang_stack_handler_block_return(ctx, block) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 return;
             case M_BLOCK_GOTO:
                 if (mln_lang_stack_handler_block_goto(ctx, block) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 return;
             default:
                 if (mln_lang_stack_handler_block_if(ctx, block) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 return;
@@ -3869,7 +3869,7 @@ nil:
             mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
         } else {
             if (mln_lang_met_return(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         }
@@ -4118,7 +4118,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_while, (mln_lang_ctx_t *ctx),
             mln_lang_var_t *var;
             if ((var = __mln_lang_var_create_true(ctx, NULL)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             __mln_lang_ctx_set_ret_var(ctx, var);
@@ -4126,7 +4126,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_while, (mln_lang_ctx_t *ctx),
         } else {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, w->condition)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -4139,7 +4139,7 @@ goon1:
             if (w->blockstm != NULL) {
                 if ((node = mln_lang_stack_push(ctx, M_LSNT_BLOCK, w->blockstm)) == NULL) {
                     __mln_lang_errmsg(ctx, "Stack is full.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 mln_lang_stack_map[node->type](ctx);
@@ -4201,7 +4201,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_switch, (mln_lang_ctx_t *ctx)
         } else {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, sw->condition)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -4212,7 +4212,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_switch, (mln_lang_ctx_t *ctx)
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
         if ((node = mln_lang_stack_push(ctx, M_LSNT_SWITCHSTM, sw->switchstm)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -4236,7 +4236,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_switchstm, (mln_lang_ctx_t *c
         if (sw_node->ret_var != NULL && sw_stm->factor != NULL) {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_FACTOR, sw_stm->factor)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -4260,17 +4260,17 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_switchstm, (mln_lang_ctx_t *c
         method = mln_lang_methods[mln_lang_var_val_type_get(sw_node->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         handler = method->equal_handler;
         if (handler == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (handler(ctx, &res, sw_node->ret_var, ctx->ret_var) < 0) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         __mln_lang_ctx_set_ret_var(ctx, res);
@@ -4279,7 +4279,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_switchstm, (mln_lang_ctx_t *c
 again:
             node->step = 2;
             if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -4293,7 +4293,7 @@ goon2:
         mln_lang_stack_withdraw(ctx);
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             res = ctx->ret_var;
@@ -4314,7 +4314,7 @@ goon3:
         node->step = 4;
         if ((node = mln_lang_stack_push(ctx, M_LSNT_STM, sw_stm->stm)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -4325,7 +4325,7 @@ goon4:
         if (sw_stm->next != NULL) {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_SWITCHSTM, sw_stm->next)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -4343,7 +4343,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_for, (mln_lang_ctx_t *ctx), (
         if (f->init_exp != NULL) {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, f->init_exp)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -4357,7 +4357,7 @@ goon1:
         if (f->condition != NULL) {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, f->condition)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -4371,7 +4371,7 @@ goon2:
             node->step = 3;
             if ((node = mln_lang_stack_push(ctx, M_LSNT_BLOCK, f->blockstm)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -4384,7 +4384,7 @@ goon2:
         if (f->mod_exp != NULL) {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, f->mod_exp)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -4417,12 +4417,12 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_if, (mln_lang_ctx_t *ctx), (c
                     mln_lang_generate_jump_ptr(cond, M_LSNT_EXP);
                 if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(cond->type), cond->jump)) == NULL) {
                     __mln_lang_errmsg(ctx, "Stack is full.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
             } else if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, cond)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -4437,7 +4437,7 @@ goon1:
             if (i->elsestm != NULL) {
                 if ((node = mln_lang_stack_push(ctx, M_LSNT_BLOCK, i->elsestm)) == NULL) {
                     __mln_lang_errmsg(ctx, "Stack is full.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
             } else {
@@ -4446,7 +4446,7 @@ goon1:
         } else {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_BLOCK, i->blockstm)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         }
@@ -4707,7 +4707,7 @@ again:
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(exp->type), exp->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -4741,7 +4741,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_assign, (mln_lang_ctx_t *ctx)
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(assign->type), assign->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -4752,7 +4752,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_assign, (mln_lang_ctx_t *ctx)
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
         if ((node = mln_lang_stack_push(ctx, M_LSNT_ASSIGN, assign->right)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -4766,7 +4766,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_assign, (mln_lang_ctx_t *ctx)
             method = mln_lang_methods[mln_lang_var_val_type_get(ctx->ret_var)];
             if (method == NULL) {
                 __mln_lang_errmsg(ctx, "Operation NOT support.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             switch (assign->op) {
@@ -4810,11 +4810,11 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_assign, (mln_lang_ctx_t *ctx)
         if (handler != NULL) {
             if (mln_lang_val_not_modify_isset(node->ret_var->val)) {
                 __mln_lang_errmsg(ctx, "Operand cannot be changed.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             if (handler(ctx, &res, node->ret_var, ctx->ret_var) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             __mln_lang_ctx_set_ret_var(ctx, res);
@@ -4822,7 +4822,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_assign, (mln_lang_ctx_t *ctx)
                 node->call = 1;
 again:
                 if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
             } else {
@@ -4833,7 +4833,7 @@ again:
                 mln_lang_ctx_get_node_ret_val(ctx, node);
             } else {
                 __mln_lang_errmsg(ctx, "Operation NOT support.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             goto goon3;
@@ -4841,7 +4841,7 @@ again:
     } else if (node->step == 3) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             res = ctx->ret_var;
@@ -4857,7 +4857,7 @@ goon3:
                                          node->ret_var->val->udata, \
                                          node->ret_var->val) < 0)
             {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -4868,7 +4868,7 @@ goon3:
     } else if (node->step == 4) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -4899,7 +4899,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_logiclow, (mln_lang_ctx_t *ct
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(logiclow->type), logiclow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -4911,7 +4911,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_logiclow, (mln_lang_ctx_t *ct
             if (logiclow->op == M_LOGICLOW_AND) {
                 if ((node = mln_lang_stack_push(ctx, M_LSNT_LOGICLOW, logiclow->right)) == NULL) {
                     __mln_lang_errmsg(ctx, "Stack is full.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 mln_lang_stack_map[node->type](ctx);
@@ -4922,7 +4922,7 @@ again:
             if (logiclow->op == M_LOGICLOW_OR) {
                 if ((node = mln_lang_stack_push(ctx, M_LSNT_LOGICLOW, logiclow->right)) == NULL) {
                     __mln_lang_errmsg(ctx, "Stack is full.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 mln_lang_stack_map[node->type](ctx);
@@ -4957,7 +4957,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_logichigh, (mln_lang_ctx_t *c
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(logichigh->type), logichigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -4974,7 +4974,7 @@ goon2:
         ll = logichigh->right;
         if ((node = mln_lang_stack_push(ctx, M_LSNT_RELATIVELOW, ll->left)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -4986,7 +4986,7 @@ goon2:
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         switch (logichigh->op) {
@@ -5005,11 +5005,11 @@ goon2:
         }
         if (handler == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (handler(ctx, &res, node->ret_var, ctx->ret_var) < 0) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5018,7 +5018,7 @@ goon2:
 again:
             node->call = 1;
             if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -5027,7 +5027,7 @@ again:
     } else if (node->step == 4) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -5066,7 +5066,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_relativelow, (mln_lang_ctx_t 
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(relativelow->type), relativelow->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5083,7 +5083,7 @@ goon2:
         tmp = relativelow->right;
         if ((node = mln_lang_stack_push(ctx, M_LSNT_RELATIVEHIGH, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5095,7 +5095,7 @@ goon2:
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         switch (relativelow->op) {
@@ -5111,11 +5111,11 @@ goon2:
         }
         if (handler == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (handler(ctx, &res, node->ret_var, ctx->ret_var) < 0) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5124,7 +5124,7 @@ goon2:
 again:
             node->call = 1;
             if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -5133,7 +5133,7 @@ again:
     } else if (node->step == 4) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -5172,7 +5172,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_relativehigh, (mln_lang_ctx_t
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(relativehigh->type), relativehigh->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5189,7 +5189,7 @@ goon2:
         tmp = relativehigh->right;
         if ((node = mln_lang_stack_push(ctx, M_LSNT_MOVE, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5219,7 +5219,7 @@ goon2:
             }
             if ((res = __mln_lang_var_create_bool(ctx, r, NULL)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5232,7 +5232,7 @@ goon2:
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         switch (relativehigh->op) {
@@ -5254,11 +5254,11 @@ goon2:
         }
         if (handler == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (handler(ctx, &res, node->ret_var, ctx->ret_var) < 0) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5267,7 +5267,7 @@ goon2:
 again:
             node->call = 1;
             if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -5277,7 +5277,7 @@ again:
     } else if (node->step == 4) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -5316,7 +5316,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_move, (mln_lang_ctx_t *ctx), 
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(move->type), move->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5333,7 +5333,7 @@ goon2:
         tmp = move->right;
         if ((node = mln_lang_stack_push(ctx, M_LSNT_ADDSUB, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5345,7 +5345,7 @@ goon2:
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         switch (move->op) {
@@ -5361,11 +5361,11 @@ goon2:
         }
         if (handler == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (handler(ctx, &res, node->ret_var, ctx->ret_var) < 0) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5374,7 +5374,7 @@ goon2:
 again:
             node->call = 1;
             if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -5383,7 +5383,7 @@ again:
     } else if (node->step == 4) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -5422,7 +5422,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_addsub, (mln_lang_ctx_t *ctx)
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(addsub->type), addsub->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5439,7 +5439,7 @@ goon2:
         tmp = addsub->right;
         if ((node = mln_lang_stack_push(ctx, M_LSNT_MULDIV, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5463,7 +5463,7 @@ goon2:
             }
             if ((res = __mln_lang_var_create_int(ctx, r, NULL)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5476,7 +5476,7 @@ goon2:
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         switch (addsub->op) {
@@ -5492,11 +5492,11 @@ goon2:
         }
         if (handler == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (handler(ctx, &res, node->ret_var, ctx->ret_var) < 0) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5505,7 +5505,7 @@ goon2:
 again:
             node->call = 1;
             if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -5515,7 +5515,7 @@ again:
     } else if (node->step == 4) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -5554,7 +5554,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_muldiv, (mln_lang_ctx_t *ctx)
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(muldiv->type), muldiv->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5571,7 +5571,7 @@ goon2:
         tmp = muldiv->right;
         if ((node = mln_lang_stack_push(ctx, M_LSNT_NOT, tmp->left)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5605,7 +5605,7 @@ goon2:
             if (do_fast) {
                 if ((res = __mln_lang_var_create_int(ctx, r, NULL)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5619,7 +5619,7 @@ goon2:
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         switch (muldiv->op) {
@@ -5638,11 +5638,11 @@ goon2:
         }
         if (handler == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (handler(ctx, &res, node->ret_var, ctx->ret_var) < 0) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5651,7 +5651,7 @@ goon2:
 again:
             node->call = 1;
             if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -5661,7 +5661,7 @@ again:
     } else if (node->step == 4) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -5696,7 +5696,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_not, (mln_lang_ctx_t *ctx), (
             mln_lang_generate_jump_ptr(not, M_LSNT_NOT);
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(not->type), not->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5708,7 +5708,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_not, (mln_lang_ctx_t *ctx), (
         method = mln_lang_methods[mln_lang_var_val_type_get(ctx->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         switch (not->op) {
@@ -5720,7 +5720,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_not, (mln_lang_ctx_t *ctx), (
         }
         if (handler != NULL) {
             if (handler(ctx, &res, ctx->ret_var, NULL) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             __mln_lang_ctx_set_ret_var(ctx, res);
@@ -5728,7 +5728,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_not, (mln_lang_ctx_t *ctx), (
                 node->call = 1;
 again:
                 if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
             } else {
@@ -5738,7 +5738,7 @@ again:
     } else if (node->step == 2) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             res = ctx->ret_var;
@@ -5768,7 +5768,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_suffix, (mln_lang_ctx_t *ctx)
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(suffix->type), suffix->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5780,7 +5780,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_suffix, (mln_lang_ctx_t *ctx)
         method = mln_lang_methods[mln_lang_var_val_type_get(ctx->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         switch (suffix->op) {
@@ -5796,11 +5796,11 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_suffix, (mln_lang_ctx_t *ctx)
         if (handler != NULL) {
             if (mln_lang_val_not_modify_isset(ctx->ret_var->val)) {
                 __mln_lang_errmsg(ctx, "Operand cannot be changed.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             if (handler(ctx, &res, ctx->ret_var, NULL) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5809,7 +5809,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_suffix, (mln_lang_ctx_t *ctx)
                 node->call = 1;
 again:
                 if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
             } else {
@@ -5817,13 +5817,13 @@ again:
             }
         } else if (suffix->op != M_SUFFIX_NONE) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
     } else if (node->step == 2) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             res = ctx->ret_var;
@@ -5838,7 +5838,7 @@ goon2:
                                          node->ret_var->val->udata, \
                                          node->ret_var->val) < 0)
             {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -5849,7 +5849,7 @@ goon2:
     } else if (node->step == 3) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -5893,7 +5893,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_locate, (mln_lang_ctx_t *ctx)
         }
         if ((node = mln_lang_stack_push(ctx, (mln_lang_stack_node_type_t)(locate->type), locate->jump)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -5906,14 +5906,14 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_locate, (mln_lang_ctx_t *ctx)
             mln_lang_var_t *ret_var;
             if ((ret_var = __mln_lang_var_create_nil(ctx, NULL)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             __mln_lang_ctx_set_ret_var(ctx, ret_var);
         } else {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_EXP, locate->right.exp)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -5924,17 +5924,17 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_locate, (mln_lang_ctx_t *ctx)
         method = mln_lang_methods[mln_lang_var_val_type_get(node->ret_var)];
         if (method == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_op handler = method->index_handler;
         if (handler == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (handler(ctx, &res, node->ret_var, ctx->ret_var) < 0) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         __mln_lang_ctx_set_ret_var(ctx, res);
@@ -5943,7 +5943,7 @@ again_index:
             node->call = 1;
             node->step = 3;
             if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -5953,7 +5953,7 @@ again_index:
     } else if (node->step == 3) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -5974,7 +5974,7 @@ again_index:
         if (method == NULL || method->property_handler == NULL) {
             __mln_lang_errmsg(ctx, "Operation NOT support.");
             node->ret_var2 = NULL;
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_var_t *res = NULL;
@@ -5982,13 +5982,13 @@ again_index:
         if ((var = mln_lang_var_create_string(ctx, locate->right.id, NULL)) == NULL) {
             __mln_lang_errmsg(ctx, "No memory.");
             node->ret_var2 = NULL;
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (method->property_handler(ctx, &res, ctx->ret_var, var) < 0) {
             __mln_lang_var_free(var);
             node->ret_var2 = NULL;
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         __mln_lang_var_free(var);
@@ -6000,7 +6000,7 @@ again_property:
             node->call = 1;
             node->step = 6;
             if (mln_lang_stack_handler_funccall_run(ctx, node, res->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -6018,12 +6018,12 @@ again_property:
                 s = ctx->ret_var->name;
             } else {
                 __mln_lang_errmsg(ctx, "Operation NOT support.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             if ((funccall = __mln_lang_funccall_val_new(ctx->pool, s)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             funccall->prototype = NULL;
@@ -6035,7 +6035,7 @@ again_property:
             if ((ret_var = __mln_lang_var_create_call(ctx, funccall)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 __mln_lang_funccall_val_free(funccall);
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->ret_var = ret_var;
@@ -6043,7 +6043,7 @@ again_property:
         } else {
             if ((funccall = __mln_lang_funccall_val_new(ctx->pool, ctx->ret_var->name)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             funccall->prototype = ctx->ret_var->val->data.func;
@@ -6055,7 +6055,7 @@ again_property:
             if ((ret_var = __mln_lang_var_create_call(ctx, funccall)) == NULL) {
                 __mln_lang_errmsg(ctx, "No memory.");
                 __mln_lang_funccall_val_free(funccall);
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->ret_var = ret_var;
@@ -6074,7 +6074,7 @@ again_property:
             node->pos = exp->next;
             if ((node = mln_lang_stack_push(ctx, M_LSNT_ASSIGN, exp->assign)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -6083,14 +6083,14 @@ again_property:
             node->call = 1;
             node->step = 6;
             if (mln_lang_stack_handler_funccall_run(ctx, node, node->ret_var->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         }
     } else if (node->step == 6) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -6107,7 +6107,7 @@ goon7:
             if ((node = mln_lang_stack_push(ctx, M_LSNT_LOCATE, locate->next)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
                 mln_lang_stack_node_free(&tmp);
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             if (locate->next->op == M_LOCATE_NONE) node->step = 7;
@@ -6434,7 +6434,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_spec, (mln_lang_ctx_t *ctx), 
     mln_lang_var_t *ret_var;
     if (spec->op == M_SPEC_REFER) {
         __mln_lang_errmsg(ctx, "'&' Not allowed.");
-        ctx->quit = 1;
+        MLN_CTX_QUIT_STORE(ctx, 1);
         return;
     }
     if (node->step == 0) {
@@ -6454,7 +6454,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_spec, (mln_lang_ctx_t *ctx), 
                 break;
             case M_SPEC_NEW:
                 if (mln_lang_stack_handler_spec_new(ctx, spec->data.set_name) < 0) {
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 node->step = 2;
@@ -6463,7 +6463,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_spec, (mln_lang_ctx_t *ctx), 
                 if (spec->data.exp == NULL) {
                     if ((ret_var = __mln_lang_var_create_nil(ctx, NULL)) == NULL) {
                         __mln_lang_errmsg(ctx, "No memory.");
-                        ctx->quit = 1;
+                        MLN_CTX_QUIT_STORE(ctx, 1);
                         return;
                     }
                 } else {
@@ -6485,7 +6485,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_spec, (mln_lang_ctx_t *ctx), 
             }
             if ((node = mln_lang_stack_push(ctx, type, data)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -6501,7 +6501,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_spec, (mln_lang_ctx_t *ctx), 
 again:
             node->call = 1;
             if (mln_lang_stack_handler_funccall_run(ctx, node, ret_var->val->data.call) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
         } else {
@@ -6510,7 +6510,7 @@ again:
             method = mln_lang_methods[mln_lang_var_val_type_get(ret_var)];
             if (method == NULL) {
                 __mln_lang_errmsg(ctx, "Operation NOT support.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             switch (spec->op) {
@@ -6532,17 +6532,17 @@ again:
             }
             if (handler == NULL) {
                 __mln_lang_errmsg(ctx, "Operation NOT support.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             ret_var = NULL;
             if ((spec->op == M_SPEC_INC || spec->op == M_SPEC_DEC) && mln_lang_val_not_modify_isset(ctx->ret_var->val)) {
                 __mln_lang_errmsg(ctx, "Operand cannot be changed.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             if (handler(ctx, &ret_var, ctx->ret_var, NULL) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -6556,7 +6556,7 @@ again:
     } else if (node->step == 2) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -6575,7 +6575,7 @@ goon2:
                                          node->ret_var->val->udata, \
                                          node->ret_var->val) < 0)
             {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_node_get_ctx_ret_var(node, ctx);
@@ -6586,7 +6586,7 @@ goon2:
     } else if (node->step == 3) {
         if (node->call) {
             if (mln_lang_withdraw_until_func(ctx) < 0) {
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             node->call = 0;
@@ -6670,26 +6670,26 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_factor, (mln_lang_ctx_t *ctx)
                         __mln_lang_ctx_set_ret_var(ctx, mln_lang_var_ref(sym->data.var));
                     } else {/*M_LANG_SYMBOL_SET*/
                         __mln_lang_errmsg(ctx, "Invalid token. Token is a SET name, not a value or function.");
-                        ctx->quit = 1;
+                        MLN_CTX_QUIT_STORE(ctx, 1);
                         return;
                     }
                 } else {
                     if ((name = mln_string_pool_dup(ctx->pool, factor->data.s_id)) == NULL) {
                         __mln_lang_errmsg(ctx, "No memory.");
-                        ctx->quit = 1;
+                        MLN_CTX_QUIT_STORE(ctx, 1);
                         return;
                     }
                     if ((var = __mln_lang_var_create_nil(ctx, name)) == NULL) {
                         __mln_lang_errmsg(ctx, "No memory.");
                         mln_string_free(name);
-                        ctx->quit = 1;
+                        MLN_CTX_QUIT_STORE(ctx, 1);
                         return;
                     }
                     mln_string_free(name);
                     if (__mln_lang_symbol_node_join(ctx, M_LANG_SYMBOL_VAR, var) < 0) {
                         __mln_lang_errmsg(ctx, "No memory.");
                         __mln_lang_var_free(var);
-                        ctx->quit = 1;
+                        MLN_CTX_QUIT_STORE(ctx, 1);
                         return;
                     }
                     __mln_lang_ctx_set_ret_var(ctx, mln_lang_var_ref(var));
@@ -6699,7 +6699,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_factor, (mln_lang_ctx_t *ctx)
             case M_FACTOR_INT:
                 if ((var = __mln_lang_var_create_int(ctx, factor->data.i, NULL)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 __mln_lang_ctx_set_ret_var(ctx, var);
@@ -6707,7 +6707,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_factor, (mln_lang_ctx_t *ctx)
             case M_FACTOR_BOOL:
                 if ((var = __mln_lang_var_create_bool(ctx, factor->data.b, NULL)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 __mln_lang_ctx_set_ret_var(ctx, var);
@@ -6715,7 +6715,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_factor, (mln_lang_ctx_t *ctx)
             case M_FACTOR_STRING:
                 if ((var = mln_lang_var_create_string(ctx, factor->data.s_id, NULL)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 __mln_lang_ctx_set_ret_var(ctx, var);
@@ -6723,7 +6723,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_factor, (mln_lang_ctx_t *ctx)
             case M_FACTOR_REAL:
                 if ((var = __mln_lang_var_create_real(ctx, factor->data.f, NULL)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 __mln_lang_ctx_set_ret_var(ctx, var);
@@ -6731,14 +6731,14 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_factor, (mln_lang_ctx_t *ctx)
             case M_FACTOR_ARRAY:
                 if ((var = __mln_lang_var_create_array(ctx, NULL)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 mln_lang_stack_node_set_ret_var(node, var);
                 if (factor->data.array != NULL) {
                     if ((node = mln_lang_stack_push(ctx, M_LSNT_ELEMLIST, factor->data.array)) == NULL) {
                         __mln_lang_errmsg(ctx, "Stack is full.");
-                        ctx->quit = 1;
+                        MLN_CTX_QUIT_STORE(ctx, 1);
                         return;
                     }
                 }
@@ -6746,7 +6746,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_factor, (mln_lang_ctx_t *ctx)
             default:
                 if ((var = __mln_lang_var_create_nil(ctx, NULL)) == NULL) {
                     __mln_lang_errmsg(ctx, "No memory.");
-                    ctx->quit = 1;
+                    MLN_CTX_QUIT_STORE(ctx, 1);
                     return;
                 }
                 __mln_lang_ctx_set_ret_var(ctx, var);
@@ -6777,7 +6777,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_elemlist, (mln_lang_ctx_t *ct
         if (elem->key != NULL) {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_ASSIGN, elem->key)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -6790,7 +6790,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_elemlist, (mln_lang_ctx_t *ct
         }
         if ((node = mln_lang_stack_push(ctx, M_LSNT_ASSIGN, elem->val)) == NULL) {
             __mln_lang_errmsg(ctx, "Stack is full.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_map[node->type](ctx);
@@ -6812,12 +6812,12 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_elemlist, (mln_lang_ctx_t *ct
         ASSERT(array != NULL);
         key = node->ret_var;
         if ((val = __mln_lang_array_get(ctx, array, key)) == NULL) {
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         if (mln_lang_var_value_set_string_ref(ctx, val, ctx->ret_var) < 0) {
             __mln_lang_errmsg(ctx, "No memory.");
-            ctx->quit = 1;
+            MLN_CTX_QUIT_STORE(ctx, 1);
             return;
         }
         mln_lang_stack_node_free(mln_lang_stack_pop(ctx));
@@ -6825,7 +6825,7 @@ MLN_FUNC_VOID(static, void, mln_lang_stack_handler_elemlist, (mln_lang_ctx_t *ct
         if (elem->next != NULL) {
             if ((node = mln_lang_stack_push(ctx, M_LSNT_ELEMLIST, elem->next)) == NULL) {
                 __mln_lang_errmsg(ctx, "Stack is full.");
-                ctx->quit = 1;
+                MLN_CTX_QUIT_STORE(ctx, 1);
                 return;
             }
             mln_lang_stack_map[node->type](ctx);
@@ -8165,7 +8165,7 @@ MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_kill_process, (mln_lang_ctx_t *
             MLN_CTX_QUIT_STORE(ctx, 1);
 #if !defined(MSVC)
         } else if (killed_ctx->owner != 0) {
-            __atomic_store_n(&killed_ctx->quit, 1, __ATOMIC_RELEASE);
+            MLN_CTX_QUIT_STORE(killed_ctx, 1);
 #endif
         } else {
             __mln_lang_job_free(killed_ctx);

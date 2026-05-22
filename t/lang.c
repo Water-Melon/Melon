@@ -351,6 +351,45 @@ static void iso_return_handler(mln_lang_ctx_t *ctx) {
         mln_event_break_set(itc->ev);
 }
 
+/* -------------------------------------------------
+ * Cross-coroutine Kill() test helper
+ *
+ * A custom return handler that checks:
+ *   1. The parent's ret_var == INT(42)
+ *   2. After the parent completes, the lang scheduler has no remaining
+ *      queued contexts (i.e., the killed child was properly freed).
+ * ------------------------------------------------- */
+typedef struct {
+    mln_event_t *ev;
+    const char  *name;
+    int          parent_ok;
+    int          cleanup_ok;
+} kill_cross_tc_t;
+
+static void kill_cross_return_handler(mln_lang_ctx_t *ctx) {
+    kill_cross_tc_t *kc = (kill_cross_tc_t *)mln_lang_ctx_data_get(ctx);
+    mln_lang_var_t *rv = ctx->ret_var;
+
+    /* Check 1: parent returns 42. */
+    kc->parent_ok = (rv != NULL && rv->val != NULL &&
+                     rv->val->type == M_LANG_VAL_TYPE_INT &&
+                     rv->val->data.i == 42);
+
+    /* Check 2: after the parent's return_handler fires, no other ctx
+     * should be queued — the killed child must have been freed.
+     * Note: ctx itself is about to be freed by the dispatcher AFTER this
+     * handler returns, so it is still on run_head right now.  We check
+     * that no OTHER ctx is present: run_head == ctx && run_head->next ==
+     * NULL and wait_head == NULL. */
+    mln_lang_t *lang = ctx->lang;
+    kc->cleanup_ok = (lang->run_head == ctx &&
+                      ctx->next == NULL &&
+                      lang->wait_head == NULL);
+
+    mln_event_break_set(kc->ev);
+}
+
+
 /* =========================================================
  * main
  * ========================================================= */
@@ -2323,23 +2362,85 @@ vm_trace_done:;
      * then Kill()s it and returns 42.  We verify:
      *   - The parent's return_handler fires with ret_var = 42 (the
      *     scheduler did not crash, the parent completed normally).
-     *   - The lang has no remaining queued ctx after the parent's
-     *     return_handler runs (the child was removed from run_head /
-     *     wait_head).
+     *   - After the parent's return_handler fires, the killed child ctx
+     *     has been freed: lang->run_head has only the parent, and
+     *     lang->wait_head is NULL.
      *
      * The child's body is intentionally CPU-bound rather than calling
      * sys.msleep — t/lang.c doesn't link against the sys dynamic
      * library, so the child runs purely in the interpreter core.
      * ------------------------------------------------- */
-    T_INT(lang, ev, "kill_other_keeps_parent_alive",
-          "Eval('"
-          "  s = 0;"
-          "  for (i = 0; i < 1000000; i = i + 1) { s = s + i; }"
-          "  return s;"
-          "', nil, true, 'victim');"
-          "Kill('victim');"
-          "return 42;",
-          42);
+    {
+        kill_cross_tc_t kc;
+        kc.ev         = ev;
+        kc.name       = "kill_other_keeps_parent_alive";
+        kc.parent_ok  = 0;
+        kc.cleanup_ok = 0;
+
+        const char *code =
+            "Eval('"
+            "  s = 0;"
+            "  for (i = 0; i < 1000000; i = i + 1) { s = s + i; }"
+            "  return s;"
+            "', nil, true, 'victim');"
+            "Kill('victim');"
+            "return 42;";
+
+        mln_string_t src;
+        mln_string_nset(&src, (mln_u8ptr_t)code, strlen(code));
+        mln_event_break_reset(ev);
+
+        mln_lang_ctx_t *ctx = mln_lang_job_new(lang, NULL, M_INPUT_T_BUF,
+                                               &src, &kc, kill_cross_return_handler);
+        if (ctx == NULL) {
+            fprintf(stderr, "  FAIL [%s]: mln_lang_job_new returned NULL\n", kc.name);
+            ++g_n_fail;
+        } else {
+            mln_event_dispatch(ev);
+            if (kc.parent_ok && kc.cleanup_ok) {
+                ++g_n_pass;
+                printf("  PASS [%s]\n", kc.name);
+            } else {
+                ++g_n_fail;
+                if (!kc.parent_ok)
+                    fprintf(stderr, "  FAIL [%s]: parent did not return 42\n", kc.name);
+                if (!kc.cleanup_ok)
+                    fprintf(stderr, "  FAIL [%s]: killed child ctx still queued after parent completed\n", kc.name);
+            }
+        }
+    }
+
+    /* -------------------------------------------------
+     * 41. Exit() terminates coroutine — ctx is not rescheduled
+     *
+     * Exit() inside a conditional: iteration before the exit should
+     * produce observable side effects (variable mutation), but the
+     * return statement after the loop must never execute.
+     * ------------------------------------------------- */
+    T_EXIT(lang, ev, "exit_in_conditional_loop",
+           "x = 0;"
+           "for (i = 0; i < 10; i = i + 1) {"
+           "  if (i == 5) { Exit(); } fi"
+           "  x = x + 1;"
+           "}"
+           "return x;");
+
+    /* Exit() inside a nested function called from a loop. */
+    T_EXIT(lang, ev, "exit_nested_func_in_loop",
+           "@bail(n) { if (n > 2) { Exit(); } fi return n; }"
+           "s = 0;"
+           "for (i = 0; i < 100; i = i + 1) { s = s + bail(i); }"
+           "return s;");
+
+    /* Kill(self) inside a while loop — same semantics as Exit(). */
+    T_EXIT_ALIAS(lang, ev, "kill_self_in_while_loop",
+                 "i = 0;"
+                 "while (true) {"
+                 "  if (i == 3) { Kill('ks_while'); } fi"
+                 "  i = i + 1;"
+                 "}"
+                 "return 999;",
+                 "ks_while");
 
     /* -------------------------------------------------
      * Report
