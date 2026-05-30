@@ -5593,11 +5593,14 @@ goon2:
             switch (muldiv->op) {
                 case M_MULDIV_MUL: r = a * b; break;
                 case M_MULDIV_DIV:
-                    if (b == 0) { do_fast = 0; r = 0; }
+                    /* INT64_MIN / -1 overflows the signed range and is UB
+                     * (SIGFPE on x86-64); bail to the slow path, which
+                     * raises a runtime error. */
+                    if (b == 0 || (b == -1 && a == (mln_s64_t)0x8000000000000000LL)) { do_fast = 0; r = 0; }
                     else r = a / b;
                     break;
                 case M_MULDIV_MOD:
-                    if (b == 0) { do_fast = 0; r = 0; }
+                    if (b == 0 || (b == -1 && a == (mln_s64_t)0x8000000000000000LL)) { do_fast = 0; r = 0; }
                     else r = a % b;
                     break;
                 default: ASSERT(0); r = 0; break;
@@ -7609,6 +7612,20 @@ static mln_lang_var_t *mln_lang_func_import_process(mln_lang_ctx_t *ctx)
     }
     name = mln_lang_var_val_get(sym->data.var)->data.s;
 
+    /*
+     * The module name is copied into the fixed-size 'path' buffer with a
+     * small fixed prefix ("./") and suffix (".so"/".dll").  snprintf()
+     * truncates safely, but its return value is the length that *would*
+     * have been written, so a script-supplied name long enough to be
+     * truncated would make the subsequent "path[n] = 0" / memcpy(.., n)
+     * write past the buffer.  Reject over-long names up front so n can
+     * never exceed the buffer.
+     */
+    if (name->len >= sizeof(path) - 8) {
+        mln_lang_errmsg(ctx, "Module name too long.");
+        return NULL;
+    }
+
     i.name = name;
     tree = (mln_rbtree_t *)mln_lang_resource_fetch(ctx->lang, "import");
     rn = mln_rbtree_search(tree, &i);
@@ -7650,6 +7667,7 @@ static mln_lang_var_t *mln_lang_func_import_process(mln_lang_ctx_t *ctx)
                 while (end != NULL) {
                     *end = 0;
                     n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_dy_path, path);
+                    if (n < 0 || (size_t)n >= sizeof(path)) n = (int)sizeof(path) - 1;
 #if defined(MSVC)
                     if (!_access(tmp_path, 0)) {
 #else
@@ -7667,6 +7685,7 @@ static mln_lang_var_t *mln_lang_func_import_process(mln_lang_ctx_t *ctx)
                 if (!found) {
                     if (*melang_dy_path) {
                         n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_dy_path, path);
+                        if (n < 0 || (size_t)n >= sizeof(path)) n = (int)sizeof(path) - 1;
                         memcpy(path, tmp_path, n);
                         path[n] = 0;
                     } else {
@@ -7676,6 +7695,7 @@ static mln_lang_var_t *mln_lang_func_import_process(mln_lang_ctx_t *ctx)
             } else {
 goon:
                 n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_dylib(), path);
+                if (n < 0 || (size_t)n >= sizeof(path)) n = (int)sizeof(path) - 1;
                 memcpy(path, tmp_path, n);
                 path[n] = 0;
             }
@@ -7688,6 +7708,7 @@ goon:
 #endif
         if (handle == NULL) {
             n = snprintf(tmp_path, sizeof(tmp_path)-1, "Load dynamic library [%s] failed.", path);
+            if (n < 0 || (size_t)n >= sizeof(tmp_path)) n = (int)sizeof(tmp_path) - 1;
             tmp_path[n] = 0;
             mln_lang_errmsg(ctx, tmp_path);
             return NULL;
@@ -7738,6 +7759,7 @@ goon:
 #endif
     if (init == NULL) {
         n = snprintf(tmp_path, sizeof(tmp_path)-1, "No 'init' found in dynamic library [%s].", path);
+        if (n < 0 || (size_t)n >= sizeof(tmp_path)) n = (int)sizeof(tmp_path) - 1;
         tmp_path[n] = 0;
         mln_lang_errmsg(ctx, tmp_path);
         return NULL;
@@ -7745,6 +7767,7 @@ goon:
 
     if ((ret_var = init(ctx, mln_conf())) == NULL) {
         n = snprintf(tmp_path, sizeof(tmp_path)-1, "Init dynamic library [%s] failed.", path);
+        if (n < 0 || (size_t)n >= sizeof(tmp_path)) n = (int)sizeof(tmp_path) - 1;
         tmp_path[n] = 0;
         mln_lang_errmsg(ctx, tmp_path);
         return NULL;
@@ -7926,12 +7949,24 @@ MLN_FUNC(static, mln_lang_var_t *, mln_lang_func_eval_process, (mln_lang_ctx_t *
                 tmp.len = path->len - 1;
             }
         } else {
+            int r;
             n = sizeof(buf) - 1;
             if (n > p - (char *)(ctx->filename->data)) {
                 n = p - (char *)(ctx->filename->data);
             }
             memcpy(buf, ctx->filename->data, n);
-            n += snprintf(buf + n, sizeof(buf) - n - 1, "/%s", (char *)(&(path->data[1])));
+            /*
+             * snprintf() returns the length it *would* have written, which
+             * for a script-supplied path can exceed the space left in buf.
+             * Clamp it to the remaining room before advancing n, otherwise
+             * the following "buf[n] = 0" / mln_string_nset(.., n) would run
+             * past the 1024-byte stack buffer.
+             */
+            r = snprintf(buf + n, sizeof(buf) - n - 1, "/%s", (char *)(&(path->data[1])));
+            if (r < 0 || (size_t)r >= sizeof(buf) - (size_t)n - 1)
+                r = (int)(sizeof(buf) - (size_t)n - 1) - 1;
+            if (r < 0) r = 0;
+            n += r;
             buf[n] = 0;
             mln_string_nset(&tmp, buf, n);
         }

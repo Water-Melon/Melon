@@ -2852,9 +2852,18 @@ static mln_lang_var_t *apply_binop(mln_lang_ctx_t *ctx, mln_u8_t op,
             case MLN_VOP_MUL: r = mln_lang_var_create_int(ctx, ai * bi, NULL); break;
             case MLN_VOP_DIV:
                 if (bi == 0) { mln_lang_errmsg(ctx, "Division by zero."); goto done; }
+                /* INT64_MIN / -1 overflows the signed range and is UB
+                 * (traps with SIGFPE on x86-64). Reject at runtime. */
+                if (bi == -1 && ai == (mln_s64_t)0x8000000000000000LL) {
+                    mln_lang_errmsg(ctx, "Division overflow."); goto done;
+                }
                 r = mln_lang_var_create_int(ctx, ai / bi, NULL); break;
             case MLN_VOP_MOD:
                 if (bi == 0) { mln_lang_errmsg(ctx, "Modulo by zero."); goto done; }
+                /* INT64_MIN % -1 traps the same way as the division. */
+                if (bi == -1 && ai == (mln_s64_t)0x8000000000000000LL) {
+                    mln_lang_errmsg(ctx, "Modulo overflow."); goto done;
+                }
                 r = mln_lang_var_create_int(ctx, ai % bi, NULL); break;
             case MLN_VOP_LT: r = mln_lang_var_create_bool(ctx, (mln_u8_t)(ai <  bi), NULL); break;
             case MLN_VOP_LE: r = mln_lang_var_create_bool(ctx, (mln_u8_t)(ai <= bi), NULL); break;
@@ -3734,9 +3743,17 @@ static inline MLN_VM_ALWAYS_INLINE int dispatch_one(mln_lang_ctx_t *ctx)
                     case MLN_VOP_MUL: VPUSH_INT(ai * bi); return 0;
                     case MLN_VOP_DIV:
                         if (bi == 0) { mln_lang_errmsg(ctx, "Division by zero."); return -1; }
+                        /* INT64_MIN / -1 overflows the signed range and is
+                         * UB (traps with SIGFPE on x86-64). Reject. */
+                        if (bi == -1 && ai == (mln_s64_t)0x8000000000000000LL) {
+                            mln_lang_errmsg(ctx, "Division overflow."); return -1;
+                        }
                         VPUSH_INT(ai / bi); return 0;
                     case MLN_VOP_MOD:
                         if (bi == 0) { mln_lang_errmsg(ctx, "Modulo by zero."); return -1; }
+                        if (bi == -1 && ai == (mln_s64_t)0x8000000000000000LL) {
+                            mln_lang_errmsg(ctx, "Modulo overflow."); return -1;
+                        }
                         VPUSH_INT(ai % bi); return 0;
                     case MLN_VOP_LT:  VPUSH_BOOL(ai <  bi); return 0;
                     case MLN_VOP_LE:  VPUSH_BOOL(ai <= bi); return 0;

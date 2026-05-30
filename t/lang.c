@@ -2443,6 +2443,216 @@ vm_trace_done:;
                  "ks_while");
 
     /* -------------------------------------------------
+     * 42. VULN: Import() with an over-long module name must be rejected,
+     *     never crash the host.
+     *
+     * The Import builtin copies the script-supplied module name into two
+     * fixed 1024-byte stack buffers (path[]/tmp_path[]).  Before the fix it
+     * wrote the buffer terminator and combined paths using the *untruncated*
+     * snprintf() return value — `path[n] = 0;` and `memcpy(path, tmp_path,
+     * n);` — so any name long enough for snprintf to truncate made n exceed
+     * the buffer and smashed the stack.  A single untrusted script calling
+     * Import() with a long string could therefore abort or corrupt the host.
+     *
+     * Detection (same idea as t/lang_vm.c): the Import is followed by
+     * `return <SENTINEL>;`.  On a fixed build Import raises a runtime error
+     * ("Module name too long." for the very long name, or a clean
+     * "Load dynamic library [...] failed." for the medium one) which aborts
+     * the job before the return runs, so ret_var is never the sentinel and
+     * EXPECT_EXITED passes.  On a vulnerable build the overflow trips the
+     * stack protector and SIGABRTs the whole process, which also fails CI.
+     *
+     * Two lengths are exercised:
+     *   - 4000 bytes: far past sizeof(path); hits the first copy site
+     *     (path[n] = 0 after the "./%s.so" snprintf).
+     *   - 1000 bytes: passes the early length guard but, once combined with
+     *     the dynamic-library install prefix ("%s/%s"), overflows tmp_path
+     *     and drives the memcpy(path, tmp_path, n) site.
+     * ------------------------------------------------- */
+    {
+        size_t lens[2] = { 4000, 1000 };
+        const char *names[2] = {
+            "import_overlong_name_rejected",
+            "import_long_name_combine_path"
+        };
+        size_t k;
+        for (k = 0; k < 2; ++k) {
+            size_t namelen = lens[k];
+            char *code = (char *)malloc(namelen + 64);
+            assert(code != NULL);
+            char *p = code;
+            memcpy(p, "Import('", 8); p += 8;
+            memset(p, 'a', namelen);  p += namelen;
+            /* The trailing return uses the same sentinel as t/lang_vm.c. */
+            memcpy(p, "'); return 123456789;", 21); p += 21;
+            *p = 0;
+
+            test_ctx_t tc;
+            tc.ev = ev;
+            tc.name = names[k];
+            tc.etype = EXPECT_EXITED;
+            tc.eint = 0; tc.ereal = 0; tc.estr = NULL;
+
+            mln_string_t src;
+            mln_string_nset(&src, (mln_u8ptr_t)code, strlen(code));
+            mln_event_break_reset(ev);
+
+            mln_lang_ctx_t *ctx = mln_lang_job_new(lang, NULL, M_INPUT_T_BUF,
+                                                   &src, &tc, test_return_handler);
+            if (ctx == NULL) {
+                fprintf(stderr, "  FAIL [%s]: mln_lang_job_new returned NULL\n",
+                        names[k]);
+                ++g_n_fail;
+            } else {
+                mln_event_dispatch(ev);
+            }
+            free(code);
+        }
+    }
+
+    /* -------------------------------------------------
+     * 43. VULN: Eval('@<relative path>', ...) must not overflow the host.
+     *
+     * When the first argument starts with '@' and the current job has a
+     * filename, the Eval builtin resolves the path relative to the current
+     * script's directory by copying into a fixed 1024-byte stack buffer:
+     *
+     *     n  = <dir length, clamped to sizeof(buf)-1>;
+     *     memcpy(buf, ctx->filename->data, n);
+     *     n += snprintf(buf + n, sizeof(buf) - n - 1, "/%s", &path->data[1]);
+     *     buf[n] = 0;                       <- OOB write before the fix
+     *     mln_string_nset(&tmp, buf, n);
+     *
+     * snprintf() returns the length it *would* have written, so a long
+     * script-supplied '@' path drove n past the buffer and smashed the
+     * stack — a single untrusted script could crash or corrupt the host.
+     *
+     * The branch only fires when ctx->filename is set and contains '/', so
+     * the reproducer writes a temporary script file (path under /tmp) and
+     * runs it with M_INPUT_T_FILE.  On a fixed build the over-long relative
+     * path is safely truncated, the resolved file does not exist, Eval()
+     * returns false, and the script proceeds to `return 123456789;` — so
+     * EXPECT_INT(123456789) confirms it ran to completion without crashing.
+     * On a vulnerable build the stray "buf[n] = 0" lands far past the
+     * 1024-byte buffer (n grows with the path length); a large name pushes
+     * the write beyond the top of the stack, so the process dies with
+     * SIGSEGV/SIGABRT and fails CI.
+     * ------------------------------------------------- */
+    {
+        const char *scrpath = "/tmp/mln_lang_eval_vuln4.m";
+        const char *pre  = "Eval('@";
+        const char *post = "', nil, false, nil); return 123456789;";
+        /* Large enough that the unclamped offset overshoots the stack on a
+         * vulnerable build (empirically anything past a few tens of KB
+         * faults); on a fixed build the path is simply truncated. */
+        size_t namelen = 1024 * 1024;
+        size_t prelen = strlen(pre), postlen = strlen(post);
+        char *script = (char *)malloc(prelen + namelen + postlen + 1);
+        assert(script != NULL);
+        char *q = script;
+        memcpy(q, pre, prelen);   q += prelen;
+        memset(q, 'a', namelen);  q += namelen;
+        memcpy(q, post, postlen); q += postlen;
+        *q = 0;
+
+        FILE *fp = fopen(scrpath, "wb");
+        if (fp == NULL) {
+            fprintf(stderr, "  FAIL [eval_at_overlong_path]: cannot create temp script\n");
+            ++g_n_fail;
+        } else {
+            fwrite(script, 1, strlen(script), fp);
+            fclose(fp);
+
+            test_ctx_t tc;
+            tc.ev = ev;
+            tc.name = "eval_at_overlong_path";
+            tc.etype = EXPECT_INT;
+            tc.eint = 123456789;
+            tc.ereal = 0; tc.estr = NULL;
+
+            mln_string_t paths;
+            mln_string_nset(&paths, (mln_u8ptr_t)scrpath, strlen(scrpath));
+            mln_event_break_reset(ev);
+
+            mln_lang_ctx_t *ctx = mln_lang_job_new(lang, NULL, M_INPUT_T_FILE,
+                                                   &paths, &tc, test_return_handler);
+            if (ctx == NULL) {
+                fprintf(stderr, "  FAIL [eval_at_overlong_path]: job creation failed\n");
+                ++g_n_fail;
+            } else {
+                mln_event_dispatch(ev);
+            }
+            remove(scrpath);
+        }
+        free(script);
+    }
+
+    /* -------------------------------------------------
+     * 44. VULN: loading a relative script path must not overflow the host
+     *     when MELANG_PATH is set.
+     *
+     * mln_lang_ast_file_open() resolves a relative script path against the
+     * search directories in $MELANG_PATH (and the install prefix) by combining
+     * them into a fixed 1024-byte stack buffer:
+     *
+     *     n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
+     *     tmp_path[n] = 0;                  <- OOB write before the fix
+     *
+     * snprintf() returns the length it *would* have written, so a long
+     * $MELANG_PATH entry (or a long relative path) drove n past the buffer
+     * and the terminator write smashed the stack.  This is reached from a
+     * single untrusted script: Eval('<relative file>', nil, false, nil)
+     * spawns a M_INPUT_T_FILE job whose path does not start with '/' or '@',
+     * so the loader calls mln_lang_ast_file_open() with the script's string.
+     *
+     * mln_lang_ast_file_open() is reached only on the cached-AST code path
+     * (mln_lang_ast_cache_search); the non-cached path goes through the lexer
+     * instead.  The reproducer therefore enables the AST cache, sets a 1 MiB
+     * $MELANG_PATH, and evals a non-existent relative file.  On a fixed build
+     * the combined path is truncated to the buffer, the file is not found,
+     * Eval() returns false, and the outer script runs on to
+     * `return 123456789;` (EXPECT_INT).  On a vulnerable build the "%s/%s"
+     * expansion makes n ~1 MiB and "tmp_path[n] = 0" overshoots the top of
+     * the stack, killing the process with SIGSEGV.
+     * ------------------------------------------------- */
+    {
+        size_t pathlen = 1024 * 1024;
+        char *envval = (char *)malloc(pathlen + 1);
+        assert(envval != NULL);
+        memset(envval, 'a', pathlen);
+        envval[pathlen] = 0;
+        setenv("MELANG_PATH", envval, 1);
+        mln_lang_cache_set(lang);
+
+        const char *code =
+            "Eval('zz_mln_lang_vuln5_nonexistent', nil, false, nil);"
+            " return 123456789;";
+
+        test_ctx_t tc;
+        tc.ev = ev;
+        tc.name = "load_relpath_overlong_melang_path";
+        tc.etype = EXPECT_INT;
+        tc.eint = 123456789;
+        tc.ereal = 0; tc.estr = NULL;
+
+        mln_string_t src;
+        mln_string_nset(&src, (mln_u8ptr_t)code, strlen(code));
+        mln_event_break_reset(ev);
+
+        mln_lang_ctx_t *ctx = mln_lang_job_new(lang, NULL, M_INPUT_T_BUF,
+                                               &src, &tc, test_return_handler);
+        if (ctx == NULL) {
+            fprintf(stderr, "  FAIL [load_relpath_overlong_melang_path]: job creation failed\n");
+            ++g_n_fail;
+        } else {
+            mln_event_dispatch(ev);
+        }
+        lang->cache = 0;
+        unsetenv("MELANG_PATH");
+        free(envval);
+    }
+
+    /* -------------------------------------------------
      * Report
      * ------------------------------------------------- */
     printf("=== Results: %d passed, %d failed ===\n", g_n_pass, g_n_fail);

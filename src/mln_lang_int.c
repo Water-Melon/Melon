@@ -463,6 +463,10 @@ MLN_FUNC(static, int, mln_lang_int_diveq, \
             mln_lang_errmsg(ctx, "Division by zero.");
             return -1;
         }
+        if (i == -1 && mln_lang_int_var_toint(op1) == (mln_s64_t)0x8000000000000000LL) {
+            mln_lang_errmsg(ctx, "Division overflow.");
+            return -1;
+        }
         mln_lang_var_set_int(op1, mln_lang_int_var_toint(op1) / i);
     }
     *ret = mln_lang_var_ref(op1);
@@ -577,6 +581,10 @@ MLN_FUNC(static, int, mln_lang_int_modeq, \
     mln_s64_t i = mln_lang_int_var_toint(op2);
     if (!i) {
         mln_lang_errmsg(ctx, "Modulo by zero.");
+        return -1;
+    }
+    if (i == -1 && mln_lang_int_var_toint(op1) == (mln_s64_t)0x8000000000000000LL) {
+        mln_lang_errmsg(ctx, "Modulo overflow.");
         return -1;
     }
     mln_lang_var_set_int(op1, mln_lang_int_var_toint(op1) % i);
@@ -1220,6 +1228,10 @@ MLN_FUNC(static, int, mln_lang_int_div, \
             mln_lang_errmsg(ctx, "Division by zero.");
             return -1;
         }
+        if (tmp == -1 && mln_lang_int_var_toint(op1) == (mln_s64_t)0x8000000000000000LL) {
+            mln_lang_errmsg(ctx, "Division overflow.");
+            return -1;
+        }
         mln_s64_t i = mln_lang_int_var_toint(op1) / tmp;
         if ((val = mln_lang_val_new(ctx, M_LANG_VAL_TYPE_INT, &i)) == NULL) {
             mln_lang_errmsg(ctx, "No memory.");
@@ -1259,6 +1271,10 @@ MLN_FUNC(static, int, mln_lang_int_mod, \
     mln_s64_t tmp =  mln_lang_int_var_toint(op2);
     if (!tmp) {
         mln_lang_errmsg(ctx, "Modulo by zero.");
+        return -1;
+    }
+    if (tmp == -1 && mln_lang_int_var_toint(op1) == (mln_s64_t)0x8000000000000000LL) {
+        mln_lang_errmsg(ctx, "Modulo overflow.");
         return -1;
     }
     mln_s64_t i = mln_lang_int_var_toint(op1) % tmp;

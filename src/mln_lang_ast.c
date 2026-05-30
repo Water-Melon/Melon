@@ -3717,6 +3717,7 @@ int mln_lang_ast_file_open(mln_string_t *file_path)
             while (end != NULL) {
                 *end = 0;
                 n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
+                if (n < 0 || (size_t)n >= sizeof(tmp_path)) n = (int)sizeof(tmp_path) - 1;
                 tmp_path[n] = 0;
 #if defined(MSVC)
                 if (!_access(tmp_path, 0)) {
@@ -3733,6 +3734,7 @@ int mln_lang_ast_file_open(mln_string_t *file_path)
             if (!found) {
                 if (*melang_path) {
                     n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", melang_path, path);
+                    if (n < 0 || (size_t)n >= sizeof(tmp_path)) n = (int)sizeof(tmp_path) - 1;
                     tmp_path[n] = 0;
                     fd = open(tmp_path, O_RDONLY);
                 } else {
@@ -3742,6 +3744,7 @@ int mln_lang_ast_file_open(mln_string_t *file_path)
         } else {
 goon:
             n = snprintf(tmp_path, sizeof(tmp_path)-1, "%s/%s", mln_path_melang_lib(), path);
+            if (n < 0 || (size_t)n >= sizeof(tmp_path)) n = (int)sizeof(tmp_path) - 1;
             tmp_path[n] = 0;
             fd = open(tmp_path, O_RDONLY);
         }
